@@ -616,15 +616,9 @@ class RxPacket(Packet):
         data = self.data
         le = data['de']
         if le == 0:
-            #host = data['dh']
-            #if host == '0.0.0.0':
-                #host = '127.0.0.1'
             le = (data['dh'], data['dp'])
         re = data['se']
         if re == 0:
-            #host = data['sh']
-            #if host == '0.0.0.0':
-                #host = '127.0.0.1'
             re = (data['sh'], data['sp'])
         return ((not data['cf'], le, re, data['si'], data['ti'], data['bf']))
 

@@ -879,17 +879,6 @@ class StackUxd(object):
             self.message(body, name)
             console.verbose("{0} sending\n{1}\n".format(self.name, body))
 
-    #def serviceTxMsgs(self):
-        #'''
-        #Service .txMsgs queue of outgoing messages
-        #'''
-        #while self.txMsgs:
-            #body, name = self.txMsgs.popleft() # duple (body dict, destination name)
-            #packed = self.packUxdTx(body)
-            #if packed:
-                #console.verbose("{0} sending\n{1}\n".format(self.name, body))
-                #self.txUxd(packed, name)
-
     def serviceTxes(self):
         '''
         Service the .txes deque to send Uxd messages
@@ -1031,18 +1020,6 @@ class StackUxd(object):
         for page in book.pages:
             self.txes.append((page.packed, remote.ha))
 
-    #def processUxdRx(self):
-        #'''
-        #Retrieve next message from stack receive queue if any and parse
-        #'''
-        #body = self.fetchParseUxdRx()
-        #if not body:
-            #return
-
-        #console.verbose("{0} received message data\n{1}\n".format(self.name, body))
-
-        #self.rxMsgs.append(body)
-
     def processUxdRx(self):
         '''
         Retrieve next page from stack receive queue if any and parse
@@ -1088,14 +1065,7 @@ class StackUxd(object):
                 console.terse(emsg)
                 self.incStat('unaccepted_source_yard')
                 return None
-
-            #yard = yarding.RemoteYard(stack=self, ha=sa) # gets name from ha
-            #name = yarding.Yard.nameFromHa(sa)
-            #yard = yarding.RemoteYard(stack=self,
-                                        #name=name,
-                                        #ha=sa)
             try:
-                #self.addRemoteYard(yard)
                 self.addRemoteYard(yarding.RemoteYard(ha=sa))
             except raeting.StackError as ex:
                 console.terse(str(ex) + '\n')
@@ -1106,91 +1076,3 @@ class StackUxd(object):
         page.parse()
         return page
 
-        #return self.parseUxdRx(raw) # deserialize
-
-    def parseUxdRx(self, packed):
-        '''
-        Parse (deserialize message)
-        '''
-        body = None
-
-        if (not packed.startswith('RAET\n') or raeting.HEAD_END not in packed):
-            emsg = "Unrecognized packed body head\n"
-            console.terse(emsg)
-            self.incStat("invalid_receive_head")
-            return None
-
-        front, sep, back = packed.partition(raeting.HEAD_END)
-        code, sep, kind = front.partition('\n')
-        if kind not in [raeting.PACK_KIND_NAMES[raeting.packKinds.json],
-                        raeting.PACK_KIND_NAMES[raeting.packKinds.pack]]:
-            emsg = "Unrecognized message pack kind '{0}'\n".format(kind)
-            console.terse(emsg)
-            self.incStat("invalid_receive_serialization")
-            return None
-
-        if len(back) > raeting.UXD_MAX_PACKET_SIZE: #raeting.MAX_MESSAGE_SIZE
-            emsg = "Message length of {0}, exceeds max of {1}\n".format(
-                     len(back), raeting.UXD_MAX_PACKET_SIZE)
-            console.terse(emsg)
-            self.incStat("invalid_receive_size")
-            return None
-
-        kind = raeting.PACK_KINDS[kind]
-        if kind == raeting.packKinds.json:
-            body = json.loads(back, object_pairs_hook=odict)
-            if not isinstance(body, Mapping):
-                emsg = "Message body not a mapping\n"
-                console.terse(emsg)
-                self.incStat("invalid_receive_body")
-                return  None
-        elif kind == raeting.packKinds.pack:
-            if not msgpack:
-                emsg = "Msgpack not installed\n"
-                console.terse(emsg)
-                self.incStat("invalid_receive_serialization")
-                return None
-            body = msgpack.loads(back, object_pairs_hook=odict)
-            if not isinstance(body, Mapping):
-                emsg = "Message body not a mapping\n"
-                console.terse(emsg)
-                self.incStat("invalid_receive_body")
-                return None
-
-        return body
-
-
-    def packUxdTx(self, body=None, name=None, kind=None):
-        '''
-        Pack serialize message body data
-        '''
-        if kind is None:
-            kind = self.Pk
-
-        packed = ""
-        if kind not in [raeting.packKinds.json, raeting.packKinds.pack]:
-            emsg = "Invalid message pack kind '{0}'\n".format(kind)
-            console.terse(emsg)
-            self.incStat("invalid_transmit_serialization")
-            return ""
-
-        if kind == raeting.packKinds.json:
-            head = 'RAET\njson\n\n'
-            packed = "".join([head, json.dumps(body, separators=(',', ':'))])
-
-        elif kind == raeting.packKinds.pack:
-            if not msgpack:
-                emsg = "Msgpack not installed\n"
-                console.terse(emsg)
-                self.incStat("invalid_transmit_serialization")
-                return ""
-            head = 'RAET\npack\n\n'
-            packed = "".join([head, msgpack.dumps(body)])
-
-        if len(packed) > raeting.UXD_MAX_PACKET_SIZE: #raeting.MAX_MESSAGE_SIZE
-            emsg = "Message length of {0}, exceeds max of {1}\n".format(
-                     len(packed), raeting.UXD_MAX_PACKET_SIZE)
-            console.terse(emsg)
-            self.incStat("invalid_transmit_size")
-
-        return packed
