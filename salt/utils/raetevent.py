@@ -42,7 +42,7 @@ class SaltEvent(object):
                 lanename=self.node,
                 dirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
-        self.router_yard = yarding.Yard(
+        self.router_yard = yarding.RemoteYard(
                 prefix=self.node,
                 yid=0,
                 dirpath=self.sock_dir)

@@ -56,7 +56,7 @@ class RAETChannel(Channel):
                 yid=salt.utils.gen_jid(),
                 dirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
-        self.router_yard = yarding.Yard(
+        self.router_yard = yarding.RemoteYard(
                 yid=0,
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
