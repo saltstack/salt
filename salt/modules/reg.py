@@ -28,6 +28,9 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'reg'
+
 
 class Registry(object):
     '''
@@ -58,12 +61,8 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
-        if HAS_WINDOWS_MODULES:
-            return 'reg'
-            # TODO: This needs to be reworked after the module dependency
-        # docstring was changed to :depends
-        log.warn(salt.utils.required_modules_error(__file__, __doc__))
+    if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
+        return __virtualname__
     return False
 
 
