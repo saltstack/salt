@@ -56,7 +56,7 @@ class LocalClient(salt.client.LocalClient):
                 lanename='master',
                 dirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
-        router_yard = yarding.Yard(
+        router_yard = yarding.RemoteYard(
                 prefix='master',
                 yid=0,
                 dirpath=self.opts['sock_dir'])

@@ -17,7 +17,7 @@ def fudal():
     '''
     lord_stack = stacking.StackUxd(name='lord', lanename='execute', yid=0, dirpath='/tmp')
     serf_stack = stacking.StackUxd(name='serf', lanename='execute', yid=1, dirpath='/tmp')
-    lord_yard = yarding.Yard(yid=0, prefix='execute', dirpath='/tmp')
+    lord_yard = yarding.RemoteYard(yid=0, prefix='execute', dirpath='/tmp')
     #serf_yard = yarding.Yard(name=serf_stack.yard.name, prefix='execute')
     serf_stack.addRemoteYard(lord_yard)
     #print 'stack: {0}\nyid: {1}\nname: {2}\nha: {3}\ndirpath: {4}'.format(lord_stack.yard.stack, lord_stack.yard.yid, lord_stack.yard.name, lord_stack.yard.ha, lord_stack.yard.dirpath)
@@ -45,7 +45,7 @@ def lord(serfs=5):
     lord_stack = stacking.StackUxd(name='lord', lanename='execute', yid=lord_yid, dirpath=dirpath)
     lord_stack.serviceAll()
     for serf_id in range(1, serfs + 1):
-        serf_yard = yarding.Yard(yid=serf_id, prefix='execute', dirpath=dirpath)
+        serf_yard = yarding.RemoteYard(yid=serf_id, prefix='execute', dirpath=dirpath)
         lord_stack.addRemoteYard(serf_yard)
         proc = multiprocessing.Process(target=serf, args=(lord_stack.yard.name, lord_yid, serf_id, dirpath))
         proc.start()
@@ -75,7 +75,7 @@ def serf(lord_name, lord_yid, id_, dirpath):
             lanename='execute',
             yid=id_,
             dirpath=dirpath)
-    lord_yard = yarding.Yard(yid=lord_yid, prefix='execute', dirpath=dirpath)
+    lord_yard = yarding.RemoteYard(yid=lord_yid, prefix='execute', dirpath=dirpath)
     serf_stack.addRemoteYard(lord_yard)
     src = (ESTATE, serf_stack.yard.name, None)
     dst = (ESTATE, lord_name, None)
