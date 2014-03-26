@@ -51,7 +51,7 @@ class Estate(object):
             host = '127.0.0.1'
         else:
             host = self.host
-        self.fqdn = salt.utils.network.get_fqhostname()
+        self.fqdn = socket.getfqdn(host)
 
     @property
     def ha(self):
