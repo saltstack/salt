@@ -19,6 +19,11 @@ Using a WSGI-compliant web server
 This module may be deplayed on any WSGI-compliant server such as Apache with
 mod_wsgi or Nginx with FastCGI, to name just two (there are many).
 
+Note, external WSGI servers handle URLs, paths, and SSL certs directly. The
+``rest_cherrypy`` configuration options are ignored and the ``salt-api`` daemon
+does not need to be running at all. Remember Salt authentication credentials
+are sent in the clear unless SSL is being enforced!
+
 An example Apache virtual host configuration::
 
     <VirtualHost *:80>
