@@ -28,7 +28,7 @@ def __virtual__():
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
         return False
-    return __virtualname__
+    return True
 
 
 def _list_mounts():
