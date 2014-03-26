@@ -1462,6 +1462,35 @@ def append(path, *args):
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
 
+def prepend(path, *args):
+    '''
+    .. versionadded:: Helium
+
+    Prepend text to the beginning of a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.prepend /etc/motd \\
+                "With all thine offerings thou shalt offer salt." \\
+                "Salt is what makes things taste bad when it isn't in them."
+    '''
+    try:
+        contents = salt.utils.fopen(path).readlines()
+    except IOError:
+        contents = []
+
+    prepend = []
+    for line in args:
+        prepend.append("{0}\n".format(line))
+
+    with salt.utils.fopen(path, "w") as ofile:
+        contents = prepend + contents
+        ofile.write(''.join(contents))
+    return 'Prepended {0} lines to "{1}"'.format(len(args), path)
+
+
 def touch(name, atime=None, mtime=None):
     '''
     .. versionadded:: 0.9.5
