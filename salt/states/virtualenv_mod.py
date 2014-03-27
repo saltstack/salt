@@ -43,7 +43,8 @@ def managed(name,
             extra_index_url=None,
             pre_releases=False,
             no_deps=False,
-            pip_exists_action=None):
+            pip_exists_action=None,
+            proxy=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -61,6 +62,8 @@ def managed(name,
     pip_exists_action: None
         Default action of pip when a path already exists: (s)witch, (i)gnore,
         (w)wipe, (b)ackup
+    proxy: None
+        Proxy address which is passed to "pip install"
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -208,6 +211,7 @@ def managed(name,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
             no_deps=no_deps,
+            proxy=proxy,
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
