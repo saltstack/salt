@@ -503,7 +503,7 @@ def is_mounted(name):
 
         salt '*' mount.is_mounted /mnt/share
     '''
-    active_= active()
+    active_ = active()
     if name in active_:
         return True
     else:
