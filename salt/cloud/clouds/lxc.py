@@ -404,6 +404,7 @@ def create(vm_, call=None):
     if backing in ['dir', 'overlayfs']:
         fstype = None
         size = None
+    if backing in ['dir']:
         snapshot = False
     for k in ['password',
               'ssh_username']:
