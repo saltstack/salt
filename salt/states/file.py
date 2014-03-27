@@ -1713,7 +1713,7 @@ def recurse(name,
         ret['result'] = False
         ret['comment'] = (
             'The directory {0!r} does not exist on the salt fileserver '
-            'in environment {1!r}'.format(source, __env__)
+            'in saltenv {1!r}'.format(source, __env__)
         )
         return ret
 
@@ -2644,7 +2644,7 @@ def patch(name,
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
     if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from environment {1!r}'
+        ret['comment'] = ('Unable to cache {0} from saltenv {1!r}'
                           .format(source, __env__))
         return ret
 
