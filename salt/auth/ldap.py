@@ -200,11 +200,11 @@ def auth(username, password):
 
 
 def groups(username, *args, **kwargs):
-    groups = []
+    group_list = []
     bind = _bind(username, kwargs['password'])
     search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')), ldap.SCOPE_SUBTREE, '(&(memberUid={0})(objectClass=posixGroup))'.format(username), ['memberUid', 'cn'])
     for dn, entry in search_results:
         if entry['memberUid'][0] == username:
-            groups.append(entry['cn'][0])
-    log.debug('User {0} is a member of groups: {1}'.format(username, groups))
-    return groups
+            group_list.append(entry['cn'][0])
+    log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+    return group_list
