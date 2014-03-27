@@ -648,10 +648,12 @@ class AdaptedConfigurationTestCaseMixIn(object):
             # Running as root, the running user does not need to be updated
             return integration_config_dir
 
-        for fname in os.listdir(integration_config_dir):
-            if fname.startswith(('.', '_')):
-                continue
-            self.get_config_file_path(fname)
+        for triplet in os.walk(integration_config_dir):
+            partial = triplet[0].replace(integration_config_dir, "")[1:]
+            for fname in triplet[2]:
+                if fname.startswith(('.', '_')):
+                    continue
+                self.get_config_file_path(os.path.join(partial, fname))
         return TMP_CONF_DIR
 
     def get_config_file_path(self, filename):
@@ -662,10 +664,11 @@ class AdaptedConfigurationTestCaseMixIn(object):
             # Running as root, the running user does not need to be updated
             return integration_config_file
 
-        if not os.path.isdir(TMP_CONF_DIR):
-            os.makedirs(TMP_CONF_DIR)
-
         updated_config_path = os.path.join(TMP_CONF_DIR, filename)
+        partial = os.path.dirname(updated_config_path)
+        if not os.path.isdir(partial):
+            os.makedirs(partial)
+
         if not os.path.isfile(updated_config_path):
             self.__update_config(integration_config_file, updated_config_path)
         return updated_config_path
