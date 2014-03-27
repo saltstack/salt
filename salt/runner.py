@@ -258,7 +258,7 @@ class Runner(RunnerClient):
         else:
             try:
                 return super(Runner, self).cmd(
-                        self.opts['fun'], self.opts['arg'], self.opts)
+                        self.opts['fun'], self.opts['arg'])
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 print(ret)
