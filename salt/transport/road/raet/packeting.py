@@ -727,7 +727,8 @@ class TxTray(Tray):
         '''
         super(TxTray, self).__init__(**kwa)
         self.packets = []
-        self.current = 0 #current packet to send
+        self.current = 0 # next  packet to send
+        self.last = 0 # last packet sent
 
     def pack(self, data=None, body=None):
         '''
@@ -797,13 +798,18 @@ class RxTray(Tray):
         super(RxTray, self).__init__(**kwa)
         self.segments = segments if segments is not None else []
         self.complete = False
+        self.last = 0 # last packet number received
+        self.prev = 0 # previous packet number received
 
     def parse(self, packet):
         '''
         Process a given packet assumes parseOuter done already
         '''
         sc = packet.data['sc']
-        console.verbose("segment count = {0} tid={1}\n".format(sc, packet.data['ti']))
+        self.prev = self.last
+        self.last = sn = packet.data['sn']
+        console.verbose("segment count={0} number={1} tid={2}\n".format(
+            sc, sn, packet.data['ti']))
 
         if sc == 1:
             self.data.update(packet.data)
@@ -812,7 +818,6 @@ class RxTray(Tray):
             self.complete = True
             return self.body
 
-
         if not self.segments: #get data from first packet received
             self.data.update(packet.data)
             self.segments = [None] * sc
@@ -820,13 +825,26 @@ class RxTray(Tray):
         hl = packet.data['hl']
         fl = packet.data['fl']
         segment = packet.packed[hl:packet.size - fl]
-        sn = packet.data['sn']
 
         self.segments[sn] = segment
         if None in self.segments: #don't have all segments yet
             return None
         self.body = self.desegmentize()
         return self.body
+
+    def missing(self, begin=None, end=None):
+        '''
+        return list of missing packet numbers between begina and end
+        '''
+        if begin is None:
+            begin = 0
+        if end is None:
+            end = len(self.segments)
+        missing = []
+        for i, segment in enumerate(self.segments[begin:end]):
+            if segment is None:
+                missing.append(i)
+        return missing
 
     def desegmentize(self):
         '''

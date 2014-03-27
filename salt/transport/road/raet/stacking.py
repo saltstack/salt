@@ -47,6 +47,8 @@ class StackUdp(object):
     Bk = raeting.bodyKinds.json # stack default
     Fk = raeting.footKinds.nacl # stack default
     Ck = raeting.coatKinds.nacl # stack default
+    Bf = False # stack default for bcstflag
+    Wf = False # stack default for waitflag
 
     def __init__(self,
                  name='',
@@ -634,7 +636,11 @@ class StackUdp(object):
         Initiate message transaction
         '''
         data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
-        messenger = transacting.Messenger(stack=self, txData=data, reid=deid)
+        messenger = transacting.Messenger(stack=self,
+                                          txData=data,
+                                          reid=deid,
+                                          bcst=self.Bf,
+                                          wait=self.Wf)
         messenger.message(body)
 
     def replyMessage(self, packet):
@@ -644,6 +650,8 @@ class StackUdp(object):
         data = odict(hk=self.Hk, bk=self.Bk, fk=self.Fk, ck=self.Ck)
         messengent = transacting.Messengent(stack=self,
                                         reid=packet.data['se'],
+                                        bcst=packet.data['bf'],
+                                        wait=packet.data['wf'],
                                         sid=packet.data['si'],
                                         tid=packet.data['ti'],
                                         txData=data,

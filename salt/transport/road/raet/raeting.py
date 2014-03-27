@@ -53,8 +53,8 @@ header data =
     dt: Datetime Stamp  (Datetime) Default 0
     oi: Order index (OrdrIndx)   Default 0
 
-    pf: Pending Ack Flag    (PendFlag) Default 0
-        Next segment or ordered packet is pended waiting for ack to this packet
+    wf: Waiting Ack Flag    (WaitFlag) Default 0
+        Next segment or ordered packet is waiting for ack to this packet
     ml: Message Length (MsgLen)  Default 0
         Length of message only (unsegmented)
     sn: Segment Number (SgmtNum) Default 0
@@ -70,7 +70,7 @@ header data =
     fl: Footer length (FootLen) Default 0
 
     fg: flags  packed (Flags) Default '00' hs
-         2 char Hex string with bits (0, 0, af, sf, 0, pf, bf, cf)
+         2 char Hex string with bits (0, 0, af, sf, 0, wf, bf, cf)
          Zeros are TBD flags
 }
 
@@ -166,9 +166,9 @@ TRNS_KIND_NAMES = odict((v, k) for k, v in TRNS_KINDS.iteritems())  # inverse ma
 TrnsKind = namedtuple('TrnsKind', TRNS_KINDS.keys())
 trnsKinds = TrnsKind(**TRNS_KINDS)
 
-PCKT_KINDS = odict([('message', 0), ('ack', 1), ('nack', 2),
-                    ('request', 3), ('response', 4),
-                    ('hello', 5), ('cookie', 6), ('initiate', 7),
+PCKT_KINDS = odict([('message', 0), ('ack', 1), ('nack', 2), ('resend', 3),
+                    ('request', 4), ('response', 5),
+                    ('hello', 6), ('cookie', 7), ('initiate', 8),
                     ('unknown', 255)])
 PCKT_KIND_NAMES = odict((v, k) for k, v in PCKT_KINDS.iteritems())  # inverse map
 PcktKind = namedtuple('PcktKind', PCKT_KINDS.keys())
@@ -211,7 +211,7 @@ PACKET_DEFAULTS = odict([
                             ('tk', 0),
                             ('dt', 0),
                             ('oi', 0),
-                            ('pf', False),
+                            ('wf', False),
                             ('sn', 0),
                             ('sc', 1),
                             ('ml', 0),
@@ -227,16 +227,16 @@ PACKET_DEFAULTS = odict([
 PACKET_FIELDS = ['sh', 'sp', 'dh', 'dp',
                  'ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                  'se', 'de', 'cf', 'bf', 'si', 'ti', 'tk',
-                 'dt', 'oi', 'pf', 'sn', 'sc', 'ml', 'sf', 'af',
+                 'dt', 'oi', 'wf', 'sn', 'sc', 'ml', 'sf', 'af',
                  'bk', 'ck', 'fk', 'fl', 'fg']
 
 HEAD_FIELDS = ['ri', 'vn', 'pk', 'pl', 'hk', 'hl',
                'se', 'de', 'cf', 'bf', 'si', 'ti', 'tk',
-               'dt', 'oi', 'pf', 'sn', 'sc', 'ml', 'sf', 'af',
+               'dt', 'oi', 'wf', 'sn', 'sc', 'ml', 'sf', 'af',
                'bk', 'bl', 'ck', 'cl', 'fk', 'fl', 'fg']
 
-PACKET_FLAGS = ['af', 'sf', 'pf', 'bf', 'cf']
-PACKET_FLAG_FIELDS = ['', '', 'af', 'sf', '', 'pf', 'bf', 'cf']
+PACKET_FLAGS = ['af', 'sf', 'wf', 'bf', 'cf']
+PACKET_FLAG_FIELDS = ['', '', 'af', 'sf', '', 'wf', 'bf', 'cf']
 
 FIELD_FORMATS = odict([
                     ('ri', '.4s'),
@@ -254,7 +254,7 @@ FIELD_FORMATS = odict([
                     ('tk', 'x'),
                     ('dt', 'f'),
                     ('oi', 'x'),
-                    ('pf', ''),
+                    ('wf', ''),
                     ('sn', 'x'),
                     ('sc', 'x'),
                     ('ml', 'x'),

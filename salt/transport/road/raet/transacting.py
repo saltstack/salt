@@ -35,7 +35,7 @@ class Transaction(object):
     Timeout =  5.0 # default timeout
 
     def __init__(self, stack=None, kind=None, timeout=None,
-                 reid=None, rmt=False, bcst=False, sid=None, tid=None,
+                 reid=None, rmt=False, bcst=False, wait=False, sid=None, tid=None,
                  txData=None, txPacket=None, rxPacket=None):
         '''
         Setup Transaction instance
@@ -54,6 +54,7 @@ class Transaction(object):
 
         self.rmt = rmt
         self.bcst = bcst
+        self.wait = wait
 
         self.sid = sid
         self.tid = tid
@@ -192,6 +193,7 @@ class Staler(Initiator):
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
+                            wf=self.wait,
                             si=self.sid,
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
@@ -306,9 +308,9 @@ class Joiner(Initiator):
         # need keep sending join until accepted or timed out
         if self.redoTimer.expired:
             duration = min(
-                        max(self.redoTimeoutMin,
-                              self.redoTimer.duration) * 2.0,
-                        self.redoTimeoutMin)
+                         max(self.redoTimeoutMin,
+                              self.redoTimer.duration * 2.0),
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
             if (self.txPacket and
                     self.txPacket.data['pk'] == raeting.pcktKinds.request):
@@ -331,6 +333,7 @@ class Joiner(Initiator):
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
+                            wf=self.wait,
                             si=self.sid,
                             ti=self.tid,
                             ck=raeting.coatKinds.nada,
@@ -585,9 +588,9 @@ class Joinent(Correspondent):
         # need to perform the check for accepted status and then send accept
         if self.redoTimer.expired:
             duration = min(
-                        max(self.redoTimeoutMin,
-                              self.redoTimer.duration) * 2.0,
-                        self.redoTimeoutMax)
+                         max(self.redoTimeoutMin,
+                              self.redoTimer.duration * 2.0),
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
 
             if (self.txPacket and
@@ -620,6 +623,7 @@ class Joinent(Correspondent):
                     tk=self.kind,
                     cf=self.rmt,
                     bf=self.bcst,
+                    wf=self.wait,
                     si=self.sid,
                     ti=self.tid,
                     ck=raeting.coatKinds.nada,
@@ -750,7 +754,7 @@ class Joinent(Correspondent):
         elif status == raeting.acceptances.accepted:
             duration = min(
                          max(self.redoTimeoutMin,
-                            self.redoTimer.duration) * 2.0,
+                              self.redoTimer.duration * 2.0),
                          self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
             self.accept()
@@ -951,8 +955,8 @@ class Allower(Initiator):
         if self.redoTimer.expired:
             duration = min(
                          max(self.redoTimeoutMin,
-                              self.redoTimer.duration) * 2.0,
-                         self.redoTimeoutMin)
+                              self.redoTimer.duration * 2.0),
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
             if self.txPacket:
                 if self.txPacket.data['pk'] == raeting.pcktKinds.hello:
@@ -984,6 +988,7 @@ class Allower(Initiator):
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
+                            wf=self.wait,
                             si=self.sid,
                             ti=self.tid, )
 
@@ -1243,9 +1248,9 @@ class Allowent(Correspondent):
         # need to perform the check for accepted status and then send accept
         if self.redoTimer.expired:
             duration = min(
-                        max(self.redoTimeoutMin,
-                              self.redoTimer.duration) * 2.0,
-                        self.redoTimeoutMax)
+                         max(self.redoTimeoutMin,
+                              self.redoTimer.duration * 2.0),
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
 
             if self.txPacket:
@@ -1273,6 +1278,7 @@ class Allowent(Correspondent):
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
+                            wf=self.wait,
                             si=self.sid,
                             ti=self.tid, )
 
@@ -1559,9 +1565,11 @@ class Messenger(Initiator):
 
         if packet.data['tk'] == raeting.trnsKinds.message:
             if packet.data['pk'] == raeting.pcktKinds.ack:
-                self.again()
+                self.another()
             elif packet.data['pk'] == raeting.pcktKinds.nack: # rejected
                 self.rejected()
+            elif packet.data['pk'] == raeting.pcktKinds.resend: # missed resend
+                self.resend()
 
     def process(self):
         '''
@@ -1576,14 +1584,14 @@ class Messenger(Initiator):
         if self.redoTimer.expired:
             duration = min(
                          max(self.redoTimeoutMin,
-                              self.redoTimer.duration) * 2.0,
-                         self.redoTimeoutMin)
+                              self.redoTimer.duration * 2.0),
+                         self.redoTimeoutMax)
             self.redoTimer.restart(duration=duration)
             if self.txPacket:
                 if self.txPacket.data['pk'] == raeting.pcktKinds.message:
                     self.transmit(self.txPacket) # redo
-                    console.concise("Messenger Redo Segment {0} at {1}\n".format(
-                        self.tray.current, self.stack.store.stamp))
+                    console.concise("Messenger {0} Redo Segment {1} at {2}\n".format(
+                        self.stack.name, self.tray.last, self.stack.store.stamp))
                     self.stack.incStat('redo_segment')
 
     def prep(self):
@@ -1600,6 +1608,7 @@ class Messenger(Initiator):
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
+                            wf=self.wait,
                             si=self.sid,
                             ti=self.tid,)
 
@@ -1626,28 +1635,73 @@ class Messenger(Initiator):
         if self.tray.current >= len(self.tray.packets):
             return
 
-        packet = self.tray.packets[self.tray.current]
-        self.transmit(packet)
-        self.stack.incStat("message_segment_tx")
-        console.concise("Messenger Do Message Segment {0} at {1}\n".format(
-                self.tray.current, self.stack.store.stamp))
-        self.tray.current += 1
+        burst = 1 if self.wait else len(self.tray.packets) - self.tray.current
 
-    def again(self):
+        for packet in self.tray.packets[self.tray.current:self.tray.current + burst]:
+            self.transmit(packet)
+            self.tray.last = self.tray.current
+            self.stack.incStat("message_segment_tx")
+            console.concise("Messenger {0} Do Message Segment {1} at {2}\n".format(
+                    self.stack.name, self.tray.last, self.stack.store.stamp))
+            self.tray.current += 1
+
+    def another(self):
         '''
-        Process ack packet
+        Process ack packet send next one
         '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
         if self.tray.current >= len(self.tray.packets):
             self.complete()
         else:
             self.message()
+
+    def resend(self):
+        '''
+        Process resend packet and send misseds list of missing packets
+        '''
+        if not self.stack.parseInner(self.rxPacket):
+            return
+        data = self.rxPacket.data
+        body = self.rxPacket.body.data
+
+        misseds = body.get('misseds')
+        if misseds:
+
+            if self.reid not in self.stack.estates:
+                emsg = "Invalid remote destination estate id '{0}'\n".format(self.reid)
+                console.terse(emsg)
+                self.stack.incStat('invalid_remote_eid')
+                self.remove()
+                return
+
+            if not self.tray.packets:
+                emsg = "Invalid resend request '{0}'\n".format(misseds)
+                console.terse(emsg)
+                self.stack.incStat('invalid_resend')
+                return
+
+            for m in misseds:
+                try:
+                    packet = self.tray.packets[m]
+                except IndexError as ex:
+                    #console.terse(str(ex) + '\n')
+                    console.terse("Invalid misseds segment number {0}\n".format(m))
+                    self.stack.incStat("invalid_misseds")
+                    return
+
+                self.transmit(packet)
+                self.stack.incStat("message_segment_tx")
+                console.concise("Messenger {0} Resend Message Segment {1} at {2}\n".format(
+                        self.stack.name, m, self.stack.store.stamp))
 
     def complete(self):
         '''
         Complete transaction and remove
         '''
         self.remove()
-        console.concise("Messenger Done at {0}\n".format(self.stack.store.stamp))
+        console.concise("Messenger {0} Done at {1}\n".format(
+                self.stack.name, self.stack.store.stamp))
         self.stack.incStat("message_initiate_complete")
 
     def rejected(self):
@@ -1658,7 +1712,8 @@ class Messenger(Initiator):
         if not self.stack.parseInner(self.rxPacket):
             return
         self.remove()
-        console.concise("Messenger rejected at {0}\n".format(self.stack.store.stamp))
+        console.concise("Messenger {0} rejected at {1}\n".format(
+                self.stack.name, self.stack.store.stamp))
         self.stack.incStat(self.statKey())
 
 class Messengent(Correspondent):
@@ -1691,6 +1746,7 @@ class Messengent(Correspondent):
             console.terse(emsg)
             self.stack.incStat('unallowed_message_attempt')
             return
+        # .bcast .wait set from packet by stack when created transaction
         #Current .sid was set by stack from rxPacket.data sid so it is the new rsid
         if not remote.validRsid(self.sid):
             emsg = "Stale sid '{0}' in packet\n".format(self.sid)
@@ -1730,23 +1786,20 @@ class Messengent(Correspondent):
         '''
         if self.timeout > 0.0 and self.timer.expired:
             self.nack()
-            console.concise("Messengent timed out at {0}\n".format(self.stack.store.stamp))
+            console.concise("Messengent {0} timed out at {1}\n".format(
+                    self.stack.name, self.stack.store.stamp))
             return
 
-        # need to include current segment in ack or resend
-        #if self.redoTimer.expired:
-            #duration = min(
-                        #max(self.redoTimeoutMin,
-                              #self.redoTimer.duration) * 2.0,
-                        #self.redoTimeoutMax)
-            #self.redoTimer.restart(duration=duration)
+        if self.redoTimer.expired:
+            duration = min(
+                         max(self.redoTimeoutMin,
+                              self.redoTimer.duration * 2.0),
+                         self.redoTimeoutMax)
+            self.redoTimer.restart(duration=duration)
 
-            #if self.txPacket:
-                #if self.txPacket.data['pk'] == raeting.pcktKinds.ack:
-                    #self.transmit(self.txPacket) #redo
-                    #console.concise("Messengent Redo Ack at {0}\n".format(self.stack.store.stamp))
-                    #self.stack.incStat('redo_segment_ack')
-
+            misseds = self.tray.missing()
+            if misseds:
+                self.resend(misseds)
 
     def prep(self):
         '''
@@ -1762,6 +1815,7 @@ class Messengent(Correspondent):
                             tk=self.kind,
                             cf=self.rmt,
                             bf=self.bcst,
+                            wf=self.wait,
                             si=self.sid,
                             ti=self.tid,)
 
@@ -1777,13 +1831,20 @@ class Messengent(Correspondent):
             self.remove()
             return
 
-        self.ackMessage()
-
         if self.tray.complete:
+            self.ackMessage()
             console.verbose("{0} received message body\n{1}\n".format(
                     self.stack.name, body))
             self.stack.rxMsgs.append(body)
             self.complete()
+
+        elif self.wait:
+            self.ackMessage()
+
+        else:
+            misseds = self.tray.missing(begin=self.tray.prev, end=self.tray.last)
+            if misseds:
+                self.resend(misseds)
 
     def ackMessage(self):
         '''
@@ -1810,15 +1871,52 @@ class Messengent(Correspondent):
             return
         self.transmit(packet)
         self.stack.incStat("message_segment_rx")
-        console.concise("Messengent Do Ack Segment at {0}\n".format(
-                self.stack.store.stamp))
+        console.concise("Messengent {0} Do Ack Segment {1} at {2}\n".format(
+                self.stack.name, self.tray.last, self.stack.store.stamp))
+
+    def resend(self, misseds):
+        '''
+        Send resend request(s) for missing packets
+        '''
+        if self.reid not in self.stack.estates:
+            msg = "Invalid remote destination estate id '{0}'\n".format(self.reid)
+            console.terse(emsg)
+            self.stack.incStat('invalid_remote_eid')
+            self.remove()
+            return
+
+        while misseds:
+            if len(misseds) > 64:
+                remainders = misseds[64:] # only do at most 64 at a time
+                misseds = misseds[:64]
+            else:
+                remainders = []
+
+            body = odict(misseds=misseds)
+            packet = packeting.TxPacket(stack=self.stack,
+                                        kind=raeting.pcktKinds.resend,
+                                        embody=body,
+                                        data=self.txData)
+            try:
+                packet.pack()
+            except raeting.PacketError as ex:
+                console.terse(str(ex) + '\n')
+                self.stack.incStat("packing_error")
+                self.remove()
+                return
+            self.transmit(packet)
+            self.stack.incStat("message_resend")
+            console.concise("Messengent {0} Do Resend Segments {1} at {2}\n".format(
+                    self.stack.name, misseds, self.stack.store.stamp))
+            misseds = remainders
 
     def complete(self):
         '''
         Complete transaction and remove
         '''
         self.remove()
-        console.concise("Messengent Complete at {0}\n".format(self.stack.store.stamp))
+        console.concise("Messengent {0} Complete at {1}\n".format(
+                self.stack.name, self.stack.store.stamp))
         self.stack.incStat("messagent_correspond_complete")
 
     def rejected(self):
@@ -1829,5 +1927,6 @@ class Messengent(Correspondent):
         if not self.stack.parseInner(self.rxPacket):
             return
         self.remove()
-        console.concise("Messengent rejected at {0}\n".format(self.stack.store.stamp))
+        console.concise("Messengent {0} rejected at {1}\n".format(
+                self.stack.name, self.stack.store.stamp))
         self.stack.incStat(self.statKey())
