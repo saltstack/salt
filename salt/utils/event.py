@@ -232,22 +232,29 @@ class SaltEvent(object):
         data = serial.loads(mdata)
         return mtag, data
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', full=False, use_pending=False):
         '''
         Get a single publication.
         IF no publication available THEN block for upto wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
+
+        use_pending
+            Defines whether to keep all unconsumed events in a pending_events
+            list, or to discard events that don't match the requested tag.  If
+            set to True, MAY CAUSE MEMORY LEAKS.
         '''
         self.subscribe()
 
-        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
-            self.pending_events.remove(evt)
-            if full:
-                return evt
-            else:
-                return evt['data']
+        if use_pending:
+            for evt in [x for x in self.pending_events
+                        if x['tag'].startswith(tag)]:
+                self.pending_events.remove(evt)
+                if full:
+                    return evt
+                else:
+                    return evt['data']
 
         start = time.time()
         timeout_at = start + wait
@@ -263,7 +270,8 @@ class SaltEvent(object):
                     'tag': mtag}
 
             if not mtag.startswith(tag):  # tag not match
-                self.pending_events.append(ret)
+                if use_pending:
+                    self.pending_events.append(ret)
                 wait = timeout_at - time.time()
                 continue
 
