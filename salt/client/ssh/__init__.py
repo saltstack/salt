@@ -89,7 +89,8 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
          for md5_candidate in \
             md5sum            \
             md5               \
-            csum              ;
+            csum              \
+            digest            ;
          do
             command -v $md5_candidate >/dev/null
             if [ $? -eq 0 ]
@@ -99,7 +100,8 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
             fi
          done
       else
-         if [ $(command -v "{{2}}" >/dev/null) ]
+         command -v "{{2}}" >/dev/null
+         if [ $? -eq 0 ]
          then
             SUMCHECK="{{2}}"
          fi
@@ -124,11 +126,15 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
       elif [ "$SUMCHECK" = "csum" ]
       then
          SUMCHECK="csum -h MD5"
+      # MD5 check for Solaris systems.
+      elif [ "$SUMCHECK" = "digest" ]
+      then
+         SUMCHECK="digest -a md5"
       fi
 
       if [ -f "$SALT" ]
       then
-         if [ "$(cat /tmp/.salt/version)" != "{0}" ]
+         if [ "`cat /tmp/.salt/version`" != "{0}" ]
          then
             {{0}} rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
             if [ $? -ne 0 ]; then
@@ -139,7 +145,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
             exit 1
          fi
       else
-         PY_TOO_OLD="$($PYTHON -c "import sys; print sys.hexversion < 0x02060000")"
+         PY_TOO_OLD=`$PYTHON -c "import sys; print sys.hexversion < 0x02060000"`
          if [ "$PY_TOO_OLD" = "True" ];
          then
             echo "Python too old" >&2
@@ -147,7 +153,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             if [ "$($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ )" = "{{3}}" ]
+             if [ "`$SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ `" = "{{3}}" ]
              then
                  cd /tmp/.salt/ && gunzip -c salt-thin.tgz | {{0}} tar opxvf -
              else
