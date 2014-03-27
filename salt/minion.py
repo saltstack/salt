@@ -189,7 +189,7 @@ def load_args_and_kwargs(func, args, data=None):
                     # **kwargs not in argspec and parsed argument name not in
                     # list of positional arguments. This keyword argument is
                     # invalid.
-                    invalid_kwargs.append(arg)
+                    invalid_kwargs.append('{0}'.format(arg))
                 continue
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
@@ -203,7 +203,7 @@ def load_args_and_kwargs(func, args, data=None):
                     # **kwargs not in argspec and parsed argument name not in
                     # list of positional arguments. This keyword argument is
                     # invalid.
-                    invalid_kwargs.append(arg)
+                    invalid_kwargs.append('{0}'.format(arg))
             continue
 
         else:
