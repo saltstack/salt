@@ -4,10 +4,12 @@ Tests to try out stacking. Potentially ephemeral
 
 '''
 import os
+import time
 
 # pylint: skip-file
 from ioflo.base.odicting import odict
 from ioflo.base.aiding import Timer
+from ioflo.base import storing
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
@@ -26,6 +28,8 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     minion eid of 2
     '''
     console.reinit(verbosity=console.Wordage.concise)
+
+    store = storing.Store(stamp=0.0)
 
     stacking.StackUdp.Bk = bk  #set class body kind for serialization
 
@@ -55,14 +59,15 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     stack0 = stacking.StackUdp(estate=estate,
                                auto=True,
                                main=True,
-                               dirpath=dirpathMaster)
+                               dirpath=dirpathMaster,
+                               store=store)
 
     estate = estating.LocalEstate(   eid=0,
                                      name=minionName,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=minionSignKeyHex,
                                      prikey=minionPriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate,  dirpath=dirpathMinion)
+    stack1 = stacking.StackUdp(estate=estate,  dirpath=dirpathMinion, store=store)
 
     print "\n********* Join Transaction **********"
     stack1.join()
@@ -219,7 +224,7 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     #segmented packets
     stuff = []
     for i in range(300):
-        stuff.append(str(i).rjust(4, " "))
+        stuff.append(str(i).rjust(10, " "))
     stuff = "".join(stuff)
 
     stack1.txMsgs.append((odict(house="Mama mia1", queue="big stuff", stuff=stuff), None))
@@ -235,6 +240,22 @@ def testStackUdp(bk=raeting.bodyKinds.json):
 
     stack0.serviceRxes()
     stack1.serviceRxes()
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    stack1.serviceRxes()
+    stack0.serviceRxes()
+
+    timer.restart()
+    while not timer.expired:
+        stack0.serviceUdp()
+        stack1.serviceUdp()
+
+    stack1.serviceRxes()
+    stack0.serviceRxes()
 
     timer.restart()
     while not timer.expired:
@@ -275,16 +296,18 @@ def testStackUdp(bk=raeting.bodyKinds.json):
     #segmented packets
     stuff = []
     for i in range(300):
-        stuff.append(str(i).rjust(4, " "))
+        stuff.append(str(i).rjust(10, " "))
     stuff = "".join(stuff)
 
     stack1.transmit(odict(house="Snake eyes", queue="near stuff", stuff=stuff))
     stack0.transmit(odict(house="Craps", queue="far stuff", stuff=stuff))
 
-    timer.restart(duration=2)
-    while not timer.expired:
+    #timer.restart(duration=3)
+    while  store.stamp < 5.0: #not timer.expired
         stack1.serviceAll()
         stack0.serviceAll()
+        store.advanceStamp(0.1)
+        time.sleep(0.1)
 
 
     print "{0} eid={1}".format(stack0.name, stack0.estate.eid)

@@ -257,7 +257,6 @@ class TxBook(Book):
         if body is not None:
             self.body = body
 
-        self.current = 0
         self.pages = []
         page = TxPage(  stack=self.stack,
                         data=self.body,
