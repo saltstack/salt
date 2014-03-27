@@ -350,3 +350,21 @@ def is_fuse_exec(cmd):
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path))
     return 'libfuse' in out
+
+def is_mounted(name):
+    '''
+    .. versionadded:: Helium
+
+    Check if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.is_mounted /mnt/share
+    '''
+    active_= active()
+    if name in active_:
+      return True
+    else:
+      return False
