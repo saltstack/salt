@@ -132,10 +132,13 @@ def up():  # pylint: disable=C0103
     return ret
 
 
-def present(show_ipv4=False):
+def present(subset=None, show_ipv4=False):
     '''
     Print a list of all minions that are up according to Salt's presence
     detection, no commands will be sent
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
@@ -148,7 +151,7 @@ def present(show_ipv4=False):
     '''
     ckminions = salt.utils.minions.CkMinions(__opts__)
 
-    minions = ckminions.connected_ids(show_ipv4=show_ipv4)
+    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
     salt.output.display_output(connected, '', __opts__)
