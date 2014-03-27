@@ -183,6 +183,7 @@ def latest(name,
             else:
 
                 if __opts__['test']:
+                    ret['changes'] = {'old': current_rev, 'new': new_rev}
                     return _neutral_test(
                         ret,
                         ('Repository {0} update is probably required (current '
