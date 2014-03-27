@@ -101,7 +101,7 @@ class RunnerClient(object):
         docs = dict(docs)
         return _strip_rst(docs)
 
-    def cmd(self, fun, arg, kwarg=None, pub_data=None):
+    def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
         Execute a runner function
 
