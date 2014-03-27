@@ -483,3 +483,21 @@ def swapoff(name):
             return False
         return True
     return None
+
+def is_mounted(name):
+    '''
+    .. versionadded:: Helium
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.is_mounted /mnt/share
+    '''
+    active_= active()
+    if name in active_:
+        return True
+    else:
+        return False
