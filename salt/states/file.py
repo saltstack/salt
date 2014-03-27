@@ -1413,6 +1413,8 @@ def directory(name,
                     ret['comment'] = 'user not specified, but configured as ' \
                                      'a target for recursive ownership ' \
                                      'management'
+            else:
+                user = None
             if 'group' in recurse:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
@@ -1426,6 +1428,8 @@ def directory(name,
                     ret['comment'] = 'group not specified, but configured ' \
                                      'as a target for recursive ownership ' \
                                      'management'
+            else:
+                group = None
 
             if 'mode' not in recurse:
                 file_mode = None
