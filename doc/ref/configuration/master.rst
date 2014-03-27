@@ -840,8 +840,8 @@ translated into salt environments.
 
     As of the upcoming **Helium** release (and right now in the development
     branch), it is possible to have per-repo versions of the
-    :conf_master:`gitfs_root` and :conf_master:`gitfs_mountpoint` parameters.
-    For example:
+    :conf_master:`gitfs_base`, :conf_master:`gitfs_root`, and
+    :conf_master:`gitfs_mountpoint` parameters. For example:
 
     .. code-block:: yaml
 
@@ -850,6 +850,7 @@ translated into salt environments.
           - https://foo.com/bar.git:
             - root: salt
             - mountpoint: salt://foo/bar/baz
+            - base: salt-base
           - https://foo.com/baz.git:
             - root: salt/states
 
@@ -941,6 +942,10 @@ available to the Salt fileserver. Can be used in conjunction with
 Default: ``master``
 
 Defines which branch/tag should be used as the ``base`` environment.
+
+.. versionchanged:: Helium
+    Can also be configured on a per-remote basis, see :conf_master:`here
+    <gitfs_remotes>` for more info.
 
 .. code-block:: yaml
 
