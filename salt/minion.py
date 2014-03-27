@@ -91,13 +91,16 @@ def resolve_dns(opts):
     check_dns = True
     if opts.get('file_client', 'remote') == 'local' and check_dns:
         check_dns = False
-
+    
     if check_dns is True:
         # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
-            ret['master_ip'] = \
-                    salt.utils.dns_check(opts['master'], True, opts['ipv6'])
+            ret['master_ip'] = salt.utils.dns_check(
+                opts['master'],
+                True,
+                opts['ipv6']
+            )
         except SaltClientError:
             if opts['retry_dns']:
                 while True:
@@ -125,7 +128,15 @@ def resolve_dns(opts):
             raise SaltSystemExit(code=42, msg=err)
     else:
         ret['master_ip'] = '127.0.0.1'
-
+    
+    if 'master_ip' in ret and 'master_ip' in opts:
+        if ret['master_ip'] != opts['master_ip']:
+            log.warning('Master ip address changed from {0} to {1}'.format(
+                                                        opts['master_ip'],
+                                                        ret['master_ip']
+                                                        )
+            )
+    
     ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
                                                    port=opts['master_port'])
     return ret
@@ -1173,12 +1184,9 @@ class Minion(MinionBase):
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
-
-            if self.opts.get('check_dns'):
-                log.info('Resolve master dns name.')
-                self.opts.update(resolve_dns(self.opts))
-
-            time.sleep(acceptance_wait_time)
+            if acceptance_wait_time:
+                log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
+                time.sleep(acceptance_wait_time)
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))

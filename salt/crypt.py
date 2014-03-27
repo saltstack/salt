@@ -28,6 +28,7 @@ import salt.utils
 import salt.payload
 import salt.utils.verify
 import salt.version
+import salt.minion
 from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError
 )
@@ -325,7 +326,7 @@ class Auth(object):
             salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
             aes, token = self.decrypt_aes(payload, False)
             return aes
-
+    
     def sign_in(self, timeout=60, safe=True):
         '''
         Send a sign in request to the master, sets the key information and
@@ -334,23 +335,7 @@ class Auth(object):
         '''
         auth = {}
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        try:
-            self.opts['master_ip'] = salt.utils.dns_check(
-                self.opts['master'],
-                True,
-                self.opts['ipv6']
-            )
-        except SaltClientError as e:
-            if safe:
-                log.warning('SaltClientError: {0}'.format(e))
-                return 'retry'
-            raise SaltClientError
-
-        if self.opts['master_ip'] not in self.opts['master_uri']:
-            self.opts['master_uri'] = (self.opts['master_uri'].replace(
-                self.opts['master_uri'].split(':')[1][2:],
-                self.opts['master_ip']))
-
+        
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
@@ -360,6 +345,7 @@ class Auth(object):
                 timeout=timeout
             )
         except SaltReqTimeoutError as e:
+            self.opts.update(salt.minion.resolve_dns(self.opts))
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
