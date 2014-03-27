@@ -151,6 +151,8 @@ def _salt(fun, *args, **kw):
         runner = _runner()
         rkwargs = kwargs.copy()
         rkwargs['timeout'] = timeout
+        rkwargs.setdefault('expr_form', 'list')
+        kwargs.setdefault('expr_form', 'list')
         jid = conn.cmd_async(tgt=target,
                              fun=fun,
                              arg=args,
