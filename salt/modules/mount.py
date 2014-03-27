@@ -64,6 +64,9 @@ def _active_mountinfo(ret):
 
 
 def _active_mounts(ret):
+    '''
+    List active mounts on Linux systems
+    '''
     _list = _list_mounts()
     filename = '/proc/self/mounts'
     if not os.access(filename, os.R_OK):
@@ -81,6 +84,9 @@ def _active_mounts(ret):
 
 
 def _active_mounts_freebsd(ret):
+    '''
+    List active mounts on FreeBSD systems
+    '''
     for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[1]] = {'device': comps[0],
@@ -483,6 +489,7 @@ def swapoff(name):
             return False
         return True
     return None
+
 
 def is_mounted(name):
     '''
