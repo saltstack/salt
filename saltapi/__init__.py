@@ -68,6 +68,8 @@ class APIClient(object):
         '''
         Run :ref:`execution modules <all-salt.modules>` against batches of minions
 
+        .. versionadded:: 0.8.4
+
         Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
 
         :return: Returns the result from the exeuction module for each batch of
