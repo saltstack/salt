@@ -834,17 +834,17 @@ class RxTray(Tray):
 
     def missing(self, begin=None, end=None):
         '''
-        return list of missing packet numbers between begina and end
+        return list of missing packet numbers between begin and end
         '''
         if begin is None:
             begin = 0
         if end is None:
             end = len(self.segments)
-        missing = []
+        misseds = []
         for i, segment in enumerate(self.segments[begin:end]):
             if segment is None:
-                missing.append(i)
-        return missing
+                misseds.append(i)
+        return misseds
 
     def desegmentize(self):
         '''

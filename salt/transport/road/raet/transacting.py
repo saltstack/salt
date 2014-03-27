@@ -1831,6 +1831,8 @@ class Messengent(Correspondent):
             self.remove()
             return
 
+        self.stack.incStat("message_segment_rx")
+
         if self.tray.complete:
             self.ackMessage()
             console.verbose("{0} received message body\n{1}\n".format(
@@ -1870,7 +1872,7 @@ class Messengent(Correspondent):
             self.remove()
             return
         self.transmit(packet)
-        self.stack.incStat("message_segment_rx")
+        self.stack.incStat("message_segment_ack")
         console.concise("Messengent {0} Do Ack Segment {1} at {2}\n".format(
                 self.stack.name, self.tray.last, self.stack.store.stamp))
 
