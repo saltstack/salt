@@ -1475,9 +1475,6 @@ def build_network_settings(**settings):
     if settings['test']:
         return _read_temp(network)
 
-    # Write settings
-    _write_file_network(network, _DEB_NETWORKING_FILE, True)
-
     # Ubuntu has moved away from /etc/default/networking
     # beginning with the 12.04 release so we disable or enable
     # the networking related services on boot
@@ -1494,6 +1491,12 @@ def build_network_settings(**settings):
 
             if __salt__['service.available']("networking"):
                 __salt__[service_cmd]("networking")
+        else:
+            # Write settings
+            _write_file_network(network, _DEB_NETWORKING_FILE, True)
+    else:
+        # Write settings
+        _write_file_network(network, _DEB_NETWORKING_FILE, True)
 
     # Write hostname to /etc/hostname
     sline = opts['hostname'].split('.', 1)
