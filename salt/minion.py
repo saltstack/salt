@@ -165,6 +165,7 @@ def load_args_and_kwargs(func, args, data=None):
     _args = []
     _kwargs = {}
     invalid_kwargs = []
+    failhard = True
 
     for arg in args:
         if isinstance(arg, string_types):
@@ -203,17 +204,23 @@ def load_args_and_kwargs(func, args, data=None):
                     # **kwargs not in argspec and parsed argument name not in
                     # list of positional arguments. This keyword argument is
                     # invalid.
-                    invalid_kwargs.append(arg)
+                    # We will just warn users that they are not using correctly
+                    # the function signature
+                    failhard = False
+                    if not key in invalid_kwargs:
+                        invalid_kwargs.append(key)
             continue
 
         else:
             _args.append(arg)
 
     if invalid_kwargs:
-        raise SaltInvocationError(
-            'The following keyword arguments are not valid: {0}'
-            .format(', '.join(invalid_kwargs))
-        )
+        msg = 'The following keyword arguments are not valid: {0}'.format(
+            ', '.join(invalid_kwargs))
+        if failhard:
+            raise SaltInvocationError(msg)
+        else:
+            log.error(msg)
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
