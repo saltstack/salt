@@ -263,11 +263,11 @@ def init(name,
                                     profile=profile, **kwargs)
         if not ret.get('cloned', False):
             return ret
-        cfg = LXCConfig(name=name, nic=nic, cpuset=cpuset,
-                        cpushare=cpushare, memory=memory)
+        cfg = LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
+                        cpuset=cpuset, cpushare=cpushare, memory=memory)
         cfg.write()
     else:
-        cfg = LXCConfig(nic=nic, cpuset=cpuset,
+        cfg = LXCConfig(nic=nic, nic_opts=nic_opts, cpuset=cpuset,
                         cpushare=cpushare, memory=memory)
         with cfg.tempfile() as cfile:
             ret = __salt__['lxc.create'](name, config=cfile.name,
