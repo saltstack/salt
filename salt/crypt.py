@@ -335,10 +335,17 @@ class Auth(object):
         auth = {}
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         try:
+            org_master_ip = self.opts['master_ip']
             self.opts['master_ip'] = salt.utils.dns_check(
                 self.opts['master'],
                 True,
                 self.opts['ipv6']
+            )
+            if org_master_ip != self.opts['master_ip']:
+                log.warning('Master ip address changed from {0} to {1}'.format(
+                    org_master_ip,
+                    self.opts['master_ip']
+                )
             )
         except SaltClientError as e:
             if safe:
