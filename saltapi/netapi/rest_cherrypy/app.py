@@ -1381,7 +1381,7 @@ class Webhook(object):
 
 class Stats(object):
     '''
-    Expose cherrypy stats via cpstats StatsPage class
+    Expose statistics on the running CherryPy server
     '''
     exposed = True
 
@@ -1390,6 +1390,12 @@ class Stats(object):
     }
 
     def GET(self):
+        '''
+        Return a dump of statistics collected from the CherryPy server
+
+        :status 200: success
+        :status 406: requested Content-Type not available
+        '''
         if hasattr(logging, 'statistics'):
             return cpstats.extrapolate_statistics(logging.statistics)
 
