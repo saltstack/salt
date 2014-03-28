@@ -50,6 +50,7 @@ try:
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
+    from MySQLdb import ProgrammingError
     HAS_MYSQLDB = True
 except ImportError:
     HAS_MYSQLDB = False
@@ -389,8 +390,11 @@ def _grant_to_tokens(grant):
             # the shlex splitter may have split on special database characters `
             database += token
             # Read-ahead
-            if exploded_grant[position_tracker + 1] == '.':
-                phrase = 'tables'
+            try:
+                if exploded_grant[position_tracker + 1] == '.':
+                    phrase = 'tables'
+            except IndexError:
+                break
 
         elif phrase == 'user':
             if dict_mode:
@@ -407,15 +411,19 @@ def _grant_to_tokens(grant):
 
         position_tracker += 1
 
-    if not dict_mode:
-        user = user.strip("'")
-        host = host.strip("'")
-    log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
-        user,
-        host,
-        grant_tokens,
-        database
-    ))
+    try:
+        if not dict_mode:
+            user = user.strip("'")
+            host = host.strip("'")
+        log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
+            user,
+            host,
+            grant_tokens,
+            database
+        ))
+    except UnboundLocalError:
+        host=''
+        pass
     return dict(user=user,
                 host=host,
                 grant=grant_tokens,
@@ -1592,7 +1600,7 @@ def grant_add(grant,
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
     try:
         _execute(cur, qry['qry'], qry['args'])
-    except MySQLdb.OperationalError as exc:
+    except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
