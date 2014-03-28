@@ -30,8 +30,9 @@ A REST API for Salt
 
         % salt-call tls.create_self_signed_cert
 
-    The configuration options for this module resides in the Salt master config
-    file. All available options are detailed below.
+    All available configuration options are detailed below. These settings
+    configure the CherryPy HTTP server and do not apply when using an external
+    server such as Apache or Nginx.
 
     port
         **Required**
