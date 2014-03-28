@@ -214,7 +214,6 @@ def salt_token_tool():
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
 
-
 def salt_ip_verify_tool():
     '''
     If there is a list of restricted IPs, verify current
@@ -252,7 +251,6 @@ def salt_auth_tool():
 
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
-
 
 # Be conservative in what you send
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
@@ -450,6 +448,23 @@ def lowdata_fmt():
         cherrypy.request.lowstate = [data]
     else:
         cherrypy.serving.request.lowstate = data
+
+
+cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
+        salt_token_tool, priority=55)
+cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
+        salt_auth_tool, priority=60)
+cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
+        hypermedia_in)
+cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
+        lowdata_fmt, priority=40)
+cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
+        hypermedia_out)
+cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
+        salt_ip_verify_tool)
+
+
+###############################################################################
 
 
 class LowDataAdapter(object):
@@ -1460,21 +1475,6 @@ def get_app(opts):
     cherrypy.config['apiopts'] = apiopts
 
     root = API() # cherrypy app
-
     cpyopts = root.get_conf() # cherrypy app opts
-
-    # Register salt-specific hooks
-    cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
-            salt_token_tool, priority=55)
-    cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
-            hypermedia_in)
-    cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
-            salt_auth_tool, priority=60)
-    cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
-            lowdata_fmt, priority=40)
-    cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
-            hypermedia_out)
-    cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
-            salt_ip_verify_tool)
 
     return root, apiopts, cpyopts
