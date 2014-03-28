@@ -50,11 +50,29 @@ def parse_args_kwargs(args):
         if isinstance(arg, string_types):
             arg_name, arg_value = utils.parse_kwarg(arg)
             if arg_name:
+                if arg_value.strip() == '':
+                    # Because YAML loads empty strings as None, we return the original string
+                    # >>> import yaml
+                    # >>> yaml.load('') is None
+                    # True
+                    # >>> yaml.load('      ') is None
+                    # True
+                    _kwargs[arg_name] = arg_value
+                    continue
                 try:
                     _kwargs[arg_name] = yaml.load(arg_value, Loader=yamlloader.CustomLoader)
                 except YAMLScannerError:
                     _kwargs[arg_name] = arg_value
             else:
+                if arg.strip() == '':
+                    # Because YAML loads empty strings as None, we return the original string
+                    # >>> import yaml
+                    # >>> yaml.load('') is None
+                    # True
+                    # >>> yaml.load('      ') is None
+                    # True
+                    _args.append(arg)
+                    continue
                 try:
                     _args.append(yaml.load(arg, Loader=yamlloader.CustomLoader))
                 except YAMLScannerError:
