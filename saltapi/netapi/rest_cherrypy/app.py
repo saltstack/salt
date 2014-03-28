@@ -188,9 +188,7 @@ import collections
 import itertools
 import functools
 import logging
-import os
 import json
-import textwrap
 
 # Import third-party libs
 import cherrypy
