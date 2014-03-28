@@ -799,6 +799,7 @@ def symlink(
             # Remove whatever is in the way
             if os.path.isfile(name):
                 os.remove(name)
+                ret['changes']['forced'] = 'Symlink was forciably replaced'
             else:
                 shutil.rmtree(name)
         else:
