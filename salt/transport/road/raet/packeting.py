@@ -840,6 +840,8 @@ class RxTray(Tray):
             begin = 0
         if end is None:
             end = len(self.segments)
+        if begin >= end:
+            return []
         misseds = []
         for i, segment in enumerate(self.segments[begin:end]):
             if segment is None:
