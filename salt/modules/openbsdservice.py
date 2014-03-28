@@ -123,7 +123,7 @@ def _get_rc():
         # to know what are the system enabled daemons
         with open('/etc/rc', 'r') as handle:
             lines = handle.readlines()
-    except:
+    except IOError:
         log.error('Unable to read /etc/rc')
     else:
         for line in lines:
@@ -145,7 +145,7 @@ def _get_rc():
         if match:
             # the matched var look like daemon_name_flags=, we test its assigned value
             # NO: disabled, everything else: enabled
-            # do not create a new key if the service hasn't been found in /etc/rc, see $pkg_scripts 
+            # do not create a new key if the service hasn't been found in /etc/rc, see $pkg_scripts
             if match.group(2) == 'NO':
                 daemons_flags[match.group(1)] = False
         else:
