@@ -35,6 +35,10 @@ from salt._compat import string_types
 if not utils.is_windows():
     import salt.cloud.exceptions
 
+# Import 3rd-party libs
+import yaml
+from yaml.scanner import ScannerError as YAMLScannerError
+
 
 def parse_args_kwargs(args):
     '''
@@ -46,9 +50,15 @@ def parse_args_kwargs(args):
         if isinstance(arg, string_types):
             arg_name, arg_value = utils.parse_kwarg(arg)
             if arg_name:
-                _kwargs[arg_name] = yamlloader.load(arg_value, Loader=yamlloader.CustomLoader)
+                try:
+                    _kwargs[arg_name] = yaml.load(arg_value, Loader=yamlloader.CustomLoader)
+                except YAMLScannerError:
+                    _kwargs[arg_name] = arg_value
             else:
-                _args.append(yamlloader.load(arg, Loader=yamlloader.CustomLoader))
+                try:
+                    _args.append(yaml.load(arg, Loader=yamlloader.CustomLoader))
+                except YAMLScannerError:
+                    _args.append(arg)
     return _args, _kwargs
 
 
