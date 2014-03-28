@@ -77,6 +77,16 @@ def yamlify_arg(arg):
     '''
     if not isinstance(arg, string_types):
         return arg
+
+    if arg.strip() == '':
+        # Because YAML loads empty strings as None, we return the original string
+        # >>> import yaml
+        # >>> yaml.load('') is None
+        # True
+        # >>> yaml.load('      ') is None
+        # True
+        return arg
+
     try:
         # Explicit late import to avoid circular import. DO NOT MOVE THIS.
         import salt.utils.yamlloader as yamlloader
