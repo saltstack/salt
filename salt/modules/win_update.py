@@ -63,57 +63,56 @@ def _gather_update_categories(updateCollection):
 
 
 class PyWinUpdater:
-    def __init__(self, categories=None, skipUI = True, skipDownloaded = True,
-            skipInstalled=True, skipReboot=False, skipPresent=True,
-            softwareUpdates=True, driverUpdates=False, skipHidden=True):
+    def __init__(self, categories= None, skipUI= True, skipDownloaded= True,
+            skipInstalled= True, skipReboot= False, skipPresent= True,
+            softwareUpdates= True, driverUpdates= False, skipHidden= True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
-        
+
         self.skipUI = skipUI
         self.skipDownloaded = skipDownloaded
         self.skipInstalled = skipInstalled
         self.skipReboot = skipReboot
         self.skipPresent = skipPresent
         self.skipHidden = skipHidden
-        
+
         self.softwareUpdates = softwareUpdates
         self.driverUpdates = driverUpdates
-        
+
         #the list of categories that the user wants to be searched for.
         self.categories = categories
-        
+
         #the list of categories that are present in the updates found.
         self.foundCategories = []
         #careful not to get those two confused.
-        
+
         log.debug('dispatching update_session to keep the session object.')
         self.update_session = win32com.client.Dispatch('Microsoft.Update.Session')
-        
+
         log.debug('update_session got. Now creating a win_searcher to seek out the updates')
         self.win_searcher = self.update_session.CreateUpdateSearcher()
-        
+
         #list of updates that are applicable by current settings.
         self.download_collection = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        
+
         #list of updates to be installed.
         self.install_collection = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        
+
         #the object responsible for fetching the actual downloads. 
         self.win_downloader = self.update_session.CreateUpdateDownloader()
         self.win_downloader.Updates = self.download_collection
-        
+
         #the object responsible for the installing of the updates.
         self.win_installer = self.update_session.CreateUpdateInstaller()
         self.win_installer.Updates = self.install_collection
-        
+
         #the results of the download process
         self.download_results = None
-        
+
         #the results of the installation process
         self.install_results = None
 
-
-    def Search(self,searchString):
+    def Search(self, searchString):
         try:
             log.debug('beginning search of the passed string: {0}'.format(searchString))
             self.search_results = self.win_searcher.Search(searchString)
@@ -121,16 +120,16 @@ class PyWinUpdater:
         except Exception as e:
             log.info('search for updates failed. {0}'.format(str(e)))
             return e
-        
+
         log.debug('parsing results. {0} updates were found.'.format(
             str(self.search_results.Updates.Count)))
-        
+
         try:
             #step through the list of the updates to ensure that the updates match the
             # features desired.
             for update in self.search_results.Updates:
                 #this skipps an update if UI updates are not desired.
-                if update.InstallationBehavior.CanRequestUserInput == True:
+                if update.InstallationBehavior.CanRequestUserInput:
                     log.debug('Skipped update {0}'.format(str(update)))
                     continue
                 
@@ -144,13 +143,13 @@ class PyWinUpdater:
                     #this is a zero gaurd. these tests have to be in this order
                     # or it will error out when the user tries to search for 
                     # updates with out specifying categories.
-                    if self.categories == None or category.Name in self.categories:
+                    if self.categories is None or category.Name in self.categories:
                         #adds it to the list to be downloaded.
                         self.download_collection.Add(update)
                         log.debug('added update {0}'.format(str(update)))
                         #ever update has 2 categories. this prevents the
                         #from being added twice.
-                        break;
+                        break
             log.debug('download_collection made. gathering found categories.')
             
             #gets the categories of the updates available in this collection of updates
@@ -161,7 +160,6 @@ class PyWinUpdater:
             log.info('parsing updates failed. {0}'.format(str(e)))
             return e
 
-
     def AutoSearch(self):
         '''
         this function generates a search string. simplifying the search function while
@@ -169,20 +167,33 @@ class PyWinUpdater:
         '''
         search_string = ''
         searchParams = []
-        if self.skipInstalled: searchParams.append('IsInstalled=0')
-        else: searchParams.append('IsInstalled=1')
-        if self.skipHidden: searchParams.append('IsHidden=0')
-        else: searchParams.append('IsHidden=1')
-        if self.skipReboot: searchParams.append('RebootRequired=1')
-        else: searchParams.append('RebootRequired=0')
-        if self.skipPresent: searchParams.append('IsPresent=0')
-        else: searchParams.append('IsPresent=1')
+
+        if self.skipInstalled:
+            searchParams.append('IsInstalled=0')
+        else:
+            searchParams.append('IsInstalled=1')
+
+        if self.skipHidden:
+            searchParams.append('IsHidden=0')
+        else:
+            searchParams.append('IsHidden=1')
+
+        if self.skipReboot:
+            searchParams.append('RebootRequired=1')
+        else:
+            searchParams.append('RebootRequired=0')
+
+        if self.skipPresent:
+            searchParams.append('IsPresent=0')
+        else:
+            searchParams.append('IsPresent=1')
+
         if len(searchParams) > 1:
             for i in searchParams:
                 search_string += '{0} and '.format(i)
         else:
             search_string += '{0} and '.format(searchParams[1])
-        
+
         if self.softwareUpdates and self.driverUpdates:
             search_string += 'Type=\'Software\' or Type=\'Driver\''
         elif self.softwareUpdates:
@@ -190,10 +201,9 @@ class PyWinUpdater:
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False ##if there is no type, the is nothing to search.
+            return False  ##if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
-
 
     def Download(self):
         #chase the download_collection! do the actual download process.
@@ -208,7 +218,6 @@ class PyWinUpdater:
             log.debug('failed in the downloading {0}.'.format(str(e)))
             return e
 
-
     def Install(self):
         #beat those updates into place!
         try:
@@ -222,7 +231,7 @@ class PyWinUpdater:
         except Exception as e:
             log.info('Preparing install list failed: {0}'.format(str(e)))
             return e
-        
+
         #if the blugger is empty. no point it starting the install process.
         if self.install_collection.Count != 0:
             log.debug('Install list created, about to install')
@@ -239,7 +248,6 @@ class PyWinUpdater:
             log.info('no new updates.')
             return True
 
-
     def GetInstallationResults(self):
         '''
         this gets results of installation process.
@@ -248,7 +256,7 @@ class PyWinUpdater:
         log.debug('bluger has {0} updates in it'.format(str(self.install_collection.Count)))
         if self.install_collection.Count == 0:
             return {}
-        
+
         updates = []
         log.debug('reparing update list')
         for i in range(self.install_collection.Count):
@@ -257,17 +265,16 @@ class PyWinUpdater:
             updates.append('{0}: {1}'.format(
                 str(self.install_results.GetUpdateResult(i).ResultCode),
                 str(self.install_collection.Item(i).Title)))
-        
+
         log.debug('Update results enumerated, now making a library to pass back')
         results = {}
-        
+
         #translates the list of update results into a library that salt expects.
-        for i,update in enumerate(updates):
+        for i, update in enumerate(updates):
             results['update {0}'.format(i)] = update
-        
+
         log.debug('Update information complied. returning')
         return results
-
 
     def GetInstallationResultsPretty(self):
         '''
@@ -276,26 +283,25 @@ class PyWinUpdater:
         updates = self.GetInstallationResults()
         ret = 'The following are the updates and their return codes.\n'
         for i in updates.keys():
-            ret += '\t{0} : {1}\n'.format(str(updates[i].ResultCode),str(updates[i].Title))
+            ret += '\t{0} : {1}\n'.format(str(updates[i].ResultCode), str(updates[i].Title))
         return ret
 
-
     def GetDownloadResults(self):
+        updates = []
         for i in range(self.download_collection.Count):
             updates.append('{0}: {1}'.format(
                 str(self.download_results.GetUpdateResult(i).ResultCode),
                 str(self.download_collection.Item(i).Title)))
         results = {}
-        for i,update in enumerate(updates):
+        for i, update in enumerate(updates):
             results['update {0}'.format(i)] = update
         return results
-
 
     def GetSearchResults(self):
         updates = []
         log.debug('parsing results. {0} updates were found.'.format(
             str(self.download_collection.count)))
-        
+
         for update in self.download_collection:
             if update.InstallationBehavior.CanRequestUserInput == True:
                 log.debug('Skipped update {0}'.format(str(update)))
@@ -304,7 +310,6 @@ class PyWinUpdater:
             log.debug('added update {0}'.format(str(update)))
         return updates
 
-
     def GetSearchResultsPretty(self):
         updates = self.GetSearchResults()
         ret = 'There are {0} updates. they are as follows:\n'.format(str(len(updates)))
@@ -312,18 +317,14 @@ class PyWinUpdater:
             ret += '\t{0}\n'.format(str(update))
         return ret
 
-
     def SetCategories(self,categories):
         self.categories = categories
-
 
     def GetCategories(self):
         return self.categories
 
-
     def GetAvailableCategories(self):
         return self.foundCategories
-
 
     def SetIncludes(self,includes):
         if includes:
@@ -332,7 +333,6 @@ class PyWinUpdater:
                 include = i.keys()[0]
                 self.SetInclude(include,value)
                 log.debug('was asked to set {0} to {1}'.format(include,value))
-
 
     def SetInclude(self,include,state):
         if include == 'UI': self.skipUI = state
@@ -346,7 +346,6 @@ class PyWinUpdater:
             self.skipUI,self.skipDownloaded,self.skipInstalled,self.skipReboot,
             self.skipPresent,self.softwareUpdates,self.driverUpdates))
 
-
     def __str__(self):
         updates = []
         results = 'There are {0} updates, by category there are:\n'.format(
@@ -359,7 +358,6 @@ class PyWinUpdater:
                         count += 1
             results += '\t{0}: {1}\n'.format(category,count)
         return results
-
 
 def _search(quidditch,retries=5):
     '''

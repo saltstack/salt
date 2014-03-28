@@ -54,15 +54,15 @@ updates:
 '''
 
 # Import Python libs
-import tempfile
-import subprocess
+#import tempfile
+#import subprocess
 import logging
 try:
     import win32com.client
-    import win32api
-    import win32con
-    import pywintypes
-    import threading
+#    import win32api
+#    import win32con
+#    import pywintypes
+#    import threading
     import pythoncom
     HAS_DEPENDENCIES = True
 except ImportError:
@@ -107,9 +107,9 @@ def _gather_update_categories(updateCollection):
 
 
 class PyWinUpdater:
-    def __init__(self, categories=None, skipUI = True, skipDownloaded = True,
-            skipInstalled=True, skipReboot=False, skipPresent=True, 
-            softwareUpdates=True, driverUpdates=False, skipHidden=True):
+    def __init__(self, categories = None, skipUI = True, skipDownloaded = True,
+            skipInstalled = True, skipReboot = False, skipPresent = True, 
+            softwareUpdates = True, driverUpdates = False, skipHidden = True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
 
@@ -119,36 +119,35 @@ class PyWinUpdater:
         self.skipReboot = skipReboot
         self.skipPresent = skipPresent
         self.skipHidden = skipHidden
-        
+
         self.softwareUpdates = softwareUpdates
         self.driverUpdates = driverUpdates
         self.categories = categories
         self.foundCategories = None
-        
-        
+
         log.debug('dispatching update_session to keep the session object.')
         self.update_session = win32com.client.Dispatch('Microsoft.Update.Session')
-        
+
         log.debug('update_session got. Now creating a win_searcher to seek out the updates')
         self.win_searcher = self.update_session.CreateUpdateSearcher()
-        
+
         #list of updates that are applicable by current settings.
         self.download_collection = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        
+
         #list of updates to be installed.
         self.install_collection = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
-        
+
         #the object responsible for fetching the actual downloads. 
         self.win_downloader = self.update_session.CreateUpdateDownloader()
         self.win_downloader.Updates = self.download_collection
-        
+
         #the object responsible for the installing of the updates.
         self.win_installer = self.update_session.CreateUpdateInstaller()
         self.win_installer.Updates = self.install_collection
-        
+
         #the results of the download process
         self.download_results = None
-        
+
         #the results of the installation process
         self.install_results = None
 
@@ -161,18 +160,18 @@ class PyWinUpdater:
         except Exception as e:
             log.info('search for updates failed. {0}'.format(str(e)))
             return e
-        
+
         log.debug('parsing results. {0} updates were found.'.format(
             str(self.search_results.Updates.Count)))
         try:
             for update in self.search_results.Updates:
-                if update.InstallationBehavior.CanRequestUserInput == True:
+                if update.InstallationBehavior.CanRequestUserInput:
                     log.debug('Skipped update {0}'.format(str(update)))
                     continue
                 for category in update.Categories:
                     if self.skipDownloaded and update.IsDownloaded:
                         continue
-                    if self.categories == None or category.Name in self.categories:
+                    if self.categories is None or category.Name in self.categories:
                         self.download_collection.Add(update)
                         log.debug('added update {0}'.format(str(update)))
             self.foundCategories = _gather_update_categories(self.download_collection)
@@ -185,20 +184,32 @@ class PyWinUpdater:
     def AutoSearch(self):
         search_string = ''
         searchParams = []
-        if self.skipInstalled: searchParams.append('IsInstalled=0')
-        else: searchParams.append('IsInstalled=1')
-        if self.skipHidden: searchParams.append('IsHidden=0')
-        else: searchParams.append('IsHidden=1')
-        if self.skipReboot: searchParams.append('RebootRequired=1')
-        else: searchParams.append('RebootRequired=0')
-        if self.skipPresent: searchParams.append('IsPresent=0')
-        else: searchParams.append('IsPresent=1')
+        if self.skipInstalled:
+            searchParams.append('IsInstalled=0')
+        else:
+            searchParams.append('IsInstalled=1')
+
+        if self.skipHidden:
+            searchParams.append('IsHidden=0')
+        else:
+            searchParams.append('IsHidden=1')
+
+        if self.skipReboot:
+            searchParams.append('RebootRequired=1')
+        else:
+            searchParams.append('RebootRequired=0')
+
+        if self.skipPresent:
+            searchParams.append('IsPresent=0')
+        else:
+            searchParams.append('IsPresent=1')
+
         if len(searchParams) > 1:
             for i in searchParams:
                 search_string += '{0} and '.format(i)
         else:
             search_string += '{0} and '.format(searchParams[1])
-        
+
         if self.softwareUpdates and self.driverUpdates:
             search_string += 'Type=\'Software\' or Type=\'Driver\''
         elif self.softwareUpdates:
@@ -206,7 +217,7 @@ class PyWinUpdater:
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False ##if there is no type, the is nothing to search.
+            return False  ##if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
 
@@ -232,7 +243,7 @@ class PyWinUpdater:
         except Exception as e:
             log.info('Preparing install list failed: {0}'.format(str(e)))
             return e
-        
+
         if self.install_collection.Count != 0:
             log.debug('Install list created, about to install')
             updates = []
@@ -250,29 +261,31 @@ class PyWinUpdater:
 
     def GetInstallationResults(self):
         log.debug('bluger has {0} updates in it'.format(str(self.install_collection.Count)))
+        updates = []
         if self.install_collection.Count == 0:
             return {}
         for i in range(self.install_collection.Count):
             updates.append('{0}: {1}'.format(
                 str(self.install_results.GetUpdateResult(i).ResultCode),
                 str(self.install_collection.Item(i).Title)))
-        
+
         log.debug('Update results enumerated, now making a list to pass back')
         results = {}
-        for i,update in enumerate(updates):
+        for i, update in enumerate(updates):
             results['update {0}'.format(i)] = update
-        
+
         log.debug('Update information complied. returning')
         return results
 
 
     def GetDownloadResults(self):
+        updates = []
         for i in range(self.download_collection.Count):
             updates.append('{0}: {1}'.format(
                 str(self.download_results.GetUpdateResult(i).ResultCode),
                 str(self.download_collection.Item(i).Title)))
         results = {}
-        for i,update in enumerate(updates):
+        for i, update in enumerate(updates):
             results['update {0}'.format(i)] = update
         return results
 
@@ -294,8 +307,8 @@ class PyWinUpdater:
             for i in includes:
                 value = i[i.keys()[0]]
                 include = i.keys()[0]
-                self.SetInclude(include,value)
-                log.debug('was asked to set {0} to {1}'.format(include,value))
+                self.SetInclude(include, value)
+                log.debug('was asked to set {0} to {1}'.format(include, value))
 
 
     def SetInclude(self,include,state):
@@ -509,5 +522,5 @@ def download(name,categories=None,includes=None,retries=10):
         ret['changes'] = win_updater.GetDownloadResults()
     except Exception as e:
         ret['comment'] += 'could not get results, but updates were downloaded.'
-        
+
     return ret
