@@ -31,12 +31,13 @@ to the following directories (and their subdirectories, where applicable):
 * /etc/salt
 * /var/cache/salt
 * /var/log/salt
+* /var/run/salt
 
 Ownership can be easily changed with ``chown``, like so:
 
 .. code-block:: bash
 
-    # chown -R user /etc/salt /var/cache/salt /var/log/salt
+    # chown -R user /etc/salt /var/cache/salt /var/log/salt /var/run/salt
 
 .. warning::
 
