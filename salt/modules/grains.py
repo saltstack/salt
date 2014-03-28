@@ -206,8 +206,11 @@ def setvals(grains, destructive=False):
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
+                if key in __grains__:
+                    del __grains__[key]
         else:
             grains[key] = val
+            __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
@@ -225,7 +228,6 @@ def setvals(grains, destructive=False):
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
-    __grains__[key] = val
     # Sync the grains
     __salt__['saltutil.sync_grains']()
     # Return the grains we just set to confirm everything was OK
