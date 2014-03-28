@@ -10,6 +10,26 @@ A REST API for Salt
     authenticating as has permissions for all the functions you will be
     running.
 
+    Example production configuration block; add to the Salt master config file:
+
+    .. code-block:: yaml
+
+        rest_cherrypy:
+          port: 8000
+          ssl_crt: /etc/pki/tls/certs/localhost.crt
+          ssl_key: /etc/pki/tls/certs/localhost.key
+
+    The REST interface strongly recommends a secure HTTPS connection since Salt
+    authentication credentials will be sent over the wire. If you don't already
+    have a certificate and don't wish to buy one, you can generate a
+    self-signed certificate using the
+    :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
+    the dependencies for this module):
+
+    .. code-block:: bash
+
+        % salt-call tls.create_self_signed_cert
+
     The configuration options for this module resides in the Salt master config
     file. All available options are detailed below.
 
@@ -78,26 +98,6 @@ A REST API for Salt
         for serving multiple applications from the same URL.
 
         .. versionadded:: 0.8.4
-
-    Example production configuration block:
-
-    .. code-block:: yaml
-
-        rest_cherrypy:
-          port: 8000
-          ssl_crt: /etc/pki/tls/certs/localhost.crt
-          ssl_key: /etc/pki/tls/certs/localhost.key
-
-    The REST interface strongly recommends a secure HTTPS connection since Salt
-    authentication credentials will be sent over the wire. If you don't already
-    have a certificate and don't wish to buy one, you can generate a
-    self-signed certificate using the
-    :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
-    the dependencies for this module):
-
-    .. code-block:: bash
-
-        % salt-call tls.create_self_signed_cert
 
 Authentication
 --------------
