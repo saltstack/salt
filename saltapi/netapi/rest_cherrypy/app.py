@@ -1247,13 +1247,8 @@ class Webhook(object):
     External services can POST data to this URL to trigger an event in Salt.
     For example, Jenkins-CI or Travis-CI, or GitHub web hooks.
 
-    The event data is taken from the ``POST`` data.
-
-    The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
-    appended to the end. For example, a ``POST`` request sent to
-    ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
-    ``salt/netapi/hook/mycompany/myapp/mydata``. See the :ref:`Salt Reactor
-    <reactor>` documentation for how to react to events with various tags.
+    This entry point does not require authentication. The event data is taken
+    from the request body.
 
     .. note:: Be mindful of security
 
@@ -1262,6 +1257,12 @@ class Webhook(object):
         trusted source and contains valid data! Pass a secret key and use SSL.
 
         This is a generic interface and securing it is up to you!
+
+    The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
+    appended to the end. For example, a ``POST`` request sent to
+    ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
+    ``salt/netapi/hook/mycompany/myapp/mydata``. See the :ref:`Salt Reactor
+    <reactor>` documentation for how to react to events with various tags.
 
     The following is an example ``.travis.yml`` file to send notifications to
     Salt of successful test runs:
