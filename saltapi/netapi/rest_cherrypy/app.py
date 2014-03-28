@@ -573,6 +573,8 @@ class LowDataAdapter(object):
             'clients': clients,
         }
 
+    @cherrypy.tools.salt_token()
+    @cherrypy.tools.salt_auth()
     def POST(self, **kwargs):
         '''
         The primary execution interface for the rest of the API
