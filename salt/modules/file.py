@@ -1481,12 +1481,12 @@ def prepend(path, *args):
     except IOError:
         contents = []
 
-    prepend = []
+    preface = []
     for line in args:
-        prepend.append("{0}\n".format(line))
+        preface.append("{0}\n".format(line))
 
     with salt.utils.fopen(path, "w") as ofile:
-        contents = prepend + contents
+        contents = preface + contents
         ofile.write(''.join(contents))
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
