@@ -1638,7 +1638,7 @@ class Messenger(Initiator):
         burst = 1 if self.wait else len(self.tray.packets) - self.tray.current
 
         for packet in self.tray.packets[self.tray.current:self.tray.current + burst]:
-            self.transmit(packet)
+            self.transmit(packet) #if self.tray.current %  2 else None
             self.tray.last = self.tray.current
             self.stack.incStat("message_segment_tx")
             console.concise("Messenger {0} Do Message Segment {1} at {2}\n".format(
@@ -1831,6 +1831,8 @@ class Messengent(Correspondent):
             self.remove()
             return
 
+        self.stack.incStat("message_segment_rx")
+
         if self.tray.complete:
             self.ackMessage()
             console.verbose("{0} received message body\n{1}\n".format(
@@ -1870,7 +1872,7 @@ class Messengent(Correspondent):
             self.remove()
             return
         self.transmit(packet)
-        self.stack.incStat("message_segment_rx")
+        self.stack.incStat("message_segment_ack")
         console.concise("Messengent {0} Do Ack Segment {1} at {2}\n".format(
                 self.stack.name, self.tray.last, self.stack.store.stamp))
 
