@@ -43,6 +43,10 @@ A REST API for Salt
 
         .. versionchanged:: 0.8.4
             Previous versions defaulted to ``5`` connections.
+    max_request_body_size : ``1048576``
+        .. versionchanged:: 0.8.4
+            Previous versions defaulted to ``104857600`` for the size of the
+            request body
     collect_stats : False
         Collect and report statistics about the CherryPy server
 
@@ -1362,6 +1366,7 @@ class Webhook(object):
 
         :status 200: success
         :status 406: requested Content-Type not available
+        :status 413: request body is too large
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.serialized_data
@@ -1435,6 +1440,7 @@ class API(object):
                 'server.socket_port': self.apiopts.get('port', 8000),
                 'server.thread_pool': self.apiopts.get('thread_pool', 100),
                 'server.socket_queue_size': self.apiopts.get('queue_size', 30),
+                'max_request_body_size': self.apiopts.get('max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
             },
             '/': {
