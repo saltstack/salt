@@ -1385,9 +1385,10 @@ class Stats(object):
     '''
     exposed = True
 
-    _cp_config = {
-        'tools.hypermedia_out.on': True,
-    }
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_token.on': True,
+        'tools.salt_auth.on': True,
+    })
 
     def GET(self):
         '''
