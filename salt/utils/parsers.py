@@ -28,6 +28,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
+from salt.utils import yamlloader
 from salt.utils.validate.path import is_writeable
 from salt._compat import string_types
 
@@ -45,10 +46,9 @@ def parse_args_kwargs(args):
         if isinstance(arg, string_types):
             arg_name, arg_value = utils.parse_kwarg(arg)
             if arg_name:
-                _kwargs[arg_name] = arg_value
+                _kwargs[arg_name] = yamlloader.load(arg_value, Loader=yamlloader.CustomLoader)
             else:
-                _args.append(arg)
-
+                _args.append(yamlloader.load(arg, Loader=yamlloader.CustomLoader))
     return _args, _kwargs
 
 
