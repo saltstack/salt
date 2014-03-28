@@ -198,10 +198,6 @@ def load_args_and_kwargs(func, args, data=None):
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
-                    if isinstance(val, string_types):
-                        # In case there's still some YAML which needs to be loaded
-                        if isinstance(val, string_types):
-                            val = salt.utils.args.yamlify_arg(val)
                     _kwargs[key] = val
                 else:
                     # **kwargs not in argspec and parsed argument name not in
@@ -709,7 +705,8 @@ class Minion(MinionBase):
             data = self.crypticle.loads(load)
 
         # Verify that the publication is valid
-        if 'tgt' not in data or 'jid' not in data or 'fun' not in data or 'arg' not in data:
+        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
+           or 'arg' not in data:
             return
         # Verify that the publication applies to this minion
 
