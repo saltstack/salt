@@ -481,9 +481,6 @@ class LowDataAdapter(object):
 
         # 'tools.autovary.on': True,
 
-        'tools.salt_token.on': True,
-        'tools.salt_auth.on': True,
-
         'tools.hypermedia_out.on': True,
         'tools.hypermedia_in.on': True,
         'tools.lowdata_fmt.on': True,
@@ -634,6 +631,11 @@ class LowDataAdapter(object):
 
 
 class Minions(LowDataAdapter):
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_token.on': True,
+        'tools.salt_auth.on': True,
+    })
+
     def GET(self, mid=None):
         '''
         A convenience URL for getting lists of minions or getting minion
@@ -745,6 +747,11 @@ class Minions(LowDataAdapter):
 
 
 class Jobs(LowDataAdapter):
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_token.on': True,
+        'tools.salt_auth.on': True,
+    })
+
     def GET(self, jid=None):
         '''
         A convenience URL for getting lists of previously run jobs or getting
@@ -867,11 +874,6 @@ class Login(LowDataAdapter):
     If the request is initiated programmatically, the request must contain a
     :mailheader:`X-Auth-Token` header with valid and active session id.
     '''
-    _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': False,
-        'tools.salt_auth.on': False,
-    })
-
 
     def __init__(self, *args, **kwargs):
         super(Login, self).__init__(*args, **kwargs)
@@ -1012,8 +1014,8 @@ class Login(LowDataAdapter):
 
 class Logout(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        'tools.salt_token.on': False,
-        'tools.salt_auth.on': False,
+        'tools.salt_token.on': True,
+        'tools.salt_auth.on': True,
     })
 
     def POST(self):
@@ -1031,8 +1033,6 @@ class Logout(LowDataAdapter):
 class Run(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.sessions.on': False,
-        'tools.salt_token.on': False,
-        'tools.salt_auth.on': False,
     })
 
     def POST(self, **kwargs):
@@ -1109,6 +1109,7 @@ class Events(object):
         'tools.encode.encoding': 'utf-8',
 
         # Auth handled manually below
+        'tools.salt_token.on': True,
         'tools.salt_auth.on': False,
 
         'tools.hypermedia_in.on': False,
@@ -1274,10 +1275,6 @@ class Webhook(object):
     tag_base = ['salt', 'netapi', 'hook']
 
     _cp_config = dict(LowDataAdapter._cp_config, **{
-        # No auth needed; we're just passing dictionaries
-        'tools.salt_token.on': False,
-        'tools.salt_auth.on': False,
-
         # Don't do any lowdata processing on the POST data
         'tools.lowdata_fmt.on': True,
 
