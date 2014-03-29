@@ -15,6 +15,8 @@ General rules
 2. Create clear relations between pillars and states.
 3. Use variables when it makes sense but don't overuse them.
 4. Store sensitive data in pillar.
+5. Don't use grains for matching in your pillar top file for any sensitive
+   pillars.
 
 
 Structuring States and Formulas
