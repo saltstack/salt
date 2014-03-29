@@ -43,7 +43,6 @@ def get(key, default='', merge=False):
     if merge:
         return salt.utils.dictupdate.update(default,
             salt.utils.traverse_dict(__pillar__, key, ''))
-
     return salt.utils.traverse_dict(__pillar__, key, default)
 
 
