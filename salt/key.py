@@ -86,11 +86,8 @@ class KeyCLI(object):
 
         matches = self.key.name_match(match)
         keys = {}
-        print(matches)
-        print(self.pend)
         if self.pend in matches:
             keys[self.pend] = matches[self.pend]
-            print(keys)
         if include_rejected and bool(matches.get(self.rej)):
             keys[self.rej] = matches[self.rej]
         if not keys:
