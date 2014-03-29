@@ -911,7 +911,6 @@ class Login(LowDataAdapter):
         :status 401: authentication required
         :status 406: requested Content-Type not available
         '''
-        cherrypy.response.status = '401 Unauthorized'
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
         return {
