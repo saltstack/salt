@@ -50,7 +50,6 @@ try:
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
-    from MySQLdb import ProgrammingError
     HAS_MYSQLDB = True
 except ImportError:
     HAS_MYSQLDB = False
