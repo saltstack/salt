@@ -72,7 +72,6 @@ class CompileTest(integration.ModuleCase):
                 os.unlink(managed_file)
 
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(CompileTest)
