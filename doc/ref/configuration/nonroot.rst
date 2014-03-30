@@ -11,7 +11,7 @@ which is why the master has remained as root by default.
 
 .. note::
 
-    Some of Salt's operations cannot execute corectly when the master is not
+    Some of Salt's operations cannot execute correctly when the master is not
     running as root, specifically the pam external auth system, as this system
     needs root access to check authentication.
 
