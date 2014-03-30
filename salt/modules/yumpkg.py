@@ -48,7 +48,6 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-        os_major_version = int(__grains__['osrelease'].split('.')[0])
     except Exception:
         return False
 
@@ -104,7 +103,6 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
-    ret = []
     cmd = 'repoquery --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
@@ -185,9 +183,6 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-    # FIXME: do stricter argument checking that somehow takes
-    # _get_repo_options() into account
-
     if len(names) == 0:
         return ''
 
@@ -773,7 +768,7 @@ def upgrade(refresh=True):
     return ret
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
     Remove packages with ``yum -q -y remove``.
 
@@ -819,7 +814,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def purge(name=None, pkgs=None, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
     Package purges are not supported by yum, this function is identical to
     :mod:`pkg.remove <salt.modules.yumpkg.remove>`.
@@ -1007,7 +1002,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
         repopath = '{0}/{1}'.format(basedir, repofile)
         if not repofile.endswith('.repo'):
             continue
-        header, filerepos = _parse_repo_file(repopath)
+        filerepos = _parse_repo_file(repopath)[1]
         for reponame in filerepos.keys():
             repo = filerepos[reponame]
             repo['file'] = repopath
@@ -1015,7 +1010,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
     return repos
 
 
-def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
+def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W0613
     '''
     Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
@@ -1037,11 +1032,11 @@ def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
         raise Exception('repo {0} was not found in {1}'.format(repo, basedir))
 
     # Return just one repo
-    header, filerepos = _parse_repo_file(repofile)
+    filerepos = _parse_repo_file(repofile)[1]
     return filerepos[repo]
 
 
-def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):
+def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W0613
     '''
     Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
 
