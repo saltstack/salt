@@ -51,6 +51,9 @@ def start():
         (r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
         (r"/jobs", saltnado.JobsSaltAPIHandler),
         (r"/run", saltnado.RunSaltAPIHandler),
+        (r"/events", saltnado.EventsSaltAPIHandler),
+        (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
+        
     ], debug=mod_opts.get('debug', False))
     
     application.opts = __opts__ 

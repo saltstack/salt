@@ -11,10 +11,13 @@ siege -c 1 -n 1 "http://127.0.0.1:8888 POST client=local&tgt=*&fun=test.ping"
 # this works
 ab -c 50 -n 100 -p body -T 'application/x-www-form-urlencoded' http://localhost:8888/
 
-{"return": [{"perms": ["*.*"], "start": 1396137149.13565, "token": "0cd364f0a3fa4f7d5c7bd07909031783", "expire": 1396180349.135651, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$ 
+{"return": [{"perms": ["*.*"], "start": 1396151398.373983, "token": "cb86b805e8915c84bceb0d466026caab", "expire": 1396194598.373983, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$ 
+
 
 
 '''
+
+from copy import copy
 
 import time
 
@@ -231,11 +234,11 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
         Format the incoming data into a lowstate object
         '''
         data = self.deserialize(self.request.body)
+        self.raw_data = copy(data)
 
         if self.request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
             if 'arg' in data and not isinstance(data['arg'], list):
                 data['arg'] = [data['arg']]
-            print data
             lowstate = [data]
         else:
             lowstate = data
@@ -359,7 +362,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         self.client = client
         
         for low in self.lowstate:
-            if not ('token' in low or 'eauth' in low):
+            if (not self._verify_auth() or 'eauth' in low):
                 # TODO: better error?
                 self.set_status(401)
                 self.finish()
@@ -742,4 +745,76 @@ class RunSaltAPIHandler(SaltAPIHandler):
         self._verify_client(client)
         self.disbatch(client)
 
+class EventsSaltAPIHandler(SaltAPIHandler):
+    '''
+    Handler for /events requests
+    '''
+    @tornado.web.asynchronous
+    def get(self):
+        # if you aren't authenticated, redirect to login
+        if not self._verify_auth():
+            self.redirect('/login')
+            return
+        # set the streaming headers
+        self.set_header('Content-Type', 'text/event-stream')
+        self.set_header('Cache-Control', 'no-cache')
+        self.set_header('Connection', 'keep-alive')
+        
+        # TODO: consolidate??
+        self.event = salt.utils.event.MasterEvent(self.application.opts['sock_dir'])
+        
+        self.write(u'retry: {0}\n'.format(400))
+        self.flush()
+        
+        self.stream_events()
+    
+    def stream_events(self):
+        # if the client has disconnected, stop trying ;)
+        if not self.connected:
+            self.finish()
+            return
 
+        try:
+            data = self.event.get_event_noblock()
+            self.write(u'tag: {0}\n'.format(data.get('tag', '')))
+            self.write(u'data: {0}\n\n'.format(json.dumps(data)))
+            self.flush()
+            tornado.ioloop.IOLoop.instance().add_callback(self.stream_events)
+
+        except zmq.ZMQError as e:
+            # if you got an EAGAIN, just schedule yourself for later
+            if e.errno == zmq.EAGAIN:
+                tornado.ioloop.IOLoop.instance().add_callback(self.stream_events)
+            # not sure what other errors we could get... but probably not good
+            else:
+                # TODO: 500 error or somesuch
+                raise Exception()
+        # catch other exceptions so we can log them?
+        except:
+            # TODO: log
+            print sys.exc_info(), 'exception in stream_events loop'
+            self.finish()
+       
+class WebhookSaltAPIHandler(SaltAPIHandler):
+    '''
+    Handler for /run requests
+    '''
+    def post(self, tag_suffix=None):
+        if not self._verify_auth():
+            self.redirect('/login')
+            return
+        
+        # if you have the tag, prefix
+        tag = 'salt/netapi/hook'
+        if tag_suffix:
+            tag += tag_suffix
+        
+        # TODO: consolidate??
+        self.event = salt.utils.event.MasterEvent(self.application.opts['sock_dir'])
+        
+        ret = self.event.fire_event({
+            'post': self.raw_data,
+            'headers': self.request.headers,
+        }, tag)
+
+        self.write(self.serialize({'success': ret}))
