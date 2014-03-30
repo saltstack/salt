@@ -476,11 +476,7 @@ def check_db(*names, **kwargs):
         if not ret[name]['found']:
             repoquery_cmd = repoquery_base + ' {0}'.format(name)
             provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-            if provides:
-                for pkg in provides:
-                    ret[name]['suggestions'] = list(provides)
-            else:
-                ret[name]['suggestions'] = []
+            ret[name]['suggestions'] = sorted(provides)
     return ret
 
 
