@@ -1045,7 +1045,7 @@ def removed(name, pkgs=None, **kwargs):
 def purged(name, pkgs=None, **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
-    to purge the package.
+    to purge the package. All configuration files are also removed.
 
     name
         The name of the package to be purged.
