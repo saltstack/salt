@@ -3,13 +3,17 @@
 curl localhost:8888/login -d client=local -d username=username -d password=password -d eauth=pam
 
 for testing
-curl -H 'X-Auth-Token: b6ae264db9535947d7326bdbcaabad32' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
+curl -H 'X-Auth-Token: 0cd364f0a3fa4f7d5c7bd07909031783' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
 
 # not working.... but in siege 3.0.1 and posts..
 siege -c 1 -n 1 "http://127.0.0.1:8888 POST client=local&tgt=*&fun=test.ping"
 
 # this works
 ab -c 50 -n 100 -p body -T 'application/x-www-form-urlencoded' http://localhost:8888/
+
+{"return": [{"perms": ["*.*"], "start": 1396137149.13565, "token": "0cd364f0a3fa4f7d5c7bd07909031783", "expire": 1396180349.135651, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$ 
+
+
 '''
 
 import time
@@ -81,10 +85,8 @@ def EventPublisher(mod_opts, opts):
 
     pub_sock.bind(mod_opts['pub_uri'])
 
-    # TODO: get this from config
     event = salt.utils.event.MasterEvent(opts['sock_dir'])
 
-    # TODO: add sleep
     for full_data in event.iter_events(tag='salt/', full=True):
         # TODO: different?
         tag = full_data['tag']
@@ -96,7 +98,11 @@ def EventPublisher(mod_opts, opts):
         package = [data['jid'], msgpack.dumps(data)]
         pub_sock.send_multipart(package)
 
+# TODO: move to a utils function within salt-- the batching stuff is a bit tied together
 def get_batch_size(batch, num_minions):
+    '''
+    Return the batch size that you should have
+    '''
     # figure out how many we can keep in flight
     partition = lambda x: float(x) / 100.0 * num_minions
     try:
@@ -141,7 +147,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
         Boolean wether the request is auth'd
         '''
 
-        return bool(self.application.auth.get_tok(self.token))
+        return self.token and bool(self.application.auth.get_tok(self.token))
 
     def prepare(self):
         '''
@@ -161,6 +167,21 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
 
         self.content_type = content_type
         self.dumper = dumper
+        
+        # do the common parts
+        self.start = time.time()
+        self.connected = True
+        
+        self.lowstate = self._get_lowstate()
+
+        # TODO: timeout per job? (since we have to wait for the longest one, 
+        # this makes some sense
+        timeout = 0
+        for s in self.lowstate:
+            s_timeout = s.get('timeout', self.application.opts['timeout'])
+            if s_timeout > timeout:
+                timeout = float(s_timeout)
+        self.timeout = self.start + timeout
 
     def serialize(self, data):
         '''
@@ -198,10 +219,12 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
             'text/plain': json.loads
         }
 
-        if self.request.headers['Content-Type'] not in ct_in_map:
-            self.send_error(406)
-
-        return ct_in_map[self.request.headers['Content-Type']](data)
+        try:
+            if self.request.headers['Content-Type'] not in ct_in_map:
+                self.send_error(406)
+            return ct_in_map[self.request.headers['Content-Type']](data)
+        except KeyError:
+            return []
 
     def _get_lowstate(self):
         '''
@@ -212,11 +235,28 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
         if self.request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
             if 'arg' in data and not isinstance(data['arg'], list):
                 data['arg'] = [data['arg']]
+            print data
             lowstate = [data]
         else:
             lowstate = data
         return lowstate
 
+    def _get_sub_sock(self, jids):
+        '''
+        Helper so we can call this from multiple places
+        '''
+        self.sub_sock = context.socket(zmq.SUB)
+        for jid in jids:
+            self.sub_sock.setsockopt(zmq.SUBSCRIBE, jid)
+            # undo later?
+            #self.sub_sock.setsockopt(zmq.UNSUBSCRIBE, jid)
+        self.sub_sock.connect(self.application.mod_opts['pub_uri'])
+
+    def _add_sub(self, jid):
+        self.sub_sock.setsockopt(zmq.SUBSCRIBE, jid)
+
+    def _rm_sub(self, jid):
+        self.sub_sock.setsockopt(zmq.UNSUBSCRIBE, jid)
 
 class SaltAuthHandler(BaseSaltAPIHandler):
     '''
@@ -252,6 +292,8 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             # TODO: nicer error message
             # 'Could not authenticate using provided credentials')
             self.send_error(401)
+            # return since we don't want to execute any more
+            return
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -277,23 +319,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
 
 
 class SaltAPIHandler(BaseSaltAPIHandler):
-    def _get_sub_sock(self, jids):
-        '''
-        Helper so we can call this from multiple places
-        '''
-        self.sub_sock = context.socket(zmq.SUB)
-        for jid in jids:
-            self.sub_sock.setsockopt(zmq.SUBSCRIBE, jid)
-            # undo later?
-            #self.sub_sock.setsockopt(zmq.UNSUBSCRIBE, jid)
-        self.sub_sock.connect(self.application.mod_opts['pub_uri'])
-
-    def _add_sub(self, jid):
-        self.sub_sock.setsockopt(zmq.SUBSCRIBE, jid)
-
-    def _rm_sub(self, jid):
-        self.sub_sock.setsockopt(zmq.UNSUBSCRIBE, jid)
-
     def get(self):
         '''
         return data about what clients you have
@@ -323,22 +348,18 @@ class SaltAPIHandler(BaseSaltAPIHandler):
             self.redirect('/login')
             return
 
-        self.client = self.get_arguments('client')[0]
-        self._verify_client(self.client)
+        client = self.get_arguments('client')[0]
+        self._verify_client(client)
+        self.disbatch(client)
 
-        # do the common parts
-        self.start = time.time()
-        # is the client still here?
-        self.connected = True
-
-        # TODO pass timeouts in
-        self.timeout = self.start + 30
-
-        lowstate = self._get_lowstate()
-
+    def disbatch(self, client):
+        '''
+        Disbatch a lowstate job to the appropriate client
+        '''
+        self.client = client
         # disbatch to the correct handler
         try:
-            getattr(self, '_disbatch_{0}'.format(self.client))(lowstate)
+            getattr(self, '_disbatch_{0}'.format(self.client))()
         except AttributeError:
             # TODO set the right status... this means we didn't implement it...
             self.set_status(500)
@@ -346,7 +367,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
     def _current_inflight(self, batch_id):
         '''
-        Helper to get the current number in flight
+        Helper to get the current number of minions in flight for a given batch
         '''
         count = 0
         for jid, batch_id in self.jid_map.iteritems():
@@ -354,7 +375,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                 count += 1
         return count
 
-    def _disbatch_local_batch(self, lowstate):
+    def _disbatch_local_batch(self):
         '''
         Disbatch local client batched commands
         '''
@@ -376,7 +397,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
         self._get_sub_sock(jids=[])
 
-        for batch_id, chunk in enumerate(lowstate):
+        for batch_id, chunk in enumerate(self.lowstate):
             f_call = salt.utils.format_call(saltclients[self.client], chunk)
             batch_size = f_call['kwargs']['batch']
             # ping all the minions (to see who we have to talk to)
@@ -410,7 +431,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
             self.jid_map[pub_data['jid']] = batch_id
             self._add_sub(pub_data['jid'])
 
-    def _disbatch_local(self, lowstate):
+    def _disbatch_local(self):
         '''
         Disbatch local client commands
         '''
@@ -424,7 +445,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         # set our handler
         self.handler = self._handle_minion_jobs
 
-        for chunk in lowstate:
+        for chunk in self.lowstate:
             # TODO: not sure why.... we already verify auth, probably for ACLs
             # require token or eauth
             chunk['token'] = self.token
@@ -441,12 +462,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
         tornado.ioloop.IOLoop.instance().add_callback(self.nonblocking_wait_loop)
 
-    def _disbatch_local_async(self, lowstate):
+    def _disbatch_local_async(self):
         '''
         Disbatch local client_async commands
         '''
         ret = []
-        for chunk in lowstate:
+        for chunk in self.lowstate:
             f_call = salt.utils.format_call(saltclients[self.client], chunk)
             # fire a job off
             pub_data = saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
@@ -455,7 +476,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         self.write(self.serialize({'return': ret}))
         self.finish()
 
-    def _disbatch_runner(self, lowstate):
+    def _disbatch_runner(self):
         '''
         Disbatch runner client commands
         '''
@@ -467,7 +488,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         # set our handler
         self.handler = self._handle_master_job
 
-        for chunk in lowstate:
+        for chunk in self.lowstate:
             f_call = {'args': [chunk['fun'], chunk]}
             pub_data = saltclients[self.client](chunk['fun'], chunk)
             # TODO: add the jid to the runner return dict
@@ -495,6 +516,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         # if the client has disconnected, stop trying ;)
         if not self.connected:
             self.finish()
+            return
         # if you are over timeout
         elif time.time() > self.timeout:
             print ('Enforce timeout')
@@ -518,6 +540,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                 raise Exception()
         # catch other exceptions so we can log them?
         except:
+            # TODO: log
             print sys.exc_info(), 'exception in main wait loop'
             self.finish()
 
@@ -542,7 +565,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
             self.write(self.serialize({'return': ret}))
             self.finish()
         else:
-            tornado.ioloop.IOLoop.instance().add_callback(self.master_job_loop)
+            tornado.ioloop.IOLoop.instance().add_callback(self.nonblocking_wait_loop)
 
     def _handle_minion_jobs(self, jid, data):
         '''
@@ -638,5 +661,68 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         '''
         If the client disconnects, lets close out
         '''
+        # TODO: log
+        # TODO: another way to abort? this seems a bit messy
         print 'client closed connection'
         self.connected = False
+
+class MinionSaltAPIHandler(SaltAPIHandler):
+    '''
+    Handler for /minion requests
+    '''
+    @tornado.web.asynchronous
+    def get(self, mid):
+        # if you aren't authenticated, redirect to login
+        if not self._verify_auth():
+            self.redirect('/login')
+            return
+
+        # overwrite the timeout, since we are making up our own lowstate
+        self.timeout = self.start + self.application.opts['timeout']
+
+        #'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
+        self.lowstate = [{
+            'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
+        }]
+        self.disbatch('local')
+
+    @tornado.web.asynchronous
+    def post(self):
+        '''
+        local_async post endpoint        
+        '''
+        # if you aren't authenticated, redirect to login
+        if not self._verify_auth():
+            self.redirect('/login')
+            return
+
+        self.disbatch('local_async')
+
+class JobsSaltAPIHandler(SaltAPIHandler):
+    '''
+    Handler for /minion requests
+    '''
+    @tornado.web.asynchronous
+    def get(self, jid=None):
+        # if you aren't authenticated, redirect to login
+        if not self._verify_auth():
+            self.redirect('/login')
+            return
+
+        self.lowstate = [{
+            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'jid': jid,
+        }]
+
+        if jid:
+            self.lowstate.append({
+                'fun': 'jobs.list_job',
+                'jid': jid,
+            })
+        
+        # overwrite the timeout, since we are making up our own lowstate
+        self.timeout = self.start + self.application.opts['timeout'] + 100
+
+        self.disbatch('runner')
+
+

@@ -46,7 +46,10 @@ def start():
     application = tornado.web.Application([
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
-        
+        (r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
+        (r"/minions", saltnado.MinionSaltAPIHandler),
+        (r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
+        (r"/jobs", saltnado.JobsSaltAPIHandler),        
     ], debug=mod_opts.get('debug', False))
     
     application.opts = __opts__ 
@@ -66,7 +69,12 @@ def start():
                                  'keyfile': mod_opts['ssl_key']}
 
     http_server = tornado.httpserver.HTTPServer(application, **kwargs)
-    http_server.listen(mod_opts['port'])
+    try:
+        http_server.listen(mod_opts['port'])
+    except:
+        print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
+        p.terminate()
+        raise SystemExit(1)
     tornado.ioloop.IOLoop.instance().start()
 
     try:
