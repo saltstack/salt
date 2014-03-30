@@ -49,7 +49,8 @@ def start():
         (r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
         (r"/minions", saltnado.MinionSaltAPIHandler),
         (r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
-        (r"/jobs", saltnado.JobsSaltAPIHandler),        
+        (r"/jobs", saltnado.JobsSaltAPIHandler),
+        (r"/run", saltnado.RunSaltAPIHandler),
     ], debug=mod_opts.get('debug', False))
     
     application.opts = __opts__ 

@@ -357,6 +357,13 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         Disbatch a lowstate job to the appropriate client
         '''
         self.client = client
+        
+        for low in self.lowstate:
+            if not ('token' in low or 'eauth' in low):
+                # TODO: better error?
+                self.set_status(401)
+                self.finish()
+                return        
         # disbatch to the correct handler
         try:
             getattr(self, '_disbatch_{0}'.format(self.client))()
@@ -724,5 +731,15 @@ class JobsSaltAPIHandler(SaltAPIHandler):
         self.timeout = self.start + self.application.opts['timeout'] + 100
 
         self.disbatch('runner')
+
+class RunSaltAPIHandler(SaltAPIHandler):
+    '''
+    Handler for /run requests
+    '''
+    @tornado.web.asynchronous
+    def post(self):
+        client = self.get_arguments('client')[0]
+        self._verify_client(client)
+        self.disbatch(client)
 
 
