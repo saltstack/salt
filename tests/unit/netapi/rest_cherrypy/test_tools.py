@@ -48,7 +48,7 @@ class TestInFormats(BaseToolsTest):
                 ('Content-type', 'application/x-www-form-urlencoded'),
         ))
         self.assertEqual(response.status, '200 OK')
-        self.assertDictEqual(request.serialized_data, data)
+        self.assertDictEqual(request.unserialized_data, data)
 
     def test_json_ctype(self):
         data = {'valid': 'stuff'}
@@ -57,7 +57,7 @@ class TestInFormats(BaseToolsTest):
                 ('Content-type', 'application/json'),
         ))
         self.assertEqual(response.status, '200 OK')
-        self.assertDictEqual(request.serialized_data, data)
+        self.assertDictEqual(request.unserialized_data, data)
 
     def test_json_as_text_out(self):
         '''
@@ -69,7 +69,7 @@ class TestInFormats(BaseToolsTest):
                 ('Content-type', 'text/plain'),
         ))
         self.assertEqual(response.status, '200 OK')
-        self.assertDictEqual(request.serialized_data, data)
+        self.assertDictEqual(request.unserialized_data, data)
 
     def test_yaml_ctype(self):
         data = {'valid': 'stuff'}
@@ -78,4 +78,4 @@ class TestInFormats(BaseToolsTest):
                 ('Content-type', 'application/x-yaml'),
         ))
         self.assertEqual(response.status, '200 OK')
-        self.assertDictEqual(request.serialized_data, data)
+        self.assertDictEqual(request.unserialized_data, data)

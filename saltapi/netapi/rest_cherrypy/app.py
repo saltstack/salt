@@ -350,7 +350,7 @@ def urlencoded_processor(entity):
     '''
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
-    cherrypy.serving.request.serialized_data = entity.params
+    cherrypy.serving.request.unserialized_data = entity.params
 
 
 @process_request_body
@@ -362,7 +362,7 @@ def json_processor(entity):
     '''
     body = entity.fp.read()
     try:
-        cherrypy.serving.request.serialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
@@ -376,7 +376,7 @@ def yaml_processor(entity):
     '''
     body = entity.fp.read()
     try:
-        cherrypy.serving.request.serialized_data = yaml.safe_load(body)
+        cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
@@ -393,9 +393,9 @@ def text_processor(entity):
     '''
     body = entity.fp.read()
     try:
-        cherrypy.serving.request.serialized_data = json.loads(body)
+        cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
-        cherrypy.serving.request.serialized_data = body
+        cherrypy.serving.request.unserialized_data = body
 
 
 def hypermedia_in():
@@ -440,7 +440,7 @@ def lowdata_fmt():
 
     # TODO: call lowdata validation routines from here
 
-    data = cherrypy.request.serialized_data
+    data = cherrypy.request.unserialized_data
 
     if cherrypy.request.headers['Content-Type'] == 'application/x-www-form-urlencoded':
         # Make the 'arg' param a list if not already
@@ -1368,7 +1368,7 @@ class Webhook(object):
         :status 413: request body is too large
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
-        data = cherrypy.serving.request.serialized_data
+        data = cherrypy.serving.request.unserialized_data
         headers = dict(cherrypy.request.headers)
 
         ret = self.event.fire_event({
