@@ -165,3 +165,8 @@ class PsTestCase(TestCase):
         # @patch('psutil.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
         # def test_get_users_utmp(self):
         #     pass
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PsTestCase, needs_daemon=False)
