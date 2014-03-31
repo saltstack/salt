@@ -79,15 +79,15 @@ class BaseCherryPyTestCase(unittest.TestCase):
         # This is a required header when running HTTP/1.1
         h = {'Host': '127.0.0.1'}
 
-        if headers is not None:
-            h.update(headers)
-
         # if we had some data passed as the request entity
         # let's make sure we have the content-length set
         fd = None
         if body is not None:
             h['content-length'] = '%d' % len(body)
             fd = StringIO(body)
+
+        if headers is not None:
+            h.update(headers)
 
         # Get our application and run the request against it
         app = cherrypy.tree.apps.get(app_path)
