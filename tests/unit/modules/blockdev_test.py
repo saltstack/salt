@@ -45,3 +45,8 @@ class TestBlockdevModule(TestCase):
                 mock.assert_called_once_with(
                     'blockdev --setra 512 --setfra 512 /dev/sda'
                 )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestBlockdevModule, needs_daemon=False)
