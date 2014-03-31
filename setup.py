@@ -537,6 +537,7 @@ if IS_WINDOWS_PLATFORM:
         '_winreg',
         'wmi',
         'site',
+        'psutil',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
