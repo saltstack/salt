@@ -138,7 +138,8 @@ class SaltEvent(object):
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
+        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
