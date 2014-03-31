@@ -156,3 +156,8 @@ empty_option=
             'SectionB': {'test3': 'this value will be edited two times'},
         })
         self.test_empty_lines_preserved_after_edit()
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(IniManageTestCase, needs_daemon=False)
