@@ -2145,6 +2145,14 @@ class BaseHighState(object):
                     else:
                         env_key = saltenv
 
+                    if env_key not in self.avail:
+                        msg = ('Nonexistant saltenv {0!r} found in include '
+                               'of {1!r} within SLS \'{2}:{3}\''
+                               .format(env_key, inc_sls, saltenv, sls))
+                        log.error(msg)
+                        errors.append(msg)
+                        continue
+
                     if inc_sls.startswith('.'):
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
