@@ -115,4 +115,4 @@ class BaseCherryPyTestCase(unittest.TestCase):
 
         # collapse the response into a bytestring
         response.collapse_body()
-        return response
+        return request, response
