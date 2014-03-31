@@ -3312,7 +3312,7 @@ def delete_backup(path, backup_id):
     '''
     .. versionadded:: 0.17.0
 
-    Restore a previous version of a file that was backed up using Salt's
+    Delete a previous version of a file that was backed up using Salt's
     :doc:`file state backup </ref/states/backup_mode>` system.
 
     path
