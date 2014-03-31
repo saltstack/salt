@@ -376,7 +376,7 @@ def yaml_processor(entity):
     '''
     body = entity.fp.read()
     try:
-        cherrypy.serving.request.serialized_data = yaml.load(body)
+        cherrypy.serving.request.serialized_data = yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
