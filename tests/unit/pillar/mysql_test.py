@@ -530,3 +530,8 @@ class MysqlPillarTestCase(TestCase):
             ]},
              return_data.result
         )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MysqlPillarTestCase, needs_daemon=False)
