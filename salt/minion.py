@@ -126,6 +126,11 @@ def resolve_dns(opts):
     else:
         ret['master_ip'] = '127.0.0.1'
 
+    if 'master_ip' in ret and 'master_ip' in opts:
+        if ret['master_ip'] != opts['master_ip']:
+            log.warning('Master ip address changed from {0} to {1}'.format(opts['master_ip'],
+                                                                          ret['master_ip'])
+            )
     ret['master_uri'] = 'tcp://{ip}:{port}'.format(ip=ret['master_ip'],
                                                    port=opts['master_port'])
     return ret
