@@ -1591,7 +1591,6 @@ def get_hash(path, form='md5', chunk_size=4096):
     '''
     try:
         hash_type = getattr(hashlib, form)
-        print(hash_type)
     except AttributeError:
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
