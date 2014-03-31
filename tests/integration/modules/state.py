@@ -543,8 +543,8 @@ fi
 
         ret = self.run_function('state.sls', mods='requisites.require_error1')
         self.assertEqual(ret, [
-            'Cannot extend ID W in "base:requisites.require_error1".'
-            + ' It is not part of the high state.'
+            "Cannot extend ID W in 'base:requisites.require_error1'. "
+            "It is not part of the high state."
         ])
 
         # issue #8235
