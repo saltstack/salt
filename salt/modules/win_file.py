@@ -19,6 +19,9 @@ import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
 import difflib  # do not remove, used in imported file.py functions
+import errno  # do not remove, used in imported file.py functions
+import shutil  # do not remove, used in imported file.py functions
+import re
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -41,7 +44,8 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
         get_hash, comment, manage_file, file_exists, get_diff, get_managed,
         __clean_tmp, check_managed, check_file_meta, _binary_replace,
-        contains_regex)
+        contains_regex, access, copy, readdir, rmdir, truncate, replace,
+        search, _get_flags)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -60,7 +64,15 @@ def __virtual__():
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs, file_exists
             global check_managed, check_file_meta, remove, append
+            global directory_exists, patch, sed_contains, touch, contains
+            global contains_regex, contains_regex_multiline, contains_glob
+            global sed, find, psed, get_sum, check_hash, get_hash
+            global uncomment, comment, get_diff, _get_flags
+            global access, copy, readdir, rmdir, truncate, replace, search
 
+            replace = _namespaced_function(replace, globals())
+            search = _namespaced_function(search, globals())
+            _get_flags = _namespaced_function(_get_flags, globals())
             remove = _namespaced_function(remove, globals())
             append = _namespaced_function(append, globals())
             check_perms = _namespaced_function(check_perms, globals())
