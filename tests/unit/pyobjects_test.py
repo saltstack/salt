@@ -206,3 +206,8 @@ class SaltObjectTests(TestCase):
         self.assertRaises(AttributeError, attr_fail)
         self.assertEqual(Salt.math.times2, times2)
         self.assertEqual(Salt.math.times2(2), 4)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(StateTests, RendererTests, SaltObjectTests, needs_daemon=False)
