@@ -22,6 +22,8 @@ import difflib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
 import shutil  # do not remove, used in imported file.py functions
 import re
+import salt.utils.atomicfile
+import salt._compat
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -41,11 +43,11 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
         check_managed, check_perms, patch, remove, source_list, sed_contains,
         touch, append, contains, contains_regex, contains_regex_multiline,
-        contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
-        get_hash, comment, manage_file, file_exists, get_diff, get_managed,
-        __clean_tmp, check_managed, check_file_meta, _binary_replace,
-        contains_regex, access, copy, readdir, rmdir, truncate, replace,
-        search, _get_flags)
+        contains_glob, uncomment, sed, find, psed, get_sum, _get_bkroot,
+        get_hash, comment, manage_file, file_exists, get_diff, list_backups,
+        __clean_tmp, check_file_meta, _binary_replace, restore_backup,
+        access, copy, readdir, rmdir, truncate, replace, delete_backup,
+        search, _get_flags, extract_hash, _error)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -63,16 +65,24 @@ def __virtual__():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs, file_exists
-            global check_managed, check_file_meta, remove, append
+            global check_managed, check_file_meta, remove, append, _error
             global directory_exists, patch, sed_contains, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
-            global sed, find, psed, get_sum, check_hash, get_hash
-            global uncomment, comment, get_diff, _get_flags
+            global sed, find, psed, get_sum, check_hash, get_hash, delete_backup
+            global uncomment, comment, get_diff, _get_flags, extract_hash
             global access, copy, readdir, rmdir, truncate, replace, search
+            global _binary_replace, _get_bkroot, list_backups, restore_backup
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
             _get_flags = _namespaced_function(_get_flags, globals())
+            _binary_replace = _namespaced_function(_binary_replace, globals())
+            _error = _namespaced_function(_error, globals())
+            _get_bkroot = _namespaced_function(_get_bkroot, globals())
+            list_backups = _namespaced_function(list_backups, globals())
+            restore_backup = _namespaced_function(restore_backup, globals())
+            delete_backup = _namespaced_function(delete_backup, globals())
+            extract_hash = _namespaced_function(extract_hash, globals())
             remove = _namespaced_function(remove, globals())
             append = _namespaced_function(append, globals())
             check_perms = _namespaced_function(check_perms, globals())
