@@ -903,9 +903,9 @@ def replace(path,
             show_changes=True,
         ):
     '''
-    Replace occurrences of a pattern in a file
-
     .. versionadded:: 0.17.0
+
+    Replace occurrences of a pattern in a file
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
@@ -1060,9 +1060,9 @@ def blockreplace(path,
         show_changes=True,
         ):
     '''
-    Replace content of a text block in a file, delimited by line markers
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Replace content of a text block in a file, delimited by line markers
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
@@ -1248,9 +1248,9 @@ def search(path,
         bufsize=1,
         ):
     '''
-    Search for occurrences of a pattern in a file
-
     .. versionadded:: 0.17.0
+
+    Search for occurrences of a pattern in a file
 
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
@@ -1537,9 +1537,9 @@ def touch(name, atime=None, mtime=None):
 
 def seek_read(path, size, offset):
     '''
-    Seek to a position on a file and write to it
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Seek to a position on a file and write to it
 
     CLI Example:
 
@@ -1556,9 +1556,9 @@ def seek_read(path, size, offset):
 
 def seek_write(path, data, offset):
     '''
-    Seek to a position on a file and write to it
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Seek to a position on a file and write to it
 
     CLI Example:
 
@@ -1576,9 +1576,9 @@ def seek_write(path, data, offset):
 
 def truncate(path, length):
     '''
-    Seek to a position on a file and write to it
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Seek to a position on a file and write to it
 
     CLI Example:
 
@@ -1593,9 +1593,9 @@ def truncate(path, length):
 
 def link(src, link):
     '''
-    Create a hard link to a file
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Create a hard link to a file
 
     CLI Example:
 
@@ -1690,12 +1690,12 @@ def copy(src, dst):
 
 def lstat(path):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     Returns the lstat attributes for the given file or dir. Does not support
     symbolic links.
 
     CLI Example:
-
-    .. versionadded:: 2014.1.0 (Hydrogen)
 
     .. code-block:: bash
 
@@ -1714,6 +1714,8 @@ def lstat(path):
 
 def access(path, mode):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
@@ -1721,8 +1723,6 @@ def access(path, mode):
         r: Test the readability of the path
         w: Test the writability of the path
         x: Test whether the path can be executed
-
-    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1749,9 +1749,9 @@ def access(path, mode):
 
 def readlink(path):
     '''
-    Return the path that a symlink points to
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Return the path that a symlink points to
 
     CLI Example:
 
@@ -1770,9 +1770,9 @@ def readlink(path):
 
 def readdir(path):
     '''
-    Return a list containing the contents of a directory
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Return a list containing the contents of a directory
 
     CLI Example:
 
@@ -1793,9 +1793,9 @@ def readdir(path):
 
 def statvfs(path):
     '''
-    Perform a statvfs call against the filesystem that the file resides on
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Perform a statvfs call against the filesystem that the file resides on
 
     CLI Example:
 
@@ -1872,9 +1872,9 @@ def stats(path, hash_type='md5', follow_symlinks=True):
 
 def rmdir(path):
     '''
-    Remove the specified directory. Fails if a directory is not empty.
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Remove the specified directory. Fails if a directory is not empty.
 
     CLI Example:
 
@@ -2963,6 +2963,8 @@ def mknod_chrdev(name,
                  group=None,
                  mode='0660'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a character device.
 
     CLI Example:
@@ -3034,6 +3036,8 @@ def mknod_blkdev(name,
                  group=None,
                  mode='0660'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a block device.
 
     CLI Example:
@@ -3103,6 +3107,8 @@ def mknod_fifo(name,
                group=None,
                mode='0660'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a FIFO pipe.
 
     CLI Example:
@@ -3147,6 +3153,8 @@ def mknod(name,
           group=None,
           mode='0600'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a block device, character device, or fifo pipe.
     Identical to the gnu mknod.
 
@@ -3188,10 +3196,10 @@ def mknod(name,
 
 def list_backups(path, limit=None):
     '''
+    .. versionadded:: 0.17.0
+
     Lists the previous versions of a file backed up using Salt's :doc:`file
     state backup </ref/states/backup_mode>` system.
-
-    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
@@ -3243,10 +3251,10 @@ list_backup = list_backups
 
 def restore_backup(path, backup_id):
     '''
+    .. versionadded:: 0.17.0
+
     Restore a previous version of a file that was backed up using Salt's
     :doc:`file state backup </ref/states/backup_mode>` system.
-
-    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
@@ -3302,10 +3310,10 @@ def restore_backup(path, backup_id):
 
 def delete_backup(path, backup_id):
     '''
+    .. versionadded:: 0.17.0
+
     Restore a previous version of a file that was backed up using Salt's
     :doc:`file state backup </ref/states/backup_mode>` system.
-
-    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
