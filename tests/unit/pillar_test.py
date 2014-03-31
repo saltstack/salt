@@ -173,3 +173,8 @@ ssh:
             }[sls]
 
         client.get_state.side_effect = get_state
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PillarTestCase, needs_daemon=False)
