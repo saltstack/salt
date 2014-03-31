@@ -223,14 +223,21 @@ def yamlify_arg(arg):
             else:
                 return arg
 
-        elif arg is None \
-                or isinstance(arg, (list, float, integer_types, string_types)):
+        elif arg is None or isinstance(arg, (list, float, integer_types, string_types)):
             # yaml.safe_load will load '|' as '', don't let it do that.
             if arg == '' and original_arg in ('|',):
                 return original_arg
             # yaml.safe_load will treat '#' as a comment, so a value of '#'
             # will become None. Keep this value from being stomped as well.
             elif arg is None and original_arg.strip().startswith('#'):
+                return original_arg
+            elif arg is None and original_arg.strip() == '':
+                # Because YAML loads empty strings as None, we return the original string
+                # >>> import yaml
+                # >>> yaml.load('') is None
+                # True
+                # >>> yaml.load('      ') is None
+                # True
                 return original_arg
             else:
                 return arg
