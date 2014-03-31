@@ -50,7 +50,7 @@ __all__ = ['BaseCherryPyTestCase']
 
 class BaseCherryPyTestCase(unittest.TestCase):
     def request(self, path='/', method='GET', app_path='', scheme='http',
-                proto='HTTP/1.1', data=None, headers=None, **kwargs):
+                proto='HTTP/1.1', body=None, qs=None, headers=None, **kwargs):
         """
         CherryPy does not have a facility for serverless unit testing.
         However this recipe demonstrates a way of doing it by
@@ -82,26 +82,12 @@ class BaseCherryPyTestCase(unittest.TestCase):
         if headers is not None:
             h.update(headers)
 
-        # If we have a POST/PUT request but no data
-        # we urlencode the named arguments in **kwargs
-        # and set the content-type header
-        if method in ('POST', 'PUT') and not data:
-            data = urllib.urlencode(kwargs)
-            kwargs = None
-            h['content-type'] = 'application/x-www-form-urlencoded'
-
-        # If we did have named arguments, let's
-        # urlencode them and use them as a querystring
-        qs = None
-        if kwargs:
-            qs = urllib.urlencode(kwargs)
-
         # if we had some data passed as the request entity
         # let's make sure we have the content-length set
         fd = None
-        if data is not None:
-            h['content-length'] = '%d' % len(data)
-            fd = StringIO(data)
+        if body is not None:
+            h['content-length'] = '%d' % len(body)
+            fd = StringIO(body)
 
         # Get our application and run the request against it
         app = cherrypy.tree.apps.get(app_path)
