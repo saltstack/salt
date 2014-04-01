@@ -253,3 +253,8 @@ class MySQLTestCase(TestCase):
             else:
                 calls = (call().cursor().execute('{0}'.format(expected_sql)))
             connect_mock.assert_has_calls(calls)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MySQLTestCase, needs_daemon=False)

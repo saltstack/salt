@@ -342,12 +342,7 @@ def destroy(vm_, call=None):
             {'name': vm_, 'instance_id': vm_},
             transport=__opts__['transport']
         )
-        gid = 'lxc.{0}.initial_pass'.format(vm_)
-        _salt('grains.setval', gid, False)
-        gid = 'lxc.{0}.initial_dns'.format(vm_)
-        _salt('grains.setval', gid, False)
         cret = _salt('lxc.destroy', vm_, stop=True)
-        _salt('saltutil.sync_grains')
         ret['result'] = cret['change']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
@@ -549,8 +544,11 @@ def create(vm_, call=None):
     # first time provisionning only, set the default user/password
     changes['250_password'] = 'Passwords in place'
     ret['comment'] = changes['250_password']
-    gid = 'lxc.{0}.initial_pass'.format(name, False)
-    if not __grains__.get(gid):
+    gid = '/.lxc.{0}.initial_pass'.format(name, False)
+    lxcret = _salt('lxc.run_cmd',
+                   name, 'test -e {0}'.format(gid),
+                   stdout=False, stderr=False)
+    if lxcret:
         cret = _salt('lxc.set_pass',
                      name,
                      password=password, users=users)
@@ -560,8 +558,18 @@ def create(vm_, call=None):
             changes['250_password'] = 'Failed to update passwords'
         ret['comment'] = changes['250_password']
         _checkpoint(ret)
-        if _salt('grains.setval', gid, True):
-            _salt('saltutil.sync_grains')
+        try:
+            lxcret = int(
+                _salt('lxc.run_cmd',
+                      name,
+                      'sh -c \'touch "{0}"; '
+                      'test -e "{0}";echo ${{?}}\''.format(gid)))
+        except ValueError:
+            lxcret = 1
+        ret['result'] = not bool(lxcret)
+        if not cret['result']:
+            changes['250_password'] = 'Failed to test password file marker'
+        _checkpoint(ret)
         changed = True
 
     def wait_for_ip():
@@ -594,7 +602,11 @@ def create(vm_, call=None):
     changes['350_dns'] = 'DNS in place'
     ret['comment'] = changes['350_dns']
     gid = 'lxc.{0}.initial_dns'.format(name, False)
-    if dnsservers and not __grains__.get(gid):
+    lxcret = _salt('lxc.run_cmd',
+                   name,
+                   'test -e {0}'.format(gid),
+                   stdout=False, stderr=False,)
+    if dnsservers and not lxcret:
         cret = _salt('lxc.set_dns',
                      name,
                      dnsservers=dnsservers)
@@ -604,8 +616,18 @@ def create(vm_, call=None):
             ret['result'] = False
             changes['350_dns'] = 'DNS provisionning error'
             ret['comment'] = changes['350_dns']
-        if _salt('grains.setval', gid, True):
-            _salt('saltutil.sync_grains')
+        try:
+            lxcret = int(
+                _salt('lxc.run_cmd',
+                      name,
+                      'sh -c \'touch "{0}"; '
+                      'test -e "{0}";echo ${{?}}\''.format(gid)))
+        except ValueError:
+            lxcret = 1
+        ret['result'] = not lxcret
+        if not cret['result']:
+            changes['250_password'] = 'Failed to test DNS set marker'
+        _checkpoint(ret)
         changed = True
     _checkpoint(ret)
 

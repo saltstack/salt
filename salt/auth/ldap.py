@@ -112,8 +112,8 @@ def _bind(username, password):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-            'mandatory': ['server', 'port', 'tls', 'no_verify', 'anonymous'],
-            'additional': ['binddn', 'bindpw', 'filter'],
+        'mandatory': ['server', 'port', 'tls', 'no_verify', 'anonymous'],
+        'additional': ['binddn', 'bindpw', 'filter'],
     }
 
     paramvalues = {}
@@ -192,6 +192,9 @@ def _bind(username, password):
 
 
 def auth(username, password):
+    '''
+    Simple LDAP auth
+    '''
     if _bind(username, password):
         log.debug('LDAP authentication successful')
         return True
@@ -199,11 +202,23 @@ def auth(username, password):
         return False
 
 
-def groups(username, *args, **kwargs):
+def groups(username, **kwargs):
+    '''
+    Authenticate against an LDAP group
+
+    Uses groupou and basedn specified in group to filter
+    group search
+    '''
     group_list = []
     bind = _bind(username, kwargs['password'])
-    search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')), ldap.SCOPE_SUBTREE, '(&(memberUid={0})(objectClass=posixGroup))'.format(username), ['memberUid', 'cn'])
-    for dn, entry in search_results:
+    if bind:
+        search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')),
+                                       ldap.SCOPE_SUBTREE,
+                                       '(&(memberUid={0})(objectClass=posixGroup))'.format(username),
+                                       ['memberUid', 'cn'])
+    else:
+        return False
+    for _, entry in search_results:
         if entry['memberUid'][0] == username:
             group_list.append(entry['cn'][0])
     log.debug('User {0} is a member of groups: {1}'.format(username, group_list))

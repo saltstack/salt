@@ -157,7 +157,8 @@ class SaltEvent(object):
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        id_hash = hashlib.md5(self.opts.get('id', '')).hexdigest()
+        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -251,22 +252,29 @@ class SaltEvent(object):
         data = serial.loads(mdata)
         return mtag, data
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', full=False, use_pending=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
+
+        use_pending
+            Defines whether to keep all unconsumed events in a pending_events
+            list, or to discard events that don't match the requested tag.  If
+            set to True, MAY CAUSE MEMORY LEAKS.
         '''
         self.subscribe()
 
-        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
-            self.pending_events.remove(evt)
-            if full:
-                return evt
-            else:
-                return evt['data']
+        if use_pending:
+            for evt in [x for x in self.pending_events
+                        if x['tag'].startswith(tag)]:
+                self.pending_events.remove(evt)
+                if full:
+                    return evt
+                else:
+                    return evt['data']
 
         start = time.time()
         timeout_at = start + wait
@@ -285,7 +293,8 @@ class SaltEvent(object):
                     raise
 
             if not ret['tag'].startswith(tag):  # tag not match
-                self.pending_events.append(ret)
+                if use_pending:
+                    self.pending_events.append(ret)
                 wait = timeout_at - time.time()
                 continue
 

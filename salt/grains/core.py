@@ -515,8 +515,11 @@ def _virtual(osdata):
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
         if os.path.isfile('/proc/1/cgroup'):
-            if ':/lxc/' in salt.utils.fopen('/proc/1/cgroup', 'r').read():
-                grains['virtual_subtype'] = 'LXC'
+            try:
+                if ':/lxc/' in salt.utils.fopen('/proc/1/cgroup', 'r').read():
+                    grains['virtual_subtype'] = 'LXC'
+            except IOError:
+                pass
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'

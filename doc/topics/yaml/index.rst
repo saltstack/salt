@@ -94,3 +94,9 @@ Lists can be the value of a key-value pair. This is quite common in Salt:
       - list_value_one
       - list_value_two
       - list_value_three
+
+In Python, the above maps to:
+
+.. code-block:: python
+
+    {'my_dictionary': ['list_value_one', 'list_value_two', 'list_value_three']}

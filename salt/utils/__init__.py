@@ -1379,8 +1379,14 @@ def check_state_result(running):
             # return false when hosts return a list instead of a dict
             return False
 
-        if state_result.get('result', False) is False:
-            return False
+        if 'result' in state_result:
+            if state_result.get('result', False) is False:
+                return False
+            return True
+
+        # Check nested state results
+        return check_state_result(state_result)
+
     return True
 
 

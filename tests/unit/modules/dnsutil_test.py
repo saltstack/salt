@@ -104,3 +104,8 @@ class DNSUtilTestCase(TestCase):
     def test_to_seconds_large(self):
         self.assertEqual(dnsutil._to_seconds('604801'), 604800,
                          msg='Did not set time greater than one week to one week')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(DNSUtilTestCase, needs_daemon=False)

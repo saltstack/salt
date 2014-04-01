@@ -390,7 +390,7 @@ class CkMinions(object):
                 return []
         return list(minions)
 
-    def connected_ids(self, subset=None):
+    def connected_ids(self, subset=None, show_ipv4=False):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
@@ -417,7 +417,10 @@ class CkMinions(object):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
                     if ipv4 in addrs:
-                        minions.add(id_)
+                        if show_ipv4:
+                            minions.add((id_, ipv4))
+                        else:
+                            minions.add(id_)
                         break
         return minions
 
