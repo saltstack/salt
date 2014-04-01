@@ -24,7 +24,6 @@ import os
 import glob
 import time
 import copy
-import getpass
 import logging
 from datetime import datetime
 
@@ -144,7 +143,7 @@ class LocalClient(object):
         '''
         Determine the current user running the salt command
         '''
-        user = getpass.getuser()
+        user = salt.utils.get_user()
         # if our user is root, look for other ways to figure out
         # who we are
         if (user == 'root' or user == self.opts['user']) and 'SUDO_USER' in os.environ:
