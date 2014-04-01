@@ -89,10 +89,25 @@ def get_fqhostname():
     if h_name.find('.') >= 0:
         return h_name
     else:
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+        try:
+            addrinfo = socket.getaddrinfo(
                 h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
-                socket.SOL_TCP, socket.AI_CANONNAME)[0]
-        return canonname
+                socket.SOL_TCP, socket.AI_CANONNAME
+            )[0]
+        except IndexError:
+            # Handle possible empty struct returns
+            return 'localhost'
+        except socket.gaierror:
+            return 'localhost'
+        else:
+            # Struct contanis the following elements:
+            #     family, socktype, proto, canonname, sockaddr
+            try:
+                # Prevent returning an empty string by falling back to
+                # 'localhost'
+                return addrinfo[3] or 'localhost'
+            except IndexError:
+                return 'localhost'
 
 
 def ip_to_host(ip):
