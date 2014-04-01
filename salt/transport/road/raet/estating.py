@@ -79,7 +79,7 @@ class Estate(object):
         modulo N where N is 2^32 = 0x100000000
         And greater means the difference is less than N/2
         '''
-        return (((sid - self.sid) % 0x100000000) < (0x100000000 / 2))
+        return (((sid - self.sid) % 0x100000000) < (0x100000000 // 2))
 
     def nextTid(self):
         '''
@@ -148,4 +148,4 @@ class RemoteEstate(Estate):
         modulo N where N is 2^32 = 0x100000000
         And greater means the difference is less than N/2
         '''
-        return (((rsid - self.rsid) % 0x100000000) < (0x100000000 / 2))
+        return (((rsid - self.rsid) % 0x100000000) < (0x100000000 // 2))

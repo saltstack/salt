@@ -107,7 +107,7 @@ class Yard(object):
         modulo N where N is 2^32 = 0x100000000
         And greater means the difference is less than N/2
         '''
-        return (((mid - self.mid) % 0x100000000) < (0x100000000 / 2))
+        return (((mid - self.mid) % 0x100000000) < (0x100000000 // 2))
 
 class LocalYard(Yard):
     '''
@@ -138,4 +138,4 @@ class RemoteYard(Yard):
         modulo N where N is 2^32 = 0x100000000
         And greater means the difference is less than N/2
         '''
-        return (((rmid - self.rmid) % 0x100000000) < (0x100000000 / 2))
+        return (((rmid - self.rmid) % 0x100000000) < (0x100000000 // 2))
