@@ -11,7 +11,6 @@ import re
 import sys
 import stat
 import socket
-import getpass
 import logging
 
 # Import third party libs
@@ -285,7 +284,7 @@ def check_user(user):
     '''
     if salt.utils.is_windows():
         return True
-    if user == getpass.getuser():
+    if user == salt.utils.get_user():
         return True
     import pwd  # after confirming not running Windows
     import grp
@@ -356,7 +355,7 @@ def check_path_traversal(path, user='root'):
             if not os.path.exists(tpath):
                 msg += ' Path does not exist.'
             else:
-                current_user = getpass.getuser()
+                current_user = salt.utils.get_user()
                 # Make the error message more intelligent based on how
                 # the user invokes salt-call or whatever other script.
                 if user != current_user:

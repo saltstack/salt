@@ -20,7 +20,6 @@ try:
     import pwd
 except ImportError:  # This is in case windows minion is importing
     pass
-import getpass
 import resource
 import subprocess
 import multiprocessing
@@ -399,7 +398,7 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user \'{0}\''.format(getpass.getuser())
+            'salt-master is starting as user {0!r}'.format(salt.utils.get_user())
         )
 
         enable_sigusr1_handler()
@@ -2553,7 +2552,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif clear_load['user'] == getpass.getuser():
+            elif clear_load['user'] == salt.utils.get_user():
                 if clear_load.pop('key') != self.key.get(clear_load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
@@ -2591,7 +2590,7 @@ class ClearFuncs(object):
                     )
                     return ''
         else:
-            if clear_load.pop('key') != self.key[getpass.getuser()]:
+            if clear_load.pop('key') != self.key[salt.utils.get_user()]:
                 log.warning(
                     'Authentication failure of type "other" occurred.'
                 )
