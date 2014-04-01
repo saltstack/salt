@@ -141,8 +141,8 @@ def _get_rc():
 
     # this will execute rc.conf and rc.conf.local
     # used in /etc/rc at boot to start the daemons
-    vars = __salt__['cmd.run']('(. /etc/rc.conf && set)', clean_env=True, output_loglevel='quiet').split('\n')
-    for var in vars:
+    variables = __salt__['cmd.run']('(. /etc/rc.conf && set)', clean_env=True, output_loglevel='quiet').split('\n')
+    for var in variables:
         match = service_flags_regex.match(var)
         if match:
             # the matched var look like daemon_name_flags=, we test its assigned value
