@@ -30,6 +30,8 @@ associated with that vm. An example profile might look like:
         size: Extra Small 512 MB
         image: centos-6
         location: us-east-1
+
+:depends: requests
 '''
 # pylint: disable=E0102
 

@@ -18,6 +18,7 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       provider: digital_ocean
 
+:depends: requests
 '''
 
 # Import python libs

@@ -59,6 +59,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 
       provider: ec2
 
+:depends: requests
 '''
 # pylint: disable=E0102
 
