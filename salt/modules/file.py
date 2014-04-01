@@ -2477,7 +2477,8 @@ def manage_file(name,
                 template=None,
                 show_diff=True,
                 contents=None,
-                dir_mode=None):
+                dir_mode=None,
+                mkdirs=False):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2621,9 +2622,8 @@ def manage_file(name,
                                                dl_sum)
                     ret['result'] = False
                     return ret
-
             if not os.path.isdir(os.path.dirname(name)):
-                if makedirs:
+                if makedirs and mkdirs:
                     if dir_mode is None and mode is not None:
                         # Add execute bit to each nonzero digit in the mode, if
                         # dir_mode was not specified. Otherwise, any
@@ -2641,7 +2641,8 @@ def manage_file(name,
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group, mode=mode)
+                    makedirs(name, user=user, group=group,
+                             mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
                     return _error(ret, 'Parent directory not present')
