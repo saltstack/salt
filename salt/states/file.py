@@ -2641,7 +2641,7 @@ def prepend(name,
 
     count = 0
 
-    prepend = []
+    preface = []
     for chunk in text:
 
         if __salt__['file.contains_regex_multiline'](
@@ -2663,10 +2663,10 @@ def prepend(name,
                 ret['comment'] = 'File {0} is set to be updated'.format(name)
                 ret['result'] = None
                 return ret
-            prepend.append(line)
+            preface.append(line)
             count += 1
 
-    __salt__['file.prepend'](name, *prepend)
+    __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
