@@ -316,15 +316,15 @@ def add(set=None, entry=None, family='ipv4', **kwargs):
 
     if 'timeout' in kwargs:
         if not 'timeout' in setinfo['Header']:
-            return 'Error: Set {0} not creatd with timeout support'.format(set)
+            return 'Error: Set {0} not created with timeout support'.format(set)
 
     if 'packets' in kwargs or 'bytes' in kwargs:
         if not 'counters' in setinfo['Header']:
-            return 'Error: Set {0} not creatd with counters support'.format(set)
+            return 'Error: Set {0} not created with counters support'.format(set)
 
     if 'comment' in kwargs:
         if not 'comment' in setinfo['Header']:
-            return 'Error: Set {0} not creatd with comment support'.format(set)
+            return 'Error: Set {0} not created with comment support'.format(set)
 
     cmd = '{0} add {1} {2}'.format(_ipset_cmd(), set, entry)
 
@@ -464,15 +464,15 @@ def build_entry(set=None, entry=None, full=None, family='ipv4', **kwargs):
 
     if 'timeout' in kwargs:
         if not 'timeout' in setinfo['Header']:
-            return 'Error: Set {0} not creatd with timeout support'.format(set)
+            return 'Error: Set {0} not created with timeout support'.format(set)
 
     if 'packets' in kwargs or 'bytes' in kwargs:
         if not 'counters' in setinfo['Header']:
-            return 'Error: Set {0} not creatd with counters support'.format(set)
+            return 'Error: Set {0} not created with counters support'.format(set)
 
     if 'comment' in kwargs:
         if not 'comment' in setinfo['Header']:
-            return 'Error: Set {0} not creatd with comment support'.format(set)
+            return 'Error: Set {0} not created with comment support'.format(set)
 
     cmd = '{0}'.format(entry)
 
