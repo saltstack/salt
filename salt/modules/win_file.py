@@ -21,11 +21,11 @@ import contextlib  # do not remove, used in imported file.py functions
 import difflib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
 import shutil  # do not remove, used in imported file.py functions
-import re # do not remove, used in imported file.py functions
-import sys # do not remove, used in imported file.py functions
-import fileinput # do not remove, used in imported file.py functions
-import salt.utils.atomicfile # do not remove, used in imported file.py functions
-import salt._compat # do not remove, used in imported file.py functions
+import re  # do not remove, used in imported file.py functions
+import sys  # do not remove, used in imported file.py functions
+import fileinput  # do not remove, used in imported file.py functions
+import salt.utils.atomicfile  # do not remove, used in imported file.py functions
+import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
