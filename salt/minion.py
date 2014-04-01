@@ -6,7 +6,6 @@ Routines to set up a minion
 # Import python libs
 from __future__ import print_function
 import logging
-import getpass
 import multiprocessing
 import fnmatch
 import copy
@@ -1122,7 +1121,7 @@ class Minion(object):
             log.info(
                 '{0} is starting as user \'{1}\''.format(
                     self.__class__.__name__,
-                    getpass.getuser()
+                    salt.utils.get_user()
                 )
             )
         except Exception as err:
