@@ -5,14 +5,6 @@ Swift utility class
 Author: Anthony Stanton <anthony.stanton@gmail.com>
 '''
 
-# Import Swift client libs
-HAS_SWIFT = False
-try:
-    from swiftclient import client
-    HAS_SWIFT = True
-except ImportError:
-    pass
-
 # Import python libs
 import time
 import logging
@@ -25,6 +17,15 @@ import salt.utils
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# Import Swift client libs
+HAS_SWIFT = False
+try:
+    from swiftclient import client
+    HAS_SWIFT = True
+except ImportError:
+    log.error('Error:: unable to find swiftclient. Try installing it from the appropriate repository.')
+    pass
 
 
 def check_swift():
