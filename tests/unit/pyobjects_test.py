@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 from cStringIO import StringIO
 
 from salttesting import TestCase
@@ -7,13 +8,9 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 
-from salt.config import minion_config
-from salt.loader import states
-from salt.minion import SMinion
 from salt.renderers.pyobjects import render as pyobjects_render
 from salt.utils.odict import OrderedDict
-from salt.utils.pyobjects import (StateFactory, State, StateRegistry,
-                                  InvalidFunction)
+from salt.utils.pyobjects import StateFactory, State, StateRegistry
 
 test_registry = StateRegistry()
 File = StateFactory('file', registry=test_registry)
@@ -39,14 +36,9 @@ invalid_template = """#!pyobjects
 File.fail('/tmp')
 """
 
-include_template = """#!pyobjects
-Include('http')
-"""
 
-extend_template = """#!pyobjects
-Include('http')
-Service.running(Extend('apache'), watch=[{'file': '/etc/file'}])
-"""
+def tmpl(name):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", name)
 
 
 class StateTests(TestCase):
@@ -118,16 +110,8 @@ class StateTests(TestCase):
 
 
 class RendererTests(TestCase):
-    def render(self, template):
-        _config = minion_config(None)
-        _config['file_client'] = 'local'
-        _minion = SMinion(_config)
-        _states = states(_config, _minion.functions)
-
-        return pyobjects_render(StringIO(template), _states=_states)
-
     def test_basic(self):
-        ret = self.render(basic_template)
+        ret = pyobjects_render(StringIO(basic_template))
         self.assertEqual(ret, OrderedDict([
             ('/tmp', {
                 'file.directory': [
@@ -142,24 +126,5 @@ class RendererTests(TestCase):
 
     def test_invalid_function(self):
         def _test():
-            self.render(invalid_template)
-        self.assertRaises(InvalidFunction, _test)
-
-    def test_include(self):
-        ret = self.render(include_template)
-        self.assertEqual(ret, OrderedDict([
-            ('include', ['http']),
-        ]))
-
-    def test_extend(self):
-        ret = self.render(extend_template)
-        self.assertEqual(ret, OrderedDict([
-            ('include', ['http']),
-            ('extend', OrderedDict([
-                ('apache', {
-                    'service.running': [
-                        {'watch': [{'file': '/etc/file'}]}
-                    ]
-                }),
-            ])),
-        ]))
+            pyobjects_render(StringIO(invalid_template))
+        self.assertRaises(Exception, _test)
