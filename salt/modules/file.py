@@ -17,7 +17,6 @@ import difflib
 import errno
 import fileinput
 import fnmatch
-import getpass
 import hashlib
 import itertools
 import logging
@@ -219,7 +218,7 @@ def user_to_uid(user):
         salt '*' file.user_to_uid root
     '''
     if not user:
-        user = getpass.getuser()
+        user = salt.utils.get_user()
     try:
         return pwd.getpwnam(user).pw_uid
     except KeyError:
