@@ -143,7 +143,7 @@ class SaltEvent(object):
         # longer hashes than others, and may exceed the IPC maximum length
         # for UNIX sockets.
         id_hash = hash_type(self.opts.get('id', '')).hexdigest()
-        if hash_type == 'sha256':
+        if self.opts.get('hash_type', 'md5') == 'sha256':
             id_hash = id_hash[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
