@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Connection library for Amazon S3
+
+:depends: requests
 '''
 
 # Import Python libs
