@@ -479,7 +479,7 @@ class SSH(object):
             cmd_args = arg_str.split(None, 1)
             fun = cmd_args[0]
             args = [cmd_args[1]]
-        
+
         job_load = {
             'jid': jid,
             'tgt_type': self.tgt_type,
