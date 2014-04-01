@@ -999,7 +999,7 @@ def replace(path,
             result = re.search(cpattern, line)
 
             if result:
-                fi_file.close() # close file handle before returning
+                fi_file.close()  # close file handle before returning
                 return True
         else:
             result, nrepl = re.subn(cpattern, repl, line, count)
