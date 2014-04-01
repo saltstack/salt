@@ -297,7 +297,7 @@ DEFAULT_MINION_OPTS = {
     'retry_dns': 30,
     'recon_max': 5000,
     'recon_default': 100,
-    'recon_randomize': False,
+    'recon_randomize': True,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
