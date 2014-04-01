@@ -40,7 +40,7 @@ import os
 import copy
 import urllib
 import httplib
-import urllib2
+import requests
 import json
 import logging
 import base64
@@ -229,7 +229,7 @@ def create(vm_):
     ret = {}
 
     def __query_node_data(vm_id, vm_location):
-        rcode, data = query2(
+        rcode, data = query(
             command='my/machines/{0}'.format(vm_id),
             method='GET',
             location=vm_location
@@ -425,7 +425,7 @@ def create_node(**kwargs):
     })
 
     try:
-        ret = query2(command='/my/machines', data=data, method='POST',
+        ret = query(command='/my/machines', data=data, method='POST',
                      location=location)
         if ret[0] in VALID_RESPONSE_CODES:
             return ret[1]
@@ -468,7 +468,7 @@ def destroy(name, call=None):
     )
 
     node = get_node(name)
-    ret = query2(command='my/machines/{0}'.format(node['id']),
+    ret = query(command='my/machines/{0}'.format(node['id']),
                  location=node['location'], method='DELETE')
 
     salt.utils.cloud.fire_event(
@@ -569,7 +569,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     ret = []
     try:
 
-        ret = query2(command=command, data=data, method=method,
+        ret = query(command=command, data=data, method=method,
                      location=location)
         log.info('Success {0} for node {1}'.format(caller, name))
     except Exception as exc:
@@ -637,7 +637,7 @@ def avail_locations(call=None):
     # corrected, currently only the european dc (new api) returns the correct
     # values
     # ret = {}
-    # rcode, datacenters = query2(
+    # rcode, datacenters = query(
     #     command='my/datacenters', location=DEFAULT_LOCATION, method='GET'
     # )
     # if rcode in VALID_RESPONSE_CODES and isinstance(datacenters, dict):
@@ -775,7 +775,7 @@ def list_nodes(full=False, call=None):
     ret = {}
     if POLL_ALL_LOCATIONS:
         for location in JOYENT_LOCATIONS.keys():
-            result = query2(command='my/machines', location=location,
+            result = query(command='my/machines', location=location,
                             method='GET')
             nodes = result[1]
             for node in nodes:
@@ -784,7 +784,7 @@ def list_nodes(full=False, call=None):
                     ret[node['name']] = reformat_node(item=node, full=full)
 
     else:
-        result = query2(command='my/machines', location=DEFAULT_LOCATION,
+        result = query(command='my/machines', location=DEFAULT_LOCATION,
                         method='GET')
         nodes = result[1]
         for node in nodes:
@@ -838,23 +838,13 @@ def avail_images(call=None):
         )
 
     img_url = 'https://images.joyent.com/images'
-    request = urllib2.Request(img_url)
-    request.get_method = lambda: 'GET'
-    result = urllib2.urlopen(request)
-    content = result.read()
-    result.close()
+    result = requests.get(img_url)
+    content = result.text
 
     ret = {}
     for image in yaml.safe_load(content):
         ret[image['name']] = image
     return ret
-
-    # It appears the API has changed on us again
-    #rcode, items = query2(command='/my/datasets')
-    #log.debug(rcode)
-    #if rcode not in VALID_RESPONSE_CODES:
-    #    return {}
-    #return key_list(items=items)
 
 
 def avail_sizes(call=None):
@@ -873,7 +863,7 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    rcode, items = query2(command='/my/packages')
+    rcode, items = query(command='/my/packages')
     if rcode not in VALID_RESPONSE_CODES:
         return {}
     return key_list(items=items)
@@ -893,7 +883,7 @@ def list_keys(kwargs=None, call=None):
         kwargs = {}
 
     ret = {}
-    data = query(action='keys')
+    rcode, data = query(command='my/keys', method='GET')
     for pair in data:
         ret[pair['name']] = pair['key']
     return {'keys': ret}
@@ -916,7 +906,10 @@ def show_key(kwargs=None, call=None):
         log.error('A keyname is required.')
         return False
 
-    data = query(action='keys/{0}'.format(kwargs['keyname']))
+    rcode, data = query(
+        command='my/keys/{0}'.format(kwargs['keyname']),
+        method='GET',
+    )
     return {'keys': {data['name']: data['key']}}
 
 
@@ -959,8 +952,12 @@ def import_key(kwargs=None, call=None):
     send_data = {'name': kwargs['keyname'], 'key': kwargs['key']}
     kwargs['data'] = json.dumps(send_data)
 
-    data = query(action='keys', method='POST', data=kwargs['data'],
-                 headers={'Content-Type': 'application/json'})
+    rcode, data = query(
+        command='my/keys',
+        method='POST',
+        data=kwargs['data'],
+    )
+    log.debug(pprint.pformat(data))
     return {'keys': {data['name']: data['key']}}
 
 
@@ -987,96 +984,11 @@ def delete_key(kwargs=None, call=None):
         log.error('A keyname is required.')
         return False
 
-    data = query(action='keys/{0}'.format(kwargs['keyname']), method='DELETE')
+    rcode, data = query(
+        command='my/keys/{0}'.format(kwargs['keyname']),
+        method='DELETE',
+    )
     return data
-
-
-def query(action=None, command=None, args=None, method='GET', data=None,
-          headers=None):
-    '''
-    Make a web call to Joyent
-    '''
-    location = get_location()
-    path = 'https://{0}.api.joyentcloud.com/{1}/'.format(
-        location,
-        config.get_cloud_config_value(
-            'user', get_configured_provider(), __opts__, search_global=False
-        ),
-    )
-    auth_handler = urllib2.HTTPBasicAuthHandler()
-    auth_handler.add_password(
-        realm='SmartDataCenter',
-        uri=path,
-        user=config.get_cloud_config_value(
-            'user', get_configured_provider(), __opts__, search_global=False
-        ),
-        passwd=config.get_cloud_config_value(
-            'password', get_configured_provider(), __opts__,
-            search_global=False
-        )
-    )
-    opener = urllib2.build_opener(auth_handler)
-    urllib2.install_opener(opener)
-
-    if action:
-        path += action
-
-    if command:
-        path += '/{0}'.format(command)
-
-    if type(args) is not dict:
-        args = {}
-
-    kwargs = {'data': data}
-    kwargs['headers'] = {
-        'Accept': 'application/json',
-        'X-Api-Version': '~6.5',
-    }
-    if type(headers) is dict:
-        for header in headers.keys():
-            kwargs['headers'][header] = headers[header]
-
-    log.debug(
-        'Request headers: {0}'.format(
-            pprint.pformat(kwargs['headers'])
-        )
-    )
-
-    if args:
-        path += '?%s'
-        params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params, **kwargs)
-    else:
-        req = urllib2.Request(url=path, **kwargs)
-
-    req.get_method = lambda: method
-
-    log.debug('{0} {1}'.format(method, req.get_full_url()))
-    if data:
-        log.debug(data)
-
-    try:
-        result = urllib2.urlopen(req)
-        log.debug(
-            'Joyent Response Status Code: {0}'.format(
-                result.getcode()
-            )
-        )
-
-        content = result.read()
-        result.close()
-
-        data = yaml.safe_load(content)
-        return data
-    except urllib2.URLError as exc:
-        log.error(
-            'Joyent Response Status Code: {0} {1}'.format(
-                exc.code,
-                exc.msg
-            )
-        )
-        log.error(exc)
-        return {'error': exc}
 
 
 def get_location_path(location=DEFAULT_LOCATION):
@@ -1088,12 +1000,11 @@ def get_location_path(location=DEFAULT_LOCATION):
     return 'https://{0}{1}'.format(location, JOYENT_API_HOST_SUFFIX)
 
 
-def query2(action=None, command=None, args=None, method='GET', location=None,
+def query(action=None, command=None, args=None, method='GET', location=None,
            data=None):
     '''
     Make a web call to Joyent
     '''
-
     user = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
     )
@@ -1126,40 +1037,26 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
     if not isinstance(args, dict):
         args = {}
 
-    request = None
-    if args:
-        params = urllib.urlencode(args)
-        path = '{0}?{1}'.format(path, params)
-
-    request = urllib2.Request(path)
-    request.get_method = lambda: method
-
     # post form data
     if not data:
         data = json.dumps({})
 
-    request.add_data(data)
-
-    for key, value in headers.items():
-        request.add_header(key, value)
-
     return_content = None
     try:
 
-        result = urllib2.urlopen(request)
+        result = requests.request(method, path, params=args, headers=headers, data=data)
         log.debug(
             'Joyent Response Status Code: {0}'.format(
-                result.getcode()
+                result.status_code
             )
         )
         if 'content-length' in result.headers:
-            content = result.read()
-            result.close()
+            content = result.text
             return_content = yaml.safe_load(content)
 
-        return [result.getcode(), return_content]
+        return [result.status_code, return_content]
 
-    except urllib2.URLError as exc:
+    except requests.exceptions.HTTPError as exc:
         log.error(
             'Joyent Response Status Code: {0}'.format(
                 str(exc)
