@@ -5,7 +5,7 @@ Swift utility class
 Author: Anthony Stanton <anthony.stanton@gmail.com>
 '''
 
-# Import third party libs
+# Import Swift client libs
 HAS_SWIFT = False
 try:
     from swiftclient import client
@@ -37,6 +37,8 @@ def mkdirs(path):
         if err.errno != EEXIST:
             raise
 
+# we've been playing fast and loose with kwargs, but the swiftclient isn't
+# going to accept any old thing
 def _sanitize(kwargs):
     variables = (
         'user', 'key', 'authurl', 
@@ -52,7 +54,6 @@ def _sanitize(kwargs):
 
     return ret
 
-# Function alias to not shadow built-ins
 class SaltSwift(object):
     '''
     Class for all swiftclient functions
@@ -102,7 +103,7 @@ class SaltSwift(object):
 
     def get_container(self, cont):
         '''
-        List files in a new Swift container
+        List files in a Swift container
         '''
         try:
             listing = self.conn.get_container(cont)
@@ -143,9 +144,15 @@ class SaltSwift(object):
             return False
 
     def post_container(self, cont, metadata=None):
+        '''
+        Update container metadata
+        '''
         pass
 
     def head_container(self, cont):
+        '''
+        Get container metadata
+        '''
         pass
 
     def get_object(self, cont, obj, local_file=None, return_bin=False):
@@ -201,7 +208,7 @@ class SaltSwift(object):
 
     def delete_object(self, cont, obj):
         '''
-        Upload a file to Swift
+        Delete a file from Swift
         '''
         try:
             self.conn.delete_object(cont, obj)
@@ -214,23 +221,15 @@ class SaltSwift(object):
             return False
 
     def head_object(self, cont, obj):
+        '''
+        Get object metadata
+        '''
         pass
 
     def post_object(self, cont, obj, metadata):
+        '''
+        Update object metadata
+        '''
         pass
 
 
-
-#The following is a list of functions that need to be incorporated in the
-#swift module. This list should be updated as functions are added.
-#
-#    delete               Delete a container or objects within a container.
-#    download             Download objects from containers.
-#    list                 Lists the containers for the account or the objects
-#                         for a container.
-#    post                 Updates meta information for the account, container,
-#                         or object; creates containers if not present.
-#    stat                 Displays information for the account, container,
-#                         or object.
-#    upload               Uploads files or directories to the given container
-#    capabilities         List cluster capabilities.

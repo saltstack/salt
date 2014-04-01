@@ -14,8 +14,6 @@ Inspired by the S3 and Nova modules
         keystone.password: verybadpass
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
-        # Optional
-        keystone.region_name: 'regionOne'
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
@@ -33,11 +31,11 @@ Inspired by the S3 and Nova modules
           keystone.tenant: admin
           keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
 
-    With this configuration in place, any of the nova functions can make use of
+    With this configuration in place, any of the swift functions can make use of
     a configuration profile by declaring it explicitly.
     For example::
 
-        salt '*' nova.flavor_list profile=openstack1
+        salt '*' swift.get mycontainer myfile /tmp/file profile=openstack1
 '''
 
 # Import python libs
@@ -46,26 +44,15 @@ import logging
 # Import salt libs
 import salt.utils.openstack.swift as suos
 
-
 # Get logging started
 log = logging.getLogger(__name__)
-
-# Function alias to not shadow built-ins
-__func_alias__ = {
-    'list_': 'list'
-}
-
 
 def __virtual__():
     '''
     Only load this module if swift
     is installed on this minion.
     '''
-    if suos.check_swift():
-        return 'swift'
-    else:
-        return False
-
+    return suos.check_swift()
 
 __opts__ = {}
 
@@ -106,11 +93,11 @@ def delete(cont, path=None, profile=None):
     '''
     Delete a container, or delete an object from a container.
 
-    CLI Example to delete a bucket::
+    CLI Example to delete a container::
 
         salt myminion swift.delete mycontainer
 
-    CLI Example to delete an object from a bucket::
+    CLI Example to delete an object from a container::
 
         salt myminion swift.delete mycontainer remoteobject
     '''
@@ -123,33 +110,33 @@ def delete(cont, path=None, profile=None):
 
 def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
     '''
-    List the contents of a bucket, or return an object from a bucket. Set
+    List the contents of a container, or return an object from a container. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
 
-    CLI Example to list buckets:
+    CLI Example to list containers:
 
     .. code-block:: bash
 
-        salt myminion s3.get
+        salt myminion swift.get
 
-    CLI Example to list the contents of a bucket:
+    CLI Example to list the contents of a container:
 
     .. code-block:: bash
 
-        salt myminion s3.get mybucket
+        salt myminion swift.get mycontainer
 
     CLI Example to return the binary contents of an object:
 
     .. code-block:: bash
 
-        salt myminion s3.get mybucket myfile.png return_bin=True
+        salt myminion swift.get mycontainer myfile.png return_bin=True
 
     CLI Example to save the binary contents of an object to a local file:
 
     .. code-block:: bash
 
-        salt myminion s3.get mybucket myfile.png local_file=/tmp/myfile.png
+        salt myminion swift.get mycontainer myfile.png local_file=/tmp/myfile.png
 
     '''
     swift_conn = _auth(profile)
@@ -173,19 +160,19 @@ def head():
 
 def put(cont, path=None, local_file=None, profile=None):
     '''
-    Create a new bucket, or upload an object to a bucket.
+    Create a new container, or upload an object to a container.
 
-    CLI Example to create a bucket:
-
-    .. code-block:: bash
-
-        salt myminion s3.put mybucket
-
-    CLI Example to upload an object to a bucket:
+    CLI Example to create a container:
 
     .. code-block:: bash
 
-        salt myminion s3.put mybucket remotepath local_path=/path/to/file
+        salt myminion swift.put mycontainer
+
+    CLI Example to upload an object to a container:
+
+    .. code-block:: bash
+
+        salt myminion swift.put mycontainer remotepath local_file=/path/to/file
     '''
     swift_conn = _auth(profile)
 
@@ -197,17 +184,3 @@ def put(cont, path=None, local_file=None, profile=None):
         return False
 
 
-
-#The following is a list of functions that need to be incorporated in the
-#swift module. This list should be updated as functions are added.
-#
-#    delete               Delete a container or objects within a container.
-#    download             Download objects from containers.
-#    list                 Lists the containers for the account or the objects
-#                         for a container.
-#    post                 Updates meta information for the account, container,
-#                         or object; creates containers if not present.
-#    stat                 Displays information for the account, container,
-#                         or object.
-#    upload               Uploads files or directories to the given container
-#    capabilities         List cluster capabilities.
