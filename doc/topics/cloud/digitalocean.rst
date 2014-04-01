@@ -7,7 +7,7 @@ Digital Ocean is a public cloud provider that specializes in Linux instances.
 
 Dependencies
 ============
-The Digital Ocean driver requires no special dependencies outside of Salt.
+This driver requires the Python ``requests`` library to be installed.
 
 
 Configuration
