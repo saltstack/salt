@@ -8,7 +8,6 @@ from __future__ import print_function
 import copy
 import errno
 import fnmatch
-import getpass
 import hashlib
 import logging
 import multiprocessing
@@ -1252,7 +1251,7 @@ class Minion(MinionBase):
             log.info(
                 '{0} is starting as user \'{1}\''.format(
                     self.__class__.__name__,
-                    getpass.getuser()
+                    salt.utils.get_user()
                 )
             )
         except Exception as err:
