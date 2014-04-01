@@ -1250,7 +1250,8 @@ def managed(name,
                 template,
                 show_diff,
                 contents,
-                dir_mode
+                dir_mode,
+                makedirs
             )
         except Exception as exc:
             ret['changes'] = {}
