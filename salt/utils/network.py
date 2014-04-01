@@ -89,9 +89,15 @@ def get_fqhostname():
     if h_name.find('.') >= 0:
         return h_name
     else:
-        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
-                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
-                socket.SOL_TCP, socket.AI_CANONNAME)[0]
+        try:
+            family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+                    h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+                    socket.SOL_TCP, socket.AI_CANONNAME)[0]
+        except IOError as exc:
+            msg = 'Command network.get_fqhostname failed with exception: ' \
+                  '{0}. Using socket.get_fqdn instead.'.format(exc)
+            log.warning(msg)
+            return socket.get_fqdn()
         return canonname
 
 
