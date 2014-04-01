@@ -259,13 +259,7 @@ class Joiner(Initiator):
         if self.reid is None:
             if not self.stack.estates: # no channel master so make one
                 master = estating.RemoteEstate(eid=0, ha=mha)
-                try:
-                    self.stack.addRemote(master)
-                except raeting.StackError as ex:
-                    console.terse(str(ex) + '\n')
-                    self.stack.incStat(self.statKey())
-                    return
-
+                self.stack.addRemote(master)
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         self.sid = 0
         self.tid = self.stack.estates[self.reid].nextTid()
@@ -910,12 +904,7 @@ class Allower(Initiator):
         if self.reid is None:
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         remote = self.stack.estates[self.reid]
-        if not remote.joined:
-            emsg = "Must be joined first\n"
-            console.terse(emsg)
-            self.stack.incStat('unjoined_allow_attempt')
-            return
-        remote.refresh() # refresh short term keys and .allowed
+        remote.refresh() # reset .allowed to False and refresh short term keys
         self.sid = remote.sid
         self.tid = remote.nextTid()
         self.prep() # prepare .txData
@@ -1000,6 +989,14 @@ class Allower(Initiator):
             emsg = "Invalid remote destination estate id '{0}'\n".format(self.reid)
             console.terse(emsg)
             self.stack.incStat('invalid_remote_eid')
+            self.remove()
+            return
+
+        remote = self.stack.estates[self.reid]
+        if not remote.joined:
+            emsg = "Must be joined first\n"
+            console.terse(emsg)
+            self.stack.incStat('unjoined_allow_attempt')
             self.remove()
             return
 
@@ -1193,18 +1190,7 @@ class Allowent(Correspondent):
                                            duration=self.redoTimeoutMin)
 
         remote = self.stack.estates[self.reid]
-        if not remote.joined:
-            emsg = "Must be joined first\n"
-            console.terse(emsg)
-            self.stack.incStat('unjoined_allow_attempt')
-            return
-
         #Current .sid was set by stack from rxPacket.data sid so it is the new rsid
-        if not remote.validRsid(self.sid):
-            emsg = "Stale sid '{0}' in packet\n".format(self.sid)
-            console.terse(emsg)
-            self.stack.incStat('stale_sid_allow_attempt')
-            return
         remote.rsid = self.sid #update last received rsid for estate
         remote.rtid = self.tid #update last received rtid for estate
         self.oreo = None #keep locally generated oreo around for redos
@@ -1286,6 +1272,22 @@ class Allowent(Correspondent):
         '''
         Process hello packet
         '''
+        remote = self.stack.estates[self.reid]
+        if not remote.joined:
+            emsg = "Must be joined first\n"
+            console.terse(emsg)
+            self.stack.incStat('unjoined_allow_attempt')
+            self.remove()
+            return
+
+        #Current .sid was set by stack from rxPacket.data sid so it is the new rsid
+        if not remote.validRsid(self.sid):
+            emsg = "Stale sid '{0}' in packet\n".format(self.sid)
+            console.terse(emsg)
+            self.stack.incStat('stale_sid_allow_attempt')
+            self.remove()
+            return
+
         if not self.stack.parseInner(self.rxPacket):
             return
         data = self.rxPacket.data
@@ -1539,11 +1541,6 @@ class Messenger(Initiator):
         if self.reid is None:
             self.reid = self.stack.estates.values()[0].eid # zeroth is channel master
         remote = self.stack.estates[self.reid]
-        if not remote.allowed:
-            emsg = "Must be allowed first\n"
-            console.terse(emsg)
-            self.stack.incStat('unallowed_message_attempt')
-            return
         self.sid = remote.sid
         self.tid = remote.nextTid()
         self.prep() # prepare .txData
@@ -1620,6 +1617,14 @@ class Messenger(Initiator):
             emsg = "Invalid remote destination estate id '{0}'\n".format(self.reid)
             console.terse(emsg)
             self.stack.incStat('invalid_remote_eid')
+            self.remove()
+            return
+
+        remote = self.stack.estates[self.reid]
+        if not remote.allowed:
+            emsg = "Must be allowed first\n"
+            console.terse(emsg)
+            self.stack.incStat('unallowed_message_attempt')
             self.remove()
             return
 
@@ -1741,18 +1746,8 @@ class Messengent(Correspondent):
                                            duration=self.redoTimeoutMin)
 
         remote = self.stack.estates[self.reid]
-        if not remote.allowed:
-            emsg = "Must be allowed first\n"
-            console.terse(emsg)
-            self.stack.incStat('unallowed_message_attempt')
-            return
         # .bcast .wait set from packet by stack when created transaction
         #Current .sid was set by stack from rxPacket.data sid so it is the new rsid
-        if not remote.validRsid(self.sid):
-            emsg = "Stale sid '{0}' in packet\n".format(self.sid)
-            console.terse(emsg)
-            self.stack.incStat('stale_sid_message_attempt')
-            return
         remote.rsid = self.sid #update last received rsid for estate
         remote.rtid = self.tid #update last received rtid for estate
         self.prep() # prepare .txData
@@ -1823,6 +1818,21 @@ class Messengent(Correspondent):
         '''
         Process message packet
         '''
+        remote = self.stack.estates[self.reid]
+        if not remote.allowed:
+            emsg = "Must be allowed first\n"
+            console.terse(emsg)
+            self.stack.incStat('unallowed_message_attempt')
+            self.remove()
+            return
+        #Current .sid was set by stack from rxPacket.data sid so it is the new rsid
+        if not remote.validRsid(self.sid):
+            emsg = "Stale sid '{0}' in packet\n".format(self.sid)
+            console.terse(emsg)
+            self.stack.incStat('stale_sid_message_attempt')
+            self.remove()
+            return
+
         try:
             body = self.tray.parse(self.rxPacket)
         except raeting.PacketError as ex:
