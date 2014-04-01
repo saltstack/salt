@@ -18,6 +18,7 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       provider: digital_ocean
 
+:depends: requests
 '''
 
 # Import python libs
@@ -26,8 +27,7 @@ import copy
 import time
 import json
 import pprint
-import urllib
-import urllib2
+import requests
 import logging
 
 # Import salt cloud libs
@@ -504,22 +504,20 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
         'api_key', get_configured_provider(), __opts__, search_global=False
     )
 
-    path += '?%s'
-    params = urllib.urlencode(args)
-    request = urllib2.urlopen(path % params)
-    if request.getcode() != 200:
+    request = requests.get(path, params=args)
+    if request.status_code != 200:
         raise SaltCloudSystemExit(
             'An error occurred while querying Digital Ocean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.getcode(),
-                request.read()
+                #request.read()
+                request.text
             )
         )
 
-    log.debug(request.geturl())
+    log.debug(request.url)
 
-    content = request.read()
-    request.close()
+    content = request.text
 
     result = json.loads(content)
     if result.get('status', '').lower() == 'error':

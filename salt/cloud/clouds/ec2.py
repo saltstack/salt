@@ -59,6 +59,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 
       provider: ec2
 
+:depends: requests
 '''
 # pylint: disable=E0102
 
@@ -79,7 +80,7 @@ import hashlib
 import binascii
 import datetime
 import urllib
-import urllib2
+import requests
 
 # Import salt libs
 from salt._compat import ElementTree as ET
@@ -318,19 +319,19 @@ def query(params=None, setname=None, requesturl=None, location=None,
             sig = binascii.b2a_base64(hashed.digest())
             params['Signature'] = sig.strip()
 
-            querystring = urllib.urlencode(params)
-            requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
+            requesturl = 'https://{0}/'.format(endpoint)
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         try:
-            result = urllib2.urlopen(requesturl)
+            result = requests.get(requesturl, params=params)
             log.debug(
                 'EC2 Response Status Code: {0}'.format(
-                    result.getcode()
+                    #result.getcode()
+                    result.status_code
                 )
             )
             break
-        except urllib2.URLError as exc:
+        except requests.exceptions.HTTPError as exc:
             root = ET.fromstring(exc.read())
             data = _xml_to_dict(root)
 
@@ -366,7 +367,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             return {'error': data}, requesturl
         return {'error': data}
 
-    response = result.read()
+    response = result.text
     result.close()
 
     root = ET.fromstring(response)
