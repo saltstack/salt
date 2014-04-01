@@ -12,7 +12,8 @@ import json
 import logging
 import time
 import urllib
-import urllib2
+import requests
+import pprint
 
 # Import Salt libs
 import salt.utils
@@ -29,23 +30,15 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     '''
     for i in range(0, num_retries):
         try:
-            # disable any environmental proxy settings
-            proxy_handler = urllib2.ProxyHandler({})
-            opener = urllib2.build_opener(proxy_handler)
-
-            req = urllib2.Request(url)
-
-            # timeout only in > 2.6
-            r = opener.open(req, timeout=timeout)
-            return r.read()
-        except urllib2.HTTPError:
+            result = requests.get(url)
+            return result.text
+        except requests.exceptions.HTTPError as exc:
             return ''
-        except urllib2.URLError:
-            pass
-        except Exception:
+        except Exception as exc:
             pass
 
         log.warning('Caught exception reading from URL. Retry no. {0}'.format(i))
+        log.warning(pprint.pformat(exc))
         time.sleep(2 ** i)
     log.error('Failed to read from URL for {0} times. Giving up.'.format(num_retries))
     return ''
@@ -201,40 +194,26 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if querystring:
             requesturl += '?{0}'.format(querystring)
 
-    req = urllib2.Request(url=requesturl)
     if method == 'PUT':
         if local_file:
             with salt.utils.fopen(local_file, 'r') as ifile:
                 data = ifile.read()
-            req = urllib2.Request(url=requesturl, data=data)
-        req.get_method = lambda: 'PUT'
-    elif method == 'HEAD':
-        req.get_method = lambda: 'HEAD'
-    elif method == 'DELETE':
-        req.get_method = lambda: 'DELETE'
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
-    for header in sorted(headers.keys()):
-        if header == 'Authorization':
-            continue
-        req.add_header(header, headers[header])
-        log.debug('    {0}: {1}'.format(header, headers[header]))
     log.debug('    Authorization: {0}'.format(headers['Authorization']))
-    req.add_header('Authorization', headers['Authorization'])
 
     try:
-        result = urllib2.urlopen(req)
-        response = result.read()
-    except Exception as exc:
+        result = requests.request(method, requesturl, headers=headers)
+        response = result.text
+    except requests.exceptions.HTTPError as exc:
         log.error('There was an error::')
         if hasattr(exc, 'code') and hasattr(exc, 'msg'):
             log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
         log.error('    Content: \n{0}'.format(exc.read()))
         return False
 
-    log.debug('S3 Response Status Code: {0}'.format(result.getcode()))
-    result.close()
+    log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 
     if method == 'PUT':
         if result.getcode() == 200:
