@@ -72,10 +72,16 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.options.update_bootstrap:
             log.debug('Updating the bootstrap-salt.sh script to latest stable')
-            import urllib2
+            try:
+                import requests
+            except ImportError:
+                self.error (
+                    'Updating the bootstrap-salt.sh script requires the '
+                    'Python requests library to be installed'
+                )
             url = 'http://bootstrap.saltstack.org'
-            req = urllib2.urlopen(url)
-            if req.getcode() != 200:
+            req = requests.get(url)
+            if req.status_code != 200:
                 self.error(
                     'Failed to download the latest stable version of the '
                     'bootstrap-salt.sh script from {0}. HTTP error: '
