@@ -40,7 +40,6 @@ associated with that vm. An example profile might look like:
 # Import python libs
 import os
 import copy
-import urllib
 import httplib
 import requests
 import json
