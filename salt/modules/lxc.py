@@ -91,7 +91,7 @@ def _lxc_profile(profile):
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
 
-class LXCConfig(object):
+class _LXCConfig(object):
     '''
     LXC configuration data
     '''
@@ -263,11 +263,11 @@ def init(name,
                                     profile=profile, **kwargs)
         if not ret.get('cloned', False):
             return ret
-        cfg = LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
+        cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
                         cpuset=cpuset, cpushare=cpushare, memory=memory)
         cfg.write()
     else:
-        cfg = LXCConfig(nic=nic, nic_opts=nic_opts, cpuset=cpuset,
+        cfg = _LXCConfig(nic=nic, nic_opts=nic_opts, cpuset=cpuset,
                         cpushare=cpushare, memory=memory)
         with cfg.tempfile() as cfile:
             ret = __salt__['lxc.create'](name, config=cfile.name,
@@ -1100,6 +1100,12 @@ def bootstrap(name, config=None, approve_key=True, install=True):
 
     install
         Whether to attempt a full installation of salt-minion if needed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.bootstrap ubuntu
     '''
 
     infos = __salt__['lxc.info'](name)
