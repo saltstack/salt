@@ -1215,7 +1215,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         return res['retcode']
 
 
-def cp(name, src, dest, saltenv='base'):
+def cp(name, src, dest):
     '''
     Copy a file or directory from the host into a container
 
