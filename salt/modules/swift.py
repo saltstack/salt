@@ -47,12 +47,14 @@ import salt.utils.openstack.swift as suos
 # Get logging started
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load this module if swift
     is installed on this minion.
     '''
     return suos.check_swift()
+
 
 __opts__ = {}
 
@@ -89,6 +91,7 @@ def _auth(profile=None):
 
     return suos.SaltSwift(**kwargs)
 
+
 def delete(cont, path=None, profile=None):
     '''
     Delete a container, or delete an object from a container.
@@ -104,9 +107,10 @@ def delete(cont, path=None, profile=None):
     swift_conn = _auth(profile)
 
     if path == None:
-      return swift_conn.delete_container(cont)
+        return swift_conn.delete_container(cont)
     else:
-      return swift_conn.delete_object(cont, path)
+        return swift_conn.delete_object(cont, path)
+
 
 def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
     '''
@@ -143,7 +147,7 @@ def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
 
     if cont == None:
         return swift_conn.get_account()
-        
+
     if path == None:
         return swift_conn.get_container(cont)
 
@@ -155,8 +159,10 @@ def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
 
     return False
 
+
 def head():
     pass
+
 
 def put(cont, path=None, local_file=None, profile=None):
     '''
