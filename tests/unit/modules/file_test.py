@@ -501,7 +501,8 @@ class FileModuleTestCase(TestCase):
         '''
         Tests if user is passed as an integer
         '''
-        user = 10000
+        # Use uid = 0 as it will always exist for root
+        user = 0
         ret = filemod.user_to_uid(user)
         self.assertEqual(ret, user)
 
@@ -509,7 +510,8 @@ class FileModuleTestCase(TestCase):
         '''
         Tests if group is passed as an integer
         '''
-        group = 10000
+        # Use gid = 0 as it will always exist for root
+        group = 0
         ret = filemod.group_to_gid(group)
         self.assertEqual(ret, group)
 

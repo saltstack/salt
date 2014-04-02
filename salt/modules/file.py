@@ -152,11 +152,11 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid root
     '''
-    if not group:
+    if group is None:
         return ''
     try:
         if isinstance(group, int):
-            return group
+            return grp.getgrgid(group).gr_gid
         return grp.getgrnam(group).gr_gid
     except KeyError:
         return ''
@@ -220,11 +220,11 @@ def user_to_uid(user):
 
         salt '*' file.user_to_uid root
     '''
-    if not user:
+    if user is None:
         user = salt.utils.get_user()
     try:
         if isinstance(user, int):
-            return user
+            return pwd.getpwuid(user).pw_uid
         return pwd.getpwnam(user).pw_uid
     except KeyError:
         return ''
