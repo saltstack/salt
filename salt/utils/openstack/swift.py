@@ -6,15 +6,11 @@ Author: Anthony Stanton <anthony.stanton@gmail.com>
 '''
 
 # Import python libs
-import time
 import logging
 from sys import stdout
 from os import makedirs
 from os.path import dirname, isdir
 from errno import EEXIST
-
-# Import salt libs
-import salt.utils
 
 # Get logging started
 log = logging.getLogger(__name__)
