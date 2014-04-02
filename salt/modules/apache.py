@@ -419,6 +419,8 @@ def config(name, config, edit=True):
     Note: This function is not meant to be used from the command line.
     Config is meant to be an ordered dict of all of the apache configs.
 
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' apache.config /etc/httpd/conf.d/ports.conf \
