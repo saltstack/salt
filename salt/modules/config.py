@@ -6,7 +6,6 @@ Return config information
 # Import python libs
 import re
 import os
-import urllib2
 
 # Import salt libs
 import salt.utils

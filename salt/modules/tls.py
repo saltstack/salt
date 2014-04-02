@@ -619,7 +619,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
             ext = OpenSSL.crypto.X509Extension.__new__(OpenSSL.crypto.X509Extension)
             ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(native_exts_obj, i)
             exts.append(ext)
-    except:
+    except Exception:
         log.error('Support for extensions is not available, upgrade PyOpenSSL')
 
     cert = OpenSSL.crypto.X509()
