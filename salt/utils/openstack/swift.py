@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 HAS_SWIFT = False
 try:
     from swiftclient import client
+
     HAS_SWIFT = True
 except ImportError:
     pass
@@ -30,6 +31,7 @@ except ImportError:
 def check_swift():
     return HAS_SWIFT
 
+
 def mkdirs(path):
     try:
         makedirs(path)
@@ -37,11 +39,12 @@ def mkdirs(path):
         if err.errno != EEXIST:
             raise
 
+
 # we've been playing fast and loose with kwargs, but the swiftclient isn't
 # going to accept any old thing
 def _sanitize(kwargs):
     variables = (
-        'user', 'key', 'authurl', 
+        'user', 'key', 'authurl',
         'retries', 'preauthurl', 'preauthtoken', 'snet',
         'starting_backoff', 'max_backoff', 'tenant_name',
         'os_options', 'auth_version', 'cacert',
@@ -54,19 +57,20 @@ def _sanitize(kwargs):
 
     return ret
 
+
 class SaltSwift(object):
     '''
     Class for all swiftclient functions
     '''
 
     def __init__(
-        self,
-        user,
-        tenant_name,
-        auth_url,
-        password=None,
-        auth_version=2,
-        **kwargs
+            self,
+            user,
+            tenant_name,
+            auth_url,
+            password=None,
+            auth_version=2,
+            **kwargs
     ):
         '''
         Set up openstack credentials
@@ -123,7 +127,7 @@ class SaltSwift(object):
         try:
             self.conn.put_container(cont)
             return True
-        except Exception as exc:      
+        except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
@@ -183,7 +187,7 @@ class SaltSwift(object):
 
         # ClientException
         # file/dir exceptions
-        except Exception as exc:      
+        except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
@@ -199,7 +203,7 @@ class SaltSwift(object):
             self.conn.put_object(cont, obj, fp)
             fp.close()
             return True
-        except Exception as exc:      
+        except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
@@ -214,7 +218,7 @@ class SaltSwift(object):
         try:
             self.conn.delete_object(cont, obj)
             return True
-        except Exception as exc:      
+        except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
