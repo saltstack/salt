@@ -21,9 +21,7 @@ import logging
 import salt.config
 import salt.output
 import salt.utils
-from salt import syspaths
 from salt.utils import parsers
-from salt.utils.validate.path import is_writeable
 from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
