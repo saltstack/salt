@@ -286,7 +286,8 @@ def create_csr(
         L='Salt Lake City',
         O='SaltStack',
         OU=None,
-        emailAddress='xyz@pdq.net'):
+        emailAddress='xyz@pdq.net',
+        subjectAltName=None):
     '''
     Create a Certificate Signing Request (CSR) for a
     particular Certificate Authority (CA)
@@ -310,6 +311,9 @@ def create_csr(
         organizational unit, default is None
     emailAddress
         email address for the request, default is 'xyz@pdq.net'
+    subjectAltName
+        valid subjectAltNames in full form, eg to add DNS entry you would call
+        this function with this value:  **['DNS:myapp.foo.comm']**
 
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
@@ -340,12 +344,9 @@ def create_csr(
     if not os.path.exists('{0}/{1}/certs/'.format(_cert_base_path(), ca_name)):
         os.makedirs("{0}/{1}/certs/".format(_cert_base_path(), ca_name))
 
-    if os.path.exists('{0}/{1}/certs/{2}.csr'.format(
-            _cert_base_path(),
-            ca_name,
-            CN)
-            ):
-        return 'Certificate Request "{0}" already exists'.format(ca_name)
+    csr_f = '{0}/{1}/certs/{2}.csr'.format(_cert_base_path(), ca_name, CN)
+    if os.path.exists(csr_f):
+        return 'Certificate Request "{0}" already exists'.format(csr_f)
 
     key = OpenSSL.crypto.PKey()
     key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
@@ -360,6 +361,11 @@ def create_csr(
         req.get_subject().OU = OU
     req.get_subject().CN = CN
     req.get_subject().emailAddress = emailAddress
+
+    if subjectAltName:
+        req.add_extensions([
+            OpenSSL.crypto.X509Extension(
+                'subjectAltName', False, ", ".join(subjectAltName))])
     req.set_pubkey(key)
     req.sign(key, 'sha1')
 
@@ -373,10 +379,7 @@ def create_csr(
             )
     priv_key.close()
 
-    csr = salt.utils.fopen(
-            '{0}/{1}/certs/{2}.csr'.format(_cert_base_path(), ca_name, CN),
-            'w+'
-            )
+    csr = salt.utils.fopen(csr_f, 'w+')
     csr.write(
             OpenSSL.crypto.dump_certificate_request(
                 OpenSSL.crypto.FILETYPE_PEM,
@@ -605,10 +608,26 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     except IOError:
         return 'There is no CSR that matches the CN "{0}"'.format(CN)
 
+    exts = []
+    try:
+    # see: http://bazaar.launchpad.net/~exarkun/pyopenssl/master/revision/189
+    # support is there from quite a long time, but without API
+    # so we mimic the newly get_extensions method present in ultra
+    # recent pyopenssl distros
+        native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
+        for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
+            ext = OpenSSL.crypto.X509Extension.__new__(OpenSSL.crypto.X509Extension)
+            ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(native_exts_obj, i)
+            exts.append(ext)
+    except:
+        log.error('Support for extensions is not available, upgrade PyOpenSSL')
+
     cert = OpenSSL.crypto.X509()
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
+    if exts:
+        cert.add_extensions(exts)
     cert.set_serial_number(_new_serial(ca_name, CN))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
