@@ -11,6 +11,7 @@ import logging
 from sys import stdout
 from os import makedirs
 from os.path import dirname, isdir
+from errno import EEXIST
 
 # Import salt libs
 import salt.utils
@@ -165,7 +166,7 @@ class SaltSwift(object):
         Retrieve a file from Swift
         '''
         try:
-            if local_file is None and return_bin == False:
+            if local_file is None and return_bin is False:
                 return False
 
             headers, body = self.conn.get_object(cont, obj, resp_chunk_size=65536)
@@ -235,5 +236,3 @@ class SaltSwift(object):
         Update object metadata
         '''
         pass
-
-
