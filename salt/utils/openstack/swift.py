@@ -120,7 +120,7 @@ class SaltSwift(object):
             log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
             return False
 
-    def put_container(self, cont, metadata=None):
+    def put_container(self, cont):
         '''
         Create a new Swift container
         '''
@@ -165,12 +165,12 @@ class SaltSwift(object):
         Retrieve a file from Swift
         '''
         try:
-            if local_file == None and return_bin == False:
+            if local_file is None and return_bin == False:
                 return False
 
             headers, body = self.conn.get_object(cont, obj, resp_chunk_size=65536)
 
-            if return_bin == True:
+            if return_bin is True:
                 fp = stdout
             else:
                 dirpath = dirname(local_file)
@@ -194,7 +194,7 @@ class SaltSwift(object):
             log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
             return False
 
-    def put_object(self, cont, obj, local_file, content_type=None, metadata=None):
+    def put_object(self, cont, obj, local_file):
         '''
         Upload a file to Swift
         '''
@@ -209,7 +209,6 @@ class SaltSwift(object):
                 log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
             log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
             return False
-
 
     def delete_object(self, cont, obj):
         '''
