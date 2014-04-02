@@ -106,7 +106,7 @@ def delete(cont, path=None, profile=None):
     '''
     swift_conn = _auth(profile)
 
-    if path == None:
+    if path is None:
         return swift_conn.delete_container(cont)
     else:
         return swift_conn.delete_object(cont, path)
@@ -145,16 +145,16 @@ def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
     '''
     swift_conn = _auth(profile)
 
-    if cont == None:
+    if cont is None:
         return swift_conn.get_account()
 
-    if path == None:
+    if path is None:
         return swift_conn.get_container(cont)
 
-    if return_bin == True:
+    if return_bin is True:
         return swift_conn.get_object(cont, path, return_bin)
 
-    if local_file != None:
+    if local_file is not None:
         return swift_conn.get_object(cont, path, local_file)
 
     return False
@@ -182,9 +182,9 @@ def put(cont, path=None, local_file=None, profile=None):
     '''
     swift_conn = _auth(profile)
 
-    if path == None:
+    if path is not None:
         return swift_conn.put_container(cont)
-    elif local_file != None:
+    elif local_file is not None:
         return swift_conn.put_object(cont, path, local_file)
     else:
         return False
