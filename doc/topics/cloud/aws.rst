@@ -10,6 +10,17 @@ has been deprecated in favor of the ``ec2`` provider. Configuration using the
 old ``aws`` provider will still function, but that driver is no longer in
 active development.
 
+
+Dependencies
+============
+This driver requires the Python ``requests`` library to be installed.
+
+
+Configuration
+=============
+The following example illustrates some of the options that can be set. These
+parameters are discussed in more detail below.
+
 .. code-block:: yaml
 
     # Note: This example is for /etc/salt/cloud.providers or any file in the

@@ -154,7 +154,7 @@ class TxHead(Head):
         values = []
         for field in raeting.PACKET_FLAG_FIELDS:
             values.append(1 if self.packet.data.get(field, 0) else 0)
-        return packByte(format='11111111', fields=values)
+        return packByte(fmt='11111111', fields=values)
 
 class RxHead(Head):
     '''
@@ -243,7 +243,7 @@ class RxHead(Head):
         '''
         Unpacks all the flag fields from a single two char hex string
         '''
-        values = unpackByte(format='11111111', byte=int(flags, 16), boolean=True)
+        values = unpackByte(fmt='11111111', byte=int(flags, 16), boolean=True)
         for i, field in enumerate(raeting.PACKET_FLAG_FIELDS):
             if field in self.packet.data:
                 self.packet.data[field] = values[i]

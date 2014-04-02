@@ -34,6 +34,13 @@ import warnings
 import yaml
 from calendar import month_abbr as months
 
+# Try to load pwd, fallback to getpass if unsuccessful
+try:
+    import pwd
+except ImportError:
+    import getpass
+    pwd = None
+
 try:
     import timelib
     HAS_TIMELIB = True
@@ -236,6 +243,16 @@ def get_context(template, line, num_lines=5, marker=None):
     buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
+
+
+def get_user():
+    '''
+    Get the current user
+    '''
+    if pwd is not None:
+        return pwd.getpwuid(os.geteuid()).pw_name
+    else:
+        return getpass.getuser()
 
 
 def daemonize(redirect_out=True):

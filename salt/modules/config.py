@@ -258,20 +258,17 @@ def dot_vals(value):
     return ret
 
 
-def gather_bootstrap_script(replace=False):
+def gather_bootstrap_script():
     '''
-    Download the salt-bootstrap script, set replace to True to refresh the
-    script if it has already been downloaded
+    Download the salt-bootstrap script, and return the first location
+    downloaded to.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' config.gather_bootstrap_script True
+        salt '*' config.gather_bootstrap_script
     '''
-    fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
-    if not replace and os.path.isfile(fn_):
-        return fn_
-    with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write(urllib2.urlopen('http://bootstrap.saltstack.org').read())
-    return fn_
+    ret = salt.utils.cloud.update_bootstrap(__opts__)
+    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
+        return ret['Success']['Files updated'][0]

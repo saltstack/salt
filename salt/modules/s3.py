@@ -30,6 +30,8 @@ Connection module for Amazon S3
 
     This module should be usable to query other S3-like services, such as
     Eucalyptus.
+
+:depends: requests
 '''
 
 # Import Python libs

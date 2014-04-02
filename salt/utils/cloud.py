@@ -40,6 +40,7 @@ from salt import syspaths
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.yamldumper import SafeOrderedDumper
+from salt.utils.validate.path import is_writeable
 
 # Import salt cloud libs
 import salt.cloud
@@ -1887,6 +1888,116 @@ def delete_minion_cachedir(minion_id, base=None):
         path = os.path.join(base, cachedir, fname)
         if os.path.exists(path):
             os.remove(path)
+
+
+def update_bootstrap(config):
+    '''
+    Update the salt-bootstrap script
+    '''
+    log.debug('Updating the bootstrap-salt.sh script to latest stable')
+    try:
+        import requests
+    except ImportError:
+        return {'error': (
+            'Updating the bootstrap-salt.sh script requires the '
+            'Python requests library to be installed'
+        )}
+    url = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
+    req = requests.get(url)
+    if req.status_code != 200:
+        return {'error': (
+            'Failed to download the latest stable version of the '
+            'bootstrap-salt.sh script from {0}. HTTP error: '
+            '{1}'.format(
+                url, req.status_code
+            )
+        )}
+
+    # Get the path to the built-in deploy scripts directory
+    builtin_deploy_dir = os.path.join(
+        os.path.dirname(__file__),
+        'deploy'
+    )
+
+    # Compute the search path from the current loaded opts conf_file
+    # value
+    deploy_d_from_conf_file = os.path.join(
+        os.path.dirname(config['conf_file']),
+        'cloud.deploy.d'
+    )
+
+    # Compute the search path using the install time defined
+    # syspaths.CONF_DIR
+    deploy_d_from_syspaths = os.path.join(
+        syspaths.CONFIG_DIR,
+        'cloud.deploy.d'
+    )
+
+    # Get a copy of any defined search paths, flagging them not to
+    # create parent
+    deploy_scripts_search_paths = []
+    for entry in config.get('deploy_scripts_search_path', []):
+        if entry.startswith(builtin_deploy_dir):
+            # We won't write the updated script to the built-in deploy
+            # directory
+            continue
+
+        if entry in (deploy_d_from_conf_file, deploy_d_from_syspaths):
+            # Allow parent directories to be made
+            deploy_scripts_search_paths.append((entry, True))
+        else:
+            deploy_scripts_search_paths.append((entry, False))
+
+    # In case the user is not using defaults and the computed
+    # 'cloud.deploy.d' from conf_file and syspaths is not included, add
+    # them
+    if deploy_d_from_conf_file not in deploy_scripts_search_paths:
+        deploy_scripts_search_paths.append(
+            (deploy_d_from_conf_file, True)
+        )
+    if deploy_d_from_syspaths not in deploy_scripts_search_paths:
+        deploy_scripts_search_paths.append(
+            (deploy_d_from_syspaths, True)
+        )
+
+    finished = []
+    finished_full = []
+    for entry, makedirs in deploy_scripts_search_paths:
+        # This handles duplicate entries, which are likely to appear
+        if entry in finished:
+            continue
+        else:
+            finished.append(entry)
+
+        if makedirs and not os.path.isdir(entry):
+            try:
+                os.makedirs(entry)
+            except (OSError, IOError) as err:
+                log.info(
+                    'Failed to create directory {0!r}'.format(entry)
+                )
+                continue
+
+        if not is_writeable(entry):
+            log.debug(
+                'The {0!r} is not writeable. Continuing...'.format(
+                    entry
+                )
+            )
+            continue
+
+        deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
+        try:
+            finished_full.append(deploy_path)
+            with salt.utils.fopen(deploy_path, 'w') as fp_:
+                fp_.write(req.text)
+        except (OSError, IOError) as err:
+            log.debug(
+                'Failed to write the updated script: {0}'.format(err)
+            )
+            continue
+
+    return {'Success': {'Files updated': finished_full}}
 
 
 def _salt_cloud_force_ascii(exc):

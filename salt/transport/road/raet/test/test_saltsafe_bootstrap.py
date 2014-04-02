@@ -63,6 +63,7 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
                 cachedir=cacheDirpath,
                 open_mode=False,
                 auto_accept=False,
+                transport='raet',
                 )
 
     masterSafe = salting.SaltSafe(opts=masterOpts)
@@ -101,6 +102,7 @@ def test(preClearMaster=False, preClearMinion=False, postClearMaster=False, post
                 cachedir=cacheDirpath,
                 open_mode=False,
                 auto_accept=True,
+                transport='raet'
                 )
 
     minionSafe = salting.SaltSafe(opts=minionOpts)
