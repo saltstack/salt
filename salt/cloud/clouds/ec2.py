@@ -2220,6 +2220,35 @@ def _list_nodes_full(location=None):
     return ret
 
 
+def list_nodes_min(location=None, call=None):
+    '''
+    Return a list of the VMs that are on the provider
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+
+    ret = {}
+    params = {'Action': 'DescribeInstances'}
+    instances = query(params)
+    if 'error' in instances:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                instances['error']['Errors']['Error']['Message']
+            )
+        )
+
+    for instance in instances:
+        if isinstance(instance['instancesSet']['item'], list):
+            for item in instance['instancesSet']['item']:
+                ret[_extract_name_tag(item)] = True
+        else:
+            item = instance['instancesSet']['item']
+            ret[_extract_name_tag(item)] = True
+    return ret
+
+
 def list_nodes(call=None):
     '''
     Return a list of the VMs that are on the provider
