@@ -68,13 +68,8 @@ def __virtual__():
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Proxmox cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Proxmox cloud module')
     return True
 
 

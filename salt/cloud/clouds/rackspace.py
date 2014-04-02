@@ -83,13 +83,8 @@ def __virtual__():
     Set up the libcloud functions and check for Rackspace configuration.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Rackspace cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Rackspace cloud module')
     return True
 
 

@@ -67,19 +67,11 @@ def __virtual__():
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
-        log.debug(
-            'The \'botocore\' library is installed. The libcloud AWS support '
-            'will not be loaded.'
-        )
         return False
     except ImportError:
         pass
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no AWS cloud provider configuration available. Not '
-            'loading module'
-        )
         return False
 
     for provider, details in __opts__['providers'].iteritems():
@@ -131,7 +123,6 @@ def __virtual__():
     )
     show_instance = namespaced_function(show_instance, globals())
 
-    log.debug('Loading Libcloud AWS cloud module')
     return __virtualname__
 
 
