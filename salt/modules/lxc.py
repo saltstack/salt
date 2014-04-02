@@ -1128,7 +1128,7 @@ def bootstrap(name, config=None, approve_key=True, install=True):
     if needs_install:
         if install:
             bs_ = __salt__['config.gather_bootstrap_script']()
-            cp(name, bs_, '/tmp/')
+            cp(name, bs_, '/tmp/bootstrap.sh')
             cp(name, cfg_files['config'], '/tmp/')
             cp(name, cfg_files['privkey'], '/tmp/')
             cp(name, cfg_files['pubkey'], '/tmp/')
@@ -1240,8 +1240,8 @@ def cp(name, src, dest):
     if not dest_name:
         dest_name = src_name
 
-    cmd = 'tar -C {0} -cf - {1} | lxc-attach -n {2} -- tar -C {3} -xf -'.format(
-            src_dir, src_name, name, dest_dir)
+    cmd = 'cat {0} | lxc-attach -n {1} -- tee {2} > /dev/null'.format(
+            src, name, os.path.join(dest_dir, dest_name))
     log.info(cmd)
     ret = __salt__['cmd.run_all'](cmd)
     return ret
