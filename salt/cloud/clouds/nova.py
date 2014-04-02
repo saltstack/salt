@@ -150,13 +150,8 @@ def __virtual__():
     Check for Nova configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Nova cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Openstack Nova cloud module')
     return True
 
 

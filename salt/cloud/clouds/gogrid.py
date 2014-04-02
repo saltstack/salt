@@ -62,13 +62,8 @@ def __virtual__():
     Set up the libcloud functions and check for GOGRID configs
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no GoGrid cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading GoGrid cloud module')
     return True
 
 

@@ -59,13 +59,8 @@ def __virtual__():
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Azure cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading Azure cloud module')
     return __virtualname__
 
 

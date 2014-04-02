@@ -63,13 +63,8 @@ def __virtual__():
     Set up the libcloud functions and check for CloudStack configurations.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no CloudStack cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading CloudStack cloud module')
     return True
 
 
