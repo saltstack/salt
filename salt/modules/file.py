@@ -155,6 +155,8 @@ def group_to_gid(group):
     if not group:
         return ''
     try:
+        if isinstance(group, int):
+            return group
         return grp.getgrnam(group).gr_gid
     except KeyError:
         return ''
@@ -221,6 +223,8 @@ def user_to_uid(user):
     if not user:
         user = salt.utils.get_user()
     try:
+        if isinstance(user, int):
+            return user
         return pwd.getpwnam(user).pw_uid
     except KeyError:
         return ''
@@ -2339,6 +2343,8 @@ def check_perms(name, ret, user, group, mode):
                 ret['result'] = False
 
     if user:
+        if isinstance(user, int):
+            user = uid_to_user(user)
         if user != get_user(name):
             if __opts__['test'] is True:
                 ret['changes']['user'] = user
@@ -2349,6 +2355,8 @@ def check_perms(name, ret, user, group, mode):
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
+        if isinstance(group, int):
+            group = gid_to_group(group)
         if group != get_group(name):
             if __opts__['test'] is True:
                 ret['changes']['group'] = group

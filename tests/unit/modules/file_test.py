@@ -497,6 +497,22 @@ class FileModuleTestCase(TestCase):
                 'hash_type': 'sha1'
             })
 
+    def test_user_to_uid_int(self):
+        '''
+        Tests if user is passed as an integer
+        '''
+        user = 10000
+        ret = filemod.user_to_uid(user)
+        self.assertEqual(ret, user)
+
+    def test_group_to_gid_int(self):
+        '''
+        Tests if group is passed as an integer
+        '''
+        group = 10000
+        ret = filemod.group_to_gid(group)
+        self.assertEqual(ret, group)
+
 
 if __name__ == '__main__':
     from integration import run_tests
