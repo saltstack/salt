@@ -188,5 +188,3 @@ def put(cont, path=None, local_file=None, profile=None):
         return swift_conn.put_object(cont, path, local_file)
     else:
         return False
-
-
