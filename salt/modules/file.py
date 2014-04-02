@@ -2758,6 +2758,8 @@ def manage_file(name,
                     makedirs_(name, user=user, group=group, mode=dir_mode)
                 else:
                     __clean_tmp(sfn)
+                    # No changes actually made
+                    ret['changes'].pop('diff', None)
                     return _error(ret, 'Parent directory not present')
         else:
             if not os.path.isdir(os.path.dirname(name)):
@@ -2766,6 +2768,8 @@ def manage_file(name,
                               mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
+                    # No changes actually made
+                    ret['changes'].pop('diff', None)
                     return _error(ret, 'Parent directory not present')
 
             # Create the file, user rw-only if mode will be set to prevent
