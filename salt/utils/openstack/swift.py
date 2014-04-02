@@ -24,7 +24,6 @@ try:
     from swiftclient import client
     HAS_SWIFT = True
 except ImportError:
-    log.error('Error:: unable to find swiftclient. Try installing it from the appropriate repository.')
     pass
 
 
@@ -73,6 +72,7 @@ class SaltSwift(object):
         Set up openstack credentials
         '''
         if not HAS_SWIFT:
+            log.error('Error:: unable to find swiftclient. Try installing it from the appropriate repository.')
             return None
 
         self.kwargs = kwargs.copy()
