@@ -473,7 +473,7 @@ class SSH(object):
         arg_str = self.opts['arg_str']
 
         if self.opts['raw_shell']:
-            fun = 'ssh_raw_shell'
+            fun = 'ssh._raw'
             args = [arg_str]
         else:
             cmd_args = arg_str.split(None, 1)
