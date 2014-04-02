@@ -2,33 +2,29 @@
 '''
     Detect SSDs
 '''
-import os
+
+# Import python libs
+import glob
 import salt.utils
 import logging
 
 log = logging.getLogger(__name__)
 
+
 def ssds():
     '''
     Return list of disk devices that are SSD (non-rotational)
     '''
-
-    SSDs = []
-    for subdir, dirs, files in os.walk('/sys/block'):
-        for dir in dirs:
-            flagfile = subdir + '/' + dir + '/queue/rotational'
-            if os.path.isfile(flagfile):
-                with salt.utils.fopen(flagfile, 'r') as _fp:
-                    flag = _fp.read(1)
-                    if flag == '0':
-                        SSDs.append(dir)
-                        log.info(dir + ' is a SSD')
-                    elif flag == '1':
-                        log.info(dir + ' is no SSD')
-                    else:
-                        log.warning(flagfile + ' does not report 0 or 1')
-                log.debug(flagfile + ' reports ' + flag)
+    ssd_devices = []
+    for entry in glob.glob('/sys/block/*/queue/rotational'):
+        with salt.utils.fopen(entry) as entry_fp:
+            device = entry.split('/')[3]
+            flag = entry_fp.read(1)
+            if flag == '0':
+                ssd_devices.append(device)
+                log.debug('Device {0} reports itself as an SSD'.format(device))
+            elif flag == '1':
+                log.debug('Device {0} does not report itself as an SSD'.format(device))
             else:
-                log.warning(flagfile + ' does not exist for ' + dir)
-            
-    return {'SSDs': SSDs}
+                log.debug('Unable to identify device {0} as an SSD or not. It does not report 0 or 1'.format(device))
+    return {'SSDs': ssd_devices}
