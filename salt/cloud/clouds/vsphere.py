@@ -72,13 +72,8 @@ def __virtual__():
     Set up the libcloud functions and check for vSphere configurations.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no vSphere cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading vSphere cloud module')
     return True
 
 
