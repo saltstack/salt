@@ -756,18 +756,22 @@ def delete_fwrule(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    try:
-        result = conn.ex_destroy_firewall(
-            conn.ex_get_firewall(name)
-        )
-    except ResourceNotFoundError as exc:
-        log.error(
-            'Rule {0} could not be found.\n'
-            'The following exception was thrown by libcloud:\n{1}'.format(
-                name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
-        )
-        return False
+    conn = get_conn()
+
+    kwargs = {
+        'name': vm_['name'],
+        'size': __get_size(conn, vm_),
+        'image': __get_image(conn, vm_),
+        'location': __get_location(conn, vm_),
+        'ex_network': __get_network(conn, vm_),
+        'ex_tags': __get_tags(vm_),
+        'ex_metadata': __get_metadata(vm_),
+    }
+
+    log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
+        kwargs['location'].name)
+    )
+    log.debug('Create instance kwargs {0}'.format(str(kwargs)))
 
     salt.utils.cloud.fire_event(
         'event',

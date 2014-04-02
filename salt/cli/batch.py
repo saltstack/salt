@@ -114,8 +114,7 @@ class Batch(object):
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,
                                 raw=self.opts.get('raw', False),
-                                ret=self.opts.get('return', ''),
-                                **self.eauth)
+                                ret=self.opts.get('return', ''))
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
                 minion_tracker[new_iter] = {}

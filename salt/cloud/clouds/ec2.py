@@ -314,19 +314,19 @@ def query(params=None, setname=None, requesturl=None, location=None,
             sig = binascii.b2a_base64(hashed.digest())
             params['Signature'] = sig.strip()
 
-            requesturl = 'https://{0}/'.format(endpoint)
+            querystring = urllib.urlencode(params)
+            requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         try:
-            result = requests.get(requesturl, params=params)
+            result = urllib2.urlopen(requesturl)
             log.debug(
                 'EC2 Response Status Code: {0}'.format(
-                    #result.getcode()
-                    result.status_code
+                    result.getcode()
                 )
             )
             break
-        except requests.exceptions.HTTPError as exc:
+        except urllib2.URLError as exc:
             root = ET.fromstring(exc.read())
             data = _xml_to_dict(root)
 

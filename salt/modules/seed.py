@@ -83,9 +83,6 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     install
         Install salt-minion, if absent. Default: true.
 
-    prep_install
-        Prepare the bootstrap script, but don't run it. Default: false
-    '''
     stats = __salt__['file.stats'](path, follow_symlinks=True)
     if not stats:
         return '{0} does not exist'.format(path)

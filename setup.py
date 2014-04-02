@@ -464,8 +464,6 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.roster',
                              'salt.runners',
                              'salt.search',
-                             'salt.states',
-                             'salt.tops',
                              'salt.templates',
                              'salt.transport',
                              'salt.transport.road',
@@ -546,7 +544,7 @@ FREEZER_INCLUDES = [
     'email.mime.*',
 ]
 
-if HAS_ZMQ and hasattr(zmq, 'pyzmq_version_info'):
+if hasattr(zmq, 'pyzmq_version_info'):
     if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
         # We're freezing, and when freezing ZMQ needs to be installed, so this
         # works fine

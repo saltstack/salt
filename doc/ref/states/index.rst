@@ -39,7 +39,7 @@ an understanding of Salt states and how to write the states is needed as well.
 .. note::
 
     States are compiled and executed only on minions that have been targeted.
-    To execute functions directly on masters, see :doc:`runners </ref/runners/index>`.
+    To execute things on masters, see `runners`_.
 
 Salt SLS System
 ---------------
@@ -318,4 +318,3 @@ The output is:
 .. _`pep8`: https://pypi.python.org/pypi/pep8
 .. _`setuptools`: https://pypi.python.org/pypi/setuptools
 .. _`runners`: /ref/runners
-

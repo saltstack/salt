@@ -19,7 +19,7 @@ from contextlib import contextmanager
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from salttesting.mock import MagicMock, patch, mock_open, call
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
 from salt.exceptions import CommandExecutionError
 
@@ -443,11 +443,11 @@ class ConfigTestCase(TestCase):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='foo.bar.org'))
-    def test_get_id_socket_get_fqhostname(self):
+    @patch('socket.getfqdn', MagicMock(return_value='foo.bar.org'))
+    def test_get_id_socket_getfqdn(self):
         '''
         Test calling salt.config.get_id() and getting the hostname from
-        salt.utils.network.get_fqhostname()
+        socket.getfqdn()
         '''
         with patch('salt.utils.fopen',
                    MagicMock(side_effect=_unhandled_mock_read)):
@@ -455,7 +455,7 @@ class ConfigTestCase(TestCase):
                 sconfig.get_id(cache=False), ('foo.bar.org', False)
             )
 
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
+    @patch('socket.getfqdn', MagicMock(return_value='localhost'))
     def test_get_id_etc_hostname(self):
         '''
         Test calling salt.config.get_id() and falling back to looking at
@@ -466,7 +466,7 @@ class ConfigTestCase(TestCase):
                 sconfig.get_id(cache=False), ('foo.bar.com', False)
             )
 
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
+    @patch('socket.getfqdn', MagicMock(return_value='localhost'))
     def test_get_id_etc_hosts(self):
         '''
         Test calling salt.config.get_id() and falling back all the way to

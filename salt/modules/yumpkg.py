@@ -141,21 +141,6 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
-def _get_excludes_option(**kwargs):
-    '''
-    Returns a string of '--disableexcludes' option to be used in the yum command,
-    based on the kwargs.
-    '''
-    disable_excludes_arg = ''
-    disable_excludes = kwargs.get('disableexcludes', '')
-
-    if disable_excludes:
-        log.info('Disabling excludes for {0!r}'.format(disable_excludes))
-        disable_excludes_arg = ('--disableexcludes={0!r}'.format(disable_excludes))
-
-    return disable_excludes_arg
-
-
 def normalize_name(name):
     '''
     Strips the architecture from the specified package name, if necessary (in
@@ -241,8 +226,8 @@ def latest_version(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     updates = _repoquery_pkginfo(
-        '{0} {1} --pkgnarrow=available --plugins {2}'
-        .format(repo_arg, exclude_arg, ' '.join(names))
+        '{0} --pkgnarrow=available --plugins {1}'
+        .format(repo_arg, ' '.join(names))
     )
 
     for name in names:
@@ -406,9 +391,8 @@ def list_upgrades(refresh=True, **kwargs):
         refresh_db()
 
     repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
     updates = _repoquery_pkginfo(
-        '{0} {1} --all --pkgnarrow=updates --plugins'.format(repo_arg, exclude_arg)
+        '{0} --all --pkgnarrow=updates --plugins'.format(repo_arg)
     )
     return dict([(x.name, x.version) for x in updates])
 
@@ -441,9 +425,8 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> disableexcludes=main
     '''
     repo_arg = _get_repo_options(**kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
     repoquery_base = \
-        '{0} {1} --all --quiet --whatprovides --plugins'.format(repo_arg, exclude_arg)
+        '{0} --all --quiet --whatprovides --plugins'.format(repo_arg)
 
     if 'pkg._avail' in __context__:
         avail = __context__['pkg._avail']

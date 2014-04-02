@@ -43,7 +43,6 @@ def managed(name,
             extra_index_url=None,
             pre_releases=False,
             no_deps=False,
-            pip_exists_action=None,
             proxy=None):
     '''
     Create a virtualenv and optionally manage it with pip
@@ -59,9 +58,6 @@ def managed(name,
         Prefer wheel archives (requires pip>=1.4)
     no_deps: False
         Pass `--no-deps` to `pip`.
-    pip_exists_action: None
-        Default action of pip when a path already exists: (s)witch, (i)gnore,
-        (w)wipe, (b)ackup
     proxy: None
         Proxy address which is passed to "pip install"
 

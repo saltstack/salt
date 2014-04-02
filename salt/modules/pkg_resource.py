@@ -57,10 +57,10 @@ def _parse_pkg_meta(path):
                 path
             )
         ).strip()
-        name, pkg_version, rel = path.split('_|-')
+        name, version, rel = path.split('_|-')
         if rel:
-            pkg_version = '-'.join((pkg_version, rel))
-        return name, pkg_version
+            version = '-'.join((version, rel))
+        return name, version
 
     def parse_pacman(path):
         name = ''
@@ -169,7 +169,7 @@ def pack_sources(sources):
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
     _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-    if isinstance(sources, string_types):
+    if isinstance(sources, basestring):
         try:
             sources = yaml.safe_load(sources)
         except yaml.parser.ParserError as err:

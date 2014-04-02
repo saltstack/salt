@@ -7,7 +7,12 @@ pre-pre-ALPHA QUALITY code.
 '''
 
 # Import python libraries
+import re
 import logging
+
+# Salt libraries
+import salt.roster
+
 
 # Set up logging
 log = logging.getLogger(__name__)

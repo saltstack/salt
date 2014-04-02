@@ -62,16 +62,12 @@ def get_local_client(
     Read in the config and return the correct LocalClient object based on
     the configured transport
     '''
-    if mopts:
-        opts = mopts
-    else:
-        import salt.config
-        opts = salt.config.client_config(c_path)
-    if opts['transport'] == 'raet':
-        import salt.client.raet
-        return salt.client.raet.LocalClient(mopts=opts)
-    elif opts['transport'] == 'zeromq':
-        return LocalClient(mopts=opts)
+    if isinstance(kwarg, dict) and kwarg:
+        kw_ = {'__kwarg__': True}
+        for key, val in kwarg.items():
+            kw_[key] = val
+        return list(arg) + [kw_]
+    return arg
 
 
 class LocalClient(object):
@@ -190,12 +186,13 @@ class LocalClient(object):
         timeout = self.opts['gather_job_timeout']
 
         arg = [jid]
+        arg = condition_kwarg(arg, kwargs)
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
                                 arg=arg,
                                 expr_form=tgt_type,
                                 timeout=timeout,
-                               )
+                                **kwargs)
 
         if not pub_data:
             return pub_data
@@ -1057,24 +1054,16 @@ class LocalClient(object):
             for fn_ in os.listdir(jid_dir):
                 if fn_.startswith('.'):
                     continue
-                if fn_ not in ret:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    outp = os.path.join(jid_dir, fn_, 'out.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'rb'))
-                            ret[fn_] = {'ret': ret_data}
-                            if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'rb'))
-                        except Exception:
-                            pass
-        except IOError:
-            pass
-
+                while fn_ not in ret:
+                    try:
+                        ret_data = self.serial.load(
+                            salt.utils.fopen(retp, 'rb'))
+                        ret[fn_] = {'ret': ret_data}
+                        if os.path.isfile(outp):
+                            ret[fn_]['out'] = self.serial.load(
+                                salt.utils.fopen(outp, 'rb'))
+                    except Exception:
+                        pass
         return ret
 
     def get_cli_static_event_returns(

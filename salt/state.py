@@ -1384,9 +1384,11 @@ class State(object):
             if len(cdata['args']) > 0:
                 name = cdata['args'][0]
             elif 'name' in cdata['kwargs']:
-                name = cdata['kwargs']['name']
-            else:
-                name = low.get('name', low.get('__id__'))
+                name = cdata['kwargs'].get(
+                    'name',
+                    low.get('name',
+                            low.get('__id__'))
+                )
             ret = {
                 'result': False,
                 'name': name,

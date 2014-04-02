@@ -18,7 +18,7 @@ and could step on each other or otherwise double execute.  The default for
 ``maxrunning`` is 1.
 
 States are executed on the minion, as all states are. You can pass positional
-arguments and provide a yaml dict of named arguments.
+arguments are provide a yaml dict of named arguments.
 
 States
 ======

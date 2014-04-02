@@ -198,19 +198,10 @@ VALID_OPTS = {
     'minion_id_caching': bool,
     'sign_pub_messages': bool,
     'keysize': int,
-    'transport': str,
-    'enumerate_proxy_minions': bool,
+    'salt_transport': str,
     'gather_job_timeout': int,
     'auth_timeout': int,
-    'random_master': bool,
-    'syndic_event_forward_timeout': float,
-    'syndic_max_event_process_time': float,
-    'ssh_passwd': str,
-    'ssh_port': str,
-    'ssh_sudo': bool,
-    'ssh_timeout': float,
-    'ssh_user': str,
-    'raet_port': int,
+    'enumerate_proxy_minions': bool,
 }
 
 # default configurations
@@ -309,14 +300,8 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'keysize': 4096,
-    'transport': 'zeromq',
+    'salt_transport': 'zeromq',
     'auth_timeout': 3,
-    'random_master': False,
-    'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
-    'ioflo_verbose': 3,
-    'ioflo_period': 0.01,
-    'ioflo_realtime': True,
-    'raet_port': 4510,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -435,22 +420,9 @@ DEFAULT_MASTER_OPTS = {
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
     'keysize': 4096,
-    'transport': 'zeromq',
+    'salt_transport': 'zeromq',
+    'gather_job_timeout': 2,
     'enumerate_proxy_minions': False,
-    'gather_job_timeout': 5,
-    'syndic_event_forward_timeout': 0.5,
-    'syndic_max_event_process_time': 0.5,
-    'ssh_passwd': '',
-    'ssh_port': '22',
-    'ssh_sudo': False,
-    'ssh_timeout': 60,
-    'ssh_user': 'root',
-    'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
-    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
-    'ioflo_verbose': 3,
-    'ioflo_period': 0.01,
-    'ioflo_realtime': True,
-    'raet_port': 4506,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

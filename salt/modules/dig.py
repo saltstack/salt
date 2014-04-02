@@ -276,37 +276,6 @@ def MX(domain, resolve=False, nameserver=None):
 
     return stdout
 
-
-def TXT(host, nameserver=None):
-    '''
-    Return the TXT record for ``host``.
-
-    Always returns a list.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt ns1 dig.TXT google.com
-    '''
-    dig = ['dig', '+short', str(host), 'TXT']
-
-    if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
-
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
-
-    if cmd['retcode'] != 0:
-        log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
-        )
-        return []
-
-    return [i for i in cmd['stdout'].split('\n')]
-
 # Let lowercase work, since that is the convention for Salt functions
 a = A
 aaaa = AAAA

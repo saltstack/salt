@@ -89,15 +89,10 @@ class Caller(object):
             try:
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
-                trace = traceback.format_exc()
-                sys.stderr.write('Passed invalid arguments: {0}\n'.format(exc))
-                active_level = LOG_LEVELS.get(
-                    self.opts['log_level'].lower(), logging.ERROR)
-                if active_level <= logging.DEBUG:
-                    sys.stderr.write(trace)
+                sys.stderr.write(('Passed invalid arguments: {0}\n').format(exc))
                 sys.exit(1)
-            ret['retcode'] = sys.modules[
-                func.__module__].__context__.get('retcode', 0)
+            ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                    'retcode', 0)
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(

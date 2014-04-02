@@ -421,12 +421,6 @@ def migrate(name, target=''):
         print('Target hypervisor {0} not found'.format(origin_data))
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
-    jid = client.cmd_async(origin_hyper,
+    print(client.cmd_async(origin_hyper,
                            'virt.migrate_non_shared',
-                           [name, target])
-
-    msg = ('The migration of virtual machine {0} to hypervisor {1} has begun, '
-           'and can be tracked via jid {2}. The ``salt-run virt.query`` '
-           'runner can also be used, the target vm will be shown as paused '
-           'until the migration is complete.').format(name, target, jid)
-    print(msg)
+                           [name, target]))

@@ -165,10 +165,9 @@ class Shell(object):
         '''
         Execute ssh-copy-id to plant the id file on the target
         '''
-        stdout, stderr, retcode = self._run_cmd(self._copy_id_str_old())
-        if os.EX_OK != retcode and stderr.startswith('Usage'):
-            stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
-        return stdout, stderr, retcode
+        _, stderr, _ = self._run_cmd(self._copy_id_str_old())
+        if stderr.startswith('Usage'):
+            self._run_cmd(self._copy_id_str_new())
 
     def _cmd_str(self, cmd, ssh='ssh'):
         '''

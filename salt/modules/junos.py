@@ -14,11 +14,9 @@ import logging
 
 
 try:
-    # pylint: disable=W0611
     import jnpr.junos
     import jnpr.junos.utils
     import jnpr.junos.cfg
-    # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
@@ -54,7 +52,7 @@ def facts_refresh():
     return __opts__['proxyobject'].refresh
 
 
-def set_hostname(hostname=None, commit_change=True):
+def set_hostname(hostname=None, commit=True):
 
     ret = dict()
     conn = __opts__['proxyobject']
@@ -67,7 +65,7 @@ def set_hostname(hostname=None, commit_change=True):
     set_string = 'set system host-name {0}'.format(hostname)
 
     conn.cu.load(set_string, format='set')
-    if commit_change:
+    if commit:
         return commit()
     else:
         ret['out'] = True

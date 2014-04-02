@@ -57,7 +57,6 @@ Package repositories can be managed with the pkgrepo state:
     once ``python-software-properties`` is installed.
 '''
 
-# Import python libs
 import sys
 
 # Import salt libs
@@ -267,7 +266,7 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+        __salt__['pkg.mod_repo'](**kwargs)
     except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.

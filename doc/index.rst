@@ -2,8 +2,8 @@
 
 .. _contents:
 
-SaltStack
-=========
+What is SaltStack?
+==================
 
 Salt is a new approach to infrastructure management. Easy enough to get
 running in minutes, scalable enough to manage tens of thousands of servers,
@@ -216,7 +216,7 @@ Salt is many splendid things.
 :doc:`Testing Salt <topics/development/tests/index>`
     A howto for writing unit tests and integration tests.
 
-:doc:`Salt Proxy Minions <topics/topology/proxyminion/index>`
+:doc:`Salt Proxy Minions <topics/proxyminion/index>`
     Controlling devices and machines unable to run a salt-minion.
 
 :ref:`Python API interface <python-api>`

@@ -9,14 +9,13 @@ import fnmatch
 import json
 import logging
 
+# Import pytohn libs
+from __future__ import print_function
+
 # Import salt libs
 import salt.output
 import salt.overstate
-import salt.syspaths
-import salt.utils.event
 from salt.exceptions import SaltInvocationError
-
-logger = logging.getLogger(__name__)
 
 
 def over(saltenv='base', os_fn=None):

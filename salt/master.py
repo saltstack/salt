@@ -160,23 +160,8 @@ class Master(SMaster):
         pillargitfs = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                parts = opts_dict['git'].strip().split()
-                try:
-                    br = parts[0]
-                    loc = parts[1]
-                except IndexError:
-                    log.critical(
-                        'Unable to extract external pillar data: {0}'
-                        .format(opts_dict['git'])
-                    )
-                else:
-                    pillargitfs.append(
-                        git_pillar.GitPillar(
-                            br,
-                            loc,
-                            self.opts
-                        )
-                    )
+                br, loc = opts_dict['git'].strip().split()
+                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
 
         # Clear remote fileserver backend env cache so it gets recreated during
         # the first loop_interval
@@ -201,8 +186,43 @@ class Master(SMaster):
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
-            if (now - last) >= loop_interval:
-                salt.daemons.masterapi.clean_old_jobs(self.opts)
+            if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
+                cur = datetime.datetime.now()
+
+                if os.path.exists(jid_root):
+                    for top in os.listdir(jid_root):
+                        t_path = os.path.join(jid_root, top)
+                        for final in os.listdir(t_path):
+                            f_path = os.path.join(t_path, final)
+                            jid_file = os.path.join(f_path, 'jid')
+                            if not os.path.isfile(jid_file):
+                                # No jid file means corrupted cache entry,
+                                # scrub it
+                                shutil.rmtree(f_path)
+                            else:
+                                with salt.utils.fopen(jid_file, 'r') as fn_:
+                                    jid = fn_.read()
+                                if len(jid) < 18:
+                                    # Invalid jid, scrub the dir
+                                    shutil.rmtree(f_path)
+                                else:
+                                    # Parse the jid into a proper datetime
+                                    # object. We only parse down to the minute,
+                                    # since keep_jobs is measured in hours, so
+                                    # a minute difference is not important
+                                    try:
+                                        jidtime = datetime.datetime(int(jid[0:4]),
+                                                                    int(jid[4:6]),
+                                                                    int(jid[6:8]),
+                                                                    int(jid[8:10]),
+                                                                    int(jid[10:12]))
+                                    except ValueError as e:
+                                        # Invalid jid, scrub the dir
+                                        shutil.rmtree(f_path)
+                                    difference = cur - jidtime
+                                    hours_difference = difference.seconds / 3600.0
+                                    if hours_difference > self.opts['keep_jobs']:
+                                        shutil.rmtree(f_path)
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:

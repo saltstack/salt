@@ -38,7 +38,7 @@ except ImportError:
     ppa_format_support = False
 
 try:
-    import apt.debfile  # pylint: disable=E0611
+    import apt.debfile
     resolve_dep_support = True
 except ImportError:
     resolve_dep_support = False

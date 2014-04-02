@@ -539,8 +539,24 @@ class Cloud(object):
                     'driver': driver
                 })
         output = {}
-        if not multiprocessing_data:
-            return output
+        data_count = len(multiprocessing_data)
+        pool = multiprocessing.Pool(
+            data_count < 10 and data_count or 10,
+            init_pool_worker
+        )
+        try:
+            parallel_pmap = pool.map(
+                func=run_parallel_map_providers_query,
+                iterable=multiprocessing_data
+            )
+        except KeyboardInterrupt:
+            print('Caught KeyboardInterrupt, terminating workers')
+            pool.terminate()
+            pool.join()
+            raise SaltCloudSystemExit('Keyboard Interrupt caught')
+        else:
+            pool.close()
+            pool.join()
 
         data_count = len(multiprocessing_data)
         pool = multiprocessing.Pool(data_count < 10 and data_count or 10,

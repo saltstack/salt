@@ -90,10 +90,9 @@ Running Salt
     * /etc/salt
     * /var/cache/salt
     * /var/log/salt
-    * /var/run/salt
 
     More information about running salt as a non-privileged user can be found
-    :doc:`here </ref/configuration/nonroot>`.
+    :doc:`here </topics/nonroot>`.
 
 
 There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`

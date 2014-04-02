@@ -627,6 +627,9 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
+        log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
+        names = {}
+        modules = []
         funcs = {}
         self.load_modules()
         for mod in self.modules:
@@ -854,7 +857,28 @@ class Loader(object):
                     exc_info=True
                 )
                 continue
-            self.modules.append(mod)
+            modules.append(mod)
+        for mod in modules:
+            virtual = ''
+
+            # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
+            # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
+            # containing the names of the proxy types that the module supports.
+            if not hasattr(mod, 'render') and 'proxy' in self.opts:
+                if not hasattr(mod, '__proxyenabled__'):
+                    # This is a proxy minion but this module doesn't support proxy
+                    # minions at all
+                    continue
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
+                    # This is a proxy minion, this module supports proxy
+                    # minions, but not this particular minion
+                    log.debug(mod)
+                    continue
+
+            if hasattr(mod, '__opts__'):
+                mod.__opts__.update(self.opts)
+            else:
+                mod.__opts__ = self.opts
 
     def load_functions(self, mod, module_name):
         '''
@@ -1150,7 +1174,7 @@ class Loader(object):
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
-                    __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
+                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
                 with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)

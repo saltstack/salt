@@ -10,9 +10,6 @@ You need lxc >= 1.0 (even beta alpha)
 
 # Import python libs
 from __future__ import print_function
-import traceback
-import datetime
-import pipes
 import logging
 import tempfile
 import os
@@ -49,28 +46,9 @@ def _ip_sort(ip):
 
 
 def __virtual__():
-    if salt.utils.which('lxc-start'):
-        return True
-    # To speed up the whole thing, we decided to not use the
-    # subshell way and assume things are in place for lxc
-    # Discussion made by @kiorky and @thatch45
-
-    # lxc-version presence is not sufficient, in lxc1.0 alpha
-    # (precise backports), we have it and it is sufficient
-    # for the module to execute.
-    # elif salt.utils.which('lxc-version'):
-    #     passed = False
-    #     try:
-    #         passed = subprocess.check_output(
-    #             'lxc-version').split(':')[1].strip() >= '1.0'
-    #     except Exception:
-    #         pass
-    #     if not passed:
-    #         log.warning('Support for lxc < 1.0 may be incomplete.')
-    #     return 'lxc'
-    # return False
-    #
-    return False
+    if not salt.utils.which('lxc-version'):
+        return False
+    return 'lxc'
 
 
 def _lxc_profile(profile):
@@ -501,55 +479,34 @@ def list_(extra=False):
     '''
     ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
-    if extra:
-        stopped = {}
-        frozen = {}
-        running = {}
-    else:
-        stopped = []
-        frozen = []
-        running = []
+    stopped = []
+    frozen = []
+    running = []
 
-    ret = {'running': running,
-           'stopped': stopped,
-           'frozen': frozen}
+    for c in ctnrs:
+        lines = __salt__['cmd.run']('lxc-info -n ' + c).splitlines()
 
-    for container in ctnrs:
-        c_infos = __salt__['cmd.run'](
-                'lxc-info -n {0}'.format(container)).splitlines()
-        log.debug(c_infos)
-        c_state = None
-        for c_info in c_infos:
-            log.debug(c_info)
-            stat = c_info.split(':')
-            if stat[0] in ('State', 'state'):
-                c_state = stat[1].strip()
+        for line in lines:
+            stat = line.split(':')
+            if stat[0] == 'state':
+                s = stat[1].strip()
                 break
-        if extra:
-            try:
-                infos = __salt__['lxc.info'](container)
-            except Exception:
-                trace = traceback.format_exc()
-                infos = {'error': 'Error while getting extra infos',
-                         'comment': trace}
-            method = 'update'
-            value = {container: infos}
-        else:
-            method = 'append'
-            value = container
 
-        if not c_state:
+        if not len(s):
             continue
-        if c_state == 'STOPPED':
-            getattr(stopped, method)(value)
+        if s == 'STOPPED':
+            stopped.append(c)
             continue
-        if c_state == 'FROZEN':
-            getattr(frozen, method)(value)
+        if s == 'FROZEN':
+            frozen.append(c)
             continue
-        if c_state == 'RUNNING':
-            getattr(running, method)(value)
+        if s == 'RUNNING':
+            running.append(c)
             continue
-    return ret
+
+    return {'running': running,
+            'stopped': stopped,
+            'frozen': frozen}
 
 
 def _change_state(cmd, name, expected):

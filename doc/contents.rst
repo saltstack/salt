@@ -24,6 +24,17 @@ Salt Table of Contents
     topics/yaml/index
     topics/master_tops/index
     topics/ssh/*
+    topics/tests/*
+    topics/reactor/*
+    topics/conventions/*
+    topics/git/*
+    topics/development/index
+    topics/translating
+    topics/salt_projects
+    topics/proxyminion/index
+
+    ref/configuration/logging/*
+    ref/configuration/logging/handlers/*
     ref/index
     topics/best_practices
     topics/troubleshooting/index

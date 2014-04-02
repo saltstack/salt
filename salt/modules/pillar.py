@@ -14,6 +14,7 @@ from salt._compat import string_types
 __proxyenabled__ = ['*']
 
 
+
 def get(key, default='', merge=False):
     '''
     .. versionadded:: 0.14

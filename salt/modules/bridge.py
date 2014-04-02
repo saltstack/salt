@@ -29,8 +29,8 @@ def __virtual__():
         'OpenBSD': 'ifconfig'
     }
     cur_os = __grains__['kernel']
-    for _os in supported_os_tool:
-        if cur_os == _os and salt.utils.which(supported_os_tool[cur_os]):
+    for _os in supported_os:
+        if cur_os == _os and salt.utils.which(supported_os[cur_os]):
             return True
     return False
 

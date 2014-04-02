@@ -1205,6 +1205,7 @@ def path():
     '''
     # Provides:
     #   path
+
     return {'path': os.environ['PATH'].strip()}
 
 
@@ -1288,8 +1289,8 @@ def _dmidecode_data(regex_dict):
         out = __salt__['cmd.run']('smbios')
     else:
         log.info(
-            'The `dmidecode` binary is not available on the system. GPU '
-            'grains will not be available.'
+            'The `dmidecode` binary is not available on the system. GPU grains '
+            'will not be available.'
         )
         return ret
 
@@ -1421,11 +1422,6 @@ def _smartos_zone_data():
     # Provides:
     #   pkgsrcversion
     #   imageversion
-    #   pkgsrcpath
-    #   zonename
-    #   zoneid
-    #   hypervisor_uuid
-    #   datacenter
 
     if 'proxyminion' in __opts__:
         return {}

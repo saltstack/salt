@@ -184,8 +184,7 @@ def _find_install_targets(name=None,
     if sources:
         targets = [x for x in desired if x not in cur_pkgs]
     else:
-        # Check for alternate package names if strict processing is not
-        # enforced.
+        # Check for alternate package names if strict processing is not enforced
         # Takes extra time. Disable for improved performance
         if not skip_suggestions:
             # Perform platform-specific pre-flight checks

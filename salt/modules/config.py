@@ -79,13 +79,8 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    if not isinstance(mode, salt._compat.string_types):
-        # Make it a string in case it's not
-        mode = str(mode)
-    # Strip any quotes and initial 0, though zero-pad it up to 4
-    ret = mode.strip('"').strip('\'').lstrip('0').zfill(4)
+    ret = str(mode).lstrip('0').zfill(4)
     if ret[0] != '0':
-        # Always include a leading zero
         return '0{0}'.format(ret)
     return ret
 

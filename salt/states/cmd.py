@@ -628,12 +628,47 @@ def run(name,
         ).format(cwd)
         return ret
 
-    # Need the check for None here, if env is not provided then it falls back
-    # to None and it is assumed that the environment is not being overridden.
-    if env is not None and not isinstance(env, (list, dict)):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
-                          'documentation.')
-        return ret
+    if env:
+        if isinstance(env, basestring):
+            try:
+                env = yaml.safe_load(env)
+            except Exception:
+                _env = {}
+                for var in env.split():
+                    try:
+                        key, val = var.split('=')
+                        _env[key] = val
+                    except ValueError:
+                        ret['comment'] = \
+                            'Invalid environment var: {0!r}'.format(var)
+                        return ret
+                env = _env
+        elif isinstance(env, dict):
+            pass
+
+        elif isinstance(env, list):
+            _env = {}
+            for comp in env:
+                try:
+                    if isinstance(comp, basestring):
+                        _env.update(yaml.safe_load(comp))
+                    if isinstance(comp, dict):
+                        _env.update(comp)
+                    else:
+                        ret['comment'] = \
+                            'Invalid environment var: {0!r}'.format(env)
+                        return ret
+                except Exception:
+                    _env = {}
+                    for var in comp.split():
+                        try:
+                            key, val = var.split('=')
+                            _env[key] = val
+                        except ValueError:
+                            ret['comment'] = \
+                                'Invalid environment var: {0!r}'.format(var)
+                            return ret
+            env = _env
 
     if HAS_GRP:
         pgid = os.getegid()
@@ -848,7 +883,7 @@ def script(name,
             ret['result'] = not bool(cmd_all['retcode'])
         if ret.get('changes', {}).get('cache_error'):
             ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                             '{1!r}'.format(source, __env__)
+                             '{1!r}'.format(source, env)
         else:
             ret['comment'] = 'Command {0!r} run'.format(name)
         return _reinterpreted_state(ret) if stateful else ret

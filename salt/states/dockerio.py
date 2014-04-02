@@ -226,12 +226,11 @@ def pulled(name, force=False, *args, **kwargs):
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
-    previous_id = image_infos['out']['id'] if image_infos['status'] else None
-    pull = __salt__['docker.pull']
-    returned = pull(name)
+    previous_id = iinfos['out']['id'] if iinfos['status'] else None
+    func = __salt('docker.pull')
+    returned = func(name)
     if previous_id != returned['id']:
-        changes = {name: {'old': previous_id,
-                          'new': returned['id']}}
+        changes = {name: True}
     else:
         changes = {}
     return _ret_status(returned, name, changes=changes)
@@ -262,9 +261,9 @@ def built(name,
         return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
-                name, image_infos['out']['id']))
-    previous_id = image_infos['out']['id'] if image_infos['status'] else None
-    build = __salt__['docker.build']
+                name, iinfos['out']['id']))
+    previous_id = iinfos['out']['id'] if iinfos['status'] else None
+    func = __salt('docker.build')
     kw = dict(tag=name,
               path=path,
               quiet=quiet,
@@ -272,15 +271,12 @@ def built(name,
               rm=rm,
               timeout=timeout,
               )
-    returned = build(**kw)
+    returned = func(**kw)
     if previous_id != returned['id']:
-        changes = {name: {'old': previous_id,
-                          'new': returned['id']}}
+        changes = {name: True}
     else:
         changes = {}
-    return _ret_status(exec_status=returned,
-                       name=name,
-                       changes=changes)
+    return _ret_status(returned, name, changes=changes)
 
 
 def installed(name,

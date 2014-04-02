@@ -347,12 +347,14 @@ def install(name=None,
                 log.error(problem)
             return {}
 
+        # It is critical that -Syu is run instead of -Sy:
+        # http://gist.io/5660494
         if salt.utils.is_true(refresh):
-            options.append('-y')
-        if salt.utils.is_true(sysupgrade):
-            options.append('-u')
-
-        cmd = 'pacman -S "{0}"'.format('" "'.join(options+targets))
+            cmd = 'pacman -Syu --noprogressbar --noconfirm --needed ' \
+                  '"{0}"'.format('" "'.join(targets))
+        else:
+            cmd = 'pacman -S --noprogressbar --noconfirm --needed ' \
+                  '"{0}"'.format('" "'.join(targets))
 
     old = list_pkgs()
     __salt__['cmd.run'](cmd, output_loglevel='debug')

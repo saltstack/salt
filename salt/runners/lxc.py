@@ -28,7 +28,7 @@ def _do(name, fun):
     if not host:
         return False
 
-    client = salt.client.get_local_client(__opts__['conf_file'])
+    client = salt.client.LocalClient(__opts__['conf_file'])
     cmd_ret = client.cmd_iter(
             host,
             'lxc.{0}'.format(fun),
@@ -49,8 +49,12 @@ def find_guest(name, quiet=False):
 
         salt-run lxc.find_guest name
     '''
-    for data in _list_iter():
-        host, l = data.items()[0]
+    data = list_(quiet=True)
+
+    for host, l in data.items():
+        # Check if data is a dict, and not '"virt.full_info" is not available.'
+        if not isinstance(l, dict):
+            continue
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
@@ -75,8 +79,7 @@ def init(name,
                 [nic=nic_profile] [profile=lxc_profile] \\
                 [nic_opts=nic_opts] [start=(true|false)] \\
                 [seed=(true|false)] [install=(true|false)] \\
-                [config=minion_config] [clone=original] \\
-                [snapshot=(true|false)]
+                [config=minion_config]
 
     name
         Name of the container.
@@ -120,58 +123,60 @@ def init(name,
     data = __salt__['lxc.list'](host, quiet=True)
     for host, containers in data.items():
         if name in sum(containers.values(), []):
-            print('Container \'{0}\' already exists on host \'{1}\''.format(
-                  name, host))
-            return False
+            print('Container "{0}" is already deployed'.format(name))
+            return 'fail'
 
     if host is None:
         #TODO: Support selection of host based on available memory/cpu/etc.
-        print('A host must be provided')
-        return False
+        print('A host must be provided.')
+        return 'fail'
 
     if host not in data:
-        print('Host \'{0}\' was not found'.format(host))
-        return False
+        print('Host "{0}" was not found'.format(host))
+        return 'fail'
 
-    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
-    approve_key = kw.get('approve_key', True)
-    if approve_key:
+    seed = kwargs.get('seed', True)
+    if seed:
         kv = salt.utils.virt.VirtKey(host, name, __opts__)
         if kv.authorize():
-            print('Container key will be preauthorized')
+            print('Minion will be preseeded.')
         else:
-            print('Container key preauthorization failed')
-            return False
+            print('Preauthorization failed.')
+            return 'fail'
 
-    client = salt.client.get_local_client(__opts__['conf_file'])
+    client = salt.client.LocalClient(__opts__['conf_file'])
 
-    print('Creating container \'{0}\' on host \'{1}\''.format(name, host))
-
+    print('Creating container {0} on host {1}.'.format(name, host))
     args = [name]
+
     cmd_ret = client.cmd_iter(host,
                               'lxc.init',
                               args,
                               kwarg=kwargs,
                               timeout=600)
+
     ret = next(cmd_ret)
-    if ret and host in ret:
-        ret = ret[host]['ret']
-    else:
-        ret = {}
+    if not ret:
+        print('Container {0} was not initialized.'.format(name))
+        return 'fail'
 
-    if ret.get('created', False) or ret.get('cloned', False):
-        print('Container \'{0}\' initialized on host \'{1}\''.format(
-            name, host))
-    else:
-        error = ret.get('error', 'unknown error')
-        print('Container \'{0}\' was not initialized: {1}'.format(name, error))
-    return ret or None
+    print('Container {0} initialized on host {1}'.format(name, host))
+    return 'good'
 
 
-def _list_iter(host=None):
+def list_(host=None, quiet=False):
+    '''
+    List defined containers (running, stopped, and frozen) for the named
+    (or all) host(s).
+
+    .. code-block:: bash
+
+        salt-run lxc.list [host=minion_id]
+    '''
+
     tgt = host or '*'
     ret = {}
-    client = salt.client.get_local_client(__opts__['conf_file'])
+    client = salt.client.LocalClient(__opts__['conf_file'])
     for container_info in client.cmd_iter(tgt, 'lxc.list'):
         if not container_info:
             continue
@@ -188,24 +193,10 @@ def _list_iter(host=None):
         if not isinstance(container_info[id_]['ret'], dict):
             continue
         chunk[id_] = container_info[id_]['ret']
-        yield chunk
-
-
-def list_(host=None, quiet=False):
-    '''
-    List defined containers (running, stopped, and frozen) for the named
-    (or all) host(s).
-
-    .. code-block:: bash
-
-        salt-run lxc.list [host=minion_id]
-    '''
-    it = _list_iter(host)
-    ret = {}
-    for chunk in it:
         ret.update(chunk)
         if not quiet:
             salt.output.display_output(chunk, 'lxc_list', __opts__)
+
     return ret
 
 

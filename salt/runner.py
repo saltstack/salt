@@ -5,7 +5,7 @@ Execute salt convenience routines
 
 # Import python libs
 from __future__ import print_function
-import collections
+import multiprocessing
 import datetime
 import logging
 import multiprocessing
@@ -242,11 +242,20 @@ class Runner(RunnerClient):
         '''
         Print out the documentation!
         '''
+        fun = None
+        run = None
         arg = self.opts.get('fun', None)
-        docs = super(Runner, self).get_docs(arg)
-        for fun in sorted(docs):
-            display_output('{0}:'.format(fun), 'text', self.opts)
-            print(docs[fun])
+
+        if arg:
+            if '.' in arg:
+                fun = arg
+            else:
+                run = arg
+
+        ret = super(Runner, self).get_docs()
+        for f in sorted(ret):
+            if not arg or f == fun or f.split('.')[0] == run:
+                print('{0}:\n{1}\n'.format(f, ret[f]))
 
     def run(self):
         '''

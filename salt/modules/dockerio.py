@@ -1262,8 +1262,8 @@ def import_image(src, repo, tag=None, *args, **kwargs):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            image_logs, _info = _parse_image_multilogs_string(ret, repo)
-            _create_image_assemble_error_status(status, ret, image_logs)
+            logs, info = _parse_image_multilogs_string(ret, repo)
+            _create_image_assemble_error_status(status, ret, logs)
             if status['status'] is not False:
                 infos = _get_image_infos(image_logs[0]['status'])
                 valid(status,
@@ -1641,13 +1641,13 @@ def pull(repo, tag=None, *args, **kwargs):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            image_logs, infos = _parse_image_multilogs_string(ret, repo)
+            logs, infos = _parse_image_multilogs_string(ret, repo)
             if infos and infos.get('id', None):
                 repotag = repo
                 if tag:
                     repotag = '{0}:{1}'.format(repo, tag)
                 valid(status,
-                      out=image_logs if image_logs else ret,
+                      out=logs if logs else ret,
                       id=infos['id'],
                       comment='Image {0} was pulled ({1})'.format(
                           repotag, infos['id']))
@@ -1727,9 +1727,9 @@ def push(repo, *args, **kwargs):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     ret = client.push(repo)
-    image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
-    if image_logs:
-        laststatus = image_logs[0].get('status', None)
+    logs, infos = _parse_image_multilogs_string(ret, repo_name)
+    if logs:
+        laststatus = logs[0].get('status', None)
         if laststatus and (
             ('already pushed' in laststatus)
             or ('Pushing tags for rev' in laststatus)

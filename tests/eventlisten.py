@@ -73,8 +73,6 @@ def listen(sock_dir, node, id=None):
             id=id
             )
     print(event.puburi)
-    jid_counter = 0
-    found_minions = []
     while True:
         ret = event.get_event(full=True)
         if ret is None:
