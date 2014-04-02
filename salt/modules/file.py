@@ -2665,6 +2665,13 @@ def manage_file(name,
                     return ret
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
+                    # check for existence of windows drive letter
+                    if salt.utils.is_windows():
+                        drive, _ = os.path.splitdrive(name)
+                        if drive and not os.path.exists(drive):
+                            __clean_tmp(sfn)
+                            return _error(ret,
+                                          '{0} drive not present'.format(drive))
                     if dir_mode is None and mode is not None:
                         # Add execute bit to each nonzero digit in the mode, if
                         # dir_mode was not specified. Otherwise, any
@@ -2684,6 +2691,13 @@ def manage_file(name,
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
+                    # check for existence of windows drive letter
+                    if salt.utils.is_windows():
+                        drive, _ = os.path.splitdrive(name)
+                        if drive and not os.path.exists(drive):
+                            __clean_tmp(sfn)
+                            return _error(ret,
+                                          '{0} drive not present'.format(drive))
                     makedirs_(name, user=user, group=group,
                               mode=dir_mode or mode)
                 else:
