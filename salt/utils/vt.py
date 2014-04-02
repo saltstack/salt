@@ -326,7 +326,7 @@ class Terminal(object):
 
 # ----- Platform Specific Methods ------------------------------------------->
     if subprocess.mswindows:
-    # ----- Windows Methods ------------------------------------------------->
+        # ----- Windows Methods --------------------------------------------->
         def _execute(self):
             raise NotImplementedError
 
@@ -371,7 +371,7 @@ class Terminal(object):
         kill = terminate
     # <---- Windows Methods --------------------------------------------------
     else:
-    # ----- Linux Methods --------------------------------------------------->
+        # ----- Linux Methods ----------------------------------------------->
         # ----- Internal API ------------------------------------------------>
         def _spawn(self):
             self.pid, self.child_fd, self.child_fde = self.__fork_ptys()

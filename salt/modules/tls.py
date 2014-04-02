@@ -610,10 +610,10 @@ def create_ca_signed_cert(ca_name, CN, days=365):
 
     exts = []
     try:
-    # see: http://bazaar.launchpad.net/~exarkun/pyopenssl/master/revision/189
-    # support is there from quite a long time, but without API
-    # so we mimic the newly get_extensions method present in ultra
-    # recent pyopenssl distros
+        # see: http://bazaar.launchpad.net/~exarkun/pyopenssl/master/revision/189
+        # support is there from quite a long time, but without API
+        # so we mimic the newly get_extensions method present in ultra
+        # recent pyopenssl distros
         native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
         for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
             ext = OpenSSL.crypto.X509Extension.__new__(OpenSSL.crypto.X509Extension)
