@@ -1663,10 +1663,12 @@ class State(object):
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
-            running[tag] = {'changes': {},
-                            'result': True,
-                            'comment': 'No changes detected',
-                            '__run_num__': self.__run_num}
+            pre_ret = {'changes': {},
+                       'result': True,
+                       'comment': 'No changes detected',
+                       '__run_num__': self.__run_num}
+            running[tag] = pre_ret
+            self.pre[tag] = pre_ret
             self.__run_num += 1
         else:
             if low.get('__prereq__'):
