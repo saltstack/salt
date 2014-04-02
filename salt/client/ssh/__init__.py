@@ -496,7 +496,7 @@ class Single(object):
             **kwargs):
         self.opts = opts
         self.arg_str = arg_str
-        self.fun, self.arg = self.__arg_comps()
+        self.fun, self.arg, self.kwargs = self.__arg_comps()
         self.id = id_
 
         args = {'host': host,
@@ -524,8 +524,16 @@ class Single(object):
         '''
         comps = self.arg_str.split()
         fun = comps[0] if comps else ''
-        arg = comps[1:]
-        return fun, arg
+        args = comps[1:]
+        s_args = []
+        kws = {}
+        for arg in args:
+            if '=' in arg:
+                (key, val) = arg.split('=')
+                kws[key] = val
+            else:
+                s_args.append(arg)
+        return fun, s_args, kws
 
     def deploy(self):
         '''
@@ -630,7 +638,7 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
-        ret = json.dumps(self.wfuncs[self.fun](*self.arg))
+        ret = json.dumps(self.wfuncs[self.fun](*self.arg, **self.kwargs))
         return ret, '', None
 
     def cmd(self):
