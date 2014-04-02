@@ -2,7 +2,7 @@
 A:
   cmd.run:
     - name: echo "A"
-    - onlyif: return 0
+    - onlyif: return 1
 
 # issue #8235
 #B:
@@ -21,7 +21,7 @@ C:
 D:
   cmd.run:
     - name: echo "D"
-    - onlyif: return 0
+    - onlyif: return 1
     - use_in:
         - cmd: E
 
