@@ -27,6 +27,7 @@ import salt.utils.gzip_util
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse, url_open,
     url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener)
+from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)
 
@@ -535,6 +536,19 @@ class Client(object):
                                     keyid=self.opts.get('s3.keyid', None),
                                     service_url=self.opts.get('s3.service_url',
                                                               None))
+                return dest
+            except Exception as ex:
+                raise MinionError('Could not fetch from {0}'.format(url))
+
+        if url_data.scheme == 'swift':
+            try:
+                swift_conn = SaltSwift(self.opts.get('keystone.user', None),
+                                             self.opts.get('keystone.tenant', None),
+                                             self.opts.get('keystone.auth_url', None),
+                                             self.opts.get('keystone.password', None))
+                swift_conn.get_object(url_data.netloc,
+                                      url_data.path[1:],
+                                      dest)
                 return dest
             except Exception as ex:
                 raise MinionError('Could not fetch from {0}'.format(url))
@@ -1116,8 +1130,9 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
+                hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(
-                    path, form='md5', chunk_size=4096)
+                    path, form=hash_type, chunk_size=4096)
                 ret['hash_type'] = 'md5'
                 return ret
         load = {'path': path,
