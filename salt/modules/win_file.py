@@ -41,7 +41,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
-        directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
+        directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
         check_managed, check_perms, patch, remove, source_list, sed_contains,
         touch, append, contains, contains_regex, contains_regex_multiline,
         contains_glob, uncomment, sed, find, psed, get_sum, _get_bkroot,
@@ -65,7 +65,7 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
-            global source_list, mkdir, __clean_tmp, makedirs, file_exists
+            global source_list, mkdir, __clean_tmp, makedirs_, file_exists
             global check_managed, check_file_meta, remove, append, _error
             global directory_exists, patch, sed_contains, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
@@ -91,7 +91,7 @@ def __virtual__():
             check_managed = _namespaced_function(check_managed, globals())
             check_file_meta = _namespaced_function(check_file_meta, globals())
             makedirs_perms = _namespaced_function(makedirs_perms, globals())
-            makedirs = _namespaced_function(makedirs, globals())
+            makedirs_ = _namespaced_function(makedirs, globals())
             manage_file = _namespaced_function(manage_file, globals())
             source_list = _namespaced_function(source_list, globals())
             mkdir = _namespaced_function(mkdir, globals())
@@ -123,10 +123,13 @@ def __virtual__():
             return __virtualname__
     return False
 
-
 __outputter__ = {
     'touch': 'txt',
     'append': 'txt',
+}
+
+__func_alias__ = {
+    'makedirs_': 'makedirs'
 }
 
 
