@@ -175,7 +175,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         docs = {}
         if not ret:
             self.exit(2, 'No minions found to gather docs from\n')
-
+        if isinstance(ret, str):
+            self.exit(2, '{0}\n'.format(ret))
         for host in ret:
             for fun in ret[host]:
                 if fun not in docs:
