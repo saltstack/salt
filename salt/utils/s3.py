@@ -32,17 +32,21 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     '''
     for i in range(0, num_retries):
         try:
-            result = requests.get(url)
+            result = requests.get(url, timeout=timeout)
             return result.text
         except requests.exceptions.HTTPError as exc:
             return ''
         except Exception as exc:
             pass
 
-        log.warning('Caught exception reading from URL. Retry no. {0}'.format(i))
+        log.warning(
+            'Caught exception reading from URL. Retry no. {0}'.format(i)
+        )
         log.warning(pprint.pformat(exc))
         time.sleep(2 ** i)
-    log.error('Failed to read from URL for {0} times. Giving up.'.format(num_retries))
+    log.error(
+        'Failed to read from URL for {0} times. Giving up.'.format(num_retries)
+    )
     return ''
 
 
