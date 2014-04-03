@@ -177,7 +177,7 @@ def get_conn():
     '''
     vm_ = get_configured_provider()
 
-    kwargs = vm_.copy()
+    kwargs = vm_.copy()  # pylint: disable=E1103
 
     kwargs['username'] = vm_['user']
     kwargs['project_id'] = vm_['tenant']
