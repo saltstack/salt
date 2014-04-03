@@ -2170,7 +2170,7 @@ def extract_hash(hash_fn, hash_type='md5', file_name=''):
     return source_sum
 
 
-def check_perms(name, ret, user, group, mode):
+def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     '''
     Check the permissions on files and chown if needed
 
@@ -2192,7 +2192,7 @@ def check_perms(name, ret, user, group, mode):
 
     # Check permissions
     perms = {}
-    cur = stats(name, follow_symlinks=False)
+    cur = stats(name, follow_symlinks=follow_symlinks)
     if not cur:
         raise CommandExecutionError('{0} does not exist'.format(name))
     perms['luser'] = cur['user']
@@ -2233,7 +2233,9 @@ def check_perms(name, ret, user, group, mode):
                 ret['result'] = False
 
     if user:
-        if user != get_user(name):
+        if isinstance(user, int):
+            user = uid_to_user(user)
+        if user != get_user(name, follow_symlinks=follow_symlinks):
             if __opts__['test'] is True:
                 ret['changes']['user'] = user
             else:
@@ -2243,7 +2245,9 @@ def check_perms(name, ret, user, group, mode):
         elif 'cuser' in perms:
             ret['changes']['user'] = user
     if group:
-        if group != get_group(name):
+        if isinstance(group, int):
+            group = gid_to_group(group)
+        if group != get_group(name, follow_symlinks=follow_symlinks):
             if __opts__['test'] is True:
                 ret['changes']['group'] = group
             else:
