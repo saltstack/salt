@@ -83,6 +83,8 @@ which have been defined in included
 
 Occurs only in the top level and defines a dictionary.
 
+States cannot be extended more than once in a single state run.
+
 Extend declarations are useful for adding-to or overriding parts of a
 :ref:`state-declaration` that is defined in another ``SLS`` file. In the
 following contrived example, the shown ``mywebsite.sls`` file is ``include``
