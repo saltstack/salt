@@ -490,7 +490,7 @@ def _find_set_members(set):
     startMembers = False
     for i in _tmp:
         if startMembers:
-            members.append(i) 
+            members.append(i)
         if 'Members:' in i:
             startMembers = True
     return members

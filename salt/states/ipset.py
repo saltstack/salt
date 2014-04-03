@@ -154,7 +154,7 @@ def set_absent(name, family='ipv4', **kwargs):
     return ret
 
 
-def present(name, entry=None, entries=[], family='ipv4', **kwargs):
+def present(name, entry=None, entries=None, family='ipv4', **kwargs):
     '''
     .. versionadded:: Helium
 
@@ -164,10 +164,10 @@ def present(name, entry=None, entries=[], family='ipv4', **kwargs):
         A user-defined name to call this entry by in another part of a state or
         formula. This should not be an actual entry.
 
-    entry 
+    entry
         A single entry to add to a set
 
-    entries 
+    entries
         A list of entries to add to a set
 
     family
@@ -191,6 +191,7 @@ def present(name, entry=None, entries=[], family='ipv4', **kwargs):
 
     # Only passed one entry
     if entry and not entries:
+        entries = []
         entries.append(entry)
 
     for entry in entries:
@@ -229,7 +230,7 @@ def present(name, entry=None, entries=[], family='ipv4', **kwargs):
     return ret
 
 
-def absent(name, entry=None, entries=[], family='ipv4', **kwargs):
+def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
     '''
     .. versionadded:: Helium
 
@@ -260,6 +261,7 @@ def absent(name, entry=None, entries=[], family='ipv4', **kwargs):
 
     # Only passed one entry
     if entry and not entries:
+        entries = []
         entries.append(entry)
 
     for entry in entries:
@@ -280,9 +282,9 @@ def absent(name, entry=None, entries=[], family='ipv4', **kwargs):
         else:
 
             if __opts__['test']:
-                ret['comment'] += 'ipset entry for {0} needs to removed from set ({1}) for {2}\n'.format(
+                ret['comment'] += 'ipset entry {0} needs to removed from set {1} for family {2}\n'.format(
                     entry,
-                    command.strip(),
+                    kwargs['set_name'],
                     family)
             else:
                 command = __salt__['ipset.delete'](kwargs['set_name'], entry, family, **kwargs)
