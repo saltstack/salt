@@ -1628,6 +1628,8 @@ class State(object):
                                 low['__prereq__'] = True
                                 self.pre[ctag] = self.call(low, chunks, running)
                                 return running
+                            else:
+                                return running
                         elif ctag not in running:
                             log.error('Recursive requisite found')
                             running[tag] = {
