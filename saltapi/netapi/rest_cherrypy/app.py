@@ -1120,7 +1120,7 @@ class Events(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
-        self.auth = salt.auth.Resolver(self.opts)
+        self.auth = salt.auth.LoadAuth(self.opts)
 
     def GET(self, token=None):
         '''
