@@ -314,6 +314,8 @@ def add(set=None, entry=None, family='ipv4', **kwargs):
 
     settype = setinfo['Type']
 
+    cmd = '{0}'.format(entry)
+
     if 'timeout' in kwargs:
         if not 'timeout' in setinfo['Header']:
             return 'Error: Set {0} not created with timeout support'.format(set)
@@ -326,17 +328,24 @@ def add(set=None, entry=None, family='ipv4', **kwargs):
         if not 'comment' in setinfo['Header']:
             return 'Error: Set {0} not created with comment support'.format(set)
 
-    cmd = '{0} add {1} {2}'.format(_ipset_cmd(), set, entry)
+        _ADD_OPTIONS[settype].remove('comment')
+        cmd = '{0} comment "{1}"'.format(cmd, kwargs['comment'])
 
     for item in _ADD_OPTIONS[settype]:
         if item in kwargs:
-            cmd = '{0} {1} {2} '.format(cmd, item, kwargs[item])
+            cmd = '{0} {1} {2}'.format(cmd, item, kwargs[item])
 
+    current_members = _find_set_members(set)
+    if cmd in current_members:
+        return 'Warn: Entry {0} already exists in set {1}'.format(cmd, set)
+
+    # Using -exist to ensure entries are updated if the comment changes
+    cmd = '{0} add -exist {1} {2}'.format(_ipset_cmd(), set, cmd)
     out = __salt__['cmd.run'](cmd)
 
     if len(out) == 0:
-        out = True
-    return out
+        return 'Success'
+    return 'Error: {0}'.format(out)
 
 
 def delete(set=None, entry=None, family='ipv4', **kwargs):
@@ -364,8 +373,34 @@ def delete(set=None, entry=None, family='ipv4', **kwargs):
     out = __salt__['cmd.run'](cmd)
 
     if len(out) == 0:
-        out = True
-    return out
+        return 'Success'
+    return 'Error: {0}'.format(out)
+
+
+def check(set=None, entry=None, family='ipv4'):
+    '''
+    Check that an entry exists in the specified set.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ipset.check setname '192.168.0.1 comment "Hello"'
+
+    '''
+    if not set:
+        return 'Error: Set needs to be specified'
+    if not entry:
+        return 'Error: Entry needs to be specified'
+
+    settype = _find_set_type(set)
+    if not settype:
+        return 'Error: Set {0} does not exist'.format(set)
+
+    current_members = _find_set_members(set)
+    if entry in current_members:
+        return True
+    return False
 
 
 def test(set=None, entry=None, family='ipv4', **kwargs):
@@ -394,7 +429,7 @@ def test(set=None, entry=None, family='ipv4', **kwargs):
     out = __salt__['cmd.run_all'](cmd)
 
     if out['retcode'] > 0:
-        # Set doesn't exist return false
+        # Entry doesn't exist in set return false
         return False
 
     return True
@@ -438,52 +473,27 @@ def flush(set=None, family='ipv4'):
         return False
 
 
-def build_entry(set=None, entry=None, full=None, family='ipv4', **kwargs):
+def _find_set_members(set):
     '''
-    Append an entry to the specified set.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ipset.build_entry setname 192.168.1.26
-
-        salt '*' ipset.build_entry setname 192.168.0.3,AA:BB:CC:DD:EE:FF
-
+    Return list of members for a set
     '''
-    if not set:
-        return 'Error: Set needs to be specified'
-    if not entry:
-        return 'Error: Entry needs to be specified'
 
-    setinfo = _find_set_info(set)
-    if not setinfo:
-        return 'Error: Set {0} does not exist'.format(set)
+    cmd = '{0} list {1}'.format(_ipset_cmd(), set)
+    out = __salt__['cmd.run_all'](cmd)
 
-    settype = setinfo['Type']
+    if out['retcode'] > 0:
+        # Set doesn't exist return false
+        return False
 
-    if 'timeout' in kwargs:
-        if not 'timeout' in setinfo['Header']:
-            return 'Error: Set {0} not created with timeout support'.format(set)
-
-    if 'packets' in kwargs or 'bytes' in kwargs:
-        if not 'counters' in setinfo['Header']:
-            return 'Error: Set {0} not created with counters support'.format(set)
-
-    if 'comment' in kwargs:
-        if not 'comment' in setinfo['Header']:
-            return 'Error: Set {0} not created with comment support'.format(set)
-
-    cmd = '{0}'.format(entry)
-
-    for item in _ADD_OPTIONS[settype]:
-        if item in kwargs:
-            cmd = '{0} {1} {2} '.format(cmd, item, kwargs[item])
-
-    if full:
-        cmd = '{0} add {1} {2} '.format(_ipset_cmd(), cmd, set)
-
-    return cmd
+    _tmp = out['stdout'].split('\n')
+    members = []
+    startMembers = False
+    for i in _tmp:
+        if startMembers:
+            members.append(i)
+        if 'Members:' in i:
+            startMembers = True
+    return members
 
 
 def _find_set_info(set):
