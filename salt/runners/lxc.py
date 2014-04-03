@@ -170,7 +170,6 @@ def init(name,
 
 def _list_iter(host=None):
     tgt = host or '*'
-    ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     for container_info in client.cmd_iter(tgt, 'lxc.list'):
         if not container_info:
