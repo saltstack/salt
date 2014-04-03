@@ -703,7 +703,7 @@ def backup_minion(path, bkroot):
     dname, bname = os.path.split(path)
     fstat = os.stat(path)
     msecs = str(int(time.time() * 1000000))[-6:]
-    stamp = time.asctime().replace(' ', '_')
+    stamp = time.strftime("%a_%b_%d_%m_%H:%M:%S_%Y")
     stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
     bkpath = os.path.join(bkroot,
                           dname[1:],
