@@ -494,18 +494,13 @@ class LowDataAdapter(object):
         self.opts = cherrypy.config['saltopts']
         self.api = saltapi.APIClient(self.opts)
 
-    def exec_lowstate(self, client=None):
+    def exec_lowstate(self, client=None, token=None):
         '''
         Pull a Low State data structure from request and execute the low-data
         chunks through Salt. The low-data chunks will be updated to include the
         authorization token for the current session.
         '''
         lowstate = cherrypy.request.lowstate
-
-        if hasattr(cherrypy, 'session'):
-            token = cherrypy.session.get('token', None)
-        else:
-            token = None
 
         # if the lowstate loaded isn't a list, lets notify the client
         if type(lowstate) != list:
@@ -629,7 +624,8 @@ class LowDataAdapter(object):
         :status 406: requested Content-Type not available
         '''
         return {
-            'return': list(self.exec_lowstate()),
+            'return': list(self.exec_lowstate(
+                token=cherrypy.session.get('token')))
         }
 
 
@@ -681,7 +677,8 @@ class Minions(LowDataAdapter):
             'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
         }]
         return {
-            'return': list(self.exec_lowstate()),
+            'return': list(self.exec_lowstate(
+                token=cherrypy.session.get('token'))),
         }
 
     def POST(self, **kwargs):
@@ -737,7 +734,8 @@ class Minions(LowDataAdapter):
         :status 401: authentication required
         :status 406: requested :mailheader:`Content-Type` not available
         '''
-        job_data = list(self.exec_lowstate(client='local_async'))
+        job_data = list(self.exec_lowstate(client='local_async',
+            token=cherrypy.session.get('token')))
 
         cherrypy.response.status = 202
         return {
@@ -848,7 +846,8 @@ class Jobs(LowDataAdapter):
             })
 
         cherrypy.request.lowstate = lowstate
-        job_ret_info = list(self.exec_lowstate())
+        job_ret_info = list(self.exec_lowstate(
+            token=cherrypy.session.get('token')))
 
         ret = {}
         if jid:
