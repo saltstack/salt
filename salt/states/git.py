@@ -166,7 +166,7 @@ def latest(name,
             current_rev = __salt__['git.revision'](target, user=user)
 
             # handle the case where a branch was provided for rev
-            remote_rev = None
+            remote_rev, new_rev = None, None
             branch = __salt__['git.current_branch'](target, user=user)
             # We're only interested in the remote branch if a branch
             # (instead of a hash, for example) was provided for rev.
