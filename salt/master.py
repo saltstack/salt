@@ -127,7 +127,7 @@ class SMaster(object):
         acl_users = set(self.opts['client_acl'].keys())
         if self.opts.get('user'):
             acl_users.add(self.opts['user'])
-        acl_users.add(getpass.getuser())
+        acl_users.add(salt.utils.get_user())
         for user in pwd.getpwall():
             users.append(user.pw_name)
         for user in acl_users:
