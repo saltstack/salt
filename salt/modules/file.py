@@ -2289,6 +2289,9 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     .. code-block:: bash
 
         salt '*' file.check_perms /etc/sudoers '{}' root root 400
+
+    .. versionchanged:: 2014.1.2
+        ``follow_symlinks`` option added
     '''
     if not ret:
         ret = {'name': name,
