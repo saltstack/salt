@@ -156,7 +156,7 @@ def group_to_gid(group):
         return ''
     try:
         if isinstance(group, int):
-            return grp.getgrgid(group).gr_gid
+            return group
         return grp.getgrnam(group).gr_gid
     except KeyError:
         return ''
@@ -224,7 +224,7 @@ def user_to_uid(user):
         user = salt.utils.get_user()
     try:
         if isinstance(user, int):
-            return pwd.getpwuid(user).pw_uid
+            return user
         return pwd.getpwnam(user).pw_uid
     except KeyError:
         return ''
