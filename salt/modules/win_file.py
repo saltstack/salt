@@ -91,7 +91,7 @@ def __virtual__():
             check_managed = _namespaced_function(check_managed, globals())
             check_file_meta = _namespaced_function(check_file_meta, globals())
             makedirs_perms = _namespaced_function(makedirs_perms, globals())
-            makedirs_ = _namespaced_function(makedirs, globals())
+            makedirs_ = _namespaced_function(makedirs_, globals())
             manage_file = _namespaced_function(manage_file, globals())
             source_list = _namespaced_function(source_list, globals())
             mkdir = _namespaced_function(mkdir, globals())
