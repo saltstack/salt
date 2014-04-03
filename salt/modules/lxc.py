@@ -250,7 +250,7 @@ def init(name,
         p = profile.pop(k, default)
         return kw or p
 
-    start_ = select('start', False)
+    start_ = select('start', True)
     seed = select('seed', True)
     install = select('install', True)
     seed_cmd = select('seed_cmd')
