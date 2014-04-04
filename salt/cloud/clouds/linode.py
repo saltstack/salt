@@ -108,6 +108,13 @@ def get_password(vm_):
         ), search_global=False
     )
 
+def get_swap(vm_):
+    '''
+    Return the amount of swap space to use
+    '''
+    return config.get_cloud_config_value(
+        'swap', vm_, __opts__, default=128
+    )
 
 def create(vm_):
     '''
@@ -132,7 +139,8 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'auth': NodeAuthPassword(get_password(vm_))
+        'auth': NodeAuthPassword(get_password(vm_)),
+        'ex_swap': get_swap(vm_)
     }
 
     salt.utils.cloud.fire_event(
@@ -142,7 +150,8 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name,
-                    'location': kwargs['location'].name}},
+                    'location': kwargs['location'].name,
+                    'ex_swap': kwargs['ex_swap']}},
         transport=__opts__['transport']
     )
 
