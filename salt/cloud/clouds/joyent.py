@@ -40,7 +40,6 @@ associated with that vm. An example profile might look like:
 # Import python libs
 import os
 import copy
-import urllib
 import httplib
 import requests
 import json
@@ -97,13 +96,7 @@ def __virtual__():
     Set up the libcloud functions and check for JOYENT configs
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Joyent cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
-
-    log.debug('Loading Joyent cloud module')
 
     global script
     conn = None

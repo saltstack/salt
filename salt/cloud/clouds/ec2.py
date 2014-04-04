@@ -150,10 +150,6 @@ def __virtual__():
     Set up the libcloud functions and check for EC2 configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no EC2 cloud provider configuration available. Not '
-            'loading module'
-        )
         return False
 
     for provider, details in __opts__['providers'].iteritems():
@@ -181,7 +177,6 @@ def __virtual__():
                 )
             )
 
-    log.debug('Loading EC2 cloud compute module')
     return True
 
 
@@ -2222,6 +2217,35 @@ def _list_nodes_full(location=None):
                     public_ips=item.get('ipAddress', [])
                 )
             )
+    return ret
+
+
+def list_nodes_min(location=None, call=None):
+    '''
+    Return a list of the VMs that are on the provider
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+
+    ret = {}
+    params = {'Action': 'DescribeInstances'}
+    instances = query(params)
+    if 'error' in instances:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                instances['error']['Errors']['Error']['Message']
+            )
+        )
+
+    for instance in instances:
+        if isinstance(instance['instancesSet']['item'], list):
+            for item in instance['instancesSet']['item']:
+                ret[_extract_name_tag(item)] = True
+        else:
+            item = instance['instancesSet']['item']
+            ret[_extract_name_tag(item)] = True
     return ret
 
 
