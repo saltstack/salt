@@ -296,7 +296,7 @@ finally:
             if (default_factory is not None and
                 not isinstance(default_factory, Callable)):
                 raise TypeError('first argument must be callable')
-            OrderedDict.__init__(self, *a, **kw)
+            super(DefaultOrderedDict, self).__init__(*a, **kw)
             self.default_factory = default_factory
 
         def __getitem__(self, key):
@@ -328,6 +328,7 @@ finally:
             import copy
             return type(self)(self.default_factory,
                               copy.deepcopy(self.items()))
-        def __repr__(self):
+
+        def __repr__(self, _repr_running={}):  # pylint: disable=W0102
             return 'DefaultOrderedDict(%s, %s)' % (self.default_factory,
                                             OrderedDict.__repr__(self))
