@@ -108,6 +108,7 @@ def get_password(vm_):
         ), search_global=False
     )
 
+
 def get_swap(vm_):
     '''
     Return the amount of swap space to use
@@ -115,6 +116,7 @@ def get_swap(vm_):
     return config.get_cloud_config_value(
         'swap', vm_, __opts__, default=128
     )
+
 
 def create(vm_):
     '''
