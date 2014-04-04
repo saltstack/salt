@@ -24,6 +24,21 @@ at some point be deprecated in favor of a more generic `firewall` state.
     httpd:
       iptables.append:
         - table: filter
+        - chain: INPUT
+        - jump: ACCEPT
+        - match:
+            - state
+            - comment
+        - comment: "Allow HTTP"
+        - connstate: NEW
+        - dport: 80
+        - proto: tcp
+        - sport: 1025:65535
+        - save: True
+
+    httpd:
+      iptables.append:
+        - table: filter
         - family: ipv6
         - chain: INPUT
         - jump: ACCEPT

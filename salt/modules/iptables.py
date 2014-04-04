@@ -132,9 +132,13 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
-        kwargs['match'].replace(' ', '')
-        for match in kwargs['match'].split(','):
-            rule += '-m {0} '.format(match)
+        if isinstance(kwargs['match'], list):
+            for match in kwargs['match']:
+                rule += '-m {0} '.format(match)
+        else:
+            kwargs['match'].replace(' ', '')
+            for match in kwargs['match'].split(','):
+                rule += '-m {0} '.format(match)
         del kwargs['match']
 
     if 'state' in kwargs:
@@ -167,6 +171,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '-m multiport '
         rule += '--sports {0} '.format(kwargs['sports'])
         del kwargs['sports']
+
+    if 'comment' in kwargs:
+        rule += '--comment "{0}" '.format(kwargs['comment'])
+        del kwargs['comment']
 
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
