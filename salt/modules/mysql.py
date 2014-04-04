@@ -412,8 +412,7 @@ def _grant_to_tokens(grant):
             database
         ))
     except UnboundLocalError:
-        host=''
-        pass
+        host = ''
     return dict(user=user,
                 host=host,
                 grant=grant_tokens,
