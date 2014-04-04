@@ -5,6 +5,7 @@ data
 
 :depends:   - win32api
             - win32con
+            - win32file
             - win32security
             - ntsecuritycon
 '''
@@ -14,6 +15,7 @@ import os
 import stat
 import os.path
 import logging
+import struct
 # pylint: disable=W0611
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
@@ -527,3 +529,142 @@ def set_mode(path, mode):
         salt '*' file.set_mode /etc/passwd 0644
     '''
     return get_mode(path)
+
+
+def symlink(src, link):
+    '''
+    Create a symbolic link to a file
+
+    This is only supported with Windows Vista or later and must be executed by a
+    user with the SeCreateSymbolicLink privilege.
+
+    The behaviour of this function matches the *nix equivalent, with one
+    exception - invalid symlinks cannot be created. The source path must exist.
+    If it doesn't, an error will be raised.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.symlink /path/to/file /path/to/link
+    '''
+    # When Python 3.2 or later becomes the minimum version, this function can be
+    # replaced with the built-in os.symlink function, which supports Windows.
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    if not os.path.exists(src):
+        raise SaltInvocationError('The given source path does not exist.')
+
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    # ensure paths are using the right slashes
+    src = os.path.normpath(src)
+    link = os.path.normpath(link)
+
+    is_dir = os.path.isdir(src)
+
+    try:
+        win32file.CreateSymbolicLink(link, src, int(is_dir))
+        return True
+    except pywinerror as e:
+        raise CommandExecutionError('Could not create {0!r} - [{1}] {2}'.format(link, e.winerror, e.strerror))
+
+
+def _islink(path):
+    '''
+    Returns true if the path is a symlink; false otherwise
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    result = win32file.GetFileAttributesW(path)
+
+    if result == -1:
+        raise SaltInvocationError('The path given is not valid, symlink or not. (does it exist?)')
+
+    if result & 0x400:  # FILE_ATTRIBUTE_REPARSE_POINT
+        return True
+    else:
+        return False
+
+
+def readlink(path):
+    '''
+    Return the path that a symlink points to
+
+    This is only supported on Windows Vista or later.
+
+    Inline with *nix behaviour, this function will raise an error if the path is
+    not a symlink, however, the error raised will be a SaltInvocationError, not
+    an OSError.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readlink /path/to/link
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Path to link must be absolute.')
+
+    # ensure paths are using the right slashes
+    path = os.path.normpath(path)
+
+    if not _islink(path):
+        raise SaltInvocationError('The path specified is not a symlink.')
+
+    fileHandle = None
+    try:
+        fileHandle = win32file.CreateFileW(
+            path,
+            0x80000000,  # GENERIC_READ
+            0,  # no sharing
+            None,  # no inherit, default security descriptor
+            3,  # OPEN_EXISTING
+            0x00200000 | 0x02000000  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
+        )
+
+        reparseData = win32file.DeviceIoControl(
+            fileHandle,
+            0x900a8,  # FSCTL_GET_REPARSE_POINT
+            None,  # in buffer
+            16384  # out buffer size (MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
+        )
+
+    finally:
+        if fileHandle:
+            win32file.CloseHandle(fileHandle)
+
+    # REPARSE_DATA_BUFFER structure - see
+    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
+
+    # parse the structure header to work out which type of reparse point this is
+    header_parser = struct.Struct('L')
+    ReparseTag, = header_parser.unpack(reparseData[:header_parser.size])
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
+    if not ReparseTag & 0x0000FFFF == 0x0000000C:
+        raise SaltInvocationError('The path specified is not a symlink, but another type of reparse point ({0:x}).'.format(ReparseTag))
+
+    # parse as a symlink reparse point structure (the structure for other
+    # reparse points is different)
+    data_parser = struct.Struct('LHHHHHHL')
+    ReparseTag, ReparseDataLength, Reserved, SubstituteNameOffset, \
+    SubstituteNameLength, PrintNameOffset, \
+    PrintNameLength, Flags = data_parser.unpack(reparseData[:data_parser.size])
+
+    path_buffer_offset = data_parser.size
+    absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
+    target_bytes = reparseData[absolute_substitute_name_offset:absolute_substitute_name_offset+SubstituteNameLength]
+    target = target_bytes.decode('UTF-16')
+
+    if target.startswith('\\??\\'):
+        target = target[4:]
+    # comes out in 8.3 form; convert it to LFN to make it look nicer
+    target = win32file.GetLongPathName(target)
+
+    return target
