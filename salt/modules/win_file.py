@@ -15,7 +15,6 @@ import os
 import stat
 import os.path
 import logging
-import struct
 # pylint: disable=W0611
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
@@ -42,7 +41,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.modules.file import (check_hash,  # pylint: disable=W0611
+from salt.modules.file import (check_hash,  # pylint: disable=W0611,E0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
         check_managed, check_perms, patch, remove, source_list, sed_contains,
         touch, append, contains, contains_regex, contains_regex_multiline,
