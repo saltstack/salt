@@ -967,7 +967,7 @@ def replace(path,
                               inplace=not dry_run,
                               backup=False if dry_run else backup,
                               bufsize=bufsize,
-                              mode='rb'):
+                              mode='rb')
     for line in fi_file:
 
         if search_only:
