@@ -1107,7 +1107,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 # These will defer to any user-defined variants
                 kwargs['dist'] = dist
                 ppa_auth = ''
-                if file not in kwargs:
+                if 'file' not in kwargs:
                     filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
                     kwargs['file'] = filename.format(owner_name, ppa_name,
                                                      dist)
