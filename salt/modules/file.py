@@ -963,11 +963,12 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
-    for line in fileinput.input(path,
-                                inplace=not dry_run,
-                                backup=False if dry_run else backup,
-                                bufsize=bufsize,
-                                mode='rb'):
+    fi_file = fileinput.input(path,
+                              inplace=not dry_run,
+                              backup=False if dry_run else backup,
+                              bufsize=bufsize,
+                              mode='rb'):
+    for line in fi_file:
 
         if search_only:
             # Just search; bail as early as a match is found
