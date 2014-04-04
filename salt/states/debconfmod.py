@@ -135,12 +135,12 @@ def set(name, data):
     current = __salt__['debconf.show'](name)
 
     for (key, args) in data.iteritems():
-         # For debconf data, valid booleans are 'true' and 'false';
-         # But str()'ing the args['value'] will result in 'True' and 'False'
-         # which will be ignored and overridden by a dpkg-reconfigure.
+        # For debconf data, valid booleans are 'true' and 'false';
+        # But str()'ing the args['value'] will result in 'True' and 'False'
+        # which will be ignored and overridden by a dpkg-reconfigure.
 
-         # So we should manually set these values to lowercase ones,
-         # before any str() call is performed.
+        # So we should manually set these values to lowercase ones,
+        # before any str() call is performed.
 
         if args['type'] == 'boolean':
             args['value'] = 'true' if args['value'] else 'false'

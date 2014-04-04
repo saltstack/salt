@@ -49,9 +49,9 @@ def _conf(family='ipv4'):
             return '/etc/iptables/iptables.rules'
     elif __grains__['os_family'] == 'Debian':
         if family == 'ipv6':
-            return '/etc/iptables/rules.v4'
-        else:
             return '/etc/iptables/rules.v6'
+        else:
+            return '/etc/iptables/rules.v4'
     elif __grains__['os'] == 'Gentoo':
         if family == 'ipv6':
             return '/var/lib/ip6tables/rules-save'
@@ -132,9 +132,13 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
-        kwargs['match'].replace(' ', '')
-        for match in kwargs['match'].split(','):
-            rule += '-m {0} '.format(match)
+        if isinstance(kwargs['match'], list):
+            for match in kwargs['match']:
+                rule += '-m {0} '.format(match)
+        else:
+            kwargs['match'].replace(' ', '')
+            for match in kwargs['match'].split(','):
+                rule += '-m {0} '.format(match)
         del kwargs['match']
 
     if 'state' in kwargs:
@@ -167,6 +171,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '-m multiport '
         rule += '--sports {0} '.format(kwargs['sports'])
         del kwargs['sports']
+
+    if 'comment' in kwargs:
+        rule += '--comment "{0}" '.format(kwargs['comment'])
+        del kwargs['comment']
 
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.

@@ -1628,6 +1628,8 @@ class State(object):
                                 low['__prereq__'] = True
                                 self.pre[ctag] = self.call(low, chunks, running)
                                 return running
+                            else:
+                                return running
                         elif ctag not in running:
                             log.error('Recursive requisite found')
                             running[tag] = {
@@ -1675,11 +1677,13 @@ class State(object):
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
-            running[tag] = {'changes': {},
-                            'result': True,
-                            'comment': 'No changes detected',
-                            '__run_num__': self.__run_num,
-                            '__sls__': low['__sls__']}
+            pre_ret = {'changes': {},
+                       'result': True,
+                       'comment': 'No changes detected',
+                       '__run_num__': self.__run_num,
+                       '__sls__': low['__sls__']}
+            running[tag] = pre_ret
+            self.pre[tag] = pre_ret
             self.__run_num += 1
         else:
             if low.get('__prereq__'):

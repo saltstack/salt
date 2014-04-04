@@ -253,6 +253,13 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults())
         return mapper.map_providers_parallel(query_type)
 
+    def min_query(self, query_type='list_nodes_min'):
+        '''
+        Query select instance information
+        '''
+        mapper = salt.cloud.Map(self._opts_defaults())
+        return mapper.map_providers_parallel(query_type)
+
     def profile(self, profile, names, vm_overrides=None, **kwargs):
         '''
         Pass in a profile to create, names is a list of vm names to allocate
@@ -513,6 +520,8 @@ class Cloud(object):
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
             for driver, details in drivers.iteritems():
+                if '{0}.list_nodes_min'.format(driver) in self.clouds:
+                    query = 'list_nodes_min'
                 fun = '{0}.{1}'.format(driver, query)
                 if fun not in self.clouds:
                     log.error(

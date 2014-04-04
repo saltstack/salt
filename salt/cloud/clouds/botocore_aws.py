@@ -68,10 +68,6 @@ def __virtual__():
     except ImportError:
         # Botocore is not available, the Libcloud AWS module will be loaded
         # instead.
-        log.debug(
-            'The \'botocore\' library is not installed. The libcloud AWS '
-            'support will be loaded instead.'
-        )
         return False
 
     # "Patch" the imported libcloud_aws to have the current __opts__
@@ -79,10 +75,6 @@ def __virtual__():
     libcloudfuncs.__opts__ = __opts__
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no AWS cloud provider configuration available. Not '
-            'loading module'
-        )
         return False
 
     for provider, details in __opts__['providers'].iteritems():
@@ -145,7 +137,6 @@ def __virtual__():
         list_nodes_select, globals(), (conn,)
     )
 
-    log.debug('Loading AWS botocore cloud module')
     return 'aws'
 
 

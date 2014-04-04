@@ -150,8 +150,15 @@ def generate_mtime_map(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
                 for item in filenames:
-                    file_path = os.path.join(directory, item)
-                    file_map[file_path] = os.path.getmtime(file_path)
+                    try:
+                        file_path = os.path.join(directory, item)
+                        file_map[file_path] = os.path.getmtime(file_path)
+                    except (OSError, IOError):
+                        # skip dangling symlinks
+                        log.info(
+                            'Failed to get mtime on {0}, '
+                            'dangling symlink ?'.format(file_path))
+                        continue
     return file_map
 
 

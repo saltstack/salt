@@ -72,13 +72,8 @@ def __virtual__():
     Set up the libcloud functions and check for vSphere configurations.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no vSphere cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading vSphere cloud module')
     return True
 
 
@@ -157,8 +152,8 @@ def avail_images():
                 name = item.Val
             elif item.Name == 'config.template':
                 is_template = item.Val
-        if type(is_template) is bool:
-            ret[name] = is_template
+        if type(is_template) is bool and is_template is True:
+            ret[name] = {'Name': name}
     return ret
 
 
@@ -398,26 +393,41 @@ def list_nodes_full():
     return ret
 
 
+def list_nodes_min():
+    '''
+    Return a list of the nodes in the provider, with no details
+    '''
+    log.debug('function list_nodes_min()')
+    ret = {}
+    conn = get_conn()
+    nodes = conn.get_registered_vms()
+    for node in nodes:
+        comps1 = node.split()
+        comps2 = comps1[1].split('/')
+        ret[comps2[0]] = True
+
+    return ret
+
+
 def list_nodes():
     '''
     Return a list of the VMs that are on the provider
     '''
     ret = {}
-    nodes = list_nodes_full()
-    if 'error' in nodes:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                nodes['error']['Errors']['Error']['Message']
-            )
-        )
+    conn = get_conn()
+    nodes = conn.get_registered_vms()
     for node in nodes:
-        ret[node] = {
-            'id': nodes[node]['name'],
-            'ram': nodes[node]['memory_mb'],
-            'cpus': nodes[node]['num_cpu'],
+        instance = conn.get_vm_by_path(node)
+        properties = salt.utils.cloud.simple_types_filter(
+            instance.get_properties()
+        )
+        ret[properties['name']] = {
+            'id': properties['name'],
+            'ram': properties['memory_mb'],
+            'cpus': properties['num_cpu'],
         }
-        if 'ip_address' in nodes[node]:
-            ret[node]['ip_address'] = nodes[node]['ip_address']
+        if 'ip_address' in properties:
+            ret[properties['name']]['ip_address'] = properties['ip_address']
     return ret
 
 

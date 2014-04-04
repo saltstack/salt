@@ -21,23 +21,15 @@ def __virtual__():
     '''
     if not salt.utils.which('rpm'):
         return False
-
-    # Work only on RHEL/Fedora based distros with python 2.6 or greater
-    # TODO: Someone decide if we can just test os_family and pythonversion
-    os_grain = __grains__['os']
-    os_family = __grains__['os_family']
     try:
-        os_major = int(__grains__['osrelease'].split('.')[0])
-    except (AttributeError, ValueError):
-        os_major = 0
+        os_grain = __grains__['os'].lower()
+        os_family = __grains__['os_family'].lower()
+    except Exception:
+        return False
 
-    if os_grain == 'Amazon':
-        return __virtualname__
-    elif os_grain == 'Fedora':
-        # Fedora <= 10 used Python 2.5 and below
-        if os_major >= 11:
-            return __virtualname__
-    elif os_family == 'RedHat' and os_major >= 6:
+    enabled = ('amazon', 'xcp', 'xenserver')
+
+    if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
     return False
 
