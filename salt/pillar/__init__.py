@@ -7,6 +7,7 @@ Render the pillar data
 import os
 import collections
 import logging
+import copy
 
 # Import salt libs
 import salt.loader
