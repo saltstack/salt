@@ -981,6 +981,17 @@ class Minion(object):
             else:
                 if isinstance(oput, string_types):
                     load['out'] = oput
+        if self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            fn_ = os.path.join(
+                self.opts['cachedir'],
+                'minion_jobs',
+                load['jid'],
+                'return.p')
+            jdir = os.path.dirname(fn_)
+            if not os.path.isdir(jdir):
+                os.makedirs(jdir)
+            salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
         except SaltReqTimeoutError:
@@ -994,17 +1005,6 @@ class Minion(object):
             # The master AES key has changed, reauth
             self.authenticate()
             ret_val = sreq.send('aes', self.crypticle.dumps(load))
-        if self.opts['cache_jobs']:
-            # Local job cache has been enabled
-            fn_ = os.path.join(
-                self.opts['cachedir'],
-                'minion_jobs',
-                load['jid'],
-                'return.p')
-            jdir = os.path.dirname(fn_)
-            if not os.path.isdir(jdir):
-                os.makedirs(jdir)
-            salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         return ret_val
 
     def _state_run(self):
