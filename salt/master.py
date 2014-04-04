@@ -1196,6 +1196,12 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        mods = set()
+        for func in self.mminion.functions.values():
+            mods.add(func.__module__)
+        for mod in mods:
+            sys.modules[mod].__grains__ = load['grains']
+
         pillar = salt.pillar.Pillar(
                 self.opts,
                 load['grains'],
@@ -1215,6 +1221,8 @@ class AESFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+        for mod in mods:
+            sys.modules[mod].__grains__ = self.opts['grains']
         return data
 
     def _minion_event(self, load):
