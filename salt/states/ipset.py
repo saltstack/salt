@@ -23,7 +23,15 @@ in IPTables Firewalls.
     setname_entries:
       ipset.present:
         - set_name: setname
-        - entries:
+        - entry: 192.168.0.3
+        - comment: Hello
+        - require:
+            - ipset: baz
+
+    setname_entries:
+      ipset.present:
+        - set_name: setname
+        - entry:
             - 192.168.0.3
             - 192.168.1.3
         - comment: Hello
@@ -33,7 +41,7 @@ in IPTables Firewalls.
     setname_entries:
       ipset.absent:
         - set_name: setname
-        - entries:
+        - entry:
             - 192.168.0.3
             - 192.168.1.3
         - comment: Hello
@@ -154,7 +162,7 @@ def set_absent(name, family='ipv4', **kwargs):
     return ret
 
 
-def present(name, entry=None, entries=None, family='ipv4', **kwargs):
+def present(name, entry=None, family='ipv4', **kwargs):
     '''
     .. versionadded:: Helium
 
@@ -165,10 +173,7 @@ def present(name, entry=None, entries=None, family='ipv4', **kwargs):
         formula. This should not be an actual entry.
 
     entry
-        A single entry to add to a set
-
-    entries
-        A list of entries to add to a set
+        A single entry to add to a set or a list of entries to add to a set
 
     family
         Network family, ipv4 or ipv6.
@@ -179,19 +184,15 @@ def present(name, entry=None, entries=None, family='ipv4', **kwargs):
            'result': None,
            'comment': ''}
 
-    if not entry and not entries:
+    if not entry:
         ret['result'] = False
-        ret['comment'] = ('ipset entry or entries must be specified')
+        ret['comment'] = ('ipset entry must be specified')
         return ret
 
-    if entry and entries:
-        ret['result'] = False
-        ret['comment'] = ('ipset entry and entries can not be specified together')
-        return ret
-
-    # Only passed one entry
-    if entry and not entries:
-        entries = []
+    entries = []
+    if isinstance(entry, list):
+        entries = entry
+    else:
         entries.append(entry)
 
     for entry in entries:
@@ -249,19 +250,15 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
            'result': None,
            'comment': ''}
 
-    if not entry and not entries:
+    if not entry:
         ret['result'] = False
-        ret['comment'] = ('ipset entry or entries must be specified')
+        ret['comment'] = ('ipset entry must be specified')
         return ret
 
-    if entry and entries:
-        ret['result'] = False
-        ret['comment'] = ('ipset entry and entries can not be specified together')
-        return ret
-
-    # Only passed one entry
-    if entry and not entries:
-        entries = []
+    entries = []
+    if isinstance(entry, list):
+        entries = entry
+    else:
         entries.append(entry)
 
     for entry in entries:

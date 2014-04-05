@@ -71,19 +71,19 @@ _CREATE_OPTIONS_REQUIRED = {
 
 
 _ADD_OPTIONS = {
-    'bitmap:ip': ['timeout', 'packets', 'bytes', 'comment'],
-    'bitmap:ip,mac': ['timeout', 'packets', 'bytes', 'comment'],
-    'bitmap:port': ['timeout', 'packets', 'bytes', 'comment'],
-    'hash:ip': ['timeout', 'packets', 'bytes', 'comment'],
-    'hash:net': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'hash:net,net': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'hash:net,port': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'hash:net,port,net': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'hash:ip,port,ip': ['timeout', 'packets', 'bytes', 'comment'],
-    'hash:ip,port,net': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'hash:ip,port': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'hash:net,iface': ['timeout', 'nomatch', 'packets', 'bytes', 'comment'],
-    'list:set': ['timeout', 'packets', 'bytes', 'comment'],
+    'bitmap:ip': ['timeout', 'packets', 'bytes'],
+    'bitmap:ip,mac': ['timeout', 'packets', 'bytes'],
+    'bitmap:port': ['timeout', 'packets', 'bytes'],
+    'hash:ip': ['timeout', 'packets', 'bytes'],
+    'hash:net': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'hash:net,net': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'hash:net,port': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'hash:net,port,net': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'hash:ip,port,ip': ['timeout', 'packets', 'bytes'],
+    'hash:ip,port,net': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'hash:ip,port': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'hash:net,iface': ['timeout', 'nomatch', 'packets', 'bytes'],
+    'list:set': ['timeout', 'packets', 'bytes'],
 }
 
 
@@ -327,8 +327,6 @@ def add(set=None, entry=None, family='ipv4', **kwargs):
     if 'comment' in kwargs:
         if not 'comment' in setinfo['Header']:
             return 'Error: Set {0} not created with comment support'.format(set)
-
-        _ADD_OPTIONS[settype].remove('comment')
         cmd = '{0} comment "{1}"'.format(cmd, kwargs['comment'])
 
     for item in _ADD_OPTIONS[settype]:
