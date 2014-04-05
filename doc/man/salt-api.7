@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-API" "7" "October 29, 2013" "0.8.2" "salt-api"
+.TH "SALT-API" "7" "April 05, 2014" "0.8.3" "salt-api"
 .SH NAME
 salt-api \- salt-api Documentation
 .
@@ -151,8 +151,41 @@ All authentication is done through Salt\(aqs \fI\%external auth\fP system. Be su
 authenticating as has permissions for all the functions you will be
 running.
 .sp
-The configuration options for this module resides in the Salt master config
-file. All available options are detailed below.
+Example production configuration block; add to the Salt master config file:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rest_cherrypy:
+  port: 8000
+  ssl_crt: /etc/pki/tls/certs/localhost.crt
+  ssl_key: /etc/pki/tls/certs/localhost.key
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The REST interface strongly recommends a secure HTTPS connection since Salt
+authentication credentials will be sent over the wire. If you don\(aqt already
+have a certificate and don\(aqt wish to buy one, you can generate a
+self\-signed certificate using the
+\fI\%create_self_signed_cert()\fP function in Salt (note
+the dependencies for this module):
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% salt\-call tls.create_self_signed_cert
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+All available configuration options are detailed below. These settings
+configure the CherryPy HTTP server and do not apply when using an external
+server such as Apache or Nginx.
 .INDENT 7.0
 .TP
 .B port
@@ -185,6 +218,35 @@ will be sent in the clear!
 New in version 0.8.3.
 
 .TP
+.B thread_pool
+\fB100\fP
+The number of worker threads to start up in the pool.
+.sp
+Changed in version 0.8.4: Previous versions defaulted to a pool of \fB10\fP
+
+.TP
+.B socket_queue_size
+\fB30\fP
+Specify the maximum number of HTTP connections to queue.
+.sp
+Changed in version 0.8.4: Previous versions defaulted to \fB5\fP connections.
+
+.TP
+.B max_request_body_size
+\fB1048576\fP
+Changed in version 0.8.4: Previous versions defaulted to \fB104857600\fP for the size of the
+request body
+
+.TP
+.B collect_stats
+False
+Collect and report statistics about the CherryPy server
+.sp
+New in version 0.8.4.
+
+.sp
+Reports are available via the \fBStats\fP URL.
+.TP
 .B static
 A filesystem path to static HTML/JavaScript/CSS/image assets.
 .TP
@@ -213,38 +275,14 @@ useful for apps that utilize the HTML5 history API.
 .sp
 New in version 0.8.2.
 
-.UNINDENT
+.TP
+.B root_prefix
+\fB/\fP
+A URL path to the main entry point for the application. This is useful
+for serving multiple applications from the same URL.
 .sp
-Example production configuration block:
-.INDENT 7.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-rest_cherrypy:
-  port: 8000
-  ssl_crt: /etc/pki/tls/certs/localhost.crt
-  ssl_key: /etc/pki/tls/certs/localhost.key
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-The REST interface strongly recommends a secure HTTPS connection since Salt
-authentication credentials will be sent over the wire. If you don\(aqt already
-have a certificate and don\(aqt wish to buy one, you can generate a
-self\-signed certificate using the
-\fI\%create_self_signed_cert()\fP function in Salt (note
-the dependencies for this module):
-.INDENT 7.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-% salt\-call tls.create_self_signed_cert
-.ft P
-.fi
-.UNINDENT
+New in version 0.8.4.
+
 .UNINDENT
 .UNINDENT
 .SS Authentication
@@ -359,6 +397,11 @@ multi\-threaded, encrypted with SSL, and should be considered production\-ready.
 This module may be deplayed on any WSGI\-compliant server such as Apache with
 mod_wsgi or Nginx with FastCGI, to name just two (there are many).
 .sp
+Note, external WSGI servers handle URLs, paths, and SSL certs directly. The
+\fBrest_cherrypy\fP configuration options are ignored and the \fBsalt\-api\fP daemon
+does not need to be running at all. Remember Salt authentication credentials
+are sent in the clear unless SSL is being enforced!
+.sp
 An example Apache virtual host configuration:
 .INDENT 0.0
 .INDENT 3.5
@@ -436,90 +479,6 @@ Content\-Type: application/json
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
-.TP
-.B Status 200
-success
-.TP
-.B Status 401
-authentication required
-.TP
-.B Status 406
-requested Content\-Type not available
-.UNINDENT
-.UNINDENT
-.INDENT 7.0
-.TP
-.B POST(**kwargs)
-The primary execution interface for the rest of the API
-.INDENT 7.0
-.TP
-.B POST /
-\fBExample request\fP:
-.INDENT 7.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-% curl \-si https://localhost:8000 \e
-        \-H "Accept: application/x\-yaml" \e
-        \-H "X\-Auth\-Token: d40d1e1e" \e
-        \-d client=local \e
-        \-d tgt=\(aq*\(aq \e
-        \-d fun=\(aqtest.ping\(aq \e
-        \-d arg
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 7.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-POST / HTTP/1.1
-Host: localhost:8000
-Accept: application/x\-yaml
-X\-Auth\-Token: d40d1e1e
-Content\-Length: 36
-Content\-Type: application/x\-www\-form\-urlencoded
-
-fun=test.ping&arg&client=local&tgt=*
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-\fBExample response\fP:
-.INDENT 7.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-HTTP/1.1 200 OK
-Content\-Length: 200
-Allow: GET, HEAD, POST
-Content\-Type: application/x\-yaml
-
-return:
-\- ms\-0: true
-  ms\-1: true
-  ms\-2: true
-  ms\-3: true
-  ms\-4: true
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.UNINDENT
-.INDENT 7.0
-.TP
-.B Form lowstate
-A list of \fIlowstate\fP data appropriate for the
-\fI\%client\fP interface you are calling.
-.sp
-Lowstate may be supplied in any supported format by specifying the
-\fIContent\-Type\fP header in the request. Supported formats
-are listed in the \fIAlternates\fP response header.
 .TP
 .B Status 200
 success
@@ -836,9 +795,6 @@ HTTP/1.1 202 Accepted
 Content\-Length: 86
 Content\-Type: application/x\-yaml
 
-\- return:
-    jid: \(aq20130118105423694155\(aq
-
 return:
 \- jid: \(aq20130603122505459265\(aq
   minions: [ms\-4, ms\-3, ms\-2, ms\-1, ms\-0]
@@ -926,7 +882,7 @@ return:
     \- \(aq3\(aq
     Function: test.fib
     Start Time: 2012, Nov 30 10:46:33.606931
-    Target: ms\-3
+    Target: jerry
     Target\-type: glob
 .ft P
 .fi
@@ -967,13 +923,24 @@ HTTP/1.1 200 OK
 Content\-Length: 73
 Content\-Type: application/x\-yaml
 
+info:
+\- Arguments:
+  \- \(aq3\(aq
+  Function: test.fib
+  Minions:
+  \- jerry
+  Start Time: 2012, Nov 30 10:46:33.606931
+  Target: \(aq*\(aq
+  Target\-type: glob
+  User: saltdev
+  jid: \(aq20121130104633606931\(aq
 return:
-\- ms\-3:
+\- jerry:
   \- \- 0
     \- 1
     \- 1
     \- 2
-  \- 9.059906005859375e\-06
+  \- 6.9141387939453125e\-06
 .ft P
 .fi
 .UNINDENT
@@ -1101,6 +1068,21 @@ formatted per the Server Sent Events (SSE) spec
 .sp
 New in version 0.8.3.
 
+.sp
+Browser clients currently lack Cross\-origin resource sharing (CORS)
+support for the \fBEventSource()\fP API. Cross\-domain requests from a
+browser may instead pass the \fIX\-Auth\-Token\fP value as an URL
+parameter:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% curl \-NsS localhost:8000/events/6d1b722e
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .INDENT 7.0
 .TP
 .B GET /events
@@ -1110,7 +1092,7 @@ New in version 0.8.3.
 .sp
 .nf
 .ft C
-% curl \-sS localhost:8000/events
+% curl \-NsS localhost:8000/events
 .ft P
 .fi
 .UNINDENT
@@ -1148,25 +1130,63 @@ data: {\(aqtag\(aq: \(aq20130802115730568475\(aq, \(aqdata\(aq: {\(aqjid\(aq: \(
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE:\fP
+The event stream can be easily consumed via JavaScript:
 .INDENT 7.0
-.INDENT 3.5
-Caveat when using CORS
-.sp
-Browser clients currently lack Cross\-origin resource sharing (CORS)
-support for the \fBEventSource()\fP API. Cross\-domain requests from a
-browser may instead pass the \fIX\-Auth\-Token\fP value as an
-URL parameter:
-.INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-% curl \-sS localhost:8000/events/6d1b722e
+# Note, you must be authenticated!
+var source = new EventSource(\(aq/events\(aq);
+source.onopen = function() { console.debug(\(aqopening\(aq) };
+source.onerror = function(e) { console.debug(\(aqerror!\(aq, e) };
+source.onmessage = function(e) { console.debug(e.data) };
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+It is also possible to consume the stream via the shell.
+.sp
+Records are separated by blank lines; the \fBdata:\fP and \fBtag:\fP
+prefixes will need to be removed manually before attempting to
+unserialize the JSON.
+.sp
+curl\(aqs \fB\-N\fP flag turns off input buffering which is required to
+process the stream incrementally.
+.sp
+Here is a basic example of printing each event as it comes in:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% curl \-NsS localhost:8000/events |\e
+        while IFS= read \-r line ; do
+            echo $line
+        done
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Here is an example of using awk to filter events based on tag:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% curl \-NsS localhost:8000/events |\e
+        awk \(aq
+            BEGIN { RS=""; FS="\en" }
+            $1 ~ /^tag: salt\e/job\e/[0\-9]+\e/new$/ { print $0 }
+        \(aq
+tag: salt/job/20140112010149808995/new
+data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014\-01\-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
+tag: 20140112010149808995
+data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014\-01\-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
+.ft P
+.fi
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
@@ -1176,6 +1196,198 @@ success
 .TP
 .B Status 401
 could not authenticate using provided credentials
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class saltapi.netapi.rest_cherrypy.app.Webhook
+A generic web hook entry point that fires an event on Salt\(aqs event bus
+.sp
+External services can POST data to this URL to trigger an event in Salt.
+For example, Jenkins\-CI or Travis\-CI, or GitHub web hooks.
+.sp
+This entry point does not require authentication. The event data is taken
+from the request body.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+Be mindful of security
+.sp
+Salt\(aqs Reactor can run any code. If you write a Reactor SLS that
+responds to a hook event be sure to validate that the event came from a
+trusted source and contains valid data! Pass a secret key and use SSL.
+.sp
+This is a generic interface and securing it is up to you!
+.UNINDENT
+.UNINDENT
+.sp
+The event tag is prefixed with \fBsalt/netapi/hook\fP and the URL path is
+appended to the end. For example, a \fBPOST\fP request sent to
+\fB/hook/mycompany/myapp/mydata\fP will produce a Salt event with the tag
+\fBsalt/netapi/hook/mycompany/myapp/mydata\fP\&. See the \fI\%Salt Reactor\fP documentation for how to react to events with various tags.
+.sp
+The following is an example \fB\&.travis.yml\fP file to send notifications to
+Salt of successful test runs:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+language: python
+script: python \-m unittest tests
+after_success:
+    \- \(aqcurl \-sS http://saltapi\-url.example.com:8000/hook/travis/build/success \-d branch="${TRAVIS_BRANCH}" \-d commit="${TRAVIS_COMMIT}"\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B POST(*args, **kwargs)
+Fire an event in Salt with a custom event tag and data
+.sp
+New in version 0.8.4.
+
+.INDENT 7.0
+.TP
+.B POST /hook
+\fBExample request\fP:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% curl \-sS localhost:8000/hook \-d foo=\(aqFoo!\(aq \-d bar=\(aqBar!\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+POST /hook HTTP/1.1
+Host: localhost:8000
+Content\-Length: 16
+Content\-Type: application/x\-www\-form\-urlencoded
+
+foo=Foo&bar=Bar!
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBExample response\fP:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+HTTP/1.1 200 OK
+Content\-Length: 14
+Content\-Type: application/json
+
+{"success": true}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+As a practical example, an internal continuous\-integration build
+server could send an HTTP POST request to the URL
+\fBhttp://localhost:8000/hook/mycompany/build/success\fP which contains
+the result of a build and the SHA of the version that was built as
+JSON. That would then produce the following event in Salt that could be
+used to kick off a deployment via Salt\(aqs Reactor:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Event fired at Fri Feb 14 17:40:11 2014
+*************************
+Tag: salt/netapi/hook/mycompany/build/success
+Data:
+{\(aq_stamp\(aq: \(aq2014\-02\-14_17:40:11.440996\(aq,
+    \(aqheaders\(aq: {
+        \(aqX\-My\-Secret\-Key\(aq: \(aqF0fAgoQjIT@W\(aq,
+        \(aqContent\-Length\(aq: \(aq37\(aq,
+        \(aqContent\-Type\(aq: \(aqapplication/json\(aq,
+        \(aqHost\(aq: \(aqlocalhost:8000\(aq,
+        \(aqRemote\-Addr\(aq: \(aq127.0.0.1\(aq},
+    \(aqpost\(aq: {\(aqrevision\(aq: \(aqaa22a3c4b2e7\(aq, \(aqresult\(aq: True}}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Salt\(aqs Reactor could listen for the event:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+reactor:
+  \- \(aqsalt/netapi/hook/mycompany/build/*\(aq:
+    \- /srv/reactor/react_ci_builds.sls
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+And finally deploy the new build:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{% set secret_key = data.get(\(aqheaders\(aq, {}).get(\(aqX\-My\-Secret\-Key\(aq) %}
+{% set build = data.get(\(aqpost\(aq, {}) %}
+
+{% if secret_key == \(aqF0fAgoQjIT@W\(aq and build.result == True %}
+deploy_my_app:
+  cmd.state.sls:
+    \- tgt: \(aqapplication*\(aq
+    \- arg:
+      \- myapp.deploy
+      \- \(aqpillar={revision: {{ revision }}}\(aq
+{% endif %}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B Status 200
+success
+.TP
+.B Status 406
+requested Content\-Type not available
+.TP
+.B Status 413
+request body is too large
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B class saltapi.netapi.rest_cherrypy.app.Stats
+Expose statistics on the running CherryPy server
+.INDENT 7.0
+.TP
+.B GET()
+Return a dump of statistics collected from the CherryPy server
+.INDENT 7.0
+.TP
+.B Status 200
+success
+.TP
+.B Status 406
+requested Content\-Type not available
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -1406,38 +1618,66 @@ in the form of low\-data data structures. For example:
 .INDENT 7.0
 .TP
 .B local(*args, **kwargs)
-Wrap LocalClient for running \fI\%execution modules\fP
+Run \fI\%execution modules\fP syncronously
 .sp
-\fBSEE ALSO:\fP
+Wraps \fI\%salt.client.LocalClient.cmd()\fP\&.
 .INDENT 7.0
-.INDENT 3.5
-\fI\%Python client API\fP
-.UNINDENT
+.TP
+.B Returns
+Returns the result from the execution module
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
 .B local_async(*args, **kwargs)
-Wrap LocalClient for running \fI\%execution modules\fP
-and immediately return the job ID. The results of the job can then be
-retrieved at a later time.
+Run \fI\%execution modules\fP asyncronously
 .sp
-\fBSEE ALSO:\fP
+Wraps \fI\%salt.client.LocalClient.run_job()\fP\&.
 .INDENT 7.0
-.INDENT 3.5
-\fI\%Python client API\fP
+.TP
+.B Returns
+job ID
 .UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B local_batch(*args, **kwargs)
+Run \fI\%execution modules\fP against batches of minions
+.sp
+New in version 0.8.4.
+
+.sp
+Wraps \fI\%salt.client.LocalClient.cmd_batch()\fP
+.INDENT 7.0
+.TP
+.B Returns
+Returns the result from the exeuction module for each batch of
+returns
 .UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
 .B runner(fun, **kwargs)
-Wrap RunnerClient for executing \fI\%runner modules\fP
+Run \fIrunner modules <all\-salt.runners>\fP
+.sp
+Wraps \fI\%salt.runner.RunnerClient.low()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+Returns the result from the runner module
+.UNINDENT
 .UNINDENT
 .INDENT 7.0
 .TP
 .B wheel(fun, **kwargs)
-Wrap Wheel to enable executing \fI\%wheel modules\fP
+Run \fI\%wheel modules\fP
+.sp
+Wraps \fI\%salt.wheel.WheelClient.master_call()\fP\&.
+.INDENT 7.0
+.TP
+.B Returns
+Returns the result from the wheel module
+.UNINDENT
 .UNINDENT
 .UNINDENT
 .SS Writing netapi modules
@@ -1880,6 +2120,104 @@ be enabled or disabled independently of the other.
 .sp
 In addition, there has been several bug fixes, packaging fixes, and minor code
 simplification.
+.SS salt\-api 0.8.4
+.sp
+\fBsalt\-api\fP 0.8.4 sees a number of new features and feature
+enhancements in the \fBrest_cherrypy\fP
+netapi module.
+.sp
+Work to merge \fBsalt\-api\fP into the main Salt distribution continues and
+it is likely to be included in Salt\(aqs Helium release.
+.SS \fBrest_cherrypy\fP changes
+.SS Web hooks
+.sp
+This release adds a \fBnew URL /hook\fP that allows salt\-api to serve as a
+generic web hook interface for Salt. POST requests to the URL trigger events on
+Salt\(aqs event bus.
+.sp
+External services like Amazon SNS, Travis CI, GitHub, etc can easily send
+signals through Salt\(aqs Reactor.
+.sp
+The following HTTP call will trigger the following Salt event.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% curl \-sS http://localhost:8000/hook/some/tag \e
+    \-d some=\(aqData!\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Event tag: \fBsalt/netapi/hook/some/tag\fP\&. Event data:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+  "_stamp": "2014\-04\-04T12:14:54.389614",
+  "post": {
+    "some": "Data!"
+  },
+  "headers": {
+    "Content\-Type": "application/x\-www\-form\-urlencoded",
+    "Host": "localhost:8000",
+    "User\-Agent": "curl/7.32.0",
+    "Accept": "*/*",
+    "Content\-Length": "10",
+    "Remote\-Addr": "127.0.0.1"
+  }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Batch mode
+.sp
+The \fBlocal_batch()\fP client exposes Salt\(aqs batch mode
+for executing commands on incremental subsets of minions.
+.SS Tests!
+.sp
+We have added the necessary framework for testing the rest_cherrypy module and
+this release includes a number of both unit and integration tests. The suite
+can be run with the following command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+python \-m unittest discover \-v
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS CherryPy server stats and configuration
+.sp
+A number of settings have been added to better configure the performance of the
+CherryPy web server. In addition, a \fBnew URL /stats\fP has been added to expose metrics on
+the health of the CherryPy web server.
+.SS Improvements for running with external WSGI servers
+.sp
+Running the \fBrest_cherrypy\fP module via a WSGI\-capable server such as Apache
+or Nginx can be tricky since the user the server is running as must have
+permission to access the running Salt system. This release eases some of those
+restrictions by accessing Salt\(aqs key interface through the external auth
+system. Read access to the Salt configuration is required for the user the
+server is running as and everything else should go through external auth.
+.SS More information in the jobs URLs
+.sp
+The output for the \fB/jobs/\fP has been augmented with more
+information about the job such as which minions are expected to return for that
+job. This same output will be added to the other salt\-api URLs in the next
+release.
+.SS Improvements to the Server Sent Events stream
+.sp
+Event tags have been added to \fBthe HTTP event stream\fP as SSE tags which allows JavaScript
+or other consumers to more easily match on certain tags without having to
+inspect the whole event.
 .SH REFERENCE
 .INDENT 0.0
 .IP \(bu 2
