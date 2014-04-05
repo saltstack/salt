@@ -163,13 +163,35 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'dports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
-        rule += '--dports {0} '.format(kwargs['dports'])
+
+        dports = ''
+        if isinstance(kwargs['dports'], list):
+            for port in kwargs['dports']:
+                if not dports:
+                    dports += '{0}'.format(port)
+                else:
+                    dports += ',{0}'.format(port)
+        else:
+            dports = kwargs['dports']
+
+        rule += '--dports {0} '.format(dports)
         del kwargs['dports']
 
     if 'sports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
-        rule += '--sports {0} '.format(kwargs['sports'])
+
+        sports = ''
+        if isinstance(kwargs['sports'], list):
+            for port in kwargs['sports']:
+                if not sports:
+                    sports += '{0}'.format(port)
+                else:
+                    sports += ',{0}'.format(port)
+        else:
+            sports = kwargs['dports']
+
+        rule += '--sports {0} '.format(sports)
         del kwargs['sports']
 
     if 'comment' in kwargs:
