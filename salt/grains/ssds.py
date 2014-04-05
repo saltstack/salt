@@ -22,9 +22,9 @@ def ssds():
             flag = entry_fp.read(1)
             if flag == '0':
                 ssd_devices.append(device)
-                log.debug('Device {0} reports itself as an SSD'.format(device))
+                log.trace('Device {0} reports itself as an SSD'.format(device))
             elif flag == '1':
-                log.debug('Device {0} does not report itself as an SSD'.format(device))
+                log.trace('Device {0} does not report itself as an SSD'.format(device))
             else:
-                log.debug('Unable to identify device {0} as an SSD or not. It does not report 0 or 1'.format(device))
+                log.trace('Unable to identify device {0} as an SSD or not. It does not report 0 or 1'.format(device))
     return {'SSDs': ssd_devices}
