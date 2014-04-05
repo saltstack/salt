@@ -647,7 +647,7 @@ def readlink(path):
     header_parser = struct.Struct('L')
     ReparseTag, = header_parser.unpack(reparseData[:header_parser.size])
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
-    if not ReparseTag & 0x0000FFFF == 0x0000000C:
+    if not ReparseTag & 0xA000FFFF == 0xA000000C:
         raise SaltInvocationError('The path specified is not a symlink, but another type of reparse point ({0:x}).'.format(ReparseTag))
 
     # parse as a symlink reparse point structure (the structure for other
