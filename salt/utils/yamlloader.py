@@ -89,8 +89,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
         if node.tag == 'tag:yaml.org,2002:int':
             if node.value == '0':
                 pass
-            elif node.value.startswith('0') \
-                    and not node.value.startswith(('0b', '0x')):
+            elif node.value.startswith('0') and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
                 # If value was all zeros, node.value would have been reduced to
                 # an empty string. Change it to '0'.
