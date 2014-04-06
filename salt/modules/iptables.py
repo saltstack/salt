@@ -198,6 +198,13 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '--comment "{0}" '.format(kwargs['comment'])
         del kwargs['comment']
 
+    # --set is deprecated, works but returns error.
+    # rewrite to --match-set
+    if 'set' in kwargs:
+        rule += '--match-set {0} '.format(kwargs['set'])
+        del kwargs['set']
+
+    # Jumps should appear last, except for any arguments that are passed to
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []

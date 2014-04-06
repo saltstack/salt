@@ -197,7 +197,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
 
     for entry in entries:
         _entry = '{0}'.format(entry)
-        if kwargs['comment']:
+        if 'comment' in kwargs:
             _entry = '{0} comment "{1}"'.format(entry, kwargs['comment'])
 
         if __salt__['ipset.check'](kwargs['set_name'],
@@ -264,7 +264,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
     for entry in entries:
         _entry = '{0}'.format(entry)
 
-        if kwargs['comment']:
+        if 'comment' in kwargs:
             _entry = '{0} comment "{1}"'.format(entry, kwargs['comment'])
 
         log.debug('_entry {0}'.format(_entry))
