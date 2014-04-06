@@ -322,7 +322,7 @@ def run(opts):
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            stream_stds=True
+            stream_stds=False
         )
         proc.poll_and_read_until_finish()
         stdout, _ = proc.communicate()
@@ -421,7 +421,7 @@ def run(opts):
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            stream_stds=True
+            stream_stds=False
         )
         proc.poll_and_read_until_finish()
         stdout, _ = proc.communicate()
