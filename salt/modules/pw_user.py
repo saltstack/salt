@@ -96,7 +96,7 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home is not None:
-        cmd += '-b {0} '.format(os.path.dirname(home))
+        cmd += '-d {0} '.format(home)
     if createhome is True:
         cmd += '-m '
     if shell:
