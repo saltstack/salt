@@ -1159,9 +1159,6 @@ def managed(name,
     # If contents_pillar was used, get the pillar data
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
-        # Make sure file ends in newline
-        if not contents.endswith('\n'):
-            contents += '\n'
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
