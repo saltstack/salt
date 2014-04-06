@@ -652,7 +652,7 @@ def _get_reparse_data(path):
         fileHandle = win32file.CreateFileW(
             path,
             0x80000000,  # GENERIC_READ
-            0,  # no sharing
+            1,  # share with other readers
             None,  # no inherit, default security descriptor
             3,  # OPEN_EXISTING
             0x00200000 | 0x02000000  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
