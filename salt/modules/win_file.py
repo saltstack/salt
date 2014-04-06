@@ -50,7 +50,9 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         get_hash, comment, manage_file, file_exists, get_diff, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
-        search, _get_flags, extract_hash, _error)
+        search, _get_flags, extract_hash, _error, _sed_esc, _psed,
+        RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
+        lstat, path_exists_glob, HASHES)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -69,12 +71,14 @@ def __virtual__():
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs, file_exists
             global check_managed, check_file_meta, remove, append, _error
-            global directory_exists, patch, sed_contains, touch, contains
+            global directory_exists, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
-            global sed, find, psed, get_sum, check_hash, get_hash, delete_backup
-            global uncomment, comment, get_diff, _get_flags, extract_hash
+            global find, psed, get_sum, check_hash, get_hash, delete_backup
+            global get_diff, _get_flags, extract_hash
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
+            global blockreplace, prepend, seek_read, seek_write, rename, lstat
+            global path_exists_glob
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -100,27 +104,29 @@ def __virtual__():
             file_exists = _namespaced_function(file_exists, globals())
             __clean_tmp = _namespaced_function(__clean_tmp, globals())
             directory_exists = _namespaced_function(directory_exists, globals())
-            patch = _namespaced_function(patch, globals())
-            sed_contains = _namespaced_function(sed_contains, globals())
             touch = _namespaced_function(touch, globals())
             contains = _namespaced_function(contains, globals())
             contains_regex = _namespaced_function(contains_regex, globals())
             contains_regex_multiline = _namespaced_function(contains_regex_multiline, globals())
             contains_glob = _namespaced_function(contains_glob, globals())
-            sed = _namespaced_function(sed, globals())
             find = _namespaced_function(find, globals())
             psed = _namespaced_function(psed, globals())
             get_sum = _namespaced_function(get_sum, globals())
             check_hash = _namespaced_function(check_hash, globals())
             get_hash = _namespaced_function(get_hash, globals())
-            uncomment = _namespaced_function(uncomment, globals())
-            comment = _namespaced_function(comment, globals())
             get_diff = _namespaced_function(get_diff, globals())
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
             rmdir = _namespaced_function(rmdir, globals())
             truncate = _namespaced_function(truncate, globals())
+            blockreplace = _namespaced_function(blockreplace, globals())
+            prepend = _namespaced_function(prepend, globals())
+            seek_read = _namespaced_function(seek_read, globals())
+            seek_write = _namespaced_function(seek_write, globals())
+            rename = _namespaced_function(rename, globals())
+            lstat = _namespaced_function(lstat, globals())
+            path_exists_glob = _namespaced_function(path_exists_glob, globals())
 
             return __virtualname__
     return False
@@ -132,9 +138,38 @@ __outputter__ = {
 }
 
 
+def _resolve_symlink(path, max_depth=64):
+    '''
+    Resolves the given symlink path to its real path, up to a maximum of the
+    `max_depth` parameter which defaults to 64.
+
+    If the path is not a symlink path, it is simply returned.
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    # make sure we don't get stuck in a symlink loop!
+    paths_seen = set((path, ))
+    cur_depth = 0
+    while is_link(path):
+        path = readlink(path)
+        if path in paths_seen:
+            raise CommandExecutionError('The given path is involved in a symlink loop.')
+        paths_seen.add(path)
+        cur_depth += 1
+        if cur_depth > max_depth:
+            raise CommandExecutionError('Too many levels of symbolic links.')
+
+    return path
+
+
 def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
+
+    Under Windows, because groups are just another ACL entity, this function
+    behaves the same as uid_to_user. For maintaining Windows systems, this
+    function is superfluous and only exists for API compatibility with *nix.
 
     CLI Example:
 
@@ -142,16 +177,16 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
-    if not gid:
-        return False
-    sid = win32security.GetBinarySid(gid)
-    name, domain, account_type = win32security.LookupAccountSid(None, sid)
-    return name
+    return uid_to_user(gid)
 
 
 def group_to_gid(group):
     '''
     Convert the group to the gid on this system
+
+    Under Windows, because groups are just another ACL entity, this function
+    behaves the same as user_to_uid. For maintaining Windows systems, this
+    function is superfluous and only exists for API compatibility with *nix.
 
     CLI Example:
 
@@ -159,13 +194,16 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     '''
-    sid, domain, account_type = win32security.LookupAccountName(None, group)
-    return win32security.ConvertSidToStringSid(sid)
+    return user_to_uid(group)
 
 
-def get_gid(path):
+def get_gid(path, follow_symlinks=True):
     '''
     Return the id of the group that owns a given file
+
+    Under Windows, this will get the rarely used primary group of a file.  This
+    generally has no bearing on permissions and is most commonly used to provide
+    Unix compatibility (e.g. Services For Unix, NFS services).
 
     CLI Example:
 
@@ -175,16 +213,29 @@ def get_gid(path):
     '''
     if not os.path.exists(path):
         return False
+
+    # Under Windows, if the path is a symlink, the user that owns the symlink is
+    # returned, not the user that owns the file/directory the symlink is
+    # pointing to. This behaviour is *different* to *nix, therefore the symlink
+    # is first resolved manually if necessary. Remember symlinks are only
+    # supported on Windows Vista or later.
+    if follow_symlinks and sys.getwindowsversion().major >= 6:
+        path = _resolve_symlink(path)
+
     secdesc = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION
+        path, win32security.GROUP_SECURITY_INFORMATION
     )
-    owner_sid = secdesc.GetSecurityDescriptorOwner()
-    return win32security.ConvertSidToStringSid(owner_sid)
+    group_sid = secdesc.GetSecurityDescriptorGroup()
+    return win32security.ConvertSidToStringSid(group_sid)
 
 
-def get_group(path):
+def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
+
+    Under Windows, this will get the rarely used primary group of a file.  This
+    generally has no bearing on permissions and is most commonly used to provide
+    Unix compatibility (e.g. Services For Unix, NFS services).
 
     CLI Example:
 
@@ -192,14 +243,7 @@ def get_group(path):
 
         salt '*' file.get_group c:\\temp\\test.txt
     '''
-    if not os.path.exists(path):
-        return False
-    secdesc = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION
-    )
-    owner_sid = secdesc.GetSecurityDescriptorOwner()
-    name, domain, account_type = win32security.LookupAccountSid(None, owner_sid)
-    return name
+    return uid_to_user(get_gid(path, follow_symlinks))
 
 
 def uid_to_user(uid):
@@ -212,9 +256,19 @@ def uid_to_user(uid):
 
         salt '*' file.uid_to_user S-1-5-21-626487655-2533044672-482107328-1010
     '''
+    if uid is None or uid == '':
+        return ''
+
     sid = win32security.GetBinarySid(uid)
-    name, domain, account_type = win32security.LookupAccountSid(None, sid)
-    return name
+    try:
+        name, domain, account_type = win32security.LookupAccountSid(None, sid)
+        return name
+    except pywinerror as e:
+        # if user does not exist...
+        if e.winerror == 1332: # No mapping between account names and security IDs was done.
+            return ''
+        else:
+            raise
 
 
 def user_to_uid(user):
@@ -227,11 +281,22 @@ def user_to_uid(user):
 
         salt '*' file.user_to_uid myusername
     '''
-    sid, domain, account_type = win32security.LookupAccountName(None, user)
+    if user is None or user == '':
+        return ''
+
+    try:
+        sid, domain, account_type = win32security.LookupAccountName(None, user)
+    except pywinerror as e:
+        # if user does not exist...
+        if e.winerror == 1332: # No mapping between account names and security IDs was done.
+            return ''
+        else:
+            raise
+
     return win32security.ConvertSidToStringSid(sid)
 
 
-def get_uid(path):
+def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
@@ -243,30 +308,20 @@ def get_uid(path):
     '''
     if not os.path.exists(path):
         return False
+
+    # Under Windows, if the path is a symlink, the user that owns the symlink is
+    # returned, not the user that owns the file/directory the symlink is
+    # pointing to. This behaviour is *different* to *nix, therefore the symlink
+    # is first resolved manually if necessary. Remember symlinks are only
+    # supported on Windows Vista or later.
+    if follow_symlinks and sys.getwindowsversion().major >= 6:
+        path = _resolve_symlink(path)
+
     secdesc = win32security.GetFileSecurity(
         path, win32security.OWNER_SECURITY_INFORMATION
     )
     owner_sid = secdesc.GetSecurityDescriptorOwner()
     return win32security.ConvertSidToStringSid(owner_sid)
-
-
-def get_mode(path):
-    '''
-    Return the mode of a file
-
-    Right now we're just returning None
-    because Windows' doesn't have a mode
-    like Linux
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.get_mode /etc/passwd
-    '''
-    if not os.path.exists(path):
-        return -1
-    return None
 
 
 def get_user(path, follow_symlinks=True):
@@ -279,31 +334,35 @@ def get_user(path, follow_symlinks=True):
 
         salt '*' file.get_user c:\\temp\\test.txt
     '''
-    # Under Windows, if the path is a symlink, the user that owns the symlink is
-    # returned, not the user that owns the file/directory the symlink is
-    # pointing to. This behaviour is *different* to *nix, therefore the symlink
-    # is first resolved manually if necessary. Remember symlinks are only
-    # supported on Windows Vista or later.
-    if follow_symlinks and sys.getwindowsversion().major >= 6:
-        # make sure we don't get stuck in a symlink loop!
-        paths_seen = set((path, ))
-        while is_link(path):
-            path = readlink(path)
-            if path in paths_seen:
-                raise CommandExecutionError('The given path is involved in a symlink loop.')
-            paths_seen.add(path)
-
-    secdesc = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION
-    )
-    owner_sid = secdesc.GetSecurityDescriptorOwner()
-    name, domain, account_type = win32security.LookupAccountSid(None, owner_sid)
-    return name
+    return uid_to_user(get_uid(path, follow_symlinks))
 
 
-def chown(path, user, group):
+def get_mode(path):
+    '''
+    Return the mode of a file
+
+    Right now we're just returning None because Windows' doesn't have a mode
+    like Linux
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_mode /etc/passwd
+    '''
+    if not os.path.exists(path):
+        return ''
+    return None
+
+
+def chown(path, user, group=None):
     '''
     Chown a file, pass the file the desired user and group
+
+    Under Windows, if `group` is specified, this will set the rarely used
+    primary group of a file.  This generally has no bearing on permissions and
+    is most commonly used to provide Unix compatibility (e.g. Services For Unix,
+    NFS services). Because of this, the group parameter is optional.
 
     CLI Example:
 
@@ -318,26 +377,53 @@ def chown(path, user, group):
     except pywinerror:
         err += 'User does not exist\n'
 
-    # get SID object for group
-    try:
-        groupSID, domainName, objectType = win32security.LookupAccountName(None, group)
-    except pywinerror:
-        err += 'Group does not exist\n'
+    if group:
+        # get SID object for group
+        try:
+            groupSID, domainName, objectType = win32security.LookupAccountName(None, group)
+        except pywinerror:
+            err += 'Group does not exist\n'
+    else:
+        groupSID = None
 
     if not os.path.exists(path):
-        err += 'File not found\n'
+        err += 'File not found'
     if err:
         return err
 
-    # set owner and group
-    securityInfo = win32security.OWNER_SECURITY_INFORMATION + win32security.GROUP_SECURITY_INFORMATION
-    win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, securityInfo, userSID, groupSID, None, None)
+    if group:
+        # set owner and group
+        win32security.SetNamedSecurityInfo(
+            path,
+            win32security.SE_FILE_OBJECT,
+            win32security.OWNER_SECURITY_INFORMATION + win32security.GROUP_SECURITY_INFORMATION,
+            userSID,
+            groupSID,
+            None,
+            None
+        )
+    else:
+        # set owner only
+        win32security.SetNamedSecurityInfo(
+            path,
+            win32security.SE_FILE_OBJECT,
+            win32security.OWNER_SECURITY_INFORMATION,
+            userSID,
+            None,
+            None,
+            None
+        )
+
     return None
 
 
 def chgrp(path, group):
     '''
     Change the group of a file
+
+    Under Windows, this will set the rarely used primary group of a file. This
+    generally has no bearing on permissions and is most commonly used to provide
+    Unix compatibility (e.g. Services For Unix, NFS services).
 
     CLI Example:
 
@@ -363,7 +449,7 @@ def chgrp(path, group):
     return None
 
 
-def stats(path, hash_type='md5', follow_symlinks=False):
+def stats(path, hash_type='md5', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -376,15 +462,15 @@ def stats(path, hash_type='md5', follow_symlinks=False):
     ret = {}
     if not os.path.exists(path):
         return ret
-    if follow_symlinks:
-        pstat = os.stat(path)
-    else:
-        pstat = os.lstat(path)
+    if follow_symlinks and sys.getwindowsversion().major >= 6:
+        path = _resolve_symlink(path)
+    pstat = os.stat(path)
     ret['inode'] = pstat.st_ino
-    ret['uid'] = pstat.st_uid
-    ret['gid'] = pstat.st_gid
-    ret['group'] = 0
-    ret['user'] = 0
+    # don't need to resolve symlinks again because we've already done that
+    ret['uid'] = get_uid(path, follow_symlinks=False)
+    ret['gid'] = get_gid(path, follow_symlinks=False)
+    ret['group'] = gid_to_group(ret['gid'])
+    ret['user'] = uid_to_user(ret['uid'])
     ret['atime'] = pstat.st_atime
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
