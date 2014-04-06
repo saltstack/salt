@@ -318,7 +318,7 @@ def run(opts):
         # Let's find out if the installed version matches the passed in pillar
         # information
         proc = NonBlockingPopen(
-            'salt -t 100 {vm_name} --out json test.version'.format(vm_name),
+            'salt -t 100 {vm_name} --out json test.version'.format(vm_name=vm_name),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -417,7 +417,7 @@ def run(opts):
         # Let's find out if the cloned repository if checked out at the desired
         # commit
         proc = NonBlockingPopen(
-            'salt -t 100 {vm_name} --out json git.revision /testing'.format(vm_name),
+            'salt -t 100 {vm_name} --out json git.revision /testing'.format(vm_name=vm_name),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
