@@ -13,6 +13,7 @@ from __future__ import print_function
 import os
 import re
 import sys
+import json
 import time
 import random
 import shutil
@@ -47,6 +48,8 @@ try:
     HAS_GITHUB = True
 except ImportError:
     HAS_GITHUB = False
+
+SALT_GIT_URL = 'https://github.com/saltstack/salt.git'
 
 
 def generate_vm_name(platform):
@@ -311,6 +314,142 @@ def run(opts):
     sys.stdout.flush()
     time.sleep(5)
 
+    if opts.commit is not None:
+        # Let's find out if the installed version matches the passed in pillar
+        # information
+        proc = NonBlockingPopen(
+            'salt -t 100 {vm_name} --out json test.version'.format(vm_name),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        stdout, _ = proc.communicate()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        if not stdout:
+            print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        version_info = json.loads(stdout.strip())
+        if not version_info[vm_name].endswith(opts.commit[:7]):
+            print('The boostrapped minion version commit does not match the desired commit:')
+            print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.commit[:7]))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+    # Do we need extra setup?
+    if opts.salt_url != SALT_GIT_URL:
+        cmds = (
+            'salt -t 100 {vm_name} git.remote_set /testing name={0!r} url={1!r}'.format(
+                'upstream',
+                SALT_GIT_URL,
+                vm_name=vm_name
+            ),
+            'salt -t 100 {vm_name} git.fetch /testing \'upstream --tags\''.format(
+                vm_name=vm_name
+            )
+        )
+        for cmd in cmds:
+            print('Running CMD: {0}'.format(cmd))
+            sys.stdout.flush()
+
+            proc = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            stdout, _ = proc.communicate()
+
+            if stdout:
+                print(stdout)
+            sys.stdout.flush()
+
+    # Run tests here
+    cmd = (
+        'salt -t 1800 {vm_name} state.sls {prep_sls} pillar="{pillar}" '
+        '--no-color'.format(
+            prep_sls=opts.prep_sls,
+            pillar=opts.pillar.format(
+                commit=opts.commit,
+                salt_url=opts.salt_url
+            ),
+            vm_name=vm_name,
+            commit=opts.commit
+        )
+    )
+    print('Running CMD: {0}'.format(cmd))
+    sys.stdout.flush()
+
+    proc = NonBlockingPopen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stream_stds=True
+    )
+    proc.poll_and_read_until_finish()
+    stdout, _ = proc.communicate()
+
+    retcode = proc.returncode
+    if retcode != 0:
+        print('Failed to execute the preparation SLS file. Exit code: {0}'.format(retcode))
+        sys.stdout.flush()
+        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+            delete_vm(vm_name)
+        sys.exit(retcode)
+
+    if opts.commit is not None:
+        # Let's find out if the cloned repository if checked out at the desired
+        # commit
+        proc = NonBlockingPopen(
+            'salt -t 100 {vm_name} --out json git.revision /testing'.format(vm_name),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        stdout, _ = proc.communicate()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        if not stdout:
+            print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        revision_info = json.loads(stdout.strip())
+        if revision_info[vm_name][7:] != opts.commit[7:]:
+            print('The cloned repository commit is not the desired one:')
+            print(' {0!r} != {1!r}'.format(version_info[vm_name][:7], opts.commit[:7]))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
     # Run tests here
     cmd = (
         'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
@@ -400,9 +539,13 @@ def parse():
         '--commit',
         help='The git commit to track')
     parser.add_option(
+        '--prep-sls',
+        default='git.salt',
+        help='The sls file to execute to prepare the system')
+    parser.add_option(
         '--sls',
         default='testrun',
-        help='The sls file to execute')
+        help='The final sls file to execute')
     parser.add_option(
         '--pillar',
         default='{{git_commit: {commit}, git_url: \'{salt_url}\'}}',
