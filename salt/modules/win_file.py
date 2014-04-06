@@ -355,7 +355,26 @@ def get_mode(path):
     return None
 
 
-def chown(path, user, group=None):
+def lchown(path, user, group=None):
+    '''
+    Chown a file, pass the file the desired user and group without following any
+    symlinks.
+
+    Under Windows, if `group` is specified, this will set the rarely used
+    primary group of a file.  This generally has no bearing on permissions and
+    is most commonly used to provide Unix compatibility (e.g. Services For Unix,
+    NFS services). Because of this, the group parameter is optional.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.lchown c:\\temp\\test.txt myusername administrators
+    '''
+    return chown(path, user, group, follow_symlinks=False)
+
+
+def chown(path, user, group=None, follow_symlinks=True):
     '''
     Chown a file, pass the file the desired user and group
 
@@ -390,6 +409,9 @@ def chown(path, user, group=None):
         err += 'File not found'
     if err:
         return err
+
+    if follow_symlinks and sys.getwindowsversion().major >= 6:
+        path = _resolve_symlink(path)
 
     if group:
         # set owner and group

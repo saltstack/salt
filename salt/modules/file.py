@@ -300,6 +300,34 @@ def set_mode(path, mode):
     return get_mode(path)
 
 
+def lchown(path, user, group):
+    '''
+    Chown a file, pass the file the desired user and group without following
+    symlinks.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.chown /etc/passwd root root
+    '''
+    uid = user_to_uid(user)
+    gid = group_to_gid(group)
+    err = ''
+    if uid == '':
+        if user:
+            err += 'User does not exist\n'
+        else:
+            uid = -1
+    if gid == '':
+        if group:
+            err += 'Group does not exist\n'
+        else:
+            gid = -1
+
+    return os.lchown(path, uid, gid)
+
+
 def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
