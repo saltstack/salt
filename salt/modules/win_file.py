@@ -269,7 +269,7 @@ def get_mode(path):
     return None
 
 
-def get_user(path):
+def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
@@ -279,6 +279,20 @@ def get_user(path):
 
         salt '*' file.get_user c:\\temp\\test.txt
     '''
+    # Under Windows, if the path is a symlink, the user that owns the symlink is
+    # returned, not the user that owns the file/directory the symlink is
+    # pointing to. This behaviour is *different* to *nix, therefore the symlink
+    # is first resolved manually if necessary. Remember symlinks are only
+    # supported on Windows Vista or later.
+    if follow_symlinks and sys.getwindowsversion().major >= 6:
+        # make sure we don't get stuck in a symlink loop!
+        paths_seen = set((path, ))
+        while is_link(path):
+            path = readlink(path)
+            if path in paths_seen:
+                raise CommandExecutionError('The given path is involved in a symlink loop.')
+            paths_seen.add(path)
+
     secdesc = win32security.GetFileSecurity(
         path, win32security.OWNER_SECURITY_INFORMATION
     )
