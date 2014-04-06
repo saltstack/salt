@@ -8,7 +8,6 @@ try:
     import pwd
 except ImportError:
     pass
-import os
 import logging
 import copy
 
