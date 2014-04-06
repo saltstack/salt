@@ -39,6 +39,7 @@ def _refine_enc(enc):
     dss = ['d', 'dsa', 'dss', 'ssh-dss']
     ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
              'ecdsa-sha2-nistp256']
+    ed25519 = ['ed25519', 'ssh-ed25519']
 
     if enc in rsa:
         return 'ssh-rsa'
@@ -50,6 +51,8 @@ def _refine_enc(enc):
         if enc in ['e', 'ecdsa']:
             return 'ecdsa-sha2-nistp256'
         return enc
+    elif enc in ed25519:
+        return 'ssh-ed25519'
     else:
         raise CommandExecutionError(
             'Incorrect encryption key type {0!r}.'.format(enc)
