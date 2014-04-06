@@ -13,6 +13,7 @@ from __future__ import print_function
 import os
 import re
 import sys
+import json
 import time
 import random
 import shutil
@@ -314,6 +315,45 @@ def run(opts):
     print('Sleeping for 5 seconds to allow the minion to breathe a little')
     sys.stdout.flush()
     time.sleep(5)
+
+    # Let's findout if the installed version meeds the passed in pillar
+    # information
+    if opts.commit is not None:
+        # Let's findout if the installed version meeds the passed in pillar
+        # information
+        proc = NonBlockingPopen(
+            'salt -t 100 {vm_name} --out json test.version'.format(vm_name),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        stdout, _ = proc.communicate()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        if not stdout:
+            print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        version_info = json.loads(stdout.strip())
+        if not version_info[vm_name].endswith(opts.commit[:7]):
+            print('The boostrapped minion version commit does not match the desired commit:')
+            print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.commit[:7]))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
 
     # Do we need extra setup?
     if opts.salt_url != SALT_GIT_URL:
