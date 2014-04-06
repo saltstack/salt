@@ -50,6 +50,21 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - save: True
 
     httpd:
+      iptables.append:
+        - table: filter
+        - family: ipv4
+        - chain: INPUT
+        - jump: ACCEPT
+        - match: state
+        - connstate: NEW
+        - dports:
+            - 80
+            - 443
+        - proto: tcp
+        - sport: 1025:65535
+        - save: True
+
+    httpd:
       iptables.insert:
         - position: 1
         - table: filter
