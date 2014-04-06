@@ -572,9 +572,9 @@ def symlink(src, link):
         raise CommandExecutionError('Could not create {0!r} - [{1}] {2}'.format(link, e.winerror, e.strerror))
 
 
-def _islink(path):
+def _is_reparse_point(path):
     '''
-    Returns true if the path is a symlink; false otherwise
+    Returns True if path is a reparse point; False otherwise.
     '''
     if sys.getwindowsversion().major < 6:
         raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
@@ -588,6 +588,88 @@ def _islink(path):
         return True
     else:
         return False
+
+
+def is_link(path):
+    '''
+    Check if the path is a symlink
+
+    Specifically, this checks to see
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_link /path/to/link
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    if not _is_reparse_point(path):
+        return False
+
+    # check that it is a symlink reparse point (in case it is something else,
+    # like a mount point)
+    reparse_data = _get_reparse_data(path)
+
+    # sanity check - this should not happen
+    if not reparse_data:
+        raise SaltInvocationError('The path specified is not a reparse point (symlinks are a type of reparse point).')
+
+    # REPARSE_DATA_BUFFER structure - see
+    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
+
+    # parse the structure header to work out which type of reparse point this is
+    header_parser = struct.Struct('L')
+    ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
+    if not ReparseTag & 0xA000FFFF == 0xA000000C:
+        return False
+    else:
+        return True
+
+
+def _get_reparse_data(path):
+    '''
+    Retrieves the reparse point data structure for the given path.
+
+    If the path is not a reparse point, None is returned.
+
+    See http://msdn.microsoft.com/en-us/library/ff552012.aspx for details on the
+    REPARSE_DATA_BUFFER structure returned.
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    # ensure paths are using the right slashes
+    path = os.path.normpath(path)
+
+    if not _is_reparse_point(path):
+        return None
+
+    fileHandle = None
+    try:
+        fileHandle = win32file.CreateFileW(
+            path,
+            0x80000000,  # GENERIC_READ
+            0,  # no sharing
+            None,  # no inherit, default security descriptor
+            3,  # OPEN_EXISTING
+            0x00200000 | 0x02000000  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
+        )
+
+        reparseData = win32file.DeviceIoControl(
+            fileHandle,
+            0x900a8,  # FSCTL_GET_REPARSE_POINT
+            None,  # in buffer
+            16384  # out buffer size (MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
+        )
+
+    finally:
+        if fileHandle:
+            win32file.CloseHandle(fileHandle)
+
+    return reparseData
 
 
 def readlink(path):
@@ -612,40 +694,17 @@ def readlink(path):
     if not os.path.isabs(path):
         raise SaltInvocationError('Path to link must be absolute.')
 
-    # ensure paths are using the right slashes
-    path = os.path.normpath(path)
+    reparse_data = _get_reparse_data(path)
 
-    if not _islink(path):
-        raise SaltInvocationError('The path specified is not a symlink.')
-
-    fileHandle = None
-    try:
-        fileHandle = win32file.CreateFileW(
-            path,
-            0x80000000,  # GENERIC_READ
-            0,  # no sharing
-            None,  # no inherit, default security descriptor
-            3,  # OPEN_EXISTING
-            0x00200000 | 0x02000000  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
-        )
-
-        reparseData = win32file.DeviceIoControl(
-            fileHandle,
-            0x900a8,  # FSCTL_GET_REPARSE_POINT
-            None,  # in buffer
-            16384  # out buffer size (MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
-        )
-
-    finally:
-        if fileHandle:
-            win32file.CloseHandle(fileHandle)
+    if not reparse_data:
+        raise SaltInvocationError('The path specified is not a reparse point (symlinks are a type of reparse point).')
 
     # REPARSE_DATA_BUFFER structure - see
     # http://msdn.microsoft.com/en-us/library/ff552012.aspx
 
     # parse the structure header to work out which type of reparse point this is
     header_parser = struct.Struct('L')
-    ReparseTag, = header_parser.unpack(reparseData[:header_parser.size])
+    ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
     if not ReparseTag & 0xA000FFFF == 0xA000000C:
         raise SaltInvocationError('The path specified is not a symlink, but another type of reparse point ({0:x}).'.format(ReparseTag))
@@ -655,11 +714,11 @@ def readlink(path):
     data_parser = struct.Struct('LHHHHHHL')
     ReparseTag, ReparseDataLength, Reserved, SubstituteNameOffset, \
     SubstituteNameLength, PrintNameOffset, \
-    PrintNameLength, Flags = data_parser.unpack(reparseData[:data_parser.size])
+    PrintNameLength, Flags = data_parser.unpack(reparse_data[:data_parser.size])
 
     path_buffer_offset = data_parser.size
     absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
-    target_bytes = reparseData[absolute_substitute_name_offset:absolute_substitute_name_offset+SubstituteNameLength]
+    target_bytes = reparse_data[absolute_substitute_name_offset:absolute_substitute_name_offset+SubstituteNameLength]
     target = target_bytes.decode('UTF-16')
 
     if target.startswith('\\??\\'):

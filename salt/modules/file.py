@@ -1618,6 +1618,24 @@ def link(src, link):
     return False
 
 
+def is_link(path):
+    '''
+    Check if the path is a symlink
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_link /path/to/link
+    '''
+    # This function exists because os.path.islink does not support Windows,
+    # therefore a custom function will need to be called. This function
+    # therefore helps API consistency by providing a single function to call for
+    # both operating systems.
+
+    return os.path.islink(path)
+
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
