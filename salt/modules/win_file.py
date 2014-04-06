@@ -707,7 +707,7 @@ def readlink(path):
     ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
     if not ReparseTag & 0xA000FFFF == 0xA000000C:
-        raise SaltInvocationError('The path specified is not a symlink, but another type of reparse point ({0:x}).'.format(ReparseTag))
+        raise SaltInvocationError('The path specified is not a symlink, but another type of reparse point (0x{0:X}).'.format(ReparseTag))
 
     # parse as a symlink reparse point structure (the structure for other
     # reparse points is different)
