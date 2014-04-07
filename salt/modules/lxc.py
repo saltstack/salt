@@ -19,7 +19,8 @@ import os
 import shutil
 import re
 
-#import salt libs
+# Import salt libs
+import salt
 import salt.utils
 import salt.utils.cloud
 import salt.config
@@ -355,7 +356,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     if image:
         img_tar = __salt__['cp.cache_file'](image)
         template = os.path.join(
-                os.path.dirname(__file__),
+                os.path.dirname(salt.__file__),
+                'templates',
                 'lxc',
                 'salt_tarball')
         profile['imgtar'] = img_tar
