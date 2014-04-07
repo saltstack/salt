@@ -8,6 +8,7 @@ HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
     import novaclient.auth_plugin
+    import novaclient.exceptions
     HAS_NOVA = True
 except ImportError:
     pass
@@ -92,8 +93,8 @@ class SaltNova(object):
         username,
         project_id,
         auth_url,
-        password=None,
         region_name=None,
+        password=None,
         os_auth_plugin=None,
         **kwargs
     ):
@@ -120,9 +121,13 @@ class SaltNova(object):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        if not hasattr(self.conn.client, 'service_catalog':
-            self.conn = client.Client(**self.kwargs)
+        self.conn = client.Client(**self.kwargs)
+        try:
             self.conn.authenicate()
+        except novaclient.exceptions.AmbiguousEndpoints:
+            raise SaltCloudSystemExit(
+                "Nova provider requires a 'region_name' to be specified"
+            )
 
         self.kwargs['auth_token'] = self.conn.client.auth_token
 
