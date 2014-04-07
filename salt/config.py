@@ -310,7 +310,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'transport': 'zeromq',
-    'auth_timeout': 3,
+    'auth_timeout': 60,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 3,
