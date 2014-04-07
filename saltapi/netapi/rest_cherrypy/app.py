@@ -1359,7 +1359,9 @@ class Webhook(object):
                 - tgt: 'application*'
                 - arg:
                   - myapp.deploy
-                  - 'pillar={revision: {{ revision }}}'
+                - kwarg:
+                    pillar:
+                      revision: {{ revision }}
             {% endif %}
 
         :status 200: success
