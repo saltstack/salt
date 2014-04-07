@@ -962,7 +962,8 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted.
+regular expressions are accepted. If using a regular expression, the expression
+must match the entire minion ID.
 
 If used, only branches/tags/SHAs which match one of the specified expressions
 will be exposed as fileserver environments.
@@ -1286,6 +1287,96 @@ for more info.
 .. code-block:: yaml
 
     svnfs_tags: tags
+
+minion: MinionFS Remote File Server Backend
+-------------------------------------------
+
+.. conf_master:: minionfs_env
+
+``minionfs_env``
+****************
+
+.. versionadded:: Helium
+
+Default: ``base``
+
+Environment from which MinionFS files are made available.
+
+.. code-block:: yaml
+
+    minionfs_env: minionfs
+
+.. conf_master:: minionfs_mountpoint
+
+``minionfs_mountpoint``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which minionfs files are served.
+
+.. code-block:: yaml
+
+    minionfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: minionfs_whitelist
+
+``minionfs_whitelist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which minions pushed files are exposed via minionfs. If using
+a regular expression, the expression must match the entire minion ID.
+
+If used, only the pushed files from minions which match one of the specified
+expressions will be exposed.
+
+If used in conjunction with :conf_master:`minionfs_blacklist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed.
+
+.. code-block:: yaml
+
+    minionfs_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: minionfs_blacklist
+
+``minionfs_blacklist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which minions pushed files are exposed via minionfs. If using
+a regular expression, the expression must match the entire minion ID.
+
+If used, only the pushed files from minions which match one of the specified
+expressions will *not* be exposed.
+
+If used in conjunction with :conf_master:`minionfs_whitelist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed.
+
+.. code-block:: yaml
+
+    minionfs_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
 
 
 .. _pillar-configuration:
