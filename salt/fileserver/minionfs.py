@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-The backend for serving files pushed to master by cp.push (file_recv).
+Fileserver backend  which serves files pushed to master by :mod:`cp.push
+<salt.modules.cp.push>`
 
-:conf_master:`file_recv` needs to be enabled in the master config file.
+:conf_master:`file_recv` needs to be enabled in the master config file in order
+to use this backend, and ``minion`` must also be present in the
+:conf_master:`fileserver_backends` list.
 '''
 
 # Import python libs
@@ -13,7 +16,7 @@ import logging
 import salt.fileserver
 import salt.utils
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 # Define the module's virtual name
@@ -26,45 +29,60 @@ def __virtual__():
     '''
     if not __virtualname__ in __opts__['fileserver_backend']:
         return False
-    if not __opts__['file_recv']:
-        return False
-    return __virtualname__
+    return __virtualname__ if __opts__['file_recv'] else False
 
 
-def find_file(path, env='base', **kwargs):
+def _is_exposed(minion):
+    '''
+    Check if the minion is exposed, based on the whitelist and blacklist
+    '''
+    return salt.utils.check_whitelist_blacklist(
+        minion,
+        whitelist=__opts__['minionfs_whitelist'],
+        blacklist=__opts__['minionfs_blacklist']
+    )
+
+
+def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     Search the environment for the relative path
     '''
-    # AP logger.debug('minionfs is asked for {0}'.format(path))
     fnd = {'path': '', 'rel': ''}
     if os.path.isabs(path):
         return fnd
-    if env not in envs():
+    if tgt_env not in envs():
         return fnd
-    if path[-7:] == 'top.sls':
+    if os.path.basename(path) == 'top.sls':
         log.debug('minionfs will NOT serve top.sls '
-                     'for security reasons: {0}'.format(path))
+                  'for security reasons (path requested: {0})'.format(path))
         return fnd
+
+    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    # Remove the mountpoint to get the "true" path
+    path = path[len(mountpoint):].lstrip(os.path.sep)
     try:
         minion, pushed_file = path.split(os.sep, 1)
     except ValueError:
         return fnd
-    full = os.path.join(__opts__['cachedir'], 'minions',
-                                     minion, 'files', pushed_file)
-    if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
+    if not _is_exposed(minion):
+        return fnd
+    full = os.path.join(
+        __opts__['cachedir'], 'minions', minion, 'files', pushed_file
+    )
+    if os.path.isfile(full) \
+            and not salt.fileserver.is_file_ignored(__opts__, full):
         fnd['path'] = full
         fnd['rel'] = path
         return fnd
-    # AP logger.debug('minionfs: full path for {0} is {1}'.format(path, full))
     return fnd
 
 
 def envs():
     '''
-    Return "base" as the file server environment, because there is only one set
-    of minions.
+    Returns the one environment specified for minionfs in the master
+    configuration.
     '''
-    return ['base']
+    return [__opts__['minionfs_env']]
 
 
 def serve_file(load, fnd):
@@ -75,8 +93,9 @@ def serve_file(load, fnd):
 
     .. code-block:: bash
 
-        $ salt 'source-minion' cp.push /path/to/the/file  # Push the file to the master
-        $ salt 'destination-minion'  cp.get_file salt://source-minion/path/to/the/file /destination/file
+        # Push the file to the master
+        $ salt 'source-minion' cp.push /path/to/the/file
+        $ salt 'destination-minion' cp.get_file salt://source-minion/path/to/the/file /destination/file
     '''
     ret = {'data': '', 'dest': ''}
     if not fnd['path']:
@@ -101,8 +120,6 @@ def update():
     '''
     When we are asked to update (regular interval) lets reap the cache
     '''
-    # AP logger.debug("minionfs: updating {0}".format(
-    # AP                     os.path.join(__opts__['cachedir'], 'minionfs/hash')))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'minionfs/hash'),
@@ -118,6 +135,16 @@ def file_hash(load, fnd):
     '''
     path = fnd['path']
     ret = {}
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if load['saltenv'] not in envs():
+        return {}
 
     # if the file doesn't exist, we can't get a hash
     if not path or not os.path.isfile(path):
@@ -128,12 +155,12 @@ def file_hash(load, fnd):
 
     # check if the hash is cached
     # cache file's contents should be "hash:mtime"
-    cache_path = os.path.join(__opts__['cachedir'],
-                              'minionfs/hash',
-                              load['saltenv'],
-                              '{0}.hash.{1}'.format(
-                                    fnd['rel'], __opts__['hash_type'])
-                            )
+    cache_path = os.path.join(
+        __opts__['cachedir'],
+        'minionfs/hash',
+        load['saltenv'],
+        '{0}.hash.{1}'.format(fnd['rel'], __opts__['hash_type'])
+    )
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
@@ -141,15 +168,22 @@ def file_hash(load, fnd):
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
-                    log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
+                    log.debug(
+                        'Fileserver attempted to read incomplete cache file. '
+                        'Retrying.'
+                    )
                     file_hash(load, fnd)
                     return ret
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
-        except os.error:  # Can't use Python select() because we need Windows support
-            log.debug("Fileserver encountered lock when reading cache file. Retrying.")
+        # Can't use Python select() because we need Windows support
+        except os.error:
+            log.debug(
+                'Fileserver encountered lock when reading cache file. '
+                'Retrying.'
+            )
             file_hash(load, fnd)
             return ret
 
@@ -170,33 +204,68 @@ def file_list(load):
     '''
     Return a list of all files on the file server in a specified environment
     '''
-    # AP logger.debug('minionfs is asked for file_list of {0}'.format(os.path.join(__opts__['cachedir'], 'minions')))
-    ret = []
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if load['saltenv'] not in envs():
+        return []
+    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
     prefix = load.get('prefix', '').strip('/')
+    if mountpoint and prefix.startswith(mountpoint + os.path.sep):
+        prefix = prefix[len(mountpoint + os.path.sep):]
+
     minions_cache_dir = os.path.join(__opts__['cachedir'], 'minions')
-    for minion_dir in os.listdir(minions_cache_dir):
-        minion_files_dir = os.path.join(minions_cache_dir, minion_dir, 'files')
-        if not os.path.isdir(minion_files_dir):
-            log.debug('minionfs: could not find files directory under {0}!'
-                             .format(os.path.join(minions_cache_dir, minion_dir))
-                        )
+    minion_dirs = os.listdir(minions_cache_dir)
+
+    # If the prefix is not an empty string, then get the minion id from it. The
+    # minion ID will be the part before the first slash, so if there is no
+    # slash, this is an invalid path.
+    if prefix:
+        tgt_minion, _, prefix = prefix.partition('/')
+        if not prefix:
+            # No minion ID in path
+            return []
+        # Reassign minion_dirs so we don't unnecessarily walk every minion's
+        # pushed files
+        if tgt_minion not in minion_dirs:
+            log.warning(
+                'No files found in minionfs cache for minion ID {0!r}'
+                .format(tgt_minion)
+            )
+            return []
+        minion_dirs = [tgt_minion]
+
+    ret = []
+    for minion in minion_dirs:
+        if not _is_exposed(minion):
             continue
-        # Always ignore links for security reasons
-        for root, dirs, files in os.walk(
-                                     os.path.join(minion_files_dir,
-                                                  prefix
-                                     ), followlinks=False):
+        minion_files_dir = os.path.join(minions_cache_dir, minion, 'files')
+        if not os.path.isdir(minion_files_dir):
+            log.debug(
+                'minionfs: could not find files directory under {0}!'
+                .format(os.path.join(minions_cache_dir, minion))
+            )
+            continue
+        walk_dir = os.path.join(minion_files_dir, prefix)
+        # Do not follow links for security reasons
+        for root, _, files in os.walk(walk_dir, followlinks=False):
             for fname in files:
+                # Ignore links for security reasons
                 if os.path.islink(os.path.join(root, fname)):
                     continue
-                rel_fn = os.path.join(minion_dir,
-                                      os.path.relpath(os.path.join(root, fname),
-                                                      minion_files_dir
-                                                     )
-                                      )
+                relpath = os.path.relpath(
+                    os.path.join(root, fname), minion_files_dir
+                )
+                if relpath.startswith('../'):
+                    continue
+                rel_fn = os.path.join(mountpoint, minion, relpath)
                 if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
                     ret.append(rel_fn)
-    # AP logger.debug('minionfs: file_list is returning {0}'.format(ret))
     return ret
 
 
@@ -215,31 +284,63 @@ def dir_list(load):
         $ salt 'source-minion' cp.push /absolute/path/file  # Push the file to the master
         $ salt 'destination-minion' cp.list_master_dirs
         destination-minion:
-            - .
             - source-minion/absolute
             - source-minion/absolute/path
     '''
-    ret = []
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if load['saltenv'] not in envs():
+        return []
+    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
     prefix = load.get('prefix', '').strip('/')
+    if mountpoint and prefix.startswith(mountpoint + os.path.sep):
+        prefix = prefix[len(mountpoint + os.path.sep):]
+
     minions_cache_dir = os.path.join(__opts__['cachedir'], 'minions')
-    for minion_dir in os.listdir(minions_cache_dir):
-        minion_files_dir = os.path.join(minions_cache_dir, minion_dir, 'files')
-        if not os.path.isdir(minion_files_dir):
-            log.debug('minionfs: could not find files directory under {0}!'
-                             .format(os.path.join(minions_cache_dir, minion_dir))
-                        )
+    minion_dirs = os.listdir(minions_cache_dir)
+
+    # If the prefix is not an empty string, then get the minion id from it. The
+    # minion ID will be the part before the first slash, so if there is no
+    # slash, this is an invalid path.
+    if prefix:
+        tgt_minion, _, prefix = prefix.partition('/')
+        if not prefix:
+            # No minion ID in path
+            return []
+        # Reassign minion_dirs so we don't unnecessarily walk every minion's
+        # pushed files
+        if tgt_minion not in minion_dirs:
+            log.warning(
+                'No files found in minionfs cache for minion ID {0!r}'
+                .format(tgt_minion)
+            )
+            return []
+        minion_dirs = [tgt_minion]
+
+    ret = []
+    for minion in os.listdir(minions_cache_dir):
+        if not _is_exposed(minion):
             continue
-        # Always ignore links for security reasons
-        for root, dirs, files in os.walk(
-                os.path.join(
-                    minion_files_dir,
-                    prefix
-                    ),
-                followlinks=False):
-            rel_fn = os.path.join(
-                    minion_dir,
-                    os.path.relpath(root, minion_files_dir)
-                    )
-            ret.append(rel_fn)
-    # AP logger.debug('minionfs: dir_list is returning {0}'.format(ret))
+        minion_files_dir = os.path.join(minions_cache_dir, minion, 'files')
+        if not os.path.isdir(minion_files_dir):
+            log.warning(
+                'minionfs: could not find files directory under {0}!'
+                .format(os.path.join(minions_cache_dir, minion))
+            )
+            continue
+        walk_dir = os.path.join(minion_files_dir, prefix)
+        # Do not follow links for security reasons
+        for root, _, _ in os.walk(walk_dir, followlinks=False):
+            relpath = os.path.relpath(root, minion_files_dir)
+            # Ensure that the current directory and directories outside of
+            # the minion dir do not end up in return list
+            if relpath in ('.', '..') or relpath.startswith('../'):
+                continue
+            ret.append(os.path.join(mountpoint, minion, relpath))
     return ret
