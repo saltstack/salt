@@ -509,7 +509,7 @@ def _set_symlink_ownership(path, uid, gid):
     success/failure
     '''
     try:
-        os.lchown(path, uid, gid)
+        __salt__['file.lchown'](path, uid, gid)
     except OSError:
         pass
     return _check_symlink_ownership(
@@ -523,12 +523,12 @@ def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
-    if not os.path.exists(name) and not os.path.islink(name):
+    if not os.path.exists(name) and not __salt__['file.is_link'](name):
         return None, 'Symlink {0} to {1} is set for creation'.format(
             name, target
         )
-    if os.path.islink(name):
-        if os.readlink(name) != target:
+    if __salt__['file.is_link'](name):
+        if __salt__['file.readlink'](name) != target:
             return None, 'Link {0} target is set to be changed to {1}'.format(
                 name, target
             )
@@ -695,6 +695,18 @@ def symlink(
         If the location of the symlink does not already have a parent directory
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
+
+    user
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
+
+    group
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion. On Windows, this is ignored
+
+    mode
+        The permissions to set on this file, aka 644, 0775, 4664. Not supported
+        on Windows
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -707,6 +719,11 @@ def symlink(
 
     if user is None:
         user = __opts__['user']
+
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+        group = user
 
     if group is None:
         group = __salt__['file.gid_to_group'](
@@ -753,9 +770,9 @@ def symlink(
                     os.path.dirname(name)
                 )
             )
-    if os.path.islink(name):
+    if __salt__['file.is_link'](name):
         # The link exists, verify that it matches the target
-        if os.readlink(name) != target:
+        if __salt__['file.readlink'](name) != target:
             # The target is wrong, delete the link
             os.remove(name)
         else:
@@ -816,7 +833,7 @@ def symlink(
     if not os.path.exists(name):
         # The link is not present, make it
         try:
-            os.symlink(target, name)
+            __salt__['file.symlink'](target, name)
         except OSError as exc:
             ret['result'] = False
             ret['comment'] = ('Unable to create new symlink {0} -> '
@@ -1017,10 +1034,11 @@ def managed(name,
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion
+        is running as on the minion On Windows, this is ignored
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664
+        The permissions to set on this file, aka 644, 0775, 4664. Not supported
+        on Windows
 
     template
         If this setting is applied then the named templating engine will be
@@ -1112,6 +1130,10 @@ def managed(name,
     mode = __salt__['config.manage_mode'](mode)
 
     user = _test_owner(kwargs, user=user)
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+        group = user
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -1281,7 +1303,7 @@ def directory(name,
 
     group
         The group ownership set for the directory; this defaults to the group
-        salt is running as on the minion
+        salt is running as on the minion. On Windows, this is ignored
 
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
@@ -1300,11 +1322,12 @@ def directory(name,
                     - mode
 
     dir_mode / mode
-        The permissions mode to set any directories created.
+        The permissions mode to set any directories created. Not supported on
+        Windows
 
     file_mode
         The permissions mode to set any files created if 'mode' is ran in
-        'recurse'. This defaults to dir_mode.
+        'recurse'. This defaults to dir_mode. Not supported on Windows
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -1329,6 +1352,10 @@ def directory(name,
         name = name[:-1]
 
     user = _test_owner(kwargs, user=user)
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+        group = user
 
     if 'mode' in kwargs and not dir_mode:
         dir_mode = kwargs.get('mode', [])
@@ -1519,16 +1546,19 @@ def recurse(name,
 
     group
         The group ownership set for the directory. This defaults to the group
-        salt is running as on the minion
+        salt is running as on the minion. On Windows, this is ignored
 
     dir_mode
-        The permissions mode to set on any directories created
+        The permissions mode to set on any directories created. Not supported on
+        Windows
 
     file_mode
-        The permissions mode to set on any files created
+        The permissions mode to set on any files created. Not supported on
+        Windows
 
     sym_mode
-        The permissions mode to set on any symlink created
+        The permissions mode to set on any symlink created. Not supported on
+        Windows
 
     template
         If this setting is applied then the named templating engine will be
@@ -1596,6 +1626,10 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+        group = user
     ret = {
         'name': name,
         'changes': {},
