@@ -4,7 +4,7 @@ Control Linux Containers via Salt
 
 :depends: lxc package for distribution
 
-You need lxc >= 1.0 (even beta alpha)
+lxc >= 1.0 (even beta alpha) is required
 
 '''
 
