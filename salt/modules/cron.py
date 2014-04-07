@@ -358,7 +358,7 @@ def set_job(user,
             month,
             dayweek,
             cmd,
-            comment,
+            comment=None,
             identifier=None):
     '''
     Sets a cron job up for a specified user.
