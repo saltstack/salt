@@ -369,15 +369,16 @@ def run(opts):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    proc = NonBlockingPopen(
+    proc = subprocess.Popen(
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        stream_stds=True
     )
-    proc.poll_and_read_until_finish()
     stdout, _ = proc.communicate()
+
+    if stdout:
+        print(stdout)
     sys.stdout.flush()
 
     retcode = proc.returncode
