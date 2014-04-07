@@ -316,7 +316,10 @@ def get_saved_policy(table='filter', chain=None, conf_file=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     rules = _parse_conf(conf_file, family=family)
-    return rules[table][chain]['policy']
+    try:
+        return rules[table][chain]['policy']
+    except KeyError:
+        return None
 
 
 def get_policy(table='filter', chain=None, family='ipv4'):
@@ -336,7 +339,10 @@ def get_policy(table='filter', chain=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     rules = _parse_conf(in_mem=True, family=family)
-    return rules[table][chain]['policy']
+    try:
+        return rules[table][chain]['policy']
+    except KeyError:
+        return None
 
 
 def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
