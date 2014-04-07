@@ -271,6 +271,7 @@ def append(name, family='ipv4', **kwargs):
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
+    kwargs['name'] = name
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full='True', family=family, command='A', **kwargs)
     if __salt__['iptables.check'](kwargs['table'],
@@ -337,6 +338,7 @@ def insert(name, family='ipv4', **kwargs):
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
+    kwargs['name'] = name
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='I', **kwargs)
     if __salt__['iptables.check'](kwargs['table'],
@@ -403,6 +405,7 @@ def delete(name, family='ipv4', **kwargs):
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
+    kwargs['name'] = name
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='D', **kwargs)
     if not __salt__['iptables.check'](kwargs['table'],
