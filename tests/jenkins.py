@@ -378,6 +378,7 @@ def run(opts):
     )
     proc.poll_and_read_until_finish()
     stdout, _ = proc.communicate()
+    sys.stdout.flush()
 
     retcode = proc.returncode
     if retcode != 0:
@@ -386,6 +387,44 @@ def run(opts):
         if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
             delete_vm(vm_name)
         sys.exit(retcode)
+
+    if opts.salt_url is not None:
+        # Let's find out if the cloned repository if checked out from the
+        # desired repository
+        proc = NonBlockingPopen(
+            'salt -t 100 {vm_name} --out json git.remote_get /testing'.format(vm_name=vm_name),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stream_stds=False
+        )
+        proc.poll_and_read_until_finish()
+        stdout, _ = proc.communicate()
+        sys.stdout.flush()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to get the cloned repository remove. Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        if not stdout:
+            print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
+
+        remotes_info = json.loads(stdout.strip())
+        if opts.salt_url not in remotes_info[vm_name]:
+            print('The cloned repository remote is not the desired one:')
+            print(' {0!r} is not in {1}'.format(opts.salt_url, remotes_info))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(vm_name)
+            sys.exit(retcode)
 
     if opts.commit is not None:
         # Let's find out if the cloned repository if checked out at the desired
@@ -399,6 +438,7 @@ def run(opts):
         )
         proc.poll_and_read_until_finish()
         stdout, _ = proc.communicate()
+        sys.stdout.flush()
 
         retcode = proc.returncode
         if retcode != 0:
@@ -418,7 +458,7 @@ def run(opts):
         revision_info = json.loads(stdout.strip())
         if revision_info[vm_name][7:] != opts.commit[7:]:
             print('The cloned repository commit is not the desired one:')
-            print(' {0!r} != {1!r}'.format(version_info[vm_name][:7], opts.commit[:7]))
+            print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(vm_name)
