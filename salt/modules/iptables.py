@@ -132,14 +132,16 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
-        if isinstance(kwargs['match'], list):
-            for match in kwargs['match']:
-                rule += '-m {0} '.format(match)
-        else:
-            kwargs['match'].replace(' ', '')
-            for match in kwargs['match'].split(','):
-                rule += '-m {0} '.format(match)
+        if not isinstance(kwargs['match'], list):
+            kwargs['match'] = kwargs['match'].split(',')
+        for match in kwargs['match']:
+            rule += '-m {0} '.format(match)
+            if 'name' in kwargs and match.strip() in ('quota2', 'recent'):
+                rule += '--name {0} '.format(kwargs['name'])
         del kwargs['match']
+
+    if 'name' in kwargs:
+        del kwargs['name']
 
     if 'state' in kwargs:
         del kwargs['state']
@@ -198,13 +200,12 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '--comment "{0}" '.format(kwargs['comment'])
         del kwargs['comment']
 
-    # --set is deprecated, works but returns error.
-    # rewrite to --match-set
-    if 'set' in kwargs:
+    # --set in ipset is deprecated, works but returns error.
+    # rewrite to --match-set if not empty, otherwise treat as recent option
+    if 'set' in kwargs and kwargs['set']:
         rule += '--match-set {0} '.format(kwargs['set'])
         del kwargs['set']
 
-    # Jumps should appear last, except for any arguments that are passed to
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
