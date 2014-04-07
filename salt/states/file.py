@@ -956,6 +956,8 @@ def managed(name,
         Both HTTPS and HTTP are supported as well as downloading directly
         from Amazon S3 compatible URLs with both pre-configured and automatic
         IAM credentials. (see s3.get state documentation)
+        File retrieval from Openstack Swift object storage is supported via
+        swift://container/object_path URLs, see swift.get documentation.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
