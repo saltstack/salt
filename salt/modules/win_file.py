@@ -168,8 +168,12 @@ def gid_to_group(gid):
     Convert the group id to the group name on this system
 
     Under Windows, because groups are just another ACL entity, this function
-    behaves the same as uid_to_user. For maintaining Windows systems, this
-    function is superfluous and only exists for API compatibility with *nix.
+    behaves the same as uid_to_user.
+
+    For maintaining Windows systems, this function is superfluous and only
+    exists for API compatibility with *nix. Use the uid_to_user function
+    instead; an info level log entry will be generated if this function is used
+    directly.
 
     CLI Example:
 
@@ -177,6 +181,10 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
+    func_name = '{}.gid_to_group'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function {} should not be used on Windows systems; see function docs for details.', func_name)
+
     return uid_to_user(gid)
 
 
@@ -185,8 +193,12 @@ def group_to_gid(group):
     Convert the group to the gid on this system
 
     Under Windows, because groups are just another ACL entity, this function
-    behaves the same as user_to_uid. For maintaining Windows systems, this
-    function is superfluous and only exists for API compatibility with *nix.
+    behaves the same as user_to_uid.
+
+    For maintaining Windows systems, this function is superfluous and only
+    exists for API compatibility with *nix. Use the user_to_uid function
+    instead; an info level log entry will be generated if this function is used
+    directly.
 
     CLI Example:
 
@@ -194,22 +206,29 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     '''
+    func_name = '{}.group_to_gid'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function {} should not be used on Windows systems; see function docs for details.', func_name)
+
     return user_to_uid(group)
 
 
-def get_gid(path, follow_symlinks=True):
+def get_pgid(path, follow_symlinks=True):
     '''
-    Return the id of the group that owns a given file
+    Return the id of the primary group that owns a given file (Windows only)
 
-    Under Windows, this will get the rarely used primary group of a file.  This
-    generally has no bearing on permissions and is most commonly used to provide
-    Unix compatibility (e.g. Services For Unix, NFS services).
+    This function will return the rarely used primary group of a file. This
+    generally has no bearing on permissions unless intentionally configured
+    and is most commonly used to provide Unix compatibility (e.g. Services
+    For Unix, NFS services).
+
+    Ensure you know what you are doing before using this function.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.get_gid c:\\temp\\test.txt
+        salt '*' file.get_pgid c:\\temp\\test.txt
     '''
     if not os.path.exists(path):
         return False
@@ -229,13 +248,76 @@ def get_gid(path, follow_symlinks=True):
     return win32security.ConvertSidToStringSid(group_sid)
 
 
+def get_pgroup(path, follow_symlinks=True):
+    '''
+    Return the name of the primary group that owns a given file (Windows only)
+
+    This function will return the rarely used primary group of a file. This
+    generally has no bearing on permissions unless intentionally configured
+    and is most commonly used to provide Unix compatibility (e.g. Services
+    For Unix, NFS services).
+
+    Ensure you know what you are doing before using this function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_pgroup c:\\temp\\test.txt
+    '''
+    return uid_to_user(get_gid(path, follow_symlinks))
+
+
+def get_gid(path, follow_symlinks=True):
+    '''
+    Return the id of the group that owns a given file
+
+    Under Windows, this will return the uid of the file.
+
+    While a file in Windows does have a 'primary group', this rarely used
+    attribute generally has no bearing on permissions unless intentionally
+    configured and is only used to support Unix compatibility features (e.g.
+    Services For Unix, NFS services).
+
+    Salt, therefore, remaps this function to provide functionality that
+    somewhat resembles *nix behaviour for API compatibility reasons. When
+    managing Windows systems, this function is superfluous and will generate
+    an info level log entry if used directly.
+
+    If you do actually want to access the 'primary group' of a file, use
+    `file.get_pgid`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.get_gid c:\\temp\\test.txt
+    '''
+    func_name = '{}.get_gid'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function {} should not be used on Windows systems; see function docs for details.', func_name)
+
+    return get_uid(path, follow_symlinks)
+
+
 def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
 
-    Under Windows, this will get the rarely used primary group of a file.  This
-    generally has no bearing on permissions and is most commonly used to provide
-    Unix compatibility (e.g. Services For Unix, NFS services).
+    Under Windows, this will return the user (owner) of the file.
+
+    While a file in Windows does have a 'primary group', this rarely used
+    attribute generally has no bearing on permissions unless intentionally
+    configured and is only used to support Unix compatibility features (e.g.
+    Services For Unix, NFS services).
+
+    Salt, therefore, remaps this function to provide functionality that
+    somewhat resembles *nix behaviour for API compatibility reasons. When
+    managing Windows systems, this function is superfluous and will generate
+    an info level log entry if used directly.
+
+    If you do actually want to access the 'primary group' of a file, use
+    `file.get_pgroup`.
 
     CLI Example:
 
@@ -243,7 +325,11 @@ def get_group(path, follow_symlinks=True):
 
         salt '*' file.get_group c:\\temp\\test.txt
     '''
-    return uid_to_user(get_gid(path, follow_symlinks))
+    func_name = '{}.get_group'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function {} should not be used on Windows systems; see function docs for details.', func_name)
+
+    return get_user(path, follow_symlinks)
 
 
 def uid_to_user(uid):
@@ -355,40 +441,67 @@ def get_mode(path):
     return None
 
 
-def lchown(path, user, group=None):
+def lchown(path, user, group=None, pgroup=None):
     '''
     Chown a file, pass the file the desired user and group without following any
     symlinks.
 
-    Under Windows, if `group` is specified, this will set the rarely used
-    primary group of a file.  This generally has no bearing on permissions and
-    is most commonly used to provide Unix compatibility (e.g. Services For Unix,
-    NFS services). Because of this, the group parameter is optional.
+    Under Windows, the group parameter will be ignored.
+
+    This is because while files in Windows do have a 'primary group'
+    property, this is rarely used.  It generally has no bearing on
+    permissions unless intentionally configured and is most commonly used to
+    provide Unix compatibility (e.g. Services For Unix, NFS services).
+
+    If you do want to change the 'primary group' property and understand the
+    implications, pass the Windows only parameter, pgroup, instead.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.lchown c:\\temp\\test.txt myusername administrators
+        salt '*' file.lchown c:\\temp\\test.txt myusername
+        salt '*' file.lchown c:\\temp\\test.txt myusername pgroup=administrators
     '''
-    return chown(path, user, group, follow_symlinks=False)
+    if group:
+        func_name = '{}.lchown'.format(__virtualname__)
+        if __opts__.get('fun', '') == func_name:
+            log.info('The group parameter has no effect when using {} on Windows systems; see function docs for details.', func_name)
+        log.debug('win_file.py {} Ignoring the group parameter for {}', func_name, path)
+        group = None
+
+    return chown(path, user, group, pgroup, follow_symlinks=False)
 
 
-def chown(path, user, group=None, follow_symlinks=True):
+def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     '''
     Chown a file, pass the file the desired user and group
 
-    Under Windows, if `group` is specified, this will set the rarely used
-    primary group of a file.  This generally has no bearing on permissions and
-    is most commonly used to provide Unix compatibility (e.g. Services For Unix,
-    NFS services). Because of this, the group parameter is optional.
+    Under Windows, the group parameter will be ignored.
+
+    This is because while files in Windows do have a 'primary group'
+    property, this is rarely used.  It generally has no bearing on
+    permissions unless intentionally configured and is most commonly used to
+    provide Unix compatibility (e.g. Services For Unix, NFS services).
+
+    If you do want to change the 'primary group' property and understand the
+    implications, pass the Windows only parameter, pgroup, instead.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.chown c:\\temp\\test.txt myusername administrators
+        salt '*' file.chown c:\\temp\\test.txt myusername
+        salt '*' file.chown c:\\temp\\test.txt myusername pgroup=administrators
     '''
+    # the group parameter is not used; only provided for API compatibility
+    if group:
+        func_name = '{}.chown'.format(__virtualname__)
+        if __opts__.get('fun', '') == func_name:
+            log.info('The group parameter has no effect when using {} on Windows systems; see function docs for details.', func_name)
+        log.debug('win_file.py {} Ignoring the group parameter for {}', func_name, path)
+        group = None
+
     err = ''
     # get SID object for user
     try:
@@ -396,10 +509,10 @@ def chown(path, user, group=None, follow_symlinks=True):
     except pywinerror:
         err += 'User does not exist\n'
 
-    if group:
+    if pgroup:
         # get SID object for group
         try:
-            groupSID, domainName, objectType = win32security.LookupAccountName(None, group)
+            groupSID, domainName, objectType = win32security.LookupAccountName(None, pgroup)
         except pywinerror:
             err += 'Group does not exist\n'
     else:
@@ -413,7 +526,7 @@ def chown(path, user, group=None, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    if group:
+    if pgroup:
         # set owner and group
         win32security.SetNamedSecurityInfo(
             path,
@@ -439,19 +552,22 @@ def chown(path, user, group=None, follow_symlinks=True):
     return None
 
 
-def chgrp(path, group):
+def chpgrp(path, group):
     '''
     Change the group of a file
 
-    Under Windows, this will set the rarely used primary group of a file. This
-    generally has no bearing on permissions and is most commonly used to provide
-    Unix compatibility (e.g. Services For Unix, NFS services).
+    Under Windows, this will set the rarely used primary group of a file.
+    This generally has no bearing on permissions unless intentionally
+    configured and is most commonly used to provide Unix compatibility (e.g.
+    Services For Unix, NFS services).
+
+    Ensure you know what you are doing before using this function.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.chgrp c:\\temp\\test.txt administrators
+        salt '*' file.chpgrp c:\\temp\\test.txt administrators
     '''
     err = ''
     # get SID object for group
@@ -468,6 +584,39 @@ def chgrp(path, group):
     # set group
     securityInfo = win32security.GROUP_SECURITY_INFORMATION
     win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, securityInfo, None, groupSID, None, None)
+    return None
+
+
+def chgrp(path, group):
+    '''
+    Change the group of a file
+
+    Under Windows, this will do nothing.
+
+    While a file in Windows does have a 'primary group', this rarely used
+    attribute generally has no bearing on permissions unless intentionally
+    configured and is only used to support Unix compatibility features (e.g.
+    Services For Unix, NFS services).
+
+    Salt, therefore, remaps this function to do nothing while still being
+    compatible with *nix behaviour. When managing Windows systems,
+    this function is superfluous and will generate an info level log entry if
+    used directly.
+
+    If you do actually want to set the 'primary group' of a file, use `file
+    .chpgrp`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.chpgrp c:\\temp\\test.txt administrators
+    '''
+    func_name = '{}.chgrp'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function {} should not be used on Windows systems; see function docs for details.', func_name)
+    log.debug('win_file.py {} Doing nothing for {}', func_name, path)
+
     return None
 
 
