@@ -865,8 +865,6 @@ def is_link(path):
     '''
     Check if the path is a symlink
 
-    Specifically, this checks to see
-
     CLI Example:
 
     .. code-block:: bash
