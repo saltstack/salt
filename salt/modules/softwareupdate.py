@@ -7,6 +7,15 @@ Support for the softwareupdate command on MacOS.
 # Import python libs
 import re
 
+__virtualname__ = softwareupdate
+
+
+def __virtual__():
+    '''
+    Only for MacOS
+    '''
+    return __virtualname__ if __grains__['os'] == 'MacOS' else False
+
 
 def _get_upgradable():
     '''
