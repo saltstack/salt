@@ -712,7 +712,7 @@ def destroy(name, stop=True):
         salt '*' lxc.destroy name [stop=(True|False)]
     '''
     if stop:
-        _change_state('lxc-stop', name, 'stopped')
+        _change_state('lxc-stop -k', name, 'stopped')
     return _change_state('lxc-destroy', name, None)
 
 
