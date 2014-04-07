@@ -354,3 +354,28 @@ def unmounted(name,
                     ret['changes']['persist'] = 'purged'
 
     return ret
+
+
+def mod_watch(name, **kwargs):
+    '''
+    The mounted watcher, called to invoke the watch command.
+
+    name
+        The name of the mount point
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if kwargs['sfun'] == 'mounted':
+        out = __salt__['mount.remount'](name, kwargs['device'], False, kwargs['fstype'], kwargs['opts'])
+        if out:
+            ret['comment'] = '{0} remounted'.format(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = '{0} failed to remount: {1}'.format(name, out)
+    else:
+        ret['comment'] = 'Watch not supported in {1} at this time'.format(kwargs['sfun'])
+    return ret
