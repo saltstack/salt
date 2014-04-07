@@ -7,35 +7,34 @@ Support for the softwareupdate command on MacOS.
 # Import python libs
 import re
 
-# Import salt libs
-import salt.utils
-
 
 def _get_upgradable():
     '''
     Utility function to get upgradable packages.
-    
+
     Sample return date:
     { 'updatename': '1.2.3-45', ... }
     '''
-    
     cmd = 'softwareupdate --list'
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
-    
+
+    # rexp parses lines that look like the following:
+    #    * Safari6.1.2MountainLion-6.1.2
+    #    Safari (6.1.2), 51679K [recommended]
     rexp = re.compile('(?m)^   [*|-] '
-                      '([^ ].*)[\r\n].*\(([^\)]+)')
-    
+                      r'([^ ].*)[\r\n].*\(([^\)]+)')
+
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
-    
+
     upgrades = rexp.findall(out)
-    
+
     ret = {}
     for line in upgrades:
         name = _get(line, 'name')
         version_num = _get(line, 'version')
         ret[name] = version_num
-    
+
     return ret
 
 
@@ -51,6 +50,7 @@ def list_upgrades():
     '''
 
     return _get_upgradable()
+
 
 def ignore(*updates):
     '''
@@ -71,7 +71,7 @@ def ignore(*updates):
         return ''
 
     for name in updates:
-        cmd = [ 'softwareupdate', '--ignore', name ]
+        cmd = ['softwareupdate', '--ignore', name]
         __salt__['cmd.run_stdout'](cmd, python_shell=False,
                                       output_loglevel='debug')
 
@@ -96,9 +96,13 @@ def list_ignored():
     cmd = 'softwareupdate --list --ignore'
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
 
+    # rep parses lines that look like the following:
+    #     "Safari6.1.2MountainLion-6.1.2",
+    # or:
+    #     Safari6.1.2MountainLion-6.1.2
     rexp = re.compile('(?m)^    ["]?'
-                      '([^,|\s|"].*[^"])[,|"]')
-    
+                      r'([^,|\s|"].*[^"])[,|"]')
+
     ignored_updates = rexp.findall(out)
 
     if ignored_updates:
@@ -119,24 +123,22 @@ def reset_ignored():
 
        salt '*' softwareupdate.reset_ignored
     '''
-    cmd = [ 'softwareupdate', '--reset-ignored']
+    cmd = 'softwareupdate', '--reset-ignored'
     ignored_updates = list_ignored()
 
-
     if ignored_updates:
-        __salt__['cmd.run_stdout'](cmd, python_shell=False,
-                                   output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
         ret = ignored_updates
     else:
         ret = None
 
     return ret
 
-        
+
 def schedule(*status):
     '''
     Decide if automatic checking for upgrades should be on or off.
-    If no argumentsare given it will return the current status. 
+    If no argumentsare given it will return the current status.
     Appaend on or off to change the status.
 
     Return values:
@@ -168,13 +170,14 @@ def schedule(*status):
     elif current_status == 'on':
         return True
 
+
 def upgrade():
     '''
     Installs all available upgrades.
 
     Return values:
     - ``True``: The update was installed.
-    - ``False``: The update was not installed.    
+    - ``False``: The update was not installed.
 
     CLI Example:
 
@@ -185,7 +188,7 @@ def upgrade():
     ret = {}
 
     available_upgrades = list_upgrades()
-    cmd = [ 'softwareupdate --install --all' ]
+    cmd = 'softwareupdate --install --all'
 
     __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
 
@@ -196,8 +199,9 @@ def upgrade():
             ret[name] = True
         else:
             ret[name] = False
-    
+
     return ret
+
 
 def install(*updates):
     '''
@@ -223,7 +227,7 @@ def install(*updates):
     avaliable_upgrades = list_upgrades()
 
     for name in updates:
-        cmd = [ 'softwareupdate', '--install', name ]
+        cmd = ['softwareupdate', '--install', name]
         __salt__['cmd.run_stdout'](cmd, python_shell=False,
                                       output_loglevel='debug')
 
@@ -236,13 +240,14 @@ def install(*updates):
             ret[name] = True
         else:
             ret[name] = False
-    
+
     return ret
+
 
 def upgrade_available(update):
     '''
     Check whether or not an upgrade is available with a given name.
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -251,4 +256,3 @@ def upgrade_available(update):
     '''
 
     return update in list_upgrades()
-
