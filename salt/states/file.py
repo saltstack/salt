@@ -942,6 +942,7 @@ def managed(name,
             create=True,
             contents=None,
             contents_pillar=None,
+            contents_pillar_newline=True,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1109,6 +1110,13 @@ def managed(name,
             shows how to do multiline string in YAML. The key is followed by a
             pipe character, and the mutliline string is indented two more
             spaces.
+
+    contents_pillar_newline
+        .. versionadded:: Helium
+
+        When using content_pillar, a newline is inserted into the data gathered
+        from pillar. When loading some data this newline is better left off.
+        Setting contents_pillar_newline to False will omit this newline.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1161,6 +1169,10 @@ def managed(name,
     # If contents_pillar was used, get the pillar data
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
+        if contents_pillar_newline:
+            # Make sure file ends in newline
+            if not contents.endswith('\n'):
+                contents += '\n'
 
     if not replace and os.path.exists(name):
        # Check and set the permissions if necessary
