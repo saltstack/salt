@@ -59,7 +59,7 @@ class NovaServer(object):
         return self.__dict__
 
 
-def get_info(dict_, key, value):
+def get_entry(dict_, key, value):
     for entry in dict_:
         if entry[key] == value:
             return entry
@@ -123,22 +123,23 @@ class SaltNova(object):
 
         self.conn = client.Client(**self.kwargs)
         try:
-            self.conn.authenicate()
+            self.conn.client.authenticate()
         except novaclient.exceptions.AmbiguousEndpoints:
             raise SaltCloudSystemExit(
                 "Nova provider requires a 'region_name' to be specified"
             )
 
         self.kwargs['auth_token'] = self.conn.client.auth_token
+        self.service_catalog = self.conn.client.service_catalog.catalog['access']['serviceCatalog']
 
         if not region_name is None:
-            servers_endpoints = get_entry(self.conn.client.serviceCatalog.catalog, 'type', 'compute')
-            kwargs['bypass_url'] = get_entry(servers_endpoints, 'region', region_name.upper())
+            servers_endpoints = get_entry(self.service_catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry(servers_endpoints, 'region', region_name.upper())['publicURL']
 
         self.compute_conn = client.Client(**self.kwargs)
 
         if not region_name is None:
-            servers_endpoints = get_entry(self.conn.client.serviceCatalog.catalog, 'type', 'volume')
+            servers_endpoints = get_entry(self.service_catalog, 'type', 'volume')['endpoints']
             kwargs['bypass_url'] = get_entry(servers_endpoints, 'region', region_name.upper())
 
         self.kwargs['service_type'] = 'volume'

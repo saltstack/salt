@@ -176,9 +176,6 @@ def get_conn():
     '''
     Return a conn object for the passed VM data
     '''
-    if not conn is False:
-        return conn
-
     vm_ = get_configured_provider()
 
     kwargs = vm_.copy()  # pylint: disable=E1103
