@@ -148,7 +148,6 @@ avail_locations = namespaced_function(avail_locations, globals())
 script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
 reboot = namespaced_function(reboot, globals())
-conn = False
 
 
 # Only load in this module is the OPENSTACK configurations are in place
