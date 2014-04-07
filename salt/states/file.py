@@ -722,7 +722,7 @@ def symlink(
 
     if salt.utils.is_windows():
         if group is not None:
-            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
         group = user
 
     if group is None:
@@ -1132,7 +1132,7 @@ def managed(name,
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
-            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
         group = user
     ret = {'changes': {},
            'comment': '',
@@ -1354,7 +1354,7 @@ def directory(name,
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
-            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
         group = user
 
     if 'mode' in kwargs and not dir_mode:
@@ -1628,7 +1628,7 @@ def recurse(name,
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
-            log.warning('The group arg for {} has been ignored as this is a Windows system.', name)
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
         group = user
     ret = {
         'name': name,
