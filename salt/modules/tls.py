@@ -59,8 +59,10 @@ def _new_serial(ca_name, CN):
     CN
         common name in the request
     '''
+    opts_hash_type = __opts__.get('hash_type', 'md5')
+    hash_type = getattr(hashlib, opts_hash_type) 
     hashnum = int(
-            hashlib.md5(
+            hashtype(
                 '{0}_{1}_{2}'.format(
                     ca_name,
                     CN,

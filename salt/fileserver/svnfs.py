@@ -133,7 +133,8 @@ def init():
             # mountpoint not specified
             pass
 
-        repo_hash = hashlib.md5(repo_uri).hexdigest()
+        hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+        repo_hash = hash_type(repo_uri).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)

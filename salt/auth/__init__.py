@@ -127,10 +127,11 @@ class LoadAuth(object):
         if ret is False:
             return {}
         fstr = '{0}.auth'.format(load['eauth'])
-        tok = str(hashlib.md5(os.urandom(512)).hexdigest())
+        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(self.opts['token_dir'], tok)
         while os.path.isfile(t_path):
-            tok = hashlib.md5(os.urandom(512)).hexdigest()
+            tok = str(hash_type(os.urandom(512)).hexdigest())
             t_path = os.path.join(self.opts['token_dir'], tok)
         fcall = salt.utils.format_call(self.auth[fstr], load)
         tdata = {'start': time.time(),
