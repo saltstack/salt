@@ -728,7 +728,7 @@ def port(container, private_port, *args, **kwargs):
     try:
         port_info = client.port(
             _get_container_infos(container)['id'],
-            port)
+            private_port)
         valid(status, id=container, out=port_info)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
