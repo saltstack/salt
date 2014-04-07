@@ -484,7 +484,8 @@ SETUP_KWARGS = {'name': NAME,
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
                                     'virt/*.jinja',
-                                    'git/*'
+                                    'git/*',
+                                    'lxc/*',
                                     ],
                                  'salt.daemons.flo': [
                                     '*.flo'
