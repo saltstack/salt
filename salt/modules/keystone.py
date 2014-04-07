@@ -952,7 +952,6 @@ def _item_list(profile=None, **connection_args):
         #        }
     return ret
 
-
     #The following is a list of functions that need to be incorporated in the
     #keystone module. This list should be updated as functions are added.
     #
