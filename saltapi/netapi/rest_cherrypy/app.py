@@ -54,6 +54,10 @@ A REST API for Salt
         will be sent in the clear!
 
         .. versionadded:: 0.8.3
+    webhook_url : /hook
+        Configure the URL endpoint for the :py:class:`Webhook` entry point.
+
+        .. versionadded:: 0.8.4.1
     thread_pool : ``100``
         The number of worker threads to start up in the pool.
 
@@ -1422,7 +1426,6 @@ class API(object):
         'run': Run,
         'jobs': Jobs,
         'events': Events,
-        'hook': Webhook,
         'stats': Stats,
     }
 
@@ -1432,6 +1435,9 @@ class API(object):
 
         for url, cls in self.url_map.items():
             setattr(self, url, cls())
+
+        # Allow the Webhook URL to be overridden from the conf.
+        setattr(self, self.apiopts.get('webhook_url', 'hook').lstrip('/'), Webhook())
 
         if 'app' in self.apiopts:
             setattr(self, self.apiopts.get('app_path', 'app').lstrip('/'), App())
