@@ -8,6 +8,7 @@ HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
     import novaclient.auth_plugin
+    import novaclient.exceptions
     HAS_NOVA = True
 except ImportError:
     pass
@@ -18,6 +19,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.cloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -58,6 +60,13 @@ class NovaServer(object):
         return self.__dict__
 
 
+def get_entry(dict_, key, value):
+    for entry in dict_:
+        if entry[key] == value:
+            return entry
+    raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+
+
 def sanatize_novaclient(kwargs):
     variables = (
         'username', 'api_key', 'project_id', 'auth_url', 'insecure',
@@ -80,14 +89,13 @@ class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
-
     def __init__(
         self,
         username,
         project_id,
         auth_url,
-        password=None,
         region_name=None,
+        password=None,
         os_auth_plugin=None,
         **kwargs
     ):
@@ -102,7 +110,7 @@ class SaltNova(object):
         self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
-        self.kwargs['service_type'] = 'volume'
+        self.kwargs['service_type'] = 'compute'
         if not os_auth_plugin is None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
@@ -114,10 +122,42 @@ class SaltNova(object):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        self.volume_conn = client.Client(**self.kwargs)
+        conn = client.Client(**self.kwargs)
+        try:
+            conn.client.authenticate()
+        except novaclient.exceptions.AmbiguousEndpoints:
+            raise SaltCloudSystemExit(
+                "Nova provider requires a 'region_name' to be specified"
+            )
 
-        self.kwargs['service_type'] = 'compute'
+        self.kwargs['auth_token'] = conn.client.auth_token
+        self.catalog = \
+            conn.client.service_catalog.catalog['access']['serviceCatalog']
+
+        if not region_name is None:
+            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry(
+                servers_endpoints,
+                'region',
+                region_name.upper()
+            )['publicURL']
+
         self.compute_conn = client.Client(**self.kwargs)
+
+        if not region_name is None:
+            servers_endpoints = get_entry(
+                self.catalog,
+                'type',
+                'volume'
+            )['endpoints']
+            kwargs['bypass_url'] = get_entry(
+                servers_endpoints,
+                'region',
+                region_name.upper()
+            )['publicURL']
+
+        self.kwargs['service_type'] = 'volume'
+        self.volume_conn = client.Client(**self.kwargs)
 
     def server_show_libcloud(self, uuid):
         '''
