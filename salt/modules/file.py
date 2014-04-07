@@ -46,6 +46,10 @@ import salt._compat
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'makedirs_': 'makedirs'
+}
+
 HASHES = [
             ['sha512', 128],
             ['sha384', 96],
@@ -81,6 +85,9 @@ def __clean_tmp(sfn):
 
 
 def _error(ret, err_msg):
+    '''
+    Common function for setting error information for return dicts
+    '''
     ret['result'] = False
     ret['comment'] = err_msg
     return ret
@@ -138,7 +145,7 @@ def gid_to_group(gid):
 
     try:
         return grp.getgrgid(gid).gr_name
-    except (KeyError, NameError) as e:
+    except (KeyError, NameError):
         return ''
 
 
@@ -206,7 +213,7 @@ def uid_to_user(uid):
     '''
     try:
         return pwd.getpwuid(uid).pw_name
-    except (KeyError, NameError) as e:
+    except (KeyError, NameError):
         return ''
 
 
@@ -394,7 +401,7 @@ def get_hash(path, form='md5', chunk_size=4096):
     return salt.utils.get_hash(path, form, chunk_size)
 
 
-def check_hash(path, hash):
+def check_hash(path, file_hash):
     '''
     Check if a file matches the given hash string
 
@@ -413,12 +420,12 @@ def check_hash(path, hash):
 
         salt '*' file.check_hash /etc/fstab md5:<md5sum>
     '''
-    hash_parts = hash.split(':', 1)
+    hash_parts = file_hash.split(':', 1)
     if len(hash_parts) != 2:
         # Support "=" for backward compatibility.
-        hash_parts = hash.split('=', 1)
+        hash_parts = file_hash.split('=', 1)
         if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: {0!r}'.format(hash))
+            raise ValueError('Bad hash format: {0!r}'.format(file_hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -1401,12 +1408,12 @@ def contains_regex_multiline(path, regex):
         return False
 
 
-def contains_glob(path, glob):
+def contains_glob(path, glob_expr):
     '''
     .. deprecated:: 0.17.0
        Use :func:`search` instead.
 
-    Return True if the given glob matches a string in the named file
+    Return ``True`` if the given glob matches a string in the named file
 
     CLI Example:
 
@@ -1420,7 +1427,7 @@ def contains_glob(path, glob):
     try:
         with salt.utils.filebuffer.BufferedReader(path) as breader:
             for chunk in breader:
-                if fnmatch.fnmatch(chunk, glob):
+                if fnmatch.fnmatch(chunk, glob_expr):
                     return True
             return False
     except (IOError, OSError):
@@ -1595,7 +1602,7 @@ def truncate(path, length):
     seek_fh.close()
 
 
-def link(src, link):
+def link(src, path):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
@@ -1611,14 +1618,14 @@ def link(src, link):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
-        os.link(src, link)
+        os.link(src, path)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create {0!r}'.format(link))
+        raise CommandExecutionError('Could not create {0!r}'.format(path))
     return False
 
 
-def symlink(src, link):
+def symlink(src, path):
     '''
     Create a symbolic link to a file
 
@@ -1632,10 +1639,10 @@ def symlink(src, link):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
-        os.symlink(src, link)
+        os.symlink(src, path)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create {0!r}'.format(link))
+        raise CommandExecutionError('Could not create {0!r}'.format(path))
     return False
 
 
@@ -2012,8 +2019,8 @@ def get_selinux_context(path):
 def set_selinux_context(path,
                         user=None,
                         role=None,
-                        type=None,
-                        range=None):
+                        type=None,    # pylint: disable=W0622
+                        range=None):  # pylint: disable=W0622
     '''
     Set a specific SELinux label on a given path
 
@@ -2072,7 +2079,7 @@ def source_list(source, source_hash, saltenv):
                 )
                 env_splitter = '?env='
             try:
-                sname, senv = single.split(env_splitter)
+                _, senv = single.split(env_splitter)
             except ValueError:
                 continue
             else:
@@ -2387,7 +2394,6 @@ def check_managed(
         group,
         mode,
         template,
-        makedirs,
         context,
         defaults,
         saltenv,
@@ -2588,10 +2594,12 @@ def manage_file(name,
                 mode,
                 saltenv,
                 backup,
-                template=None,
+                makedirs=False,
+                template=None,   # pylint: disable=W0613
                 show_diff=True,
                 contents=None,
-                dir_mode=None):
+                dir_mode=None,
+                mkdirs=False):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2703,7 +2711,7 @@ def manage_file(name,
                         ret, 'Failed to commit change, permission error')
             __clean_tmp(tmp)
 
-        ret, perms = check_perms(name, ret, user, group, mode)
+        ret, _ = check_perms(name, ret, user, group, mode)
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(name)
@@ -2735,30 +2743,33 @@ def manage_file(name,
                                                dl_sum)
                     ret['result'] = False
                     return ret
-
             if not os.path.isdir(os.path.dirname(name)):
-                if makedirs:
+                if makedirs and mkdirs:
                     if dir_mode is None and mode is not None:
                         # Add execute bit to each nonzero digit in the mode, if
                         # dir_mode was not specified. Otherwise, any
-                        # directories created with makedirs() below can't be
+                        # directories created with makedirs_() below can't be
                         # listed via a shell.
                         mode_list = [x for x in str(mode)][-3:]
                         for idx in xrange(len(mode_list)):
                             if mode_list[idx] != '0':
                                 mode_list[idx] = str(int(mode_list[idx]) | 1)
                         dir_mode = ''.join(mode_list)
-                    makedirs(name, user=user, group=group, mode=dir_mode)
+                    makedirs_(name, user=user, group=group, mode=dir_mode)
                 else:
                     __clean_tmp(sfn)
+                    # No changes actually made
+                    ret['changes'].pop('diff', None)
                     return _error(ret, 'Parent directory not present')
         else:
             if not os.path.isdir(os.path.dirname(name)):
                 if makedirs:
-                    makedirs(name, user=user, group=group,
-                             mode=dir_mode or mode)
+                    makedirs_(name, user=user, group=group,
+                              mode=dir_mode or mode)
                 else:
                     __clean_tmp(sfn)
+                    # No changes actually made
+                    ret['changes'].pop('diff', None)
                     return _error(ret, 'Parent directory not present')
 
             # Create the file, user rw-only if mode will be set to prevent
@@ -2815,7 +2826,7 @@ def manage_file(name,
             os.umask(mask)
             # Calculate the mode value that results from the umask
             mode = oct((0777 ^ mask) & 0666)
-        ret, perms = check_perms(name, ret, user, group, mode)
+        ret, _ = check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
             ret['comment'] = 'File ' + name + ' updated'
@@ -2850,10 +2861,10 @@ def mkdir(dir_path,
         makedirs_perms(directory, user, group, mode)
 
 
-def makedirs(path,
-             user=None,
-             group=None,
-             mode=None):
+def makedirs_(path,
+              user=None,
+              group=None,
+              mode=None):
     '''
     Ensure that the directory containing this path is available.
 
@@ -3178,9 +3189,7 @@ def mknod(name,
       salt '*' file.nknod /dev/fifo p
     '''
     ret = False
-    makedirs(name,
-             user,
-             group)
+    makedirs_(name, user, group)
     if ntype == 'c':
         ret = mknod_chrdev(name,
                            major,

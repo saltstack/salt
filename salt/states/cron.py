@@ -451,7 +451,6 @@ def file(name,
                                              group,
                                              mode,
                                              template,
-                                             False,  # makedirs = False
                                              context,
                                              defaults,
                                              __env__,

@@ -1163,12 +1163,8 @@ def managed(name,
         contents = __salt__['pillar.get'](contents_pillar)
 
     if not replace and os.path.exists(name):
-        # Check and set the permissions if necessary
-        ret, perms = __salt__['file.check_perms'](name,
-                                                  ret,
-                                                  user,
-                                                  group,
-                                                  mode)
+       # Check and set the permissions if necessary
+        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -1191,7 +1187,6 @@ def managed(name,
                 group,
                 mode,
                 template,
-                makedirs,
                 context,
                 defaults,
                 __env__,
@@ -1246,10 +1241,12 @@ def managed(name,
                 mode,
                 __env__,
                 backup,
+                makedirs,
                 template,
                 show_diff,
                 contents,
-                dir_mode
+                dir_mode,
+                makedirs
             )
         except Exception as exc:
             ret['changes'] = {}
@@ -2924,7 +2921,7 @@ def copy(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            os.makedirs(dname)
+            __salt__['file.makedirs'](dname)
         else:
             return _error(
                 ret,
@@ -3010,7 +3007,7 @@ def rename(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            os.makedirs(dname)
+            __salt__['file.makedirs'](dname)
         else:
             return _error(
                 ret,
@@ -3127,6 +3124,7 @@ def serialize(name,
               mode=None,
               env=None,
               backup='',
+              makedirs=False,
               show_diff=True,
               create=True,
               **kwargs):
@@ -3160,6 +3158,11 @@ def serialize(name,
 
     backup
         Overrides the default backup mode for this specific file.
+
+    makedirs
+        Create parent directories for destination file.
+
+        .. versionadded:: 2014.1.2
 
     show_diff
         If set to False, the diff will not be shown.
@@ -3259,6 +3262,7 @@ def serialize(name,
                                         mode=mode,
                                         saltenv=__env__,
                                         backup=backup,
+                                        makedirs=makedirs,
                                         template=None,
                                         show_diff=show_diff,
                                         contents=contents)
