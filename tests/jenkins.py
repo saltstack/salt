@@ -392,14 +392,12 @@ def run(opts):
     if opts.salt_url is not None:
         # Let's find out if the cloned repository if checked out from the
         # desired repository
-        proc = NonBlockingPopen(
+        proc = subprocess.Popen(
             'salt -t 100 {vm_name} --out json git.remote_get /testing'.format(vm_name=vm_name),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            stream_stds=False
         )
-        proc.poll_and_read_until_finish()
         stdout, _ = proc.communicate()
         sys.stdout.flush()
 
@@ -430,14 +428,12 @@ def run(opts):
     if opts.commit is not None:
         # Let's find out if the cloned repository if checked out at the desired
         # commit
-        proc = NonBlockingPopen(
+        proc = subprocess.Popen(
             'salt -t 100 {vm_name} --out json git.revision /testing'.format(vm_name=vm_name),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            stream_stds=False
         )
-        proc.poll_and_read_until_finish()
         stdout, _ = proc.communicate()
         sys.stdout.flush()
 
