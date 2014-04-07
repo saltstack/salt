@@ -637,7 +637,7 @@ def start(name, restart=False):
     return ret
 
 
-def stop(name):
+def stop(name, kill=True):
     '''
     Stop the named container.
 
@@ -647,6 +647,9 @@ def stop(name):
 
         salt '*' lxc.stop name
     '''
+    cmd = 'lxc-stop'
+    if kill:
+        cmd += ' -k'
     ret = {'name': name,
            'changes': {},
            'result': True,
