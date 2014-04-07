@@ -554,6 +554,57 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
+def sls_id(
+        id_,
+        mods,
+        saltenv,
+        test=None,
+        queue=False,
+        **kwargs):
+    '''
+    Call a single ID from the named module(s) and handle all requisites
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls_id apache http
+    '''
+    if queue:
+        _wait(kwargs.get('__pub_jid'))
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = __opts__.get('test', None)
+    st_ = salt.state.HighState(opts)
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({saltenv: mods})
+    finally:
+        st_.pop_active()
+    errors += st_.state.verify_high(high_)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    chunks = st_.state.compile_high_data(high_)
+    for chunk in chunks:
+        if chunk.get('__id__', '') == id_:
+            ret = st_.state.call_chunk(chunk, {}, chunks)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
+    return ret
+
+
 def show_low_sls(mods,
                  saltenv='base',
                  test=None,
