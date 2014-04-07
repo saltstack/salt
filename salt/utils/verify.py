@@ -226,32 +226,32 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                 else:
                     # chown the file for the new user
                     os.chown(dir_, uid, gid)
-            for root, dirs, files in os.walk(dir_):
-                if 'jobs' in root:
-                    continue
-                for name in files:
-                    if name.startswith('.'):
-                        continue
-                    path = os.path.join(root, name)
-                    try:
+            for subdir in [a for a in os.listdir(dir_) if 'jobs' not in a]:
+                fsubdir = os.path.join(dir_, subdir)
+                for root, dirs, files in os.walk(fsubdir):
+                    for name in files:
+                        if name.startswith('.'):
+                            continue
+                        path = os.path.join(root, name)
+                        try:
+                            fmode = os.stat(path)
+                        except (IOError, OSError):
+                            pass
+                        if fmode.st_uid != uid or fmode.st_gid != gid:
+                            if permissive and fmode.st_gid in groups:
+                                pass
+                            else:
+                                # chown the file for the new user
+                                os.chown(path, uid, gid)
+                    for name in dirs:
+                        path = os.path.join(root, name)
                         fmode = os.stat(path)
-                    except (IOError, OSError):
-                        pass
-                    if fmode.st_uid != uid or fmode.st_gid != gid:
-                        if permissive and fmode.st_gid in groups:
-                            pass
-                        else:
-                            # chown the file for the new user
-                            os.chown(path, uid, gid)
-                for name in dirs:
-                    path = os.path.join(root, name)
-                    fmode = os.stat(path)
-                    if fmode.st_uid != uid or fmode.st_gid != gid:
-                        if permissive and fmode.st_gid in groups:
-                            pass
-                        else:
-                            # chown the file for the new user
-                            os.chown(path, uid, gid)
+                        if fmode.st_uid != uid or fmode.st_gid != gid:
+                            if permissive and fmode.st_gid in groups:
+                                pass
+                            else:
+                                # chown the file for the new user
+                                os.chown(path, uid, gid)
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
