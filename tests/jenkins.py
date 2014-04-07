@@ -487,7 +487,7 @@ def run(opts):
     #    stream_stds=True
     )
     #proc.poll_and_read_until_finish()
-    stdout, stderr = proc.communicate()
+    stdout, _ = proc.communicate()
 
     if stdout:
         print(stdout)
@@ -556,7 +556,7 @@ def parse():
         help='The sls file to execute to prepare the system')
     parser.add_option(
         '--sls',
-        default='testrun',
+        default='testrun-no-deps',
         help='The final sls file to execute')
     parser.add_option(
         '--pillar',
