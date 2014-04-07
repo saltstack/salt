@@ -331,7 +331,6 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     options
         Template specific options to pass to the lxc-create command.
     '''
-
     if exists(name):
         return {'created': False, 'error': 'container already exists'}
 
@@ -351,7 +350,15 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     fstype = select('fstype')
     vgname = select('vgname')
     size = select('size', '1G')
+    image = select('image')
 
+    if image:
+        img_tar = __salt__['cp.cache_file'](image)
+        template = os.path.join(
+                os.path.dirname(__file__),
+                'lxc',
+                'salt_tarball')
+        profile['imgtar'] = img_tar
     if config:
         cmd += ' -f {0}'.format(config)
     if template:
