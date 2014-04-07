@@ -58,6 +58,13 @@ class NovaServer(object):
         return self.__dict__
 
 
+def get_info(dict_, key, value):
+    for entry in dict_:
+        if entry[key] == value:
+            return entry
+    raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+
+
 def sanatize_novaclient(kwargs):
     variables = (
         'username', 'api_key', 'project_id', 'auth_url', 'insecure',
@@ -80,7 +87,6 @@ class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
-
     def __init__(
         self,
         username,
@@ -102,7 +108,7 @@ class SaltNova(object):
         self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
-        self.kwargs['service_type'] = 'volume'
+        self.kwargs['service_type'] = 'compute'
         if not os_auth_plugin is None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
@@ -114,10 +120,24 @@ class SaltNova(object):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        self.volume_conn = client.Client(**self.kwargs)
+        if not hasattr(self.conn.client, 'service_catalog':
+            self.conn = client.Client(**self.kwargs)
+            self.conn.authenicate()
 
-        self.kwargs['service_type'] = 'compute'
+        self.kwargs['auth_token'] = self.conn.client.auth_token
+
+        if not region_name is None:
+            servers_endpoints = get_entry(self.conn.client.serviceCatalog.catalog, 'type', 'compute')
+            kwargs['bypass_url'] = get_entry(servers_endpoints, 'region', region_name.upper())
+
         self.compute_conn = client.Client(**self.kwargs)
+
+        if not region_name is None:
+            servers_endpoints = get_entry(self.conn.client.serviceCatalog.catalog, 'type', 'volume')
+            kwargs['bypass_url'] = get_entry(servers_endpoints, 'region', region_name.upper())
+
+        self.kwargs['service_type'] = 'volume'
+        self.volume_conn = client.Client(**self.kwargs)
 
     def server_show_libcloud(self, uuid):
         '''

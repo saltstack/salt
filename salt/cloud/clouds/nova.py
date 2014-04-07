@@ -148,6 +148,7 @@ avail_locations = namespaced_function(avail_locations, globals())
 script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
 reboot = namespaced_function(reboot, globals())
+conn = False
 
 
 # Only load in this module is the OPENSTACK configurations are in place
@@ -175,6 +176,9 @@ def get_conn():
     '''
     Return a conn object for the passed VM data
     '''
+    if not conn is False:
+        return conn
+
     vm_ = get_configured_provider()
 
     kwargs = vm_.copy()  # pylint: disable=E1103
@@ -187,7 +191,9 @@ def get_conn():
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
 
-    return nova.SaltNova(**kwargs)
+    conn = nova.SaltNova(**kwargs)
+
+    return conn
 
 
 def get_image(conn, vm_):
