@@ -624,6 +624,17 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
+    Under Windows, `gid` will equal `uid` and `group` will equal `user`.
+
+    While a file in Windows does have a 'primary group', this rarely used
+    attribute generally has no bearing on permissions unless intentionally
+    configured and is only used to support Unix compatibility features (e.g.
+    Services For Unix, NFS services).
+
+    Salt, therefore, remaps these properties to keep some kind of
+    compatibility with *nix behaviour. If the 'primary group' is required, it
+    can be accessed in the `pgroup` and `pgid` properties.
+
     CLI Example:
 
     .. code-block:: bash
@@ -639,9 +650,12 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['inode'] = pstat.st_ino
     # don't need to resolve symlinks again because we've already done that
     ret['uid'] = get_uid(path, follow_symlinks=False)
-    ret['gid'] = get_gid(path, follow_symlinks=False)
-    ret['group'] = gid_to_group(ret['gid'])
+    # maintain the illusion that group is the same as user as states need this
+    ret['gid'] = ret['uid']
     ret['user'] = uid_to_user(ret['uid'])
+    ret['group'] = ret['user']
+    ret['pgid'] = get_pgid(path, follow_symlinks)
+    ret['pgroup'] = gid_to_group(ret['pgid'])
     ret['atime'] = pstat.st_atime
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
