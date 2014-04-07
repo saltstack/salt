@@ -287,7 +287,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'salt_transport': 'zeromq',
-    'auth_timeout': 3,
+    'auth_timeout': 60,
 }
 
 DEFAULT_MASTER_OPTS = {
