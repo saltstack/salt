@@ -229,14 +229,27 @@ class TestSaltEvent(TestCase):
     def test_event_nested_subs(self):
         '''Test nested event subscriptions do not drop events, issue #8580'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
+            # Since we now drop unrelated events to avoid memory leaks, see http://goo.gl/2n3L09 commit bcbc5340ef, the
+            # calls below will return None and will drop the unrelated events
             evt2 = me.get_event(tag='evt2')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt2, {'data': 'foo2'})
-            self.assertGotEvent(evt1, {'data': 'foo1'})
+            # This one will be None because we're dripping unrelated events
+            self.assertIsNone(evt1)
+
+            # Fire events again
+            me.fire_event({'data': 'foo3'}, 'evt3')
+            me.fire_event({'data': 'foo4'}, 'evt4')
+            # We not force unrelated pending events not to be dropped, so both of the event bellow work and are not
+            # None
+            evt2 = me.get_event(tag='evt4', use_pending=True)
+            evt1 = me.get_event(tag='evt3', use_pending=True)
+            self.assertGotEvent(evt2, {'data': 'foo4'})
+            self.assertGotEvent(evt1, {'data': 'foo3'})
 
     @expectedFailure
     def test_event_nested_sub_all(self):
