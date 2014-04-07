@@ -157,6 +157,9 @@ for comb in """
     json_jinja
     json_mako
     json_wempy
+    sls_jinja
+    sls_mako
+    sls_wempy
     """.strip().split():
 
     fmt, tmpl = comb.split('_')
