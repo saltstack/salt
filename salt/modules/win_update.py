@@ -199,7 +199,7 @@ class PyWinUpdater(object):
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False 
+            return False
             #if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
@@ -460,7 +460,7 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
     To list the actual updates by name, add 'verbose' to the call.
 
-    you can set the maximum number of retries to n in the search process by 
+    you can set the maximum number of retries to n in the search process by
     adding: retries=n
 
     various aspects of the updates can be included or excluded. this feature is
@@ -505,7 +505,7 @@ def download_updates(includes=None, retries=5, categories=None):
     '''
     Downloads all available updates, skipping those that require user interaction.
 
-    you can set the maximum number of retries to n in the search process by 
+    you can set the maximum number of retries to n in the search process by
     adding: retries=n
 
     various aspects of the updates can be included or excluded. this feature is
@@ -558,7 +558,7 @@ def install_updates(cached=None, includes=None, retries=5, categories=None):
 
     Add 'cached' to only install those updates which have already been downloaded.
 
-    you can set the maximum number of retries to n in the search process by 
+    you can set the maximum number of retries to n in the search process by
     adding: retries=n
 
     various aspects of the updates can be included or excluded. this feature is
