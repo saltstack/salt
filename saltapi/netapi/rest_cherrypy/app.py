@@ -1254,7 +1254,7 @@ class Webhook(object):
     A generic web hook entry point that fires an event on Salt's event bus
 
     External services can POST data to this URL to trigger an event in Salt.
-    For example, Jenkins-CI or Travis-CI, or GitHub web hooks.
+    For example, Amazon SNS, Jenkins-CI or Travis-CI, or GitHub web hooks.
 
     .. note:: Be mindful of security
 
@@ -1269,6 +1269,9 @@ class Webhook(object):
         selectively disabled for this URL. Follow best practices -- always use
         SSL, pass a secret key, configure the firewall to only allow traffic
         from a known source, etc.
+
+    The event data is taken from the request body. The
+    :mailheader:`Content-Type` header is respected for the payload.
 
     The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
     appended to the end. For example, a ``POST`` request sent to
