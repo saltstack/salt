@@ -174,7 +174,7 @@ class CloudSdist(sdist):
                     )
                     with open(deploy_path, 'w') as fp_:
                         fp_.write(req.read())
-                except (OSError, IOError), err:
+                except (OSError, IOError) as err:
                     log.error(
                         'Failed to write the updated script: {0}'.format(err)
                     )
@@ -394,10 +394,10 @@ class InstallLib(install_lib):
         out = self.get_outputs()
         chmod = []
 
-        for i, word in enumerate(inp):
+        for idx, inputfile in enumerate(inp):
             for executeable in executables:
-                if word.endswith(executeable):
-                    chmod.append(i)
+                if inputfile.endswith(executeable):
+                    chmod.append(idx)
         for idx in chmod:
             filename = out[idx]
             os.chmod(filename, 0755)
