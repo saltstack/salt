@@ -813,7 +813,7 @@ class LocalClient(Client):
                 return ret
             else:
                 opts_hash_type = self.opts.get('hash_type', 'md5')
-                hash_type = getattr(hashlib, opts_hash_type) 
+                hash_type = getattr(hashlib, opts_hash_type)
                 with salt.utils.fopen(path, 'rb') as ifile:
                     ret['hsum'] = hash_type(ifile.read()).hexdigest()
                 ret['hash_type'] = opts_hash_type

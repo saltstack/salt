@@ -60,7 +60,7 @@ structure::
     s3://<bucket name>/<environment>/<files>
 
 .. note:: This fileserver back-end requires the use of the MD5 hashing algorightm.
-    MD5 may not be compliant with all security policies. 
+    MD5 may not be compliant with all security policies.
 '''
 
 # Import python libs

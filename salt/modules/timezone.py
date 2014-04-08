@@ -157,10 +157,10 @@ def zone_compare(timezone):
 
     hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
     with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = hashtype(fp_.read()).hexdigest()
+        usrzone = hash_type(fp_.read()).hexdigest()
 
     with salt.utils.fopen(tzfile, 'r') as fp_:
-        etczone = hashtype(fp_.read()).hexdigest()
+        etczone = hash_type(fp_.read()).hexdigest()
 
     if usrzone == etczone:
         return True
