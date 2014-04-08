@@ -319,7 +319,7 @@ def run(opts):
     if opts.commit is not None:
         # Let's find out if the installed version matches the passed in pillar
         # information
-        print('Grabbing bootstrapped minion version information ... ')
+        sys.stdout.write('Grabbing bootstrapped minion version information ... ')
         sys.stdout.flush()
         proc = subprocess.Popen(
             'salt -t 100 {vm_name} --out json test.version'.format(vm_name=vm_name),
@@ -331,14 +331,14 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
+            print('\nFailed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
-            print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
+            print('\nFailed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -346,12 +346,13 @@ def run(opts):
 
         version_info = json.loads(stdout.strip())
         if not version_info[vm_name].endswith(opts.commit[:7]):
-            print('The boostrapped minion version commit does not match the desired commit:')
+            print('\nThe boostrapped minion version commit does not match the desired commit:')
             print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
+        print('matches!')
 
     # Run tests here
     cmd = (
@@ -392,7 +393,7 @@ def run(opts):
     if opts.salt_url is not None:
         # Let's find out if the cloned repository if checked out from the
         # desired repository
-        print('Grabbing the cloned repository remotes information ... ')
+        sys.stdout.write('Grabbing the cloned repository remotes information ... ')
         sys.stdout.flush()
 
         proc = subprocess.Popen(
@@ -406,14 +407,14 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('Failed to get the cloned repository remote. Exit code: {0}'.format(retcode))
+            print('\nFailed to get the cloned repository remote. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
-            print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
+            print('\nFailed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -421,17 +422,18 @@ def run(opts):
 
         remotes_info = json.loads(stdout.strip())
         if opts.salt_url not in remotes_info[vm_name]:
-            print('The cloned repository remote is not the desired one:')
+            print('\nThe cloned repository remote is not the desired one:')
             print(' {0!r} is not in {1}'.format(opts.salt_url, remotes_info))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
+        print('matches!')
 
     if opts.commit is not None:
         # Let's find out if the cloned repository if checked out at the desired
         # commit
-        print('Grabbing the cloned repository commit information ... ')
+        sys.stdout.write('Grabbing the cloned repository commit information ... ')
         sys.stdout.flush()
 
         proc = subprocess.Popen(
@@ -445,14 +447,14 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
+            print('\nFailed to get the cloned repository revision. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
-            print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
+            print('\nFailed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -460,12 +462,13 @@ def run(opts):
 
         revision_info = json.loads(stdout.strip())
         if revision_info[vm_name][7:] != opts.commit[7:]:
-            print('The cloned repository commit is not the desired one:')
+            print('\nThe cloned repository commit is not the desired one:')
             print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
+        print('matches!')
 
     # Run tests here
     cmd = (
