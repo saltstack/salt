@@ -306,7 +306,7 @@ def run(opts):
         print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
         if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(vm_name)
+            delete_vm(opts)
         sys.exit(retcode)
 
     print('VM Bootstrapped. Exit code: {0}'.format(retcode))
@@ -334,14 +334,14 @@ def run(opts):
             print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
         version_info = json.loads(stdout.strip())
@@ -350,7 +350,7 @@ def run(opts):
             print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
     # Run tests here
@@ -386,7 +386,7 @@ def run(opts):
         print('Failed to execute the preparation SLS file. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
         if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(vm_name)
+            delete_vm(opts)
         sys.exit(retcode)
 
     if opts.salt_url is not None:
@@ -406,14 +406,14 @@ def run(opts):
             print('Failed to get the cloned repository remove. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
         remotes_info = json.loads(stdout.strip())
@@ -422,7 +422,7 @@ def run(opts):
             print(' {0!r} is not in {1}'.format(opts.salt_url, remotes_info))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
     if opts.commit is not None:
@@ -442,14 +442,14 @@ def run(opts):
             print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
         revision_info = json.loads(stdout.strip())
@@ -458,7 +458,7 @@ def run(opts):
             print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(vm_name)
+                delete_vm(opts)
             sys.exit(retcode)
 
     # Run tests here
@@ -515,7 +515,7 @@ def run(opts):
         download_coverage_report(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-        delete_vm(vm_name)
+        delete_vm(opts)
     return retcode
 
 
