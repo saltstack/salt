@@ -604,12 +604,8 @@ def init():
             with salt.utils.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# gitfs_remote map as of {0}\n'.format(timestamp))
-                for repo_conf in repos:
-                    fp_.write(
-                        '{0} = {1}\n'.format(
-                            repo_conf['hash'], repo_conf['uri']
-                        )
-                    )
+                for repo in repos:
+                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['uri']))
         except OSError:
             pass
         else:
@@ -727,9 +723,9 @@ def purge_cache():
         remove_dirs = os.listdir(bp_)
     except OSError:
         remove_dirs = []
-    for repo_conf in init():
+    for repo in init():
         try:
-            remove_dirs.remove(repo_conf['hash'])
+            remove_dirs.remove(repo['hash'])
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
@@ -1108,7 +1104,7 @@ def serve_file(load, fnd):
 
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
+    if not all(x in load for x in ('path', 'loc', 'saltenv')):
         return ret
     if not fnd['path']:
         return ret
@@ -1136,7 +1132,7 @@ def file_hash(load, fnd):
         )
         load['saltenv'] = load.pop('env')
 
-    if 'path' not in load or 'saltenv' not in load:
+    if not all(x in load for x in ('path', 'saltenv')):
         return ''
     ret = {'hash_type': __opts__['hash_type']}
     relpath = fnd['rel']
@@ -1376,18 +1372,18 @@ def _get_dir_list(load):
     if 'saltenv' not in load:
         return []
     ret = set()
-    for repo_conf in init():
+    for repo in init():
         if provider == 'gitpython':
             ret.update(
-                _dir_list_gitpython(repo_conf, load['saltenv'])
+                _dir_list_gitpython(repo, load['saltenv'])
             )
         elif provider == 'pygit2':
             ret.update(
-                _dir_list_pygit2(repo_conf, load['saltenv'])
+                _dir_list_pygit2(repo, load['saltenv'])
             )
         elif provider == 'dulwich':
             ret.update(
-                _dir_list_dulwich(repo_conf, load['saltenv'])
+                _dir_list_dulwich(repo, load['saltenv'])
             )
     return sorted(ret)
 
