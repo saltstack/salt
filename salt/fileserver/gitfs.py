@@ -976,7 +976,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     fnd = {'path': '',
            'rel': ''}
-    if os.path.isabs(path):
+    if os.path.isabs(path) or tgt_env not in envs():
         return fnd
 
     provider = _get_provider()
@@ -1217,7 +1217,7 @@ def _get_file_list(load):
         load['saltenv'] = load.pop('env')
 
     provider = _get_provider()
-    if 'saltenv' not in load:
+    if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
     ret = set()
     for repo in init():
@@ -1369,7 +1369,7 @@ def _get_dir_list(load):
         load['saltenv'] = load.pop('env')
 
     provider = _get_provider()
-    if 'saltenv' not in load:
+    if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
     ret = set()
     for repo in init():
