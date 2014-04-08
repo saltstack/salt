@@ -16,6 +16,9 @@ Module to provide Postgres compatibility to salt.
     be left at the default setting.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
+
+:note: This module uses MD5 hashing which may not be compliant with certain
+    security audits.
 '''
 
 # Import python libs

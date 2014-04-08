@@ -102,10 +102,11 @@ def _sync(form, saltenv=None):
             log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
-                srch = hashlib.md5(
+                hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+                srch = hash_type(
                     salt.utils.fopen(fn_, 'r').read()
                 ).hexdigest()
-                dsth = hashlib.md5(
+                dsth = hash_type(
                     salt.utils.fopen(dest, 'r').read()
                 ).hexdigest()
                 if srch != dsth:

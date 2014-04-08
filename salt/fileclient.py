@@ -812,9 +812,11 @@ class LocalClient(Client):
                 log.warning(err.format(path))
                 return ret
             else:
+                opts_hash_type = self.opts.get('hash_type', 'md5')
+                hash_type = getattr(hashlib, opts_hash_type) 
                 with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
-                ret['hash_type'] = 'md5'
+                    ret['hsum'] = hash_type(ifile.read()).hexdigest()
+                ret['hash_type'] = opts_hash_type
                 return ret
         path = self._find_file(path, saltenv)['path']
         if not path:
@@ -1134,7 +1136,7 @@ class RemoteClient(Client):
                 hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(
                     path, form=hash_type, chunk_size=4096)
-                ret['hash_type'] = 'md5'
+                ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,
                 'saltenv': saltenv,
