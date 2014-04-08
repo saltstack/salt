@@ -565,30 +565,35 @@ def _append_domain(opts):
 
 def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
-    with salt.utils.fopen(path, 'r') as conf_file:
-        try:
-            conf_opts = yaml.safe_load(conf_file.read()) or {}
-        except yaml.YAMLError as err:
-            log.error(
-                'Error parsing configuration file: {0} - {1}'.format(path, err)
-            )
-            conf_opts = {}
-        # only interpret documents as a valid conf, not things like strings,
-        # which might have been caused by invalid yaml syntax
-        if not isinstance(conf_opts, dict):
-            log.error(
-                'Error parsing configuration file: {0} - conf should be a '
-                'document, not {1}.'.format(path, type(conf_opts))
-            )
-            conf_opts = {}
-        # allow using numeric ids: convert int to string
-        if 'id' in conf_opts:
-            conf_opts['id'] = str(conf_opts['id'])
-        for key, value in conf_opts.copy().iteritems():
-            if isinstance(value, unicode):
-                # We do not want unicode settings
-                conf_opts[key] = value.encode('utf-8')
-        return conf_opts
+    try:
+        with salt.utils.fopen(path, 'r') as conf_file:
+            try:
+                conf_opts = yaml.safe_load(conf_file.read()) or {}
+            except yaml.YAMLError as err:
+                log.error(
+                    'Error parsing configuration file: {0} - {1}'.format(path, err)
+                )
+                conf_opts = {}
+            # only interpret documents as a valid conf, not things like strings,
+            # which might have been caused by invalid yaml syntax
+            if not isinstance(conf_opts, dict):
+                log.error(
+                    'Error parsing configuration file: {0} - conf should be a '
+                    'document, not {1}.'.format(path, type(conf_opts))
+                )
+                conf_opts = {}
+            # allow using numeric ids: convert int to string
+            if 'id' in conf_opts:
+                conf_opts['id'] = str(conf_opts['id'])
+            for key, value in conf_opts.copy().iteritems():
+                if isinstance(value, unicode):
+                    # We do not want unicode settings
+                    conf_opts[key] = value.encode('utf-8')
+            return conf_opts
+    except IOError as exc:
+        # Master shouldn't keep running if it can't read  config file
+        log.error('Error accessing configuration file: ({0}): {1}'.format(path, exc))
+        sys.exit(2)
 
 
 def load_config(path, env_var, default_path=None):
