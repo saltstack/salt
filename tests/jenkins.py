@@ -319,14 +319,14 @@ def run(opts):
     if opts.commit is not None:
         # Let's find out if the installed version matches the passed in pillar
         # information
-        proc = NonBlockingPopen(
+        print('Grabbing bootstrapped minion version information ... ')
+        sys.stdout.flush()
+        proc = subprocess.Popen(
             'salt -t 100 {vm_name} --out json test.version'.format(vm_name=vm_name),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            stream_stds=False
         )
-        proc.poll_and_read_until_finish()
         stdout, _ = proc.communicate()
 
         retcode = proc.returncode
@@ -392,6 +392,9 @@ def run(opts):
     if opts.salt_url is not None:
         # Let's find out if the cloned repository if checked out from the
         # desired repository
+        print('Grabbing the cloned repository remotes information ... ')
+        sys.stdout.flush()
+
         proc = subprocess.Popen(
             'salt -t 100 {vm_name} --out json git.remote_get /testing'.format(vm_name=vm_name),
             shell=True,
@@ -403,7 +406,7 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('Failed to get the cloned repository remove. Exit code: {0}'.format(retcode))
+            print('Failed to get the cloned repository remote. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -428,6 +431,9 @@ def run(opts):
     if opts.commit is not None:
         # Let's find out if the cloned repository if checked out at the desired
         # commit
+        print('Grabbing the cloned repository commit information ... ')
+        sys.stdout.flush()
+
         proc = subprocess.Popen(
             'salt -t 100 {vm_name} --out json git.revision /testing'.format(vm_name=vm_name),
             shell=True,
@@ -477,15 +483,12 @@ def run(opts):
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
-    #proc = NonBlockingPopen(
     proc = subprocess.Popen(
         cmd,
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-    #    stream_stds=True
     )
-    #proc.poll_and_read_until_finish()
     stdout, _ = proc.communicate()
 
     if stdout:
