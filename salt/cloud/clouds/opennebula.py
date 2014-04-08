@@ -60,7 +60,7 @@ def _xmltodict(xml):
         while key in dicts:
             key = key + str(idx)
             idx += 1
-        if item.text == None:
+        if item.text is None:
             dicts[key] = _xmltodict(item)
         else:
             dicts[key] = item.text
@@ -184,7 +184,7 @@ def list_nodes(call=None):
         )
         vms[vm.find('NAME').text]['image'] = image
         size = 'cpu {0}, memory {1}'.format(
-            vm.find('TEMPLATE').find('CPU').text,vm.find('TEMPLATE').find('MEMORY').text
+            vm.find('TEMPLATE').find('CPU').text, vm.find('TEMPLATE').find('MEMORY').text
         )
         vms[vm.find('NAME').text]['size'] = size
         vms[vm.find('NAME').text]['state'] = vm.find('STATE').text
@@ -218,7 +218,7 @@ def list_nodes_full(call=None):
         )
         vms[vm.find('NAME').text]['image'] = image
         size = 'cpu {0}, memory {1}'.format(
-            vm.find('TEMPLATE').find('CPU').text,vm.find('TEMPLATE').find('MEMORY').text
+            vm.find('TEMPLATE').find('CPU').text, vm.find('TEMPLATE').find('MEMORY').text
         )
         vms[vm.find('NAME').text]['size'] = size
         vms[vm.find('NAME').text]['state'] = vm.find('STATE').text
@@ -303,8 +303,8 @@ def create(vm_):
     ssh_key_name = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
     )
-    if ssh_key_name:
-        kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
+    #if ssh_key_name:
+    #    kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
 
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
@@ -329,7 +329,7 @@ def create(vm_):
     )
 
     region = ''
-    if kwargs['region_id'] != None:
+    if kwargs['region_id'] is not None:
         region = 'SCHED_REQUIREMENTS="ID={0}"'.format(kwargs['region_id'])
     try:
         server, user, password = _get_xml_rpc()
