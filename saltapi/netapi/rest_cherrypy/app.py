@@ -54,6 +54,13 @@ A REST API for Salt
         will be sent in the clear!
 
         .. versionadded:: 0.8.3
+    webhook_disable_auth : False
+        The :py:class:`Webhook` URL requires authentication by default but
+        external services cannot always be configured to send authentication.
+        See the Webhook documentation for suggestions on securing this
+        interface.
+
+        .. versionadded:: 0.8.4.1
     webhook_url : /hook
         Configure the URL endpoint for the :py:class:`Webhook` entry point.
 
@@ -1249,16 +1256,19 @@ class Webhook(object):
     External services can POST data to this URL to trigger an event in Salt.
     For example, Jenkins-CI or Travis-CI, or GitHub web hooks.
 
-    This entry point does not require authentication. The event data is taken
-    from the request body.
-
     .. note:: Be mindful of security
 
-        Salt's Reactor can run any code. If you write a Reactor SLS that
-        responds to a hook event be sure to validate that the event came from a
-        trusted source and contains valid data! Pass a secret key and use SSL.
+        Salt's Reactor can run any code. A Reactor SLS that responds to a hook
+        event is responsible for validating that the event came from a trusted
+        source and contains valid data.
 
-        This is a generic interface and securing it is up to you!
+        **This is a generic interface and securing it is up to you!**
+
+        This URL requires authentication however not all external services can
+        be configured to authenticate. For this reason authentication can be
+        selectively disabled for this URL. Follow best practices -- always use
+        SSL, pass a secret key, configure the firewall to only allow traffic
+        from a known source, etc.
 
     The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
     appended to the end. For example, a ``POST`` request sent to
@@ -1284,12 +1294,19 @@ class Webhook(object):
         # Don't do any lowdata processing on the POST data
         'tools.lowdata_fmt.on': True,
 
+        # Auth can be overridden in __init__().
+        'tools.salt_token.on': True,
+        'tools.salt_auth.on': True,
     })
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
         self.event = salt.utils.event.SaltEvent('master',
                 self.opts.get('sock_dir', ''))
+
+        if cherrypy.config['apiopts'].get('webhook_disable_auth'):
+            self._cp_config['tools.salt_token.on'] = False
+            self._cp_config['tools.salt_auth.on'] = False
 
     def POST(self, *args, **kwargs):
         '''
