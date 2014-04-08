@@ -24,6 +24,7 @@ import salt
 import salt.utils
 import salt.utils.cloud
 import salt.config
+import salt._compat
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -202,7 +203,7 @@ def get_base(**kwargs):
         proto = salt._compat.urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
-        hash_ = salt.util.get_hash(
+        hash_ = salt.utils.get_hash(
                 img_tar,
                 __salt__['config.option']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
