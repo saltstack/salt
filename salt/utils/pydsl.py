@@ -315,6 +315,15 @@ class StateDeclaration(object):
         result = HighState.get_active().state.functions['state.high'](
             {self._id: self._repr()}
         )
+
+        if not isinstance(result, dict):
+            # A list is an error
+            raise PyDslError(
+                'An error occurred while running highstate: {0}'.format(
+                    '; '.join(result)
+                )
+            )
+
         result = sorted(result.iteritems(), key=lambda t: t[1]['__run_num__'])
         if check:
             for k, v in result:
