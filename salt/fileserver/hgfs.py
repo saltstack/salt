@@ -402,7 +402,7 @@ def envs(ignore_cache=False):
                 ret.add(bookmark_name)
         ret.update([x[0] for x in _all_tags(repo['repo'])])
         repo['repo'].close()
-    return sorted(ret)
+    return [x for x in sorted(ret) if _env_is_exposed(x)]
 
 
 def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
@@ -412,7 +412,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     fnd = {'path': '',
            'rel': ''}
-    if os.path.isabs(path):
+    if os.path.isabs(path) or tgt_env not in envs():
         return fnd
 
     dest = os.path.join(__opts__['cachedir'], 'hgfs/refs', tgt_env, path)
@@ -619,7 +619,7 @@ def _get_file_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    if 'saltenv' not in load:
+    if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
     ret = set()
     for repo in init():
@@ -663,7 +663,7 @@ def _get_dir_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    if 'saltenv' not in load:
+    if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
     ret = set()
     for repo in init():
