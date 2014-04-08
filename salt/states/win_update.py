@@ -99,9 +99,9 @@ def _gather_update_categories(updateCollection):
 
 
 class PyWinUpdater:
-    def __init__(self, categories = None, skipUI = True, skipDownloaded = True,
-            skipInstalled = True, skipReboot = False, skipPresent = True, 
-            softwareUpdates = True, driverUpdates = False, skipHidden = True):
+    def __init__(self, categories=None, skipUI=True, skipDownloaded=True,
+            skipInstalled=True, skipReboot=False, skipPresent=True,
+            softwareUpdates=True, driverUpdates=False, skipHidden=True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
 
@@ -143,8 +143,7 @@ class PyWinUpdater:
         #the results of the installation process
         self.install_results = None
 
-
-    def Search(self,searchString):
+    def Search(self, searchString):
         try:
             log.debug('beginning search of the passed string: {0}'.format(searchString))
             self.search_results = self.win_searcher.Search(searchString)
@@ -171,7 +170,6 @@ class PyWinUpdater:
         except Exception as e:
             log.info('parsing updates failed. {0}'.format(str(e)))
             return e
-
 
     def AutoSearch(self):
         search_string = ''
@@ -209,10 +207,9 @@ class PyWinUpdater:
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False  ##if there is no type, the is nothing to search.
+            return False  #if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
-
 
     def Download(self):
         try:
@@ -224,7 +221,6 @@ class PyWinUpdater:
         except Exception as e:
             log.debug('failed in the downloading {0}.'.format(str(e)))
             return e
-
 
     def Install(self):
         try:
@@ -250,7 +246,6 @@ class PyWinUpdater:
             log.info('no new updates.')
             return True
 
-
     def GetInstallationResults(self):
         log.debug('bluger has {0} updates in it'.format(str(self.install_collection.Count)))
         updates = []
@@ -269,7 +264,6 @@ class PyWinUpdater:
         log.debug('Update information complied. returning')
         return results
 
-
     def GetDownloadResults(self):
         updates = []
         for i in range(self.download_collection.Count):
@@ -281,20 +275,16 @@ class PyWinUpdater:
             results['update {0}'.format(i)] = update
         return results
 
-
-    def SetCategories(self,categories):
+    def SetCategories(self, categories):
         self.categories = categories
-
 
     def GetCategories(self):
         return self.categories
 
-
     def GetAvailableCategories(self):
         return self.foundCategories
 
-
-    def SetIncludes(self,includes):
+    def SetIncludes(self, includes):
         if includes:
             for i in includes:
                 value = i[i.keys()[0]]
@@ -302,29 +292,35 @@ class PyWinUpdater:
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 
-
-    def SetInclude(self,include,state):
-        if include == 'UI': self.skipUI = state
-        elif include == 'downloaded': self.skipDownloaded = state
-        elif include == 'installed': self.skipInstalled = state
-        elif include == 'reboot': self.skipReboot = state
-        elif include == 'present': self.skipPresent = state
-        elif include == 'software':self.softwareUpdates = state
-        elif include == 'driver':self.driverUpdates = state
+    def SetInclude(self, include, state):
+        if include == 'UI':
+            self.skipUI = state
+        elif include == 'downloaded':
+            self.skipDownloaded = state
+        elif include == 'installed':
+            self.skipInstalled = state
+        elif include == 'reboot':
+            self.skipReboot = state
+        elif include == 'present':
+            self.skipPresent = state
+        elif include == 'software':
+            self.softwareUpdates = state
+        elif include == 'driver':
+            self.driverUpdates = state
         log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\tsoftware: {5}\n\tdriver: {6}'.format(
-            self.skipUI,self.skipDownloaded,self.skipInstalled,self.skipReboot,
-            self.skipPresent,self.softwareUpdates,self.driverUpdates))
+            self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
+            self.skipPresent, self.softwareUpdates, self.driverUpdates))
 
 
-def _search(win_updater,retries=5):
+def _search(win_updater, retries=5):
     passed = False
     clean = True
     comment = ''
-    while passed != True:
+    while not passed:
         log.debug('Searching. tries left: {0}'.format(str(retries)))
         passed = win_updater.AutoSearch()
         log.debug('Done searching: {0}'.format(str(passed)))
-        if isinstance(passed,Exception):
+        if isinstance(passed, Exception):
             clean = False
             comment += 'Failed in the seeking/parsing process:\n\t\t{0}\n'.format(str(passed))
             retries -= 1
@@ -333,14 +329,14 @@ def _search(win_updater,retries=5):
                 passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
-                return (comment,True,retries)
+                return (comment, True, retries)
             passed = False
     if clean:
         comment += 'Search was done with out an error.\n'
-    return (comment,True,retries)
+    return (comment, True, retries)
 
 
-def _download(win_updater,retries=5):
+def _download(win_updater, retries=5):
     passed = False
     clean = True
     comment = ''
@@ -348,7 +344,7 @@ def _download(win_updater,retries=5):
         log.debug('Downloading. tries left: {0}'.format(str(retries)))
         passed = win_updater.Download()
         log.debug('Done downloading: {0}'.format(str(passed)))
-        if isinstance(passed,Exception):
+        if isinstance(passed, Exception):
             clean = False
             comment += 'Failed while trying to download updates:\n\t\t{0}\n'.format(str(passed))
             retries -= 1
@@ -357,13 +353,13 @@ def _download(win_updater,retries=5):
                 passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
-                return (comment,False,retries)
+                return (comment, False, retries)
     if clean:
         comment += 'Download was done without error.\n'
-    return (comment,True,retries)
+    return (comment, True, retries)
 
 
-def _install(win_updater,retries=5):
+def _install(win_updater, retries=5):
     passed = False
     clean = True
     comment = ''
@@ -372,7 +368,7 @@ def _install(win_updater,retries=5):
         log.debug('Installing. tries left: {0}'.format(str(retries)))
         passed = win_updater.Install()
         log.info('Done installing: {0}'.format(str(passed)))
-        if isinstance(passed,Exception):
+        if isinstance(passed, Exception):
             clean = False
             comment += 'Failed while trying to install the updates.\n\t\t{0}\n'.format(str(passed))
             retries -= 1
@@ -381,13 +377,13 @@ def _install(win_updater,retries=5):
                 passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
-                return (comment,False,retries)
+                return (comment, False, retries)
     if clean:
         comment += 'Install was done without error.\n'
-    return (comment,True,retries)
+    return (comment, True, retries)
 
 
-def install(name,categories=None,includes=None,retries=10):
+def install(name, categories=None, includes=None, retries=10):
     '''
     Install specified windows updates.
     
@@ -428,22 +424,22 @@ def install(name,categories=None,includes=None,retries=10):
     win_updater.SetIncludes(includes)
     
     
-    ##this is where we be seeking the things! yar!
-    comment, passed, retries = _search(win_updater,retries)
+    #this is where we be seeking the things! yar!
+    comment, passed, retries = _search(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
         return ret
     
-    ##this is where we get all the things! i.e. download updates.
-    comment, passed, retries = _download(win_updater,retries)
+    #this is where we get all the things! i.e. download updates.
+    comment, passed, retries = _download(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
         return ret
 
-    ##this is where we put things in their place!
-    comment, passed, retries = _install(win_updater,retries)
+    #this is where we put things in their place!
+    comment, passed, retries = _install(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
@@ -456,7 +452,7 @@ def install(name,categories=None,includes=None,retries=10):
     return ret
 
 
-def download(name,categories=None,includes=None,retries=10):
+def download(name, categories=None, includes=None, retries=10):
     '''
     Cache updates for later install.
     
@@ -496,15 +492,15 @@ def download(name,categories=None,includes=None,retries=10):
     win_updater.SetCategories(categories)
     win_updater.SetIncludes(includes)
     
-    ##this is where we be seeking the things! yar!
-    comment, passed, retries = _search(win_updater,retries)
+    #this is where we be seeking the things! yar!
+    comment, passed, retries = _search(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
         return ret
     
-    ##this is where we get all the things! i.e. download updates.
-    comment, passed, retries = _download(win_updater,retries)
+    #this is where we get all the things! i.e. download updates.
+    comment, passed, retries = _download(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False

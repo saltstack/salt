@@ -61,9 +61,9 @@ def _gather_update_categories(updateCollection):
 
 
 class PyWinUpdater:
-    def __init__(self, categories= None, skipUI= True, skipDownloaded= True,
-            skipInstalled= True, skipReboot= False, skipPresent= True,
-            softwareUpdates= True, driverUpdates= False, skipHidden= True):
+    def __init__(self, categories=None, skipUI=True, skipDownloaded=True,
+            skipInstalled=True, skipReboot=False, skipPresent=True,
+            softwareUpdates=True, driverUpdates=False, skipHidden=True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
 
@@ -96,7 +96,7 @@ class PyWinUpdater:
         #list of updates to be installed.
         self.install_collection = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
-        #the object responsible for fetching the actual downloads. 
+        #the object responsible for fetching the actual downloads.
         self.win_downloader = self.update_session.CreateUpdateDownloader()
         self.win_downloader.Updates = self.download_collection
 
@@ -130,16 +130,16 @@ class PyWinUpdater:
                 if update.InstallationBehavior.CanRequestUserInput:
                     log.debug('Skipped update {0}'.format(str(update)))
                     continue
-                
-                #if this update is already downloaded, it doesn't need to be in 
+
+                #if this update is already downloaded, it doesn't need to be in
                 # the download_collection. so skipping it unless the user mandates redownload.
                 if self.skipDownloaded and update.IsDownloaded:
                     continue
-                
+
                 #check this update's categories aginst the ones desired.
                 for category in update.Categories:
                     #this is a zero gaurd. these tests have to be in this order
-                    # or it will error out when the user tries to search for 
+                    # or it will error out when the user tries to search for
                     # updates with out specifying categories.
                     if self.categories is None or category.Name in self.categories:
                         #adds it to the list to be downloaded.
@@ -149,7 +149,7 @@ class PyWinUpdater:
                         #from being added twice.
                         break
             log.debug('download_collection made. gathering found categories.')
-            
+
             #gets the categories of the updates available in this collection of updates
             self.foundCategories = _gather_update_categories(self.download_collection)
             log.debug('found categories: {0}'.format(str(self.foundCategories)))
@@ -199,7 +199,7 @@ class PyWinUpdater:
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False  ##if there is no type, the is nothing to search.
+            return False  #if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
 
@@ -301,7 +301,7 @@ class PyWinUpdater:
             str(self.download_collection.count)))
 
         for update in self.download_collection:
-            if update.InstallationBehavior.CanRequestUserInput == True:
+            if update.InstallationBehavior.CanRequestUserInput:
                 log.debug('Skipped update {0}'.format(str(update)))
                 continue
             updates.append(str(update))
@@ -315,7 +315,7 @@ class PyWinUpdater:
             ret += '\t{0}\n'.format(str(update))
         return ret
 
-    def SetCategories(self,categories):
+    def SetCategories(self, categories):
         self.categories = categories
 
     def GetCategories(self):
@@ -324,25 +324,32 @@ class PyWinUpdater:
     def GetAvailableCategories(self):
         return self.foundCategories
 
-    def SetIncludes(self,includes):
+    def SetIncludes(self, includes):
         if includes:
             for i in includes:
                 value = i[i.keys()[0]]
                 include = i.keys()[0]
-                self.SetInclude(include,value)
-                log.debug('was asked to set {0} to {1}'.format(include,value))
+                self.SetInclude(include, value)
+                log.debug('was asked to set {0} to {1}'.format(include, value))
 
-    def SetInclude(self,include,state):
-        if include == 'UI': self.skipUI = state
-        elif include == 'downloaded': self.skipDownloaded = state
-        elif include == 'installed': self.skipInstalled = state
-        elif include == 'reboot': self.skipReboot = state
-        elif include == 'present': self.skipPresent = state
-        elif include == 'software':self.softwareUpdates = state
-        elif include == 'driver':self.driverUpdates = state
+    def SetInclude(self, include, state):
+        if include == 'UI':
+            self.skipUI = state
+        elif include == 'downloaded':
+            self.skipDownloaded = state
+        elif include == 'installed':
+            self.skipInstalled = state
+        elif include == 'reboot':
+            self.skipReboot = state
+        elif include == 'present':
+            self.skipPresent = state
+        elif include == 'software':
+            self.softwareUpdates = state
+        elif include == 'driver':
+            self.driverUpdates = state
         log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\tsoftware: {5}\n\tdriver: {6}'.format(
-            self.skipUI,self.skipDownloaded,self.skipInstalled,self.skipReboot,
-            self.skipPresent,self.softwareUpdates,self.driverUpdates))
+            self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
+            self.skipPresent, self.softwareUpdates, self.driverUpdates))
 
     def __str__(self):
         updates = []
@@ -357,7 +364,7 @@ class PyWinUpdater:
             results += '\t{0}: {1}\n'.format(category,count)
         return results
 
-def _search(quidditch,retries=5):
+def _search(quidditch, retries=5):
     '''
     a wrapper method for the pywinupdater class. I might move this into the class, but right now,
     that is to much for one class I think.
@@ -365,12 +372,12 @@ def _search(quidditch,retries=5):
     passed = False
     clean = True
     comment = ''
-    while passed != True:
+    while not passed:
         log.debug('Searching. tries left: {0}'.format(str(retries)))
         #let the updater make it's own search string. MORE POWER this way.
         passed = quidditch.AutoSearch()
         log.debug('Done searching: {0}'.format(str(passed)))
-        if isinstance(passed,Exception):
+        if isinstance(passed, Exception):
             clean = False
             comment += 'Failed in the seeking/parsing process:\n\t\t{0}\n'.format(str(passed))
             retries -= 1
@@ -379,18 +386,18 @@ def _search(quidditch,retries=5):
                 passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
-                return (comment,True,retries)
+                return (comment, True, retries)
             passed = False
     if clean:
         #bragging rights.
         comment += 'Search was done with out an error.\n'
     
-    return (comment,True,retries)
+    return (comment, True, retries)
 
 
-def _download(quidditch,retries=5):
+def _download(quidditch, retries=5):
     '''
-    another wrapper method. 
+    another wrapper method.
     '''
     passed = False
     clean = True
@@ -399,7 +406,7 @@ def _download(quidditch,retries=5):
         log.debug('Downloading. tries left: {0}'.format(str(retries)))
         passed = quidditch.Download()
         log.debug('Done downloading: {0}'.format(str(passed)))
-        if isinstance(passed,Exception):
+        if isinstance(passed, Exception):
             clean = False
             comment += 'Failed while trying to download updates:\n\t\t{0}\n'.format(str(passed))
             retries -= 1
@@ -408,13 +415,13 @@ def _download(quidditch,retries=5):
                 passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
-                return (comment,False,retries)
+                return (comment, False, retries)
     if clean:
         comment += 'Download was done without error.\n'
-    return (comment,True,retries)
+    return (comment, True, retries)
 
 
-def _install(quidditch,retries=5):
+def _install(quidditch, retries=5):
     '''
     and the last wrapper method. keeping things simple.
     '''
@@ -435,16 +442,16 @@ def _install(quidditch,retries=5):
                 passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
-                return (comment,False,retries)
+                return (comment, False, retries)
     if clean:
         comment += 'Install was done without error.\n'
-    return (comment,True,retries)
+    return (comment, True, retries)
 
 
 #this is where the actual functions available to salt begin.
 
 
-def list_updates(verbose=False,includes=None,retries=5,categories=None):
+def list_updates(verbose=False, includes=None, retries=5, categories=None):
     '''
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories. 
@@ -484,17 +491,17 @@ def list_updates(verbose=False,includes=None,retries=5,categories=None):
     quidditch.SetIncludes(includes)
     
     
-    ##this is where we be seeking the things! yar!
-    comment, passed, retries = _search(quidditch,retries)
+    #this is where we be seeking the things! yar!
+    comment, passed, retries = _search(quidditch, retries)
     if not passed:
-        return (comment,str(passed))
+        return (comment, str(passed))
     log.debug('verbose: {0}'.format(str(verbose)))
     if verbose:
         return str(quidditch.GetSearchResultsPretty())
     return str(quidditch)
 
 
-def download_updates(includes=None,retries=5,categories=None):
+def download_updates(includes=None, retries=5, categories=None):
     '''
     Downloads all available updates, skipping those that require user interaction.
     
@@ -530,14 +537,14 @@ def download_updates(includes=None,retries=5,categories=None):
     
     
     ##this is where we be seeking the things! yar!
-    comment, passed, retries = _search(quidditch,retries)
+    comment, passed, retries = _search(quidditch, retries)
     if not passed:
-        return (comment,str(passed))
+        return (comment, str(passed))
     
     ##this is where we get all the things! i.e. download updates.
-    comment, passed, retries = _download(quidditch,retries)
+    comment, passed, retries = _download(quidditch, retries)
     if not passed:
-        return (comment,str(passed))
+        return (comment, str(passed))
 
     try:
         comment = quidditch.GetDownloadResults()
@@ -546,7 +553,7 @@ def download_updates(includes=None,retries=5,categories=None):
     return 'Windows is up to date. \n{0}'.format(comment)
 
 
-def install_updates(cached=None,includes=None,retries=5,categories=None):
+def install_updates(cached=None, includes=None, retries=5, categories=None):
     '''
     Downloads and installs all available updates, skipping those that require user interaction.
     
@@ -585,19 +592,19 @@ def install_updates(cached=None,includes=None,retries=5,categories=None):
     
     
     ##this is where we be seeking the things! yar!
-    comment, passed, retries = _search(quidditch,retries)
+    comment, passed, retries = _search(quidditch, retries)
     if not passed:
-        return (comment,str(passed))
+        return (comment, str(passed))
     
     ##this is where we get all the things! i.e. download updates.
-    comment, passed, retries = _download(quidditch,retries)
+    comment, passed, retries = _download(quidditch, retries)
     if not passed:
-        return (comment,str(passed))
+        return (comment, str(passed))
 
     ##this is where we put things in their place!
-    comment, passed, retries = _install(quidditch,retries)
+    comment, passed, retries = _install(quidditch, retries)
     if not passed:
-        return (comment,str(passed))
+        return (comment, str(passed))
 
     try:
         comment = quidditch.GetInstallationResultsPretty()
