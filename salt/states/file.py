@@ -1175,7 +1175,7 @@ def managed(name,
                 contents += '\n'
 
     if not replace and os.path.exists(name):
-       # Check and set the permissions if necessary
+        # Check and set the permissions if necessary
         ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
