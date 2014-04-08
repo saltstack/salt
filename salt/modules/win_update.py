@@ -15,10 +15,10 @@ Module for running windows updates.
 import logging
 try:
     import win32com.client
-    import win32api
-    import win32con
-    import pywintypes
-    import threading
+#    import win32api
+#    import win32con
+#    import pywintypes
+#    import threading
     import pythoncom
     HAS_DEPENDENCIES = True
 except ImportError:
@@ -28,15 +28,13 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'win_update'
-
 
 def __virtual__():
     '''
     Only works on Windows systems
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
-        return __virtualname__
+        return True
     return False
 
 
