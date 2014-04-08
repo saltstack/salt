@@ -199,7 +199,8 @@ class PyWinUpdater:
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False  #if there is no type, the is nothing to search.
+            return False 
+            #if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
 
@@ -361,8 +362,9 @@ class PyWinUpdater:
                 for c in update.Categories:
                     if category == c.Name:
                         count += 1
-            results += '\t{0}: {1}\n'.format(category,count)
+            results += '\t{0}: {1}\n'.format(category, count)
         return results
+
 
 def _search(quidditch, retries=5):
     '''
@@ -391,7 +393,7 @@ def _search(quidditch, retries=5):
     if clean:
         #bragging rights.
         comment += 'Search was done with out an error.\n'
-    
+
     return (comment, True, retries)
 
 
@@ -433,7 +435,7 @@ def _install(quidditch, retries=5):
         log.debug('Installing. tries left: {0}'.format(str(retries)))
         passed = quidditch.Install()
         log.info('Done installing: {0}'.format(str(passed)))
-        if isinstance(passed,Exception):
+        if isinstance(passed, Exception):
             clean = False
             comment += 'Failed while trying to install the updates.\n\t\t{0}\n'.format(str(passed))
             retries -= 1
@@ -454,43 +456,41 @@ def _install(quidditch, retries=5):
 def list_updates(verbose=False, includes=None, retries=5, categories=None):
     '''
     Returns a summary of available updates, grouped into their non-mutually
-    exclusive categories. 
-    
+    exclusive categories.
+
     To list the actual updates by name, add 'verbose' to the call.
-    
+
     you can set the maximum number of retries to n in the search process by 
     adding: retries=n
-    
+
     various aspects of the updates can be included or excluded. this feature is
     still indevelopment.
-    
+
     You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7','Security Updates']
+    categories=['Windows 7', 'Security Updates']
     Some known categories:
             Updates
             Windows 7
             Critical Updates
             Security Updates
             Update Rollups
-    
+
     CLI Example:
     Normal Usage:
     .. code-block:: bash
         salt '*' win_updates.list_updates
-    
+
     Find all critical updates list in detail:
     .. code-block:: bash
         salt '*' win_updates.list_updates categories=['Critical Updates'] verbose
-    
     '''
-    
+
     log.debug('categories to search for are: '.format(str(categories)))
     quidditch = PyWinUpdater()
     if categories:
         quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
-    
-    
+
     #this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
     if not passed:
@@ -504,43 +504,42 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 def download_updates(includes=None, retries=5, categories=None):
     '''
     Downloads all available updates, skipping those that require user interaction.
-    
+
     you can set the maximum number of retries to n in the search process by 
     adding: retries=n
-    
+
     various aspects of the updates can be included or excluded. this feature is
     still indevelopment.
-    
+
     You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7','Security Updates']
+    categories=['Windows 7', 'Security Updates']
     Some known categories:
             Updates
             Windows 7
             Critical Updates
             Security Updates
             Update Rollups
-    
+
     CLI Example:
     Normal Usage:
     .. code-block:: bash
         salt '*' win_updates.download_updates
-    
+
     Find all critical updates list in detail:
     .. code-block:: bash
         salt '*' win_updates.download_updates categories=['Critical Updates'] verbose
-    
     '''
+
     log.debug('categories to search for are: '.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
-    
-    
+
     ##this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
     if not passed:
         return (comment, str(passed))
-    
+
     ##this is where we get all the things! i.e. download updates.
     comment, passed, retries = _download(quidditch, retries)
     if not passed:
@@ -556,46 +555,44 @@ def download_updates(includes=None, retries=5, categories=None):
 def install_updates(cached=None, includes=None, retries=5, categories=None):
     '''
     Downloads and installs all available updates, skipping those that require user interaction.
-    
+
     Add 'cached' to only install those updates which have already been downloaded.
-    
+
     you can set the maximum number of retries to n in the search process by 
     adding: retries=n
-    
+
     various aspects of the updates can be included or excluded. this feature is
     still indevelopment.
-    
+
     You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7','Security Updates']
+    categories=['Windows 7', 'Security Updates']
     Some known categories:
             Updates
             Windows 7
             Critical Updates
             Security Updates
             Update Rollups
-    
+
     CLI Example:
     Normal Usage:
     .. code-block:: bash
         salt '*' win_updates.install_updates
-    
+
     Find all critical updates list in detail:
     .. code-block:: bash
         salt '*' win_updates.install_updates categories=['Critical Updates'] verbose
-    
     '''
-    
+
     log.debug('categories to search for are: '.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
-    
-    
+
     ##this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
     if not passed:
         return (comment, str(passed))
-    
+
     ##this is where we get all the things! i.e. download updates.
     comment, passed, retries = _download(quidditch, retries)
     if not passed:

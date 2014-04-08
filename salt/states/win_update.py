@@ -6,7 +6,7 @@ Management of the windows update agent.
 .. versionadded: (Helium)
 
 Set windows updates to run by category. Default behavior is to install
-all updates that do not require user interaction to complete. 
+all updates that do not require user interaction to complete.
 
 Optionally set ``category`` to a category of your choosing to only
 install certain updates. default is all available updates.
@@ -17,14 +17,14 @@ and download but not install standard updates.
 Example::
     updates:
         win_update.install:
-            - categories: 
+            - categories:
                 - 'Critical Updates'
                 - 'Security Updates'
         win_update.downloaded:
             - categories:
                 - 'Updates'
 
-You can also specify a number of features about the update to have a 
+You can also specify a number of features about the update to have a
 fine grain approach to specific types of updates. These are the following
 features/states of updates available for configuring:
     'UI' - User interaction required, skipped by default
@@ -129,7 +129,7 @@ class PyWinUpdater:
         #list of updates to be installed.
         self.install_collection = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
-        #the object responsible for fetching the actual downloads. 
+        #the object responsible for fetching the actual downloads.
         self.win_downloader = self.update_session.CreateUpdateDownloader()
         self.win_downloader.Updates = self.download_collection
 
@@ -207,7 +207,8 @@ class PyWinUpdater:
         elif self.driverUpdates:
             search_string += 'Type=\'Driver\''
         else:
-            return False  #if there is no type, the is nothing to search.
+            return False
+            #if there is no type, the is nothing to search.
         log.debug('generated search string: {0}'.format(search_string))
         return self.Search(search_string)
 
@@ -386,10 +387,10 @@ def _install(win_updater, retries=5):
 def install(name, categories=None, includes=None, retries=10):
     '''
     Install specified windows updates.
-    
+
     name:
         not used. exists just to make it fit in salt.
-    
+
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
         information, so there is no enumeration of the categories available. some known categories:
@@ -398,7 +399,7 @@ def install(name, categories=None, includes=None, retries=10):
             Critical Updates
             Security Updates
             Update Rollups
-    
+
     includes:
         a list of features of the updates to cull by. availble features:
             'UI' - User interaction required, skipped by default
@@ -407,10 +408,10 @@ def install(name, categories=None, includes=None, retries=10):
             'installed' - Already installed, skipped by default
             'reboot' - Reboot required, included by default
             'hidden' - skip those updates that have been hidden.
-            
+
             'software' - Software updates, included by default
             'driver' - driver updates, skipped by default
-    
+
     retries
         number of retries to make in before giving up. This is total, not per step.
     '''
@@ -422,15 +423,14 @@ def install(name, categories=None, includes=None, retries=10):
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
     win_updater.SetIncludes(includes)
-    
-    
+
     #this is where we be seeking the things! yar!
     comment, passed, retries = _search(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
         return ret
-    
+
     #this is where we get all the things! i.e. download updates.
     comment, passed, retries = _download(win_updater, retries)
     ret['comment'] += comment
@@ -455,10 +455,10 @@ def install(name, categories=None, includes=None, retries=10):
 def download(name, categories=None, includes=None, retries=10):
     '''
     Cache updates for later install.
-    
+
     name:
         not used. exists just to make it fit in salt.
-    
+
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
         information, so there is no enumeration of the categories available. some known categories:
@@ -467,7 +467,7 @@ def download(name, categories=None, includes=None, retries=10):
             Critical Updates
             Security Updates
             Update Rollups
-    
+
     includes:
         a list of features of the updates to cull by. availble features:
             'UI' - User interaction required, skipped by default
@@ -476,10 +476,10 @@ def download(name, categories=None, includes=None, retries=10):
             'installed' - Already installed, skipped by default
             'reboot' - Reboot required, included by default
             'hidden' - skip those updates that have been hidden.
-            
+
             'software' - Software updates, included by default
             'driver' - driver updates, skipped by default
-    
+
     retries
         number of retries to make in before giving up. This is total, not per step.
     '''
@@ -491,21 +491,21 @@ def download(name, categories=None, includes=None, retries=10):
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
     win_updater.SetIncludes(includes)
-    
+
     #this is where we be seeking the things! yar!
     comment, passed, retries = _search(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
         return ret
-    
+
     #this is where we get all the things! i.e. download updates.
     comment, passed, retries = _download(win_updater, retries)
     ret['comment'] += comment
     if not passed:
         ret['result'] = False
         return ret
-    
+
     try:
         ret['changes'] = win_updater.GetDownloadResults()
     except Exception as e:
