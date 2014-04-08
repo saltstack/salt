@@ -383,19 +383,24 @@ class Install(install):
 
 class InstallLib(install_lib):
     def run(self):
+        executables = [
+                'salt/templates/git/ssh-id-wrapper',
+                'salt/templates/lxc/salt_tarball',
+                ]
         install_lib.run(self)
 
         # input and outputs match 1-1
         inp = self.get_inputs()
         out = self.get_outputs()
+        chmod = []
 
-        #idx = inp.index('build/lib/salt/templates/git/ssh-id-wrapper')
         for i, word in enumerate(inp):
-            if word.endswith('salt/templates/git/ssh-id-wrapper'):
-                idx = i
-        filename = out[idx]
-
-        os.chmod(filename, 0755)
+            for executeable in executables:
+                if word.endswith(executeable):
+                    chmod.append(i)
+        for idx in chmod:
+            filename = out[idx]
+            os.chmod(filename, 0755)
 
 
 NAME = 'salt'
