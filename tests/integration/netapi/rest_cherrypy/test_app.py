@@ -30,6 +30,13 @@ class TestAuth(BaseRestCherryPyTest):
         request, response = self.request('/login')
         self.assertEqual(response.status, '200 OK')
 
+    def test_webhook_auth(self):
+        '''
+        Requests to the webhook URL require auth by default
+        '''
+        self.assertRaisesRegexp(cherrypy.InternalRedirect, '\/login',
+                self.request, '/hook', method='POST', data={})
+
 class TestLogin(BaseRestCherryPyTest):
     auth_creds = (
             ('username', 'saltdev'),
@@ -69,3 +76,23 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '401 Unauthorized')
+
+class TestWebhookDisableAuth(BaseRestCherryPyTest):
+    __opts__ = {
+        'rest_cherrypy': {
+            'port': 8000,
+            'debug': True,
+            'webhook_disable_auth': True,
+        },
+    }
+
+    def test_webhook_noauth(self):
+        '''
+        Auth can be disabled for requests to the webhook URL
+        '''
+        body = urllib.urlencode({'foo': 'Foo!'})
+        request, response = self.request('/hook', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        self.assertEqual(response.status, '200 OK')
