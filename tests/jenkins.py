@@ -421,7 +421,7 @@ def run(opts):
             sys.exit(retcode)
 
         remotes_info = json.loads(stdout.strip())
-        if remotes_info is None or opts.salt_url not in remotes_info[vm_name]:
+        if remotes_info is None or remotes_info[vm_name] is None or opts.salt_url not in remotes_info[vm_name]:
             print('\nThe cloned repository remote is not the desired one:')
             print(' {0!r} is not in {1}'.format(opts.salt_url, remotes_info))
             sys.stdout.flush()
