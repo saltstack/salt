@@ -13,6 +13,8 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     This mocks all interactions with Salt-core and sets up a dummy
     (unsubscribed) CherryPy web server.
     '''
+    __opts__ = None
+
     @mock.patch('saltapi.APIClient', autospec=True)
     @mock.patch('salt.auth.Resolver', autospec=True)
     @mock.patch('salt.auth.LoadAuth', autospec=True)
@@ -26,7 +28,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
         self.Resolver = Resolver
         self.APIClient = APIClient
 
-        __opts__ = {
+        __opts__ = self.__opts__ or {
             'external_auth': {
                 'auto': {
                     'saltdev': [
