@@ -98,7 +98,7 @@ def _gather_update_categories(updateCollection):
     return categories
 
 
-class PyWinUpdater:
+class PyWinUpdater(object):
     def __init__(self, categories=None, skipUI=True, skipDownloaded=True,
             skipInstalled=True, skipReboot=False, skipPresent=True,
             softwareUpdates=True, driverUpdates=False, skipHidden=True):
