@@ -180,6 +180,43 @@ class _LXCConfig(object):
         self.data = x
 
 
+def get_base(**kwargs):
+    '''
+    If the needed base does not exist, then create it, if it does exist
+    create nothing and return the name of the base lxc container so
+    it can be cloned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
+                [nic=nic_profile] [profile=lxc_profile] \\
+                [nic_opts=nic_opts] [image=network image path]\\
+                [seed=(True|False)] [install=(True|False)] \\
+                [config=minion_config]
+    '''
+    cntrs = ls()
+    if kwargs.get('image'):
+        image = kwargs.get('image')
+        proto = salt._compat.urlparse(image).scheme
+        img_tar = __salt__['cp.cache_file'](image)
+        img_name = os.path.basename(img_tar)
+        hash_ = salt.util.get_hash(
+                img_tar,
+                __salt__['config.option']('hash_type'))
+        name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
+        if name not in cntrs:
+            create(name, **kwargs)
+        return name
+    elif kwargs.get('template'):
+        name = '__base_{0}'.format(kwargs['template'])
+        if name not in cntrs:
+            create(name, **kwargs)
+        return name
+    return ''
+
+
 def init(name,
          cpuset=None,
          cpushare=None,
@@ -242,7 +279,8 @@ def init(name,
         Attempt to request key approval from the master. Default: ``True``
 
     clone
-        Original from which to use a clone operation to create the container. Default: ``None``
+        Original from which to use a clone operation to create the container.
+        Default: ``None``
     '''
     profile = _lxc_profile(profile)
 
@@ -251,6 +289,8 @@ def init(name,
         p = profile.pop(k, default)
         return kw or p
 
+    tvg = select('vgname')
+    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
     start_ = select('start', True)
     seed = select('seed', True)
     install = select('install', True)
@@ -258,6 +298,12 @@ def init(name,
     salt_config = select('config')
     approve_key = select('approve_key', True)
     clone_from = select('clone')
+
+    # If using a volume group then set up to make snapshot cow clones
+    if vgname and not clone_from:
+        clone_from = get_base(vgname=vgname, **kwargs)
+        if not kwargs.get('snapshot') is False:
+            kwargs['snapshot'] = True
 
     if clone_from:
         ret = __salt__['lxc.clone'](name, clone_from,
@@ -345,11 +391,12 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         p = profile.pop(k, default)
         return kw or p
 
+    tvg = select('vgname')
+    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
     template = select('template')
     backing = select('backing')
     lvname = select('lvname')
     fstype = select('fstype')
-    vgname = select('vgname')
     size = select('size', '1G')
     image = select('image')
 
@@ -402,7 +449,6 @@ def clone(name,
           snapshot=False,
           profile=None,
           **kwargs):
-
     '''
     Create a new container.
 
@@ -437,9 +483,7 @@ def clone(name,
     .. code-block:: bash
 
         salt '*' lxc.clone myclone ubuntu "snapshot=True"
-
     '''
-
     if exists(name):
         return {'cloned': False, 'error': 'container already exists'}
 
@@ -485,6 +529,19 @@ def clone(name,
         log.warn('lxc-clone failed to create container')
         return {'cloned': False, 'error':
                 'container could not be created: {0}'.format(ret['stderr'])}
+
+
+def ls():
+    '''
+    Return just a list of the containers available
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.ls
+    '''
+    return __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
 
 def list_(extra=False):
