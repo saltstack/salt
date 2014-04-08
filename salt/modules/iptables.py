@@ -383,7 +383,7 @@ def save(filename=None, family='ipv4'):
         salt '*' iptables.save /etc/sysconfig/iptables family=ipv6
     '''
     if _conf() and not filename:
-        filename = _conf()
+        filename = _conf(family)
 
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
