@@ -15,10 +15,6 @@ Module for running windows updates.
 import logging
 try:
     import win32com.client
-#    import win32api
-#    import win32con
-#    import pywintypes
-#    import threading
     import pythoncom
     HAS_DEPENDENCIES = True
 except ImportError:
