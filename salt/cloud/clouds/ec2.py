@@ -521,31 +521,31 @@ def avail_sizes(call=None):
                 'disk': '340 GiB (1 x 340 GiB)',
                 'ram': '1.7 GiB'
             },
-            'c3.large' : {
+            'c3.large': {
                 'id': 'c3.large',
                 'cores': '2 (with 3.5 ECUs each)',
                 'disk': '32 GiB (2 x 16 GiB SSD)',
                 'ram': '3.75 GiB'
             },
-            'c3.xlarge' : {
+            'c3.xlarge': {
                 'id': 'c3.xlarge',
                 'cores': '4 (with 3.5 ECUs each)',
                 'disk': '80 GiB (2 x 40 GiB SSD)',
                 'ram': '7.5 GiB'
             },
-            'c3.2xlarge' : {
+            'c3.2xlarge': {
                 'id': 'c3.2xlarge',
                 'cores': '8 (with 3.5 ECUs each)',
                 'disk': '160 GiB (2 x 80 GiB SSD)',
                 'ram': '15 GiB'
             },
-            'c3.4xlarge' : {
+            'c3.4xlarge': {
                 'id': 'c3.4xlarge',
                 'cores': '16 (with 3.5 ECUs each)',
                 'disk': '320 GiB (2 x 80 GiB SSD)',
                 'ram': '30 GiB'
             },
-            'c3.8xlarge' : {
+            'c3.8xlarge': {
                 'id': 'c3.8xlarge',
                 'cores': '32 (with 3.5 ECUs each)',
                 'disk': '320 GiB (2 x 160 GiB SSD)',
