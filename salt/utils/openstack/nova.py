@@ -590,17 +590,6 @@ class SaltNova(object):
                 }
         return ret
 
-    def list_nodes(self):
-        '''
-        List Servers
-        '''
-        ret = {}
-        servers = self.server_list()
-        for server in servers.keys():
-            ret.append(self.server_show_libcloud(servers[server]['id']))
-
-        return ret
-
     def server_list_detailed(self):
         '''
         Detailed list of servers
