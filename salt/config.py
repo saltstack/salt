@@ -27,6 +27,7 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+import salt.utils.validate.path
 
 import sys
 #can't use salt.utils.is_windows, because config.py is included from salt.utils
@@ -585,7 +586,7 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    if os.path.isfile(path):
+    if salt.utils.validate.path.is_readable(path):
         opts = _read_conf_file(path)
         opts['conf_file'] = path
         return opts
