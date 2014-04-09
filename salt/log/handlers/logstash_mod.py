@@ -413,4 +413,12 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
     def close(self):
         if self._context is not None:
             # One second to send any queued messages
-            self._context.destroy(1 * 1000)
+            if hasattr(self._context, 'destroy'):
+                self._context.destroy(1 * 1000)
+            else:
+                if getattr(self, '_publisher', None) is not None:
+                    self._publisher.setsockopt(zmq.LINGER, 1)
+                    self._publisher.close()
+
+                if self._context.closed is False:
+                    self._context.term()
