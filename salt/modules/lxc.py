@@ -1431,7 +1431,10 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
     '''
     data = []
 
-    conf = read_conf(conf_file, out_format='commented')
+    try:
+        conf = read_conf(conf_file, out_format='commented')
+    except Exception:
+        conf = []
 
     for line in conf:
         if type(line) is not dict:
