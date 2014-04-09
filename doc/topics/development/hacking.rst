@@ -77,6 +77,18 @@ discussion section of the pull request.
     failure does not necessarily mean there is an issue in the associated pull
     request as the entire development branch is tested.
 
+.. note:: Minor releases
+
+    Minor releases normally contain bug fixes selected by the Salt core
+    development team.
+
+    When submitting a pull-request which should be considered for a minor
+    release, please note in the comments that it should be reviewed
+    for inclusion.
+
+    Pull requests that are accepted to Salt but not merged into a minor
+    release will always be available in the next major release.
+
 Keeping Salt Forks in Sync
 --------------------------
 
