@@ -1445,6 +1445,12 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append({
                 key: kwargs[key]
             })
+            del kwargs[key]
+
+    for kwarg in kwargs:
+        if kwarg.startswith('__'):
+            continue
+        data.append({kwarg: kwargs[kwarg]})
 
     write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
