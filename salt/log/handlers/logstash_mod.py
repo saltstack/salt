@@ -417,7 +417,7 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
                 self._context.destroy(1 * 1000)
             else:
                 if getattr(self, '_publisher', None) is not None:
-                    self._publisher.setsockopt(zmq.LINGER, 1)
+                    self._publisher.setsockopt(zmq.LINGER, 1 * 1000)
                     self._publisher.close()
 
                 if self._context.closed is False:
