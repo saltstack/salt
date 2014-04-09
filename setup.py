@@ -483,6 +483,7 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.utils.decorators',
                              'salt.utils.openstack',
                              'salt.utils.validate',
+                             'salt.utils.serializers',
                              'salt.wheel',
                              ],
                 'package_data': {'salt.templates': [
