@@ -1406,3 +1406,42 @@ def write_conf(conf_file, conf):
                     fp_.write(out_line)
 
     return {}
+
+
+def edit_conf(conf_file, out_format='simple', **kwargs):
+    '''
+    Edit an LXC configuration file. If a setting is already present inside the
+    file, its value will be replaced. If it does not exist, it will be appended
+    to the end of the file. Comments and blank lines will be kept in-tact if
+    they already exist in the file.
+
+    After the file is edited, its contents will be returned. By default, it
+    will be returned in ``simple`` format, meaning an unordered dict (which
+    may not represent the actual file order). Passing in an ``out_format`` of
+    ``commented`` will return a data structure which accurately represents the
+    order and content of the file.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \
+            out_format=commented lxc.network.type=veth
+    '''
+    ret = []
+
+    conf = read_conf(conf_file, out_format)
+    for line in conf:
+        if type(line) is not dict:
+            ret.append(line)
+            continue
+        else:
+            key = line.keys()[0]
+            if not key in kwargs:
+                ret.append(line)
+                continue
+            ret.append({
+                key: kwargs[key]
+            })
+
+    return ret
