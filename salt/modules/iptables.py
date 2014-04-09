@@ -166,13 +166,8 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         if not '-m multiport' in rule:
             rule += '-m multiport '
 
-        dports = ''
         if isinstance(kwargs['dports'], list):
-            for port in kwargs['dports']:
-                if not dports:
-                    dports += '{0}'.format(port)
-                else:
-                    dports += ',{0}'.format(port)
+            dports = ','.join(kwargs['dports'])
         else:
             dports = kwargs['dports']
 
@@ -183,13 +178,8 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         if not '-m multiport' in rule:
             rule += '-m multiport '
 
-        sports = ''
         if isinstance(kwargs['sports'], list):
-            for port in kwargs['sports']:
-                if not sports:
-                    sports += '{0}'.format(port)
-                else:
-                    sports += ',{0}'.format(port)
+            sports = ','.join(kwargs['sports'])
         else:
             sports = kwargs['dports']
 
