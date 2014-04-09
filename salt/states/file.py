@@ -3234,12 +3234,12 @@ def serialize(name,
     formatter = kwargs.pop('formatter', 'yaml').lower()
     if formatter == 'yaml':
         contents = yaml.serialize(dataset,
-                                              default_flow_style=False)
+                                  default_flow_style=False)
     elif formatter == 'json':
         contents = json.serialize(dataset,
-                                              indent=2,
-                                              separators=(',', ': '),
-                                              sort_keys=True)
+                                  indent=2,
+                                  separators=(',', ': '),
+                                  sort_keys=True)
     elif formatter == 'python':
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
