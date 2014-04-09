@@ -493,7 +493,7 @@ def boot_time():
     return psutil.get_boot_time()
 
 
-def network_io_counters():
+def network_io_counters(interface=None):
     '''
     Return network I/O statisitics.
 
@@ -502,11 +502,20 @@ def network_io_counters():
     .. code-block:: bash
 
         salt '*' ps.network_io_counters
+
+        salt '*' ps.network_io_counters interface=eth0
     '''
-    return dict(psutil.network_io_counters()._asdict())
+    if not interface:
+        return dict(psutil.network_io_counters()._asdict())
+    else:
+        stats = psutil.network_io_counters(pernic=True)
+        if interface in stats:
+            return dict(stats[interface]._asdict())
+        else:
+            return False
 
 
-def disk_io_counters():
+def disk_io_counters(device=None):
     '''
     Return disk I/O statisitics.
 
@@ -515,8 +524,17 @@ def disk_io_counters():
     .. code-block:: bash
 
         salt '*' ps.disk_io_counters
+
+        salt '*' ps.disk_io_counters device=sda1
     '''
-    return dict(psutil.disk_io_counters()._asdict())
+    if not device:
+        return dict(psutil.disk_io_counters()._asdict())
+    else:
+        stats = psutil.disk_io_counters(perdisk=True)
+        if device in stats:
+            return dict(stats[device]._asdict())
+        else:
+            return False
 
 
 def get_users():
