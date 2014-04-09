@@ -1315,3 +1315,44 @@ def cp(name, src, dest):
     log.info(cmd)
     ret = __salt__['cmd.run_all'](cmd)
     return ret
+
+
+def read_conf(conf_file, out_format='simple'):
+    '''
+    Read in an LXC configuration file. By default returns a simple, unsorted
+    dict, but can also return a more detailed structure including blank lines
+    and comments.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf \
+            out_format=commented
+    '''
+    ret_commented = []
+    ret_simple = {}
+    with salt.utils.fopen(conf_file, 'r') as fp_:
+        for line in fp_.readlines():
+            if not '=' in line:
+                ret_commented.append(line)
+                continue
+            comps = line.split('=')
+            value = '='.join(comps[1:]).strip()
+            comment = None
+            if '#' in value:
+                vcomps = value.split('#')
+                value = vcomps[1].strip()
+                comment = '#'.join(vcomps[1:]).strip()
+                ret_commented.append({comps[0].strip(): {
+                    'value': value,
+                    'comment': comment,
+                }})
+            else:
+                ret_commented.append({comps[0].strip(): value})
+                ret_simple[comps[0].strip()] = value
+
+    if out_format == 'simple':
+        return ret_simple
+    return ret_commented
