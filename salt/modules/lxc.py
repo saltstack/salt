@@ -1388,8 +1388,8 @@ def write_conf(conf_file, conf):
         salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \
             out_format=commented
     '''
-    if type(conf) is not dict:
-        return {'Error': 'conf must be passed in as a dict'}
+    if type(conf) is not list:
+        return {'Error': 'conf must be passed in as a list'}
 
     with salt.utils.fopen(conf_file, 'w') as fp_:
         for line in conf:
@@ -1398,12 +1398,13 @@ def write_conf(conf_file, conf):
             elif type(line) is dict:
                 key = line.keys()[0]
                 if type(line[key]) is str:
-                    fp_.write(' = '.join(key, line[key]))
+                    out_line = ' = '.join((key, line[key]))
                 elif type(line[key]) is dict:
-                    out_line = ' = '.join(key, line[key]['value'])
+                    out_line = ' = '.join((key, line[key]['value']))
                     if 'comment' in line[key]:
-                        out_line = ' # '.join(out_line, line[key]['comment'])
-                    fp_.write(out_line)
+                        out_line = ' # '.join((out_line, line[key]['comment']))
+                fp_.write(out_line)
+                fp_.write('\n')
 
     return {}
 
@@ -1428,20 +1429,22 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
         salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \
             out_format=commented lxc.network.type=veth
     '''
-    ret = []
+    data = []
 
-    conf = read_conf(conf_file, out_format)
+    conf = read_conf(conf_file, out_format='commented')
+
     for line in conf:
         if type(line) is not dict:
-            ret.append(line)
+            data.append(line)
             continue
         else:
             key = line.keys()[0]
             if not key in kwargs:
-                ret.append(line)
+                data.append(line)
                 continue
-            ret.append({
+            data.append({
                 key: kwargs[key]
             })
 
-    return ret
+    write_conf(conf_file, data)
+    return read_conf(conf_file, out_format)
