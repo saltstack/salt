@@ -1356,3 +1356,53 @@ def read_conf(conf_file, out_format='simple'):
     if out_format == 'simple':
         return ret_simple
     return ret_commented
+
+
+def write_conf(conf_file, conf):
+    '''
+    Write out an LXC configuration file. This is normally only used internally.
+    The format of the data structure must match that which is returned from
+    ``lxc.read_conf()``, with ``out_format`` set to ``commented``. An example
+    might look like:
+
+    [
+        {'lxc.utsname': '$CONTAINER_NAME'},
+        '# This is a commented line\n',
+        '\n',
+        {'lxc.mount': '$CONTAINER_FSTAB'},
+        {'lxc.rootfs': {'comment': 'This is another test',
+                        'value': 'This is another test'}},
+        '\n',
+        {'lxc.network.type': 'veth'},
+        {'lxc.network.flags': 'up'},
+        {'lxc.network.link': 'br0'},
+        {'lxc.network.hwaddr': '$CONTAINER_MACADDR'},
+        {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
+        {'lxc.network.name': '$CONTAINER_DEVICENAME'},
+    ]
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \
+            out_format=commented
+    '''
+    if type(conf) is not dict:
+        return {'Error': 'conf must be passed in as a dict'}
+
+    with salt.utils.fopen(conf_file, 'w') as fp_:
+        for line in conf:
+            if type(line) is str:
+                fp_.write(line)
+            elif type(line) is dict:
+                key = line.keys()[0]
+                if type(line[key]) is str:
+                    fp_.write(' = '.join(key, line[key]))
+                elif type(line[key]) is dict:
+                    out_line = ' = '.join(key, line[key]['value'])
+                    if 'comment' in line[key]:
+                        out_line = ' # '.join(out_line, line[key]['comment'])
+                    fp_.write(out_line)
+
+    return {}
