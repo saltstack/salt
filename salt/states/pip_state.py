@@ -30,10 +30,18 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 # Import 3rd-party libs
 try:
     import pip
-    import pip.req
     HAS_PIP = True
 except ImportError:
     HAS_PIP = False
+
+if HAS_PIP is True:
+    try:
+        import pip.req
+    except ImportError:
+        HAS_PIP = False
+        # Remove references to the loaded pip module above so reloading works
+        import sys
+        del pip, sys.modules['pip']
 
 logger = logging.getLogger(__name__)
 
