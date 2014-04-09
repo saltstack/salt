@@ -300,11 +300,6 @@ def create(vm_):
         'image_id': get_image(vm_),
         'region_id': get_location(vm_),
     }
-    ssh_key_name = config.get_cloud_config_value(
-        'ssh_key_name', vm_, __opts__, search_global=False
-    )
-    #if ssh_key_name:
-    #    kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
 
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
