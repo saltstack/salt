@@ -498,7 +498,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir']
                 )
-        ret_stack.addRemoteYard(main_yard)
+        ret_stack.addRemote(main_yard)
         route = {'src': (self.opts['id'], ret_stack.yard.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
@@ -542,7 +542,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                     yid=data['jid'],
                     prefix=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            self.uxd_stack.value.addRemoteYard(ex_yard)
+            self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}
