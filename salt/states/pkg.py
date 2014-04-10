@@ -338,7 +338,7 @@ def installed(
         pkgs=None,
         names=None,
         sources=None,
-        **kwargs): # pylint: disable=W0613
+        **kwargs):  # pylint: disable=W0613
     '''
     Verify that the package is installed, and that it is the correct version
     (if specified).
