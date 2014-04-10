@@ -178,7 +178,7 @@ class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the schedule
     '''
-    Ioinits = {'opts_store': '.salt.opts',
+    Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
@@ -187,6 +187,8 @@ class Schedule(ioflo.base.deeding.Deed):
         '''
         Map opts and make the schedule object
         '''
+        self.modules.value = salt.loader.minion_mods(self.opts.value)
+        self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
         self.scedule = salt.utils.schedule.Schedule(
                 self.opts.value,
                 self.modules.value,
