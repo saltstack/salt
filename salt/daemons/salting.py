@@ -1,91 +1,43 @@
 # -*- coding: utf-8 -*-
 '''
-behaving.py raet ioflo behaviors
-
-See raeting.py for data format and packet field details.
-
-Layout in DataStore
-
-
-raet.udp.stack.stack
-    value StackUdp
-raet.udp.stack.txmsgs
-    value deque()
-raet.udp.stack.rxmsgs
-    value deque()
-raet.udp.stack.local
-    name host port sigkey prikey
-raet.udp.stack.status
-    joined allowed idle
-raet.udp.stack.destination
-    value deid
-
+salting.py module of salt specific interfaces to raet
 
 '''
 # pylint: skip-file
 # pylint: disable=W0611
 
 # Import Python libs
-from collections import deque
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
-from ioflo.base.globaling import *
-
-from ioflo.base import aiding
-from ioflo.base import storing
-from ioflo.base import deeding
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from . import raeting, nacling, packeting, keeping, stacking, estating
+from raet import raeting, nacling, keeping
+from raet.road.keeping import RoadKeep
 
-
-class JoinerStackUdpRaetSalt(deeding.Deed):  # pylint: disable=W0232
-    '''
-    Initiates join transaction with master
-    '''
-    Ioinits = odict(
-        inode=".raet.udp.stack.",
-        stack='stack',
-        masterhost='.salt.etc.master',
-        masterport='.salt.etc.master_port', )
-
-    def postinitio(self):
-        self.mha = (self.masterhost.value, int(self.masterport.value))
-
-    def action(self, **kwa):
-        '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
-        '''
-        stack = self.stack.value
-        if stack and isinstance(stack, stacking.StackUdp):
-            stack.join(mha=self.mha)
-
-
+from salt.key import RaetKey
 
 class SaltSafe(object):
     '''
-    RAET protocol estate safe (key) data persistence and status
+    Interface between Salt Key management and RAET keep key management
     '''
     Auto = False #auto accept
 
     def __init__(self, opts=None, **kwa):
         '''
         Setup SaltSafe instance
-
         '''
-        from salt.key import RaetKey
-
         if opts is None:
             opts = {}
         self.saltRaetKey = RaetKey(opts)
+        
+    def dumpLocalData(self, data):
+        '''
+        Dump the key data from the local estate
+        '''      
+        self.saltRaetKey.write_local(data.prihex, data.sighex)    
 
     def loadLocalData(self):
         '''
@@ -128,32 +80,20 @@ class SaltSafe(object):
         '''
         self.saltRaetKey.delete_all()
 
-    def dumpLocalEstate(self, estate):
-        '''
-        Dump the key data from the local estate
-        '''
-        self.saltRaetKey.write_local(estate.priver.keyhex, estate.signer.keyhex)
-
-    def dumpRemoteEstate(self, estate):
+    def dumpRemote(self, estate):
         '''
         Dump the data from the remote estate
         '''
         pass
 
-    def dumpAllRemoteEstates(self, estates):
-        '''
-        Dump the data from all the remote estates
-        '''
-        for estate in estates:
-            self.dumpRemoteEstate(estate)
-
-
-    def loadRemoteEstate(self, estate, status='accepted'):
+    def loadRemote(self, remote):
         '''
         Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        mid = estate.name
+        status='accepted'
+        
+        mid = remote.name
         keydata = self.saltRaetKey.read_remote(mid, status)
         if not keydata:
             return None
@@ -167,15 +107,15 @@ class SaltSafe(object):
 
         return data
 
-    def clearRemoteEstate(self, estate):
+    def clearRemote(self, remote):
         '''
         Clear the remote estate file
         Override this in sub class to change uid
         '''
-        mid = estate.eid
+        mid = remote.eid
         self.saltRaetKey.delete_key(mid)
 
-    def statusRemoteEstate(self, estate, verhex, pubhex, main=True):
+    def statusRemote(self, estate, verhex, pubhex, main=True):
         '''
         Evaluate acceptance status of estate per its keys
         persist key data differentially based on status
@@ -193,20 +133,26 @@ class SaltSafe(object):
         estate.acceptance = status
         return status
 
-    def rejectRemoteEstate(self, estate):
+    def rejectRemote(self, remote):
         '''
         Set acceptance status to rejected
         '''
-        estate.acceptance = raeting.acceptances.rejected
-        mid = estate.name
+        remote.acceptance = raeting.acceptances.rejected
+        mid = remote.name
         self.saltRaetKey.reject(match=mid, include_accepted=True)
+        
+    def pendRemote(self, remote):
+         '''
+         Set acceptance status to pending
+         '''
+         pass    
 
-    def acceptRemoteEstate(self, estate):
+    def acceptRemote(self, remote):
         '''
         Set acceptance status to accepted
         '''
-        estate.acceptance = raeting.acceptances.accepted
-        mid = estate.name
+        remote.acceptance = raeting.acceptances.accepted
+        mid = remote.name
         self.saltRaetKey.accept(match=mid, include_rejected=True)
 
 
@@ -214,7 +160,7 @@ def clearAllRoadSafe(dirpath, opts):
     '''
     Convenience function to clear all road and safe keep data in dirpath
     '''
-    road = keeping.RoadKeep(dirpath=dirpath)
+    road = RoadKeep(dirpath=dirpath)
     road.clearLocalData()
     road.clearAllRemoteData()
     safe = SaltSafe(opts=opts)

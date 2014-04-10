@@ -9,9 +9,10 @@ import multiprocessing
 
 # Import salt libs
 import salt.daemons.masterapi
-from salt.transport.road.raet import stacking
-from salt.transport.road.raet import yarding
-from salt.transport.road.raet import raeting
+from raet import raeting
+from raet.lane.stacking import LaneStack
+from raet.lane.yarding import RemoteYard
+
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -81,16 +82,16 @@ class SetupWorker(ioflo.base.deeding.Deed):
         '''
         Set up the uxd stack and behaviors
         '''
-        self.uxd_stack.value = stacking.StackUxd(
+        self.uxd_stack.value = LaneStack(
                 lanename=self.opts.value['id'],
                 yid=self.yid.value,
-                dirpath=self.opts.value['sock_dir'])
+                sockdirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
-        manor_yard = yarding.RemoteYard(
+        manor_yard = RemoteYard(
                 yid=0,
                 prefix=self.opts.value['id'],
                 dirpath=self.opts.value['sock_dir'])
-        self.uxd_stack.value.addRemoteYard(manor_yard)
+        self.uxd_stack.value.addRemote(manor_yard)
         self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
         self.local.value = salt.daemons.masterapi.LocalFuncs(
                 self.opts.value,
