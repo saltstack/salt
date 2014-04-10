@@ -20,6 +20,7 @@ opts['ioflo_verbose']
 # Import modules
 from . import core
 from . import worker
+from . import maint
 
 __all__ = ['core', 'worker', 'maint']
 
