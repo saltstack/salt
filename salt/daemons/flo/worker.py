@@ -40,7 +40,7 @@ class WorkerFork(ioflo.base.deeding.Deed):
         Spin up a worker, do this in s multiprocess
         '''
         self.opts.value['__worker'] = True
-        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value))]
         preloads.append(('.salt.yid', dict(value=yid)))
         preloads.append(

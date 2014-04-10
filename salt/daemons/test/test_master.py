@@ -25,7 +25,7 @@ def test():
             raet_port=7530)
 
     master = salt.daemons.flo.IofloMaster(opts=opts)
-    master.start()
+    master.start(behaviors=['raet.flo.behaving'])
 
 if __name__ == '__main__':
     test()

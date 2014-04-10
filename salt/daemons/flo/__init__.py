@@ -55,13 +55,16 @@ class IofloMaster(object):
         self.preloads.append(
                 ('.salt.access_keys', dict(value=self.access_keys)))
 
-    def start(self):
+    def start(self, behaviors=None):
         '''
         Start up ioflo
 
         port = self.opts['raet_port']
         '''
-        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        if behaviors is None:
+            behaviors = []
+        behaviors.extend(['salt.daemons.flo'])
+
         ioflo.app.run.start(
                 name='master',
                 period=float(self.opts['ioflo_period']),
@@ -89,13 +92,16 @@ class IofloMinion(object):
         '''
         self.opts = opts
 
-    def tune_in(self):
+    def tune_in(self, behaviors=None):
         '''
         Start up ioflo
 
         port = self.opts['raet_port']
         '''
-        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        if behaviors is None:
+            behaviors = []
+        behaviors.extend(['salt.daemons.flo'])
+
         preloads = explode_opts(self.opts)
 
         ioflo.app.run.start(

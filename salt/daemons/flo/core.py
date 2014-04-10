@@ -29,6 +29,7 @@ from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
 # Import ioflo libs
+from  ioflo.base.odicting import odict
 import ioflo.base.deeding
 
 # Import Third Party Libs
@@ -67,7 +68,7 @@ class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
         Send any packets in txes
         '''
         stack = self.stack.value
-        if stack and isinstance(stack, stacking.RoadStack):
+        if stack and isinstance(stack, RoadStack):
             stack.join(mha=self.mha)
 
 
