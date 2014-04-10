@@ -36,6 +36,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
@@ -43,6 +44,76 @@ log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
 # only accept valid minion ids
+
+
+def master_keys(opts):
+    '''
+    Generate and return the master long term key data
+    '''
+    keyfile = os.path.join(
+            opts['pki_dir'],
+            'priv.{0}'.format(opts['crypt_backend'])
+            )
+    if not os.path.isfile(keyfile):
+        public = salt.transport.table.Public(
+                backend=opts['crypt_backend'],
+                serial='msgpack')
+        public.save(keyfile)
+        return public
+    return salt.transport.table.Public(
+            backend=opts['crypt_backend'],
+            keyfile=keyfile,
+            serial='msgpack')
+
+
+def init_git_pillar(opts):
+    '''
+    Clear out the ext pillar caches, used when the master starts
+    '''
+    pillargitfs = []
+    for opts_dict in [x for x in opts.get('ext_pillar', [])]:
+        if 'git' in opts_dict:
+            parts = opts_dict['git'].strip().split()
+            try:
+                br = parts[0]
+                loc = parts[1]
+            except IndexError:
+                log.critical(
+                    'Unable to extract external pillar data: {0}'
+                    .format(opts_dict['git'])
+                )
+            else:
+                pillargitfs.append(
+                    git_pillar.GitPillar(
+                        br,
+                        loc,
+                        opts
+                    )
+                )
+    return pillargitfs
+
+
+def clean_fsbackend(opts):
+    '''
+    Clean ou the old fileserver backends
+    '''
+    # Clear remote fileserver backend env cache so it gets recreated
+    for backend in ('git', 'hg', 'svn'):
+        if backend in opts['fileserver_backend']:
+            env_cache = os.path.join(
+                opts['cachedir'],
+                '{0}fs'.format(backend),
+                'envs.p'
+            )
+            if os.path.isfile(env_cache):
+                log.debug('Clearing {0}fs env cache'.format(backend))
+                try:
+                    os.remove(env_cache)
+                except (IOError, OSError) as exc:
+                    log.critical(
+                        'Unable to clear env cache file {0}: {1}'
+                        .format(env_cache, exc)
+                    )
 
 
 def clean_old_jobs(opts):
