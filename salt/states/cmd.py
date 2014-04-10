@@ -279,22 +279,20 @@ def _run_check(cmd_kwargs, onlyif, unless, group, creates):
 
     if onlyif is not None:
         if isinstance(onlyif, string_types):
-            if __salt__['cmd.retcode'](onlyif, ignore_retcode=True, **cmd_kwargs) != 0:
+            cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, **cmd_kwargs)
+            if cmd != 0:
+                log.debug('onlyif return code: {0}'.format(cmd))
                 return {'comment': 'onlyif execution failed',
                         'result': True}
         elif isinstance(onlyif, list):
-            if all([
-                __salt__['cmd.retcode'](
-                    entry,
-                    ignore_retcode=True,
-                    **cmd_kwargs
-                ) != 0 for entry in onlyif
-            ]):
-
+            cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+            if all([cmd != 0 for entry in onlyif]):
+                log.debug('onlyif return code: {0}'.format(cmd))
                 return {'comment': 'onlyif execution failed',
                         'result': True}
         elif not isinstance(onlyif, string_types):
             if not onlyif:
+                log.debug('Command not run: onlyif did not evaluate to string_type')
                 return {'comment': 'onlyif execution failed',
                         'result': True}
 
