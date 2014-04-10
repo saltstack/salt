@@ -937,11 +937,11 @@ def replace(path,
         buffering.
     :type bufsize: int or str
 
-    :param append_if_not_found If pattern is not found and set to ``True``
+    :param append_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
-    :param prepend_if_not_found If pattern is not found and set to ``True``
+    :param prepend_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
-    :param not_found_content Content to use for append/prepend if not found. If
+    :param not_found_content: Content to use for append/prepend if not found. If
         None (default), uses repl. Useful when repl uses references to group in
         pattern.
 
