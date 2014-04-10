@@ -222,6 +222,7 @@ VALID_OPTS = {
 
 # default configurations
 DEFAULT_MINION_OPTS = {
+    'interface': '0.0.0.0',
     'master': 'salt',
     'master_port': '4506',
     'master_finger': '',
