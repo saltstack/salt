@@ -17,7 +17,7 @@ The salt.state declaration can call out a highstate or a list of sls:
           - core
         - saltenv: prod
 
-    databasees:
+    databases:
       salt.state:
         - tgt: role:database
         - tgt_type: grain
