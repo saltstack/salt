@@ -46,26 +46,6 @@ log = logging.getLogger(__name__)
 # only accept valid minion ids
 
 
-def master_keys(opts):
-    '''
-    Generate and return the master long term key data
-    '''
-    keyfile = os.path.join(
-            opts['pki_dir'],
-            'priv.{0}'.format(opts['crypt_backend'])
-            )
-    if not os.path.isfile(keyfile):
-        public = salt.transport.table.Public(
-                backend=opts['crypt_backend'],
-                serial='msgpack')
-        public.save(keyfile)
-        return public
-    return salt.transport.table.Public(
-            backend=opts['crypt_backend'],
-            keyfile=keyfile,
-            serial='msgpack')
-
-
 def init_git_pillar(opts):
     '''
     Clear out the ext pillar caches, used when the master starts
