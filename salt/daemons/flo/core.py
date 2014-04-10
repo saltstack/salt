@@ -76,18 +76,22 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
     '''
-    Ioinits = dict(
-            inode='raet.udp.stack.',
-            stack='stack',
-            opts='.salt.opts',
-            txmsgs=dict(ipath='txmsgs', ival=deque()),
-            rxmsgs=dict(ipath='rxmsgs', ival=deque()),
-            local=dict(ipath='local', ival=dict(name='master',
-                                            main=False,
-                                            auto=True,
-                                            eid=0,
-                                            sigkey=None,
-                                            prikey=None)),)
+    Ioinits = {
+            'inode': 'raet.udp.stack.',
+            'stack': 'stack',
+            'opts': '.salt.opts',
+            'txmsgs': {'ipath': 'txmsgs',
+                       'ival': deque()},
+            'rxmsgs': {'ipath': 'rxmsgs',
+                       'ival': deque()},
+            'local': {'ipath': 'local',
+                      'ival': {'name': 'master',
+                               'main': False,
+                               'auto': True,
+                               'eid': 0,
+                               'sigkey': None,
+                               'prikey': None}}
+            }
 
     def postinitio(self):
         '''
