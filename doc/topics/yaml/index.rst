@@ -100,3 +100,11 @@ In Python, the above maps to:
 .. code-block:: python
 
     {'my_dictionary': ['list_value_one', 'list_value_two', 'list_value_three']}
+
+Learning More
+-------------
+
+One easy way to learn more about how YAML gets rendered into Python data structures is
+to use an online YAML parser to see the Python output. 
+
+One excellent choice for experimenting with YAML parsing is: http://yaml-online-parser.appspot.com/
