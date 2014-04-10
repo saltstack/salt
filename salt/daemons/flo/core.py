@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The core bahaviuors ued by minion and master
+The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
@@ -76,21 +76,22 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
     '''
-    Ioinits = dict(
-            inode='raet.udp.stack.',
-            stack='stack',
-            opts='.salt.opts',
-            txmsgs=dict(ipath='txmsgs', ival=deque()),
-            rxmsgs=dict(ipath='rxmsgs', ival=deque()),
-            local=dict(ipath='local', ival=dict(name='master',
-                                            dirpath='/var/cache/raet',
-                                            main=False,
-                                            auto=True,
-                                            eid=0,
-                                            host='0.0.0.0',
-                                            port=raeting.RAET_PORT,
-                                            sigkey=None,
-                                            prikey=None)),)
+    Ioinits = {
+            'inode': 'raet.udp.stack.',
+            'stack': 'stack',
+            'opts': '.salt.opts',
+            'txmsgs': {'ipath': 'txmsgs',
+                       'ival': deque()},
+            'rxmsgs': {'ipath': 'rxmsgs',
+                       'ival': deque()},
+            'local': {'ipath': 'local',
+                      'ival': {'name': 'master',
+                               'main': False,
+                               'auto': True,
+                               'eid': 0,
+                               'sigkey': None,
+                               'prikey': None}}
+            }
 
     def postinitio(self):
         '''
@@ -99,10 +100,11 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
         name = self.local.data.name
-        dirpath = os.path.abspath(os.path.join(self.local.data.dirpath, name))
+        dirpath = os.path.abspath(
+                os.path.join(self.opts.value['cachedir'], 'raet'))
         auto = self.local.data.auto
         main = self.local.data.main
-        ha = (self.local.data.host, self.local.data.port)
+        ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         eid = self.local.data.eid
         estate = LocalEstate(
@@ -176,7 +178,7 @@ class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the schedule
     '''
-    Ioinits = {'opts_store': '.salt.opts',
+    Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
@@ -185,6 +187,8 @@ class Schedule(ioflo.base.deeding.Deed):
         '''
         Map opts and make the schedule object
         '''
+        self.modules.value = salt.loader.minion_mods(self.opts.value)
+        self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
         self.scedule = salt.utils.schedule.Schedule(
                 self.opts.value,
                 self.modules.value,

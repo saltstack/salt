@@ -27,6 +27,7 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+import salt.utils.validate.path
 from salt._compat import string_types
 
 import sys
@@ -147,6 +148,8 @@ VALID_OPTS = {
     'hgfs_root': str,
     'hgfs_base': str,
     'hgfs_branch_method': str,
+    'hgfs_env_whitelist': list,
+    'hgfs_env_blacklist': list,
     'svnfs_remotes': list,
     'svnfs_mountpoint': str,
     'svnfs_root': str,
@@ -219,6 +222,7 @@ VALID_OPTS = {
 
 # default configurations
 DEFAULT_MINION_OPTS = {
+    'interface': '0.0.0.0',
     'master': 'salt',
     'master_port': '4506',
     'master_finger': '',
@@ -357,6 +361,8 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
+    'hgfs_env_whitelist': [],
+    'hgfs_env_blacklist': [],
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
     'svnfs_root': '',
@@ -455,6 +461,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
+    'maintinance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
     'ioflo_verbose': 3,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
@@ -565,35 +572,30 @@ def _append_domain(opts):
 
 def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
-    try:
-        with salt.utils.fopen(path, 'r') as conf_file:
-            try:
-                conf_opts = yaml.safe_load(conf_file.read()) or {}
-            except yaml.YAMLError as err:
-                log.error(
-                    'Error parsing configuration file: {0} - {1}'.format(path, err)
-                )
-                conf_opts = {}
-            # only interpret documents as a valid conf, not things like strings,
-            # which might have been caused by invalid yaml syntax
-            if not isinstance(conf_opts, dict):
-                log.error(
-                    'Error parsing configuration file: {0} - conf should be a '
-                    'document, not {1}.'.format(path, type(conf_opts))
-                )
-                conf_opts = {}
-            # allow using numeric ids: convert int to string
-            if 'id' in conf_opts:
-                conf_opts['id'] = str(conf_opts['id'])
-            for key, value in conf_opts.copy().iteritems():
-                if isinstance(value, unicode):
-                    # We do not want unicode settings
-                    conf_opts[key] = value.encode('utf-8')
-            return conf_opts
-    except IOError as exc:
-        # Master shouldn't keep running if it can't read  config file
-        log.error('Error accessing configuration file: ({0}): {1}'.format(path, exc))
-        sys.exit(2)
+    with salt.utils.fopen(path, 'r') as conf_file:
+        try:
+            conf_opts = yaml.safe_load(conf_file.read()) or {}
+        except yaml.YAMLError as err:
+            log.error(
+                'Error parsing configuration file: {0} - {1}'.format(path, err)
+            )
+            conf_opts = {}
+        # only interpret documents as a valid conf, not things like strings,
+        # which might have been caused by invalid yaml syntax
+        if not isinstance(conf_opts, dict):
+            log.error(
+                'Error parsing configuration file: {0} - conf should be a '
+                'document, not {1}.'.format(path, type(conf_opts))
+            )
+            conf_opts = {}
+        # allow using numeric ids: convert int to string
+        if 'id' in conf_opts:
+            conf_opts['id'] = str(conf_opts['id'])
+        for key, value in conf_opts.copy().iteritems():
+            if isinstance(value, unicode):
+                # We do not want unicode settings
+                conf_opts[key] = value.encode('utf-8')
+        return conf_opts
 
 
 def load_config(path, env_var, default_path=None):
@@ -644,7 +646,7 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    if os.path.isfile(path):
+    if salt.utils.validate.path.is_readable(path):
         opts = _read_conf_file(path)
         opts['conf_file'] = path
         return opts
