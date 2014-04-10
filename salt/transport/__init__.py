@@ -63,7 +63,7 @@ class RAETChannel(Channel):
                 yid=0,
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
-        self.stack.addRemoteYard(self.router_yard)
+        self.stack.addRemote(self.router_yard)
         src = (self.opts['id'], self.stack.yard.name, None)
         dst = ('master', None, 'remote_cmd')
         self.route = {'src': src, 'dst': dst}
@@ -80,7 +80,7 @@ class RAETChannel(Channel):
         Send a message load and wait for a relative reply
         '''
         msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, 'yard0')
+        self.stack.transmit(msg, self.stack.uids['yard0'])
         while True:
             self.stack.serviceAll()
             if self.stack.rxMsgs:
