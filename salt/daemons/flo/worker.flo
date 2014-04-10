@@ -1,4 +1,5 @@
-# Raet Test FloScript
+# Salt Master Worker Floscript, this controlls a single worker proc,
+# many are started based on the value in worker_threads
 
 house worker
 
