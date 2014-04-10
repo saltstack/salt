@@ -304,7 +304,12 @@ class Pillar(object):
         Returns the high data derived from the top file
         '''
         tops, errors = self.get_tops()
-        return self.merge_tops(tops), errors
+        try:
+            merged_tops = self.merge_tops(tops)
+        except TypeError as err:
+            merged_tops = OrderedDict()
+            errors.append('Error encountered while render pillar top file.')
+        return merged_tops, errors
 
     def top_matches(self, top):
         '''
