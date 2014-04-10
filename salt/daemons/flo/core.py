@@ -17,15 +17,19 @@ from collections import deque
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
-from salt.transport.road.raet import stacking
-from salt.transport.road.raet import estating
-from salt.transport.road.raet import raeting
-from salt.transport.road.raet import yarding
-from salt.transport.road.raet import salting
+from raet import raeting
+from raet.road.stacking import RoadStack
+from raet.road.estating import LocalEstate
+from raet.lane.stacking import LaneStack
+from raet.lane.yarding import RemoteYard
+
+from salt.daemons import salting
+
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
 # Import ioflo libs
+from  ioflo.base.odicting import odict
 import ioflo.base.deeding
 
 # Import Third Party Libs
@@ -45,6 +49,29 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
+    '''
+    Initiates join transaction with master
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        masterhost='.salt.etc.master',
+        masterport='.salt.etc.master_port', )
+
+    def postinitio(self):
+        self.mha = (self.masterhost.value, int(self.masterport.value))
+
+    def action(self, **kwa):
+        '''
+        Receive any udp packets on server socket and put in rxes
+        Send any packets in txes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, RoadStack):
+            stack.join(mha=self.mha)
+
+
 class StackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -56,7 +83,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
             txmsgs=dict(ipath='txmsgs', ival=deque()),
             rxmsgs=dict(ipath='rxmsgs', ival=deque()),
             local=dict(ipath='local', ival=dict(name='master',
-                                            dirpath='raet/test/keep',
+                                            dirpath='/var/cache/raet',
                                             main=False,
                                             auto=True,
                                             eid=0,
@@ -78,7 +105,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
         ha = (self.local.data.host, self.local.data.port)
 
         eid = self.local.data.eid
-        estate = estating.LocalEstate(
+        estate = LocalEstate(
                 eid=eid,
                 name=name,
                 ha=ha,
@@ -88,7 +115,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
         rxMsgs = self.rxmsgs.value
         safe = salting.SaltSafe(opts=self.opts.value)
 
-        self.stack.value = stacking.StackUdp(
+        self.stack.value = RoadStack(
                 estate=estate,
                 store=self.store,
                 name=name,
@@ -189,11 +216,12 @@ class Setup(ioflo.base.deeding.Deed):
         '''
         Set up required objects and queues
         '''
-        self.uxd_stack.value = stacking.StackUxd(
+        self.uxd_stack.value = LaneStack(
                 name='yard',
                 lanename=self.opts.value['id'],
                 yid=0,
-                dirpath=self.opts.value['sock_dir'])
+                sockdirpath=self.opts.value['sock_dir'],
+                dirpath=self.opts.value['cachedir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
@@ -459,17 +487,18 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
-        ret_stack = stacking.StackUxd(
+        ret_stack = LaneStack(
                 lanename=self.opts['id'],
                 yid=ret['jid'],
-                dirpath=self.opts['sock_dir'])
+                sockdirpath=self.opts['sock_dir'],
+                dirpath=self.opts['cachedir'])
         ret_stack.Pk = raeting.packKinds.pack
-        main_yard = yarding.RemoteYard(
+        main_yard = RemoteYard(
                 yid=0,
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir']
                 )
-        ret_stack.addRemoteYard(main_yard)
+        ret_stack.addRemote(main_yard)
         route = {'src': (self.opts['id'], ret_stack.yard.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
@@ -509,11 +538,11 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
-            ex_yard = yarding.RemoteYard(
+            ex_yard = RemoteYard(
                     yid=data['jid'],
                     prefix=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            self.uxd_stack.value.addRemoteYard(ex_yard)
+            self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}

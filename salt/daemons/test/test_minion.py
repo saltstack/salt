@@ -12,7 +12,6 @@ FLO_DIR_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'flo'
 )
 
-
 def test():
     """ Execute run.start """
     #filepath = os.path.join(FLO_DIR_PATH, 'minion.flo')
@@ -28,7 +27,7 @@ def test():
             master='127.0.0.1', )
 
     minion = salt.daemons.flo.IofloMinion(opts=opts)
-    minion.start()
+    minion.start(behaviors=['raet.flo.behaving'])
 
 if __name__ == '__main__':
     test()
