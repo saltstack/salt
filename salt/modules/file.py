@@ -2355,26 +2355,26 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != get_user(name, follow_symlinks=follow_symlinks):
+        if user != get_user(name, follow_symlinks=follow_symlinks) and user != '':
             if __opts__['test'] is True:
                 ret['changes']['user'] = user
             else:
                 ret['result'] = False
                 ret['comment'].append('Failed to change user to {0}'
                                       .format(user))
-        elif 'cuser' in perms:
+        elif 'cuser' in perms and user != '':
             ret['changes']['user'] = user
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != get_group(name, follow_symlinks=follow_symlinks):
+        if group != get_group(name, follow_symlinks=follow_symlinks) and user != '':
             if __opts__['test'] is True:
                 ret['changes']['group'] = group
             else:
                 ret['result'] = False
                 ret['comment'].append('Failed to change group to {0}'
                                       .format(group))
-        elif 'cgroup' in perms:
+        elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
     if isinstance(orig_comment, salt._compat.string_types):
