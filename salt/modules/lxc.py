@@ -1315,3 +1315,145 @@ def cp(name, src, dest):
     log.info(cmd)
     ret = __salt__['cmd.run_all'](cmd)
     return ret
+
+
+def read_conf(conf_file, out_format='simple'):
+    '''
+    Read in an LXC configuration file. By default returns a simple, unsorted
+    dict, but can also return a more detailed structure including blank lines
+    and comments.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf \
+            out_format=commented
+    '''
+    ret_commented = []
+    ret_simple = {}
+    with salt.utils.fopen(conf_file, 'r') as fp_:
+        for line in fp_.readlines():
+            if not '=' in line:
+                ret_commented.append(line)
+                continue
+            comps = line.split('=')
+            value = '='.join(comps[1:]).strip()
+            comment = None
+            if '#' in value:
+                vcomps = value.split('#')
+                value = vcomps[1].strip()
+                comment = '#'.join(vcomps[1:]).strip()
+                ret_commented.append({comps[0].strip(): {
+                    'value': value,
+                    'comment': comment,
+                }})
+            else:
+                ret_commented.append({comps[0].strip(): value})
+                ret_simple[comps[0].strip()] = value
+
+    if out_format == 'simple':
+        return ret_simple
+    return ret_commented
+
+
+def write_conf(conf_file, conf):
+    '''
+    Write out an LXC configuration file. This is normally only used internally.
+    The format of the data structure must match that which is returned from
+    ``lxc.read_conf()``, with ``out_format`` set to ``commented``. An example
+    might look like:
+
+    [
+        {'lxc.utsname': '$CONTAINER_NAME'},
+        '# This is a commented line\n',
+        '\n',
+        {'lxc.mount': '$CONTAINER_FSTAB'},
+        {'lxc.rootfs': {'comment': 'This is another test',
+                        'value': 'This is another test'}},
+        '\n',
+        {'lxc.network.type': 'veth'},
+        {'lxc.network.flags': 'up'},
+        {'lxc.network.link': 'br0'},
+        {'lxc.network.hwaddr': '$CONTAINER_MACADDR'},
+        {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
+        {'lxc.network.name': '$CONTAINER_DEVICENAME'},
+    ]
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \
+            out_format=commented
+    '''
+    if type(conf) is not list:
+        return {'Error': 'conf must be passed in as a list'}
+
+    with salt.utils.fopen(conf_file, 'w') as fp_:
+        for line in conf:
+            if type(line) is str:
+                fp_.write(line)
+            elif type(line) is dict:
+                key = line.keys()[0]
+                if type(line[key]) is str:
+                    out_line = ' = '.join((key, line[key]))
+                elif type(line[key]) is dict:
+                    out_line = ' = '.join((key, line[key]['value']))
+                    if 'comment' in line[key]:
+                        out_line = ' # '.join((out_line, line[key]['comment']))
+                fp_.write(out_line)
+                fp_.write('\n')
+
+    return {}
+
+
+def edit_conf(conf_file, out_format='simple', **kwargs):
+    '''
+    Edit an LXC configuration file. If a setting is already present inside the
+    file, its value will be replaced. If it does not exist, it will be appended
+    to the end of the file. Comments and blank lines will be kept in-tact if
+    they already exist in the file.
+
+    After the file is edited, its contents will be returned. By default, it
+    will be returned in ``simple`` format, meaning an unordered dict (which
+    may not represent the actual file order). Passing in an ``out_format`` of
+    ``commented`` will return a data structure which accurately represents the
+    order and content of the file.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \
+            out_format=commented lxc.network.type=veth
+    '''
+    data = []
+
+    try:
+        conf = read_conf(conf_file, out_format='commented')
+    except Exception:
+        conf = []
+
+    for line in conf:
+        if type(line) is not dict:
+            data.append(line)
+            continue
+        else:
+            key = line.keys()[0]
+            if not key in kwargs:
+                data.append(line)
+                continue
+            data.append({
+                key: kwargs[key]
+            })
+            del kwargs[key]
+
+    for kwarg in kwargs:
+        if kwarg.startswith('__'):
+            continue
+        data.append({kwarg: kwargs[kwarg]})
+
+    write_conf(conf_file, data)
+    return read_conf(conf_file, out_format)
