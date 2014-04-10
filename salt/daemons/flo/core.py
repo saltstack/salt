@@ -221,7 +221,7 @@ class Setup(ioflo.base.deeding.Deed):
                 lanename=self.opts.value['id'],
                 yid=0,
                 sockdirpath=self.opts.value['sock_dir'],
-                dirpath=self.opts.value['cache_dir'])
+                dirpath=self.opts.value['cachedir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
@@ -491,7 +491,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 lanename=self.opts['id'],
                 yid=ret['jid'],
                 sockdirpath=self.opts['sock_dir'],
-                dirpath=self.opts['cache_dir'])
+                dirpath=self.opts['cachedir'])
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
                 yid=0,
