@@ -21,7 +21,7 @@ opts['ioflo_verbose']
 from . import core
 from . import worker
 
-__all__ = ['core', 'worker']
+__all__ = ['core', 'worker', 'maint']
 
 # Import salt libs
 import salt.daemons.masterapi
