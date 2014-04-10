@@ -1035,18 +1035,21 @@ translated into salt environments, as defined by the
 
     As of the upcoming **Helium** release (and right now in the development
     branch), it is possible to have per-repo versions of the
-    :conf_master:`hgfs_root` and :conf_master:`hgfs_mountpoint` parameters.
+    :conf_master:`hgfs_root`, :conf_master:`hgfs_mountpoint`,
+    :conf_master:`hgfs_base`, and :conf_master:`hgfs_branch_method` parameters.
     For example:
 
     .. code-block:: yaml
 
         hgfs_remotes:
           - https://username@bitbucket.org/username/repo1
+            - base: saltstates
           - https://username@bitbucket.org/username/repo2:
             - root: salt
             - mountpoint: salt://foo/bar/baz
           - https://username@bitbucket.org/username/repo3:
             - root: salt/states
+            - branch_method: mixed
 
 .. conf_master:: hgfs_branch_method
 
@@ -1139,6 +1142,61 @@ bookmark should be used as the ``base`` environment.
 .. code-block:: yaml
 
     hgfs_base: salt
+
+.. conf_master:: hgfs_env_whitelist
+
+``hgfs_env_whitelist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your hgfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are accepted. If using a regular expression, the expression
+must match the entire minion ID.
+
+If used, only branches/bookmarks/tags which match one of the specified
+expressions will be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`hgfs_env_blacklist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    hgfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: hgfs_env_blacklist
+
+``hgfs_env_blacklist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your hgfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are accepted.
+
+If used, branches/bookmarks/tags which match one of the specified expressions
+will *not* be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`hgfs_env_whitelist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    hgfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
 
 svn: Subversion Remote File Server Backend
 ------------------------------------------
