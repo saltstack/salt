@@ -1,6 +1,9 @@
 '''
 Define the behaviors used in the maintinance process
 '''
+# Import python libs
+import multiprocessing
+
 # Import ioflo libs
 import ioflo.base.deeding
 
@@ -9,6 +12,48 @@ import salt.fileserver
 import salt.loader
 import salt.utils.minions
 import salt.daemons.masterapi
+
+
+class MaintFork(ioflo.base.deeding.Deed):
+    '''
+    For off the maintinence process from the master router process
+    '''
+    Ioinits = {'opts': '.salt.opts'}
+
+    def _fork_maint(self):
+        '''
+        Run the multiprocessing in here to fork the maintinace process
+        '''
+        proc = multiprocessing.Process(target=self._maint)
+        proc.start()
+
+    def _maint(self):
+        '''
+        Spin up a worker, do this in s multiprocess
+        '''
+        behaviors = ['salt.daemons.flo']
+        preloads = [('.salt.opts', dict(value=self.opts.value))]
+        ioflo.app.run.start(
+                name='maintiance',
+                period=float(self.opts.value['ioflo_period']),
+                stamp=0.0,
+                real=self.opts.value['ioflo_realtime'],
+                filepath=self.opts.value['maintinance_floscript'],
+                behaviors=behaviors,
+                username="",
+                password="",
+                mode=None,
+                houses=None,
+                metas=None,
+                preloads=preloads,
+                verbose=int(self.opts.value['ioflo_verbose']),
+                )
+
+    def action(self):
+        '''
+        make go!
+        '''
+        self._fork_maint()
 
 
 class MaintSetup(ioflo.base.deeding.Deed):
