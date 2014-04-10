@@ -310,8 +310,8 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_yard is not None:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.yards:
-                self.uxd_stack.value.transmit(msg, d_yard)
+            if d_yard in self.uxd_stack.value.remotes:
+                self.uxd_stack.value.transmit(msg, d_yard.uid)
                 return
             return
         if d_share is None:
@@ -324,7 +324,7 @@ class Router(ioflo.base.deeding.Deed):
             return
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
-            self.uxd_stack.value.transmit(msg, next(self.workers.value))
+            self.uxd_stack.value.transmit(msg, self.stack.value.uids[next(self.workers.value)])
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -353,8 +353,8 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_yard != self.uxd_stack.value.yard.name:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.yards:
-                self.uxd_stack.value.transmit(msg, d_yard)
+            if d_yard in self.uxd_stack.value.remotes:
+                self.uxd_stack.value.transmit(msg, d_yard.uid)
                 return
             return
         if d_share is None:
@@ -362,7 +362,7 @@ class Router(ioflo.base.deeding.Deed):
             log.error('Received message without share: {0}'.format(msg))
             return
         elif d_share == 'local_cmd':
-            self.uxd_stack.value.transmit(msg, next(self.workers.value))
+            self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[next(self.workers.value)])
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
@@ -406,7 +406,7 @@ class Eventer(ioflo.base.deeding.Deed):
             route = {'src': ('router', self.uxd_stack.value.yard.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
-            self.uxd_stack.value.transmit(msg, y_name)
+            self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[y_name])
             self.uxd_stack.value.serviceAll()
         for y_name in rm_:
             self.event_yards.value.remove(y_name)
@@ -511,7 +511,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        ret_stack.transmit(msg, 'yard0')
+        ret_stack.transmit(msg, ret_stack.uids['yard0'])
         ret_stack.serviceAll()
 
     def action(self):
