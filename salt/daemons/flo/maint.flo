@@ -1,0 +1,27 @@
+# Maintinance process floscript
+
+house master
+
+framer jobcleaner be active first setup
+    frame setup
+        enter
+            do setup maint
+        go modules
+    frame modules
+        enter
+            do load modules
+        go fsclean
+    frame fsclean
+        enter
+            do fileserver clean
+        go start
+    frame start
+        do clear old jobs
+
+framer backends be active first start
+    frame start
+        do update backends
+
+framer scedule be active first start
+    frame start
+        do scedule
