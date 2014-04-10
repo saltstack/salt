@@ -280,15 +280,15 @@ def _run_check(cmd_kwargs, onlyif, unless, group, creates):
     if onlyif is not None:
         if isinstance(onlyif, string_types):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, **cmd_kwargs)
+            log.debug('Last command return code: {0}'.format(cmd))
             if cmd != 0:
-                log.debug('onlyif return code: {0}'.format(cmd))
                 return {'comment': 'onlyif execution failed',
                         'result': True}
         elif isinstance(onlyif, list):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+                log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0:
-                    log.debug('Return code for {0} command: {1}'.format(entry, cmd))
                     return {'comment': 'onlyif execution failed',
                         'result': True}
         elif not isinstance(onlyif, string_types):
@@ -299,22 +299,21 @@ def _run_check(cmd_kwargs, onlyif, unless, group, creates):
 
     if unless is not None:
         if isinstance(unless, string_types):
-            if __salt__['cmd.retcode'](unless, ignore_retcode=True, **cmd_kwargs) == 0:
+            cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, **cmd_kwargs)
+            log.debug('Last command return code: {0}'.format(cmd))
+            if cmd == 0:
                 return {'comment': 'unless execution succeeded',
                         'result': True}
         elif isinstance(unless, list):
-            if all([
-                __salt__['cmd.retcode'](
-                    entry,
-                    ignore_retcode=True,
-                    **cmd_kwargs
-                ) == 0 for entry in unless
-            ]):
-
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
+            for entry in unless:
+                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+                log.debug('Last command return code: {0}'.format(cmd))
+                if cmd == 0:
+                    return {'comment': 'unless execution succeeded',
+                            'result': True}
         elif not isinstance(unless, string_types):
             if unless:
+                log.debug('Command not run: unless did not evaluate to string_type')
                 return {'comment': 'unless execution succeeded',
                         'result': True}
 
