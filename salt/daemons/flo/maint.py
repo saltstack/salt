@@ -87,7 +87,7 @@ class CleanFileserver(ioflo.base.deeding.Deed):
         '''
         Clean!
         '''
-        self.daemons.masterapi.clean_fsbackend(self.opts.value)
+        salt.daemons.masterapi.clean_fsbackend(self.opts.value)
 
 
 class JobsOldClear(ioflo.base.deeding.Deed):
