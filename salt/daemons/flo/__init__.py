@@ -62,7 +62,7 @@ class IofloMaster(object):
 
         port = self.opts['raet_port']
         '''
-        import wingdbstub
+        #import wingdbstub
 
         if behaviors is None:
             behaviors = []
