@@ -29,7 +29,7 @@ from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
 # Import ioflo libs
-from  ioflo.base.odicting import odict
+from ioflo.base.odicting import odict
 import ioflo.base.deeding
 
 # Import Third Party Libs
