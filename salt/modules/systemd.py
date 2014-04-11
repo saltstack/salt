@@ -72,6 +72,28 @@ def _systemctl_cmd(action, name):
     return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
 
 
+def _get_all_units():
+    '''
+    Get all units and their state. Units ending in .service
+    are normalized so that they can be referenced without a type suffix.
+    '''
+    rexp = re.compile(r'(?m)^(?P<name>.+)\.(?P<type>' +
+                      '|'.join(VALID_UNIT_TYPES) +
+                      r')\s+loaded\s+(?P<active>[^\s]+)')
+
+    out = __salt__['cmd.run_stdout'](
+        'systemctl --full list-units | col -b'
+    )
+
+    ret = {}
+    for match in rexp.finditer(out):
+        name = match.group('name')
+        if match.group('type') != 'service':
+            name += '.' + match.group('type')
+        ret[name] = match.group('active')
+    return ret
+
+
 def _get_all_unit_files():
     '''
     Get all unit files and their state. Unit files ending in .service
@@ -173,7 +195,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(_get_all_unit_files().keys())
+    return sorted(_get_all_units().keys())
 
 
 def available(name):
