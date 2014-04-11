@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The backed for the subversion based file server system.
+Subversion Fileserver Backend
 
 After enabling this backend, branches, and tags in a remote subversion
 repository are exposed to salt as different environments. This feature is
@@ -11,6 +11,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.
 
 :depends:   - subversion
+            - pysvn
 
 
 .. versionchanged:: Helium
@@ -23,9 +24,10 @@ This backend assumes a standard svn layout with directories for ``branches``,
 '''
 
 # Import python libs
-import os
+import copy
 import hashlib
 import logging
+import os
 import shutil
 from datetime import datetime
 
@@ -43,6 +45,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
+from salt._compat import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
@@ -76,17 +79,18 @@ def __virtual__():
     return __virtualname__
 
 
-def _rev(repo_conf):
+def _rev(repo):
     '''
     Returns revision ID of repo
     '''
     try:
-        repo_info = dict(CLIENT.info(repo_conf['repo']).items())
-    except (pysvn.ClientError, TypeError, KeyError, AttributeError) as exc:
+        repo_info = dict(CLIENT.info(repo['repo']).items())
+    except (pysvn._pysvn.ClientError, TypeError,
+            KeyError, AttributeError) as exc:
         log.error(
             'Error retrieving revision ID for svnfs remote {0} '
             '(cachedir: {1}): {2}'
-            .format(repo_conf['uri'], repo_conf['repo'], exc)
+            .format(repo['uri'], repo['repo'], exc)
         )
     else:
         return repo_info['revision'].number
@@ -95,36 +99,50 @@ def _rev(repo_conf):
 
 def init():
     '''
-    Return the list of svn repos
+    Return the list of svn remotes and their configuration information
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'svnfs')
     new_remote = False
     repos = []
-    svnfs_remotes = salt.utils.repack_dictlist(__opts__['svnfs_remotes'])
-    for repo_uri, repo_conf_params in svnfs_remotes.iteritems():
 
-        # Validate and compile per-remote configuration parameters, if present
-        repo_conf = dict([(x, None) for x in PER_REMOTE_PARAMS])
-        if repo_conf_params is not None:
-            repo_conf_params = salt.utils.repack_dictlist(repo_conf_params)
-            if not repo_conf_params:
+    per_remote_defaults = {}
+    for param in PER_REMOTE_PARAMS:
+        per_remote_defaults[param] = __opts__['svnfs_{0}'.format(param)]
+
+    for remote in __opts__['svnfs_remotes']:
+        repo_conf = copy.deepcopy(per_remote_defaults)
+        if isinstance(remote, dict):
+            repo_uri = next(iter(remote))
+            per_remote_conf = salt.utils.repack_dictlist(remote[repo_uri])
+            if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0!r}'
-                    .format(repo_uri)
+                    'Invalid per-remote configuration for remote {0}. If no '
+                    'per-remote parameters are being specified, there may be '
+                    'a trailing colon after the URI, which should be removed. '
+                    'Check the master configuration file.'.format(repo_uri)
                 )
-            else:
-                for param, value in repo_conf_params.iteritems():
-                    if param in PER_REMOTE_PARAMS:
-                        repo_conf[param] = value
-                    else:
-                        log.error(
-                            'Invalid configuration parameter {0!r} in remote '
-                            '{1!r}. Valid parameters are: {2}. See the '
-                            'documentation for further information.'
-                            .format(
-                                param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
-                            )
-                        )
+
+            for param in (x for x in per_remote_conf
+                          if x not in PER_REMOTE_PARAMS):
+                log.error(
+                    'Invalid configuration parameter {0!r} for remote {1}. '
+                    'Valid parameters are: {2}. See the documentation for '
+                    'further information.'.format(
+                        param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
+                    )
+                )
+                per_remote_conf.pop(param)
+            repo_conf.update(per_remote_conf)
+        else:
+            repo_uri = remote
+
+        if not isinstance(repo_uri, string_types):
+            log.error(
+                'Invalid gitfs remote {0}. Remotes must be strings, you may '
+                'need to enclose the URI in quotes'.format(repo_uri)
+            )
+            continue
+
         try:
             repo_conf['mountpoint'] = salt.utils.strip_proto(
                 repo_conf['mountpoint']
@@ -145,10 +163,10 @@ def init():
                 CLIENT.checkout(repo_uri, rp_)
                 repos.append(rp_)
                 new_remote = True
-            except pysvn.ClientError as exc:
+            except pysvn._pysvn.ClientError as exc:
                 log.error(
                     'Failed to initialize svnfs remote {0!r}: {1}'
-                    .format(repo_uri)
+                    .format(repo_uri, exc)
                 )
                 continue
         else:
@@ -156,7 +174,7 @@ def init():
             # running pysvn.Client().status()
             try:
                 CLIENT.status(rp_)
-            except pysvn.ClientError as exc:
+            except pysvn._pysvn.ClientError as exc:
                 log.error(
                     'Cache path {0} (corresponding remote: {1}) exists but is '
                     'not a valid subversion checkout. You will need to '
@@ -194,14 +212,17 @@ def init():
 
 
 def purge_cache():
+    '''
+    Purge the fileserver cache
+    '''
     bp_ = os.path.join(__opts__['cachedir'], 'svnfs')
     try:
         remove_dirs = os.listdir(bp_)
     except OSError:
         remove_dirs = []
-    for repo_conf in init():
+    for repo in init():
         try:
-            remove_dirs.remove(repo_conf['hash'])
+            remove_dirs.remove(repo['hash'])
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
@@ -215,33 +236,31 @@ def purge_cache():
 
 def update():
     '''
-    Execute as svn update on all of the repos
+    Execute an svn update on all of the repos
     '''
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'svnfs'}
     pid = os.getpid()
     data['changed'] = purge_cache()
-    for repo_conf in init():
-        repo = repo_conf['repo']
-        repo_uri = repo_conf['uri']
-        lk_fn = os.path.join(repo, 'update.lk')
+    for repo in init():
+        lk_fn = os.path.join(repo['repo'], 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
-        old_rev = _rev(repo_conf)
+        old_rev = _rev(repo)
         try:
-            CLIENT.update(repo)
-        except pysvn.ClientError as exc:
+            CLIENT.update(repo['repo'])
+        except pysvn._pysvn.ClientError as exc:
             log.error(
                 'Error updating svnfs remote {0} (cachedir: {1}): {2}'
-                .format(repo_uri, repo, exc)
+                .format(repo['uri'], repo['cachedir'], exc)
             )
         try:
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
 
-        new_rev = _rev(repo_conf)
+        new_rev = _rev(repo)
         if any((x is None for x in (old_rev, new_rev))):
             # There were problems getting the revision ID
             continue
@@ -250,6 +269,9 @@ def update():
 
     env_cache = os.path.join(__opts__['cachedir'], 'svnfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
+        env_cachedir = os.path.dirname(env_cache)
+        if not os.path.exists(env_cachedir):
+            os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
         with salt.utils.fopen(env_cache, 'w+') as fp_:
@@ -274,6 +296,18 @@ def update():
         pass
 
 
+def _env_is_exposed(env):
+    '''
+    Check if an environment is exposed by comparing it against a whitelist and
+    blacklist.
+    '''
+    return salt.utils.check_whitelist_blacklist(
+        env,
+        whitelist=__opts__['svnfs_env_whitelist'],
+        blacklist=__opts__['svnfs_env_blacklist']
+    )
+
+
 def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments
@@ -283,21 +317,9 @@ def envs(ignore_cache=False):
         cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
         if cache_match is not None:
             return cache_match
-    svnfs_trunk = __opts__['svnfs_trunk']
-    svnfs_branches = __opts__['svnfs_branches']
-    svnfs_tags = __opts__['svnfs_tags']
     ret = set()
-    for repo_conf in init():
-        repo = repo_conf['repo']
-        repo_trunk = repo_conf['trunk'] if repo_conf['trunk'] is not None \
-            else svnfs_trunk
-        repo_branches = repo_conf['branches'] \
-            if repo_conf['branches'] is not None \
-            else svnfs_branches
-        repo_tags = repo_conf['tags'] if repo_conf['tags'] is not None \
-            else svnfs_tags
-
-        trunk = os.path.join(repo_conf['repo'], repo_trunk)
+    for repo in init():
+        trunk = os.path.join(repo['repo'], repo['trunk'])
         if os.path.isdir(trunk):
             # Add base as the env for trunk
             ret.add('base')
@@ -305,63 +327,56 @@ def envs(ignore_cache=False):
             log.error(
                 'svnfs trunk path {0!r} does not exist in repo {1}, no base '
                 'environment will be provided by this remote'
-                .format(repo_trunk, repo_conf['uri'])
+                .format(repo['trunk'], repo['uri'])
             )
 
-        branches = os.path.join(repo_conf['repo'], repo_branches)
+        branches = os.path.join(repo['repo'], repo['branches'])
         if os.path.isdir(branches):
             ret.update(os.listdir(branches))
         else:
             log.error(
                 'svnfs branches path {0!r} does not exist in repo {1}'
-                .format(repo_branches, repo_conf['uri'])
+                .format(repo['branches'], repo['uri'])
             )
 
-        tags = os.path.join(repo_conf['repo'], repo_tags)
+        tags = os.path.join(repo['repo'], repo['tags'])
         if os.path.isdir(tags):
             ret.update(os.listdir(tags))
         else:
             log.error(
                 'svnfs tags path {0!r} does not exist in repo {1}'
-                .format(repo_tags, repo_conf['uri'])
+                .format(repo['tags'], repo['uri'])
             )
-    return sorted(ret)
+    return [x for x in sorted(ret) if _env_is_exposed(x)]
 
 
-def _env_root(repo_conf, saltenv):
+def _env_root(repo, saltenv):
     '''
     Return the root of the directory corresponding to the desired environment,
     or None if the environment was not found.
     '''
     # If 'base' is desired, look for the trunk
     if saltenv == 'base':
-        repo_trunk = repo_conf['trunk'] if repo_conf['trunk'] is not None \
-            else __opts__['svnfs_trunk']
-        trunk = os.path.join(repo_conf['repo'], repo_trunk)
+        trunk = os.path.join(repo['repo'], repo['trunk'])
         if os.path.isdir(trunk):
             return trunk
         else:
             return None
 
     # Check branches
-    repo_branches = repo_conf['branches'] \
-        if repo_conf['branches'] is not None \
-        else __opts__['svnfs_branches']
-    branches = os.path.join(repo_conf['repo'], repo_branches)
+    branches = os.path.join(repo['repo'], repo['branches'])
     if os.path.isdir(branches) and saltenv in os.listdir(branches):
         return os.path.join(branches, saltenv)
 
     # Check tags
-    repo_tags = repo_conf['tags'] if repo_conf['tags'] is not None \
-        else __opts__['svnfs_tags']
-    tags = os.path.join(repo_conf['repo'], repo_tags)
+    tags = os.path.join(repo['repo'], repo['tags'])
     if os.path.isdir(tags) and saltenv in os.listdir(tags):
         return os.path.join(tags, saltenv)
 
     return None
 
 
-def find_file(path, tgt_env='base', **kwargs):
+def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     Find the first file to match the path and ref. This operates similarly to
     the roots file sever but with assumptions of the directory structure
@@ -369,28 +384,20 @@ def find_file(path, tgt_env='base', **kwargs):
     '''
     fnd = {'path': '',
            'rel': ''}
-    if os.path.isabs(path):
+    if os.path.isabs(path) or tgt_env not in envs():
         return fnd
 
-    svnfs_trunk = __opts__['svnfs_trunk']
-    svnfs_branches = __opts__['svnfs_branches']
-    svnfs_tags = __opts__['svnfs_tags']
-    svnfs_root = __opts__['svnfs_root']
-    svnfs_mountpoint = __opts__['svnfs_mountpoint']
-
-    for repo_conf in init():
-        env_root = _env_root(repo_conf, tgt_env)
+    for repo in init():
+        env_root = _env_root(repo, tgt_env)
         if env_root is None:
             # Environment not found, try the next repo
             continue
-        root = repo_conf['root'] if repo_conf['root'] is not None \
-            else svnfs_root
-        mountpoint = repo_conf['mountpoint'] \
-            if repo_conf['mountpoint'] is not None \
-            else svnfs_mountpoint
-        repo_path = path[len(mountpoint):].lstrip(os.path.sep)
-        if root:
-            repo_path = os.path.join(root, repo_path)
+        if repo['mountpoint'] \
+                and not path.startswith(repo['mountpoint'] + os.path.sep):
+            continue
+        repo_path = path[len(repo['mountpoint']):].lstrip(os.path.sep)
+        if repo['root']:
+            repo_path = os.path.join(repo['root'], repo_path)
 
         full = os.path.join(env_root, repo_path)
         if os.path.isfile(full):
@@ -414,7 +421,7 @@ def serve_file(load, fnd):
 
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
+    if not all(x in load for x in ('path', 'loc', 'saltenv')):
         return ret
     if not fnd['path']:
         return ret
@@ -442,34 +449,30 @@ def file_hash(load, fnd):
         )
         load['saltenv'] = load.pop('env')
 
-    if 'path' not in load or 'saltenv' not in load:
+    if not all(x in load for x in ('path', 'saltenv')):
         return ''
     saltenv = load['saltenv']
     if saltenv == 'base':
         saltenv = 'trunk'
+    ret = {}
     relpath = fnd['rel']
     path = fnd['path']
-    ret = {}
 
-    if __opts__['svnfs_root']:
-        relpath = os.path.join(__opts__['svnfs_root'], relpath)
-        path = os.path.join(__opts__['svnfs_root'], path)
-
-    # if the file doesn't exist, we can't get a hash
+    # If the file doesn't exist, we can't get a hash
     if not path or not os.path.isfile(path):
         return ret
 
-    # set the hash_type as it is determined by config-- so mechanism won't change that
+    # Set the hash_type as it is determined by config
     ret['hash_type'] = __opts__['hash_type']
 
-    # check if the hash is cached
-    # cache file's contents should be "hash:mtime"
+    # Check if the hash is cached
+    # Cache file's contents should be "hash:mtime"
     cache_path = os.path.join(__opts__['cachedir'],
                               'svnfs/hash',
                               saltenv,
                               '{0}.hash.{1}'.format(relpath,
                                                     __opts__['hash_type']))
-    # if we have a cache, serve that if the mtime hasn't changed
+    # If we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         with salt.utils.fopen(cache_path, 'rb') as fp_:
             hsum, mtime = fp_.read().split(':')
@@ -503,8 +506,9 @@ def _file_lists(load, form):
         )
         load['saltenv'] = load.pop('env')
 
-    svnfs_root = __opts__['svnfs_root']
-    svnfs_mountpoint = __opts__['svnfs_mountpoint']
+    if 'saltenv' not in load or load['saltenv'] not in envs():
+        return []
+
     list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/svnfs')
     if not os.path.isdir(list_cachedir):
         try:
@@ -526,29 +530,22 @@ def _file_lists(load, form):
             'dirs': set(),
             'empty_dirs': set()
         }
-        for repo_conf in init():
-            env_root = _env_root(repo_conf, load['saltenv'])
+        for repo in init():
+            env_root = _env_root(repo, load['saltenv'])
             if env_root is None:
                 # Environment not found, try the next repo
                 continue
-            root = repo_conf['root'] if repo_conf['root'] is not None \
-                else svnfs_root
-            if root:
-                env_root = os.path.join(env_root, root).rstrip(os.path.sep)
+            if repo['root']:
+                env_root = \
+                    os.path.join(env_root, repo['root']).rstrip(os.path.sep)
                 if not os.path.isdir(env_root):
                     # svnfs root (global or per-remote) does not exist in env
                     continue
 
-            mountpoint = repo_conf['mountpoint'] \
-                if repo_conf['mountpoint'] is not None \
-                else svnfs_mountpoint
-
-            # Re-using root variable since it's no longer needed
             for root, dirs, files in os.walk(env_root):
-                dir_rel_fn = os.path.join(
-                    mountpoint, os.path.relpath(root, env_root)
-                )
-                if dir_rel_fn != '.':
+                relpath = os.path.relpath(root, env_root)
+                dir_rel_fn = os.path.join(repo['mountpoint'], relpath)
+                if relpath != '.':
                     ret['dirs'].add(dir_rel_fn)
                     if len(dirs) == 0 and len(files) == 0:
                         ret['empty_dirs'].add(dir_rel_fn)
@@ -557,7 +554,7 @@ def _file_lists(load, form):
                                 os.path.join(root, fname),
                                 env_root
                             )
-                    ret['files'].add(os.path.join(mountpoint, rel_fn))
+                    ret['files'].add(os.path.join(repo['mountpoint'], rel_fn))
         # Convert all compiled sets to lists
         for key in ret:
             ret[key] = sorted(ret[key])
