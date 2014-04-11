@@ -24,8 +24,7 @@ except ImportError:
     HAS_LDAP = False
 
 # Defaults, override in master config
-__defopts__ = {'auth.ldap.server': 'localhost',
-               'auth.ldap.port': '389',
+__defopts__ = {'auth.ldap.uri': 'ldap://localhost:389',
                'auth.ldap.tls': False,
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
@@ -63,20 +62,18 @@ def _render_template(param, username):
 
 class _LDAPConnection(object):
     '''
-    Setup an LDAP connection.
+    Setup a LDAP connection.
     '''
 
-    def __init__(self, server, port, tls, no_verify, binddn, bindpw,
+    def __init__(self, uri, tls, no_verify, binddn, bindpw,
                  anonymous):
         '''
-        Bind to an LDAP directory using passed credentials.
+        Bind to a LDAP directory using passed credentials.
         '''
-        self.server = server
-        self.port = port
+        self.uri = uri
         self.tls = tls
         self.binddn = binddn
         self.bindpw = bindpw
-        schema = 'ldap'
         if not HAS_LDAP:
             raise CommandExecutionError('Failed to connect to LDAP, module '
                                         'not loaded')
@@ -84,20 +81,18 @@ class _LDAPConnection(object):
             if no_verify:
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
                                 ldap.OPT_X_TLS_NEVER)
-            if self.tls:
-                schema = 'ldaps'
-            self.ldap = ldap.initialize(
-                '{0}://{1}:{2}'.format(schema, self.server, self.port)
-            )
+            self.ldap = ldap.initialize(self.uri)
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
+            if self.tls:
+                self.ldap.start_tls_s()
 
             if not anonymous:
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:
             raise CommandExecutionError(
-                'Failed to bind to LDAP server {0}:{1} as {2}: {3}'.format(
-                    self.server, self.port, self.binddn, ldap_error
+                'Failed to bind to LDAP server {0} as {1}: {2}'.format(
+                    self.uri, self.binddn, ldap_error
                 )
             )
 
@@ -112,7 +107,7 @@ def _bind(username, password):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['server', 'port', 'tls', 'no_verify', 'anonymous'],
+        'mandatory': ['uri', 'tls', 'no_verify', 'anonymous'],
         'additional': ['binddn', 'bindpw', 'filter'],
     }
 
