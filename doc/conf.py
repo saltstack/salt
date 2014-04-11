@@ -72,6 +72,7 @@ MOCK_MODULES = [
     'pymongo',
     'rabbitmq_server',
     'redis',
+    'requests',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
