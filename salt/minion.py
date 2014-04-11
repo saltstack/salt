@@ -620,7 +620,7 @@ class Minion(object):
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None):
         '''
-        Fire an event on the master
+        Fire an event on the master, or drop message if unable to send.
         '''
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
@@ -635,9 +635,16 @@ class Minion(object):
             return
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
-            sreq.send('aes', self.crypticle.dumps(load))
+            result = sreq.send('aes', self.crypticle.dumps(load))
+            try:
+                data = self.crypticle.loads(result)
+            except AuthenticationError:
+                log.info("AES key changed, re-authenticating")
+                # We can't decode the master's response to our event,
+                # so we will need to re-authenticate.
+                self.authenticate()
         except Exception:
-            pass
+            log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
     def _handle_payload(self, payload):
         '''
