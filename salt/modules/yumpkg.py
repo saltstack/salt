@@ -23,17 +23,22 @@ log = logging.getLogger(__name__)
 __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 
 # These arches compiled from the rpmUtils.arch python module source
-__ARCHES = (
-    'x86_64', 'athlon', 'amd64', 'ia32e', 'ia64', 'geode',
-    'i386', 'i486', 'i586', 'i686',
-    'ppc', 'ppc64', 'ppc64iseries', 'ppc64pseries',
-    's390', 's390x',
-    'sparc', 'sparcv8', 'sparcv9', 'sparcv9v', 'sparc64', 'sparc64v',
-    'alpha', 'alphaev4', 'alphaev45', 'alphaev5', 'alphaev56',
-    'alphapca56', 'alphaev6', 'alphaev67', 'alphaev68', 'alphaev7',
-    'armv5tel', 'armv5tejl', 'armv6l', 'armv7l',
-    'sh3', 'sh4', 'sh4a',
+__ARCHES_64 = ('x86_64', 'athlon', 'amd64', 'ia32e', 'ia64', 'geode')
+__ARCHES_32 = ('i386', 'i486', 'i586', 'i686')
+__ARCHES_PPC = ('ppc', 'ppc64', 'ppc64iseries', 'ppc64pseries')
+__ARCHES_S390 = ('s390', 's390x')
+__ARCHES_SPARC = (
+    'sparc', 'sparcv8', 'sparcv9', 'sparcv9v', 'sparc64', 'sparc64v'
 )
+__ARCHES_ALPHA = (
+    'alpha', 'alphaev4', 'alphaev45', 'alphaev5', 'alphaev56',
+    'alphapca56', 'alphaev6', 'alphaev67', 'alphaev68', 'alphaev7'
+)
+__ARCHES_ARM = ('armv5tel', 'armv5tejl', 'armv6l', 'armv7l')
+__ARCHES_SH = ('sh3', 'sh4', 'sh4a')
+
+__ARCHES = __ARCHES_64 + __ARCHES_32 + __ARCHES_PPC + __ARCHES_S390 + \
+    __ARCHES_ALPHA + __ARCHES_ARM + __ARCHES_SH
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -79,8 +84,9 @@ def _parse_pkginfo(line):
     except ValueError:
         return None
 
-    if arch != 'noarch' and arch != __grains__['osarch']:
-        name += '.{0}'.format(arch)
+    if not _check_32(arch):
+        if arch not in (__grains__['osarch'], 'noarch'):
+            name += '.{0}'.format(arch)
     if release:
         pkg_version += '-{0}'.format(release)
 
@@ -156,10 +162,20 @@ def _get_excludes_option(**kwargs):
     return disable_excludes_arg
 
 
+def _check_32(arch):
+    '''
+    Returns True if both the OS arch and the passed arch are 32-bit
+    '''
+    return all(x in __ARCHES_32 for x in (__grains__['osarch'], arch))
+
+
 def normalize_name(name):
     '''
-    Strips the architecture from the specified package name, if necessary (in
-    other words, if the arch matches the OS arch, or is ``noarch``.
+    Strips the architecture from the specified package name, if necessary.
+    Circomstances where this would be done include:
+
+    * If the arch is 32 bit and the package name ends in a 32-bit arch.
+    * If the arch matches the OS arch, or is ``noarch``.
 
     CLI Example:
 
@@ -173,7 +189,7 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__['osarch'], 'noarch'):
+    if arch in (__grains__['osarch'], 'noarch') or _check_32(arch):
         return name[:-(len(arch) + 1)]
     return name
 
@@ -247,7 +263,8 @@ def latest_version(*names, **kwargs):
 
     for name in names:
         for pkg in (x for x in updates if x.name == name):
-            if pkg.arch == 'noarch' or pkg.arch == namearch_map[name]:
+            if pkg.arch == 'noarch' or pkg.arch == namearch_map[name] \
+                    or _check_32(pkg.arch):
                 ret[name] = pkg.version
                 # no need to check another match, if there was one
                 break
@@ -459,10 +476,7 @@ def check_db(*names, **kwargs):
                 name, arch = line.split('_|-')
             except ValueError:
                 continue
-            if arch in __ARCHES and arch != __grains__['osarch']:
-                avail.append('.'.join((name, arch)))
-            else:
-                avail.append(name)
+            avail.append(normalize_name('.'.join((name, arch))))
         __context__['pkg._avail'] = avail
 
     ret = {}
