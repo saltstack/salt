@@ -164,7 +164,7 @@ class Master(SMaster):
         # Init any values needed by the git ext pillar
         pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Clean out the fileserver backend cache
-        self.daemons.masterapi.clean_fsbackend(self.opts)
+        salt.daemons.masterapi.clean_fsbackend(self.opts)
 
         old_present = set()
         while True:
