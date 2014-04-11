@@ -447,7 +447,6 @@ def present(name):
 def run(name,
         cid=None,
         hostname=None,
-        stateful=False,
         onlyif=None,
         unless=None,
         docked_onlyif=None,
@@ -466,9 +465,6 @@ def run(name,
 
     state_id
         state_id
-
-    stateful
-        stateful mode
 
     onlyif
         Only execute cmd if statement on the host returns 0
