@@ -579,6 +579,36 @@ def avail_sizes(call=None):
                 'disk': '1680 GiB (2 x 840 GiB)',
                 'ram': '68.4 GiB'
             },
+            'r3.large': {
+                'id': 'r3.large',
+                'cores': '2 (with 3.25 ECUs each)',
+                'disk': '32 GiB (1 x 32 GiB SSD)',
+                'ram': '15 GiB'
+            },
+            'r3.xlarge': {
+                'id': 'r3.xlarge',
+                'cores': '4 (with 3.25 ECUs each)',
+                'disk': '80 GiB (1 x 80 GiB SSD)',
+                'ram': '30.5 GiB'
+            },
+            'r3.2xlarge': {
+                'id': 'r3.2xlarge',
+                'cores': '8 (with 3.25 ECUs each)',
+                'disk': '160 GiB (1 x 160 GiB SSD)',
+                'ram': '61 GiB'
+            },
+            'r3.4xlarge': {
+                'id': 'r3.4xlarge',
+                'cores': '16 (with 3.25 ECUs each)',
+                'disk': '320 GiB (1 x 320 GiB SSD)',
+                'ram': '122 GiB'
+            },
+            'r3.8xlarge': {
+                'id': 'r3.8xlarge',
+                'cores': '32 (with 3.25 ECUs each)',
+                'disk': '640 GiB (2 x 320 GiB SSD)',
+                'ram': '244 GiB'
+            }
         },
         'High-Memory Cluster': {
             'cr1.8xlarge': {
