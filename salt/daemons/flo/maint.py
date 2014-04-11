@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Define the behaviors used in the maintinance process
 '''
