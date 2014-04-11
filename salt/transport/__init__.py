@@ -64,7 +64,7 @@ class RAETChannel(Channel):
                 prefix=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemote(self.router_yard)
-        src = (self.opts['id'], self.stack.yard.name, None)
+        src = (self.opts['id'], self.stack.local.name, None)
         dst = ('master', None, 'remote_cmd')
         self.route = {'src': src, 'dst': dst}
 
