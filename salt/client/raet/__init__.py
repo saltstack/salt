@@ -9,9 +9,9 @@ import time
 import logging
 
 # Import Salt libs
-from salt.transport.road.raet import stacking
-from salt.transport.road.raet import raeting
-from salt.transport.road.raet import yarding
+from raet import raeting
+from raet.lane.stacking import LaneStack
+from raet.lane.yarding import RemoteYard
 import salt.config
 import salt.client
 import salt.utils
@@ -51,18 +51,18 @@ class LocalClient(salt.client.LocalClient):
                 timeout=timeout,
                 **kwargs)
         yid = salt.utils.gen_jid()
-        stack = stacking.StackUxd(
+        stack = LaneStack(
                 yid=yid,
                 lanename='master',
-                dirpath=self.opts['sock_dir'])
+                sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
-        router_yard = yarding.RemoteYard(
+        router_yard = RemoteYard(
                 prefix='master',
                 yid=0,
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)
         route = {'dst': (None, router_yard.name, 'local_cmd'),
-                 'src': (None, stack.yard.name, None)}
+                 'src': (None, stack.local.name, None)}
         msg = {'route': route, 'load': payload_kwargs}
         stack.transmit(msg)
         stack.serviceAll()

@@ -49,29 +49,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
-    '''
-    Initiates join transaction with master
-    '''
-    Ioinits = odict(
-        inode=".raet.udp.stack.",
-        stack='stack',
-        masterhost='.salt.etc.master',
-        masterport='.salt.etc.master_port', )
-
-    def postinitio(self):
-        self.mha = (self.masterhost.value, int(self.masterport.value))
-
-    def action(self, **kwa):
-        '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
-        '''
-        stack = self.stack.value
-        if stack and isinstance(stack, RoadStack):
-            stack.join(mha=self.mha)
-
-
 class StackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -107,7 +84,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         eid = self.local.data.eid
-        estate = LocalEstate(
+        local = LocalEstate(
                 eid=eid,
                 name=name,
                 ha=ha,
@@ -118,7 +95,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
         safe = salting.SaltSafe(opts=self.opts.value)
 
         self.stack.value = RoadStack(
-                estate=estate,
+                local=local,
                 store=self.store,
                 name=name,
                 auto=auto,
@@ -129,6 +106,105 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
 
+class CloserStackUdpRaetSalt(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+    '''
+    CloserStackUdpRaetSalt closes stack server socket connection
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Close udp socket
+        '''
+        if self.stack.value and isinstance(self.stack.value, RoadStack):
+            self.stack.value.server.close()
+
+class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
+    '''
+    Initiates join transaction with master
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        masterhost='.salt.etc.master',
+        masterport='.salt.etc.master_port', )
+
+    def postinitio(self):
+        self.mha = (self.masterhost.value, int(self.masterport.value))
+
+    def action(self, **kwa):
+        '''
+        Receive any udp packets on server socket and put in rxes
+        Send any packets in txes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, RoadStack):
+            stack.join(mha=self.mha)
+
+class JoinedStackUdpRaetSalt(ioflo.base.deeding.Deed):
+    '''
+    Updates status with .joined of zeroth remote estate (master)
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        joined = False
+        if stack and isinstance(stack, RoadStack):
+            if stack.remotes:
+                joined = stack.remotes.values()[0].joined
+        self.status.update(joined=joined)
+
+
+class AllowerStackUdpRaetSalt(ioflo.base.deeding.Deed):
+    '''
+    Initiates allow (CurveCP handshake) transaction with master
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Receive any udp packets on server socket and put in rxes
+        Send any packets in txes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, RoadStack):
+            stack.allow()
+        return None
+
+class AllowedStackUdpRaetSalt(ioflo.base.deeding.Deed):
+    '''
+    Updates status with .allowed of zeroth remote estate (master)
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        allowed = False
+        if stack and isinstance(stack, RoadStack):
+            if stack.remotes:
+                allowed = stack.remotes.values()[0].allowed
+        self.status.update(allowed=allowed)
 
 class ModulesLoad(ioflo.base.deeding.Deed):
     '''
@@ -308,7 +384,7 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_estate is None:
             pass
-        elif d_estate != self.udp_stack.value.estate.name:
+        elif d_estate != self.udp_stack.value.local.name:
             log.error(
                     'Received message for wrong estate: {0}'.format(d_estate))
             return
@@ -328,7 +404,8 @@ class Router(ioflo.base.deeding.Deed):
             return
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
-            self.uxd_stack.value.transmit(msg, self.stack.value.uids[next(self.workers.value)])
+            self.uxd_stack.value.transmit(msg,
+                    self.stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -346,7 +423,7 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_estate is None:
             pass
-        elif d_estate != self.udp_stack.value.estate:
+        elif d_estate != self.udp_stack.value.local:
             # Forward to the correct estate
             eid = self.udp_stack.value.eids.get(d_estate)
             self.udp_stack.value.message(msg, eid)
@@ -355,7 +432,7 @@ class Router(ioflo.base.deeding.Deed):
             self.publish.value.append(msg)
         if d_yard is None:
             pass
-        elif d_yard != self.uxd_stack.value.yard.name:
+        elif d_yard != self.uxd_stack.value.local.name:
             # Meant for another yard, send it off!
             if d_yard in self.uxd_stack.value.remotes:
                 self.uxd_stack.value.transmit(msg, d_yard.uid)
@@ -366,7 +443,8 @@ class Router(ioflo.base.deeding.Deed):
             log.error('Received message without share: {0}'.format(msg))
             return
         elif d_share == 'local_cmd':
-            self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[next(self.workers.value)])
+            self.uxd_stack.value.transmit(msg,
+                    self.uxd_stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
@@ -404,13 +482,14 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         rm_ = []
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.yards:
+            if y_name not in self.uxd_stack.value.remotes:
                 rm_.append(y_name)
                 continue
-            route = {'src': ('router', self.uxd_stack.value.yard.name, None),
+            route = {'src': ('router', self.uxd_stack.value.local.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
-            self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[y_name])
+            self.uxd_stack.value.transmit(msg,
+                    self.uxd_stack.value.uids.get(y_name))
             self.uxd_stack.value.serviceAll()
         for y_name in rm_:
             self.event_yards.value.remove(y_name)
@@ -449,7 +528,7 @@ class Publisher(ioflo.base.deeding.Deed):
             if eid:
                 route = {
                         'dst': (minion, None, 'fun'),
-                        'src': (self.udp_stack.value.estate.name, None, None)}
+                        'src': (self.udp_stack.value.local.name, None, None)}
                 msg = {'route': route, 'pub': pub_data['pub']}
                 self.udp_stack.value.message(msg, eid)
 
@@ -503,7 +582,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
                 dirpath=self.opts['sock_dir']
                 )
         ret_stack.addRemote(main_yard)
-        route = {'src': (self.opts['id'], ret_stack.yard.name, 'jid_ret'),
+        route = {'src': (self.opts['id'], ret_stack.local.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
         ret['id'] = self.opts['id']
@@ -515,7 +594,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        ret_stack.transmit(msg, ret_stack.uids['yard0'])
+        ret_stack.transmit(msg, ret_stack.uids.get('yard0'))
         ret_stack.serviceAll()
 
     def action(self):

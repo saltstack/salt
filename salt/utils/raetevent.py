@@ -69,7 +69,7 @@ class SaltEvent(object):
         if not self.connected and self.listen:
             try:
                 route = {'dst': (None, self.router_yard.name, 'event_req'),
-                         'src': (None, self.stack.yard.name, None)}
+                         'src': (None, self.stack.local.name, None)}
                 msg = {
                         'route': route,
                         'load': {'yid': self.yid, 'dirpath': self.sock_dir}}
@@ -156,7 +156,7 @@ class SaltEvent(object):
         if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
         route = {'dst': (None, self.router_yard.name, 'event_fire'),
-                 'src': (None, self.stack.yard.name, None)}
+                 'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
         self.stack.transmit(msg)
         self.stack.serviceAll()

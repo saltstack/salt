@@ -10,7 +10,7 @@ framer minionudpstack be active first start
    frame start
       do raet udp stack per inode ".raet.udp.stack"
       exit
-         do raet udp stack closer per inode ".raet.udp.stack."
+         do salt raet udp stack closer per inode ".raet.udp.stack."
 
 framer bootstrap be active first join
    frame join
@@ -18,7 +18,7 @@ framer bootstrap be active first join
       enter
          do salt raet udp stack joiner per inode ".raet.udp.stack."
       recur
-         do raet udp stack joined per inode ".raet.udp.stack."
+         do salt raet udp stack joined per inode ".raet.udp.stack."
 
       go next if joined in .raet.udp.stack.status
       go abort if elapsed >= 10

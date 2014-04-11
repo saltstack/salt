@@ -24,7 +24,7 @@ class SaltSafe(object):
     Interface between Salt Key management and RAET keep key management
     '''
     Auto = False #auto accept
-    LocalFields = ['eid', 'name', 'sighex', 'prihex']
+    LocalFields = ['sighex', 'prihex']
     RemoteFields = ['eid', 'name', 'acceptance', 'verhex', 'pubhex']
 
     def __init__(self, opts=None, **kwa):
@@ -75,7 +75,7 @@ class SaltSafe(object):
         self.saltRaetKey.status(data['name'],
                                 data['eid'],
                                 data['pubhex'],
-                                data['verhex'])        
+                                data['verhex'])
 
     def loadAllRemoteData(self):
         '''
@@ -102,19 +102,17 @@ class SaltSafe(object):
         Remove all the remote estate files
         '''
         self.saltRaetKey.delete_all()
-        
+
     def dumpLocal(self, local):
         '''
         Dump the key data from the local estate
         '''
         data = odict([
-                        ('eid', local.eid),
-                        ('name', local.name),
                         ('sighex', local.signer.keyhex),
                         ('prihex', local.priver.keyhex),
                     ])
         if self.verifyLocalData(data):
-            self.dumpLocalData(data)  
+            self.dumpLocalData(data)
 
     def dumpRemote(self, remote):
         '''

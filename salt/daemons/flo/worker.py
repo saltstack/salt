@@ -98,10 +98,10 @@ class SetupWorker(ioflo.base.deeding.Deed):
                 self.access_keys.value)
         init = {}
         init['route'] = {
-                'src': (None, self.uxd_stack.value.yard.name, None),
+                'src': (None, self.uxd_stack.value.local.name, None),
                 'dst': (None, 'yard0', 'worker_req')
                 }
-        self.uxd_stack.value.transmit(init, self.uxd_stack.value.uids['yard0'])
+        self.uxd_stack.value.transmit(init, self.uxd_stack.value.uids.get('yard0'))
         self.uxd_stack.value.serviceAll()
 
 
@@ -141,5 +141,5 @@ class RouterWorker(ioflo.base.deeding.Deed):
                         'src': (self.opts.value['id'], self.yid.value, None),
                         'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)
                         }
-                self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids['yard0'])
+                self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids.get('yard0'))
                 self.uxd_stack.value.serviceAll()

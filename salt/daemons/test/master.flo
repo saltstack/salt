@@ -10,7 +10,7 @@ framer masterudpstack be active first start
    frame start
       do raet udp stack per inode ".raet.udp.stack"
       exit
-         do raet udp stack closer per inode ".raet.udp.stack."
+         do salt raet udp stack closer per inode ".raet.udp.stack."
 
 framer uxdrouter be active first start
    frame start
