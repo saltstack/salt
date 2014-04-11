@@ -65,6 +65,7 @@ __defopts__ = {'ldap.uri': 'ldap://localhost:389',
                'ldap.attrs': []
                }
 
+
 def __virtual__():
     '''
     Only load this module if the ldap config is set
@@ -208,4 +209,3 @@ class _LDAPConnection(object):
                     self.uri, self.binddn, ldap_error
                 )
             )
-
