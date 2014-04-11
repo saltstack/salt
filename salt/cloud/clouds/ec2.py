@@ -325,6 +325,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
                     result.status_code
                 )
             )
+            log.trace(
+                'EC2 Response Text: {0}'.format(
+                    result.text
+                )
+            )
             break
         except requests.exceptions.HTTPError as exc:
             root = ET.fromstring(exc.read())
