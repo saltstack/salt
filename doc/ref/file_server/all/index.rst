@@ -14,4 +14,5 @@ Full list of builtin fileserver modules
     hgfs
     roots
     s3fs
+    svnfs
     minionfs
