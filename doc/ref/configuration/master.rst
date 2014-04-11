@@ -962,15 +962,15 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted. If using a regular expression, the expression
-must match the entire minion ID.
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
 
 If used, only branches/tags/SHAs which match one of the specified expressions
 will be exposed as fileserver environments.
 
 If used in conjunction with :conf_master:`gitfs_env_blacklist`, then the subset
-of hosts which match the whitelist but do *not* match the blacklist will be
-exposed as fileserver environments.
+of branches/tags/SHAs which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
@@ -990,14 +990,15 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted.
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
 
 If used, branches/tags/SHAs which match one of the specified expressions will
 *not* be exposed as fileserver environments.
 
 If used in conjunction with :conf_master:`gitfs_env_whitelist`, then the subset
-of hosts which match the whitelist but do *not* match the blacklist will be
-exposed as fileserver environments.
+of branches/tags/SHAs which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
@@ -1153,16 +1154,16 @@ bookmark should be used as the ``base`` environment.
 Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
-if your hgfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted. If using a regular expression, the expression
-must match the entire minion ID.
+if your hgfs remotes contain many branches/bookmarks/tags. Full names, globs,
+and regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
 
 If used, only branches/bookmarks/tags which match one of the specified
 expressions will be exposed as fileserver environments.
 
 If used in conjunction with :conf_master:`hgfs_env_blacklist`, then the subset
-of hosts which match the whitelist but do *not* match the blacklist will be
-exposed as fileserver environments.
+of branches/bookmarks/tags which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
@@ -1181,15 +1182,16 @@ exposed as fileserver environments.
 Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
-if your hgfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted.
+if your hgfs remotes contain many branches/bookmarks/tags. Full names, globs,
+and regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
 
 If used, branches/bookmarks/tags which match one of the specified expressions
 will *not* be exposed as fileserver environments.
 
 If used in conjunction with :conf_master:`hgfs_env_whitelist`, then the subset
-of hosts which match the whitelist but do *not* match the blacklist will be
-exposed as fileserver environments.
+of branches/bookmarks/tags which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
@@ -1346,6 +1348,62 @@ for more info.
 
     svnfs_tags: tags
 
+.. conf_master:: svnfs_env_whitelist
+
+``svnfs_env_whitelist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your svnfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the expression
+must match the entire minion ID.
+
+If used, only branches/tags which match one of the specified expressions will
+be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`svnfs_env_blacklist`, then the subset
+of branches/tags which match the whitelist but do *not* match the blacklist
+will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    svnfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: svnfs_env_blacklist
+
+``svnfs_env_blacklist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your svnfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, branches/tags which match one of the specified expressions will *not*
+be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`svnfs_env_whitelist`, then the subset
+of branches/tags which match the whitelist but do *not* match the blacklist
+will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    svnfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
 minion: MinionFS Remote File Server Backend
 -------------------------------------------
 
@@ -1393,7 +1451,7 @@ Specifies a path on the salt fileserver from which minionfs files are served.
 
 Default: ``[]``
 
-Used to restrict which minions pushed files are exposed via minionfs. If using
+Used to restrict which minions' pushed files are exposed via minionfs. If using
 a regular expression, the expression must match the entire minion ID.
 
 If used, only the pushed files from minions which match one of the specified
@@ -1419,7 +1477,7 @@ exposed.
 
 Default: ``[]``
 
-Used to restrict which minions pushed files are exposed via minionfs. If using
+Used to restrict which minions' pushed files are exposed via minionfs. If using
 a regular expression, the expression must match the entire minion ID.
 
 If used, only the pushed files from minions which match one of the specified
