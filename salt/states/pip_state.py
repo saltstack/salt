@@ -115,6 +115,7 @@ def installed(name,
               no_install=False,
               no_download=False,
               install_options=None,
+              global_options=None,
               user=None,
               runas=None,
               no_chown=False,
@@ -183,6 +184,30 @@ def installed(name,
 
     .. versionchanged:: 0.17.0
         ``use_wheel`` option added.
+
+    install_options
+
+        Extra arguments to be supplied to the setup.py install command.
+        If you are using an option with a directory path, be sure to use
+        absolute path.
+
+        Example:
+
+        .. code-block:: yaml
+
+            django:
+              pip.installed:
+                - name: django
+                - install_options:
+                  - --prefix=/blah
+                - require:
+                  - pkg: python-pip
+
+    global_options
+        Extra global options to be supplied to the setup.py call before the
+        install command.
+
+        .. versionadded:: 2014.1.2
 
     .. admonition:: Attention
 
@@ -385,6 +410,7 @@ def installed(name,
         no_install=no_install,
         no_download=no_download,
         install_options=install_options,
+        global_options=global_options,
         user=user,
         no_chown=no_chown,
         cwd=cwd,
