@@ -4,10 +4,8 @@ Manage information about files on the minion, set/read user, group
 data
 
 :depends:   - win32api
-            - win32con
             - win32file
             - win32security
-            - ntsecuritycon
 '''
 
 # Import python libs
@@ -33,8 +31,9 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import third party libs
 try:
-    import win32security
+    import win32api
     import win32file
+    import win32security
     from pywintypes import error as pywinerror
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -161,6 +160,53 @@ def _resolve_symlink(path, max_depth=64):
             raise CommandExecutionError('Too many levels of symbolic links.')
 
     return path
+
+
+def _change_privilege(privilege_name, enable):
+    '''
+    Change, either enable or disable, the named privilege for this process.
+
+    If the change did not occur, an exception will be raised.
+    '''
+    hProc = win32api.GetCurrentProcess()
+    hToken = win32security.OpenProcessToken(
+        hProc,
+        win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
+    )
+    privilege = win32security.LookupPrivilegeValue(None, privilege_name)
+    if enable:
+        enabled = win32security.SE_PRIVILEGE_ENABLED
+    else:
+        enabled = win32security.SE_PRIVILEGE_REMOVED
+    changes = win32security.AdjustTokenPrivileges(
+        hToken,
+        False,
+        [(privilege, enabled)]
+    )
+
+    if (enable and not bool(changes)) or (not enable and bool(changes)):
+        raise SaltInvocationError(
+            'Could not {} the {} privilege for this process'.format(
+                'enable' if enable else 'remove',
+                privilege_name
+            )
+        )
+    else:
+        return True
+
+
+def _enable_privilege(privilege_name):
+    '''
+    Enables the named privilege for this process.
+    '''
+    return _change_privilege(privilege_name, True)
+
+
+def _disable_privilege(privilege_name):
+    '''
+    Disables the named privilege for this process.
+    '''
+    return _change_privilege(privilege_name, False)
 
 
 def gid_to_group(gid):
@@ -526,28 +572,32 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    if pgroup:
-        # set owner and group
-        win32security.SetNamedSecurityInfo(
-            path,
-            win32security.SE_FILE_OBJECT,
-            win32security.OWNER_SECURITY_INFORMATION + win32security.GROUP_SECURITY_INFORMATION,
-            userSID,
-            groupSID,
-            None,
-            None
-        )
-    else:
-        # set owner only
-        win32security.SetNamedSecurityInfo(
-            path,
-            win32security.SE_FILE_OBJECT,
-            win32security.OWNER_SECURITY_INFORMATION,
-            userSID,
-            None,
-            None,
-            None
-        )
+    try:
+        _enable_privilege(win32security.SE_RESTORE_NAME)
+        if pgroup:
+            # set owner and group
+            win32security.SetNamedSecurityInfo(
+                path,
+                win32security.SE_FILE_OBJECT,
+                win32security.OWNER_SECURITY_INFORMATION + win32security.GROUP_SECURITY_INFORMATION,
+                userSID,
+                groupSID,
+                None,
+                None
+            )
+        else:
+            # set owner only
+            win32security.SetNamedSecurityInfo(
+                path,
+                win32security.SE_FILE_OBJECT,
+                win32security.OWNER_SECURITY_INFORMATION,
+                userSID,
+                None,
+                None,
+                None
+            )
+    finally:
+        _disable_privilege(win32security.SE_RESTORE_NAME)
 
     return None
 
@@ -582,8 +632,20 @@ def chpgrp(path, group):
         return err
 
     # set group
-    securityInfo = win32security.GROUP_SECURITY_INFORMATION
-    win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, securityInfo, None, groupSID, None, None)
+    try:
+        _enable_privilege(win32security.SE_RESTORE_NAME)
+        win32security.SetNamedSecurityInfo(
+            path,
+            win32security.SE_FILE_OBJECT,
+            win32security.GROUP_SECURITY_INFORMATION,
+            None,
+            groupSID,
+            None,
+            None
+        )
+    finally:
+        _disable_privilege(win32security.SE_RESTORE_NAME)
+
     return None
 
 
