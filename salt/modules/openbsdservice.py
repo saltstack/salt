@@ -14,6 +14,10 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 
 def __virtual__():
     '''
@@ -87,7 +91,7 @@ def status(name, sig=None):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def reload(name):
+def reload_(name):
     '''
     .. versionadded:: Helium
 
