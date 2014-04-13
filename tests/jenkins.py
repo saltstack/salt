@@ -255,16 +255,27 @@ def download_remote_logs(options):
         if os.path.isfile(os.path.join(workspace, fname)):
             os.unlink(os.path.join(workspace, fname))
 
-    cmds = (
-        'salt {0} archive.gzip /tmp/salt-runtests.log',
-        'salt {0} archive.gzip /var/log/salt/minion',
-        'salt {0} cp.push /tmp/salt-runtests.log.gz',
-        'salt {0} cp.push /var/log/salt/minion.gz',
-        'gunzip /var/cache/salt/master/minions/{0}/files/tmp/salt-runtests.log.gz',
-        'gunzip /var/cache/salt/master/minions/{0}/files/var/log/salt/minion.gz',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/salt-runtests.log {1}/salt-runtests.log',
-        'mv /var/cache/salt/master/minions/{0}/files/var/log/salt/minion {1}/minion.log'
-    )
+    if not options.remote_log_path:
+        options.remote_log_path = [
+            '/tmp/salt-runtests.log',
+            '/var/log/salt/minion'
+        ]
+
+    cmds = []
+
+    for remote_log in options.remote_log_path:
+        cmds.extend([
+            'salt {{0}} archive.gzip {0}'.format(remote_log),
+            'salt {{0}} cp.push {0}.gz'.format(remote_log),
+            'gunzip /var/cache/salt/master/minions/{{0}}/files/{0}.gz'.format(remote_log),
+            'mv /var/cache/salt/master/minions/{{0}}/files/{0} {{1}}/{1}'.format(
+                remote_log,
+                '{0}{1}'.format(
+                    os.path.basename(remote_log),
+                    remote_log.endswith('.log') and '' or '.log'
+                )
+            )
+        ])
 
     for cmd in cmds:
         cmd = cmd.format(vm_name, workspace)
@@ -633,6 +644,12 @@ def parse():
         '--download-coverage-report',
         default=None,
         help='Download the XML coverage reports'
+    )
+    parser.add_option(
+        '--remote-log-path',
+        action='append',
+        default=[],
+        help='Provide additional log paths to download from remote minion'
     )
     parser.add_option(
         '--download-remote-logs',
