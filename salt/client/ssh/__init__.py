@@ -477,8 +477,10 @@ class SSH(object):
             args = [arg_str]
         else:
             cmd_args = arg_str.split(None, 1)
-            fun = cmd_args[0]
-            args = [cmd_args[1]]
+            fun = cmd_args.pop()
+            args = []
+            if cmd_args:
+                args = [cmd_args]
 
         job_load = {
             'jid': jid,
