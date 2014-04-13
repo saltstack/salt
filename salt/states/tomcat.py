@@ -54,7 +54,8 @@ def __virtual__():
 def war_deployed(name,
                  war,
                  url='http://localhost:8080/manager',
-                 timeout=180):
+                 timeout=180,
+                 **kwargs):
     '''
     Enforce that the WAR will be deployed and started in the context path
     it will make use of WAR versions
@@ -159,7 +160,7 @@ def war_deployed(name,
     return ret
 
 
-def wait(name, url='http://localhost:8080/manager', timeout=180):
+def wait(name, url='http://localhost:8080/manager', timeout=180, **kwargs):
     '''
     Wait for the tomcat manager to load
 
@@ -208,7 +209,7 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     return ret
 
 
-def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
+def mod_watch(name, url='http://localhost:8080/manager', timeout=180, **kwargs):
     '''
     The tomcat watcher function.
     When called it will reload the webapp in question
@@ -228,7 +229,8 @@ def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
 
 def undeployed(name,
                  url='http://localhost:8080/manager',
-                 timeout=180):
+                 timeout=180,
+                 **kwargs):
     '''
     Enforce that the WAR will be un-deployed from the server
 

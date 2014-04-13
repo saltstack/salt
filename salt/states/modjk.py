@@ -14,7 +14,7 @@ def __virtual__():
     Load this state if modjk is loaded
     '''
 
-    return 'modjk.workers' in __salt__
+    return 'modjk' if 'modjk.workers' in __salt__ else False
 
 
 def _bulk_state(saltfunc, lbn, workers, profile):
@@ -62,7 +62,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
     return ret
 
 
-def worker_stopped(name, workers=None, profile='default'):
+def worker_stopped(name, workers=None, profile='default', **kwargs):
     '''
     Stop all the workers in the modjk load balancer
 
@@ -81,7 +81,7 @@ def worker_stopped(name, workers=None, profile='default'):
     )
 
 
-def worker_activated(name, workers=None, profile='default'):
+def worker_activated(name, workers=None, profile='default', **kwargs):
     '''
     Activate all the workers in the modjk load balancer
 
@@ -100,7 +100,7 @@ def worker_activated(name, workers=None, profile='default'):
     )
 
 
-def worker_disabled(name, workers=None, profile='default'):
+def worker_disabled(name, workers=None, profile='default', **kwargs):
     '''
     Disable all the workers in the modjk load balancer
 
@@ -119,7 +119,7 @@ def worker_disabled(name, workers=None, profile='default'):
     )
 
 
-def worker_recover(name, workers=None, profile='default'):
+def worker_recover(name, workers=None, profile='default', **kwargs):
     '''
     Recover all the workers in the modjk load balancer
 
