@@ -57,10 +57,11 @@ def build_pillar_data(options):
     '''
     Build a YAML formatted string to properly pass pillar data
     '''
-    pillar = {
-        'git_commit': options.commit,
-        'salt_url': options.salt_url,
-    }
+    pillar = {}
+    if options.commit is not None:
+        pillar['git_commit'] = options.commit
+    if options.salt_url is not None:
+        pillar['salt_url'] = options.salt_url
     if options.pillar:
         pillar.update(dict(options.pillar))
     return yaml.dump(pillar).rstrip()
@@ -295,11 +296,19 @@ def run(opts):
         opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
 
-    cmd = (
-        'salt-cloud -l debug'
-        ' --script-args "-D -g {salt_url} -n git {commit}"'
-        ' -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
-    )
+    if opts.commit is not None:
+        if opts.salt_url is None:
+            opts.salt_url = 'https://github.com/saltstack/salt.git'
+        cmd = (
+            'salt-cloud -l debug'
+            ' --script-args "-D -g {salt_url} -n git {commit}"'
+            ' -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
+        )
+    else:
+        cmd = (
+            'salt-cloud -l debug'
+            ' --script-args "-D" -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
+        )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -556,10 +565,11 @@ def parse():
         help='The vm provider')
     parser.add_option(
         '--salt-url',
-        default='https://github.com/saltstack/salt.git',
+        default=None,
         help='The  salt git repository url')
     parser.add_option(
         '--commit',
+        default=None,
         help='The git commit to track')
     parser.add_option(
         '--prep-sls',
