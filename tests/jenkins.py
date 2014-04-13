@@ -43,6 +43,7 @@ except ImportError:
         from nb_popen import NonBlockingPopen
 
 # Import 3rd-party libs
+import yaml
 try:
     import github
     HAS_GITHUB = True
@@ -50,6 +51,19 @@ except ImportError:
     HAS_GITHUB = False
 
 SALT_GIT_URL = 'https://github.com/saltstack/salt.git'
+
+
+def build_pillar_data(options):
+    '''
+    Build a YAML formatted string to properly pass pillar data
+    '''
+    pillar = {
+        'git_commit': options.commit,
+        'salt_url': options.salt_url,
+    }
+    if options.pillar:
+        pillar.update(dict(options.pillar))
+    return yaml.dump(pillar).rstrip()
 
 
 def generate_vm_name(platform):
@@ -357,10 +371,7 @@ def run(opts):
         'salt -t 1800 {vm_name} state.sls {prep_sls} pillar="{pillar}" '
         '--no-color'.format(
             prep_sls=opts.prep_sls,
-            pillar=opts.pillar.format(
-                commit=opts.commit,
-                salt_url=opts.salt_url
-            ),
+            pillar=build_pillar_data(opts),
             vm_name=vm_name,
             commit=opts.commit
         )
@@ -473,10 +484,7 @@ def run(opts):
         'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
         '--no-color'.format(
             sls=opts.sls,
-            pillar=opts.pillar.format(
-                commit=opts.commit,
-                salt_url=opts.salt_url
-            ),
+            pillar=build_pillar_data(opts),
             vm_name=vm_name,
             commit=opts.commit
         )
@@ -563,8 +571,10 @@ def parse():
         help='The final sls file to execute')
     parser.add_option(
         '--pillar',
-        default='{{git_commit: {commit}, git_url: \'{salt_url}\'}}',
-        help='Pillar values to pass to the sls file')
+        action='append',
+        nargs=2,
+        help='Pillar (key, value)s to pass to the sls file. '
+             'Example: \'--pillar pillar_key pillar_value\'')
     parser.add_option(
         '--no-clean',
         dest='clean',
