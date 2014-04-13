@@ -68,7 +68,7 @@ def build_pillar_data(options):
         pillar['bootstrap_salt_commit'] = options.bootstrap_salt_commit
     if options.pillar:
         pillar.update(dict(options.pillar))
-    return yaml.dump(pillar).rstrip()
+    return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
 
 
 def generate_vm_name(platform):
