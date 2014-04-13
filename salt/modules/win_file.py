@@ -43,10 +43,10 @@ except ImportError:
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
-        check_managed, check_perms, patch, remove, source_list, sed_contains,
+        check_managed, check_perms, remove, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
-        contains_glob, uncomment, sed, find, psed, get_sum, _get_bkroot,
-        get_hash, comment, manage_file, file_exists, get_diff, list_backups,
+        contains_glob, find, psed, get_sum, _get_bkroot,
+        get_hash, manage_file, file_exists, get_diff, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
