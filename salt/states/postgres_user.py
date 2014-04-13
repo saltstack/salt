@@ -28,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_user' if (
-        'postgres.user_exists' in __salt__
-    ) else False
+    return 'postgres.user_exists' in __salt__
 
 
 def present(name,
@@ -227,6 +225,8 @@ def present(name,
         ret['comment'] = 'The user {0} has been {1}d'.format(name, mode)
         if update:
             ret['changes'][name] = update
+        else:
+            ret['changes'][name] = 'Present'
     elif cret is not None:
         ret['comment'] = 'Failed to create user {0}'.format(name)
         ret['result'] = False

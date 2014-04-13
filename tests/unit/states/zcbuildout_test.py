@@ -1,22 +1,15 @@
 # -*- coding: utf-8 -*-
 import os
-import tempfile
-import textwrap
-
-# Import third party libs
-import yaml
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
 )
-from salttesting.mock import MagicMock
 
 ensure_in_syspath('../../')
 import integration
-import shutil
 
 # Import Salt libs
 import salt.utils
@@ -24,7 +17,6 @@ from unit.modules.zcbuildout_test import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 from salt.modules import zcbuildout as modbuildout
 from salt.states import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
-from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 ROOT = os.path.join(os.path.dirname(integration.__file__),
                     'files/file/base/buildout')

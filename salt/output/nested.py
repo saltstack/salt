@@ -7,6 +7,7 @@ from numbers import Number
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 
 class NestDisplay(object):
@@ -35,7 +36,7 @@ class NestDisplay(object):
                     prefix,
                     ret,
                     self.colors['ENDC'])
-        elif isinstance(ret, basestring):
+        elif isinstance(ret, string_types):
             lines = ret.split('\n')
             for line in lines:
                 out += '{0}{1}{2}{3}{4}\n'.format(

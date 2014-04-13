@@ -27,6 +27,18 @@ available to Salt.
 Simple Configuration
 ====================
 
+.. note::
+
+    GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
+    If your Master runs Ubuntu 12.04 LTS, you will likely need to install
+    GitPython using `pip`_.
+
+    .. code-block:: bash
+
+        # pip install GitPython
+
+.. _`pip`: http://www.pip-installer.org/
+
 To use the gitfs backend only two configuration changes are required on the
 master. The ``fileserver_backend`` option needs to be set with a value of
 ``git``:
@@ -84,12 +96,18 @@ Assuming that the ``gitfs_remotes`` option specifies three remotes:
     gitfs backend. This example should not be read as a recommended way to lay
     out files and git repos.
 
-.. note::
-
     The :strong:`file://` prefix denotes a git repository in a local directory.
     However, it will still use the given :strong:`file://` URL as a remote,
     rather than copying the git repo to the salt cache.  This means that any
     refs you want accessible must exist as *local* refs in the specified repo.
+
+.. warning::
+
+    Salt versions prior to 2014.1.0 (Hydrogen) are not tolerant of changing the
+    order of remotes, or modifying the URI of existing remotes. In those
+    versions, when modifying remotes it is a good idea to remove the gitfs
+    cache directory (``/var/cache/salt/master/gitfs``) before restarting the
+    salt-master service.
 
 Assume that each repository contains some files:
 
@@ -188,29 +206,16 @@ and use environment-specific branches for states definitions.
 GitFS Remotes over SSH
 ======================
 
-In order to configure a ``gitfs_remotes`` repository over SSH transport the 
+In order to configure a ``gitfs_remotes`` repository over SSH transport the
 ``git+ssh`` URL form must be used.
 
 .. code-block:: yaml
-    
+
     gitfs_remotes:
       - git+ssh://git@github.com/example/salt-states.git
-      
+
 The private key used to connect to the repository must be located in ``~/.ssh/id_rsa``
 for the user running the salt-master.
-
-.. note::
-
-    GitFS requires the Python module ``GitPython``, version 0.3.0 or newer.
-    If your Master runs Ubuntu 12.04 LTS, you will likely need to install
-    GitPython using `pip`_.
-
-    .. code-block:: bash
-
-        # pip install GitPython
-
-.. _`pip`: http://www.pip-installer.org/
-
 
 Using Git as an External Pillar Source
 ======================================
@@ -223,17 +228,27 @@ following to your master config file:
 .. code-block:: yaml
 
     ext_pillar:
-      - git: <branch> <repo>
+      - git: <branch> <repo> [root=<gitroot>]
 
+.. versionchanged:: Helium
+    The optional ``root`` parameter will be added.
 
 The ``<branch>`` param is the branch containing the pillar SLS tree, and the
 ``<repo>`` param is the URI for the repository. The below example would add the
-``master`` branch of the specified repo as an external pillar source.
+``master`` branch of the specified repo as an external pillar source:
 
 .. code-block:: yaml
 
     ext_pillar:
       - git: master https://domain.com/pillar.git
+
+Use the ``root`` parameter to use pillars from a subdirectory of the GIT
+repository:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: master https://domain.com/pillar.git root=subdirectory
 
 More information on the git external pillar can be found :mod:`here
 <salt.pillar.git_pillar>`.

@@ -5,7 +5,9 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+from __future__ import print_function
 import os
+import re
 import sys
 import time
 import errno
@@ -23,6 +25,10 @@ except ImportError:
     pass
 
 
+STATE_FUNCTION_RUNNING_RE = re.compile(
+    r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
+    r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
+)
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -75,7 +81,7 @@ def skip_if_binaries_missing(binaries, check_all=False):
         return obj
 
     if sys.version_info < (2, 7):
-        from unittest2 import skip
+        from unittest2 import skip  # pylint: disable=F0401
     else:
         from unittest import skip  # pylint: disable=E0611
 
@@ -126,7 +132,7 @@ def run_tests(*test_cases, **kwargs):
 
         def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
             if needs_daemon:
-                print('Setting up Salt daemons to execute tests')
+                print(' * Setting up Salt daemons to execute tests')
                 with TestDaemon(self):
                     return SaltTestcaseParser.run_testcase(self, testcase)
             return SaltTestcaseParser.run_testcase(self, testcase)
@@ -355,17 +361,15 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        import integration
-        integration.SYNDIC = None
-        self.sub_minion_process.terminate()
+        salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
-        self.minion_process.terminate()
+        salt.master.clean_proc(self.minion_process, wait_for_kill=50)
         self.minion_process.join()
-        self.master_process.terminate()
+        salt.master.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
-        self.syndic_process.terminate()
+        salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
         self.syndic_process.join()
-        self.smaster_process.terminate()
+        salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
         self.smaster_process.join()
         self._exit_mockbin()
         self._clean()
@@ -427,16 +431,18 @@ class TestDaemon(object):
 
         if sync_needed:
             # Wait for minions to "sync_all"
-            sync_minions = multiprocessing.Process(
-                target=self.sync_minion_modules,
-                args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
-            )
-            sync_minions.start()
-            sync_minions.join()
-            if sync_minions.exitcode > 0:
-                return False
-            sync_minions.terminate()
-            del sync_minions
+            for target in [self.sync_minion_modules,
+                           self.sync_minion_states]:
+                sync_minions = multiprocessing.Process(
+                    target=target,
+                    args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
+                )
+                sync_minions.start()
+                sync_minions.join()
+                if sync_minions.exitcode > 0:
+                    return False
+                sync_minions.terminate()
+                del sync_minions
 
         return True
 
@@ -596,26 +602,30 @@ class TestDaemon(object):
                 print_header('=', sep='=', inline=True)
             raise SystemExit()
 
-    def sync_minion_modules(self, targets, timeout=120):
+    def sync_minion_modules_(self, modules_kind, targets, timeout=None):
+        if not timeout:
+            timeout = 120
         # Let's sync all connected minions
         print(
-            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s modules '
-            '(saltutil.sync_modules)'.format(
+            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s {1} '
+            '(saltutil.sync_{1})'.format(
                 ', '.join(targets),
+                modules_kind,
                 **self.colors
             )
         )
         syncing = set(targets)
         jid_info = self.client.run_job(
-            list(targets), 'saltutil.sync_modules',
+            list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
             timeout=9999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync modules. '
-                'Tests requiring these modules WILL fail'.format(**self.colors)
+                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync {0}. '
+                'Tests requiring these {0} WILL fail'.format(
+                    modules_kind, **self.colors)
             )
             raise SystemExit()
 
@@ -631,15 +641,20 @@ class TestDaemon(object):
                     if isinstance(output['ret'], salt._compat.string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed so sync modules: '
-                            '{1}'.format(name, output['ret'], **self.colors)
+                            ' {RED_BOLD}*{ENDC} {0} Failed so sync {2}: '
+                            '{1}'.format(
+                                name, output['ret'],
+                                modules_kind,
+                                **self.colors)
                         )
                         return False
 
                     print(
-                        '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
+                        '   {LIGHT_GREEN}*{ENDC} Synced {0} {2}: '
                         '{1}'.format(
-                            name, ', '.join(output['ret']), **self.colors
+                            name,
+                            ', '.join(output['ret']),
+                            modules_kind, **self.colors
                         )
                     )
                     # Synced!
@@ -651,6 +666,12 @@ class TestDaemon(object):
                             '{1}'.format(name, output, **self.colors)
                         )
         return True
+
+    def sync_minion_states(self, targets, timeout=None):
+        self.sync_minion_modules_('states', targets, timeout=timeout)
+
+    def sync_minion_modules(self, targets, timeout=None):
+        self.sync_minion_modules_('modules', targets, timeout=timeout)
 
 
 class AdaptedConfigurationTestCaseMixIn(object):
@@ -665,10 +686,12 @@ class AdaptedConfigurationTestCaseMixIn(object):
             # Running as root, the running user does not need to be updated
             return integration_config_dir
 
-        for fname in os.listdir(integration_config_dir):
-            if fname.startswith(('.', '_')):
-                continue
-            self.get_config_file_path(fname)
+        for triplet in os.walk(integration_config_dir):
+            partial = triplet[0].replace(integration_config_dir, "")[1:]
+            for fname in triplet[2]:
+                if fname.startswith(('.', '_')):
+                    continue
+                self.get_config_file_path(os.path.join(partial, fname))
         return TMP_CONF_DIR
 
     def get_config_file_path(self, filename):
@@ -679,10 +702,11 @@ class AdaptedConfigurationTestCaseMixIn(object):
             # Running as root, the running user does not need to be updated
             return integration_config_file
 
-        if not os.path.isdir(TMP_CONF_DIR):
-            os.makedirs(TMP_CONF_DIR)
-
         updated_config_path = os.path.join(TMP_CONF_DIR, filename)
+        partial = os.path.dirname(updated_config_path)
+        if not os.path.isdir(partial):
+            os.makedirs(partial)
+
         if not os.path.isfile(updated_config_path):
             self.__update_config(integration_config_file, updated_config_path)
         return updated_config_path
@@ -746,13 +770,20 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                     function, minion_tgt, orig
                 )
             )
+
+        # Try to match stalled state functions
+        orig[minion_tgt] = self._check_state_return(
+            orig[minion_tgt], func=function
+        )
+
         return orig[minion_tgt]
 
     def run_state(self, function, **kwargs):
         '''
         Run the state.single command and return the state return structure
         '''
-        return self.run_function('state.single', [function], **kwargs)
+        ret = self.run_function('state.single', [function], **kwargs)
+        return self._check_state_return(ret)
 
     @property
     def minion_opts(self):
@@ -780,6 +811,42 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         return salt.config.master_config(
             self.get_config_file_path('master')
         )
+
+    def _check_state_return(self, ret, func='state.single'):
+        if isinstance(ret, dict):
+            # This is the supposed return format for state calls
+            return ret
+
+        if isinstance(ret, list):
+            jids = []
+            # These are usually errors
+            for item in ret[:]:
+                if not isinstance(item, salt._compat.string_types):
+                    # We don't know how to handle this
+                    continue
+                match = STATE_FUNCTION_RUNNING_RE.match(item)
+                if not match:
+                    # We don't know how to handle this
+                    continue
+                jid = match.group('jid')
+                if jid in jids:
+                    continue
+
+                jids.append(jid)
+
+                job_data = self.run_function(
+                    'saltutil.find_job', [jid]
+                )
+                job_kill = self.run_function('saltutil.kill_job', [jid])
+                msg = (
+                    'A running state.single was found causing a state lock. '
+                    'Job details: {0!r}  Killing Job Returned: {1!r}'.format(
+                        job_data, job_kill
+                    )
+                )
+                ret.append('[TEST SUITE ENFORCED]{0}'
+                           '[/TEST SUITE ENFORCED]'.format(msg))
+        return ret
 
 
 class SyndicCase(TestCase, SaltClientTestCaseMixIn):

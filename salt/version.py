@@ -4,6 +4,7 @@ Set up the version of Salt
 '''
 
 # Import python libs
+from __future__ import print_function
 import re
 import sys
 

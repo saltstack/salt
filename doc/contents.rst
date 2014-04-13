@@ -3,81 +3,32 @@ Salt Table of Contents
 ======================
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 2
     :glob:
-
-    faq
+    :numbered:
 
     topics/index
     topics/installation/index
-    topics/configuration
-    topics/hacking
-    topics/targeting/index
     topics/tutorials/index
-    topics/eauth/*
+    topics/targeting/index
     topics/pillar/index
-    topics/master_tops/index
-    topics/jobs/*
-    topics/nonroot
-    topics/troubleshooting/*
-    topics/community
-    topics/projects/index
+    topics/reactor/index
+    topics/mine/index
+    topics/eauth/index
+    topics/jobs/index
     topics/event/index
-    topics/mine/*
+    topics/topology/index
+    topics/windows/index
     topics/cloud/index
-    topics/virt/*
+    topics/virt/index
+    topics/yaml/index
+    topics/master_tops/index
     topics/ssh/*
-    topics/tests/*
-    topics/reactor/*
-    topics/conventions/*
-    topics/git/*
-    topics/development/index
-    topics/translating
-    topics/salt_projects
-    topics/proxyminion/index
-
-    ref/configuration/logging/*
-    ref/configuration/logging/handlers/*
     ref/index
-    ref/modules/*
-    ref/modules/all/index
-    ref/returners/*
-    ref/returners/all/index
-    ref/states/*
-    ref/states/all/index
-    ref/renderers/*
-    ref/renderers/all/index
-    ref/pillar/*
-    ref/pillar/all/index
-    ref/tops/*
-    ref/tops/all/index
-    ref/runners/index
-    ref/runners/all/index
-    ref/wheel/all/index
-    ref/auth/all/index
-    ref/output/all/index
-    ref/clouds/all/index
-    ref/clients/index
-    ref/peer
-    ref/clientacl
-    ref/syndic
-    ref/file_server/*
-    ref/file_server/all/index
-    ref/configuration/*
-    ref/internals/index
-    ref/topology
-    ref/windows-package-manager
-
-    ref/cli/index
-    ref/cli/salt
-    ref/cli/salt-master
-    ref/cli/salt-minion
-    ref/cli/salt-key
-    ref/cli/salt-cp
-    ref/cli/salt-call
-    ref/cli/salt-run
-    ref/cli/salt-ssh
-    ref/cli/salt-syndic
-    ref/cli/salt-cloud
-
+    topics/best_practices
+    topics/troubleshooting/index
+    topics/development/index
     topics/releases/index
+    topics/projects/index
+    faq
+    glossary

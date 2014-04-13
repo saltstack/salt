@@ -11,7 +11,7 @@ import logging
 import salt.crypt
 import salt.payload
 
-__proxyenabled__ = ['junos']
+__proxyenabled__ = ['*']
 
 log = logging.getLogger(__name__)
 
@@ -153,6 +153,7 @@ def get(tgt, fun, expr_form='glob'):
         pcre
         grain
         grain_pcre
+        compound
 
     CLI Example:
 
@@ -160,6 +161,7 @@ def get(tgt, fun, expr_form='glob'):
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
+        salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
     '''
     if expr_form.lower == 'pillar':
         log.error('Pillar matching not supported on mine.get')

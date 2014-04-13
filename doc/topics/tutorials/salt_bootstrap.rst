@@ -134,42 +134,57 @@ passed):
 Command Line Options
 --------------------
 
-**-h** Display the help message and command line options.
+Here's a summary of the command line options (and how check them against
+``http://bootstrap.saltstack.org``)::
 
-**-v** Display script version.
-
-**-n** No colours.
-
-**-D** Show debug output.
-
-**-c** Temporary configuration directory.
-
-**-k** Temporary directory holding the minion keys which will pre-seed the master.
-
-**-M** Also install salt-master.
-
-**-S** Also install salt-syndic.
-
-**-N** Do not install salt-minion.
-
-**-X** Do not start daemons after installation.
-
-**-C** Only run the configuration function. This option automatically bypasses
-any installation.
-
-**-P** Allow pip based installations. On some distributions the required salt
-packages or its dependencies are not available as a package for that
-distribution. Using this flag allows the script to use pip as a last
-resort method. 
-
-.. note::
-
-    This works for functions which actually implement
-    pip based installations.
-
-**-F** Allow copied files to overwrite existing(config, init.d, etc).
-
-**-U** If set, fully upgrade the system prior to bootstrapping salt.
-
-**-K** If set, keep the temporary files in the temporary directories specified
-with -c and -k.
+    $ sh bootstrap-salt.sh -h
+    
+      Usage :  bootstrap-salt.sh [options] <install-type> <install-type-args>
+    
+      Installation types:
+        - stable (default)
+        - daily  (ubuntu specific)
+        - git
+    
+      Examples:
+        $ bootstrap-salt.sh
+        $ bootstrap-salt.sh stable
+        $ bootstrap-salt.sh daily
+        $ bootstrap-salt.sh git
+        $ bootstrap-salt.sh git develop
+        $ bootstrap-salt.sh git v0.17.0
+        $ bootstrap-salt.sh git 8c3fadf15ec183e5ce8c63739850d543617e4357
+    
+      Options:
+      -h  Display this message
+      -v  Display script version
+      -n  No colours.
+      -D  Show debug output.
+      -c  Temporary configuration directory
+      -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
+      -k  Temporary directory holding the minion keys which will pre-seed
+          the master.
+      -M  Also install salt-master
+      -S  Also install salt-syndic
+      -N  Do not install salt-minion
+      -X  Do not start daemons after installation
+      -C  Only run the configuration function. This option automatically
+          bypasses any installation.
+      -P  Allow pip based installations. On some distributions the required salt
+          packages or its dependencies are not available as a package for that
+          distribution. Using this flag allows the script to use pip as a last
+          resort method. NOTE: This only works for functions which actually
+          implement pip based installations.
+      -F  Allow copied files to overwrite existing(config, init.d, etc)
+      -U  If set, fully upgrade the system prior to bootstrapping salt
+      -K  If set, keep the temporary files in the temporary directories specified
+          with -c and -k.
+      -I  If set, allow insecure connections while downloading any files. For
+          example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
+      -A  Pass the salt-master DNS name or IP. This will be stored under
+          ${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
+      -i  Pass the salt-minion id. This will be stored under
+          ${BS_SALT_ETC_DIR}/minion_id
+      -L  Install the Apache Libcloud package if possible(required for salt-cloud)
+      -p  Extra-package to install while installing salt dependencies. One package
+          per -p flag. You're responsible for providing the proper package name.

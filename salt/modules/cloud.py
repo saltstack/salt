@@ -37,8 +37,8 @@ def _get_client():
     Return a cloud client
     '''
     client = salt.cloud.CloudClient(
-            os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
-            )
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+    )
     return client
 
 
@@ -130,7 +130,7 @@ def select_query(query_type='list_nodes_select'):
     return query(query_type='list_nodes_select')
 
 
-def profile_(profile, names, **kwargs):
+def profile_(profile, names, vm_overrides=None, **kwargs):
     '''
     Spin up an instance using Salt Cloud
 
@@ -141,7 +141,7 @@ def profile_(profile, names, **kwargs):
         salt '*' cloud.profile my-gce-config myinstance
     '''
     client = _get_client()
-    info = client.profile(profile, names, **kwargs)
+    info = client.profile(profile, names, vm_overrides=vm_overrides, **kwargs)
     return info
 
 
@@ -198,4 +198,88 @@ def create(provider, names, **kwargs):
     '''
     client = _get_client()
     info = client.create(provider, names, **kwargs)
+    return info
+
+
+def volume_list(provider):
+    '''
+    List block storage volumes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.volume_list my-nova
+
+    '''
+    client = _get_client()
+    info = client.volume_action(provider, 'name', action='list')
+    return info['name']
+
+
+def volume_delete(provider, names, **kwargs):
+    '''
+    Delete volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.volume_delete my-nova myblock
+
+    '''
+    client = _get_client()
+    info = client.volume_action(provider, names, action='delete', **kwargs)
+    return info
+
+
+def volume_create(provider, names, **kwargs):
+    '''
+    Create volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.volume_create my-nova myblock size=100 \
+                voltype=SSD
+
+    '''
+    client = _get_client()
+    info = client.volume_action(provider, names, action='create', **kwargs)
+    return info
+
+
+def volume_attach(provider, names, **kwargs):
+    '''
+    Attach volume to a server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.volume_attach my-nova myblock \
+                server_name=myserver \
+                device='/dev/xvdf'
+
+    '''
+    client = _get_client()
+    info = client.volume_action(provider, names, action='attach', **kwargs)
+    return info
+
+
+def volume_detach(provider, names, **kwargs):
+    '''
+    Detach volume from a server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.volume_detach my-nova myblock \
+                server_name=myserver
+
+    '''
+    client = _get_client()
+    info = client.volume_action(provider, names, action='detach', **kwargs)
     return info

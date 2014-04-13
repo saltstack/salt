@@ -2,8 +2,7 @@
 '''
 A module to manage software on Windows
 
-:depends:   - pythoncom
-            - win32com
+:depends:   - win32com
             - win32con
             - win32api
             - pywintypes
@@ -11,7 +10,6 @@ A module to manage software on Windows
 
 # Import third party libs
 try:
-    import pythoncom
     import win32com.client
     import win32api
     import win32con
@@ -237,8 +235,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -537,6 +536,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
                 cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
+            if __salt__['cp.hash_file'](installer, saltenv) != \
+                                          __salt__['cp.hash_file'](cached_pkg):
+                cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
         else:
             cached_pkg = installer
 
@@ -704,7 +706,7 @@ def get_repo_data(saltenv='base'):
     if not cached_repo:
         __salt__['pkg.refresh_db']()
     try:
-        with salt.utils.fopen(cached_repo, 'r') as repofile:
+        with salt.utils.fopen(cached_repo, 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
                 #__context__['winrepo.data'] = repodata

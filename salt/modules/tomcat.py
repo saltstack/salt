@@ -87,13 +87,13 @@ def _auth(uri):
     If user & pass are missing return False
     '''
     try:
-        user = __grains__['tomcat-manager.user']
-        password = __grains__['tomcat-manager.passwd']
+        user = __grains__['tomcat-manager']['user']
+        password = __grains__['tomcat-manager']['passwd']
     except KeyError:
         try:
-            user = salt.utils.option('tomcat-manager.user', '', __opts__,
+            user = salt.utils.option('tomcat-manager:user', '', __opts__,
                     __pillar__)
-            password = salt.utils.option('tomcat-manager.passwd', '', __opts__,
+            password = salt.utils.option('tomcat-manager:passwd', '', __opts__,
                     __pillar__)
         except Exception:
             return False

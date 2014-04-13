@@ -1,13 +1,14 @@
 Source: salt
 Section: admin
 Priority: optional
-Maintainer: Corey Quinn <corey@sequestered.net>
+Maintainer: Bret Palsson <bretep@gmail.com>
 Build-Depends: debhelper (>= 7.0.50),
                cython,
                python | python-all | python-dev | python-all-dev,
                python-crypto,
                python-jinja2,
                python-m2crypto,
+               python-requests,
                python-setuptools,
                python-sphinx,
                python-yaml,
@@ -25,6 +26,7 @@ Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends},
          python-crypto,
          python-jinja2,
          python-m2crypto,
+         python-requests,
          python-yaml,
          python-zmq,
          dctrl-tools,
@@ -47,6 +49,7 @@ Description: Shared libraries that salt requires for all packages
  .
  This particular package provides shared libraries that salt-master,
  salt-minion, and salt-syndic require to function.
+
 
 Package: salt-master
 Architecture: all
@@ -115,6 +118,7 @@ Description: This package represents the master-of-masters for salt
  This particular package provides the master of masters for salt-- it enables
  the management of multiple masters at a time..
 
+
 Package: salt-ssh
 Architecture: all
 Depends: ${misc:Depends},
@@ -142,6 +146,19 @@ Description: remote manager to administer servers via salt
  is able to run salt modules and states on remote hosts via ssh.
  No minion or other salt specific software needs to be installed
  on the remote host.
+
+
+Package: salt-cloud
+Architecture: all
+Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends},
+         salt-common (= ${source:Version}),
+         sshpass
+Suggests: python-botocore
+Recommends: python-netaddr
+Description: public cloud VM management system
+ provision virtual machines on various public clouds via a cleanly 
+ controlled profile and mapping system.
+
 
 Package: salt-doc
 Architecture: all

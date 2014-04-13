@@ -4,6 +4,8 @@
 MinionFS Backend Walkthrough
 ============================
 
+.. versionadded:: 2014.1.0 (Hydrogen)
+
 Sometimes, you might need to propagate files that are generated on a minion.
 Salt already has a feature to send files from a minion to the master:
 

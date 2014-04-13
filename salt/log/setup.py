@@ -35,6 +35,7 @@ QUIET = logging.QUIET = 1000
 # Import salt libs
 from salt.log.handlers import TemporaryLoggingHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
+from salt._compat import string_types
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -166,7 +167,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
                    extra=None):
         # Let's try to make every logging message unicode
-        if isinstance(msg, basestring) and not isinstance(msg, unicode):
+        if isinstance(msg, string_types) and not isinstance(msg, unicode):
             try:
                 return LOGGING_LOGGER_CLASS.makeRecord(
                     self, name, level, fn, lno,

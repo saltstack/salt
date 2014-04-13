@@ -41,6 +41,16 @@ def compile_template(template,
     Take the path to a template and return the high data structure
     derived from the template.
     '''
+
+    # We "map" env to the same as saltenv until Boron is out in order to follow the same deprecation path
+    kwargs.setdefault('env', saltenv)
+    salt.utils.warn_until(
+        'Boron',
+        'We are only supporting \'env\' in the templating context until Boron comes out. '
+        'Once this warning is shown, please remove the above mapping',
+        _dont_call_warnings=True
+    )
+
     # Template was specified incorrectly
     if not isinstance(template, string_types):
         return {}

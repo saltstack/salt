@@ -7,6 +7,9 @@ in a standalone way. This runner has tools which generate the standalone salt
 system for easy consumption.
 '''
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt libs
 import salt.utils.thin
 

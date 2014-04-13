@@ -12,46 +12,35 @@ Primary interfaces for the salt-cloud system
 # the VM data will be in opts['profiles']
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
-import getpass
 import logging
 
 # Import salt libs
 import salt.config
 import salt.output
 import salt.utils
-from salt import syspaths
 from salt.utils import parsers
-from salt.utils.validate.path import is_writeable
 from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
 import salt.cloud
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
-try:
-    from salt.cloud.libcloudfuncs import libcloud_version
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
 
 log = logging.getLogger(__name__)
 
 
 class SaltCloud(parsers.SaltCloudParser):
+
     def run(self):
         '''
         Execute the salt-cloud command line
         '''
-        if HAS_LIBCLOUD is False:
-            self.error('salt-cloud requires >= libcloud 0.11.4')
-
-        libcloud_version()
-
         # Parse shell arguments
         self.parse_args()
 
-        salt_master_user = self.config.get('user', getpass.getuser())
+        salt_master_user = self.config.get('user', salt.utils.get_user())
         if salt_master_user is not None and not check_user(salt_master_user):
             self.error(
                 'salt-cloud needs to run as the same user as salt-master, '
@@ -79,106 +68,12 @@ class SaltCloud(parsers.SaltCloudParser):
         self.setup_logfile_logger()
 
         if self.options.update_bootstrap:
-            log.debug('Updating the bootstrap-salt.sh script to latest stable')
-            import urllib2
-            url = 'http://bootstrap.saltstack.org'
-            req = urllib2.urlopen(url)
-            if req.getcode() != 200:
-                self.error(
-                    'Failed to download the latest stable version of the '
-                    'bootstrap-salt.sh script from {0}. HTTP error: '
-                    '{1}'.format(
-                        url, req.getcode()
-                    )
-                )
-
-            # Get the path to the built-in deploy scripts directory
-            builtin_deploy_dir = os.path.join(
-                os.path.dirname(__file__),
-                'deploy'
+            ret = salt.utils.cloud.update_bootstrap(self.config)
+            display_output = salt.output.get_printout(
+                self.options.output, self.config
             )
-
-            # Compute the search path from the current loaded opts conf_file
-            # value
-            deploy_d_from_conf_file = os.path.join(
-                os.path.dirname(self.config['conf_file']),
-                'cloud.deploy.d'
-            )
-
-            # Compute the search path using the install time defined
-            # syspaths.CONF_DIR
-            deploy_d_from_syspaths = os.path.join(
-                syspaths.CONFIG_DIR,
-                'cloud.deploy.d'
-            )
-
-            # Get a copy of any defined search paths, flagging them not to
-            # create parent
-            deploy_scripts_search_paths = []
-            for entry in self.config.get('deploy_scripts_search_path', []):
-                if entry.startswith(builtin_deploy_dir):
-                    # We won't write the updated script to the built-in deploy
-                    # directory
-                    continue
-
-                if entry in (deploy_d_from_conf_file, deploy_d_from_syspaths):
-                    # Allow parent directories to be made
-                    deploy_scripts_search_paths.append((entry, True))
-                else:
-                    deploy_scripts_search_paths.append((entry, False))
-
-            # In case the user is not using defaults and the computed
-            # 'cloud.deploy.d' from conf_file and syspaths is not included, add
-            # them
-            if deploy_d_from_conf_file not in deploy_scripts_search_paths:
-                deploy_scripts_search_paths.append(
-                    (deploy_d_from_conf_file, True)
-                )
-            if deploy_d_from_syspaths not in deploy_scripts_search_paths:
-                deploy_scripts_search_paths.append(
-                    (deploy_d_from_syspaths, True)
-                )
-
-            for entry, makedirs in deploy_scripts_search_paths:
-                if makedirs and not os.path.isdir(entry):
-                    try:
-                        os.makedirs(entry)
-                    except (OSError, IOError) as err:
-                        log.info(
-                            'Failed to create directory {0!r}'.format(entry)
-                        )
-                        continue
-
-                if not is_writeable(entry):
-                    log.debug(
-                        'The {0!r} is not writeable. Continuing...'.format(
-                            entry
-                        )
-                    )
-                    continue
-
-                deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
-                try:
-                    print(
-                        '\nUpdating \'bootstrap-salt.sh\':'
-                        '\n\tSource:      {0}'
-                        '\n\tDestination: {1}'.format(
-                            url,
-                            deploy_path
-                        )
-                    )
-                    with salt.utils.fopen(deploy_path, 'w') as fp_:
-                        fp_.write(req.read())
-                    # We were able to update, no need to continue trying to
-                    # write up the search path
-                    self.exit(0)
-                except (OSError, IOError) as err:
-                    log.debug(
-                        'Failed to write the updated script: {0}'.format(err)
-                    )
-                    continue
-
-            self.error('Failed to update the bootstrap script')
+            print(display_output(ret))
+            self.exit(0)
 
         log.info('salt-cloud starting')
         mapper = salt.cloud.Map(self.config)
@@ -245,7 +140,8 @@ class SaltCloud(parsers.SaltCloudParser):
                 matching = mapper.delete_map(query='list_nodes')
             else:
                 matching = mapper.get_running_by_names(
-                    self.config.get('names', ())
+                    self.config.get('names', ()),
+                    profile=self.options.profile
                 )
 
             if not matching:

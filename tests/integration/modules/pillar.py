@@ -51,6 +51,25 @@ class PillarModuleTest(integration.ModuleCase):
             self.run_function('pillar.data')['test_ext_pillar_opts']['file_roots']['base']
         )
 
+    def no_test_issue_10408_ext_pillar_gitfs_url_update(self):
+        import os
+        from salt.pillar import git_pillar
+        import git
+        original_url = 'git+ssh://original@example.com/home/git/test'
+        changed_url = 'git+ssh://changed@example.com/home/git/test'
+        rp_location = os.path.join(self.master_opts['cachedir'], 'pillar_gitfs/0/.git')
+        opts = {
+            'ext_pillar': [{'git': 'master {0}'.format(original_url)}],
+            'cachedir': self.master_opts['cachedir'],
+        }
+
+        git_pillar.GitPillar('master', original_url, opts)
+        opts['ext_pillar'] = [{'git': 'master {0}'.format(changed_url)}]
+        grepo = git_pillar.GitPillar('master', changed_url, opts)
+        repo = git.Repo(rp_location)
+
+        self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PillarModuleTest)

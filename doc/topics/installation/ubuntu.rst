@@ -64,5 +64,5 @@ may be given at a time:
 Post-installation tasks
 =======================
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
 

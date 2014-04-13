@@ -35,7 +35,6 @@ from salt.cloud.exceptions import SaltCloudSystemExit
 # CloudStackNetwork will be needed during creation of a new node
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    from libcloud.common.cloudstack import CloudStackConnection
     HASLIBS = True
 except ImportError:
     HASLIBS = False
@@ -63,13 +62,8 @@ def __virtual__():
     Set up the libcloud functions and check for CloudStack configurations.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no CloudStack cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading CloudStack cloud module')
     return True
 
 
@@ -213,6 +207,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -242,6 +237,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -266,6 +262,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': get_ip(data),
             'username': ssh_username,
             'password': data.extra['password'],
@@ -348,6 +345,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -386,6 +384,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

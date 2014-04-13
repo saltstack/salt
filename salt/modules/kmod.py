@@ -15,7 +15,7 @@ def __virtual__():
     '''
     Only runs on Linux systems
     '''
-    return 'kmod' if __grains__['kernel'] == 'Linux' else False
+    return __grains__['kernel'] == 'Linux'
 
 
 def _new_mods(pre_mods, post_mods):

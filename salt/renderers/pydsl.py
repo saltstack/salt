@@ -10,7 +10,7 @@ The `pydsl` renderer allows one to author salt formulas(.sls files) in pure
 Python using a DSL that's easy to write and easy to read. Here's an example:
 
 .. code-block:: python
-   :linenos:
+    :linenos:
 
     #!pydsl
 
@@ -38,20 +38,21 @@ a few objects are defined for you, including the usual(with ``__`` added)
 
   ``include``
 
-    Salt PyDSL function for creating :term:`include declaration`'s.
+    Salt PyDSL function for creating :ref:`include-declaration`'s.
 
   ``extend``
 
-    Salt PyDSL function for creating :term:`extend declaration`'s.
+    Salt PyDSL function for creating :ref:`extend-declaration`'s.
 
   ``state``
 
-    Salt PyDSL function for creating :term:`ID declaration`'s.
+    Salt PyDSL function for creating :ref:`ID-declaration`'s.
 
 
-A state :term:`ID declaration` is created with a ``state(id)`` function call.
+A state :ref:`ID-declaration` is created with a ``state(id)`` function call.
 Subsequent ``state(id)`` call with the same id returns the same object. This
-singleton access pattern applies to all declaration objects created with the DSL.
+singleton access pattern applies to all declaration objects created with the
+DSL.
 
 .. code-block:: python
 
@@ -63,8 +64,9 @@ singleton access pattern applies to all declaration objects created with the DSL
 The `id` argument is optional. If omitted, an UUID will be generated and used as
 the `id`.
 
-``state(id)`` returns an object under which you can create a :term:`state declaration`
-object by accessing an attribute named after *any* state module available in Salt.
+``state(id)`` returns an object under which you can create a
+:ref:`state-declaration` object by accessing an attribute named after *any*
+state module available in Salt.
 
 .. code-block:: python
 
@@ -73,26 +75,26 @@ object by accessing an attribute named after *any* state module available in Sal
     state('example').pkg
     ...
 
-Then, a :term:`function declaration` object can be created from a
-:term:`state declaration` object by one of the following two ways:
+Then, a :ref:`function-declaration` object can be created from a
+:ref:`state-declaration` object by one of the following two ways:
 
-1. by directly calling the attribute named for the :term:`state declaration`, and
+1. by directly calling the attribute named for the :ref:`state-declaration`, and
    supplying the state function name as the first argument.
 
 .. code-block:: python
 
        state('example').file('managed', ...)
 
-2. by calling a method named after the state function on the :term:`state declaration`
-   object.
+2. by calling a method named after the state function on the :ref:`state-declaration` object.
 
 .. code-block:: python
 
        state('example').file.managed(...)
 
-With either way of creating a :term:`function declaration` object, any
-:term:`function arg declaration`'s can be passed as keyword arguments to the call.
-Subsequent calls of a :term:`function declaration` will update the arg declarations.
+With either way of creating a :ref:`function-declaration` object, any
+:ref:`function-arg-declaration`'s can be passed as keyword arguments to the
+call. Subsequent calls of a :ref:`function-declaration` will update the arg
+declarations.
 
 .. code-block:: python
 
@@ -107,16 +109,17 @@ calling using the first way) positional argument.
     state('example').cmd('run', 'ls -la', cwd='/')
     state('example').cmd.run('ls -la', cwd='/')
 
-Finally, a :term:`requisite declaration` object with its :term:`requisite reference`'s
-can be created by invoking one of the requisite methods(``require``, ``watch``, ``use``,
-``require_in``, ``watch_in``, and ``use_in``) on either a :term:`function declaration`
-object or a :term:`state declaration` object. The return value of a requisite call is
-also a :term:`function declaration` object, so you can chain several requisite calls
+Finally, a :ref:`requisite-declaration` object with its
+:ref:`requisite-reference`'s can be created by invoking one of the requisite
+methods(``require``, ``watch``, ``use``, ``require_in``, ``watch_in``, and
+``use_in``) on either a :ref:`function-declaration` object or a
+:ref:`state-declaration` object. The return value of a requisite call is also a
+:ref:`function-declaration` object, so you can chain several requisite calls
 together.
 
-Arguments to a requisite call can be a list of :term:`state declaration` objects and/or
-a set of keyword arguments whose names are state modules and values are IDs of
-:term:`ID declaration`'s or names of :term:`name declaration`'s.
+Arguments to a requisite call can be a list of :ref:`state-declaration` objects
+and/or a set of keyword arguments whose names are state modules and values are
+IDs of :ref:`ID-declaration`'s or names of :ref:`name-declaration`'s.
 
 .. code-block:: python
 
@@ -140,9 +143,9 @@ a set of keyword arguments whose names are state modules and values are IDs of
     # we still need to set the name of the function declaration.
     apache2.service.running()
 
-:term:`include declaration` objects can be created with the ``include`` function,
-while :term:`extend declaration` objects can be created with the ``extend`` function,
-whose arguments are just :term:`function declaration` objects.
+:ref:`include-declaration` objects can be created with the ``include`` function,
+while :ref:`extend-declaration` objects can be created with the ``extend`` function,
+whose arguments are just :ref:`function-declaration` objects.
 
 .. code-block:: python
 
@@ -152,7 +155,7 @@ whose arguments are just :term:`function declaration` objects.
 The ``include`` function, by default, causes the included sls file to be rendered
 as soon as the ``include`` function is called. It returns a list of rendered module
 objects; sls files not rendered with the pydsl renderer return ``None``'s.
-This behavior creates no :term:`include declaration`'s in the resulting high state
+This behavior creates no :ref:`include-declaration`'s in the resulting high state
 data structure.
 
 .. code-block:: python
@@ -181,7 +184,7 @@ argument to ``include``.
 
     include('edit.vim', 'http.server', delayed=True)
 
-Above will just create a :term:`include declaration` in the rendered result, and
+Above will just create a :ref:`include-declaration` in the rendered result, and
 such call always returns ``None``.
 
 
@@ -207,9 +210,9 @@ See :func:`salt.states.cmd.call` for more information.
 
 Implicit ordering of states
 ----------------------------
-Salt states are explicitly ordered via :term:`requisite declaration`'s.
+Salt states are explicitly ordered via :ref:`requisite-declaration`'s.
 However, with `pydsl` it's possible to let the renderer track the order
-of creation for :term:`function declaration` objects, and implicitly add
+of creation for :ref:`function-declaration` objects, and implicitly add
 ``require`` requisites for your states to enforce the ordering. This feature
 is enabled by setting the ``ordered`` option on ``__pydsl__``.
 
@@ -240,11 +243,12 @@ Above example should create states from ``0`` to ``9`` that will output ``0``,
 ``one``, ``two``, ``3``, ... ``9``, in that order.
 
 It's important to know that `pydsl` tracks the *creations* of
-:term:`function declaration` objects, and automatically adds a ``require`` requisite
-to a :term:`function declaration` object that requires the last
-:term:`function declaration` object created before it in the sls file.
+:ref:`function-declaration` objects, and automatically adds a ``require`` requisite
+to a :ref:`function-declaration` object that requires the last
+:ref:`function-declaration` object created before it in the sls file.
 
-This means later calls(perhaps to update the function's :term:`function arg declaration`) to a previously created function declaration will not change the order.
+This means later calls(perhaps to update the function's :ref:`function-arg-declaration`) to a previously created function declaration will not change the
+order.
 
 
 Render time state execution
@@ -254,7 +258,7 @@ high state data representation by a renderer before the states can be executed.
 In the case of the `pydsl` renderer, the .sls file is executed as a python module
 as it is being rendered which makes it easy to execute a state at render time.
 In `pydsl`, executing one or more states at render time can be done by calling a
-configured :term:`ID declaration` object.
+configured :ref:`ID-declaration` object.
 
 .. code-block:: python
 
@@ -268,13 +272,13 @@ configured :term:`ID declaration` object.
 
     s() # execute the two states now
 
-Once an :term:`ID declaration` is called at render time it is detached from the
+Once an :ref:`ID-declaration` is called at render time it is detached from the
 sls module as if it was never defined.
 
 .. note::
     If `implicit ordering` is enabled(ie, via ``__pydsl__.set(ordered=True)``) then
-    the *first* invocation of a :term:`ID declaration` object must be done before a
-    new :term:`function declaration` is created.
+    the *first* invocation of a :ref:`ID-declaration` object must be done before a
+    new :ref:`function-declaration` is created.
 
 
 Integration with the stateconf renderer
@@ -308,6 +312,24 @@ high state data rendered by `pydsl` to `stateconf`. This example shows that by
 it's possible to ensure that the included sls files can be made to execute before
 or after a state in the including sls file.
 
+Importing custom Python modules
+-------------------------------
+To use a custom Python module inside a PyDSL state, place the module somewhere that
+it can be loaded by the Salt loader, such as `_modules` in the `/srv/salt` directory.
+
+Then, copy it to any minions as necessary by using `saltutil.sync_modules`.
+
+To import into a PyDSL SLS, one must bypass the Python importer and insert it manually
+by getting a reference from Python's `sys.modules` dictionary.
+
+For example:
+
+.. code-block:: python
+
+    #!pydsl|stateconf -ps
+
+    def main():
+        my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
 '''
 

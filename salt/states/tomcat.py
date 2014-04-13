@@ -224,3 +224,56 @@ def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
        }
 
     return ret
+
+
+def undeployed(name,
+                 url='http://localhost:8080/manager',
+                 timeout=180):
+    '''
+    Enforce that the WAR will be un-deployed from the server
+
+    name
+        the context path to deploy
+    url : http://localhost:8080/manager
+        the URL of the server manager webapp
+    timeout : 180
+        timeout for HTTP request to the tomcat manager
+
+    Example::
+
+        jenkins:
+          tomcat.undeployed:
+            - name: /ran
+            - require:
+              - service: application-service
+    '''
+
+    # Prepare
+    ret = {'name': name,
+       'result': True,
+       'changes': {},
+       'comment': ''}
+
+    if not __salt__['tomcat.status'](url, timeout):
+        ret['comment'] = 'Tomcat Manager does not response'
+        ret['result'] = False
+        return ret
+
+    try:
+        version = __salt__['tomcat.ls'](url, timeout)[name]['version']
+        ret['changes'] = {'undeploy': version}
+    except KeyError:
+        return ret
+
+    # Test
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    undeploy = __salt__['tomcat.undeploy'](name, url, timeout=timeout)
+    if undeploy.startswith('FAIL'):
+        ret['result'] = False
+        ret['comment'] = undeploy
+        return ret
+
+    return ret

@@ -42,7 +42,8 @@ def present(
         The user who owns the ssh authorized keys file to modify
 
     enc
-        Defines what type of key is being used, can be ecdsa ssh-rsa or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
+        or ssh-dss
 
     fingerprint
         The fingerprint of the key which must be presented in the known_hosts

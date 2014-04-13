@@ -1,0 +1,21 @@
+description "Salt Minion"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+# The respawn in the minion is known to cause problems
+# because if the main minion process dies it has done
+# so most likely for a good reason. Uncomment these
+# two lines to enable respawn
+#respawn
+#respawn limit 10 5
+
+script
+  # Read configuration variable file if it is present
+  [ -f /etc/default/$UPSTART_JOB ] && . /etc/default/$UPSTART_JOB
+
+  # Activate the virtualenv if defined
+  [ -f $SALT_USE_VIRTUALENV/bin/activate ] && . $SALT_USE_VIRTUALENV/bin/activate
+
+  exec salt-minion
+end script

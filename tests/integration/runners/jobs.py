@@ -3,8 +3,6 @@
 '''
 Tests for the salt-run command
 '''
-# Import python libs
-import sys
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath

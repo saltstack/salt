@@ -22,3 +22,8 @@ class MinionTestCase(TestCase):
     def test_invalid_master_address(self):
         with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
             self.assertRaises(SaltSystemExit, minion.resolve_dns, __opts__)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MinionTestCase, needs_daemon=False)

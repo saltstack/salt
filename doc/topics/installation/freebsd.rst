@@ -19,7 +19,13 @@ dependencies of the ``sysutils/py-salt`` port. ::
 Installation
 ============
 
-To install Salt from the FreeBSD ports tree, use the command:
+On FreeBSD 10 and later, to install Salt from the FreeBSD pkgng repo, use the command:
+
+.. code-block:: bash
+
+    pkg install py27-salt
+
+On older versions of FreeBSD, to install Salt from the FreeBSD ports tree, use the command:
 
 .. code-block:: bash
 
@@ -77,5 +83,5 @@ Start the Salt Minion as follows:
 
    service salt_minion start
 
-Now go to the :doc:`Configuring Salt</topics/configuration>` page.
+Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
 

@@ -7,6 +7,12 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
+Please note that the `rackspace` driver is only intended for 1st gen instances,
+aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
+will *not* work with OpenStack-based instances. Unless you explicitly have a
+reason to use it, it is highly recommended that you use the `openstack` driver
+instead.
+
 The rackspace cloud module interfaces with the Rackspace public cloud service
 and requires that two configuration parameters be set for use, ``user`` and
 ``apikey``.
@@ -77,13 +83,8 @@ def __virtual__():
     Set up the libcloud functions and check for Rackspace configuration.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Rackspace cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Rackspace cloud module')
     return True
 
 
@@ -201,6 +202,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -218,6 +220,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -332,6 +335,7 @@ def create(vm_):
     if deploy is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
             'username': ssh_username,
             'password': data.extra['password'],
@@ -413,6 +417,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -451,6 +456,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

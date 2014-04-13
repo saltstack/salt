@@ -25,9 +25,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 
     my-openstack-config:
       # The OpenStack identity service url
-      identity_url: https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/
       # The OpenStack compute region
-      compute_region: az-1.region-a.geo-1
+      compute_region: region-b.geo-1
       # The OpenStack compute service name
       compute_name: Compute
       # The OpenStack tenant name (not tenant ID)
@@ -35,7 +35,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The OpenStack user name
       user: myuser
       # The OpenStack keypair name
-      ssh_key_name
+      ssh_key_name: mykey
+      # The ssh key file
+      ssh_key_file: /path/to/keyfile/test.pem
       # The OpenStack network UUIDs
       networks:
           - fixed:
@@ -43,7 +45,7 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
           - floating:
               - Ext-Net
       files:
-          /path/to/dest.txt
+          /path/to/dest.txt:
               /local/path/to/src.txt
 
       provider: openstack
@@ -80,16 +82,25 @@ following option may be useful. Using the old syntax:
       ignore_cidr: 192.168.50.0/24
 
 It is possible to upload a small set of files (no more than 5, and nothing too
-large) to the remote server. Generally this should not be needed, as salt itself
-can upload to the server after it is spun up, with nowhere near the same
-restrictions.
+large) to the remote server. Generally this should not be needed, as salt
+itself can upload to the server after it is spun up, with nowhere near the
+same restrictions.
 
 .. code-block:: yaml
 
     my-openstack-config:
       files:
-          /path/to/dest.txt
+          /path/to/dest.txt:
               /local/path/to/src.txt
+
+Alternatively, one could use the private IP to connect by specifying:
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      ssh_interface: private_ips
+
+
 '''
 
 # The import section is mostly libcloud boilerplate
@@ -165,13 +176,8 @@ def __virtual__():
     Set up the libcloud functions and check for OPENSTACK configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Openstack cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Openstack cloud module')
     return True
 
 
@@ -205,11 +211,12 @@ def get_conn():
         'ex_tenant_name': config.get_cloud_config_value(
             'tenant', vm_, __opts__, search_global=False
         ),
-   }
+    }
 
-    service_type = config.get_cloud_config_value(
-            'service_type', vm_, __opts__, search_global=False
-        )
+    service_type = config.get_cloud_config_value('service_type',
+                                                 vm_,
+                                                 __opts__,
+                                                 search_global=False)
     if service_type:
         authinfo['ex_force_service_type'] = service_type
 
@@ -237,10 +244,12 @@ def get_conn():
     authinfo['ex_force_auth_version'] = '2.0_apikey'
     log.debug('OpenStack authenticating using apikey')
     return driver(
-        config.get_cloud_config_value('user', vm_, __opts__, search_global=False),
-        config.get_cloud_config_value('apikey', vm_, __opts__, search_global=False),
-        **authinfo
-    )
+        config.get_cloud_config_value('user',
+                                      vm_,
+                                      __opts__,
+                                      search_global=False),
+        config.get_cloud_config_value('apikey', vm_, __opts__,
+                                      search_global=False), **authinfo)
 
 
 def preferred_ip(vm_, ips):
@@ -261,7 +270,7 @@ def preferred_ip(vm_, ips):
         except Exception:
             continue
 
-        return False
+    return False
 
 
 def ignore_cidr(vm_, ip):
@@ -277,7 +286,9 @@ def ignore_cidr(vm_, ip):
         'ignore_cidr', vm_, __opts__, default='', search_global=False
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
-        log.warning('IP "{0}" found within "{1}"; ignoring it.'.format(ip, cidr))
+        log.warning(
+            'IP {0!r} found within {1!r}; ignoring it.'.format(ip, cidr)
+        )
         return True
 
     return False
@@ -324,12 +335,14 @@ def create(vm_):
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
-    if key_filename is not None and not os.path.isfile(key_filename):
-        raise SaltCloudConfigError(
-            'The defined ssh_key_file {0!r} does not exist'.format(
-                key_filename
+    if key_filename is not None:
+        key_filename = os.path.expanduser(key_filename)
+        if not os.path.isfile(key_filename):
+            raise SaltCloudConfigError(
+                'The defined ssh_key_file {0!r} does not exist'.format(
+                    key_filename
+                )
             )
-        )
 
     if deploy is True and key_filename is None and \
             salt.utils.which('sshpass') is None:
@@ -348,6 +361,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -413,29 +427,50 @@ def create(vm_):
 
     floating = []
 
-    if HAS014 and networks is not None:
-        for net in networks:
-            if 'fixed' in net:
-                kwargs['networks'] = [
-                    OpenStackNetwork(n, None, None, None) for n in net['fixed']
-                ]
-            elif 'floating' in net:
-                pool = OpenStack_1_1_FloatingIpPool(
-                    net['floating'], conn.connection
-                )
-                for idx in pool.list_floating_ips():
-                    if idx.node_id is None:
-                        floating.append(idx)
-                if not floating:
-                    # Note(pabelanger): We have no available floating IPs. For
-                    # now, we raise an execption and exit. A future enhancement
-                    # might be to allow salt-cloud to dynamically allociate new
-                    # address but that might be tricky to manage.
-                    raise SaltCloudSystemExit(
-                        "Floating pool '%s' has not more address available, "
-                        "please create some more or use a different pool." %
-                        net['floating']
+    if HAS014:
+        if networks is not None:
+            for net in networks:
+                if 'fixed' in net:
+                    kwargs['networks'] = [
+                        OpenStackNetwork(n, None, None, None)
+                        for n in net['fixed']
+                    ]
+                elif 'floating' in net:
+                    pool = OpenStack_1_1_FloatingIpPool(
+                        net['floating'], conn.connection
                     )
+                    for idx in pool.list_floating_ips():
+                        if idx.node_id is None:
+                            floating.append(idx)
+                    if not floating:
+                        # Note(pabelanger): We have no available floating IPs.
+                        # For now, we raise an exception and exit.
+                        # A future enhancement might be to allow salt-cloud
+                        # to dynamically allocate new address but that might
+                        raise SaltCloudSystemExit(
+                            'Floating pool {0!r} does not have any more '
+                            'please create some more or use a different '
+                            'pool.'.format(net['floating'])
+                        )
+        # otherwise, attempt to obtain list without specifying pool
+        # this is the same as 'nova floating-ip-list'
+        elif ssh_interface(vm_) != 'private_ips':
+            pool = OpenStack_1_1_FloatingIpPool(
+                '', conn.connection
+            )
+            for idx in pool.list_floating_ips():
+                if idx.node_id is None:
+                    floating.append(idx)
+            if not floating:
+                # Note(pabelanger): We have no available floating IPs.
+                # For now, we raise an exception and exit.
+                # A future enhancement might be to allow salt-cloud to
+                # dynamically allocate new address but that might be
+                # tricky to manage.
+                raise SaltCloudSystemExit(
+                    'There are no more floating IP addresses '
+                    'available, please create some more'
+                )
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
@@ -460,16 +495,20 @@ def create(vm_):
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
-                    'size': kwargs['size'].name}},
+                    'size': kwargs['size'].name,
+                    'profile': vm_['profile']}},
+        transport=__opts__['transport']
     )
 
+    default_profile = {}
+    if 'profile' in vm_ and vm_['profile'] is not None:
+        default_profile = {'profile': vm_['profile']}
+
     kwargs['ex_metadata'] = config.get_cloud_config_value(
-        'metadata', vm_, __opts__, default={}, search_global=False
+        'metadata', vm_, __opts__, default=default_profile, search_global=False
     )
     if not isinstance(kwargs['ex_metadata'], dict):
-        raise SaltCloudConfigError(
-                '\'metadata\' should be a dict.'
-        )
+        raise SaltCloudConfigError('\'metadata\' should be a dict.')
 
     try:
         data = conn.create_node(**kwargs)
@@ -487,7 +526,7 @@ def create(vm_):
 
     def __query_node_data(vm_, data, floating):
         try:
-            nodelist = list_nodes()
+            nodelist = list_nodes_full()
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
@@ -507,17 +546,17 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == node_state(
-            NodeState.RUNNING
-        )
+        running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
         if not running:
             # Still not running, trigger another iteration
             return
 
         if rackconnect(vm_) is True:
+            check_libcloud_version((0, 14, 0), why='rackconnect: True')
             extra = nodelist[vm_['name']].get('extra')
-            rc_status = extra.get('metadata').get('rackconnect_automation_status')
-            access_ip = extra.get('access_ip')
+            rc_status = extra.get('metadata', {}).get(
+                'rackconnect_automation_status', '')
+            access_ip = extra.get('access_ip', '')
 
             if rc_status != 'DEPLOYED':
                 log.debug('Waiting for Rackconnect automation to complete')
@@ -525,7 +564,8 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = nodelist[vm_['name']].get('extra')
-            mc_status = extra.get('metadata').get('rax_service_level_automation')
+            mc_status = extra.get('metadata', {}).get(
+                'rax_service_level_automation', '')
 
             if mc_status != 'Complete':
                 log.debug('Waiting for managed cloud automation to complete')
@@ -537,7 +577,9 @@ def create(vm_):
                 ip = floating[0].ip_address
                 conn.ex_attach_floating_ip_to_node(data, ip)
                 log.info(
-                    'Attaching floating IP "{0}" to node "{1}"'.format(ip, name)
+                    'Attaching floating IP {0!r} to node {1!r}'.format(
+                        ip, name
+                    )
                 )
             except Exception:
                 # Note(pabelanger): Because we loop, we only want to attach the
@@ -559,7 +601,8 @@ def create(vm_):
                     log.warn('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
                     log.warn(
-                        'Public IP address was not ready when we last checked.  Appending public IP address now.'
+                        'Public IP address was not ready when we last checked.'
+                        ' Appending public IP address now.'
                     )
                     public = data.public_ips
                 else:
@@ -627,6 +670,7 @@ def create(vm_):
         'ssh_username', vm_, __opts__, default='root'
     )
     deploy_kwargs = {
+        'opts': __opts__,
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
@@ -655,8 +699,11 @@ def create(vm_):
         'script_args': config.get_cloud_config_value(
             'script_args', vm_, __opts__
         ),
-        'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-        'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
+        'script_env': config.get_cloud_config_value('script_env',
+                                                    vm_,
+                                                    __opts__),
+        'minion_conf': salt.utils.cloud.minion_config(__opts__,
+                                                      vm_)
     }
 
     if ssh_username != 'root':
@@ -702,7 +749,9 @@ def create(vm_):
         )
 
         # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
+        win_installer = config.get_cloud_config_value('win_installer',
+                                                      vm_,
+                                                      __opts__)
         if win_installer:
             deploy_kwargs['win_installer'] = win_installer
             minion = salt.utils.cloud.minion_config(__opts__, vm_)
@@ -728,6 +777,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -766,6 +816,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

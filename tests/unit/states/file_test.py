@@ -7,7 +7,7 @@ import pprint
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 ensure_in_syspath('../../')
 
 # Import third party libs
@@ -108,7 +108,7 @@ class TestFileState(TestCase):
         self.assertEqual(None, ret)
 
         # make sure the value is correct
-        self.assertEqual(expected, returner.call_args[0][-2])
+        self.assertEqual(expected, returner.call_args[0][-3])
 
 if __name__ == '__main__':
     from integration import run_tests

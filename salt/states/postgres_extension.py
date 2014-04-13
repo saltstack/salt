@@ -24,9 +24,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_extension' if (
-        'postgres.create_extension' in __salt__
-    ) else False
+    return 'postgres.create_extension' in __salt__
 
 
 def present(name,
@@ -94,7 +92,7 @@ def present(name,
         name,
         schema=schema,
         ext_version=ext_version,
-        from_version=from_version, **db_args)
+        **db_args)
 
     # The user is not present, make it!
     toinstall = postgres._EXTENSION_NOT_INSTALLED in mtdata

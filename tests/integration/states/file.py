@@ -114,6 +114,68 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_file_mode(self):
+        '''
+        file.managed, correct file permissions
+        '''
+        desired_mode = 504    # 0770 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode='0770', source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_replace(self):
+        '''
+        file.managed, existing file with replace=True, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_noreplace(self):
+        '''
+        file.managed, existing file with replace=False, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        ret = self.run_state(
+            'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -901,7 +963,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '    - show_changes: True',
             '']
         open(template_path, 'w').write(
-                '\n'.join(sls_template).format(testcase_filedest))
+            '\n'.join(sls_template).format(testcase_filedest))
         try:
             ret = self.run_function('state.sls', mods='issue-8343')
             for name, step in ret.items():
@@ -925,6 +987,68 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
+    def test_issue_11003_immutable_lazy_proxy_sum(self):
+        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
+        testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
+        sls_template = [
+            'a{0}:',
+            '  file.absent:',
+            '    - name: {0}',
+            '',
+            '{0}:',
+            '  file.managed:',
+            '    - contents: |',
+            '                #',
+            '',
+            'test-acc1:',
+            '  file.accumulated:',
+            '    - require_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            bar',
+            '',
+            'test-acc2:',
+            '  file.accumulated:',
+            '    - watch_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            baz',
+            '',
+            'final:',
+            '  file.blockreplace:',
+            '    - name: {0}',
+            '    - marker_start: "#-- start managed zone PLEASE, DO NOT EDIT"',
+            '    - marker_end: "#-- end managed zone"',
+            '    - content: \'\'',
+            '    - append_if_not_found: True',
+            '    - show_changes: True'
+        ]
+
+        open(template_path, 'w').write(
+            '\n'.join(sls_template).format(testcase_filedest))
+        try:
+            ret = self.run_function('state.sls', mods='issue-11003')
+            for name, step in ret.items():
+                self.assertSaltTrueReturn({name: step})
+            self.assertEqual(
+                ['#',
+                 '#-- start managed zone PLEASE, DO NOT EDIT',
+                 'bar',
+                 '',
+                 'baz',
+                 '',
+                 '#-- end managed zone',
+                 ''],
+                open(testcase_filedest).read().split('\n')
+            )
+        finally:
+            if os.path.isdir(testcase_filedest):
+                os.unlink(testcase_filedest)
+            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
+                os.unlink(filename)
+
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 chararacters on the sls
@@ -932,7 +1056,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         This is more generic than just a file test. Feel free to move
         '''
         # Get a path to the temporary file
-         # 한국어 시험 (korean)
+        # 한국어 시험 (korean)
         # '\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98' (utf-8)
         # u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8' (unicode)
         korean_1 = '한국어 시험'

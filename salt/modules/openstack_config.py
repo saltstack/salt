@@ -37,7 +37,7 @@ __func_alias__ = {
 def __virtual__():
     if _quote is None and not HAS_DEPS:
         return False
-    return 'openstack_config'
+    return True
 
 
 def _fallback(*args, **kw):

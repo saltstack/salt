@@ -21,7 +21,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'disk'
+    return True
 
 
 def _clean_flags(args, caller):
@@ -189,3 +189,29 @@ def percent(args=None):
         return ret[args]
     else:
         return ret
+
+
+def blkid(device=None):
+    '''
+    Return block device attributes: UUID, LABEL, etc.
+
+    CLI Example::
+
+        salt '*' disk.blkid
+        salt '*' disk.blkid /dev/sda
+    '''
+    args = ""
+    if device:
+        args = " " + device
+
+    ret = {}
+    for line in __salt__['cmd.run_stdout']('blkid' + args).split('\n'):
+        comps = line.split()
+        device = comps[0][:-1]
+        info = {}
+        for elem in comps[1:]:
+            key, value = elem.split('=')
+            info[key] = value.strip('"')
+        ret[device] = info
+
+    return ret

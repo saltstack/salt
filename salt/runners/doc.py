@@ -14,7 +14,10 @@ import salt.wheel
 
 
 def __virtual__():
-    return 'doc'
+    '''
+    Always load
+    '''
+    return True
 
 
 def runner():
@@ -59,7 +62,7 @@ def execution():
 
         salt-run doc.execution
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
 
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
@@ -79,7 +82,7 @@ def __list_functions(user=None):
     List all of the functions, optionally pass in a user to evaluate
     permissions on
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     funcs = {}
     gener = client.cmd_iter(
             '*',

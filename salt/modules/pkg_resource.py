@@ -16,6 +16,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
@@ -26,7 +27,7 @@ def _parse_pkg_meta(path):
     Parse metadata from a binary package and return the package's name and
     version number.
     '''
-    def parse_rpm(path):
+    def parse_rpm_redhat(path):
         try:
             from salt.modules.yumpkg import __QUERYFORMAT, _parse_pkginfo
             from salt.utils import namespaced_function as _namespaced_function
@@ -49,9 +50,21 @@ def _parse_pkg_meta(path):
         else:
             return pkginfo.name, pkginfo.version
 
+    def parse_rpm_suse(path):
+        pkginfo = __salt__['cmd.run_stdout'](
+            'rpm -qp --queryformat {0!r} {1!r}'.format(
+                r'%{NAME}_|-%{VERSION}_|-%{RELEASE}\n',
+                path
+            )
+        ).strip()
+        name, pkg_version, rel = path.split('_|-')
+        if rel:
+            pkg_version = '-'.join((pkg_version, rel))
+        return name, pkg_version
+
     def parse_pacman(path):
         name = ''
-        version = ''
+        pkg_version = ''
         result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
         if result['retcode'] == 0:
             for line in result['stdout'].splitlines():
@@ -60,16 +73,16 @@ def _parse_pkg_meta(path):
                     if match:
                         name = match.group(1)
                         continue
-                if not version:
+                if not pkg_version:
                     match = re.match(r'^Version\s*:\s*(\S+)', line)
                     if match:
-                        version = match.group(1)
+                        pkg_version = match.group(1)
                         continue
-        return name, version
+        return name, pkg_version
 
     def parse_deb(path):
         name = ''
-        version = ''
+        pkg_version = ''
         arch = ''
         # This is ugly, will have to try to find a better way of accessing the
         # __grains__ global.
@@ -91,9 +104,9 @@ def _parse_pkg_meta(path):
                         ).group(1)
                     except AttributeError:
                         continue
-                if not version:
+                if not pkg_version:
                     try:
-                        version = re.match(
+                        pkg_version = re.match(
                             r'^\s*Version\s*:\s*(\S+)',
                             line
                         ).group(1)
@@ -110,10 +123,12 @@ def _parse_pkg_meta(path):
         if arch and cpuarch == 'x86_64':
             if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
-        return name, version
+        return name, pkg_version
 
-    if __grains__['os_family'] in ('Suse', 'RedHat', 'Mandriva'):
-        metaparser = parse_rpm
+    if __grains__['os_family'] in ('RedHat', 'Mandriva'):
+        metaparser = parse_rpm_redhat
+    elif __grains__['os_family'] in ('Suse',):
+        metaparser = parse_rpm_suse
     elif __grains__['os_family'] in ('Arch',):
         metaparser = parse_pacman
     elif __grains__['os_family'] in ('Debian',):
@@ -130,9 +145,10 @@ def _repack_pkgs(pkgs):
     Repack packages specified using "pkgs" argument to pkg states into a single
     dictionary
     '''
+    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
     return dict(
         [
-            (str(x), str(y) if y is not None else y)
+            (_normalize_name(str(x)), str(y) if y is not None else y)
             for x, y in salt.utils.repack_dictlist(pkgs).iteritems()
         ]
     )
@@ -152,7 +168,8 @@ def pack_sources(sources):
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
-    if isinstance(sources, basestring):
+    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+    if isinstance(sources, string_types):
         try:
             sources = yaml.safe_load(sources)
         except yaml.parser.ParserError as err:
@@ -165,7 +182,8 @@ def pack_sources(sources):
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
-            ret.update(source)
+            key = next(iter(source))
+            ret[_normalize_name(key)] = source[key]
     return ret
 
 
@@ -270,7 +288,10 @@ def parse_targets(name=None,
         return [x[2] for x in srcinfo], 'file'
 
     elif name:
-        return dict([(x, None) for x in name.split(',')]), 'repository'
+        _normalize_name = \
+            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        return packed, 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')

@@ -7,6 +7,7 @@ Render the pillar data
 import os
 import collections
 import logging
+import copy
 
 # Import salt libs
 import salt.loader
@@ -303,7 +304,12 @@ class Pillar(object):
         Returns the high data derived from the top file
         '''
         tops, errors = self.get_tops()
-        return self.merge_tops(tops), errors
+        try:
+            merged_tops = self.merge_tops(tops)
+        except TypeError as err:
+            merged_tops = OrderedDict()
+            errors.append('Error encountered while render pillar top file.')
+        return merged_tops, errors
 
     def top_matches(self, top):
         '''
@@ -341,10 +347,18 @@ class Pillar(object):
         errors = []
         fn_ = self.client.get_state(sls, saltenv).get('dest', False)
         if not fn_:
-            msg = ('Specified SLS {0!r} in environment {1!r} is not'
-                   ' available on the salt master').format(sls, saltenv)
-            log.error(msg)
-            errors.append(msg)
+            if self.opts['pillar_roots'].get(saltenv):
+                msg = ('Specified SLS {0!r} in environment {1!r} is not'
+                       ' available on the salt master').format(sls, saltenv)
+                log.error(msg)
+                errors.append(msg)
+            else:
+                log.debug('Specified SLS {0!r} in environment {1!r} is not'
+                          ' found, which might be due to environment {1!r}'
+                          ' not being present in "pillar_roots" yet!'
+                          .format(sls, saltenv))
+                # return state, mods, errors
+                return None, mods, errors
         state = None
         try:
             state = compile_template(
@@ -480,14 +494,15 @@ class Pillar(object):
                             )
         return pillar
 
-    def compile_pillar(self):
+    def compile_pillar(self, ext=True):
         '''
         Render the pillar data and return
         '''
         top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
-        self.ext_pillar(pillar)
+        if ext:
+            self.ext_pillar(pillar)
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)

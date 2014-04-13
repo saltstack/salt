@@ -18,6 +18,8 @@ A state module to manage LVMs
       lvm.lv_present:
         - vgname: my_vg
         - size: 10G
+        - stripes: 5
+        - stripesize: 8K
 '''
 
 # Import salt libs
@@ -134,7 +136,13 @@ def vg_absent(name):
     return ret
 
 
-def lv_present(name, vgname=None, size=None, extents=None, pv=''):
+def lv_present(name,
+               vgname=None,
+               size=None,
+               extents=None,
+               snapshot=None,
+               pv='',
+               **kwargs):
     '''
     Create a new logical volume
 
@@ -150,15 +158,29 @@ def lv_present(name, vgname=None, size=None, extents=None, pv=''):
     extents
         The number of logical extents to allocate
 
+    snapshot
+        The name of the snapshot
+
     pv
         The physical volume to use
+
+    kwargs
+        Any supported options to lvcreate. See
+        :mod:`linux_lvm <salt.modules.linux_lvm>` for more details.
     '''
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
 
+    _snapshot = None
+
+    if snapshot:
+        _snapshot = name
+        name = snapshot
+
     lvpath = '/dev/{0}/{1}'.format(vgname, name)
+
     if __salt__['lvm.lvdisplay'](lvpath):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
     elif __opts__['test']:
@@ -170,7 +192,9 @@ def lv_present(name, vgname=None, size=None, extents=None, pv=''):
                                            vgname,
                                            size=size,
                                            extents=extents,
-                                           pv=pv)
+                                           snapshot=_snapshot,
+                                           pv=pv,
+                                           **kwargs)
 
         if __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Created Logical Volume {0}'.format(name)

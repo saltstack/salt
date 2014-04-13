@@ -98,5 +98,5 @@ def set_password(name, password):
     else:
         cmd = 'usermod -p {0!r} {1}'.format(password, name)
         stdin = None
-    __salt__['cmd.run'](cmd, stdin=stdin)
+    __salt__['cmd.run'](cmd, stdin=stdin, output_loglevel='quiet')
     return info(name)['passwd'] == password

@@ -5,6 +5,7 @@ data
 
 :depends:   - win32api
             - win32con
+            - win32file
             - win32security
             - ntsecuritycon
 '''
@@ -14,17 +15,27 @@ import os
 import stat
 import os.path
 import logging
-import contextlib
-import difflib
+import struct
+# pylint: disable=W0611
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
+import contextlib  # do not remove, used in imported file.py functions
+import difflib  # do not remove, used in imported file.py functions
+import errno  # do not remove, used in imported file.py functions
+import shutil  # do not remove, used in imported file.py functions
+import re  # do not remove, used in imported file.py functions
+import sys  # do not remove, used in imported file.py functions
+import fileinput  # do not remove, used in imported file.py functions
+import salt.utils.atomicfile  # do not remove, used in imported file.py functions
+import salt._compat  # do not remove, used in imported file.py functions
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+# pylint: enable=W0611
 
 # Import third party libs
 try:
     import win32security
     import win32file
     from pywintypes import error as pywinerror
-    import ntsecuritycon as con
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -32,13 +43,14 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
-        directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
+        directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
         check_managed, check_perms, patch, remove, source_list, sed_contains,
         touch, append, contains, contains_regex, contains_regex_multiline,
-        contains_glob, patch, uncomment, sed, find, psed, get_sum, check_hash,
-        get_hash, comment, manage_file, file_exists, get_diff, get_managed,
-        __clean_tmp, check_managed, check_file_meta, _binary_replace,
-        contains_regex)
+        contains_glob, uncomment, sed, find, psed, get_sum, _get_bkroot,
+        get_hash, comment, manage_file, file_exists, get_diff, list_backups,
+        __clean_tmp, check_file_meta, _binary_replace, restore_backup,
+        access, copy, readdir, rmdir, truncate, replace, delete_backup,
+        search, _get_flags, extract_hash, _error)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -55,26 +67,71 @@ def __virtual__():
     if salt.utils.is_windows():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
-            global source_list, mkdir, __clean_tmp, makedirs, file_exists
+            global source_list, mkdir, __clean_tmp, makedirs_, file_exists
+            global check_managed, check_file_meta, remove, append, _error
+            global directory_exists, patch, sed_contains, touch, contains
+            global contains_regex, contains_regex_multiline, contains_glob
+            global sed, find, psed, get_sum, check_hash, get_hash, delete_backup
+            global uncomment, comment, get_diff, _get_flags, extract_hash
+            global access, copy, readdir, rmdir, truncate, replace, search
+            global _binary_replace, _get_bkroot, list_backups, restore_backup
 
+            replace = _namespaced_function(replace, globals())
+            search = _namespaced_function(search, globals())
+            _get_flags = _namespaced_function(_get_flags, globals())
+            _binary_replace = _namespaced_function(_binary_replace, globals())
+            _error = _namespaced_function(_error, globals())
+            _get_bkroot = _namespaced_function(_get_bkroot, globals())
+            list_backups = _namespaced_function(list_backups, globals())
+            restore_backup = _namespaced_function(restore_backup, globals())
+            delete_backup = _namespaced_function(delete_backup, globals())
+            extract_hash = _namespaced_function(extract_hash, globals())
+            remove = _namespaced_function(remove, globals())
+            append = _namespaced_function(append, globals())
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
+            check_managed = _namespaced_function(check_managed, globals())
+            check_file_meta = _namespaced_function(check_file_meta, globals())
             makedirs_perms = _namespaced_function(makedirs_perms, globals())
-            makedirs = _namespaced_function(makedirs, globals())
+            makedirs_ = _namespaced_function(makedirs_, globals())
             manage_file = _namespaced_function(manage_file, globals())
             source_list = _namespaced_function(source_list, globals())
             mkdir = _namespaced_function(mkdir, globals())
             file_exists = _namespaced_function(file_exists, globals())
             __clean_tmp = _namespaced_function(__clean_tmp, globals())
+            directory_exists = _namespaced_function(directory_exists, globals())
+            patch = _namespaced_function(patch, globals())
+            sed_contains = _namespaced_function(sed_contains, globals())
+            touch = _namespaced_function(touch, globals())
+            contains = _namespaced_function(contains, globals())
+            contains_regex = _namespaced_function(contains_regex, globals())
+            contains_regex_multiline = _namespaced_function(contains_regex_multiline, globals())
+            contains_glob = _namespaced_function(contains_glob, globals())
+            sed = _namespaced_function(sed, globals())
+            find = _namespaced_function(find, globals())
+            psed = _namespaced_function(psed, globals())
+            get_sum = _namespaced_function(get_sum, globals())
+            check_hash = _namespaced_function(check_hash, globals())
+            get_hash = _namespaced_function(get_hash, globals())
+            uncomment = _namespaced_function(uncomment, globals())
+            comment = _namespaced_function(comment, globals())
+            get_diff = _namespaced_function(get_diff, globals())
+            access = _namespaced_function(access, globals())
+            copy = _namespaced_function(copy, globals())
+            readdir = _namespaced_function(readdir, globals())
+            rmdir = _namespaced_function(rmdir, globals())
+            truncate = _namespaced_function(truncate, globals())
 
             return __virtualname__
-        log.warn(salt.utils.required_modules_error(__file__, __doc__))
     return False
-
 
 __outputter__ = {
     'touch': 'txt',
     'append': 'txt',
+}
+
+__func_alias__ = {
+    'makedirs_': 'makedirs'
 }
 
 
@@ -475,3 +532,142 @@ def set_mode(path, mode):
         salt '*' file.set_mode /etc/passwd 0644
     '''
     return get_mode(path)
+
+
+def symlink(src, link):
+    '''
+    Create a symbolic link to a file
+
+    This is only supported with Windows Vista or later and must be executed by a
+    user with the SeCreateSymbolicLink privilege.
+
+    The behaviour of this function matches the *nix equivalent, with one
+    exception - invalid symlinks cannot be created. The source path must exist.
+    If it doesn't, an error will be raised.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.symlink /path/to/file /path/to/link
+    '''
+    # When Python 3.2 or later becomes the minimum version, this function can be
+    # replaced with the built-in os.symlink function, which supports Windows.
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    if not os.path.exists(src):
+        raise SaltInvocationError('The given source path does not exist.')
+
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    # ensure paths are using the right slashes
+    src = os.path.normpath(src)
+    link = os.path.normpath(link)
+
+    is_dir = os.path.isdir(src)
+
+    try:
+        win32file.CreateSymbolicLink(link, src, int(is_dir))
+        return True
+    except pywinerror as e:
+        raise CommandExecutionError('Could not create {0!r} - [{1}] {2}'.format(link, e.winerror, e.strerror))
+
+
+def _islink(path):
+    '''
+    Returns true if the path is a symlink; false otherwise
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    result = win32file.GetFileAttributesW(path)
+
+    if result == -1:
+        raise SaltInvocationError('The path given is not valid, symlink or not. (does it exist?)')
+
+    if result & 0x400:  # FILE_ATTRIBUTE_REPARSE_POINT
+        return True
+    else:
+        return False
+
+
+def readlink(path):
+    '''
+    Return the path that a symlink points to
+
+    This is only supported on Windows Vista or later.
+
+    Inline with *nix behaviour, this function will raise an error if the path is
+    not a symlink, however, the error raised will be a SaltInvocationError, not
+    an OSError.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readlink /path/to/link
+    '''
+    if sys.getwindowsversion().major < 6:
+        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError('Path to link must be absolute.')
+
+    # ensure paths are using the right slashes
+    path = os.path.normpath(path)
+
+    if not _islink(path):
+        raise SaltInvocationError('The path specified is not a symlink.')
+
+    fileHandle = None
+    try:
+        fileHandle = win32file.CreateFileW(
+            path,
+            0x80000000,  # GENERIC_READ
+            0,  # no sharing
+            None,  # no inherit, default security descriptor
+            3,  # OPEN_EXISTING
+            0x00200000 | 0x02000000  # FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS
+        )
+
+        reparseData = win32file.DeviceIoControl(
+            fileHandle,
+            0x900a8,  # FSCTL_GET_REPARSE_POINT
+            None,  # in buffer
+            16384  # out buffer size (MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
+        )
+
+    finally:
+        if fileHandle:
+            win32file.CloseHandle(fileHandle)
+
+    # REPARSE_DATA_BUFFER structure - see
+    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
+
+    # parse the structure header to work out which type of reparse point this is
+    header_parser = struct.Struct('L')
+    ReparseTag, = header_parser.unpack(reparseData[:header_parser.size])
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
+    if not ReparseTag & 0x0000FFFF == 0x0000000C:
+        raise SaltInvocationError('The path specified is not a symlink, but another type of reparse point ({0:x}).'.format(ReparseTag))
+
+    # parse as a symlink reparse point structure (the structure for other
+    # reparse points is different)
+    data_parser = struct.Struct('LHHHHHHL')
+    ReparseTag, ReparseDataLength, Reserved, SubstituteNameOffset, \
+    SubstituteNameLength, PrintNameOffset, \
+    PrintNameLength, Flags = data_parser.unpack(reparseData[:data_parser.size])
+
+    path_buffer_offset = data_parser.size
+    absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
+    target_bytes = reparseData[absolute_substitute_name_offset:absolute_substitute_name_offset+SubstituteNameLength]
+    target = target_bytes.decode('UTF-16')
+
+    if target.startswith('\\??\\'):
+        target = target[4:]
+    # comes out in 8.3 form; convert it to LFN to make it look nicer
+    target = win32file.GetLongPathName(target)
+
+    return target

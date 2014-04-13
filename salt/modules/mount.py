@@ -17,6 +17,19 @@ from salt.exceptions import CommandNotFoundError, CommandExecutionError
 # Set up logger
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'mount'
+
+
+def __virtual__():
+    '''
+    Only load on POSIX-like systems
+    '''
+    # Disable on Windows, a specific file module exists:
+    if salt.utils.is_windows():
+        return False
+    return True
+
 
 def _list_mounts():
     ret = {}
@@ -33,10 +46,17 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
+    blkid_info = __salt__['disk.blkid']()
+
     with salt.utils.fopen(filename) as ifile:
         for line in ifile:
             comps = line.split()
             device = comps[2].split(':')
+            device_name = comps[8]
+            device_uuid = None
+            if device_name:
+                device_uuid = blkid_info.get(device_name, {}).get('UUID')
+                device_uuid = device_uuid and device_uuid.lower()
             ret[comps[4]] = {'mountid': comps[0],
                              'parentid': comps[1],
                              'major': device[0],
@@ -44,13 +64,17 @@ def _active_mountinfo(ret):
                              'root': comps[3],
                              'opts': comps[5].split(','),
                              'fstype': comps[7],
-                             'device': comps[8],
+                             'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[9].split(',')}
+                             'superopts': comps[9].split(','),
+                             'device_uuid': device_uuid}
     return ret
 
 
 def _active_mounts(ret):
+    '''
+    List active mounts on Linux systems
+    '''
     _list = _list_mounts()
     filename = '/proc/self/mounts'
     if not os.access(filename, os.R_OK):
@@ -68,6 +92,9 @@ def _active_mounts(ret):
 
 
 def _active_mounts_freebsd(ret):
+    '''
+    List active mounts on FreeBSD systems
+    '''
     for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[1]] = {'device': comps[0],
@@ -470,3 +497,22 @@ def swapoff(name):
             return False
         return True
     return None
+
+
+def is_mounted(name):
+    '''
+    .. versionadded:: Helium
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.is_mounted /mnt/share
+    '''
+    active_ = active()
+    if name in active_:
+        return True
+    else:
+        return False

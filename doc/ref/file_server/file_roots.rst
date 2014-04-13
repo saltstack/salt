@@ -51,6 +51,25 @@ will be returned. If the file is not found there, then
 This allows for directories to be overlaid and prioritized based on the order
 they are defined in the configuration.
 
+It is also possible to have ``file_roots`` which supports multiple
+environments:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt/base
+      dev:
+        - /srv/salt/dev
+        - /srv/salt/base
+      prod:
+        - /srv/salt/prod
+        - /srv/salt/base
+
+This example ensures that each environment will check the associated
+environment directory for files first. If a file is not found in the
+appropriate directory, the system will default to using the base directory.
+
 Local File Server
 =================
 

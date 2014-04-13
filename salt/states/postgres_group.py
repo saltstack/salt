@@ -28,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_group' if (
-        'postgres.group_create' in __salt__
-    ) else False
+    return 'postgres.group_create' in __salt__
 
 
 def present(name,

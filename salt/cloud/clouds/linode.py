@@ -58,13 +58,8 @@ def __virtual__():
     Set up the libcloud functions and check for Linode configurations.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Linode cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading Linode cloud module')
     return True
 
 
@@ -114,6 +109,15 @@ def get_password(vm_):
     )
 
 
+def get_swap(vm_):
+    '''
+    Return the amount of swap space to use
+    '''
+    return config.get_cloud_config_value(
+        'swap', vm_, __opts__, default=128
+    )
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -127,6 +131,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -136,7 +141,8 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'auth': NodeAuthPassword(get_password(vm_))
+        'auth': NodeAuthPassword(get_password(vm_)),
+        'ex_swap': get_swap(vm_)
     }
 
     salt.utils.cloud.fire_event(
@@ -146,7 +152,9 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name,
-                    'location': kwargs['location'].name}},
+                    'location': kwargs['location'].name,
+                    'ex_swap': kwargs['ex_swap']}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -171,6 +179,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': data.public_ips[0],
             'username': ssh_username,
             'password': get_password(vm_),
@@ -252,6 +261,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -269,7 +279,7 @@ def create(vm_):
                 )
             )
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
@@ -287,6 +297,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

@@ -16,7 +16,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.utils import KWARG_REGEX
+from salt.utils.args import KWARG_REGEX
 
 
 class KwargRegexTest(TestCase):
