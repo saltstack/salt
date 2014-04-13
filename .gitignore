@@ -22,6 +22,8 @@ lib/
 pip/
 share/
 tests/integration/tmp/
+tests/integration/files/
+venv/
 
 # tox - ignore any tox-created virtualenv dirs
 .tox
