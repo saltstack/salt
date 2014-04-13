@@ -343,7 +343,7 @@ def run(opts):
     sys.stdout.flush()
     time.sleep(5)
 
-    if opts.test_git_commit is not None:
+    if opts.bootstrap_salt_commit is not None:
         # Let's find out if the installed version matches the passed in pillar
         # information
         sys.stdout.write('Grabbing bootstrapped minion version information ... ')
@@ -372,9 +372,9 @@ def run(opts):
             sys.exit(retcode)
 
         version_info = json.loads(stdout.strip())
-        if not version_info[vm_name].endswith(opts.test_git_commit[:7]):
+        if not version_info[vm_name].endswith(opts.bootstrap_salt_commit[:7]):
             print('\nThe boostrapped minion version commit does not match the desired commit:')
-            print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.test_git_commit[:7]))
+            print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.bootstrap_salt_commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
