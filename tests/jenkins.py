@@ -267,8 +267,8 @@ def download_remote_logs(options):
         cmds.extend([
             'salt {{0}} archive.gzip {0}'.format(remote_log),
             'salt {{0}} cp.push {0}.gz'.format(remote_log),
-            'gunzip /var/cache/salt/master/minions/{{0}}/files/{0}.gz'.format(remote_log),
-            'mv /var/cache/salt/master/minions/{{0}}/files/{0} {{1}}/{1}'.format(
+            'gunzip /var/cache/salt/master/minions/{{0}}/files{0}.gz'.format(remote_log),
+            'mv /var/cache/salt/master/minions/{{0}}/files{0} {{1}}/{1}'.format(
                 remote_log,
                 '{0}{1}'.format(
                     os.path.basename(remote_log),
