@@ -58,10 +58,14 @@ def build_pillar_data(options):
     Build a YAML formatted string to properly pass pillar data
     '''
     pillar = {}
-    if options.commit is not None:
-        pillar['git_commit'] = options.commit
-    if options.salt_url is not None:
-        pillar['salt_url'] = options.salt_url
+    if options.test_git_commit is not None:
+        pillar['test_git_commit'] = options.test_git_commit
+    if options.test_git_url is not None:
+        pillar['test_git_url'] = options.test_git_url
+    if options.bootstrap_salt_url is not None:
+        pillar['bootstrap_salt_url'] = options.bootstrap_salt_url
+    if options.bootstrap_salt_commit is not None:
+        pillar['bootstrap_salt_commit'] = options.bootstrap_salt_commit
     if options.pillar:
         pillar.update(dict(options.pillar))
     return yaml.dump(pillar).rstrip()
@@ -148,8 +152,8 @@ def echo_parseable_environment(options):
                 'SALT_PR_GIT_URL={0}'.format(PR.head.repo.clone_url),
                 'SALT_PR_GIT_COMMIT={0}'.format(PR.head.sha)
             ])
-            options.salt_url = PR.head.repo.clone_url
-            options.commit = PR.head.sha
+            options.test_git_url = PR.head.repo.clone_url
+            options.test_git_commit = PR.head.sha
         except ValueError:
             print('# Failed to get the PR id from the environment')
 
@@ -298,12 +302,12 @@ def run(opts):
         opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
 
-    if opts.commit is not None:
-        if opts.salt_url is None:
-            opts.salt_url = 'https://github.com/saltstack/salt.git'
+    if opts.bootstrap_salt_commit is not None:
+        if opts.bootstrap_salt_url is None:
+            opts.bootstrap_salt_url = 'https://github.com/saltstack/salt.git'
         cmd = (
             'salt-cloud -l debug'
-            ' --script-args "-D -g {salt_url} -n git {commit}"'
+            ' --script-args "-D -g {bootstrap_salt_url} -n git {bootstrap_salt_commit}"'
             ' -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
         )
     else:
@@ -339,7 +343,7 @@ def run(opts):
     sys.stdout.flush()
     time.sleep(5)
 
-    if opts.commit is not None:
+    if opts.test_git_commit is not None:
         # Let's find out if the installed version matches the passed in pillar
         # information
         sys.stdout.write('Grabbing bootstrapped minion version information ... ')
@@ -368,9 +372,9 @@ def run(opts):
             sys.exit(retcode)
 
         version_info = json.loads(stdout.strip())
-        if not version_info[vm_name].endswith(opts.commit[:7]):
+        if not version_info[vm_name].endswith(opts.test_git_commit[:7]):
             print('\nThe boostrapped minion version commit does not match the desired commit:')
-            print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.commit[:7]))
+            print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.test_git_commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -384,7 +388,6 @@ def run(opts):
             prep_sls=opts.prep_sls,
             pillar=build_pillar_data(opts),
             vm_name=vm_name,
-            commit=opts.commit
         )
     )
     print('Running CMD: {0}'.format(cmd))
@@ -410,7 +413,7 @@ def run(opts):
             delete_vm(opts)
         sys.exit(retcode)
 
-    if opts.salt_url is not None:
+    if opts.test_git_url is not None:
         # Let's find out if the cloned repository if checked out from the
         # desired repository
         sys.stdout.write('Grabbing the cloned repository remotes information ... ')
@@ -441,17 +444,17 @@ def run(opts):
             sys.exit(retcode)
 
         remotes_info = json.loads(stdout.strip())
-        if remotes_info is None or remotes_info[vm_name] is None or opts.salt_url not in remotes_info[vm_name]:
+        if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
             print('\nThe cloned repository remote is not the desired one:')
-            print(' {0!r} is not in {1}'.format(opts.salt_url, remotes_info))
+            print(' {0!r} is not in {1}'.format(opts.test_git_url, remotes_info))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
         print('matches!')
 
-    if opts.commit is not None:
-        # Let's find out if the cloned repository if checked out at the desired
+    if opts.test_git_commit is not None:
+        # Let's find out if the cloned repository is checked out at the desired
         # commit
         sys.stdout.write('Grabbing the cloned repository commit information ... ')
         sys.stdout.flush()
@@ -481,9 +484,9 @@ def run(opts):
             sys.exit(retcode)
 
         revision_info = json.loads(stdout.strip())
-        if revision_info[vm_name][7:] != opts.commit[7:]:
+        if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
             print('\nThe cloned repository commit is not the desired one:')
-            print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.commit[:7]))
+            print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -492,12 +495,10 @@ def run(opts):
 
     # Run tests here
     cmd = (
-        'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" '
-        '--no-color'.format(
+        'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" --no-color'.format(
             sls=opts.sls,
             pillar=build_pillar_data(opts),
             vm_name=vm_name,
-            commit=opts.commit
         )
     )
     print('Running CMD: {0}'.format(cmd))
@@ -566,13 +567,21 @@ def parse():
         default=os.environ.get('JENKINS_SALTCLOUD_VM_PROVIDER', None),
         help='The vm provider')
     parser.add_option(
-        '--salt-url',
+        '--bootstrap-salt-url',
         default=None,
-        help='The  salt git repository url')
+        help='The salt git repository url used to boostrap a minion')
     parser.add_option(
-        '--commit',
+        '--bootstrap-salt-commit',
         default=None,
-        help='The git commit to track')
+        help='The salt git commit used to boostrap a minion')
+    parser.add_option(
+        '--test-git-url',
+        default=None,
+        help='The testing git repository url')
+    parser.add_option(
+        '--test-git-commit',
+        default=None,
+        help='The testing git commit to track')
     parser.add_option(
         '--prep-sls',
         default='git.salt',
@@ -633,19 +642,19 @@ def parse():
 
     options, args = parser.parse_args()
 
-    if options.delete_vm is not None and not options.commit:
+    if options.delete_vm is not None and not options.test_git_commit:
         delete_vm(options)
         parser.exit(0)
 
-    if options.download_unittest_reports is not None and not options.commit:
+    if options.download_unittest_reports is not None and not options.test_git_commit:
         download_unittest_reports(options)
         parser.exit(0)
 
-    if options.download_coverage_report is not None and not options.commit:
+    if options.download_coverage_report is not None and not options.test_git_commit:
         download_coverage_report(options)
         parser.exit(0)
 
-    if options.download_remote_logs is not None and not options.commit:
+    if options.download_remote_logs is not None and not options.test_git_commit:
         download_remote_logs(options)
         parser.exit(0)
 
@@ -659,7 +668,7 @@ def parse():
         echo_parseable_environment(options)
         parser.exit(0)
 
-    if not options.commit and not options.pull_request:
+    if not options.test_git_commit and not options.pull_request:
         parser.exit('--commit or --pull-request is required')
 
     return options
