@@ -66,20 +66,38 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     env = {}
 
     if identity:
-        helper = _git_ssh_helper(identity)
 
-        env = {
-            'GIT_SSH': helper
-        }
+        # if the statefile provides multiple identities, they need to be tried
+        # (but also allow a string instead of a list)
+        if not isinstance(identity, list):
+            # force it into a list
+            identity = [identity]
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=cwd,
-                                     runas=runas,
-                                     env=env,
-                                     **kwargs)
+        # try each of the identities, independently
+        for id_file in identity:
+            helper = _git_ssh_helper(id_file)
 
-    if identity:
-        os.unlink(helper)
+            env = {
+                'GIT_SSH': helper
+            }
+
+            result = __salt__['cmd.run_all'](cmd,
+                                             cwd=cwd,
+                                             runas=runas,
+                                             env=env,
+                                             **kwargs)
+
+            os.unlink(helper)
+            if result['retcode'] == 0:
+                break
+
+
+    else:
+        result = __salt__['cmd.run_all'](cmd,
+                                         cwd=cwd,
+                                         runas=runas,
+                                         env=env,
+                                         **kwargs)
 
     retcode = result['retcode']
 
