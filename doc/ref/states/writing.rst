@@ -220,7 +220,7 @@ Example state module
 
     import salt.exceptions
 
-    def enforce_custom_thing(name, foo, baz=True, **kwargs):
+    def enforce_custom_thing(name, foo, baz=True):
         '''
         Enforce the state of a custom thing
 
