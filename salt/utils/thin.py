@@ -14,14 +14,24 @@ import msgpack
 import requests
 try:
     import urllib3
+    HAS_URLLIB3 = True
 except ImportError:
     # Import the bundled package
-    from requests.packages import urllib3
+    try:
+        from requests.packages import urllib3
+        HAS_URLLIB3 = True
+    except ImportError:
+        HAS_URLLIB3 = False
 try:
     import six
+    HAS_SIX = True
 except ImportError:
     # Import the bundled package
-    from requests.packages.urllib3.packages import six
+    try:
+        from requests.packages.urllib3.packages import six
+        HAS_SIX = True
+    except ImportError:
+        HAS_SIX = False
 try:
     import markupsafe
     HAS_MARKUPSAFE = True
@@ -73,10 +83,15 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
             os.path.dirname(msgpack.__file__),
-            os.path.dirname(requests.__file__),
-            os.path.dirname(urllib3.__file__),
-            six.__file__.replace('.pyc', '.py'),
+            os.path.dirname(requests.__file__)
             ]
+
+    if HAS_URLLIB3:
+        tops.append(os.path.dirname(urllib3.__file__))
+
+    if HAS_SIX:
+        tops.append(six.__file__.replace('.pyc', '.py'))
+
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
             try:
