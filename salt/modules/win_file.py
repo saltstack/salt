@@ -190,7 +190,7 @@ def _change_privilege(privilege_name, enable):
         [(privilege, enabled)]
     )
 
-    if bool(changes):
+    if not bool(changes):
         raise SaltInvocationError(
             'Could not {} the {} privilege for this process'.format(
                 'enable' if enable else 'remove',
