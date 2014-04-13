@@ -12,8 +12,16 @@ import jinja2
 import yaml
 import msgpack
 import requests
-import urllib3
-import six
+try:
+    import urllib3
+except ImportError:
+    # Import the bundled package
+    from requests.packages import urllib3
+try:
+    import six
+except ImportError:
+    # Import the bundled package
+    from requests.packages.urllib3.packages import six
 try:
     import markupsafe
     HAS_MARKUPSAFE = True
