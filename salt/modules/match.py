@@ -1,13 +1,29 @@
 # -*- coding: utf-8 -*-
 '''
 The match module allows for match routines to be run and determine target specs
+
+.. warning::
+
+    Since :doc:`Pillar </topics/pillar/index>` data is compiled on the master,
+    some of these functions require the minion ID to be overridden to
+    succesfully match them in Pillar SLS files. These functions are:
+
+    * :mod:`match.compound <salt.modules.match.compound>`
+    * :mod:`match.glob <salt.modules.match.glob>`
+    * :mod:`match.list <salt.modules.match.list_>`
+    * :mod:`match.pcre <salt.modules.match.pcre>`
+
+    This ability is new in the upcoming Helium release, and currently only
+    available in the development branch of Salt.
 '''
 
 # Import python libs
+import copy
 import logging
 
 # Import salt libs
 import salt.minion
+from salt._compat import string_types
 
 __func_alias__ = {
     'list_': 'list'
@@ -16,9 +32,14 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
-def compound(tgt):
+def compound(tgt, minion_id=None):
     '''
-    Return True if the minion matches the given compound target
+    Return True if the minion ID matches the given compound target
+
+    minion_id
+        Specify the minion ID to match against the target expression
+
+        .. versionadded:: Helium
 
     CLI Example:
 
@@ -26,8 +47,13 @@ def compound(tgt):
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
-    __opts__['grains'] = __grains__
-    matcher = salt.minion.Matcher(__opts__, __salt__)
+    opts = copy.deepcopy(__opts__)
+    opts['grains'] = __grains__
+    if minion_id is not None:
+        if not isinstance(minion_id, string_types):
+            minion_id = str(minion_id)
+        opts['id'] = minion_id
+    matcher = salt.minion.Matcher(opts, __salt__)
     try:
         return matcher.compound_match(tgt)
     except Exception as exc:
@@ -140,9 +166,14 @@ def grain(tgt, delim=':'):
         return False
 
 
-def list_(tgt):
+def list_(tgt, minion_id=None):
     '''
-    Return True if the minion matches the given list target
+    Return True if the minion ID matches the given list target
+
+    minion_id
+        Specify the minion ID to match against the target expression
+
+        .. versionadded:: Helium
 
     CLI Example:
 
@@ -150,7 +181,12 @@ def list_(tgt):
 
         salt '*' match.list 'server1,server2'
     '''
-    matcher = salt.minion.Matcher(__opts__, __salt__)
+    opts = copy.deepcopy(__opts__)
+    if minion_id is not None:
+        if not isinstance(minion_id, string_types):
+            minion_id = str(minion_id)
+        opts['id'] = minion_id
+    matcher = salt.minion.Matcher(opts, __salt__)
     try:
         return matcher.list_match(tgt)
     except Exception as exc:
@@ -158,9 +194,14 @@ def list_(tgt):
         return False
 
 
-def pcre(tgt):
+def pcre(tgt, minion_id=None):
     '''
-    Return True if the minion matches the given pcre target
+    Return True if the minion ID matches the given pcre target
+
+    minion_id
+        Specify the minion ID to match against the target expression
+
+        .. versionadded:: Helium
 
     CLI Example:
 
@@ -168,7 +209,12 @@ def pcre(tgt):
 
         salt '*' match.pcre '.*'
     '''
-    matcher = salt.minion.Matcher(__opts__, __salt__)
+    opts = copy.deepcopy(__opts__)
+    if minion_id is not None:
+        if not isinstance(minion_id, string_types):
+            minion_id = str(minion_id)
+        opts['id'] = minion_id
+    matcher = salt.minion.Matcher(opts, __salt__)
     try:
         return matcher.pcre_match(tgt)
     except Exception as exc:
@@ -176,9 +222,14 @@ def pcre(tgt):
         return False
 
 
-def glob(tgt):
+def glob(tgt, minion_id=None):
     '''
-    Return True if the minion matches the given glob target
+    Return True if the minion ID matches the given glob target
+
+    minion_id
+        Specify the minion ID to match against the target expression
+
+        .. versionadded:: Helium
 
     CLI Example:
 
@@ -186,7 +237,12 @@ def glob(tgt):
 
         salt '*' match.glob '*'
     '''
-    matcher = salt.minion.Matcher(__opts__, __salt__)
+    opts = copy.deepcopy(__opts__)
+    if minion_id is not None:
+        if not isinstance(minion_id, string_types):
+            minion_id = str(minion_id)
+        opts['id'] = minion_id
+    matcher = salt.minion.Matcher(opts, __salt__)
     try:
         return matcher.glob_match(tgt)
     except Exception as exc:
