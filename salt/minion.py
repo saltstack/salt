@@ -810,6 +810,7 @@ class Minion(MinionBase):
             salt.utils.daemonize_if(opts)
         sdata = {'pid': os.getpid()}
         sdata.update(data)
+        log.info('Starting a new job with PID {0}'.format(sdata['pid']))
         with salt.utils.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
