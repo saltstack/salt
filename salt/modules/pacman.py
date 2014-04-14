@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -533,7 +534,7 @@ def file_dict(*packages):
     return {'errors': errors, 'packages': ret}
 
 
-def owner(path=None, *paths):
+def owner(*paths):
     '''
     Return the name of the package that owns the specified file. Files may be
     passed as a string (``path``) or as a list of strings (``paths``). If
@@ -546,16 +547,5 @@ def owner(path=None, *paths):
         salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
     '''
     cmd = 'pacman -Qqo {0}'
-    if path and isinstance(path, string_types):
-        if not ',' in path:
-            return {path: __salt__['cmd.run'](cmd.format(path)).strip()}
-        else:
-            paths = path.split(',')
-
-    if paths and isinstance(paths, list):
-        owners = {}
-        for fp_ in paths:
-            owners[fp_] = __salt__['cmd.run'](cmd.format(fp_)).strip()
-        return owners
-
-    return {'Error': 'Path must be passed in as a string or list'}
+    return salt.utils.pkg.find_owner(
+        __salt__['cmd.run'], cmd, *paths)

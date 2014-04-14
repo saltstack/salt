@@ -16,6 +16,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -1610,3 +1611,20 @@ def _resolve_deps(name, pkgs, **kwargs):
             except MinionError as exc:
                 raise CommandExecutionError(exc)
     return
+
+
+def owner(*paths):
+    '''
+    Return the name of the package that owns the specified file. Files may be
+    passed as a string (``path``) or as a list of strings (``paths``). If
+    ``path`` contains a comma, it will be converted to ``paths``. If a file
+    name legitimately contains a comma, pass it in via ``paths``.
+
+    CLI Example:
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+    '''
+    cmd = "dpkg -S {0} | cut -d':' -f1"
+    return salt.utils.pkg.find_owner(
+        __salt__['cmd.run'], cmd, *paths)
