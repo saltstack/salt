@@ -5,7 +5,7 @@ Release notes
 .. releasestree::
     :maxdepth: 1
 
-    2014.1.0
+    2014.1.1
 
 Archive
 ================
