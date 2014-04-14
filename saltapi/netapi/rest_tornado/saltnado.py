@@ -3,7 +3,7 @@
 curl localhost:8888/login -d client=local -d username=username -d password=password -d eauth=pam
 
 for testing
-curl -H 'X-Auth-Token: 0cd364f0a3fa4f7d5c7bd07909031783' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
+curl -H 'X-Auth-Token: a5ff555673afbde3cb3a34ea344bddb6' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
 
 # not working.... but in siege 3.0.1 and posts..
 siege -c 1 -n 1 "http://127.0.0.1:8888 POST client=local&tgt=*&fun=test.ping"
@@ -27,6 +27,9 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.gen
+from tornado.concurrent import Future
+
+from collections import defaultdict
 
 from multiprocessing import Process
 
@@ -77,6 +80,103 @@ AUTH_TOKEN_HEADER = 'X-Auth-Token'
 AUTH_COOKIE_NAME = 'session_id'
 
 
+class TimeoutException(Exception):
+    pass
+
+# from http://stackoverflow.com/questions/22269474/tornado-generator-resume-on-any-future-in-list
+class Any(Future):
+    '''
+    Future that wraps other futures to "block" until one is done
+    '''
+    def __init__(self, futures):
+        super(Any, self).__init__()
+        for future in futures:
+            future.add_done_callback(self.done_callback)
+
+    def done_callback(self, future):
+        self.set_result(future)
+
+class EventListener():
+    def __init__(self):
+        self.event = salt.utils.event.MasterEvent('/var/run/salt/master')
+
+        # tag -> list of futures
+        self.tag_map = defaultdict(list)
+
+        # request_obj -> list of (tag, future)
+        self.request_map = defaultdict(list)
+
+    def clean_timeout_futures(self, request):
+        '''
+        Remove all futures that were waiting for request `request` since it is done waiting
+        '''
+        if request not in self.request_map:
+            return
+        for tag, future in self.request_map[request]:
+            # TODO: log, this shouldn't happen...
+            if tag not in self.tag_map:
+                continue
+            # mark the future done
+            future.set_exception(TimeoutException())
+            self.tag_map[tag].remove(future)
+            
+            # if that was the last of them, remove the key all together
+            if len(self.tag_map[tag]) == 0:
+                del self.tag_map[tag]
+
+    def get_event(self, request,
+                        tag='', 
+                        timeout=2,
+                        callback=None):
+        '''
+        Get an event (async of course) return a future that will get it later
+        '''
+        future = Future()
+        if callback is not None:
+            def handle_future(future):
+                response = future.result()
+                self.io_loop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+        # add this tag and future to the callbacks
+        self.tag_map[tag].append(future)
+        self.request_map[request].append((tag, future))
+        
+        return future
+    
+    def iter_events(self):
+        '''
+        Iterate over all events that could happen
+        '''
+        try:
+            data = self.event.get_event_noblock()
+            # TODO: log
+            print data['tag'], 'event'
+            # see if we have any futures that need this info:
+            for tag_prefix, futures in self.tag_map.items():
+                if data['tag'].startswith(tag_prefix):
+                    for future in futures:
+                        if future.done():
+                            continue
+                        future.set_result(data)
+                    del self.tag_map[tag_prefix]
+            
+            # call yourself back!
+            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+
+        except zmq.ZMQError as e:
+            # TODO: not sure what other errors we can get...
+            if e.errno != zmq.EAGAIN:
+                raise Exception()
+            # add callback in the future (to avoid spinning)
+            # TODO: configurable timeout
+            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
+        except:
+            print sys.exc_info(), 'exception in main wait loop'
+            # TODO: configurable timeout
+            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
+       
+
+# TODO: kill this ;)
 def EventPublisher(mod_opts, opts):
     '''
     TODO: an API to change the subscribe thing (so we don't have to look at everything)
@@ -441,36 +541,45 @@ class SaltAPIHandler(BaseSaltAPIHandler):
             self.jid_map[pub_data['jid']] = batch_id
             self._add_sub(pub_data['jid'])
 
+    @tornado.gen.coroutine
     def _disbatch_local(self):
         '''
         Disbatch local client commands
         '''
-        # dict of jid -> minions_to_get
-        self.pub_map = {}
-        # jid -> id -> return
-        self.ret = {}
-        # list of the jids that you have dispatched (in order)
-        self.jids = []
-
-        # set our handler
-        self.handler = self._handle_minion_jobs
+        self.ret = []
 
         for chunk in self.lowstate:
             # TODO: not sure why.... we already verify auth, probably for ACLs
             # require token or eauth
             chunk['token'] = self.token
 
+            chunk_ret = {}
+
             f_call = salt.utils.format_call(saltclients[self.client], chunk)
             # fire a job off
             pub_data = saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-            self.pub_map[pub_data['jid']] = pub_data['minions']
-            self.jids.append(pub_data['jid'])
+            # TODO: find the right tagify function
+            tag = 'salt/job/{jid}/ret/'.format(jid=pub_data['jid'])
+            
+            minions_remaining = pub_data['minions']
 
-        # TODO: buffer? This is a pretty obvious race condition :/
-        # We are currently relying on the zmq pub buffer (HWM) to catch us
-        self._get_sub_sock(jids=self.jids)
+            # while we are waiting on all the mininons
+            while len(minions_remaining) > 0:
+                try:
+                    event = yield self.application.event_listener.get_event(self, tag=tag)
+                    chunk_ret[event['data']['id']] = event['data']['return']
+                    minions_remaining.remove(event['data']['id'])
+                # if you hit a timeout, just stop waiting ;)
+                except TimeoutException:
+                    break
+                except:
+                    # TODO: LOG
+                    print 'some exception'
+                    print sys.exc_info()
+            self.ret.append(chunk_ret)
 
-        tornado.ioloop.IOLoop.instance().add_callback(self.nonblocking_wait_loop)
+        self.write(self.serialize({'return': self.ret}))
+        self.finish()
 
     def _disbatch_local_async(self):
         '''
@@ -661,11 +770,20 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         if hasattr(self, 'sub_sock'):
             self.sub_sock.close()
 
+    def timeout(self):
+        '''
+        Callback to a timeout of the request (to make sure all inflight futures are timed out)
+        '''
+        self.application.event_listener.clean_timeout_futures(self)
+
     def on_finish(self):
         '''
         When the job has been done, lets cleanup
         '''
         self._cleanup()
+        
+        # make sure we don't leave any futures laying around
+        self.application.event_listener.clean_timeout_futures(self)
 
     def on_connection_close(self):
         '''

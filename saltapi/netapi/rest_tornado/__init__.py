@@ -59,6 +59,7 @@ def start():
     application.opts = __opts__ 
     application.mod_opts = mod_opts
     application.auth = salt.auth.LoadAuth(__opts__)
+    application.event_listener = saltnado.EventListener()
 
     # the kwargs for the HTTPServer
     kwargs = {}
@@ -79,6 +80,7 @@ def start():
         print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
         p.terminate()
         raise SystemExit(1)
+    tornado.ioloop.IOLoop.instance().add_callback(application.event_listener.iter_events)
     tornado.ioloop.IOLoop.instance().start()
 
     try:
