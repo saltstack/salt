@@ -1039,9 +1039,12 @@ def is_link(path):
        salt '*' file.is_link /path/to/link
     '''
     if sys.getwindowsversion().major < 6:
-        raise SaltInvocationError('Symlinks are only supported on Windows Vista or later.')
+        return False
 
-    if not _is_reparse_point(path):
+    try:
+        if not _is_reparse_point(path):
+            return False
+    except SaltInvocationError:
         return False
 
     # check that it is a symlink reparse point (in case it is something else,
@@ -1050,7 +1053,8 @@ def is_link(path):
 
     # sanity check - this should not happen
     if not reparse_data:
-        raise SaltInvocationError('The path specified is not a reparse point (symlinks are a type of reparse point).')
+        # not a reparse point
+        return False
 
     # REPARSE_DATA_BUFFER structure - see
     # http://msdn.microsoft.com/en-us/library/ff552012.aspx
