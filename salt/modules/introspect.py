@@ -100,11 +100,15 @@ def enabled_service_owners():
 
 def service_highstate(requires=True):
     '''
-    Return running and enabled services in a highstate structure.
+    Return running and enabled services in a highstate structure. By default
+    also returns package dependencies for those services, which means that
+    package definitions must be created outside this function. To drop the
+    package dependencies, set ``requires`` to False.
 
     CLI Example:
 
         salt myminion introspect.service_highstate
+        salt myminion introspect.service_highstate requires=False
     '''
     ret = {}
     running = running_service_owners()
