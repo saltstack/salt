@@ -905,6 +905,10 @@ def start(container, binds=None, ports=None, port_bindings=None,
         binds = {}
     if not ports:
         ports = {}
+
+    if not isinstance(binds, dict):
+        raise SaltInvocationError('binds must be formatted as a dictionary')
+
     client = _get_client()
     status = base_status.copy()
     try:
@@ -912,9 +916,15 @@ def start(container, binds=None, ports=None, port_bindings=None,
         if not is_running(container):
             bindings = None
             if port_bindings is not None:
-                bindings = {}
-                for k, v in port_bindings.iteritems():
-                    bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+                try:
+                    bindings = {}
+                    for k, v in port_bindings.iteritems():
+                        bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+                except AttributeError:
+                    raise SaltInvocationError(
+                        'port_bindings must be formatted as a dictionary of '
+                        'dictionaries'
+                    )
             client.start(dcontainer, binds=binds, port_bindings=bindings,
                          lxc_conf=lxc_conf,
                          publish_all_ports=publish_all_ports, links=links,
