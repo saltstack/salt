@@ -1670,25 +1670,23 @@ def rename(src, dst):
     return False
 
 
-def copy(src, dst, recurse=False, merge_existing=False, remove_existing=False):
+def copy(src, dst, recurse=False, remove_existing=False):
     '''
     Copy a file or directory from source to dst
 
-    In order to copy a directory, the recurse flag is required, along
-    with one of the merge_existing or remove_existing flags.
-
-    merge_existing will keep files in the target directory,
-    overwriting files from the source.
+    In order to copy a directory, the recurse flag is required, and
+    will by default overwrite files in the destination with the same path,
+    and retain all other existing files. (similar to cp -r on unix)
 
     remove_existing will remove all files in the target directory,
-    and copy files from the source.
+    and then copy files from the source.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.copy /path/to/src /path/to/dst
-        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True merge_existing=True
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True
         salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True remove_existing=True
 
     '''
@@ -1705,17 +1703,11 @@ def copy(src, dst, recurse=False, merge_existing=False, remove_existing=False):
             if not recurse:
                 raise SaltInvocationError(
                     "Cannot copy overwriting a directory without recurse flag set to true!")
-            if not (merge_existing or remove_existing):
-                raise SaltInvocationError(
-                    "one of merge_existing and remove_existing must be set!")
-            if merge_existing and remove_existing:
-                raise SaltInvocationError(
-                    "only one of merge_existing and remove_existing can be set!")
             if remove_existing:
                 if os.path.exists(dst):
                     shutil.rmtree(dst)
                 shutil.copytree(src, dst)
-            elif merge_existing:
+            else:
                 salt.utils.files.recursive_copy(src, dst)
         else:
             shutil.copyfile(src, dst)
