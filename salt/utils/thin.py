@@ -18,7 +18,7 @@ try:
 except ImportError:
     # Import the bundled package
     try:
-        from requests.packages import urllib3
+        from requests.packages import urllib3  # pylint: disable=E0611
         HAS_URLLIB3 = True
     except ImportError:
         HAS_URLLIB3 = False
@@ -28,7 +28,7 @@ try:
 except ImportError:
     # Import the bundled package
     try:
-        from requests.packages.urllib3.packages import six
+        from requests.packages.urllib3.packages import six  # pylint: disable=E0611
         HAS_SIX = True
     except ImportError:
         HAS_SIX = False
