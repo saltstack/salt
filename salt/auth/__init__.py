@@ -339,12 +339,13 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
+        oldmask = os.umask(0177)
         try:
-            oldmask = os.umask(0177)
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
-            os.umask(oldmask)
         except (IOError, OSError):
+            pass
+        finally:
             os.umask(oldmask)
         return tdata
 
