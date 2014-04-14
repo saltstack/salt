@@ -374,3 +374,49 @@ def disabled(name):
         salt '*' service.disabled <service name>
     '''
     return not _enabled(name)
+
+
+def show(name):
+    '''
+    Show properties of one or more units/jobs or the manager
+
+    CLI Example:
+
+        salt '*' service.show <service name>
+    '''
+    ret = {}
+    cmd = 'systemctl show {0}.service'.format(name)
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        comps = line.split('=')
+        name = comps[0]
+        value = '='.join(comps[1:])
+        if value.startswith('{'):
+            value = value.replace('{', '').replace('}', '')
+            ret[name] = {}
+            for item in value.split(' ; '):
+                comps = item.split('=')
+                ret[name][comps[0].strip()] = comps[1].strip()
+        elif name in ('Before', 'After', 'Wants'):
+            ret[name] = value.split()
+        else:
+            ret[name] = value
+
+    return ret
+
+
+def execs():
+    '''
+    Return a list of all files specified as ``ExecStart`` for all services.
+
+    CLI Example:
+
+        salt '*' service.execs
+    '''
+    execs_ = {}
+    for service in get_all():
+        data = show(service)
+        if not 'ExecStart' in data:
+            continue
+        execs_[service] = data['ExecStart']['path']
+
+    return execs_
