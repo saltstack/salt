@@ -3438,3 +3438,81 @@ def grep(path,
         raise CommandExecutionError(exc.strerror)
 
     return ret
+
+
+def open_files(by_pid=False):
+    '''
+    Return a list of all physical open files on the system.
+
+    CLI Examples:
+
+        salt '*' file.open_files
+        salt '*' file.open_files by_pid=True
+    '''
+    # First we collect valid PIDs
+    pids = {}
+    procfs = os.listdir('/proc/')
+    for pfile in procfs:
+        try:
+            pids[int(pfile)] = []
+        except ValueError:
+            # Not a valid PID, move on
+            pass
+
+    # Then we look at the open files for each PID
+    files = {}
+    for pid in pids.keys():
+        ppath = '/proc/{0}'.format(pid)
+        try:
+            tids = os.listdir('{0}/task'.format(ppath))
+        except OSError:
+            continue
+
+        # Collect the names of all of the file descriptors
+        fd_ = []
+
+        #try:
+        #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
+        #except:
+        #    pass
+
+        for fpath in os.listdir('{0}/fd'.format(ppath)):
+            fd_.append('{0}/fd/{1}'.format(ppath, fpath))
+
+        for tid in tids:
+            try:
+                fd_.append(
+                    os.path.realpath('{0}/task/{1}/exe'.format(ppath, tid))
+                )
+            except:
+                pass
+
+            for tpath in os.listdir('{0}/task/{1}/fd'.format(ppath, tid)):
+                fd_.append('{0}/task/{1}/fd/{2}'.format(ppath, tid, tpath))
+
+        fd_ = sorted(set(fd_))
+
+        # Loop through file descriptors and return useful data for each file
+        for fdpath in fd_:
+            # Sometimes PIDs and TIDs disappear before we can query them
+            try:
+                name = os.path.realpath(fdpath)
+                # Running stat on the file cuts out all of the sockets and
+                # deleted files from the list
+                os.stat(name)
+            except OSError:
+                continue
+
+            if not name in files:
+                files[name] = [pid]
+            else:
+                # We still want to know which PIDs are using each file
+                files[name].append(pid)
+                files[name] = sorted(set(files[name]))
+
+            pids[pid].append(name)
+            pids[pid] = sorted(set(pids[pid]))
+
+    if by_pid:
+        return pids
+    return files
