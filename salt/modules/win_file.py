@@ -345,7 +345,7 @@ def get_pgroup(path, follow_symlinks=True):
 
         salt '*' file.get_pgroup c:\\temp\\test.txt
     '''
-    return uid_to_user(get_gid(path, follow_symlinks))
+    return uid_to_user(get_pgid(path, follow_symlinks))
 
 
 def get_gid(path, follow_symlinks=True):
