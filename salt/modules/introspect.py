@@ -96,3 +96,41 @@ def enabled_service_owners():
         ret[service] = pkg.values()[0]
 
     return ret
+
+
+def service_highstate(requires=True):
+    '''
+    Return running and enabled services in a lowstate structure.
+
+    CLI Example:
+
+        salt myminion introspect.service_lowstate
+    '''
+    ret = {}
+    running = running_service_owners()
+    for service in running:
+        ret[service] = {'service': ['running']}
+
+        if requires:
+            ret[service]['service'].append(
+                {'require': {'pkg': running[service]}}
+            )
+
+    enabled = enabled_service_owners()
+    for service in enabled:
+        if service in ret:
+            ret[service]['service'].append({'enabled': True})
+        else:
+            ret[service] = {'service': [{'enabled': True}]}
+
+        if requires:
+            exists = False
+            for item in ret[service]['service']:
+                if type(item) is dict and item.keys()[0] == 'require':
+                    exists = True
+            if not exists:
+                ret[service]['service'].append(
+                    {'require': {'pkg': enabled[service]}}
+                )
+
+    return ret
