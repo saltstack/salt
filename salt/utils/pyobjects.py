@@ -37,6 +37,7 @@ class Registry(object):
     requisites = []
     includes = []
     extends = OrderedDict()
+    enabled = True
 
     @classmethod
     def empty(cls):
@@ -47,6 +48,9 @@ class Registry(object):
 
     @classmethod
     def include(cls, *args):
+        if not cls.enabled:
+            return
+
         cls.includes += args
 
     @classmethod
@@ -71,6 +75,9 @@ class Registry(object):
 
     @classmethod
     def add(cls, id_, state, extend=False):
+        if not cls.enabled:
+            return
+
         if extend:
             attr = cls.extends
         else:
@@ -78,10 +85,12 @@ class Registry(object):
 
         if id_ in attr:
             if state.full_func in attr[id_]:
-                raise DuplicateState("A state with id '%s', type '%s' exists" % (
-                    id_,
-                    state.full_func
-                ))
+                raise DuplicateState(
+                    "A state with id '{0!r}', type '{1!r}' exists".format(
+                        id_,
+                        state.full_func
+                    )
+                )
         else:
             attr[id_] = OrderedDict()
 
@@ -104,10 +113,16 @@ class Registry(object):
 
     @classmethod
     def push_requisite(cls, requisite):
+        if not cls.enabled:
+            return
+
         cls.requisites.append(requisite)
 
     @classmethod
     def pop_requisite(cls):
+        if not cls.enabled:
+            return
+
         del cls.requisites[-1]
 
 
@@ -155,8 +170,11 @@ class StateFactory(object):
 
     def __getattr__(self, func):
         if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
-            raise InvalidFunction("The function '%s' does not exist in the "
-                                  "StateFactory for '%s'" % (func, self.module))
+            raise InvalidFunction('The function {0!r} does not exist in the '
+                                  'StateFactory for {1!r}'.format(
+                                      func,
+                                      self.module
+                                  ))
 
         def make_state(id_, **kwargs):
             return State(
@@ -227,10 +245,10 @@ class State(object):
 
     @property
     def full_func(self):
-        return "%s.%s" % (self.module, self.func)
+        return "{0!s}.{1!s}".format(self.module, self.func)
 
     def __str__(self):
-        return "%s = %s:%s" % (self.id_, self.full_func, self.attrs)
+        return "{0!s} = {1!s}:{2!s}".format(self.id_, self.full_func, self.attrs)
 
     def __call__(self):
         return {
@@ -264,9 +282,9 @@ class SaltObject(object):
 
         # now transform using namedtuples
         self.mods = {}
-        for mod in _mods:
-            mod_object = namedtuple('%sModule' % mod.capitalize(),
-                                    _mods[mod].keys())
+        for mod in _mods.keys():
+            mod_name = '{0}Module'.format(str(mod).capitalize())
+            mod_object = namedtuple(mod_name, _mods[mod].keys())
 
             self.mods[mod] = mod_object(**_mods[mod])
 
