@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Management of package repos
-===========================
+Management of APT/YUM package repos
+===================================
 
-Package repositories can be managed with the pkgrepo state:
+Package repositories for APT-based and YUM-based distros can be managed with
+these states. Here is some example SLS:
 
 .. code-block:: yaml
 
