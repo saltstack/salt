@@ -71,6 +71,6 @@ framer outbound be active first start
     frame start
         do tx
 
-framer scheduler be active first start
-    frame start
-        do schedule
+#framer scheduler be active first start
+#    frame start
+#        do schedule
