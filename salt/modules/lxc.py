@@ -4,7 +4,7 @@ Control Linux Containers via Salt
 
 :depends: lxc package for distribution
 
-You need lxc >= 1.0 (even beta alpha)
+lxc >= 1.0 (even beta alpha) is required
 
 '''
 
@@ -19,10 +19,12 @@ import os
 import shutil
 import re
 
-#import salt libs
+# Import salt libs
+import salt
 import salt.utils
 import salt.utils.cloud
 import salt.config
+import salt._compat
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -179,6 +181,43 @@ class _LXCConfig(object):
         self.data = x
 
 
+def get_base(**kwargs):
+    '''
+    If the needed base does not exist, then create it, if it does exist
+    create nothing and return the name of the base lxc container so
+    it can be cloned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
+                [nic=nic_profile] [profile=lxc_profile] \\
+                [nic_opts=nic_opts] [image=network image path]\\
+                [seed=(True|False)] [install=(True|False)] \\
+                [config=minion_config]
+    '''
+    cntrs = ls()
+    if kwargs.get('image'):
+        image = kwargs.get('image')
+        proto = salt._compat.urlparse(image).scheme
+        img_tar = __salt__['cp.cache_file'](image)
+        img_name = os.path.basename(img_tar)
+        hash_ = salt.utils.get_hash(
+                img_tar,
+                __salt__['config.option']('hash_type'))
+        name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
+        if name not in cntrs:
+            create(name, **kwargs)
+        return name
+    elif kwargs.get('template'):
+        name = '__base_{0}'.format(kwargs['template'])
+        if name not in cntrs:
+            create(name, **kwargs)
+        return name
+    return ''
+
+
 def init(name,
          cpuset=None,
          cpushare=None,
@@ -241,7 +280,8 @@ def init(name,
         Attempt to request key approval from the master. Default: ``True``
 
     clone
-        Original from which to use a clone operation to create the container. Default: ``None``
+        Original from which to use a clone operation to create the container.
+        Default: ``None``
     '''
     profile = _lxc_profile(profile)
 
@@ -250,6 +290,8 @@ def init(name,
         p = profile.pop(k, default)
         return kw or p
 
+    tvg = select('vgname')
+    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
     start_ = select('start', True)
     seed = select('seed', True)
     install = select('install', True)
@@ -257,6 +299,12 @@ def init(name,
     salt_config = select('config')
     approve_key = select('approve_key', True)
     clone_from = select('clone')
+
+    # If using a volume group then set up to make snapshot cow clones
+    if vgname and not clone_from:
+        clone_from = get_base(vgname=vgname, **kwargs)
+        if not kwargs.get('snapshot') is False:
+            kwargs['snapshot'] = True
 
     if clone_from:
         ret = __salt__['lxc.clone'](name, clone_from,
@@ -331,7 +379,6 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     options
         Template specific options to pass to the lxc-create command.
     '''
-
     if exists(name):
         return {'created': False, 'error': 'container already exists'}
 
@@ -345,13 +392,23 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         p = profile.pop(k, default)
         return kw or p
 
+    tvg = select('vgname')
+    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
     template = select('template')
     backing = select('backing')
     lvname = select('lvname')
     fstype = select('fstype')
-    vgname = select('vgname')
     size = select('size', '1G')
+    image = select('image')
 
+    if image:
+        img_tar = __salt__['cp.cache_file'](image)
+        template = os.path.join(
+                os.path.dirname(salt.__file__),
+                'templates',
+                'lxc',
+                'salt_tarball')
+        profile['imgtar'] = img_tar
     if config:
         cmd += ' -f {0}'.format(config)
     if template:
@@ -393,7 +450,6 @@ def clone(name,
           snapshot=False,
           profile=None,
           **kwargs):
-
     '''
     Create a new container.
 
@@ -428,9 +484,7 @@ def clone(name,
     .. code-block:: bash
 
         salt '*' lxc.clone myclone ubuntu "snapshot=True"
-
     '''
-
     if exists(name):
         return {'cloned': False, 'error': 'container already exists'}
 
@@ -476,6 +530,19 @@ def clone(name,
         log.warn('lxc-clone failed to create container')
         return {'cloned': False, 'error':
                 'container could not be created: {0}'.format(ret['stderr'])}
+
+
+def ls():
+    '''
+    Return just a list of the containers available
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.ls
+    '''
+    return __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
 
 def list_(extra=False):
@@ -628,7 +695,7 @@ def start(name, restart=False):
     return ret
 
 
-def stop(name):
+def stop(name, kill=True):
     '''
     Stop the named container.
 
@@ -638,6 +705,9 @@ def stop(name):
 
         salt '*' lxc.stop name
     '''
+    cmd = 'lxc-stop'
+    if kill:
+        cmd += ' -k'
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -700,7 +770,7 @@ def destroy(name, stop=True):
         salt '*' lxc.destroy name [stop=(True|False)]
     '''
     if stop:
-        _change_state('lxc-stop', name, 'stopped')
+        _change_state('lxc-stop -k', name, 'stopped')
     return _change_state('lxc-destroy', name, None)
 
 
@@ -1245,3 +1315,145 @@ def cp(name, src, dest):
     log.info(cmd)
     ret = __salt__['cmd.run_all'](cmd)
     return ret
+
+
+def read_conf(conf_file, out_format='simple'):
+    '''
+    Read in an LXC configuration file. By default returns a simple, unsorted
+    dict, but can also return a more detailed structure including blank lines
+    and comments.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf \
+            out_format=commented
+    '''
+    ret_commented = []
+    ret_simple = {}
+    with salt.utils.fopen(conf_file, 'r') as fp_:
+        for line in fp_.readlines():
+            if not '=' in line:
+                ret_commented.append(line)
+                continue
+            comps = line.split('=')
+            value = '='.join(comps[1:]).strip()
+            comment = None
+            if '#' in value:
+                vcomps = value.split('#')
+                value = vcomps[1].strip()
+                comment = '#'.join(vcomps[1:]).strip()
+                ret_commented.append({comps[0].strip(): {
+                    'value': value,
+                    'comment': comment,
+                }})
+            else:
+                ret_commented.append({comps[0].strip(): value})
+                ret_simple[comps[0].strip()] = value
+
+    if out_format == 'simple':
+        return ret_simple
+    return ret_commented
+
+
+def write_conf(conf_file, conf):
+    '''
+    Write out an LXC configuration file. This is normally only used internally.
+    The format of the data structure must match that which is returned from
+    ``lxc.read_conf()``, with ``out_format`` set to ``commented``. An example
+    might look like:
+
+    [
+        {'lxc.utsname': '$CONTAINER_NAME'},
+        '# This is a commented line\n',
+        '\n',
+        {'lxc.mount': '$CONTAINER_FSTAB'},
+        {'lxc.rootfs': {'comment': 'This is another test',
+                        'value': 'This is another test'}},
+        '\n',
+        {'lxc.network.type': 'veth'},
+        {'lxc.network.flags': 'up'},
+        {'lxc.network.link': 'br0'},
+        {'lxc.network.hwaddr': '$CONTAINER_MACADDR'},
+        {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
+        {'lxc.network.name': '$CONTAINER_DEVICENAME'},
+    ]
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \
+            out_format=commented
+    '''
+    if type(conf) is not list:
+        return {'Error': 'conf must be passed in as a list'}
+
+    with salt.utils.fopen(conf_file, 'w') as fp_:
+        for line in conf:
+            if type(line) is str:
+                fp_.write(line)
+            elif type(line) is dict:
+                key = line.keys()[0]
+                if type(line[key]) is str:
+                    out_line = ' = '.join((key, line[key]))
+                elif type(line[key]) is dict:
+                    out_line = ' = '.join((key, line[key]['value']))
+                    if 'comment' in line[key]:
+                        out_line = ' # '.join((out_line, line[key]['comment']))
+                fp_.write(out_line)
+                fp_.write('\n')
+
+    return {}
+
+
+def edit_conf(conf_file, out_format='simple', **kwargs):
+    '''
+    Edit an LXC configuration file. If a setting is already present inside the
+    file, its value will be replaced. If it does not exist, it will be appended
+    to the end of the file. Comments and blank lines will be kept in-tact if
+    they already exist in the file.
+
+    After the file is edited, its contents will be returned. By default, it
+    will be returned in ``simple`` format, meaning an unordered dict (which
+    may not represent the actual file order). Passing in an ``out_format`` of
+    ``commented`` will return a data structure which accurately represents the
+    order and content of the file.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \
+            out_format=commented lxc.network.type=veth
+    '''
+    data = []
+
+    try:
+        conf = read_conf(conf_file, out_format='commented')
+    except Exception:
+        conf = []
+
+    for line in conf:
+        if type(line) is not dict:
+            data.append(line)
+            continue
+        else:
+            key = line.keys()[0]
+            if not key in kwargs:
+                data.append(line)
+                continue
+            data.append({
+                key: kwargs[key]
+            })
+            del kwargs[key]
+
+    for kwarg in kwargs:
+        if kwarg.startswith('__'):
+            continue
+        data.append({kwarg: kwargs[kwarg]})
+
+    write_conf(conf_file, data)
+    return read_conf(conf_file, out_format)

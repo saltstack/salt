@@ -1393,7 +1393,13 @@ def scp_file(dest_path, contents, kwargs):
 
         ssh_args.extend([
             # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+        	# Don't add new hosts to the host key database
+        	'-oStrictHostKeyChecking=no',
+        	# Set hosts key database path to /dev/null, ie, non-existing
+        	'-oUserKnownHostsFile=/dev/null',
+        	# Don't re-use the SSH connection. Less failures.
+        	'-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
@@ -1528,7 +1534,13 @@ def root_cmd(command, tty, sudo, **kwargs):
 
         ssh_args.extend([
             # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,

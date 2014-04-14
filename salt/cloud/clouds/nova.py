@@ -187,7 +187,9 @@ def get_conn():
     if 'password' in vm_:
         kwargs['password'] = vm_['password']
 
-    return nova.SaltNova(**kwargs)
+    conn = nova.SaltNova(**kwargs)
+
+    return conn
 
 
 def get_image(conn, vm_):

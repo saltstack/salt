@@ -22,10 +22,13 @@ def test():
             ioflo_realtime=True,
             master_floscript=filepath,
             ioflo_verbose=2,
-            raet_port=7530)
+            raet_port=7530,
+            client_acl=dict(),
+            cachedir='/tmp/raet',
+            sock_dir='/tmp/raet/run')
 
     master = salt.daemons.flo.IofloMaster(opts=opts)
-    master.start()
+    master.start(behaviors=['raet.flo.behaving'])
 
 if __name__ == '__main__':
     test()

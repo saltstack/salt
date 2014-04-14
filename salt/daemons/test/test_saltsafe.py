@@ -12,15 +12,16 @@ from ioflo.base.odicting import odict
 
 from salt.key import RaetKey
 
-from salt.transport.road.raet import (raeting, nacling, estating, keeping,
-                                      stacking, salting)
+from salt.daemons import salting
+from raet import raeting, nacling
+from raet.road import keeping, estating, stacking
 
 
 def test():
     '''
     Test keeping.
     '''
-    pkiDirpath = os.path.join(os.getcwd(), 'keyo', 'master', 'pki')
+    pkiDirpath = os.path.join('/tmp', 'raet', 'keyo', 'master', 'pki')
     if not os.path.exists(pkiDirpath):
             os.makedirs(pkiDirpath)
 
@@ -40,10 +41,12 @@ def test():
     if os.path.exists(localFilepath):
         mode = os.stat(localFilepath).st_mode
         print mode
-        os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
+        os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IRUSR)
+        mode = os.stat(localFilepath).st_mode
+        print mode
 
 
-    cacheDirpath = os.path.join(os.getcwd(), 'cache', 'master')
+    cacheDirpath = os.path.join('/tmp/raet', 'cache', 'master')
     sockDirpath = os.path.join('/tmp/raet', 'sock', 'master')
 
     opts = dict(
@@ -52,13 +55,14 @@ def test():
                 cachedir=cacheDirpath,
                 open_mode=True,
                 auto_accept=True,
+                transport='raet',
                 )
 
     masterSafe = salting.SaltSafe(opts=opts)
-    print masterSafe.loadLocalData()
-    print masterSafe.loadAllRemoteData()
+    print("masterSafe local =\n{0}".format(masterSafe.loadLocalData()))
+    print("masterSafe remote =\n{0}".format(masterSafe.loadAllRemoteData()))
 
-    pkiDirpath = os.path.join(os.getcwd(), 'keyo', 'minion', 'pki')
+    pkiDirpath = os.path.join('/tmp', 'raet', 'keyo', 'minion', 'pki')
     if not os.path.exists(pkiDirpath):
             os.makedirs(pkiDirpath)
 
@@ -78,10 +82,11 @@ def test():
     if os.path.exists(localFilepath):
         mode = os.stat(localFilepath).st_mode
         print mode
-        os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
+        os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IRUSR)
+        mode = os.stat(localFilepath).st_mode
+        print mode
 
-
-    cacheDirpath = os.path.join(os.getcwd(), 'cache', 'minion')
+    cacheDirpath = os.path.join('/tmp/raet', 'cache', 'minion')
     sockDirpath = os.path.join('/tmp/raet', 'sock', 'minion')
 
     opts = dict(
@@ -90,16 +95,15 @@ def test():
                 cachedir=cacheDirpath,
                 open_mode=True,
                 auto_accept=True,
+                transport='raet',
                 )
 
     minionSafe = salting.SaltSafe(opts=opts)
-    print minionSafe.loadLocalData()
-    print minionSafe.loadAllRemoteData()
-
-
+    print("minionSafe local =\n{0}".format(minionSafe.loadLocalData()))
+    print("minionSafe remote =\n{0}".format(minionSafe.loadAllRemoteData()))
 
     masterName = 'master'
-    masterDirpath = os.path.join(os.getcwd(), 'keep', masterName )
+    masterDirpath = os.path.join('/tmp', 'raet', 'keep', masterName )
     signer = nacling.Signer()
     masterSignKeyHex = signer.keyhex
     masterVerKeyHex = signer.verhex
@@ -108,7 +112,7 @@ def test():
     masterPubKeyHex = privateer.pubhex
 
     m1Name = 'minion1'
-    m1Dirpath = os.path.join(os.getcwd(), 'keep', m1Name)
+    m1Dirpath = os.path.join('/tmp', 'raet', 'keep', m1Name)
     signer = nacling.Signer()
     m1SignKeyHex = signer.keyhex
     m1VerKeyHex = signer.verhex
@@ -135,16 +139,16 @@ def test():
     keeping.clearAllRoadSafe(masterDirpath)
     keeping.clearAllRoadSafe(m1Dirpath)
 
-    saltsafe = salting.SaltSafe(opts=opts)
-    print saltsafe.loadLocalData()
-    print saltsafe.loadAllRemoteData()
+    #saltsafe = salting.SaltSafe(opts=opts)
+    #print saltsafe.loadLocalData()
+    #print saltsafe.loadAllRemoteData()
 
     #master stack
-    estate = estating.LocalEstate(  eid=1,
+    local = estating.LocalEstate(  eid=1,
                                     name=masterName,
                                     sigkey=masterSignKeyHex,
                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate,
+    stack0 = stacking.RoadStack(local=local,
                                dirpath=masterDirpath,
                                safe=masterSafe)
 
@@ -161,12 +165,12 @@ def test():
                                     pubkey=m2PubKeyHex,))
 
     #minion stack
-    estate = estating.LocalEstate(   eid=2,
+    local = estating.LocalEstate(   eid=2,
                                      name=m1Name,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=m1SignKeyHex,
                                      prikey=m1PriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate,
+    stack1 = stacking.RoadStack(local=local,
                                dirpath=m1Dirpath,
                                safe=minionSafe)
 
@@ -184,27 +188,27 @@ def test():
                                     pubkey=m3PubKeyHex,))
 
     #stack0.clearLocal()
-    stack0.clearAllRemote()
+    stack0.clearRemoteKeeps()
     #stack1.clearLocal()
-    stack1.clearAllRemote()
+    stack1.clearRemoteKeeps()
 
     stack0.dumpLocal()
-    stack0.dumpAllRemote()
+    stack0.dumpRemotes()
 
     stack1.dumpLocal()
-    stack1.dumpAllRemote()
+    stack1.dumpRemotes()
 
     print "Road {0}".format(stack0.name)
-    print stack0.road.loadLocalData()
-    print stack0.road.loadAllRemoteData()
+    print stack0.keep.loadLocalData()
+    print stack0.keep.loadAllRemoteData()
     print "Safe {0}".format(stack0.name)
     print stack0.safe.loadLocalData()
     print stack0.safe.loadAllRemoteData()
     print
 
     print "Road {0}".format(stack1.name)
-    print stack1.road.loadLocalData()
-    print stack1.road.loadAllRemoteData()
+    print stack1.keep.loadLocalData()
+    print stack1.keep.loadAllRemoteData()
     print "Safe {0}".format(stack1.name)
     print stack1.safe.loadLocalData()
     print stack1.safe.loadAllRemoteData()
@@ -213,36 +217,36 @@ def test():
     stack1.server.close()
 
     #master stack
-    dirpath = os.path.join(os.getcwd(), 'keep', 'master')
-    estate = estating.LocalEstate(  eid=1,
+    dirpath = os.path.join('/tmp/raet', 'keep', 'master')
+    local = estating.LocalEstate(  eid=1,
                                     name='master',
                                     sigkey=masterSignKeyHex,
                                     prikey=masterPriKeyHex,)
-    stack0 = stacking.StackUdp(estate=estate,
+    stack0 = stacking.RoadStack(local=local,
                                dirpath=masterDirpath,
                                safe=masterSafe)
 
     #minion stack
-    dirpath = os.path.join(os.getcwd(), 'keep', 'minion1')
-    estate = estating.LocalEstate(   eid=2,
+    dirpath = os.path.join('/tmp/raet', 'keep', 'minion1')
+    local = estating.LocalEstate(   eid=2,
                                      name='minion1',
                                      ha=("", raeting.RAET_TEST_PORT),
                                      sigkey=m1SignKeyHex,
                                      prikey=m1PriKeyHex,)
-    stack1 = stacking.StackUdp(estate=estate,
+    stack1 = stacking.RoadStack(local=local,
                                dirpath=m1Dirpath,
                                safe=minionSafe)
 
 
-    estate0 = stack0.loadLocal()
-    print estate0.name, estate0.eid, estate0.sid, estate0.ha, estate0.signer, estate0.priver
-    estate1 = stack1.loadLocal()
-    print estate1.name, estate1.eid, estate1.sid, estate1.ha, estate1.signer, estate1.priver
+    stack0.loadLocal()
+    print stack0.local.name, stack0.local.eid, stack0.local.sid, stack0.local.ha, stack0.local.signer, stack0.local.priver
+    stack1.loadLocal()
+    print stack1.local.name, stack1.local.eid, stack1.local.sid, stack1.local.ha, stack1.local.signer, stack1.local.priver
 
     stack0.clearLocal()
-    stack0.clearAllRemote()
+    stack0.clearRemoteKeeps()
     stack1.clearLocal()
-    stack1.clearAllRemote()
+    stack1.clearRemoteKeeps()
 
 
 if __name__ == "__main__":

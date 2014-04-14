@@ -28,6 +28,7 @@ import salt.utils.gzip_util
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse,
     url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener)
+from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)
 
@@ -540,6 +541,19 @@ class Client(object):
             except Exception as ex:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
+        if url_data.scheme == 'swift':
+            try:
+                swift_conn = SaltSwift(self.opts.get('keystone.user', None),
+                                             self.opts.get('keystone.tenant', None),
+                                             self.opts.get('keystone.auth_url', None),
+                                             self.opts.get('keystone.password', None))
+                swift_conn.get_object(url_data.netloc,
+                                      url_data.path[1:],
+                                      dest)
+                return dest
+            except Exception as ex:
+                raise MinionError('Could not fetch from {0}'.format(url))
+
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
             _, netloc = url_data.netloc.split('@', 1)
@@ -798,9 +812,11 @@ class LocalClient(Client):
                 log.warning(err.format(path))
                 return ret
             else:
+                opts_hash_type = self.opts.get('hash_type', 'md5')
+                hash_type = getattr(hashlib, opts_hash_type)
                 with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
-                ret['hash_type'] = 'md5'
+                    ret['hsum'] = hash_type(ifile.read()).hexdigest()
+                ret['hash_type'] = opts_hash_type
                 return ret
         path = self._find_file(path, saltenv)['path']
         if not path:
@@ -1120,7 +1136,7 @@ class RemoteClient(Client):
                 hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(
                     path, form=hash_type, chunk_size=4096)
-                ret['hash_type'] = 'md5'
+                ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,
                 'saltenv': saltenv,

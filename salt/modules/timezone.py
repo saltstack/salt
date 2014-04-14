@@ -136,7 +136,7 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     '''
-    Checks the md5sum between the given timezone, and the one set in
+    Checks the hash sum between the given timezone, and the one set in
     /etc/localtime. Returns True if they match, and False if not. Mostly useful
     for running state checks.
 
@@ -155,11 +155,12 @@ def zone_compare(timezone):
     if not os.path.exists(tzfile):
         return 'Error: {0} does not exist.'.format(tzfile)
 
+    hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
     with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = hashlib.md5(fp_.read()).hexdigest()
+        usrzone = hash_type(fp_.read()).hexdigest()
 
     with salt.utils.fopen(tzfile, 'r') as fp_:
-        etczone = hashlib.md5(fp_.read()).hexdigest()
+        etczone = hash_type(fp_.read()).hexdigest()
 
     if usrzone == etczone:
         return True

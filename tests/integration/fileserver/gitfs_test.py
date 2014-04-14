@@ -127,19 +127,6 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.file_hash(load, fnd)
             self.assertDictEqual({'hash_type': 'blob_sha1', 'hsum': '0d234303e6451128d756c5c259175de37d767742'}, ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9194')
-    def test_file_hash_md5(self):
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
-                                         'sock_dir': self.master_opts['sock_dir'],
-                                         'hash_type': 'md5'}):
-            tmp_load = load
-            tmp_load['path'] = 'testfile'
-            fnd = {'rel': 'testfile',
-                   'path': 'testfile'}
-            ret = gitfs.file_hash(load, fnd)
-            self.assertDictEqual({'hash_type': 'md5', 'hsum': '98aa509006628302ce38ce521a7f805f'}, ret)
-
     def test_serve_file(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],

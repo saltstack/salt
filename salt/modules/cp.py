@@ -172,9 +172,12 @@ def get_template(path,
                  template='jinja',
                  saltenv='base',
                  env=None,
+                 makedirs=False,
                  **kwargs):
     '''
-    Render a file as a template before setting it down
+    Render a file as a template before setting it down.
+    Warning, order is not the same as in fileclient.cp for
+    non breaking old API.
 
     CLI Example:
 
@@ -204,7 +207,7 @@ def get_template(path,
             path,
             dest,
             template,
-            False,
+            makedirs,
             saltenv,
             **kwargs)
 

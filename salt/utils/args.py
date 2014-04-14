@@ -9,8 +9,8 @@ import re
 # Import salt libs
 from salt._compat import string_types, integer_types
 
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$')
+#KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
 
 
 def condition_input(args, kwargs):
@@ -29,11 +29,13 @@ def parse_input(args, condition=True):
     '''
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
+
+    Don't pull args with key=val apart if it has a newline in it.
     '''
     _args = []
     _kwargs = {}
     for arg in args:
-        if isinstance(arg, string_types):
+        if isinstance(arg, string_types) and not r'\n' in arg:
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
                 _kwargs[arg_name] = yamlify_arg(arg_value)
@@ -73,7 +75,7 @@ def parse_kwarg(string_):
 
 def yamlify_arg(arg):
     '''
-    yaml.safe_load the arg unless it has a newline in it.
+    yaml.safe_load the arg
     '''
     if not isinstance(arg, string_types):
         return arg
@@ -97,7 +99,7 @@ def yamlify_arg(arg):
             return arg
         if arg == 'None':
             arg = None
-        elif '\n' not in arg:
+        else:
             arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
 
         if isinstance(arg, dict):

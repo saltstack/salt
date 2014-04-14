@@ -51,7 +51,6 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
-from salt.pillar import git_pillar
 
 # Import halite libs
 try:
@@ -148,54 +147,24 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
+        # Set up search object
         search = salt.search.Search(self.opts)
+        # Make Start Times
         last = int(time.time())
         rotate = int(time.time())
+        # Init fileserver manager
         fileserver = salt.fileserver.Fileserver(self.opts)
+        # Load Runners
         runners = salt.loader.runner(self.opts)
+        # Init Scheduler
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
+        # Make Event bus for firing
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-
-        pillargitfs = []
-        for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
-            if 'git' in opts_dict:
-                parts = opts_dict['git'].strip().split()
-                try:
-                    br = parts[0]
-                    loc = parts[1]
-                except IndexError:
-                    log.critical(
-                        'Unable to extract external pillar data: {0}'
-                        .format(opts_dict['git'])
-                    )
-                else:
-                    pillargitfs.append(
-                        git_pillar.GitPillar(
-                            br,
-                            loc,
-                            self.opts
-                        )
-                    )
-
-        # Clear remote fileserver backend env cache so it gets recreated during
-        # the first loop_interval
-        for backend in ('git', 'hg', 'svn'):
-            if backend in self.opts['fileserver_backend']:
-                env_cache = os.path.join(
-                    self.opts['cachedir'],
-                    '{0}fs'.format(backend),
-                    'envs.p'
-                )
-                if os.path.isfile(env_cache):
-                    log.debug('Clearing {0}fs env cache'.format(backend))
-                    try:
-                        os.remove(env_cache)
-                    except (IOError, OSError) as exc:
-                        log.critical(
-                            'Unable to clear env cache file {0}: {1}'
-                            .format(env_cache, exc)
-                        )
+        # Init any values needed by the git ext pillar
+        pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
+        # Clean out the fileserver backend cache
+        salt.daemons.masterapi.clean_fsbackend(self.opts)
 
         old_present = set()
         while True:
@@ -1196,6 +1165,12 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        mods = set()
+        for func in self.mminion.functions.values():
+            mods.add(func.__module__)
+        for mod in mods:
+            sys.modules[mod].__grains__ = load['grains']
+
         pillar = salt.pillar.Pillar(
                 self.opts,
                 load['grains'],
@@ -1215,6 +1190,8 @@ class AESFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+        for mod in mods:
+            sys.modules[mod].__grains__ = self.opts['grains']
         return data
 
     def _minion_event(self, load):

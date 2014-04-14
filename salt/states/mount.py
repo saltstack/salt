@@ -14,6 +14,16 @@ Mount any type of mountable filesystem with the mounted function:
         - mkmnt: True
         - opts:
           - defaults
+
+    /srv/bigdata:
+      mount.mounted:
+        - device: UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
+        - fstype: xfs
+        - opts: nobootwait,noatime,nodiratime,nobarrier,logbufs=8
+        - dump: 0
+        - pass_num: 2
+        - persist: True
+        - mkmnt: True
 '''
 
 # Import python libs
@@ -41,6 +51,7 @@ def mounted(name,
 
     device
         The device name, typically the device node, such as /dev/sdb1
+        or UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
 
     fstype
         The filesystem type, this will be xfs, ext2/3/4 in the case of classic
@@ -86,6 +97,8 @@ def mounted(name,
     real_name = os.path.realpath(name)
     if device.startswith('/'):
         real_device = os.path.realpath(device)
+    elif device.upper().startswith('UUID='):
+        real_device = device.split('=')[1].strip('"').lower()
     else:
         real_device = device
 
@@ -107,8 +120,12 @@ def mounted(name,
     if real_name in active:
         device_list.append(active[real_name]['device'])
         device_list.append(os.path.realpath(device_list[0]))
-        if active[real_name]['alt_device'] not in device_list:
-            device_list.append(active[real_name]['alt_device'])
+        alt_device = active[real_name]['alt_device']
+        uuid_device = active[real_name]['device_uuid']
+        if alt_device and alt_device not in device_list:
+            device_list.append(alt_device)
+        if uuid_device and uuid_device not in device_list:
+            device_list.append(uuid_device)
         if real_device not in device_list:
             # name matches but device doesn't - need to umount
             ret['changes']['umount'] = "Forced unmount because devices " \
@@ -336,4 +353,29 @@ def unmounted(name,
                 else:
                     ret['changes']['persist'] = 'purged'
 
+    return ret
+
+
+def mod_watch(name, **kwargs):
+    '''
+    The mounted watcher, called to invoke the watch command.
+
+    name
+        The name of the mount point
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if kwargs['sfun'] == 'mounted':
+        out = __salt__['mount.remount'](name, kwargs['device'], False, kwargs['fstype'], kwargs['opts'])
+        if out:
+            ret['comment'] = '{0} remounted'.format(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = '{0} failed to remount: {1}'.format(name, out)
+    else:
+        ret['comment'] = 'Watch not supported in {1} at this time'.format(kwargs['sfun'])
     return ret

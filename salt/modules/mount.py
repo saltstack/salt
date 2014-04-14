@@ -46,10 +46,17 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
+    blkid_info = __salt__['disk.blkid']()
+
     with salt.utils.fopen(filename) as ifile:
         for line in ifile:
             comps = line.split()
             device = comps[2].split(':')
+            device_name = comps[8]
+            device_uuid = None
+            if device_name:
+                device_uuid = blkid_info.get(device_name, {}).get('UUID')
+                device_uuid = device_uuid and device_uuid.lower()
             ret[comps[4]] = {'mountid': comps[0],
                              'parentid': comps[1],
                              'major': device[0],
@@ -57,9 +64,10 @@ def _active_mountinfo(ret):
                              'root': comps[3],
                              'opts': comps[5].split(','),
                              'fstype': comps[7],
-                             'device': comps[8],
+                             'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[9].split(',')}
+                             'superopts': comps[9].split(','),
+                             'device_uuid': device_uuid}
     return ret
 
 

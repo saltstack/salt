@@ -9,9 +9,10 @@ import multiprocessing
 
 # Import salt libs
 import salt.daemons.masterapi
-from salt.transport.road.raet import stacking
-from salt.transport.road.raet import yarding
-from salt.transport.road.raet import raeting
+from raet import raeting
+from raet.lane.stacking import LaneStack
+from raet.lane.yarding import RemoteYard
+
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -39,7 +40,7 @@ class WorkerFork(ioflo.base.deeding.Deed):
         Spin up a worker, do this in s multiprocess
         '''
         self.opts.value['__worker'] = True
-        behaviors = ['salt.transport.road.raet', 'salt.daemons.flo']
+        behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value))]
         preloads.append(('.salt.yid', dict(value=yid)))
         preloads.append(
@@ -81,26 +82,26 @@ class SetupWorker(ioflo.base.deeding.Deed):
         '''
         Set up the uxd stack and behaviors
         '''
-        self.uxd_stack.value = stacking.StackUxd(
+        self.uxd_stack.value = LaneStack(
                 lanename=self.opts.value['id'],
                 yid=self.yid.value,
-                dirpath=self.opts.value['sock_dir'])
+                sockdirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
-        manor_yard = yarding.RemoteYard(
+        manor_yard = RemoteYard(
                 yid=0,
                 prefix=self.opts.value['id'],
                 dirpath=self.opts.value['sock_dir'])
-        self.uxd_stack.value.addRemoteYard(manor_yard)
+        self.uxd_stack.value.addRemote(manor_yard)
         self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
         self.local.value = salt.daemons.masterapi.LocalFuncs(
                 self.opts.value,
                 self.access_keys.value)
         init = {}
         init['route'] = {
-                'src': (None, self.uxd_stack.value.yard.name, None),
+                'src': (None, self.uxd_stack.value.local.name, None),
                 'dst': (None, 'yard0', 'worker_req')
                 }
-        self.uxd_stack.value.transmit(init, 'yard0')
+        self.uxd_stack.value.transmit(init, self.uxd_stack.value.uids.get('yard0'))
         self.uxd_stack.value.serviceAll()
 
 
@@ -140,5 +141,5 @@ class RouterWorker(ioflo.base.deeding.Deed):
                         'src': (self.opts.value['id'], self.yid.value, None),
                         'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)
                         }
-                self.uxd_stack.value.transmit(ret, 'yard0')
+                self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids.get('yard0'))
                 self.uxd_stack.value.serviceAll()

@@ -29,7 +29,7 @@ warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(yaml.SafeLoader):
+class SaltYamlSafeLoader(yaml.SafeLoader, object):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt
@@ -89,8 +89,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
         if node.tag == 'tag:yaml.org,2002:int':
             if node.value == '0':
                 pass
-            elif node.value.startswith('0') \
-                    and not node.value.startswith(('0b', '0x')):
+            elif node.value.startswith('0') and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
                 # If value was all zeros, node.value would have been reduced to
                 # an empty string. Change it to '0'.

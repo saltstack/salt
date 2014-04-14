@@ -62,7 +62,7 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
     if username:
         opts += ('--username', username)
     if password:
-        opts += ('--password', password)
+        opts += ('--password', '\'{0}\''.format(password))
     if opts:
         cmd += subprocess.list2cmdline(opts)
 

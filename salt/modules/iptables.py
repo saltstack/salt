@@ -132,10 +132,16 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
-        kwargs['match'].replace(' ', '')
-        for match in kwargs['match'].split(','):
+        if not isinstance(kwargs['match'], list):
+            kwargs['match'] = kwargs['match'].split(',')
+        for match in kwargs['match']:
             rule += '-m {0} '.format(match)
+            if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
+                rule += '--name {0} '.format(kwargs['name'])
         del kwargs['match']
+
+    if 'name' in kwargs:
+        del kwargs['name']
 
     if 'state' in kwargs:
         del kwargs['state']
@@ -159,14 +165,36 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'dports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
-        rule += '--dports {0} '.format(kwargs['dports'])
+
+        if isinstance(kwargs['dports'], list):
+            dports = ','.join(kwargs['dports'])
+        else:
+            dports = kwargs['dports']
+
+        rule += '--dports {0} '.format(dports)
         del kwargs['dports']
 
     if 'sports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
-        rule += '--sports {0} '.format(kwargs['sports'])
+
+        if isinstance(kwargs['sports'], list):
+            sports = ','.join(kwargs['sports'])
+        else:
+            sports = kwargs['dports']
+
+        rule += '--sports {0} '.format(sports)
         del kwargs['sports']
+
+    if 'comment' in kwargs:
+        rule += '--comment "{0}" '.format(kwargs['comment'])
+        del kwargs['comment']
+
+    # --set in ipset is deprecated, works but returns error.
+    # rewrite to --match-set if not empty, otherwise treat as recent option
+    if 'set' in kwargs and kwargs['set']:
+        rule += '--match-set {0} '.format(kwargs['set'])
+        del kwargs['set']
 
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
@@ -279,7 +307,10 @@ def get_saved_policy(table='filter', chain=None, conf_file=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     rules = _parse_conf(conf_file, family=family)
-    return rules[table][chain]['policy']
+    try:
+        return rules[table][chain]['policy']
+    except KeyError:
+        return None
 
 
 def get_policy(table='filter', chain=None, family='ipv4'):
@@ -299,7 +330,10 @@ def get_policy(table='filter', chain=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     rules = _parse_conf(in_mem=True, family=family)
-    return rules[table][chain]['policy']
+    try:
+        return rules[table][chain]['policy']
+    except KeyError:
+        return None
 
 
 def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
@@ -339,7 +373,7 @@ def save(filename=None, family='ipv4'):
         salt '*' iptables.save /etc/sysconfig/iptables family=ipv6
     '''
     if _conf() and not filename:
-        filename = _conf()
+        filename = _conf(family)
 
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
@@ -718,7 +752,8 @@ def _parser():
     add_arg('-g', '--goto', dest='goto', action='append')
     add_arg('-i', '--in-interface', dest='in-interface', action='append')
     add_arg('-o', '--out-interface', dest='out-interface', action='append')
-    add_arg('-f', '--fragment', dest='fragment', action='append')
+    add_arg('-f', '--fragment', dest='fragment', action='append_const',
+            const='')
     add_arg('-c', '--set-counters', dest='set-counters', action='append')
 
     # MATCH EXTENSIONS
@@ -726,8 +761,10 @@ def _parser():
     ## addrtype
     add_arg('--src-type', dest='src-type', action='append')
     add_arg('--dst-type', dest='dst-type', action='append')
-    add_arg('--limit-iface-in', dest='limit-iface-in', action='append')
-    add_arg('--limit-iface-out', dest='limit-iface-out', action='append')
+    add_arg('--limit-iface-in', dest='limit-iface-in', action='append_const',
+            const='')
+    add_arg('--limit-iface-out', dest='limit-iface-out', action='append_const',
+            const='')
     ## ah
     add_arg('--ahspi', dest='ahspi', action='append')
     ## cluster
@@ -778,8 +815,10 @@ def _parser():
     add_arg('--dscp', dest='dscp', action='append')
     add_arg('--dscp-class', dest='dscp-class', action='append')
     ## ecn
-    add_arg('--ecn-tcp-cwr', dest='ecn-tcp-cwr', action='append')
-    add_arg('--ecn-tcp-ece', dest='ecn-tcp-ece', action='append')
+    add_arg('--ecn-tcp-cwr', dest='ecn-tcp-cwr', action='append_const',
+            const='')
+    add_arg('--ecn-tcp-ece', dest='ecn-tcp-ece', action='append_const',
+            const='')
     add_arg('--ecn-ip-ect', dest='ecn-ip-ect', action='append')
     ## esp
     add_arg('--espspi', dest='espspi', action='append')
@@ -827,61 +866,73 @@ def _parser():
     ## owner
     add_arg('--uid-owner', dest='uid-owner', action='append')
     add_arg('--gid-owner', dest='gid-owner', action='append')
-    add_arg('--socket-exists', dest='socket-exists', action='append')
+    add_arg('--socket-exists', dest='socket-exists', action='append_const',
+            const='')
     ## physdev
     add_arg('--physdev-in', dest='physdev-in', action='append')
     add_arg('--physdev-out', dest='physdev-out', action='append')
-    add_arg('--physdev-is-in', dest='physdev-is-in', action='append')
-    add_arg('--physdev-is-out', dest='physdev-is-out', action='append')
-    add_arg('--physdev-is-bridged', dest='physdev-is-bridged', action='append')
+    add_arg('--physdev-is-in', dest='physdev-is-in', action='append_const',
+            const='')
+    add_arg('--physdev-is-out', dest='physdev-is-out', action='append_const',
+            const='')
+    add_arg('--physdev-is-bridged',
+            dest='physdev-is-bridged',
+            action='append_const',
+            const='')
     ## pkttype
     add_arg('--pkt-type', dest='pkt-type', action='append')
     ## policy
     add_arg('--dir', dest='dir', action='append')
     add_arg('--pol', dest='pol', action='append')
-    add_arg('--strict', dest='strict', action='append')
+    add_arg('--strict', dest='strict', action='append_const', const='')
     add_arg('--reqid', dest='reqid', action='append')
     add_arg('--spi', dest='spi', action='append')
     add_arg('--proto', dest='proto', action='append')
     add_arg('--mode', dest='mode', action='append')
     add_arg('--tunnel-src', dest='tunnel-src', action='append')
     add_arg('--tunnel-dst', dest='tunnel-dst', action='append')
-    add_arg('--next', dest='next', action='append')
+    add_arg('--next', dest='next', action='append_const', const='')
     ## quota
     add_arg('--quota', dest='quota', action='append')
     ## rateest
     add_arg('--rateest1', dest='rateest1', action='append')
     add_arg('--rateest2', dest='rateest2', action='append')
-    add_arg('--rateest-delta', dest='rateest-delta', action='append')
+    add_arg('--rateest-delta', dest='rateest-delta', action='append_const',
+            const='')
     add_arg('--rateest1-bps', dest='rateest1-bps', action='append')
     add_arg('--rateest2-bps', dest='rateest2-bps', action='append')
     add_arg('--rateest1-pps', dest='rateest1-pps', action='append')
     add_arg('--rateest2-pps', dest='rateest2-pps', action='append')
-    add_arg('--rateest1-lt', dest='rateest1-lt', action='append')
-    add_arg('--rateest1-gt', dest='rateest1-gt', action='append')
-    add_arg('--rateest1-eq', dest='rateest1-eq', action='append')
+    add_arg('--rateest1-lt', dest='rateest1-lt', action='append_const',
+            const='')
+    add_arg('--rateest1-gt', dest='rateest1-gt', action='append_const',
+            const='')
+    add_arg('--rateest1-eq', dest='rateest1-eq', action='append_const',
+            const='')
     add_arg('--rateest-name', dest='rateest-name', action='append')
     add_arg('--rateest-interval', dest='rateest-interval', action='append')
     add_arg('--rateest-ewma', dest='rateest-ewma', action='append')
     ## realm
     add_arg('--realm', dest='realm', action='append')
     ## recent
-    add_arg('--set', dest='set', action='append')
+    add_arg('--set', dest='set', action='append_const', const='')
     add_arg('--name', dest='name', action='append')
-    add_arg('--rsource', dest='rsource', action='append')
-    add_arg('--rdest', dest='rdest', action='append')
-    add_arg('--rcheck', dest='rcheck', action='append')
-    add_arg('--update', dest='update', action='append')
-    add_arg('--remove', dest='remove', action='append')
+    add_arg('--rsource', dest='rsource', action='append_const', const='')
+    add_arg('--rdest', dest='rdest', action='append_const', const='')
+    add_arg('--mask', dest='mask', action='append')
+    add_arg('--rcheck', dest='rcheck', action='append_const', const='')
+    add_arg('--update', dest='update', action='append_const', const='')
+    add_arg('--remove', dest='remove', action='append_const', const='')
     add_arg('--seconds', dest='seconds', action='append')
     add_arg('--hitcount', dest='hitcount', action='append')
-    add_arg('--rttl', dest='rttl', action='append')
+    add_arg('--rttl', dest='rttl', action='append_const', const='')
     ## sctp
     add_arg('--chunk-types', dest='chunk-types', action='append')
     ## set
     add_arg('--match-set', dest='match-set', action='append')
     ## socket
-    add_arg('--transparent', dest='transparent', action='append')
+    add_arg('--transparent', dest='transparent', action='append_const',
+            const='')
     ## state
     add_arg('--state', dest='state', action='append')
     ## statistic
@@ -899,7 +950,7 @@ def _parser():
         add_arg('--tcp-flags', dest='tcp-flags', action='append')
     else:
         add_arg('--tcp-flags', dest='tcp-flags', action='append', nargs='*')
-    add_arg('--syn', dest='syn', action='append')
+    add_arg('--syn', dest='syn', action='append_const', const='')
     add_arg('--tcp-option', dest='tcp-option', action='append')
     ## tcpmss
     add_arg('--mss', dest='mss', action='append')
@@ -918,15 +969,99 @@ def _parser():
     add_arg('--ttl-lt', dest='ttl-lt', action='append')
     ## u32
     add_arg('--u32', dest='u32', action='append')
+    ## condition
+    add_arg('--condition', dest='condition', action='append')
+    ## dhcpmac
+    add_arg('--mac', dest='mac', action='append')
+    ## fuzzy
+    add_arg('--lower-limit', dest='lower-limit', action='append')
+    add_arg('--upper-limit', dest='upper-limit', action='append')
+    ## geoip
+    add_arg('--src-cc',
+            '--source-country',
+            dest='source-country',
+            action='append')
+    add_arg('--dst-cc',
+            '--destination-country',
+            dest='destination-country',
+            action='append')
+    ## gradm
+    add_arg('--enabled', dest='enabled', action='append_const', const='')
+    add_arg('--disabled', dest='disabled', action='append_const', const='')
+    ## iface
+    add_arg('--iface', dest='iface', action='append')
+    add_arg('--dev-in', dest='dev-in', action='append_const', const='')
+    add_arg('--dev-out', dest='dev-out', action='append_const', const='')
+    add_arg('--up', dest='up', action='append_const', const='')
+    add_arg('--down', dest='down', action='append_const', const='')
+    add_arg('--broadcast', dest='broadcast', action='append_const', const='')
+    add_arg('--loopback', dest='loopback', action='append_const', const='')
+    add_arg('--pointtopoint', dest='pointtopoint', action='append_const',
+            const='')
+    add_arg('--running', dest='running', action='append_const', const='')
+    add_arg('--noarp', dest='noarp', action='append_const', const='')
+    add_arg('--arp', dest='arp', action='append_const', const='')
+    add_arg('--promisc', dest='promisc', action='append_const', const='')
+    add_arg('--multicast', dest='multicast', action='append_const', const='')
+    add_arg('--dynamic', dest='dynamic', action='append_const', const='')
+    add_arg('--lower-up', dest='lower-up', action='append_const', const='')
+    add_arg('--dormant', dest='dormant', action='append_const', const='')
+    ## ipp2p
+    add_arg('--edk', dest='edk', action='append_const', const='')
+    add_arg('--kazaa', dest='kazaa', action='append_const', const='')
+    add_arg('--gnu', dest='gnu', action='append_const', const='')
+    add_arg('--dc', dest='dc', action='append_const', const='')
+    add_arg('--bit', dest='bit', action='append_const', const='')
+    add_arg('--apple', dest='apple', action='append_const', const='')
+    add_arg('--soul', dest='soul', action='append_const', const='')
+    add_arg('--winmx', dest='winmx', action='append_const', const='')
+    add_arg('--ares', dest='ares', action='append_const', const='')
+    add_arg('--debug', dest='debug', action='append_const', const='')
+    ## ipv4options
+    add_arg('--flags', dest='flags', action='append')
+    add_arg('--any', dest='any', action='append_const', const='')
+    ## length2
+    add_arg('--layer3', dest='layer3', action='append_const', const='')
+    add_arg('--layer4', dest='layer4', action='append_const', const='')
+    add_arg('--layer5', dest='layer5', action='append_const', const='')
+    ## lscan
+    add_arg('--stealth', dest='stealth', action='append_const', const='')
+    add_arg('--synscan', dest='synscan', action='append_const', const='')
+    add_arg('--cnscan', dest='cnscan', action='append_const', const='')
+    add_arg('--grscan', dest='grscan', action='append_const', const='')
+    ## psd
+    add_arg('--psd-weight-threshold',
+            dest='psd-weight-threshold',
+            action='append')
+    add_arg('--psd-delay-threshold',
+            dest='psd-delay-threshold',
+            action='append')
+    add_arg('--psd-lo-ports-weight',
+            dest='psd-lo-ports-weight',
+            action='append')
+    add_arg('--psd-hi-ports-weight',
+            dest='psd-hi-ports-weight',
+            action='append')
+    ## quota2
+    add_arg('--grow', dest='grow', action='append_const', const='')
+    add_arg('--no-change', dest='no-change', action='append_const', const='')
+    add_arg('--packets', dest='packets', action='append_const', const='')
+    ## pknock
+    add_arg('--knockports', dest='knockports', action='append')
+    add_arg('--time', dest='time', action='append')
+    add_arg('--autoclose', dest='autoclose', action='append')
+    add_arg('--checkip', dest='checkip', action='append_const', const='')
 
     # CHECKSUM
-    add_arg('--checksum-fill', dest='checksum-fill', action='append')
+    add_arg('--checksum-fill', dest='checksum-fill', action='append_const',
+            const='')
 
     # CLASSIFY
     add_arg('--set-class', dest='set-class', action='append')
 
     # CLUSTERIP
-    add_arg('--new', dest='new', action='append')
+    add_arg('--new', dest='new', action='append_const',
+            const='')
     add_arg('--hashmode', dest='hashmode', action='append')
     add_arg('--clustermac', dest='clustermac', action='append')
     add_arg('--total-nodes', dest='total-nodes', action='append')
@@ -944,23 +1079,29 @@ def _parser():
 
     # DNAT
     add_arg('--to-destination', dest='to-destination', action='append')
-    add_arg('--random', dest='random', action='append')
-    add_arg('--persistent', dest='persistent', action='append')
+    add_arg('--random', dest='random', action='append_const', const='')
+    add_arg('--persistent', dest='persistent', action='append_const', const='')
 
     # DSCP
     add_arg('--set-dscp', dest='set-dscp', action='append')
     add_arg('--set-dscp-class', dest='set-dscp-class', action='append')
 
     # ECN
-    add_arg('--ecn-tcp-remove', dest='ecn-tcp-remove', action='append')
+    add_arg('--ecn-tcp-remove', dest='ecn-tcp-remove', action='append_const',
+            const='')
 
     # LOG
     add_arg('--log-level', dest='log-level', action='append')
     add_arg('--log-prefix', dest='log-prefix', action='append')
-    add_arg('--log-tcp-sequence', dest='log-tcp-sequence', action='append')
-    add_arg('--log-tcp-options', dest='log-tcp-options', action='append')
-    add_arg('--log-ip-options', dest='log-ip-options', action='append')
-    add_arg('--log-uid', dest='log-uid', action='append')
+    add_arg('--log-tcp-sequence',
+            dest='log-tcp-sequence',
+            action='append_const',
+            const='')
+    add_arg('--log-tcp-options', dest='log-tcp-options', action='append_const',
+            const='')
+    add_arg('--log-ip-options', dest='log-ip-options', action='append_const',
+            const='')
+    add_arg('--log-uid', dest='log-uid', action='append_const', const='')
 
     # NFLOG
     add_arg('--nflog-group', dest='nflog-group', action='append')
@@ -982,7 +1123,7 @@ def _parser():
     add_arg('--reject-with', dest='reject-with', action='append')
 
     # SAME
-    add_arg('--nodst', dest='nodst', action='append')
+    add_arg('--nodst', dest='nodst', action='append_const', const='')
 
     # SECMARK
     add_arg('--selctx', dest='selctx', action='append')
@@ -996,7 +1137,10 @@ def _parser():
 
     # TCPMSS
     add_arg('--set-mss', dest='set-mss', action='append')
-    add_arg('--clamp-mss-to-pmtu', dest='clamp-mss-to-pmtu', action='append')
+    add_arg('--clamp-mss-to-pmtu',
+            dest='clamp-mss-to-pmtu',
+            action='append_const',
+            const='')
 
     # TCPOPTSTRIP
     add_arg('--strip-options', dest='strip-options', action='append')
@@ -1022,5 +1166,31 @@ def _parser():
     add_arg('--ulog-prefix', dest='ulog-prefix', action='append')
     add_arg('--ulog-cprange', dest='ulog-cprange', action='append')
     add_arg('--ulog-qthreshold', dest='ulog-qthreshold', action='append')
+
+    # ACCOUNT
+    add_arg('--addr', dest='addr', action='append')
+    add_arg('--tname', dest='tname', action='append')
+
+    # CHAOS
+    add_arg('--delude', dest='delude', action='append_const', const='')
+    add_arg('--tarpit', dest='tarpit', action='append_const', const='')
+
+    # DHCPMAC
+    add_arg('--set-mac', dest='set-mac', action='append')
+
+    # DNETMAP
+    add_arg('--prefix', dest='prefix', action='append')
+    add_arg('--reuse', dest='reuse', action='append_const', const='')
+    add_arg('--static', dest='static', action='append_const', const='')
+    add_arg('--ttl', dest='ttl', action='append')
+
+    # IPMARK
+    add_arg('--and-mask', dest='and-mask', action='append')
+    add_arg('--or-mask', dest='or-mask', action='append')
+    add_arg('--shift', dest='shift', action='append')
+
+    # TARPIT
+    add_arg('--honeypot', dest='honeypot', action='append_const', const='')
+    add_arg('--reset', dest='reset', action='append_const', const='')
 
     return parser

@@ -27,6 +27,7 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+import salt.utils.validate.path
 from salt._compat import string_types
 
 import sys
@@ -147,12 +148,20 @@ VALID_OPTS = {
     'hgfs_root': str,
     'hgfs_base': str,
     'hgfs_branch_method': str,
+    'hgfs_env_whitelist': list,
+    'hgfs_env_blacklist': list,
     'svnfs_remotes': list,
     'svnfs_mountpoint': str,
     'svnfs_root': str,
     'svnfs_trunk': str,
     'svnfs_branches': str,
     'svnfs_tags': str,
+    'svnfs_env_whitelist': list,
+    'svnfs_env_blacklist': list,
+    'minionfs_env': str,
+    'minionfs_mountpoint': str,
+    'minionfs_whitelist': list,
+    'minionfs_blacklist': list,
     'ext_pillar': list,
     'pillar_version': int,
     'pillar_opts': bool,
@@ -215,6 +224,7 @@ VALID_OPTS = {
 
 # default configurations
 DEFAULT_MINION_OPTS = {
+    'interface': '0.0.0.0',
     'master': 'salt',
     'master_port': '4506',
     'master_finger': '',
@@ -310,7 +320,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'transport': 'zeromq',
-    'auth_timeout': 3,
+    'auth_timeout': 60,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 3,
@@ -353,12 +363,20 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
+    'hgfs_env_whitelist': [],
+    'hgfs_env_blacklist': [],
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
     'svnfs_root': '',
     'svnfs_trunk': 'trunk',
     'svnfs_branches': 'branches',
     'svnfs_tags': 'tags',
+    'svnfs_env_whitelist': [],
+    'svnfs_env_blacklist': [],
+    'minionfs_env': 'base',
+    'minionfs_mountpoint': '',
+    'minionfs_whitelist': [],
+    'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
@@ -447,6 +465,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
+    'maintinance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
     'ioflo_verbose': 3,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
@@ -631,7 +650,7 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    if os.path.isfile(path):
+    if salt.utils.validate.path.is_readable(path):
         opts = _read_conf_file(path)
         opts['conf_file'] = path
         return opts

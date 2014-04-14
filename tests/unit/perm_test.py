@@ -39,6 +39,7 @@ EXEMPT_FILES = [
     'pkg/shar/build_shar.sh',
     'pkg/smartos/esky/install.sh',
     'salt/templates/git/ssh-id-wrapper',
+    'salt/templates/lxc/salt_tarball',
     'scripts/salt',
     'scripts/salt-call',
     'scripts/salt-cloud',

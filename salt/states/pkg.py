@@ -336,7 +336,6 @@ def installed(
         skip_verify=False,
         skip_suggestions=False,
         pkgs=None,
-        names=None,
         sources=None,
         **kwargs):
     '''
@@ -423,7 +422,9 @@ def installed(
         Update the repo database of available packages prior to installing the
         requested package.
 
-    Usage::
+    Example:
+
+    .. code-block:: yaml
 
         httpd:
           pkg.installed:
@@ -439,7 +440,9 @@ def installed(
         A list of packages to install from a software repository. All packages
         listed under ``pkgs`` will be installed via a single command.
 
-    Usage::
+    Example:
+
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -452,7 +455,9 @@ def installed(
     :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
     and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
-    in the ``pkgs`` argument. Example::
+    in the ``pkgs`` argument. For example:
+
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -464,8 +469,10 @@ def installed(
     Additionally, :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>` and
     :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-    ``>`` operators for more control over what versions will be installed.
-    Example::
+    ``>`` operators for more control over what versions will be installed. For
+    example:
+
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -480,69 +487,29 @@ def installed(
     With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
     flag list and/or if the given packages should be in package.accept_keywords
     file and/or the overlay from which you want the package to be installed.
-    Example::
+    For example:
+
+    .. code-block:: yaml
 
         mypkgs:
-            pkg.installed:
-                - pkgs:
-                    - foo: '~'
-                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
-                    - baz
+          pkg.installed:
+            - pkgs:
+              - foo: '~'
+              - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+              - baz
 
     names
         A list of packages to install from a software repository. Each package
         will be installed individually by the package manager.
 
-    Usage::
+        .. warning::
 
-        mypkgs:
-          pkg.installed:
-            - names:
-              - foo
-              - bar
-              - baz
-
-    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
-    :mod:`ebuild <salt.modules.ebuild>`,
-    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
-    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
-    in the ``names`` argument. Example::
-
-        mypkgs:
-          pkg.installed:
-            - names:
-              - foo
-              - bar: 1.2.3-4
-              - baz
-
-    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
-    :mod:`pacman <salt.modules.pacman>` and
-    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-    ``>`` operators for more control over what versions will be installed.
-    Example::
-
-        mypkgs:
-          pkg.installed:
-            - names:
-              - foo
-              - bar: '>=1.2.3-4'
-              - baz
-
-    ``NOTE:`` When using comparison operators, the expression must be enclosed
-    in quotes to avoid a YAML render error.
-
-    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
-    flag list and/or if the given packages should be in package.accept_keywords
-    file and/or the overlay from which you want the package to be installed.
-    Example::
-
-        mypkgs:
-            pkg.installed:
-                - names:
-                    - foo: '~'
-                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
-                    - baz
-
+            Unlike ``pkgs``, the ``names`` parameter cannot specify a version.
+            In addition, it makes a separate call to the package management
+            frontend to install each package, whereas ``pkgs`` makes just a
+            single call. It is therefore recommended to use ``pkgs`` instead of
+            ``names`` to install multiple packages, both for the additional
+            features and the performance improvement that it brings.
 
     sources
         A list of packages to install, along with the source URI or local path
