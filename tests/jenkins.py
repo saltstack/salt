@@ -425,6 +425,41 @@ def run(opts):
             delete_vm(opts)
         sys.exit(retcode)
 
+    if opts.prep_sls_2 is not None:
+        time.sleep(3)
+
+        # Run the 2nd preparation SLS
+        cmd = (
+            'salt -t 30 {vm_name} state.sls {prep_sls_2} pillar="{pillar}" '
+            '--no-color'.format(
+                prep_sls_2=opts.prep_sls_2,
+                pillar=build_pillar_data(opts),
+                vm_name=vm_name,
+            )
+        )
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        stdout, _ = proc.communicate()
+
+        if stdout:
+            print(stdout)
+        sys.stdout.flush()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to execute the 2nd preparation SLS file. Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
+            sys.exit(retcode)
+
     # Run remote checks
     if opts.test_git_url is not None:
         time.sleep(1)
@@ -603,6 +638,10 @@ def parse():
         '--prep-sls',
         default='git.salt',
         help='The sls file to execute to prepare the system')
+    parser.add_option(
+        '--prep-sls-2',
+        default=None,
+        help='An optional 2nd system preparation SLS')
     parser.add_option(
         '--sls',
         default='testrun-no-deps',
