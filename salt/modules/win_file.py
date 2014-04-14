@@ -19,11 +19,13 @@ import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
 import difflib  # do not remove, used in imported file.py functions
+import hashlib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
 import shutil  # do not remove, used in imported file.py functions
 import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
+import fnmatch  # do not remove, used in imported file.py functions
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -339,6 +341,11 @@ def get_pgroup(path, follow_symlinks=True):
 
     Ensure you know what you are doing before using this function.
 
+    The return value may be 'None', e.g. if the user is not on a domain. This is
+    a valid group - do not confuse this with the Salt/Python value of None which
+    means no value was returned. To be certain, use the `get_pgid` function
+    which will return the SID, including for the system 'None' group.
+
     CLI Example:
 
     .. code-block:: bash
@@ -470,11 +477,15 @@ def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
+    Symlinks are followed by default to mimic *nix behaviour. Specify
+    `follow_symlinks=False` to turn off this behaviour.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.get_uid c:\\temp\\test.txt
+        salt '*' file.get_uid c:\\temp\\test.txt follow_symlinks=False
     '''
     if not os.path.exists(path):
         return False
@@ -498,11 +509,15 @@ def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
+    Symlinks are followed by default to mimic *nix behaviour. Specify
+    `follow_symlinks=False` to turn off this behaviour.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.get_user c:\\temp\\test.txt
+        salt '*' file.get_user c:\\temp\\test.txt follow_symlinks=False
     '''
     return uid_to_user(get_uid(path, follow_symlinks))
 
@@ -522,6 +537,13 @@ def get_mode(path):
     '''
     if not os.path.exists(path):
         return ''
+
+    func_name = '{}.get_mode'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details. '
+                 'The value returned is always None.', func_name)
+
     return None
 
 
@@ -540,12 +562,17 @@ def lchown(path, user, group=None, pgroup=None):
     If you do want to change the 'primary group' property and understand the
     implications, pass the Windows only parameter, pgroup, instead.
 
+    To set the primary group to 'None', it must be specified in lowercase.
+    Otherwise Salt will interpret it as the Python value of None and no primary
+    group changes will occur. See the example below.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.lchown c:\\temp\\test.txt myusername
         salt '*' file.lchown c:\\temp\\test.txt myusername pgroup=administrators
+        salt '*' file.lchown c:\\temp\\test.txt myusername pgroup=none
     '''
     if group:
         func_name = '{}.lchown'.format(__virtualname__)
@@ -571,12 +598,17 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     If you do want to change the 'primary group' property and understand the
     implications, pass the Windows only parameter, pgroup, instead.
 
+    To set the primary group to 'None', it must be specified in lowercase.
+    Otherwise Salt will interpret it as the Python value of None and no primary
+    group changes will occur. See the example below.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.chown c:\\temp\\test.txt myusername
         salt '*' file.chown c:\\temp\\test.txt myusername pgroup=administrators
+        salt '*' file.chown c:\\temp\\test.txt myusername pgroup=none
     '''
     # the group parameter is not used; only provided for API compatibility
     if group:
@@ -653,12 +685,23 @@ def chpgrp(path, group):
 
     Ensure you know what you are doing before using this function.
 
+    To set the primary group to 'None', it must be specified in lowercase.
+    Otherwise Salt will interpret it as the Python value of None and no primary
+    group changes will occur. See the example below.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.chpgrp c:\\temp\\test.txt administrators
+        salt '*' file.chpgrp c:\\temp\\test.txt none
     '''
+    if group is None:
+        raise SaltInvocationError("The group value was specified as None and "
+                                  "is invalid. If you mean the built-in None "
+                                  "group, specify the group in lowercase, e.g. "
+                                  "'none'.")
+
     err = ''
     # get SID object for group
     try:
@@ -917,6 +960,12 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
+    func_name = '{}.set_mode'.format(__virtualname__)
+    if __opts__.get('fun', '') == func_name:
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details. '
+                 'The value returned is always None.', func_name)
+
     return get_mode(path)
 
 
