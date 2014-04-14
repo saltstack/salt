@@ -1172,7 +1172,14 @@ def readlink(path):
 
     if target.startswith('\\??\\'):
         target = target[4:]
-    # comes out in 8.3 form; convert it to LFN to make it look nicer
-    target = win32file.GetLongPathName(target)
+
+    try:
+        # comes out in 8.3 form; convert it to LFN to make it look nicer
+        target = win32file.GetLongPathName(target)
+    except pywinerror as e:
+        # if file is not found (i.e. bad symlink), return it anyway like on *nix
+        if e.winerror == 2:
+            return target
+        raise
 
     return target
