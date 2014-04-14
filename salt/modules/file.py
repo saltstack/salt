@@ -3480,7 +3480,12 @@ def open_files(by_pid=False):
             fd_.append('{0}/fd/{1}'.format(ppath, fpath))
 
         for tid in tids:
-            fd_.append(os.path.realpath('{0}/task/{1}/exe'.format(ppath, tid)))
+            try:
+                fd_.append(
+                    os.path.realpath('{0}/task/{1}/exe'.format(ppath, tid))
+                )
+            except OSError:
+                continue
 
             for tpath in os.listdir('{0}/task/{1}/fd'.format(ppath, tid)):
                 fd_.append('{0}/task/{1}/fd/{2}'.format(ppath, tid, tpath))
