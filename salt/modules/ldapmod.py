@@ -97,7 +97,7 @@ def _config(name, key=None, **kwargs):
 
 def _connect(**kwargs):
     '''
-    Instantiate LDAP Connection class and return a LDAP connection object
+    Instantiate LDAP Connection class and return an LDAP connection object
     '''
     connargs = {}
     for name in ['uri', 'tls', 'no_verify', 'anonymous', 'binddn', 'bindpw']:
@@ -179,13 +179,13 @@ def search(filter,      # pylint: disable=C0103
 
 class _LDAPConnection(object):
     '''
-    Setup a LDAP connection.
+    Setup an LDAP connection.
     '''
 
     def __init__(self, uri, tls, no_verify, anonymous,
                  binddn, bindpw):
         '''
-        Bind to a LDAP directory using passed credentials.
+        Bind to an LDAP directory using passed credentials.
         '''
         self.uri = uri
         self.tls = tls

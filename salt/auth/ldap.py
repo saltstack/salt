@@ -62,13 +62,13 @@ def _render_template(param, username):
 
 class _LDAPConnection(object):
     '''
-    Setup a LDAP connection.
+    Setup an LDAP connection.
     '''
 
     def __init__(self, uri, tls, no_verify, binddn, bindpw,
                  anonymous):
         '''
-        Bind to a LDAP directory using passed credentials.
+        Bind to an LDAP directory using passed credentials.
         '''
         self.uri = uri
         self.tls = tls
