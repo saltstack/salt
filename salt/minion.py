@@ -1897,7 +1897,7 @@ class Matcher(object):
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
-                if results:
+                if results or match in ['(', ')']:
                     if match == 'not':
                         if results[-1] == 'and':
                             pass
@@ -1917,7 +1917,7 @@ class Matcher(object):
         try:
             return eval(results)
         except Exception:
-            log.error('Invalid compound target: {0}'.format(tgt))
+            log.error('Invalid compound target: {0} for results: {1}'.format(tgt, results))
             return False
         return False
 
