@@ -261,7 +261,8 @@ def gid_to_group(gid):
     '''
     func_name = '{}.gid_to_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details.', func_name)
 
     return uid_to_user(gid)
 
@@ -286,7 +287,8 @@ def group_to_gid(group):
     '''
     func_name = '{}.group_to_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details.', func_name)
 
     return user_to_uid(group)
 
@@ -373,7 +375,9 @@ def get_gid(path, follow_symlinks=True):
     '''
     func_name = '{}.get_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details. '
+                 'The value returned is the uid.', func_name)
 
     return get_uid(path, follow_symlinks)
 
@@ -405,7 +409,9 @@ def get_group(path, follow_symlinks=True):
     '''
     func_name = '{}.get_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
+        log.info('The function %s should not be used on Windows systems; '
+                 'see function docs for details. '
+                 'The value returned is the user (owner).', func_name)
 
     return get_user(path, follow_symlinks)
 
