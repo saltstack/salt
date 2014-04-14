@@ -173,22 +173,48 @@ def _change_privilege(privilege_name, enable):
         'Enabling' if enable else 'Disabling',
         privilege_name
     )
+    # this is a pseudo-handle that doesn't need to be closed
     hProc = win32api.GetCurrentProcess()
-    hToken = win32security.OpenProcessToken(
-        hProc,
-        win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
-    )
-    privilege = win32security.LookupPrivilegeValue(None, privilege_name)
-    if enable:
-        enabled = win32security.SE_PRIVILEGE_ENABLED
-    else:
-        # a value of 0 disables a privilege (there's no constant for it)
-        enabled = 0
-    changes = win32security.AdjustTokenPrivileges(
-        hToken,
-        False,
-        [(privilege, enabled)]
-    )
+    hToken = None
+    try:
+        hToken = win32security.OpenProcessToken(
+            hProc,
+            win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
+        )
+        privilege = win32security.LookupPrivilegeValue(None, privilege_name)
+        if enable:
+            privilege_attrs = win32security.SE_PRIVILEGE_ENABLED
+        else:
+            # a value of 0 disables a privilege (there's no constant for it)
+            privilege_attrs = 0
+
+        # check that the handle has the requested privilege
+        token_privileges = dict(win32security.GetTokenInformation(
+            hToken, win32security.TokenPrivileges))
+        if privilege not in token_privileges:
+            if enable:
+                raise SaltInvocationError(
+                    'The requested privilege {} is not available for this '
+                    'process (check Salt user privileges).'.format(privilege_name))
+            else:  # disable a privilege this process does not have
+                log.debug('Cannot disable privilege %s because this process '
+                          'does not have that privilege.', privilege_name)
+                return True
+        else:
+            # check if the privilege is already in the requested state
+            if token_privileges[privilege] == privilege_attrs:
+                log.debug('The requested privilege %s is already in the '
+                          'requested state.', privilege_name)
+                return True
+
+        changes = win32security.AdjustTokenPrivileges(
+            hToken,
+            False,
+            [(privilege, privilege_attrs)]
+        )
+    finally:
+        if hToken:
+            win32api.CloseHandle(hToken)
 
     if not bool(changes):
         raise SaltInvocationError(
