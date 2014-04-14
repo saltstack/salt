@@ -571,7 +571,7 @@ def lchown(path, user, group=None, pgroup=None):
     If you do want to change the 'primary group' property and understand the
     implications, pass the Windows only parameter, pgroup, instead.
 
-    To set the primary group to 'None', it must be specified in lowercase.
+    To set the primary group to 'None', it must be specified in quotes.
     Otherwise Salt will interpret it as the Python value of None and no primary
     group changes will occur. See the example below.
 
@@ -580,8 +580,8 @@ def lchown(path, user, group=None, pgroup=None):
     .. code-block:: bash
 
         salt '*' file.lchown c:\\temp\\test.txt myusername
-        salt '*' file.lchown c:\\temp\\test.txt myusername pgroup=administrators
-        salt '*' file.lchown c:\\temp\\test.txt myusername pgroup=none
+        salt '*' file.lchown c:\\temp\\test.txt myusername pgroup=Administrators
+        salt '*' file.lchown c:\\temp\\test.txt myusername "pgroup='None'"
     '''
     if group:
         func_name = '{}.lchown'.format(__virtualname__)
@@ -607,7 +607,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     If you do want to change the 'primary group' property and understand the
     implications, pass the Windows only parameter, pgroup, instead.
 
-    To set the primary group to 'None', it must be specified in lowercase.
+    To set the primary group to 'None', it must be specified in quotes.
     Otherwise Salt will interpret it as the Python value of None and no primary
     group changes will occur. See the example below.
 
@@ -616,8 +616,8 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     .. code-block:: bash
 
         salt '*' file.chown c:\\temp\\test.txt myusername
-        salt '*' file.chown c:\\temp\\test.txt myusername pgroup=administrators
-        salt '*' file.chown c:\\temp\\test.txt myusername pgroup=none
+        salt '*' file.chown c:\\temp\\test.txt myusername pgroup=Administrators
+        salt '*' file.chown c:\\temp\\test.txt myusername "pgroup='None'"
     '''
     # the group parameter is not used; only provided for API compatibility
     if group:
@@ -694,7 +694,7 @@ def chpgrp(path, group):
 
     Ensure you know what you are doing before using this function.
 
-    To set the primary group to 'None', it must be specified in lowercase.
+    To set the primary group to 'None', it must be specified in quotes.
     Otherwise Salt will interpret it as the Python value of None and no primary
     group changes will occur. See the example below.
 
@@ -702,8 +702,8 @@ def chpgrp(path, group):
 
     .. code-block:: bash
 
-        salt '*' file.chpgrp c:\\temp\\test.txt administrators
-        salt '*' file.chpgrp c:\\temp\\test.txt none
+        salt '*' file.chpgrp c:\\temp\\test.txt Administrators
+        salt '*' file.chpgrp c:\\temp\\test.txt "'None'"
     '''
     if group is None:
         raise SaltInvocationError("The group value was specified as None and "
