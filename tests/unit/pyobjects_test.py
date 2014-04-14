@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import os
+import shutil
+import tempfile
+import uuid
+
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
@@ -7,7 +12,7 @@ ensure_in_syspath('../')
 
 import salt.state
 from salt.config import minion_config
-from salt.template import compile_template_str
+from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
                                   SaltObject, InvalidFunction, DuplicateState)
@@ -24,7 +29,9 @@ pydmesg_expected = {
         {'user': 'root'},
     ]
 }
-pydmesg_salt_expected = OrderedDict([('/usr/local/bin/pydmesg', pydmesg_expected)])
+pydmesg_salt_expected = OrderedDict([
+    ('/usr/local/bin/pydmesg', pydmesg_expected)
+])
 pydmesg_kwargs = dict(user='root', group='root', mode='0755',
                       source='salt://debian/files/pydmesg.py')
 
@@ -66,6 +73,19 @@ class Samba(Map):
 
 with Pkg.installed("samba", names=[Samba.server, Samba.client]):
     Service.running("samba", name=Samba.service)
+'''
+
+import_template = '''#!pyobjects
+import salt://map.sls
+
+Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
+'''
+
+from_import_template = '''#!pyobjects
+# this spacing is like this on purpose to ensure it's stripped properly
+from   salt://map.sls  import     Samba
+
+Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
 '''
 
 
@@ -147,31 +167,69 @@ class StateTests(TestCase):
         self.assertEqual(
             Registry.states,
             OrderedDict([
-                ('dup', OrderedDict([
-                    ('file.managed', [
-                        {'name': '/dup'}
-                    ]),
-                    ('service.running', [
-                        {'name': 'dup-service'}
-                    ])
-                ]))
+                ('dup',
+                 OrderedDict([
+                     ('file.managed', [
+                         {'name': '/dup'}
+                     ]),
+                     ('service.running', [
+                         {'name': 'dup-service'}
+                     ])
+                 ]))
             ])
         )
 
 
 class RendererMixin(object):
-    def render(self, template, opts=None):
-        _config = minion_config(None)
-        _config['file_client'] = 'local'
+    '''
+    This is a mixin that adds a ``.render()`` method to render a template
+
+    It must come BEFORE ``TestCase`` in the declaration of your test case
+    class so that our setUp & tearDown get invoked first, and super can
+    trigger the methods in the ``TestCase`` class.
+    '''
+    def setUp(self, *args, **kwargs):
+        super(RendererMixin, self).setUp(*args, **kwargs)
+
+        self.root_dir = tempfile.mkdtemp('pyobjects_test_root')
+
+        self.config = minion_config(None)
+        self.config.update({
+            'file_client': 'local',
+            'file_roots': {
+                'base': [self.root_dir]
+            }
+        })
+
+    def tearDown(self, *args, **kwargs):
+        shutil.rmtree(self.root_dir)
+
+        super(RendererMixin, self).tearDown(*args, **kwargs)
+
+    def write_template_file(self, filename, content):
+        full_path = os.path.join(self.root_dir, filename)
+        with open(full_path, 'w') as f:
+            f.write(content)
+        return full_path
+
+    def render(self, template, opts=None, filename=None):
         if opts:
-            _config.update(opts)
-        _state = salt.state.State(_config)
-        return compile_template_str(template,
-                                    _state.rend,
-                                    _state.opts['renderer'])
+            self.config.update(opts)
+
+        if not filename:
+            filename = ".".join([
+                str(uuid.uuid4()),
+                "sls"
+            ])
+        full_path = self.write_template_file(filename, template)
+
+        state = salt.state.State(self.config)
+        return compile_template(full_path,
+                                state.rend,
+                                state.opts['renderer'])
 
 
-class RendererTests(TestCase, RendererMixin):
+class RendererTests(RendererMixin, TestCase):
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(ret, OrderedDict([
@@ -210,8 +268,28 @@ class RendererTests(TestCase, RendererMixin):
             ])),
         ]))
 
+    def test_sls_imports(self):
+        def render_and_assert(template):
+            ret = self.render(template,
+                              {'grains': {
+                                  'os_family': 'Debian',
+                                  'os': 'Debian'
+                              }})
 
-class MapTests(TestCase, RendererMixin):
+            self.assertEqual(ret, OrderedDict([
+                ('samba-imported', {
+                    'pkg.removed': [
+                        {'names': ['samba', 'samba-client']},
+                    ]
+                })
+            ]))
+
+        self.write_template_file("map.sls", map_template)
+        render_and_assert(import_template)
+        render_and_assert(from_import_template)
+
+
+class MapTests(RendererMixin, TestCase):
     def test_map(self):
         def samba_with_grains(grains):
             return self.render(map_template, {'grains': grains})
