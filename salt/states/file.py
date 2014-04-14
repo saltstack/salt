@@ -503,20 +503,16 @@ def _check_symlink_ownership(path, user, group):
     return (cur_user == user) and (cur_group == group)
 
 
-def _set_symlink_ownership(path, uid, gid):
+def _set_symlink_ownership(path, user, group):
     '''
     Set the ownership of a symlink and return a boolean indicating
     success/failure
     '''
     try:
-        __salt__['file.lchown'](path, uid, gid)
+        __salt__['file.lchown'](path, user, group)
     except OSError:
         pass
-    return _check_symlink_ownership(
-        path,
-        __salt__['file.uid_to_user'](uid),
-        __salt__['file.gid_to_group'](gid)
-    )
+    return _check_symlink_ownership(path, user, group)
 
 
 def _symlink_check(name, target, force, user, group):
@@ -781,7 +777,7 @@ def symlink(
                 ret['comment'] = ('Symlink {0} is present and owned by '
                                   '{1}:{2}'.format(name, user, group))
             else:
-                if _set_symlink_ownership(name, uid, gid):
+                if _set_symlink_ownership(name, user, group):
                     ret['comment'] = ('Set ownership of symlink {0} to '
                                       '{1}:{2}'.format(name, user, group))
                     ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
@@ -845,7 +841,7 @@ def symlink(
             ret['changes']['new'] = name
 
         if not _check_symlink_ownership(name, user, group):
-            if not _set_symlink_ownership(name, uid, gid):
+            if not _set_symlink_ownership(name, user, group):
                 ret['result'] = False
                 ret['comment'] += (', but was unable to set ownership to '
                                    '{0}:{1}'.format(user, group))
