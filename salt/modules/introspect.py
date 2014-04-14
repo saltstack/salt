@@ -6,6 +6,7 @@ usable by Salt States
 
 import os
 
+
 def running_service_owners(
         exclude=('/dev', '/home', '/media', '/proc', '/run', '/sys/', '/tmp',
                  '/var')
