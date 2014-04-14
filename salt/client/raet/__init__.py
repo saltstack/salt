@@ -27,6 +27,8 @@ class LocalClient(salt.client.LocalClient):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None):
+
+        #import  wingdbstub
         salt.client.LocalClient.__init__(self, c_path, mopts)
 
     def pub(self,

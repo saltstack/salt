@@ -82,6 +82,7 @@ class SetupWorker(ioflo.base.deeding.Deed):
         '''
         Set up the uxd stack and behaviors
         '''
+        #import wingdbstub
         self.uxd_stack.value = LaneStack(
                 lanename=self.opts.value['id'],
                 yid=self.yid.value,
@@ -138,7 +139,7 @@ class RouterWorker(ioflo.base.deeding.Deed):
                 else:
                     r_share = 'ret'
                 ret['route'] = {
-                        'src': (self.opts.value['id'], self.yid.value, None),
+                        'src': (self.opts.value['id'], self.uxd_stack.value.local.name, None),
                         'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)
                         }
                 self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids.get('yard0'))

@@ -395,8 +395,8 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_yard is not None:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.remotes:
-                self.uxd_stack.value.transmit(msg, d_yard.uid)
+            if d_yard in self.uxd_stack.value.uids:
+                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
                 return
             return
         if d_share is None:
@@ -410,7 +410,7 @@ class Router(ioflo.base.deeding.Deed):
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
             self.uxd_stack.value.transmit(msg,
-                    self.stack.value.uids.get(next(self.workers.value)))
+                    self.uxd_stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -419,6 +419,7 @@ class Router(ioflo.base.deeding.Deed):
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
         '''
+        #import wingdbstub
         try:
             d_estate = msg['route']['dst'][0]
             d_yard = msg['route']['dst'][1]
@@ -430,7 +431,7 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.udp_stack.value.local:
             # Forward to the correct estate
-            eid = self.udp_stack.value.eids.get(d_estate)
+            eid = self.udp_stack.value.uids.get(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
         if d_share == 'pub_ret':
@@ -439,8 +440,8 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_yard != self.uxd_stack.value.local.name:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.remotes:
-                self.uxd_stack.value.transmit(msg, d_yard.uid)
+            if d_yard in self.uxd_stack.value.uids:
+                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
                 return
             return
         if d_share is None:
@@ -487,7 +488,7 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         rm_ = []
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.remotes:
+            if y_name not in self.uxd_stack.value.uids:
                 rm_.append(y_name)
                 continue
             route = {'src': ('router', self.uxd_stack.value.local.name, None),
@@ -528,8 +529,8 @@ class Publisher(ioflo.base.deeding.Deed):
         Publish the message out to the targeted minions
         '''
         pub_data = pub_msg['return']
-        for minion in self.udp_stack.value.eids:
-            eid = self.udp_stack.value.eids.get(minion)
+        for minion in self.udp_stack.value.uids:
+            eid = self.udp_stack.value.uids.get(minion)
             if eid:
                 route = {
                         'dst': (minion, None, 'fun'),
