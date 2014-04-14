@@ -32,8 +32,7 @@ def compound(tgt, minion_id=None):
 
         salt '*' match.compound 'L@cheese,foo and *'
     '''
-    opts = {}
-    opts['grains'] = __grains__
+    opts = {'grains': __grains__}
     if minion_id is not None:
         if not isinstance(minion_id, string_types):
             minion_id = str(minion_id)
