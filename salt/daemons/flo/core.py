@@ -106,6 +106,7 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
 
+
 class CloserStackUdpRaetSalt(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     CloserStackUdpRaetSalt closes stack server socket connection
@@ -120,6 +121,7 @@ class CloserStackUdpRaetSalt(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         if self.stack.value and isinstance(self.stack.value, RoadStack):
             self.stack.value.server.close()
+
 
 class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
@@ -142,6 +144,7 @@ class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
             stack.join(mha=self.mha)
+
 
 class JoinedStackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
@@ -184,6 +187,7 @@ class AllowerStackUdpRaetSalt(ioflo.base.deeding.Deed):
             stack.allow()
         return None
 
+
 class AllowedStackUdpRaetSalt(ioflo.base.deeding.Deed):
     '''
     Updates status with .allowed of zeroth remote estate (master)
@@ -205,6 +209,7 @@ class AllowedStackUdpRaetSalt(ioflo.base.deeding.Deed):
             if stack.remotes:
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
+
 
 class ModulesLoad(ioflo.base.deeding.Deed):
     '''
