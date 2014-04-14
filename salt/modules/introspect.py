@@ -100,11 +100,11 @@ def enabled_service_owners():
 
 def service_highstate(requires=True):
     '''
-    Return running and enabled services in a lowstate structure.
+    Return running and enabled services in a highstate structure.
 
     CLI Example:
 
-        salt myminion introspect.service_lowstate
+        salt myminion introspect.service_highstate
     '''
     ret = {}
     running = running_service_owners()
