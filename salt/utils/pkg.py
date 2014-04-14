@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from salt._compat import string_types
 
 
