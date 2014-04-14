@@ -72,6 +72,28 @@ def _systemctl_cmd(action, name):
     return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
 
 
+def _get_all_units():
+    '''
+    Get all units and their state. Units ending in .service
+    are normalized so that they can be referenced without a type suffix.
+    '''
+    rexp = re.compile(r'(?m)^(?P<name>.+)\.(?P<type>' +
+                      '|'.join(VALID_UNIT_TYPES) +
+                      r')\s+loaded\s+(?P<active>[^\s]+)')
+
+    out = __salt__['cmd.run_stdout'](
+        'systemctl --full --no-legend --no-pager list-units | col -b'
+    )
+
+    ret = {}
+    for match in rexp.finditer(out):
+        name = match.group('name')
+        if match.group('type') != 'service':
+            name += '.' + match.group('type')
+        ret[name] = match.group('active')
+    return ret
+
+
 def _get_all_unit_files():
     '''
     Get all unit files and their state. Unit files ending in .service
@@ -82,7 +104,7 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full list-unit-files | col -b'
+        'systemctl --full --no-legend --no-pager list-unit-files | col -b'
     )
 
     ret = {}
@@ -173,7 +195,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(_get_all_unit_files().keys())
+    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
 
 
 def available(name):
@@ -187,7 +209,15 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    return _canonical_template_unit_name(name) in get_all()
+    name = _canonical_template_unit_name(name)
+    units = get_all()
+    if name in units:
+        return True
+    elif '@' in name:
+        templatename = name[:name.find('@') + 1]
+        return templatename in units
+    else:
+        return False
 
 
 def missing(name):
@@ -202,7 +232,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not _canonical_template_unit_name(name) in get_all()
+    return not available(name)
 
 
 def start(name):
