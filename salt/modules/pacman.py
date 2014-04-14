@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
@@ -530,3 +531,31 @@ def file_dict(*packages):
                 ret[comps[0]] = []
             ret[comps[0]].append((' '.join(comps[1:])))
     return {'errors': errors, 'packages': ret}
+
+
+def owner(path=None, *paths):
+    '''
+    Return the name of the package that owns the specified file. Files may be
+    passed as a string (``path``) or as a list of strings (``paths``). If
+    ``path`` contains a comma, it will be converted to ``paths``. If a file
+    name legitimately contains a comma, pass it in via ``paths``.
+
+    CLI Example:
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+    '''
+    cmd = 'pacman -Qqo {0}'
+    if path and isinstance(path, string_types):
+        if not ',' in path:
+            return {path: __salt__['cmd.run'](cmd.format(path)).strip()}
+        else:
+            paths = path.split(',')
+
+    if paths and isinstance(paths, list):
+        owners = {}
+        for fp_ in paths:
+            owners[fp_] = __salt__['cmd.run'](cmd.format(fp_)).strip()
+        return owners
+
+    return {'Error': 'Path must be passed in as a string or list'}
