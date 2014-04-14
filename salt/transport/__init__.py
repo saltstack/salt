@@ -56,8 +56,8 @@ class RAETChannel(Channel):
         self.stack = LaneStack(
                 lanename=self.opts['id'],
                 yid=salt.utils.gen_jid(),
-                dirpath=self.opts['cache_dir'],
-                hadirpath=self.opts['sock_dir'])
+                dirpath=self.opts['cachedir'],
+                sockdirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.RemoteYard(
                 yid=0,
