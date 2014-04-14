@@ -204,7 +204,7 @@ def _make_nodes(root):
 
     https://wiki.archlinux.org/index.php/Linux_Containers
     '''
-    dirs =(
+    dirs = (
         ('{0}/etc'.format(root), 'root', 'root', '755'),
         ('{0}/dev'.format(root), 'root', 'root', '755'),
         ('{0}/dev/pts'.format(root), 'root', 'root', '755'),
