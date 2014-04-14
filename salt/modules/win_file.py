@@ -274,7 +274,7 @@ def group_to_gid(group):
     Convert the group to the gid on this system
 
     Under Windows, because groups are just another ACL entity, this function
-    behaves the same as user_to_uid.
+    behaves the same as user_to_uid, except if None is given, '' is returned.
 
     For maintaining Windows systems, this function is superfluous and only
     exists for API compatibility with *nix. Use the user_to_uid function
@@ -292,7 +292,7 @@ def group_to_gid(group):
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details.', func_name)
 
-    return user_to_uid(group)
+    return _user_to_uid(group)
 
 
 def get_pgid(path, follow_symlinks=True):
@@ -457,6 +457,15 @@ def user_to_uid(user):
     .. code-block:: bash
 
         salt '*' file.user_to_uid myusername
+    '''
+    if user is None:
+        user = salt.utils.get_user()
+    return _user_to_uid(user)
+
+
+def _user_to_uid(user):
+    '''
+    Convert user name to a uid
     '''
     if user is None or user == '':
         return ''
