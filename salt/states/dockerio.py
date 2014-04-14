@@ -555,7 +555,7 @@ def running(name, container=None, port_bindings=None, binds=None,
         .. code-block:: yaml
 
             - binds:
-                - /var/log/service: /var/log/service
+                /var/log/service: /var/log/service
 
     publish_all_ports
 
