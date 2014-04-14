@@ -124,6 +124,42 @@ a state.
     Service.running(extend('apache'),
                     watch=[File('/etc/httpd/extra/httpd-vhosts.conf')])
 
+
+Importing from other state files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Like any Python project that grows you will likely reach a point where you want
+to create reusability in your state tree and share objects between state files,
+Map Data (described below) is a perfect example of this.
+
+To facilitate this Python's ``import`` statement has been augmented to allow
+for a special case when working with a Salt state tree. If you specify a Salt
+url (``salt://...``) as the target for importing from then the pyobjects
+renderer will take care of fetching the file for you, parsing it with all of
+the pyobjects features available and then place the requested objects in the
+global scope of the template being rendered.
+
+This works for both types of import statements, ``import X`` and
+``from X import Y``.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    import salt://myfile.sls
+    from salt://something/data.sls import Object
+
+
+See the Map Data section for a more practical use.
+
+Caveats:
+
+* You cannot use the ``as`` syntax, you can only import objects using their
+  existing name.
+
+* Imported objects are ALWAYS put into the global scope of your template,
+  regardless of where your import statement is.
+
 Salt object
 ^^^^^^^^^^^
 In the spirit of the object interface for creating state data pyobjects also
@@ -178,9 +214,6 @@ To build map data using pyobjects we provide a class named Map that you use to
 build your own classes with inner classes for each set of values for the
 different grain matches.
 
-To access the data in the map you simply access the attribute name on the base
-class that is extending Map.
-
 .. code-block:: python
    :linenos:
 
@@ -203,6 +236,17 @@ class that is extending Map.
             client = 'samba'
             service = 'smb'
 
+To use this new data you can import it into your state file and then access
+your attributes. To access the data in the map you simply access the attribute
+name on the base class that is extending Map. Assuming the above Map was in the
+file ``samba/map.sls``, you could do the following.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    from salt://samba/map.sls import Samba
 
     with Pkg.installed("samba", names=[Samba.server, Samba.client]):
         Service.running("samba", name=Samba.service)
@@ -210,14 +254,19 @@ class that is extending Map.
 TODO
 ^^^^
 * Interface for working with reactor files
-* Allow for imports based on the salt file root
 '''
 
 import logging
+import re
 import sys
 
 from salt.loader import _create_loader
-from salt.utils.pyobjects import (Registry, StateFactory, SaltObject, Map)
+from salt.fileclient import get_file_client
+from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
+
+# our import regexes
+FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
+IMPORT_RE = r'^\s*import\s+(salt:\/\/.*)$'
 
 log = logging.getLogger(__name__)
 
@@ -266,6 +315,9 @@ def render(template, saltenv='base', sls='', **kwargs):
     _globals = {}
     _locals = {}
 
+    # this will be used to fetch any import files
+    client = get_file_client(__opts__)
+
     # create our StateFactory objects
     mod_globals = {'StateFactory': StateFactory}
     for mod in __context__['pyobjects_states']:
@@ -274,14 +326,21 @@ def render(template, saltenv='base', sls='', **kwargs):
             part.capitalize()
             for part in mod.split('_')
         ])
-        mod_cmd = "%s = StateFactory('%s', valid_funcs=['%s'])" % (
-            mod_camel, mod,
-            "','".join(__context__['pyobjects_states'][mod].keys())
+        valid_funcs = "','".join(
+            __context__['pyobjects_states'][mod].keys()
         )
-        if sys.version > 3:
+        mod_cmd = "{0} = StateFactory('{1!s}', valid_funcs=['{2}'])".format(
+            mod_camel,
+            mod,
+            valid_funcs
+        )
+        if sys.version_info[0] > 2:
+            # in py3+ exec is a function
             exec(mod_cmd, mod_globals, mod_locals)
         else:
+            # prior to that it is a statement
             exec mod_cmd in mod_globals, mod_locals
+
         _globals[mod_camel] = mod_locals[mod_camel]
 
     # add our include and extend functions
@@ -310,11 +369,79 @@ def render(template, saltenv='base', sls='', **kwargs):
     except NameError:
         pass
 
+    # process our sls imports
+    #
+    # we allow pyobjects users to use a special form of the import statement
+    # so that they may bring in objects from other files. while we do this we
+    # disable the registry since all we're looking for here is python objects,
+    # not salt state data
+    #
+    # once we have our template we scan through it and look for any "from X
+    # import Y" statements and if X ends in .sls then we process it by passing
+    # the file in X through the pyobjects renderer and putting the requested
+    # variables into our template
+    template_data = []
+    Registry.enabled = False
+    for line in template.readlines():
+        line = line.rstrip('\r\n')
+        matched = False
+        for RE in (IMPORT_RE, FROM_RE):
+            matches = re.match(RE, line)
+            if not matches:
+                continue
+
+            import_file = matches.group(1).strip()
+            try:
+                imports = matches.group(2).split(',')
+            except IndexError:
+                # if we don't have a third group in the matches object it means
+                # that we're importing everything
+                imports = None
+
+            state_file = client.cache_file(import_file, saltenv)
+            if not state_file:
+                raise ImportError("Could not find the file {0!r}".format(import_file))
+
+            with open(state_file) as f:
+                state_contents = f.read()
+
+            state_locals = {}
+            if sys.version_info[0] > 2:
+                # in py3+ exec is a function
+                exec(state_contents, _globals, state_locals)
+            else:
+                # prior to that it is a statement
+                exec state_contents in _globals, state_locals
+
+            if imports is None:
+                imports = state_locals.keys()
+
+            for name in imports:
+                name = name.strip()
+                if name not in state_locals:
+                    raise ImportError("{0!r} was not found in {1!r}".format(
+                        name,
+                        import_file
+                    ))
+                _globals[name] = state_locals[name]
+
+            matched = True
+            break
+
+        if not matched:
+            template_data.append(line)
+
+    final_template = "\n".join(template_data)
+
+    # re-enable the registry
+    Registry.enabled = True
+
     # now exec our template using our created scopes
-    # in py3+ exec is a function, prior to that it is a statement
-    if sys.version > 3:
-        exec(template.read(), _globals, _locals)
+    if sys.version_info[0] > 2:
+        # in py3+ exec is a function
+        exec(final_template, _globals, _locals)
     else:
-        exec template.read() in _globals, _locals
+        # prior to that it is a statement
+        exec final_template in _globals, _locals
 
     return Registry.salt_data()
