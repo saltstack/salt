@@ -58,3 +58,41 @@ def running_service_owners(
                 ret[service] = pkg.values()[0]
 
     return ret
+
+
+def enabled_service_owners():
+    '''
+    Return which packages own each of the services that are currently enabled.
+
+    CLI Example:
+
+        salt myminion introspect.enabled_service_owners
+    '''
+    error = {}
+    if not 'pkg.owner' in __salt__:
+        error['Unsupported Package Manager'] = (
+            'The module for the package manager on this system does not '
+            'support looking up which package(s) owns which file(s)'
+        )
+
+    if not 'service.show' in __salt__:
+        error['Unsupported Service Manager'] = (
+            'The module for the service manager on this system does not '
+            'support showing descriptive service data'
+        )
+
+    if error:
+        return {'Error': error}
+
+    ret = {}
+    services = __salt__['service.get_enabled']()
+
+    for service in services:
+        data = __salt__['service.show'](service)
+        if not 'ExecStart' in data:
+            continue
+        start_cmd = data['ExecStart']['path']
+        pkg = __salt__['pkg.owner'](start_cmd)
+        ret[service] = pkg.values()[0]
+
+    return ret
