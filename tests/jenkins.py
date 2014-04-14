@@ -392,7 +392,8 @@ def run(opts):
             sys.exit(retcode)
         print('matches!')
 
-    # Run tests here
+    # Run preparation SLS
+    time.sleep(3)
     cmd = (
         'salt -t 1800 {vm_name} state.sls {prep_sls} pillar="{pillar}" '
         '--no-color'.format(
@@ -424,7 +425,9 @@ def run(opts):
             delete_vm(opts)
         sys.exit(retcode)
 
+    # Run remote checks
     if opts.test_git_url is not None:
+        time.sleep(1)
         # Let's find out if the cloned repository if checked out from the
         # desired repository
         sys.stdout.write('Grabbing the cloned repository remotes information ... ')
@@ -465,6 +468,8 @@ def run(opts):
         print('matches!')
 
     if opts.test_git_commit is not None:
+        time.sleep(1)
+
         # Let's find out if the cloned repository is checked out at the desired
         # commit
         sys.stdout.write('Grabbing the cloned repository commit information ... ')
@@ -505,6 +510,7 @@ def run(opts):
         print('matches!')
 
     # Run tests here
+    time.sleep(3)
     cmd = (
         'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" --no-color'.format(
             sls=opts.sls,
