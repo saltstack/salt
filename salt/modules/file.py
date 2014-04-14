@@ -40,6 +40,7 @@ except ImportError:
 import salt.utils
 import salt.utils.find
 import salt.utils.filebuffer
+import salt.utils.files
 import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt._compat
@@ -1669,15 +1670,27 @@ def rename(src, dst):
     return False
 
 
-def copy(src, dst):
+def copy(src, dst, recurse=False, merge_existing=False, remove_existing=False):
     '''
-    Copy a file or directory
+    Copy a file or directory from source to dst
+
+    In order to copy a directory, the recurse flag is required, along
+    with one of the merge_existing or remove_existing flags.
+
+    merge_existing will keep files in the target directory,
+    overwriting files from the source.
+
+    remove_existing will remove all files in the target directory,
+    and copy files from the source.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.copy /path/to/src /path/to/dst
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True merge_existing=True
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True remove_existing=True
+
     '''
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -1688,7 +1701,24 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
-        shutil.copyfile(src, dst)
+        if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
+            if not recurse:
+                raise SaltInvocationError(
+                    "Cannot copy overwriting a directory without recurse flag set to true!")
+            if not (merge_existing or remove_existing):
+                raise SaltInvocationError(
+                    "one of merge_existing and remove_existing must be set!")
+            if merge_existing and remove_existing:
+                raise SaltInvocationError(
+                    "only one of merge_existing and remove_existing can be set!")
+            if remove_existing:
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+            elif merge_existing:
+                salt.utils.files.recursive_copy(src, dst)
+        else:
+            shutil.copyfile(src, dst)
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
