@@ -57,6 +57,10 @@ def extracted(name,
     source
         Archive source, same syntax as file.managed source argument.
 
+    source_hash
+        Hash of source file, or file with list of hash-to-file mappings.
+        It uses the same syntax as the file.managed source_hash argument.
+
     archive_format
         tar, zip or rar
 
