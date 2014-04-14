@@ -36,7 +36,7 @@ def wait_lock(lk_fn, dest):
     written. If there is no change in the file size after a short sleep,
     remove the lock and move forward.
     '''
-    if not os.path.exists(lk_fn):
+    if not os.path.isfile(lk_fn):
         return False
     if not os.path.isfile(dest):
         # The dest is not here, sleep for a bit, if the dest is not here yet
@@ -44,11 +44,7 @@ def wait_lock(lk_fn, dest):
         time.sleep(1)
         if not os.path.isfile(dest):
             try:
-                if not os.path.isdir(lk_fn):
-                    os.remove(lk_fn)
-                # folder based empty dir lock
-                else:
-                    os.rmdir(lk_fn)
+                os.remove(lk_fn)
             except (OSError, IOError):
                 pass
             return False
@@ -59,7 +55,7 @@ def wait_lock(lk_fn, dest):
     s_size = os.stat(dest).st_size
     while True:
         time.sleep(1)
-        if not os.path.exists(lk_fn):
+        if not os.path.isfile(lk_fn):
             return False
         size = os.stat(dest).st_size
         if size == s_size:
@@ -67,11 +63,7 @@ def wait_lock(lk_fn, dest):
             if s_count >= 3:
                 # The file is not being written to, kill the lock and proceed
                 try:
-                    if not os.path.isdir(lk_fn):
-                        os.remove(lk_fn)
-                    # folder based empty dir lock
-                    else:
-                        os.rmdir(lk_fn)
+                    os.remove(lk_fn)
                 except (OSError, IOError):
                     pass
                 return False
@@ -103,31 +95,17 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                         log.trace('Returning file_lists cache data from '
                                   '{0}'.format(list_cache))
                         return serial.load(fp_).get(form, []), False, False
-                else:
-                    locked = _lock_cache(w_lock)
-                    # if we are locked it may be cause of a killed
-                    # fileserver thread or parent salt-master.
-                    # In that case, we would just call the wait_lock
-                    # function which will take care of cleaning
-                    # obsolete and irrelevant locks.
-                    # This will at a bonus prevent us from
-                    # infinite loops.
-                    if not locked:
-                        wait_lock(w_lock, list_cache)
-                    locked = _lock_cache(w_lock)
-                    if locked:
-                        # Set the w_lock and go
-                        refresh_cache = True
-                        break
-                    else:
-                        attempt += 1
+                elif _lock_cache(w_lock):
+                    # Set the w_lock and go
+                    refresh_cache = True
+                    break
             except Exception:
                 time.sleep(0.2)
                 attempt += 1
                 continue
-            if attempt > 10:
-                save_cache = False
-                refresh_cache = True
+        if attempt > 10:
+            save_cache = False
+            refresh_cache = True
     return None, refresh_cache, save_cache
 
 
