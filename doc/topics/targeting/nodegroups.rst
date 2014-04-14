@@ -38,3 +38,8 @@ nodegroup`` on the line directly following the nodegroup name.
       group1:
         - match: nodegroup
         - webserver
+
+.. note::
+
+    When adding or modifying nodegroups to a master configuration file, the master must be restarted
+    for those changes to be recognized.

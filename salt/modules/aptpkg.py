@@ -16,6 +16,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -572,6 +573,128 @@ def upgrade(refresh=True, **kwargs):
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
+
+
+def hold(name=None, pkgs=None, **kwargs):
+    '''
+    Set package in 'hold' state, meaning it will not be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.hold <package name>
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.hold pkgs='["foo", "bar"]'
+
+    .. versionadded:: Helium
+
+    '''
+
+    if not name and not pkgs:
+        return 'Error: name or pkgs needs to be specified.'
+
+    if name and not pkgs:
+        pkgs = []
+        pkgs.append(name)
+
+    ret = {}
+    for pkg in pkgs:
+
+        if isinstance(pkg, dict):
+            pkg = pkg.keys()[0]
+
+        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
+        state = get_selections(pattern=pkg, state=hold)
+        if not state:
+            ret[pkg]['comment'] = 'Package {0} not currently held.'.format(pkg)
+        elif not salt.utils.is_true(state.get('hold', False)):
+            if 'test' in kwargs and kwargs['test']:
+                ret[pkg].update(result=None)
+                ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
+            else:
+                result = set_selections(
+                    selection={'hold': [pkg]}
+                )
+                ret[pkg].update(changes=result[pkg], result=True)
+                ret[pkg]['comment'] = 'Package {0} is now being held.'.format(pkg)
+        else:
+            ret[pkg].update(result=True)
+            ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
+    return ret
+
+
+def unhold(name=None, pkgs=None, **kwargs):
+    '''
+    Set package current in 'hold' state to install state,
+    meaning it will be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unhold <package name>
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unhold pkgs='["foo", "bar"]'
+
+    .. versionadded:: Helium
+
+    '''
+
+    log.debug('calling unhold {0}')
+    if not name and not pkgs:
+        return 'Error: name or pkgs needs to be specified.'
+
+    if name and not pkgs:
+        pkgs = []
+        pkgs.append(name)
+
+    ret = {}
+    for pkg in pkgs:
+
+        if isinstance(pkg, dict):
+            pkg = pkg.keys()[0]
+
+        ret[pkg] = {'changes': {}, 'result': False, 'comment': ''}
+        state = get_selections(pattern=pkg)
+        if not state:
+            ret[pkg]['comment'] = 'Package {0} does not have a state.'.format(pkg)
+        elif salt.utils.is_true(state.get('hold', False)):
+            if 'test' in kwargs and kwargs['test']:
+                ret[pkg].update(result=None)
+                ret['comment'] = 'Package {0} is set not to be held.'.format(pkg)
+            else:
+                result = set_selections(
+                    selection={'install': [pkg]}
+                )
+                ret[pkg].update(changes=result[pkg], result=True)
+                ret[pkg]['comment'] = 'Package {0} is no longer being held.'.format(pkg)
+        else:
+            ret[pkg].update(result=True)
+            ret[pkg]['comment'] = 'Package {0} is already set not to be held.'.format(pkg)
+
+    log.debug('in unhold {0}'.format(ret))
+    return ret
 
 
 def _clean_pkglist(pkgs):
@@ -1610,3 +1733,20 @@ def _resolve_deps(name, pkgs, **kwargs):
             except MinionError as exc:
                 raise CommandExecutionError(exc)
     return
+
+
+def owner(*paths):
+    '''
+    Return the name of the package that owns the specified file. Files may be
+    passed as a string (``path``) or as a list of strings (``paths``). If
+    ``path`` contains a comma, it will be converted to ``paths``. If a file
+    name legitimately contains a comma, pass it in via ``paths``.
+
+    CLI Example:
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+    '''
+    cmd = "dpkg -S {0} | cut -d':' -f1"
+    return salt.utils.pkg.find_owner(
+        __salt__['cmd.run'], cmd, *paths)

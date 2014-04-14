@@ -40,6 +40,7 @@ except ImportError:
 import salt.utils
 import salt.utils.find
 import salt.utils.filebuffer
+import salt.utils.files
 import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt._compat
@@ -1669,15 +1670,25 @@ def rename(src, dst):
     return False
 
 
-def copy(src, dst):
+def copy(src, dst, recurse=False, remove_existing=False):
     '''
-    Copy a file or directory
+    Copy a file or directory from source to dst
+
+    In order to copy a directory, the recurse flag is required, and
+    will by default overwrite files in the destination with the same path,
+    and retain all other existing files. (similar to cp -r on unix)
+
+    remove_existing will remove all files in the target directory,
+    and then copy files from the source.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.copy /path/to/src /path/to/dst
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True remove_existing=True
+
     '''
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -1688,7 +1699,18 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
-        shutil.copyfile(src, dst)
+        if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
+            if not recurse:
+                raise SaltInvocationError(
+                    "Cannot copy overwriting a directory without recurse flag set to true!")
+            if remove_existing:
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+            else:
+                salt.utils.files.recursive_copy(src, dst)
+        else:
+            shutil.copyfile(src, dst)
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)

@@ -656,7 +656,7 @@ class Minion(MinionBase):
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None):
         '''
-        Fire an event on the master
+        Fire an event on the master, or drop message if unable to send.
         '''
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
@@ -671,9 +671,16 @@ class Minion(MinionBase):
             return
         sreq = salt.payload.SREQ(self.opts['master_uri'])
         try:
-            sreq.send('aes', self.crypticle.dumps(load))
+            result = sreq.send('aes', self.crypticle.dumps(load))
+            try:
+                data = self.crypticle.loads(result)
+            except AuthenticationError:
+                log.info("AES key changed, re-authenticating")
+                # We can't decode the master's response to our event,
+                # so we will need to re-authenticate.
+                self.authenticate()
         except Exception:
-            pass
+            log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
     def _handle_payload(self, payload):
         '''
@@ -810,6 +817,7 @@ class Minion(MinionBase):
             salt.utils.daemonize_if(opts)
         sdata = {'pid': os.getpid()}
         sdata.update(data)
+        log.info('Starting a new job with PID {0}'.format(sdata['pid']))
         with salt.utils.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
@@ -1890,7 +1898,7 @@ class Matcher(object):
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
-                if results:
+                if results or match in ['(', ')']:
                     if match == 'not':
                         if results[-1] == 'and':
                             pass
@@ -1910,7 +1918,7 @@ class Matcher(object):
         try:
             return eval(results)
         except Exception:
-            log.error('Invalid compound target: {0}'.format(tgt))
+            log.error('Invalid compound target: {0} for results: {1}'.format(tgt, results))
             return False
         return False
 
