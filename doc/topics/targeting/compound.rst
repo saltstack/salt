@@ -61,7 +61,7 @@ Matches can be grouped together with parentheses to explicitely declare preceden
 
 .. code-block:: bash
 
-    salt -C sudo salt -C ' ( ms-1 or G@id:ms-3 ) and G@id:ms-3' test.ping
+    salt -C '( ms-1 or G@id:ms-3 ) and G@id:ms-3' test.ping
 
 .. note::
     
