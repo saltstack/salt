@@ -86,6 +86,15 @@ def get_conn():
     )
 
 
+def get_disk_size(vm_, size, swap):
+    '''
+    Return the size of of the root disk in MB
+    '''
+    return config.get_cloud_config_value(
+        'disk_size', vm_, __opts__, default=size.disk - swap
+    )
+
+
 def get_location(conn, vm_):
     '''
     Return the node location to use
@@ -109,9 +118,18 @@ def get_password(vm_):
     )
 
 
+def get_private_ip(vm_):
+    '''
+    Return True if a private ip address is requested
+    '''
+    return config.get_cloud_config_value(
+        'private_ip', vm_, __opts__, default=False
+    )
+
+
 def get_swap(vm_):
     '''
-    Return the amount of swap space to use
+    Return the amount of swap space to use in MB
     '''
     return config.get_cloud_config_value(
         'swap', vm_, __opts__, default=128
@@ -142,6 +160,8 @@ def create(vm_):
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
         'auth': NodeAuthPassword(get_password(vm_)),
+        'ex_private': get_private_ip(vm_),
+        'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
         'ex_swap': get_swap(vm_)
     }
 
@@ -153,6 +173,8 @@ def create(vm_):
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name,
                     'location': kwargs['location'].name,
+                    'ex_private': kwargs['ex_private'],
+                    'ex_rsize': kwargs['ex_rsize'],
                     'ex_swap': kwargs['ex_swap']}},
         transport=__opts__['transport']
     )
