@@ -1,7 +1,4 @@
-from multiprocessing import Process
 import logging
-
-import sys
 
 import tornado.httpserver
 import tornado.ioloop
@@ -10,7 +7,6 @@ import tornado.gen
 
 import salt.auth
 
-from multiprocessing import Process
 
 from . import saltnado
 
@@ -76,9 +72,8 @@ def start():
         print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
         raise SystemExit(1)
     tornado.ioloop.IOLoop.instance().add_callback(application.event_listener.iter_events)
-    tornado.ioloop.IOLoop.instance().start()
 
     try:
-        ioloop.start()
+        tornado.ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

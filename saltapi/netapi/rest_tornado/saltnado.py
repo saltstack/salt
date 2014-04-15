@@ -17,6 +17,7 @@ ab -c 50 -n 100 -p body -T 'application/x-www-form-urlencoded' http://localhost:
 
 '''
 
+import logging
 from copy import copy
 
 import time
@@ -48,9 +49,6 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-
-# globals
-context = zmq.Context()
 
 '''
 The clients rest_cherrypi supports. We want to mimic the interface, but not
@@ -174,7 +172,7 @@ class EventListener():
             # TODO: configurable timeout
             tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
         except:
-            print sys.exc_info(), 'exception in main wait loop'
+            logging.critical('Uncaught exception in the event_listener: {0}'.format(sys.exc_info())
             # TODO: configurable timeout
             tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
 
@@ -218,6 +216,9 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
 
     @property
     def token(self):
+        '''
+        The token used for the request
+        '''
         # find the token (cookie or headers)
         if AUTH_TOKEN_HEADER in self.request.headers:
             return self.request.headers[AUTH_TOKEN_HEADER]
@@ -290,11 +291,11 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for k, v in self.request.arguments.iteritems():
-            if len(v) == 1:
-                data[k] = v[0]
+        for key, val in self.request.arguments.iteritems():
+            if len(val) == 1:
+                data[key] = val[0]
             else:
-                data[k] = v
+                data[key] = val
         return data
 
     def deserialize(self, data):
@@ -376,7 +377,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):
         try:
             perms = self.application.opts['external_auth'][token['eauth']][token['name']]
         except (AttributeError, IndexError):
-            logger.debug("Configuration for external_auth malformed for "
+            logging.debug("Configuration for external_auth malformed for "
                          "eauth '{0}', and user '{1}'."
                          .format(token.get('eauth'), token.get('name')), exc_info=True)
             # TODO better error -- 'Configuration for external_auth could not be read.'
@@ -396,6 +397,9 @@ class SaltAuthHandler(BaseSaltAPIHandler):
 
 
 class SaltAPIHandler(BaseSaltAPIHandler):
+    '''
+    Main API handler for base "/"
+    '''
     def get(self):
         '''
         return data about what clients you have
@@ -541,10 +545,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                 # if you hit a timeout, just stop waiting ;)
                 except TimeoutException:
                     break
-                except:
-                    # TODO: LOG
-                    print 'some exception'
-                    print sys.exc_info()
             self.ret.append(chunk_ret)
 
             # if we finish in time, cancel the timeout
@@ -591,10 +591,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                 tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
             except TimeoutException:
                 break
-            except:
-                # TODO: LOG
-                print 'some exception'
-                print sys.exc_info()
 
         self.write(self.serialize({'return': self.ret}))
         self.finish()
