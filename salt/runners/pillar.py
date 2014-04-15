@@ -86,4 +86,3 @@ def show_pillar(minion='*', **kwargs):
     compiled_pillar = pillar.compile_pillar()
     salt.output.display_output(compiled_pillar, 'nested', __opts__)
     return compiled_pillar
-
