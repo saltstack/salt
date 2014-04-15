@@ -72,12 +72,12 @@ def build_pillar_data(options):
 
 
 def build_minion_target(options, vm_name):
-    if options.grain_target is None:
-        return vm_name
-    return '-C L@{0} and G:{1}'.format(
-        vm_name,
-        ' and G@'.join(options.grain_target)
-    )
+    target = vm_name
+    for grain in options.grain_target:
+        target += ' and G@{0}'.format(grain)
+    if options.grain_target is not None:
+        return '-C "{0}"'.format(target)
+    return target
 
 
 def generate_vm_name(platform):
