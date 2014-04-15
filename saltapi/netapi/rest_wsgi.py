@@ -159,8 +159,6 @@ def __virtual__():
     if 'port' in mod_opts:
         return __virtualname__
 
-    logger.error("Not loading '%s'. 'port' not specified in config",
-            __virtualname__)
     return False
 
 class HTTPError(Exception):

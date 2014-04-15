@@ -24,8 +24,6 @@ def __virtual__():
     if has_tornado and 'port' in mod_opts:
         return __virtualname__
 
-    logger.error("Not loading '%s'. 'port' not specified in config",
-                 __virtualname__)
     return False
 
 
