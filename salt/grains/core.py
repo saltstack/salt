@@ -969,7 +969,7 @@ def os_data():
                     grains['osrelease'] = ''
                 else:
                     if development is not None:
-                        osname = ''.join((osname, development))
+                        osname = ' '.join((osname, development))
                     grains['os'] = grains['osfullname'] = osname
                     grains['osrelease'] = osrelease
 
