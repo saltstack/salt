@@ -474,11 +474,11 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
     CLI Example:
     Normal Usage:
     .. code-block:: bash
-        salt '*' win_updates.list_updates
+        salt '*' win_update.list_updates
 
     Find all critical updates list in detail:
     .. code-block:: bash
-        salt '*' win_updates.list_updates categories=['Critical Updates'] verbose
+        salt '*' win_update.list_updates categories=['Critical Updates'] verbose
     '''
 
     log.debug('categories to search for are: '.format(str(categories)))
@@ -519,11 +519,11 @@ def download_updates(includes=None, retries=5, categories=None):
     CLI Example:
     Normal Usage:
     .. code-block:: bash
-        salt '*' win_updates.download_updates
+        salt '*' win_update.download_updates
 
     Find all critical updates list in detail:
     .. code-block:: bash
-        salt '*' win_updates.download_updates categories=['Critical Updates'] verbose
+        salt '*' win_update.download_updates categories=['Critical Updates'] verbose
     '''
 
     log.debug('categories to search for are: '.format(str(categories)))
@@ -572,11 +572,11 @@ def install_updates(cached=None, includes=None, retries=5, categories=None):
     CLI Example:
     Normal Usage:
     .. code-block:: bash
-        salt '*' win_updates.install_updates
+        salt '*' win_update.install_updates
 
     Find all critical updates list in detail:
     .. code-block:: bash
-        salt '*' win_updates.install_updates categories=['Critical Updates'] verbose
+        salt '*' win_update.install_updates categories=['Critical Updates'] verbose
     '''
 
     log.debug('categories to search for are: '.format(str(categories)))
