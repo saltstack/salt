@@ -16,7 +16,7 @@ and download but not install standard updates.
 
 Example::
     updates:
-        win_update.install:
+        win_update.installed:
             - categories:
                 - 'Critical Updates'
                 - 'Security Updates'
@@ -384,12 +384,14 @@ def _install(win_updater, retries=5):
     return (comment, True, retries)
 
 
-def install(name, categories=None, includes=None, retries=10):
+def installed(name, categories=None, includes=None, retries=10):
     '''
     Install specified windows updates.
 
     name:
-        not used. exists just to make it fit in salt.
+        if categories is left empty, it will be assumed that you are passing the category option
+        through the name. These are seperate because you can only have one name, but can have
+        multiple categories. 
 
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
@@ -419,6 +421,8 @@ def install(name, categories=None, includes=None, retries=10):
            'result': True,
            'changes': {},
            'comment': ''}
+    if not categories:
+        categories = [name]
     log.debug('categories to search for are: '.format(str(categories)))
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
@@ -452,12 +456,14 @@ def install(name, categories=None, includes=None, retries=10):
     return ret
 
 
-def download(name, categories=None, includes=None, retries=10):
+def downloaded(name, categories=None, includes=None, retries=10):
     '''
     Cache updates for later install.
 
     name:
-        not used. exists just to make it fit in salt.
+        if categories is left empty, it will be assumed that you are passing the category option
+        through the name. These are seperate because you can only have one name, but can have
+        multiple categories. 
 
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
@@ -487,6 +493,8 @@ def download(name, categories=None, includes=None, retries=10):
            'result': True,
            'changes': {},
            'comment': ''}
+    if not categories:
+        categories = [name]
     log.debug('categories to search for are: '.format(str(categories)))
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
