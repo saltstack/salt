@@ -145,8 +145,6 @@ class EventListener():
         '''
         try:
             data = self.event.get_event_noblock()
-            # TODO: log
-            print data['tag'], 'event'
             # see if we have any futures that need this info:
             for tag_prefix, futures in self.tag_map.items():
                 if data['tag'].startswith(tag_prefix):
