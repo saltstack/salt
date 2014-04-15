@@ -71,6 +71,15 @@ def build_pillar_data(options):
     return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
 
 
+def build_minion_target(options, vm_name):
+    if options.grain_target is None:
+        return vm_name
+    return '-C L@{0} and G:{1}'.format(
+        vm_name,
+        ' and G@'.join(options.grain_target)
+    )
+
+
 def generate_vm_name(platform):
     '''
     Generate a random enough vm name
@@ -182,7 +191,7 @@ def download_unittest_reports(options):
 
     vm_name = options.download_unittest_reports
     for cmd in cmds:
-        cmd = cmd.format(vm_name, workspace)
+        cmd = cmd.format(build_minion_target(options, vm_name), workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -217,12 +226,12 @@ def download_coverage_report(options):
     cmds = (
         'salt {0} archive.gzip /tmp/coverage.xml',
         'salt {0} cp.push /tmp/coverage.xml.gz',
-        'gunzip /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml.gz',
-        'mv /var/cache/salt/master/minions/{0}/files/tmp/coverage.xml {1}'
+        'gunzip /var/cache/salt/master/minions/{1}/files/tmp/coverage.xml.gz',
+        'mv /var/cache/salt/master/minions/{1}/files/tmp/coverage.xml {2}'
     )
 
     for cmd in cmds:
-        cmd = cmd.format(vm_name, workspace)
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -267,8 +276,8 @@ def download_remote_logs(options):
         cmds.extend([
             'salt {{0}} archive.gzip {0}'.format(remote_log),
             'salt {{0}} cp.push {0}.gz'.format(remote_log),
-            'gunzip /var/cache/salt/master/minions/{{0}}/files{0}.gz'.format(remote_log),
-            'mv /var/cache/salt/master/minions/{{0}}/files{0} {{1}}/{1}'.format(
+            'gunzip /var/cache/salt/master/minions/{{1}}/files{0}.gz'.format(remote_log),
+            'mv /var/cache/salt/master/minions/{{1}}/files{0} {{2}}/{1}'.format(
                 remote_log,
                 '{0}{1}'.format(
                     os.path.basename(remote_log),
@@ -278,7 +287,7 @@ def download_remote_logs(options):
         ])
 
     for cmd in cmds:
-        cmd = cmd.format(vm_name, workspace)
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -360,7 +369,7 @@ def run(opts):
         sys.stdout.write('Grabbing bootstrapped minion version information ... ')
         sys.stdout.flush()
         proc = subprocess.Popen(
-            'salt -t 100 {vm_name} --out json test.version'.format(vm_name=vm_name),
+            'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name)),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -395,11 +404,11 @@ def run(opts):
     # Run preparation SLS
     time.sleep(3)
     cmd = (
-        'salt -t 1800 {vm_name} state.sls {prep_sls} pillar="{pillar}" '
+        'salt -t 1800 {target} state.sls {prep_sls} pillar="{pillar}" '
         '--no-color'.format(
+            target=build_minion_target(opts, vm_name),
             prep_sls=opts.prep_sls,
             pillar=build_pillar_data(opts),
-            vm_name=vm_name,
         )
     )
     print('Running CMD: {0}'.format(cmd))
@@ -430,11 +439,11 @@ def run(opts):
 
         # Run the 2nd preparation SLS
         cmd = (
-            'salt -t 30 {vm_name} state.sls {prep_sls_2} pillar="{pillar}" '
+            'salt -t 30 {target} state.sls {prep_sls_2} pillar="{pillar}" '
             '--no-color'.format(
                 prep_sls_2=opts.prep_sls_2,
                 pillar=build_pillar_data(opts),
-                vm_name=vm_name,
+                target=build_minion_target(opts, vm_name),
             )
         )
         print('Running CMD: {0}'.format(cmd))
@@ -469,7 +478,7 @@ def run(opts):
         sys.stdout.flush()
 
         proc = subprocess.Popen(
-            'salt -t 100 {vm_name} --out json git.remote_get /testing'.format(vm_name=vm_name),
+            'salt -t 100 {0} --out json git.remote_get /testing'.format(build_minion_target(opts, vm_name)),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -511,7 +520,7 @@ def run(opts):
         sys.stdout.flush()
 
         proc = subprocess.Popen(
-            'salt -t 100 {vm_name} --out json git.revision /testing'.format(vm_name=vm_name),
+            'salt -t 100 {0} --out json git.revision /testing'.format(build_minion_target(opts, vm_name)),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -547,10 +556,10 @@ def run(opts):
     # Run tests here
     time.sleep(3)
     cmd = (
-        'salt -t 1800 {vm_name} state.sls {sls} pillar="{pillar}" --no-color'.format(
+        'salt -t 1800 {target} state.sls {sls} pillar="{pillar}" --no-color'.format(
             sls=opts.sls,
             pillar=build_pillar_data(opts),
-            vm_name=vm_name,
+            target=build_minion_target(opts, vm_name),
         )
     )
     print('Running CMD: {0}'.format(cmd))
@@ -700,6 +709,12 @@ def parse():
         '--download-remote-logs',
         default=None,
         help='Download remote minion and runtests log files'
+    )
+    parser.add_option(
+        '--grain-target',
+        action='append',
+        default=[],
+        help='Match minions using compound matchers, the minion ID, plus the passed grain.'
     )
 
     options, args = parser.parse_args()
