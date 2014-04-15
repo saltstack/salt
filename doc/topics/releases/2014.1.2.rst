@@ -1,0 +1,22 @@
+===========================
+Salt 2014.1.2 Release Notes
+===========================
+
+:release: 2014-04-15
+
+Version 2014.1.2 is another bugfix release for :doc:`2014.1.0
+</topics/releases/2014.1.0>`. The changes include:
+
+- Fix username detection when su’ed to root on FreeBSD (:issue:`11628`)
+- Fix minionfs backend for file.recurse states
+- Fix 32-bit packages of different arches than the CPU arch, on 32-bit
+  RHEL/CentOS (:issue:`11822`)
+- Fix bug with specifying alternate home dir on user creation (FreeBSD)
+  (:issue:`11790`)
+- Don’t reload “site” module on module refresh for MacOS
+- Fix regression with running execution functions in Pillar SLS
+  (:issue:`11453`)
+- Fix some modules missing from Windows installer
+- Fix traceback on eauth failure (:issue:`11293`)
+- Don’t log an error for yum commands that return nonzero exit status on
+  non-failure (:issue:`11645`)
