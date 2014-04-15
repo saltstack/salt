@@ -154,7 +154,7 @@ import traceback
 import shutil
 
 from salt.modules import cmdmod
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 import salt.utils
 from salt.utils.odict import OrderedDict
