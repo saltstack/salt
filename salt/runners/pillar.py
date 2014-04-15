@@ -36,6 +36,7 @@ def show_top(minion=None, saltenv='base'):
     salt.output.display_output(top, 'nested', __opts__)
     return top
 
+
 def show_pillar(minion='*', **kwargs):
     '''
     Returns the compiled pillar either of a specific minion
