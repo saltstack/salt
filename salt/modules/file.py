@@ -1153,7 +1153,7 @@ def blockreplace(path,
     done = False
     # we do not use in_place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
-    # written file.
+    # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
     fi_file = fileinput.input(path,
                 inplace=False, backup=False,
