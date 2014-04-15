@@ -68,8 +68,7 @@ class RunnerClient(object):
         data['user'] = user
         event.fire_event(data, tagify('ret', base=tag))
         # this is a workaround because process reaping is defeating 0MQ linger
-        time.sleep(2.0)  # delay so 0MQ event gets out before runner process
-                         # reaped
+        time.sleep(2.0)  # delay so 0MQ event gets out before runner process reaped
 
     def _verify_fun(self, fun):
         '''

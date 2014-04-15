@@ -779,8 +779,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')
-        # Verify that the tarball does not extract outside of the intended
-        # root
+    # Verify that the tarball does not extract outside of the intended root
     members = s_pkg.getmembers()
     for member in members:
         if member.path.startswith((os.sep, '..{0}'.format(os.sep))):

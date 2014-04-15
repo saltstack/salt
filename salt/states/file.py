@@ -1210,7 +1210,7 @@ def managed(name,
             contents += '\n'
 
     if not replace and os.path.exists(name):
-       # Check and set the permissions if necessary
+        # Check and set the permissions if necessary
         ret, perms = __salt__['file.check_perms'](name,
                                                   ret,
                                                   user,

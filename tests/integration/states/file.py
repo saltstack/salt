@@ -932,7 +932,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         This is more generic than just a file test. Feel free to move
         '''
         # Get a path to the temporary file
-         # 한국어 시험 (korean)
+        # 한국어 시험 (korean)
         # '\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98' (utf-8)
         # u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8' (unicode)
         korean_1 = '한국어 시험'

@@ -353,7 +353,7 @@ def getent(refresh=False):
                 comps = line.split()
                 users += comps
                 ##if not len(comps) > 1:
-                    #continue
+                #   continue
                 #items[comps[0].strip()] = comps[1].strip()
     #return users
     for user in users:
