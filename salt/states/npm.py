@@ -35,7 +35,8 @@ def installed(name,
               dir=None,
               runas=None,
               user=None,
-              force_reinstall=False):
+              force_reinstall=False,
+              registry=None):
     '''
     Verify that the given package is installed and is at the correct version
     (if specified).
@@ -62,6 +63,9 @@ def installed(name,
 
     user
         The user to run NPM with
+
+    registry
+        The NPM registry to install the package from.
 
         .. versionadded:: 0.17.0
 
@@ -97,7 +101,9 @@ def installed(name,
     prefix = name.split('@')[0].strip()
 
     try:
-        installed_pkgs = __salt__['npm.list'](pkg=name, dir=dir)
+        installed_pkgs = __salt__['npm.list'](pkg=name,
+                                              dir=dir,
+                                              registry=registry)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
