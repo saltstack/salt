@@ -368,8 +368,10 @@ def run(opts):
         # information
         sys.stdout.write('Grabbing bootstrapped minion version information ... ')
         sys.stdout.flush()
+        cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name))
+        print('Running CMD: {0}'.format(cmd))
         proc = subprocess.Popen(
-            'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name)),
+            cmd,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -476,9 +478,10 @@ def run(opts):
         # desired repository
         sys.stdout.write('Grabbing the cloned repository remotes information ... ')
         sys.stdout.flush()
-
+        cmd = 'salt -t 100 {0} --out json git.remote_get /testing'.format(build_minion_target(opts, vm_name))
+        print('Running CMD: {0}'.format(cmd))
         proc = subprocess.Popen(
-            'salt -t 100 {0} --out json git.remote_get /testing'.format(build_minion_target(opts, vm_name)),
+            cmd,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -519,8 +522,10 @@ def run(opts):
         sys.stdout.write('Grabbing the cloned repository commit information ... ')
         sys.stdout.flush()
 
+        cmd = 'salt -t 100 {0} --out json git.revision /testing'.format(build_minion_target(opts, vm_name))
+        print('Running CMD: {0}'.format(cmd))
         proc = subprocess.Popen(
-            'salt -t 100 {0} --out json git.revision /testing'.format(build_minion_target(opts, vm_name)),
+            cmd,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
