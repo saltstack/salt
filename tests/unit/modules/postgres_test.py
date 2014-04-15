@@ -551,11 +551,11 @@ class PostgresTestCase(TestCase):
         self.assertEqual(postgres.drop_extension('foo'), False)
 
     @patch('salt.modules.postgres.installed_extensions',
-           Mock(return_value=
-               {'foo': {'extversion': '0.8',
-                        'extrelocatable': 't',
-                        'schema_name': 'foo',
-                        'extname': 'foo'}},
+           Mock(return_value={
+               'foo': {'extversion': '0.8',
+                       'extrelocatable': 't',
+                       'schema_name': 'foo',
+                       'extname': 'foo'}},
            ))
     @patch('salt.modules.postgres.available_extensions',
            Mock(return_value={'foo': {'default_version': '1.4',
