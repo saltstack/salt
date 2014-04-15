@@ -184,14 +184,14 @@ def download_unittest_reports(options):
     cmds = (
         'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
         'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
-        'mv -f /var/cache/salt/master/minions/{0}/files/tmp/xml-test-reports.tar.gz {1} && '
-        'tar zxvf {1}/xml-test-reports.tar.gz -C {1}/xml-test-reports && '
-        'rm -f {1}/xml-test-reports.tar.gz'
+        'mv -f /var/cache/salt/master/minions/{1}/files/tmp/xml-test-reports.tar.gz {2} && '
+        'tar zxvf {2}/xml-test-reports.tar.gz -C {2}/xml-test-reports && '
+        'rm -f {2}/xml-test-reports.tar.gz'
     )
 
     vm_name = options.download_unittest_reports
     for cmd in cmds:
-        cmd = cmd.format(build_minion_target(options, vm_name), workspace)
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
