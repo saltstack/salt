@@ -111,7 +111,6 @@
 
 # Import python libs
 import os
-import zmq
 import json
 import socket
 import logging
@@ -129,6 +128,12 @@ try:
     HAS_PYTZ = True
 except ImportError:
     HAS_PYTZ = False
+
+try:
+    import zmq
+    HAS_ZMQ = True
+except:
+    HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
 
