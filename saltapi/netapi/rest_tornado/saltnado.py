@@ -172,7 +172,7 @@ class EventListener():
             # TODO: configurable timeout
             tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
         except:
-            logging.critical('Uncaught exception in the event_listener: {0}'.format(sys.exc_info())
+            logging.critical('Uncaught exception in the event_listener: {0}'.format(sys.exc_info()))
             # TODO: configurable timeout
             tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
 

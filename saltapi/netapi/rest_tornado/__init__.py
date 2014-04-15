@@ -32,8 +32,8 @@ def start():
     '''
     mod_opts = __opts__.get(__virtualname__, {})
 
-    if 'pub_uri' not in mod_opts:
-        mod_opts['pub_uri'] = 'ipc://eventpublisher'
+    if 'num_processes' not in mod_opts:
+        mod_opts['num_processes'] = 1
 
     application = tornado.web.Application([
         (r"/", saltnado.SaltAPIHandler),
@@ -67,11 +67,13 @@ def start():
 
     http_server = tornado.httpserver.HTTPServer(application, **kwargs)
     try:
-        http_server.listen(mod_opts['port'])
+        http_server.bind(mod_opts['port'])
+        http_server.start(mod_opts['num_processes'])
     except:
         print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
         raise SystemExit(1)
     tornado.ioloop.IOLoop.instance().add_callback(application.event_listener.iter_events)
+
 
     try:
         tornado.ioloop.IOLoop.instance().start()
