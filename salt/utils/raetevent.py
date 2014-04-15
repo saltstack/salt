@@ -121,6 +121,7 @@ class SaltEvent(object):
                     return event['data']
             if start + wait < time.time():
                 return None
+            time.sleep(0.01)
 
     def get_event_noblock(self):
         '''
