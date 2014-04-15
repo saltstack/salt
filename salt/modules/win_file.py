@@ -167,11 +167,13 @@ def _resolve_symlink(path, max_depth=64):
     return path
 
 
-def _change_privilege(privilege_name, enable):
+def _change_privilege_state(privilege_name, enable):
     '''
-    Change, either enable or disable, the named privilege for this process.
+    Change the state, either enable or disable, of the named privilege for this
+    process.
 
-    If the change did not occur, an exception will be raised.
+    If the change fails, an exception will be raised. If successful, it returns
+    True.
     '''
     log.debug(
         '%s the privilege %s for this process.',
@@ -236,14 +238,14 @@ def _enable_privilege(privilege_name):
     '''
     Enables the named privilege for this process.
     '''
-    return _change_privilege(privilege_name, True)
+    return _change_privilege_state(privilege_name, True)
 
 
 def _disable_privilege(privilege_name):
     '''
     Disables the named privilege for this process.
     '''
-    return _change_privilege(privilege_name, False)
+    return _change_privilege_state(privilege_name, False)
 
 
 def gid_to_group(gid):
