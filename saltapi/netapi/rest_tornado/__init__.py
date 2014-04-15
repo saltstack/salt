@@ -39,10 +39,6 @@ def start():
     if 'pub_uri' not in mod_opts:
         mod_opts['pub_uri'] = 'ipc://eventpublisher'
 
-    # TODO: make this a subprocessing subclass
-    p = Process(target=saltnado.EventPublisher, args=(mod_opts, __opts__))
-    p.start()
-
     application = tornado.web.Application([
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
@@ -53,13 +49,13 @@ def start():
         (r"/run", saltnado.RunSaltAPIHandler),
         (r"/events", saltnado.EventsSaltAPIHandler),
         (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
-        
+
     ], debug=mod_opts.get('debug', False))
-    
-    application.opts = __opts__ 
+
+    application.opts = __opts__
     application.mod_opts = mod_opts
     application.auth = salt.auth.LoadAuth(__opts__)
-    application.event_listener = saltnado.EventListener()
+    application.event_listener = saltnado.EventListener(mod_opts, __opts__)
 
     # the kwargs for the HTTPServer
     kwargs = {}
@@ -78,7 +74,6 @@ def start():
         http_server.listen(mod_opts['port'])
     except:
         print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
-        p.terminate()
         raise SystemExit(1)
     tornado.ioloop.IOLoop.instance().add_callback(application.event_listener.iter_events)
     tornado.ioloop.IOLoop.instance().start()
@@ -86,6 +81,4 @@ def start():
     try:
         ioloop.start()
     except KeyboardInterrupt:
-        # cleanup eventpublisher
-        p.terminate()
         raise SystemExit(0)
