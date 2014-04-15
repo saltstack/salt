@@ -1,14 +1,17 @@
 import logging
 
-import tornado.httpserver
-import tornado.ioloop
-import tornado.web
-import tornado.gen
+try:
+    import tornado.httpserver
+    import tornado.ioloop
+    import tornado.web
+    import tornado.gen
+
+    has_tornado = True
+except ImportError:
+    has_tornado = False
 
 import salt.auth
 
-
-from . import saltnado
 
 __virtualname__ = 'rest_tornado'
 
@@ -18,7 +21,7 @@ logger = logging.getLogger(__virtualname__)
 def __virtual__():
     mod_opts = __opts__.get(__virtualname__, {})
 
-    if 'port' in mod_opts:
+    if has_tornado and 'port' in mod_opts:
         return __virtualname__
 
     logger.error("Not loading '%s'. 'port' not specified in config",
@@ -30,6 +33,8 @@ def start():
     '''
     Start the saltnado!
     '''
+    from . import saltnado
+
     mod_opts = __opts__.get(__virtualname__, {})
 
     if 'num_processes' not in mod_opts:
