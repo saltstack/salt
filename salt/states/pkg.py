@@ -620,6 +620,9 @@ def installed(
                 'comment': ' '.join(comment)}
 
     changes = {'installed': {}}
+    modified_hold = None
+    not_modified_hold = None
+    failed_hold = None
     if targets:
         try:
             pkg_ret = __salt__['pkg.install'](name,
@@ -640,9 +643,6 @@ def installed(
                     'comment': 'An error was encountered while installing '
                             'package(s): {0}'.format(exc)}
 
-        modified_hold = None
-        not_modified_hold = None
-        failed_hold = None
         if 'pkg.hold' in __salt__:
             if 'hold' in kwargs:
                 if kwargs['hold']:
