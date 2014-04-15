@@ -49,7 +49,15 @@ MOCK_MODULES = [
     'cherrypy.wsgiserver',
     'cherrypy.wsgiserver.ssl_builtin',
 
+    'tornado',
+    'tornado.concurrent',
+    'tornado.gen',
+    'tornado.httpserver',
+    'tornado.ioloop',
+    'tornado.web',
+
     'yaml',
+    'zmq',
 
     # salt libs
     'salt',
