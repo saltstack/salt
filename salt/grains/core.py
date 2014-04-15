@@ -1252,8 +1252,11 @@ def zmqversion():
     '''
     # Provides:
     #   zmqversion
-    import zmq
-    return {'zmqversion': zmq.zmq_version()}
+    try:
+        import zmq
+        return {'zmqversion': zmq.zmq_version()}
+    except ImportError:
+        return {}
 
 
 def saltversioninfo():
