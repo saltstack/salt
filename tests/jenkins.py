@@ -366,10 +366,10 @@ def run(opts):
     if opts.bootstrap_salt_commit is not None:
         # Let's find out if the installed version matches the passed in pillar
         # information
-        sys.stdout.write('Grabbing bootstrapped minion version information ... ')
-        sys.stdout.flush()
+        print('Grabbing bootstrapped minion version information ... ')
         cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
         proc = subprocess.Popen(
             cmd,
             shell=True,
@@ -380,14 +380,14 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('\nFailed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
+            print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
-            print('\nFailed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
+            print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -395,7 +395,7 @@ def run(opts):
 
         version_info = json.loads(stdout.strip())
         if not version_info[vm_name].endswith(opts.bootstrap_salt_commit[:7]):
-            print('\nThe boostrapped minion version commit does not match the desired commit:')
+            print('The boostrapped minion version commit does not match the desired commit:')
             print(' {0!r} does not end with {1!r}'.format(version_info[vm_name], opts.bootstrap_salt_commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
@@ -476,10 +476,10 @@ def run(opts):
         time.sleep(1)
         # Let's find out if the cloned repository if checked out from the
         # desired repository
-        sys.stdout.write('Grabbing the cloned repository remotes information ... ')
-        sys.stdout.flush()
+        print('Grabbing the cloned repository remotes information ... ')
         cmd = 'salt -t 100 {0} --out json git.remote_get /testing'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
         proc = subprocess.Popen(
             cmd,
             shell=True,
@@ -491,14 +491,14 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('\nFailed to get the cloned repository remote. Exit code: {0}'.format(retcode))
+            print('Failed to get the cloned repository remote. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
-            print('\nFailed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
+            print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -506,7 +506,7 @@ def run(opts):
 
         remotes_info = json.loads(stdout.strip())
         if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
-            print('\nThe cloned repository remote is not the desired one:')
+            print('The cloned repository remote is not the desired one:')
             print(' {0!r} is not in {1}'.format(opts.test_git_url, remotes_info))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
@@ -519,11 +519,10 @@ def run(opts):
 
         # Let's find out if the cloned repository is checked out at the desired
         # commit
-        sys.stdout.write('Grabbing the cloned repository commit information ... ')
-        sys.stdout.flush()
-
+        print('Grabbing the cloned repository commit information ... ')
         cmd = 'salt -t 100 {0} --out json git.revision /testing'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
         proc = subprocess.Popen(
             cmd,
             shell=True,
@@ -535,14 +534,14 @@ def run(opts):
 
         retcode = proc.returncode
         if retcode != 0:
-            print('\nFailed to get the cloned repository revision. Exit code: {0}'.format(retcode))
+            print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
-            print('\nFailed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
+            print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                 delete_vm(opts)
@@ -550,7 +549,7 @@ def run(opts):
 
         revision_info = json.loads(stdout.strip())
         if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
-            print('\nThe cloned repository commit is not the desired one:')
+            print('The cloned repository commit is not the desired one:')
             print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
