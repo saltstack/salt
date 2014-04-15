@@ -1088,7 +1088,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
-            show_jid=False): 
+            show_jid=False):
         '''
         Get the returns for the command line interface via the event system
         '''
