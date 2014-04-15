@@ -68,7 +68,7 @@ def show_pillar(minion='*', **kwargs):
 
     saltenv = 'base'
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
-    if grains == None:
+    if grains is None:
         grains = {'fqdn': minion}
 
     for key in kwargs:
