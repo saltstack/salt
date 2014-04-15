@@ -32,14 +32,11 @@ from tornado.concurrent import Future
 
 from collections import defaultdict
 
-from multiprocessing import Process
-
 import math
 import functools
 import json
 import yaml
 import zmq
-import msgpack
 import fnmatch
 
 # salt imports
@@ -61,8 +58,6 @@ The clients rest_cherrypi supports. We want to mimic the interface, but not
 # master side
  - "runner" (done)
  - "wheel" (need async api...)
-
-disbatch -> sends off the jobs and can set a handler and then call the main loop
 '''
 
 
