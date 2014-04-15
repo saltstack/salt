@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Connection library for Amazon S3
+Connection library for Amazon IAM
 
 :depends: requests
 '''
