@@ -44,7 +44,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
-        directory_exists, get_managed, mkdir, makedirs, makedirs_perms,
+        directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
         check_managed, check_perms, remove, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
         contains_glob, find, psed, get_sum, _get_bkroot,
@@ -199,7 +199,7 @@ def _change_privilege(privilege_name, enable):
         if privilege not in token_privileges:
             if enable:
                 raise SaltInvocationError(
-                    'The requested privilege {} is not available for this '
+                    'The requested privilege {0} is not available for this '
                     'process (check Salt user privileges).'.format(privilege_name))
             else:  # disable a privilege this process does not have
                 log.debug('Cannot disable privilege %s because this process '
@@ -223,7 +223,7 @@ def _change_privilege(privilege_name, enable):
 
     if not bool(changes):
         raise SaltInvocationError(
-            'Could not {} the {} privilege for this process'.format(
+            'Could not {0} the {1} privilege for this process'.format(
                 'enable' if enable else 'remove',
                 privilege_name
             )
@@ -264,7 +264,7 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     '''
-    func_name = '{}.gid_to_group'.format(__virtualname__)
+    func_name = '{0}.gid_to_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details.', func_name)
@@ -290,7 +290,7 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     '''
-    func_name = '{}.group_to_gid'.format(__virtualname__)
+    func_name = '{0}.group_to_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details.', func_name)
@@ -383,7 +383,7 @@ def get_gid(path, follow_symlinks=True):
 
         salt '*' file.get_gid c:\\temp\\test.txt
     '''
-    func_name = '{}.get_gid'.format(__virtualname__)
+    func_name = '{0}.get_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. '
@@ -417,7 +417,7 @@ def get_group(path, follow_symlinks=True):
 
         salt '*' file.get_group c:\\temp\\test.txt
     '''
-    func_name = '{}.get_group'.format(__virtualname__)
+    func_name = '{0}.get_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. '
@@ -445,7 +445,9 @@ def uid_to_user(uid):
         return name
     except pywinerror as e:
         # if user does not exist...
-        if e.winerror == 1332: # No mapping between account names and security IDs was done.
+        # 1332 = No mapping between account names and security IDs was carried
+        # out.
+        if e.winerror == 1332:
             return ''
         else:
             raise
@@ -477,7 +479,9 @@ def _user_to_uid(user):
         sid, domain, account_type = win32security.LookupAccountName(None, user)
     except pywinerror as e:
         # if user does not exist...
-        if e.winerror == 1332: # No mapping between account names and security IDs was done.
+        # 1332 = No mapping between account names and security IDs was carried
+        # out.
+        if e.winerror == 1332:
             return ''
         else:
             raise
@@ -550,7 +554,7 @@ def get_mode(path):
     if not os.path.exists(path):
         return ''
 
-    func_name = '{}.get_mode'.format(__virtualname__)
+    func_name = '{0}.get_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. '
@@ -587,7 +591,7 @@ def lchown(path, user, group=None, pgroup=None):
         salt '*' file.lchown c:\\temp\\test.txt myusername "pgroup='None'"
     '''
     if group:
-        func_name = '{}.lchown'.format(__virtualname__)
+        func_name = '{0}.lchown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
             log.info('The group parameter has no effect when using %s on Windows systems; see function docs for details.', func_name)
         log.debug('win_file.py %s Ignoring the group parameter for %s', func_name, path)
@@ -624,7 +628,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     '''
     # the group parameter is not used; only provided for API compatibility
     if group:
-        func_name = '{}.chown'.format(__virtualname__)
+        func_name = '{0}.chown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
             log.info('The group parameter has no effect when using %s on Windows systems; see function docs for details.', func_name)
         log.debug('win_file.py %s Ignoring the group parameter for %s', func_name, path)
@@ -771,7 +775,7 @@ def chgrp(path, group):
 
         salt '*' file.chpgrp c:\\temp\\test.txt administrators
     '''
-    func_name = '{}.chgrp'.format(__virtualname__)
+    func_name = '{0}.chgrp'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
     log.debug('win_file.py %s Doing nothing for %s', func_name, path)
@@ -972,7 +976,7 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     '''
-    func_name = '{}.set_mode'.format(__virtualname__)
+    func_name = '{0}.set_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
         log.info('The function %s should not be used on Windows systems; '
                  'see function docs for details. '
