@@ -64,10 +64,12 @@ def installed(name,
     user
         The user to run NPM with
 
+        .. versionadded:: 0.17.0
+
     registry
         The NPM registry to install the package from.
 
-        .. versionadded:: 0.17.0
+        .. versionadded:: Helium
 
     force_reinstall
         Install the package even if it is already installed

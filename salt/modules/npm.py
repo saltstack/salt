@@ -66,6 +66,8 @@ def install(pkg=None,
     registry
         The NPM registry to install the package from.
 
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
