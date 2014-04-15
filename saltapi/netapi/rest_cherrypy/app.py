@@ -513,6 +513,11 @@ class LowDataAdapter(object):
         '''
         lowstate = cherrypy.request.lowstate
 
+        # Release the session lock before executing any potentially
+        # long-running Salt commands. This allows different threads to execute
+        # Salt commands concurrently without blocking.
+        cherrypy.session.release_lock()
+
         # if the lowstate loaded isn't a list, lets notify the client
         if type(lowstate) != list:
             raise cherrypy.HTTPError(400, 'Lowstates must be a list')
