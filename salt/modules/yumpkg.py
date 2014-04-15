@@ -1041,6 +1041,12 @@ def get_locked_packages(pattern=None, full=False):
     '''
     Get packages that are currently locked
     ``yum -q versionlock list``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_locked_packages
     '''
     cmd = 'yum -q versionlock list'
     ret = __salt__['cmd.run'](cmd).split('\n')
