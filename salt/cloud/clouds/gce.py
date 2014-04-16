@@ -122,14 +122,18 @@ _UA_PRODUCT = 'salt-cloud'
 _UA_VERSION = '0.2.0'
 
 # The import section is mostly libcloud boilerplate
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.loadbalancer.types import Provider as Provider_lb
-from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-from libcloud.common.google import (
-    ResourceInUseError,
-    ResourceNotFoundError,
-    )
+try:
+    from libcloud.compute.types import Provider
+    from libcloud.compute.providers import get_driver
+    from libcloud.loadbalancer.types import Provider as Provider_lb
+    from libcloud.loadbalancer.providers import get_driver as get_driver_lb
+    from libcloud.common.google import (
+        ResourceInUseError,
+        ResourceNotFoundError,
+        )
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Import python libs
 import copy
@@ -170,6 +174,9 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for GCE configurations.
     '''
+    if not HAS_LIBCLOUD:
+        return False
+
     if get_configured_provider() is False:
         return False
 

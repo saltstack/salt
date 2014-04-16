@@ -38,17 +38,21 @@ import logging
 # Import salt.cloud libs
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.libcloudfuncs import *        # pylint: disable=W0614,W0401
 from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
-from salt.cloud import libcloudfuncs
-from salt.cloud.clouds import libcloud_aws
-# Import libcloud_aws, storing pre and post locals so we can namespace any
-# callable to this module.
-PRE_IMPORT_LOCALS_KEYS = locals().copy()
-from salt.cloud.clouds.libcloud_aws import *  # pylint: disable=W0614,W0401
-POST_IMPORT_LOCALS_KEYS = locals().copy()
+try:
+    from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
+    from salt.cloud import libcloudfuncs
+    from salt.cloud.clouds import libcloud_aws
+    # Import libcloud_aws, storing pre and post locals so we can namespace any
+    # callable to this module.
+    PRE_IMPORT_LOCALS_KEYS = locals().copy()
+    from salt.cloud.clouds.libcloud_aws import *  # pylint: disable=W0614,W0401
+    POST_IMPORT_LOCALS_KEYS = locals().copy()
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -62,6 +66,9 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
+    if not HAS_LIBCLOUD:
+        return False
+
     try:
         # Import botocore
         import botocore.session
