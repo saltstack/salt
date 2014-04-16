@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.02.27"
+__ScriptVersion="2014.04.16"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -71,7 +71,7 @@ __detect_color_support
 #   DESCRIPTION:  Echo errors to stderr.
 #----------------------------------------------------------------------------------------------------------------------
 echoerror() {
-    printf "${RC} * ERROR${EC}: $@\n" 1>&2;
+    printf "${RC} * ERROR${EC}: %s\n" "$@" 1>&2;
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -184,13 +184,13 @@ usage() {
     - git
 
   Examples:
-    $ ${__ScriptName}
-    $ ${__ScriptName} stable
-    $ ${__ScriptName} daily
-    $ ${__ScriptName} git
-    $ ${__ScriptName} git develop
-    $ ${__ScriptName} git v0.17.0
-    $ ${__ScriptName} git 8c3fadf15ec183e5ce8c63739850d543617e4357
+    - ${__ScriptName}
+    - ${__ScriptName} stable
+    - ${__ScriptName} daily
+    - ${__ScriptName} git
+    - ${__ScriptName} git develop
+    - ${__ScriptName} git v0.17.0
+    - ${__ScriptName} git 8c3fadf15ec183e5ce8c63739850d543617e4357
 
   Options:
   -h  Display this message
@@ -220,6 +220,8 @@ usage() {
       example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
   -A  Pass the salt-master DNS name or IP. This will be stored under
       \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
+  -i  Pass the salt-minion id. This will be stored under
+      \${BS_SALT_ETC_DIR}/minion_id
   -L  Install the Apache Libcloud package if possible(required for salt-cloud)
   -p  Extra-package to install while installing salt dependencies. One package
       per -p flag. You're responsible for providing the proper package name.
@@ -235,6 +237,7 @@ EOT
 _KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 _TEMP_CONFIG_DIR="null"
 _SALTSTACK_REPO_URL="git://github.com/saltstack/salt.git"
+_SALT_REPO_URL=${_SALTSTACK_REPO_URL}
 _TEMP_KEYS_DIR="null"
 _INSTALL_MASTER=$BS_FALSE
 _INSTALL_SYNDIC=$BS_FALSE
@@ -255,12 +258,13 @@ _WGET_ARGS=${BS_WGET_ARGS:-}
 _CURL_ARGS=${BS_CURL_ARGS:-}
 _FETCH_ARGS=${BS_FETCH_ARGS:-}
 _SALT_MASTER_ADDRESS="null"
+_SALT_MINION_ID="null"
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
 __SIMPLIFY_VERSION=$BS_TRUE
 _LIBCLOUD_MIN_VERSION="0.14.0"
 _EXTRA_PACKAGES=""
 
-while getopts ":hvnDc:g:k:MSNXCPFUKIA:Lp:" opt
+while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:" opt
 do
   case "${opt}" in
 
@@ -280,7 +284,7 @@ do
              exit 1
          fi
          ;;
-    g ) _SALTSTACK_REPO_URL=$OPTARG                     ;;
+    g ) _SALT_REPO_URL=$OPTARG                          ;;
     k )  _TEMP_KEYS_DIR="$OPTARG"
          # If the configuration directory does not exist, error out
          if [ ! -d "$_TEMP_KEYS_DIR" ]; then
@@ -299,6 +303,7 @@ do
     K )  _KEEP_TEMP_FILES=$BS_TRUE                      ;;
     I )  _INSECURE_DL=$BS_TRUE                          ;;
     A )  _SALT_MASTER_ADDRESS=$OPTARG                   ;;
+    i )  _SALT_MINION_ID=$OPTARG                        ;;
     L )  _INSTALL_CLOUD=$BS_TRUE                        ;;
     p )  _EXTRA_PACKAGES="$_EXTRA_PACKAGES $OPTARG"     ;;
 
@@ -311,7 +316,7 @@ do
 
   esac    # --- end of case ---
 done
-shift $(($OPTIND-1))
+shift $((OPTIND-1))
 
 
 __check_unparsed_options() {
@@ -346,7 +351,13 @@ fi
 
 # Check that we're installing a minion if we're being passed a master address
 if [ $_INSTALL_MINION -eq $BS_FALSE ] && [ $_SALT_MASTER_ADDRESS != "null" ]; then
-    echoerror "Don't pass a master address(-A) if no minion is going to be bootstrapped."
+    echoerror "Don't pass a master address (-A) if no minion is going to be bootstrapped."
+    exit 1
+fi
+
+# Check that we're installing a minion if we're being passed a master address
+if [ $_INSTALL_MINION -eq $BS_FALSE ] && [ $_SALT_MINION_ID != "null" ]; then
+    echoerror "Don't pass a minion id (-i) if no minion is going to be bootstrapped."
     exit 1
 fi
 
@@ -400,7 +411,7 @@ if [ "$(${whoami})" != "root" ]; then
 fi
 
 # Let's discover how we're being called
-CALLER=$(echo `ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' '` | cut -d ' ' -f 2)
+CALLER="$(echo `ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' '` | cut -d ' ' -f 2)"
 if [ "${CALLER}x" = "${0}x" ]; then
     CALLER="PIPED THROUGH"
 fi
@@ -571,7 +582,7 @@ __parse_version_string() {
 #   DESCRIPTION:  Strip single or double quotes from the provided string.
 #----------------------------------------------------------------------------------------------------------------------
 __unquote_string() {
-    echo $@ | sed "s/^\([\"']\)\(.*\)\1\$/\2/g"
+    echo "${@}" | sed "s/^\([\"']\)\(.*\)\1\$/\2/g"
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -579,7 +590,7 @@ __unquote_string() {
 #   DESCRIPTION:  Convert CamelCased strings to Camel_Cased
 #----------------------------------------------------------------------------------------------------------------------
 __camelcase_split() {
-    echo $@ | sed -r 's/([^A-Z-])([A-Z])/\1 \2/g'
+    echo "${@}" | sed -r 's/([^A-Z-])([A-Z])/\1 \2/g'
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -587,7 +598,7 @@ __camelcase_split() {
 #   DESCRIPTION:  Strip duplicate strings
 #----------------------------------------------------------------------------------------------------------------------
 __strip_duplicates() {
-    echo $@ | tr -s '[:space:]' '\n' | awk '!x[$0]++'
+    echo "${@}" | tr -s '[:space:]' '\n' | awk '!x[$0]++'
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -598,11 +609,11 @@ __strip_duplicates() {
 __sort_release_files() {
     KNOWN_RELEASE_FILES=$(echo "(arch|centos|debian|ubuntu|fedora|redhat|suse|\
         mandrake|mandriva|gentoo|slackware|turbolinux|unitedlinux|lsb|system|\
-        os)(-|_)(release|version)" | sed -r 's:[[:space:]]::g')
+        oracle|os)(-|_)(release|version)" | sed -r 's:[[:space:]]::g')
     primary_release_files=""
     secondary_release_files=""
     # Sort know VS un-known files first
-    for release_file in $(echo $@ | sed -r 's:[[:space:]]:\n:g' | sort --unique --ignore-case); do
+    for release_file in $(echo "${@}" | sed -r 's:[[:space:]]:\n:g' | sort --unique --ignore-case); do
         match=$(echo $release_file | egrep -i ${KNOWN_RELEASE_FILES})
         if [ "x${match}" != "x" ]; then
             primary_release_files="${primary_release_files} ${release_file}"
@@ -643,17 +654,20 @@ __gather_linux_system_info() {
     rv=$(lsb_release >/dev/null 2>&1)
     if [ $? -eq 0 ]; then
         DISTRO_NAME=$(lsb_release -si)
-        if [ "x$(echo "$DISTRO_NAME" | grep RedHat)" != "x" ]; then
+        if [ "${DISTRO_NAME}" = "Scientific" ]; then
+            DISTRO_NAME="Scientific Linux"
+        elif [ "x$(echo "$DISTRO_NAME" | grep RedHat)" != "x" ]; then
             # Let's convert CamelCase to Camel Case
             DISTRO_NAME=$(__camelcase_split "$DISTRO_NAME")
-        fi
-        if [ "${DISTRO_NAME}" = "openSUSE project" ]; then
+        elif [ "${DISTRO_NAME}" = "openSUSE project" ]; then
             # lsb_release -si returns "openSUSE project" on openSUSE 12.3
             DISTRO_NAME="opensuse"
-        fi
-        if [ "${DISTRO_NAME}" = "SUSE LINUX" ]; then
+        elif [ "${DISTRO_NAME}" = "SUSE LINUX" ]; then
             # lsb_release -si returns "SUSE LINUX" on SLES 11 SP3
             DISTRO_NAME="suse"
+        elif [ "${DISTRO_NAME}" = "EnterpriseEnterpriseServer" ]; then
+            # This the Oracle Linux Enterprise ID before ORACLE LINUX 5 UPDATE 3
+            DISTRO_NAME="Oracle Linux"
         fi
         rv=$(lsb_release -sr)
         [ "${rv}x" != "x" ] && DISTRO_VERSION=$(__parse_version_string "$rv")
@@ -686,6 +700,8 @@ __gather_linux_system_info() {
             redhat             )
                 if [ ".$(egrep 'CentOS' /etc/${rsource})" != . ]; then
                     n="CentOS"
+                elif [ ".$(egrep 'Scientific' /etc/${rsource})" != . ]; then
+                    n="Scientific Linux"
                 elif [ ".$(egrep 'Red Hat Enterprise Linux' /etc/${rsource})" != . ]; then
                     n="<R>ed <H>at <E>nterprise <L>inux"
                 else
@@ -703,6 +719,7 @@ __gather_linux_system_info() {
             slackware          ) n="Slackware"      ;;
             turbolinux         ) n="TurboLinux"     ;;
             unitedlinux        ) n="UnitedLinux"    ;;
+            oracle             ) n="Oracle Linux"   ;;
             system             )
                 while read -r line; do
                     [ "${n}x" != "systemx" ] && break
@@ -714,8 +731,8 @@ __gather_linux_system_info() {
                 done < /etc/${rsource}
                 ;;
             os                 )
-                nn=$(__unquote_string $(grep '^ID=' /etc/os-release | sed -e 's/^ID=\(.*\)$/\1/g'))
-                rv=$(__unquote_string $(grep '^VERSION_ID=' /etc/os-release | sed -e 's/^VERSION_ID=\(.*\)$/\1/g'))
+                nn="$(__unquote_string $(grep '^ID=' /etc/os-release | sed -e 's/^ID=\(.*\)$/\1/g'))"
+                rv="$(__unquote_string $(grep '^VERSION_ID=' /etc/os-release | sed -e 's/^VERSION_ID=\(.*\)$/\1/g'))"
                 [ "${rv}x" != "x" ] && v=$(__parse_version_string "$rv") || v=""
                 case $(echo ${nn} | tr '[:upper:]' '[:lower:]') in
                     arch        )
@@ -783,7 +800,7 @@ __gather_sunos_system_info() {
                     DISTRO_NAME="Solaris"
                     # Let's make sure we not actually on a Joyent's SmartOS VM since some releases
                     # don't have SmartOS in `/etc/release`, only `Solaris`
-                    $(uname -v | grep joyent >/dev/null 2>&1)
+                    uname -v | grep joyent >/dev/null 2>&1
                     if [ $? -eq 0 ]; then
                         DISTRO_NAME="SmartOS"
                     fi
@@ -1007,6 +1024,15 @@ __git_clone_and_checkout() {
         git fetch || return 1
         # Tags are needed because of salt's versioning, also fetch that
         git fetch --tags || return 1
+
+        # If we have the SaltStack remote set as upstream, we also need to fetch the tags from there
+        if [ "x$(git remote -v | grep $_SALTSTACK_REPO_URL)" != "x" ]; then
+            git fetch --tags upstream
+        else
+            git remote add upstream $_SALTSTACK_REPO_URL
+            git fetch --tags upstream
+        fi
+
         git reset --hard $GIT_REV || return 1
 
         # Just calling `git reset --hard $GIT_REV` on a branch name that has
@@ -1019,9 +1045,17 @@ __git_clone_and_checkout() {
             git pull --rebase || return 1
         fi
     else
-        git clone $_SALTSTACK_REPO_URL || return 1
+        git clone $_SALT_REPO_URL || return 1
         cd $SALT_GIT_CHECKOUT_DIR
+
+        if [ $_SALT_REPO_URL != $_SALTSTACK_REPO_URL ]; then
+            # We need to add the saltstack repository as a remote and fetch tags for proper versioning
+            git remote add upstream $_SALTSTACK_REPO_URL
+            git fetch --tags upstream
+        fi
+
         git checkout $GIT_REV || return 1
+
     fi
     return 0
 }
@@ -1032,7 +1066,7 @@ __git_clone_and_checkout() {
 #   DESCRIPTION:  (DRY) apt-get install with noinput options
 #----------------------------------------------------------------------------------------------------------------------
 __apt_get_install_noinput() {
-    apt-get install -y -o DPkg::Options::=--force-confold $@; return $?
+    apt-get install -y -o DPkg::Options::=--force-confold "${@}"; return $?
 }
 
 
@@ -1041,7 +1075,7 @@ __apt_get_install_noinput() {
 #   DESCRIPTION:  (DRY) apt-get upgrade with noinput options
 #----------------------------------------------------------------------------------------------------------------------
 __apt_get_upgrade_noinput() {
-    apt-get upgrade -y -o DPkg::Options::=--force-confold $@; return $?
+    apt-get upgrade -y -o DPkg::Options::=--force-confold; return $?
 }
 
 
@@ -1314,6 +1348,58 @@ __check_services_upstart() {
 }   # ----------  end of function __check_services_upstart  ----------
 
 
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_sysvinit
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_sysvinit() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    if [ "$(chkconfig --list  | grep salt-$fname | grep '[2-5]:on')" != "" ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_sysvinit  ----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_debian
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_debian() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    if [ -f /etc/rc$(runlevel | awk '{ print $2 }').d/S*${servicename} ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_debian  ----------
+
+
 #######################################################################################################################
 #
 #   Distribution install functions
@@ -1421,7 +1507,12 @@ install_ubuntu_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
         echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
+
     apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
     if [ $DISTRO_MAJOR_VERSION -gt 12 ] || ([ $DISTRO_MAJOR_VERSION -eq 12 ] && [ $DISTRO_MINOR_VERSION -eq 10 ]); then
         # Above Ubuntu 12.04 add-apt-repository is in a different package
         __apt_get_install_noinput software-properties-common || return 1
@@ -1443,10 +1534,29 @@ install_ubuntu_deps() {
     # Minimal systems might not have upstart installed, install it
     __apt_get_install_noinput upstart
 
-    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
+    if [ $DISTRO_MAJOR_VERSION -gt 12 ] || ([ $DISTRO_MAJOR_VERSION -eq 12 ] && [ $DISTRO_MINOR_VERSION -gt 03 ]); then
+        __apt_get_install_noinput python-requests
+        __PIP_PACKAGES=""
+    else
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package 'requests'"
         __apt_get_install_noinput python-pip
-        pip install -U apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        __PIP_PACKAGES="requests"
+        pip install requests
+    fi
+
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __apt_get_install_noinput procps pciutils
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install 'apache-libcloud'"
+        if [ "x${__PIP_PACKAGES}" = "x" ]; then
+            __apt_get_install_noinput python-pip
+        fi
+        __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
+    fi
+
+    if [ "x${__PIP_PACKAGES}" != "x" ]; then
+        pip install -U ${__PIP_PACKAGES}
     fi
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
@@ -1603,16 +1713,16 @@ install_ubuntu_restart_daemons() {
 }
 
 install_ubuntu_check_services() {
-    if [ ! -f /sbin/initctl ]; then
-        return 0
-    fi
-
     for fname in minion master syndic; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
-        __check_services_upstart salt-$fname || return 1
+        if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
+            __check_services_upstart salt-$fname || return 1
+        elif [ -f /etc/init.d/salt-$fname ]; then
+            __check_services_debian salt-$fname || return 1
+        fi
     done
     return 0
 }
@@ -1634,11 +1744,21 @@ install_debian_deps() {
 
     apt-get update
 
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
+    # Both python-requests which is a hard dependency and apache-libcloud which is a soft dependency, under debian < 7
+    # need to be installed using pip
+    check_pip_allowed "You need to allow pip based installations (-P) in order to install the python 'requests' package"
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __apt_get_install_noinput python-pip procps pciutils
+
+    __PIP_PACKAGES="requests"
+
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
-        __apt_get_install_noinput python-pip
-        pip install -U apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
     fi
+    pip install -U ${__PIP_PACKAGES}
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
@@ -1658,6 +1778,11 @@ install_debian_6_deps() {
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
 
     wget $_WGET_ARGS -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
 
@@ -1703,6 +1828,10 @@ _eof
     if [ "x$(grep -R 'backports.debian.org' /etc/apt)" = "x" ]; then
         echo "deb http://backports.debian.org/debian-backports squeeze-backports main" >> \
             /etc/apt/sources.list.d/backports.list
+
+        # Add the backports key
+        gpg --keyserver pgpkeys.mit.edu --recv-key 8B48AD6246925553
+        gpg -a --export 8B48AD6246925553 | apt-key add -
     fi
 
     # Saltstack's Stable Debian repository
@@ -1712,9 +1841,14 @@ _eof
     fi
     apt-get update || return 1
 
+    # Python requests is available through Squeeze backports
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __apt_get_install_noinput python-requests python-pip procps pciutils
+
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
-        pip install -U apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        __apt_get_install_noinput python-pip
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
@@ -1737,6 +1871,10 @@ install_debian_7_deps() {
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
 
     # Saltstack's Stable Debian repository
     if [ "x$(grep -R 'wheezy-saltstack' /etc/apt)" = "x" ]; then
@@ -1772,15 +1910,22 @@ _eof
 
         apt-get update
         __apt_get_install_noinput -t unstable libzmq3 libzmq3-dev || return 1
-        __apt_get_install_noinput build-essential python-dev python-pip || return 1
+        __PACKAGES="build-essential python-dev python-pip python-requests"
+        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+        __PACKAGES="${__PACKAGES} procps pciutils"
+        __apt_get_install_noinput ${__PACKAGES} || return 1
     else
         apt-get update || return 1
-        __apt_get_install_noinput python-zmq || return 1
+        __PACKAGES="python-zmq python-requests"
+        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+        __PACKAGES="${__PACKAGES} procps pciutils"
+        __apt_get_install_noinput ${__PACKAGES} || return 1
+
     fi
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
-        pip install -U apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
@@ -1808,6 +1953,10 @@ install_debian_git_deps() {
     export DEBIAN_FRONTEND=noninteractive
 
     apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
     __apt_get_install_noinput lsb-release python python-pkg-resources python-crypto \
         python-jinja2 python-m2crypto python-yaml msgpack-python python-pip \
         git || return 1
@@ -1821,8 +1970,8 @@ install_debian_git_deps() {
     fi
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
-        pip install -U apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
@@ -1974,6 +2123,17 @@ install_debian_restart_daemons() {
         /etc/init.d/salt-$fname start
     done
 }
+
+install_debian_check_services() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_debian salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   Ended Debian Install Functions
 #
@@ -1984,7 +2144,7 @@ install_debian_restart_daemons() {
 #   Fedora Install Functions
 #
 install_fedora_deps() {
-    packages="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq"
+    packages="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
         packages="${packages} python-libcloud"
@@ -2123,19 +2283,19 @@ install_centos_stable_deps() {
         yum -y update || return 1
     fi
 
-    packages="yum-utils"
+    packages="yum-utils chkconfig"
 
     if [ $DISTRO_MAJOR_VERSION -eq 5 ]; then
-        packages="${packages} python26-PyYAML python26-m2crypto m2crypto python26 "
+        packages="${packages} python26-PyYAML python26-m2crypto m2crypto python26 python26-requests"
         packages="${packages} python26-crypto python26-msgpack python26-zmq python26-jinja2"
         if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-            check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
+            check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
             packages="${packages} python26-setuptools"
         fi
     else
-        packages="PyYAML m2crypto python-crypto python-msgpack python-zmq python-jinja2"
+        packages="${packages} PyYAML m2crypto python-crypto python-msgpack python-zmq python-jinja2 python-requests"
         if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-            check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
+            check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
             packages="${packages} python-pip"
         fi
     fi
@@ -2143,11 +2303,11 @@ install_centos_stable_deps() {
     yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
         if [ $DISTRO_MAJOR_VERSION -eq 5 ]; then
-            easy_install-2.6 apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+            easy_install-2.6 "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
         else
-            pip-python install apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+            pip-python install "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
         fi
     fi
 
@@ -2178,7 +2338,7 @@ install_centos_stable_post() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
-        if [ ! -f /sbin/initctl ] && [ -f /etc/init.d/salt-$fname ]; then
+        if [ -f /etc/init.d/salt-$fname ]; then
             # Still in SysV init!?
             /sbin/chkconfig salt-$fname on
         fi
@@ -2254,21 +2414,24 @@ install_centos_restart_daemons() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
-        if [ -f /sbin/initctl ]; then
-            # We have upstart support
+        if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
+            # We have upstart support and upstart knows about our service
             /sbin/initctl status salt-$fname > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                # upstart knows about this service.
-                # Let's try to stop it, and then start it
-                /sbin/initctl stop salt-$fname > /dev/null 2>&1
-                /sbin/initctl start salt-$fname > /dev/null 2>&1
-                # Restart service
-                [ $? -eq 0 ] && continue
-                # We failed to start the service, let's test the SysV code bellow
+            if [ $? -ne 0 ]; then
+                # Everything is in place and upstart gave us an error code? Fail!
+                return 1
             fi
-        fi
 
-        if [ -f /etc/init.d/salt-$fname ]; then
+            # upstart knows about this service.
+            # Let's try to stop it, and then start it
+            /sbin/initctl stop salt-$fname > /dev/null 2>&1
+            /sbin/initctl start salt-$fname > /dev/null 2>&1
+            # Restart service
+            if [ $? -ne 0 ]; then
+                # Failed the restart?!
+                return 1
+            fi
+        elif [ -f /etc/init.d/salt-$fname ]; then
             # Still in SysV init!?
             /etc/init.d/salt-$fname stop > /dev/null 2>&1
             /etc/init.d/salt-$fname start
@@ -2292,16 +2455,16 @@ install_centos_testing_post() {
 }
 
 install_centos_check_services() {
-    if [ ! -f /sbin/initctl ]; then
-        return 0
-    fi
-
     for fname in minion master syndic; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
-        __check_services_upstart salt-$fname || return 1
+        if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
+            __check_services_upstart salt-$fname || return 1
+        elif [ -f /etc/init.d/salt-$fname ]; then
+            __check_services_sysvinit salt-$fname || return 1
+        fi
     done
     return 0
 }
@@ -2321,7 +2484,7 @@ install_red_hat_linux_stable_deps() {
     else
         OPTIONAL_ARCH=$CPU_ARCH_L
     fi
-    if [ $DISTRO_MAJOR_VERSION -eq 6 ] && [ "X$(rhn-channel -l | grep optional)" != "Xrhel-${OPTIONAL_ARCH}-server-optional-${DISTRO_MAJOR_VERSION}" ]; then
+    if [ $DISTRO_MAJOR_VERSION -eq 6 ] && case "X$(rhn-channel -l | grep optional)" in Xrhel-${OPTIONAL_ARCH}-server-optional-${DISTRO_MAJOR_VERSION}* ) false ;; * ) true ;; esac ; then
       echoerror "Failed to find RHN optional repo, please enable it using the GUI or rhn-channel command."
       return 1
     fi
@@ -2515,6 +2678,137 @@ install_red_hat_enterprise_workstation_testing_post() {
 #
 #######################################################################################################################
 
+
+#######################################################################################################################
+#
+#   Oracle Linux Install Functions
+#
+install_oracle_linux_stable_deps() {
+    install_centos_stable_deps || return 1
+    return 0
+}
+
+install_oracle_linux_git_deps() {
+    install_centos_git_deps || return 1
+    return 0
+}
+
+install_oracle_linux_testing_deps() {
+    install_centos_testing_deps || return 1
+    return 0
+}
+
+install_oracle_linux_stable() {
+    install_centos_stable || return 1
+    return 0
+}
+
+install_oracle_linux_git() {
+    install_centos_git || return 1
+    return 0
+}
+
+install_oracle_linux_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_oracle_linux_stable_post() {
+    install_centos_stable_post || return 1
+    return 0
+}
+
+install_oracle_linux_git_post() {
+    install_centos_git_post || return 1
+    return 0
+}
+
+
+install_oracle_linux_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
+
+install_oracle_linux_restart_daemons() {
+    install_centos_restart_daemons || return 1
+    return 0
+}
+
+install_oracle_linux_check_services() {
+    install_centos_check_services || return 1
+    return 0
+}
+#
+#   Ended Oracle Linux Install Functions
+#
+#######################################################################################################################
+
+
+#######################################################################################################################
+#
+#   Scientific Linux Install Functions
+#
+install_scientific_linux_stable_deps() {
+    install_centos_stable_deps || return 1
+    return 0
+}
+
+install_scientific_linux_git_deps() {
+    install_centos_git_deps || return 1
+    return 0
+}
+
+install_scientific_linux_testing_deps() {
+    install_centos_testing_deps || return 1
+    return 0
+}
+
+install_scientific_linux_stable() {
+    install_centos_stable || return 1
+    return 0
+}
+
+install_scientific_linux_git() {
+    install_centos_git || return 1
+    return 0
+}
+
+install_scientific_linux_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_scientific_linux_stable_post() {
+    install_centos_stable_post || return 1
+    return 0
+}
+
+install_scientific_linux_git_post() {
+    install_centos_git_post || return 1
+    return 0
+}
+
+
+install_scientific_linux_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
+
+install_scientific_linux_restart_daemons() {
+    install_centos_restart_daemons || return 1
+    return 0
+}
+
+install_scientific_linux_check_services() {
+    install_centos_check_services || return 1
+    return 0
+}
+#
+#   Ended Scientific Linux Install Functions
+#
+#######################################################################################################################
+
+
 #######################################################################################################################
 #
 #   Amazon Linux AMI Install Functions
@@ -2533,18 +2827,18 @@ install_amazon_linux_ami_deps() {
         yum -y update || return 1
     fi
 
-    packages="PyYAML m2crypto python-crypto python-msgpack python-zmq python-ordereddict python-jinja2"
+    packages="PyYAML m2crypto python-crypto python-msgpack python-zmq python-ordereddict python-jinja2 python-requests"
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
         packages="${packages} python-pip"
     fi
 
     yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
-        pip-python install apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        pip-python install "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
     if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
@@ -2636,9 +2930,9 @@ install_arch_linux_git_deps() {
     pacman -Sy --noconfirm --needed pacman || return 1
     # Don't fail if un-installing python2-distribute threw an error
     pacman -R --noconfirm --needed python2-distribute
-    pacman -Sy --noconfirm --needed git python2-crypto python2-setuptools \
-        python2-jinja python2-m2crypto python2-markupsafe python2-msgpack \
-        python2-psutil python2-yaml python2-pyzmq zeromq || return 1
+    pacman -Sy --noconfirm --needed git python2-crypto python2-setuptools python2-jinja \
+        python2-m2crypto python2-markupsafe python2-msgpack python2-psutil python2-yaml \
+        python2-pyzmq zeromq python2-requests || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -2866,7 +3160,7 @@ config_freebsd_salt() {
 install_freebsd_git_deps() {
     install_freebsd_9_stable_deps || return 1
 
-    /usr/local/sbin/pkg install -y git || return 1
+    /usr/local/sbin/pkg install -y git www/py-requests || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -3011,8 +3305,7 @@ install_freebsd_restart_daemons() {
 #
 install_smartos_deps() {
     pkgin -y install \
-        zeromq py27-m2crypto py27-crypto py27-msgpack py27-yaml \
-        py27-jinja2 py27-zmq || return 1
+        zeromq py27-m2crypto py27-crypto py27-msgpack py27-yaml py27-jinja2 py27-zmq py27-requests || return 1
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
@@ -3147,7 +3440,7 @@ install_opensuse_stable_deps() {
     DISTRO_REPO="openSUSE_${DISTRO_MAJOR_VERSION}.${DISTRO_MINOR_VERSION}"
 
     # Is the repository already known
-    $(zypper repos | grep devel_languages_python >/dev/null 2>&1)
+    zypper repos | grep devel_languages_python >/dev/null 2>&1
     if [ $? -eq 1 ]; then
         # zypper does not yet know nothing about devel_languages_python
         zypper --non-interactive addrepo --refresh \
@@ -3171,10 +3464,10 @@ install_opensuse_stable_deps() {
         zypper --gpg-auto-import-keys --non-interactive update || return 1
     fi
 
-    packages="libzmq3 python python-Jinja2 python-M2Crypto python-PyYAML "
+    packages="libzmq3 python python-Jinja2 python-M2Crypto python-PyYAML python-requests"
     packages="${packages} python-msgpack-python python-pycrypto python-pyzmq python-xml"
 
-    if [ $_INSTALL_CLOUD -eq $BS_TRUE]; then
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
         packages="${packages} python-apache-libcloud"
     fi
 
@@ -3320,7 +3613,7 @@ install_suse_11_stable_deps() {
     DISTRO_REPO="SLE_${DISTRO_MAJOR_VERSION}${DISTRO_PATCHLEVEL}"
 
     # Is the repository already known
-    $(zypper repos | grep devel_languages_python >/dev/null 2>&1)
+    zypper repos | grep devel_languages_python >/dev/null 2>&1
     if [ $? -eq 1 ]; then
         # zypper does not yet know nothing about devel_languages_python
         zypper --non-interactive addrepo --refresh \
@@ -3334,7 +3627,7 @@ install_suse_11_stable_deps() {
     fi
 
     packages="libzmq3 python python-Jinja2 'python-M2Crypto>=0.21' python-msgpack-python"
-    packages="${packages} python-pycrypto python-pyzmq python-pip python-xml"
+    packages="${packages} python-pycrypto python-pyzmq python-pip python-xml python-requests"
 
     if [ $SUSE_PATCHLEVEL -eq 1 ]; then
         check_pip_allowed
@@ -3482,9 +3775,9 @@ install_suse_check_services() {
 #
 __emerge() {
     if [ $_GENTOO_USE_BINHOST -eq $BS_TRUE ]; then
-        emerge --autounmask-write --getbinpkg $@; return $?
+        emerge --autounmask-write --getbinpkg "${@}"; return $?
     fi
-    emerge --autounmask-write $@; return $?
+    emerge --autounmask-write "${@}"; return $?
 }
 
 __gentoo_config_protection() {
@@ -3521,11 +3814,12 @@ __gentoo_post_dep() {
     __gentoo_config_protection
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
-        check_pip_allowed "You need to allow pip based installations(-P) in order to install apache-libcloud"
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
         __emerge -v 'dev-python/pip'
-        pip install -U apache-libcloud>=$_LIBCLOUD_MIN_VERSION
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
+    __emerge -vo 'dev-python/requests'
     __emerge -vo 'app-admin/salt'
 
     if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
@@ -3711,7 +4005,7 @@ preseed_master() {
     SEED_DEST="$_PKI_DIR/master/minions"
     [ -d $SEED_DEST ] || mkdir -p $SEED_DEST && chmod 700 $SEED_DEST || return 1
 
-    for keyfile in $(ls $_TEMP_KEYS_DIR); do
+    for keyfile in $_TEMP_KEYS_DIR/*; do
         src_keyfile="${_TEMP_KEYS_DIR}/${keyfile}"
         dst_keyfile="${SEED_DEST}/${keyfile}"
 
@@ -3748,11 +4042,11 @@ daemons_running() {
         if [ "${DISTRO_NAME}" = "SmartOS" ]; then
             if [ "$(svcs -Ho STA salt-$fname)" != "ON" ]; then
                 echoerror "salt-$fname was not found running"
-                FAILED_DAEMONS=$(expr $FAILED_DAEMONS + 1)
+                FAILED_DAEMONS=$((FAILED_DAEMONS + 1))
             fi
         elif [ "x$(ps wwwaux | grep -v grep | grep salt-$fname)" = "x" ]; then
             echoerror "salt-$fname was not found running"
-            FAILED_DAEMONS=$(expr $FAILED_DAEMONS + 1)
+            FAILED_DAEMONS=$((FAILED_DAEMONS + 1))
         fi
     done
     return $FAILED_DAEMONS
@@ -3986,6 +4280,12 @@ if [ $_SALT_MASTER_ADDRESS != "null" ]; then
     cat <<_eof > $_SALT_ETC_DIR/minion.d/99-master-address.conf
 master: $_SALT_MASTER_ADDRESS
 _eof
+fi
+
+# Drop the minion id if passed
+if [ $_SALT_MINION_ID != "null" ]; then
+    [ ! -d $_SALT_ETC_DIR ] && mkdir -p $_SALT_ETC_DIR
+    echo $_SALT_MINION_ID > $_SALT_ETC_DIR/minion_id
 fi
 
 # Run any post install function. Only execute function if not in config mode only
