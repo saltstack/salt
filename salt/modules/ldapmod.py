@@ -88,7 +88,7 @@ def _connect(**kwargs):
     '''
     connargs = {}
     for name in ['uri', 'server', 'port', 'tls', 'no_verify', 'binddn',
-                 'bindpw', 'anonymous' ]:
+                 'bindpw', 'anonymous']:
         connargs[name] = _config(name, **kwargs)
 
     return _LDAPConnection(**connargs).ldap
