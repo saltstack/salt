@@ -6,10 +6,11 @@ The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
-Requisites come in two types: Direct requisites (such as ``require`` and
-``watch``), and requisite_ins (``require_in``, ``watch_in``, and ``prereq_in``). The
-relationships are directional, so a requisite statement makes the requiring
-state declaration depend on the required state declaration:
+Requisites come in two types: Direct requisites (such as ``require`` and ``watch``),
+and requisite_ins (such as ``require_in`` and ``watch_in``). The relationships are
+directional: a direct requisite requires something from another state, while
+requisite_ins operate in the other direction. A requisite_in contains something that
+is required by another state. The following example demonstrates a direct requisite:
 
 .. code-block:: yaml
 
@@ -22,9 +23,9 @@ state declaration depend on the required state declaration:
         - require:
           - pkg: vim
 
-So in this example, the file ``/etc/vimrc`` depends on the vim package.
+In the example above, the file ``/etc/vimrc`` depends on the vim package.
 
-``Requisite_in`` statements are the opposite, instead of saying "I depend on
+Requisite_in statements are the opposite. Instead of saying "I depend on
 something", requisite_ins say "Someone depends on me":
 
 .. code-block:: yaml
@@ -38,9 +39,9 @@ something", requisite_ins say "Someone depends on me":
       file.managed:
         - source: salt://edit/vimrc
 
-So here, with a ``requisite_in``, the same thing is accomplished, but just
-from the other way around. The vim package is saying "/etc/vimrc depends on
-me".
+So here, with a requisite_in, the same thing is accomplished as in the first
+example, but the other way around. The vim package is saying "/etc/vimrc depends
+on me".
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -59,29 +60,29 @@ finite and predictable order.
             - source: salt://edit/vimrc
 
 
-Requisite and Requisite in types
-================================
+Direct Requisite and Requisite_in types
+=======================================
 
-There are three requisite statements that can be used in Salt: the ``require``,
-``watch`` and ``use`` requisites. Each requisite also has a corresponding
-requisite_in: ``require_in``, ``watch_in`` and ``use_in``. All of the
+There are four direct requisite statements that can be used in Salt: ``require``,
+``watch``, ``prereq``, and ``use``. Each direct requisite also has a corresponding
+requisite_in: ``require_in``, ``watch_in``, ``prereq_in`` and ``use_in``. All of the
 requisites define specific relationships and always work with the dependency
 logic defined above.
 
 Require
 -------
 
-The most basic requisite statement is ``require``. The behavior of require is
-simple. Make sure that the dependent state is executed before the depending
-state, and if the dependent state fails, don't run the depending state. So in
-the above examples the file ``/etc/vimrc`` will only be applied after the vim
+The most basic requisite is ``require``. The behavior of require is
+simple: Make sure the dependent state is executed before the depending
+state. If the dependent state fails, don't run the depending state. In
+the first example, the file ``/etc/vimrc`` will only run after the vim
 package is installed and only if the vim package is installed successfully.
 
 Require an entire sls file
 --------------------------
 
 As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first including
-the sls file and then setting a state to ``require`` the included sls file.
+the sls file and then setting a state to ``require`` the included sls file:
 
 .. code-block:: yaml
 
@@ -99,13 +100,16 @@ Watch
 The watch statement does everything the require statement does, but with a
 little more. The watch statement looks into the state modules for a function
 called ``mod_watch``. If this function is not available in the corresponding
-state module, then watch does the same thing as require. If the ``mod_watch``
-function is in the state module, then the watched state is checked to see if
-it made any changes to the system, if it has, then ``mod_watch`` is called.
+state module, then watch does the same thing as require (not all state modules
+contain the ``mod_watch`` function). If the ``mod_watch`` function is in the
+state module, then the watched state is checked to see if it made any changes
+to the system, if it has changes, then ``mod_watch`` is called.
 
 Perhaps the best example of using watch is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
-the service is reloaded/restarted when the watched state changes::
+the service is reloaded/restarted when the watched state changes:
+
+.. code-block:: yaml
 
     ntpd:
       service.running:
@@ -145,7 +149,7 @@ changes, then the state requiring it will execute.
         - source: salt://site/code
 
 In this case the apache server will only be shutdown if the site-code state
-expects to deploy fresh code via the file.recurse call, and the site-code
+expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
@@ -173,7 +177,7 @@ id declaration. This is useful when many files need to have the same defaults.
           - file: /etc/foo.conf
 
 The ``use`` statement was developed primarily for the networking states but
-can be used on any states in Salt. This made sense for the networking state
+can be used on any states in Salt. This makes sense for the networking state
 because it can define a long list of options that need to be applied to
 multiple network interfaces.
 
@@ -188,7 +192,7 @@ Require In
 
 The ``require_in`` requisite is the literal reverse of ``require``. If
 a state declaration needs to be required by another state declaration then
-require_in can accommodate it, so these two sls files would be the same in
+require_in can accommodate it. Therefore, these two sls files would be same in
 the end:
 
 Using ``require``
@@ -266,14 +270,51 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
 Watch In
 --------
 
-Watch in functions the same as require in, but applies a watch statement
-rather than a require statement to the external state declaration.
+``watch_in`` functions the same way as ``require_in``, but applies
+a ``watch`` statement rather than a ``require`` statement to the external state
+declaration.
+
+A good example of when to use ``watch_in`` versus ``watch`` is in regards to writing
+an Apache state in conjunction with a git state for a Django application. On the most
+basic level, using either the ``watch`` or the ``watch_in`` requisites, the resulting
+behavior will be the same: Apache restarts each time the Django git state changes.
+
+.. code-block:: yaml
+
+    apache:
+      pkg:
+        - installed
+      service:
+        - watch:
+          - git: django_git
+
+    django_app1_git:
+      git:
+        - latest
+
+However, by using ``watch_in``, the approach is improved. By writing ``watch_in`` in
+the depending states (such as the Django state and any other states that require Apache
+to restart), the dependent state (Apache state) is de-coupled from the depending states:
+
+.. code-block:: yaml
+
+    apache:
+      pkg:
+        - installed
+        - name: httpd
+
+    django_git:
+      git:
+        - latest
+        - name: git@github.com/example/mydjangoproject.git
+        - watch_in:
+          - service: apache
 
 Prereq In
 ---------
 
-The ``prereq_in`` requisite in follows the same assignment logic as the
-``require_in`` requisite in. The ``prereq_in`` call simply assigns
+The ``prereq_in`` requisite_in follows the same assignment logic as the
+``require_in`` requisite_in. The ``prereq_in`` call simply assigns
 ``prereq`` to the state referenced. The above example for ``prereq`` can
 be modified to function in the same way using ``prereq_in``:
 
