@@ -7,7 +7,6 @@ Support for the softwareupdate command on MacOS.
 # Import python libs
 import re
 import os
-import glob
 
 # import salt libs
 import salt.utils
@@ -97,8 +96,8 @@ def list_upgrades(rec=False, restart=False):
 
 def ignore(*updates):
     '''
-    Ignore a specific program update. When an update is ignored the '-' and 
-    version number at the end will be omited, so "SecUpd2014-001-1.0" becomes 
+    Ignore a specific program update. When an update is ignored the '-' and
+    version number at the end will be omited, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
     is successfully ignored when it no longer shows up after list_upgrades.
 
@@ -114,7 +113,7 @@ def ignore(*updates):
         return ''
 
     # remove everything after and including the '-' in the updates
-    # name. 
+    # name.
     to_ignore = []
     for name in updates:
         to_ignore.append(name.rsplit('-', 1)[0])
@@ -130,7 +129,7 @@ def ignore(*updates):
 def list_ignored():
     '''
     List all upgrades that has been ignored. Ignored updates are shown
-    without the '-' and version number at the end, this is how the 
+    without the '-' and version number at the end, this is how the
     softwareupdate command works.
 
     CLI Example:
@@ -219,7 +218,7 @@ def schedule(*status):
 
 def upgrade(rec=False, restart=True):
     '''
-    Install all available upgrades. Returns a dictionary containing the name 
+    Install all available upgrades. Returns a dictionary containing the name
     of the update and the status of it's installation.
 
     Return values:
@@ -231,7 +230,7 @@ def upgrade(rec=False, restart=True):
 
     restart
        Set this to False if you do not want to install updates
-       that require a restart. 
+       that require a restart.
 
     CLI Example:
 
@@ -254,7 +253,7 @@ def upgrade(rec=False, restart=True):
         cmd = ['softwareupdate', '--install', update]
         __salt__['cmd.run_stdout'](cmd, python_shell=False,
                                    output_loglevel='debug')
-    
+
     ret = {}
     upgrades_left = _get_upgradable()
     for update in to_upgrade:
@@ -264,11 +263,11 @@ def upgrade(rec=False, restart=True):
             ret[update] = False
 
     return ret
-        
+
 
 def install(*updates):
     '''
-    Install a named upgrade. Returns a dictionary containing the name 
+    Install a named upgrade. Returns a dictionary containing the name
     of the update and the status of it's installation.
 
     Return values:
