@@ -288,7 +288,7 @@ behavior will be the same: Apache restarts each time the Django git state change
         - watch:
           - git: django_git
 
-    django_app1_git:
+    django_git:
       git:
         - latest
 
