@@ -6,7 +6,7 @@ Execute chef in server or solo mode
 import logging
 
 
-log = logging.getLogger(__name__) 
+log = logging.getLogger(__name__)
 
 CHEF_BINARIES = (
    'chef-client',
@@ -83,11 +83,11 @@ def ohai(*args, **kwargs):
     return __exec_cmd(*args, **kwargs)
 
 
-def __exec_cmd(*args, **kwargs): 
+def __exec_cmd(*args, **kwargs):
     cmd = ''.join([arg for arg in args])
     cmd_args = ''.join([
          ' --{0} {1}'.format(k, v) for k, v in kwargs.items() if not k.startswith('__')]
     )
     cmd_exec = "{0} {1}".format(cmd, cmd_args)
-    log.debug("ChefCommand: %s" % cmd_exec)
+    log.debug("ChefCommand: %s", cmd_exec)
     return __salt__['cmd.run'](cmd_exec)
