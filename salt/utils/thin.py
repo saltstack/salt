@@ -33,6 +33,16 @@ except ImportError:
     except ImportError:
         HAS_SIX = False
 try:
+    import chardet
+    HAS_CHARDET = True
+except ImportError:
+    # Import the bundled package
+    try:
+        from requests.packages.urllib3.packages import chardet  # pylint: disable=E0611
+        HAS_CHARDET = True
+    except ImportError:
+        HAS_CHARDET = False
+try:
     import markupsafe
     HAS_MARKUPSAFE = True
 except ImportError:
@@ -91,6 +101,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
 
     if HAS_SIX:
         tops.append(six.__file__.replace('.pyc', '.py'))
+
+    if HAS_CHARDET:
+        tops.append(os.path.dirname(chardet.__file__))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
