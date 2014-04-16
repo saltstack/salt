@@ -65,7 +65,7 @@ import salt.payload
 import salt.utils.schedule
 import salt.utils.event
 
-from salt._compat import integer_types, string_types
+from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 import salt.syspaths
@@ -222,7 +222,7 @@ def yamlify_arg(arg):
             else:
                 return arg
 
-        elif arg is None or isinstance(arg, (list, float, integer_types, string_types)):
+        elif arg is None or isinstance(arg, (int, list, float, string_types)):
             # yaml.safe_load will load '|' as '', don't let it do that.
             if arg == '' and original_arg in ('|',):
                 return original_arg
