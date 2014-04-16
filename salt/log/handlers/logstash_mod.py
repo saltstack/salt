@@ -132,7 +132,7 @@ except ImportError:
 try:
     import zmq
     HAS_ZMQ = True
-except:
+except ImportError:
     HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
