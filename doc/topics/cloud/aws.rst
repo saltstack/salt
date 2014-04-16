@@ -460,7 +460,7 @@ Tags can be set once an instance has been launched.
     my-ec2-config:
         tag:
             tag0: value
-            tag2: value
+            tag1: value
 
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
 .. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
@@ -476,6 +476,15 @@ as a tag called Name. Salt Cloud has the ability to manage these tags:
     salt-cloud -a get_tags mymachine
     salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     salt-cloud -a del_tags mymachine tag1,tag2,tag3
+
+It is possible to manage tags on any resource in EC2 with a Resource ID, not
+just instances:
+
+.. code-block:: bash
+
+    salt-cloud -f get_tags my_ec2 resource_id=af5467ba
+    salt-cloud -f set_tags my_ec2 resource_id=af5467ba tag1=somestuff
+    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tag1,tag2,tag3
 
 
 Rename EC2 Instances

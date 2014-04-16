@@ -247,6 +247,7 @@ Example state module
         current_state = __salt__['my_custom_module.current_state'](name)
 
         if current_state == foo:
+            ret['result'] = True
             ret['comment'] = 'System already in the correct state'
             return ret
 

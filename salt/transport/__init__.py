@@ -2,6 +2,7 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+import time
 
 # Import Salt Libs
 import salt.payload
@@ -82,6 +83,7 @@ class RAETChannel(Channel):
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['yard0'])
         while True:
+            time.sleep(0.01)
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 for msg in self.stack.rxMsgs:

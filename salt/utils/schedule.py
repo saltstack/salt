@@ -42,11 +42,13 @@ import multiprocessing
 import threading
 import sys
 import logging
+import errno
 
 # Import Salt libs
 import salt.utils
 import salt.utils.process
 from salt.utils.odict import OrderedDict
+from salt.utils.process import os_is_running
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -110,7 +112,7 @@ class Schedule(object):
                     job = salt.payload.Serial(self.opts).load(fp_)
                     log.debug('schedule.handle_func: Checking job against '
                               'fun {0}: {1}'.format(ret['fun'], job))
-                    if ret['fun'] == job['fun']:
+                    if ret['fun'] == job['fun'] and os_is_running(job['pid']):
                         jobcount += 1
                         log.debug(
                             'schedule.handle_func: Incrementing jobcount, now '
@@ -142,43 +144,58 @@ class Schedule(object):
         if 'kwargs' in data:
             kwargs = data['kwargs']
 
-        if args and kwargs:
-            ret['return'] = self.functions[func](*args, **kwargs)
-
-        if args and not kwargs:
-            ret['return'] = self.functions[func](*args)
-
-        if kwargs and not args:
-            ret['return'] = self.functions[func](**kwargs)
-
-        if not kwargs and not args:
-            ret['return'] = self.functions[func]()
-
-        data_returner = data.get('returner', None)
-        if data_returner or self.schedule_returner:
-            rets = []
-            for returner in [data_returner, self.schedule_returner]:
-                if isinstance(returner, str):
-                    rets.append(returner)
-                elif isinstance(returner, list):
-                    rets.extend(returner)
-            # simple de-duplication with order retained
-            rets = OrderedDict.fromkeys(rets).keys()
-            for returner in rets:
-                ret_str = '{0}.returner'.format(returner)
-                if ret_str in self.returners:
-                    ret['success'] = True
-                    self.returners[ret_str](ret)
-                else:
-                    log.info(
-                        'Job {0} using invalid returner: {1} Ignoring.'.format(
-                        func, returner
-                        )
-                    )
         try:
-            os.unlink(proc_fn)
-        except OSError:
-            pass
+            if args and kwargs:
+                ret['return'] = self.functions[func](*args, **kwargs)
+
+            if args and not kwargs:
+                ret['return'] = self.functions[func](*args)
+
+            if kwargs and not args:
+                ret['return'] = self.functions[func](**kwargs)
+
+            if not kwargs and not args:
+                ret['return'] = self.functions[func]()
+
+            data_returner = data.get('returner', None)
+            if data_returner or self.schedule_returner:
+                rets = []
+                for returner in [data_returner, self.schedule_returner]:
+                    if isinstance(returner, str):
+                        rets.append(returner)
+                    elif isinstance(returner, list):
+                        rets.extend(returner)
+                # simple de-duplication with order retained
+                rets = OrderedDict.fromkeys(rets).keys()
+                for returner in rets:
+                    ret_str = '{0}.returner'.format(returner)
+                    if ret_str in self.returners:
+                        ret['success'] = True
+                        self.returners[ret_str](ret)
+                    else:
+                        log.info(
+                            'Job {0} using invalid returner: {1} Ignoring.'.format(
+                            func, returner
+                            )
+                        )
+        except Exception:
+            log.exception("Unhandled exception running {0}".format(ret['fun']))
+            # Although catch-all exception handlers are bad, the exception here
+            # is to let the exception bubble up to the top of the thread context,
+            # where the thread will die silently, which is worse.
+        finally:
+            try:
+                os.unlink(proc_fn)
+            except OSError as e:
+                if e.errno == errno.EEXIST:
+                    # EEXIST is OK because the file is gone and that's what
+                    # we wanted
+                    pass
+                else:
+                    log.error("Failed to delete '{0}': {1}".format(proc_fn, e.errno))
+                    # Otherwise, failing to delete this file is not something
+                    # we can cleanly handle.
+                    raise
 
     def eval(self):
         '''
