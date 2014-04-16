@@ -910,7 +910,7 @@ class Cloud(object):
 
             if os.path.isfile(key_file) and not globbed_key_file:
                 # Single key entry. Remove it!
-                salt.utils.cloud.remove_key(self.opts['pki_dir'], name)
+                salt.utils.cloud.remove_key(self.opts['pki_dir'], os.path.basename(key_file))
                 continue
 
             if not os.path.isfile(key_file) and globbed_key_file:
