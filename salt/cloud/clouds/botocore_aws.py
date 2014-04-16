@@ -42,7 +42,6 @@ from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
 try:
-    from libcloud.compute.types import Provider
     from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
     from salt.cloud import libcloudfuncs
     from salt.cloud.clouds import libcloud_aws
