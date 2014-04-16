@@ -2001,7 +2001,14 @@ def get_tags(name=None,
              location=None,
              resource_id=None):  # pylint: disable=W0613
     '''
-    Retrieve tags for a node
+    Retrieve tags for a resource. Normally a VM name or instance_id is passed
+    in, but a resource_id may be passed instead. If both are passed in, the
+    instance_id will be used.
+
+    CLI Examples::
+
+        salt-cloud -a get_tags mymachine
+        salt-cloud -a get_tags resource_id=vol-3267ab32
     '''
     if instance_id is None:
         if location is None:
@@ -2027,11 +2034,14 @@ def del_tags(name=None,
              instance_id=None,
              resource_id=None):  # pylint: disable=W0613
     '''
-    Delete tags for a node
+    Delete tags for a resource. Normally a VM name or instance_id is passed in,
+    but a resource_id may be passed instead. If both are passed in, the
+    instance_id will be used.
 
-    CLI Example::
+    CLI Examples::
 
         salt-cloud -a del_tags mymachine tags=tag1,tag2,tag3
+        salt-cloud -a del_tags resource_id=vol-3267ab32 tags=tag1,tag2,tag3
     '''
     if kwargs is None:
         kwargs = {}
