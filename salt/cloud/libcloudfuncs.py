@@ -11,13 +11,17 @@ import logging
 
 # pylint: disable=W0611
 # Import libcloud
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-from libcloud.compute.deployment import (
-    MultiStepDeployment,
-    ScriptDeployment,
-    SSHKeyDeployment
-)
+try:
+    from libcloud.compute.types import Provider
+    from libcloud.compute.providers import get_driver
+    from libcloud.compute.deployment import (
+        MultiStepDeployment,
+        ScriptDeployment,
+        SSHKeyDeployment
+    )
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 # pylint: enable=W0611
 
 
@@ -52,6 +56,9 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     '''
     Compare different libcloud versions
     '''
+    if not HAS_LIBCLOUD:
+        return False
+
     if not isinstance(reqver, (list, tuple)):
         raise RuntimeError(
             '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
