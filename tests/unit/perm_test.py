@@ -38,6 +38,7 @@ EXEMPT_FILES = [
     'pkg/rpm/salt-syndic',
     'pkg/shar/build_shar.sh',
     'pkg/smartos/esky/install.sh',
+    'salt/cloud/deploy/bootstrap-salt.sh',
     'salt/templates/git/ssh-id-wrapper',
     'salt/templates/lxc/salt_tarball',
     'scripts/salt',
