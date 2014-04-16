@@ -34,7 +34,7 @@ def active():
         for job in data:
             if not job['jid'] in ret:
                 ret[job['jid']] = _format_job_instance(job)
-                ret[job['jid']].update({'Running': [], 'Returned': []})
+                ret[job['jid']].update({'Running': [{minion: job.get('pid', None)}], 'Returned': []})
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
     for jid in ret:
@@ -45,7 +45,7 @@ def active():
         if not os.path.isdir(jid_dir):
             continue
         for minion in os.listdir(jid_dir):
-            if minion.startswith('.'):
+            if minion.startswith('.') or minion == 'jid':
                 continue
             if os.path.exists(os.path.join(jid_dir, minion)):
                 ret[jid]['Returned'].append(minion)
