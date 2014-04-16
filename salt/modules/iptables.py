@@ -14,10 +14,6 @@ import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 
-import logging
-log = logging.getLogger(__name__)
-
-
 def __virtual__():
     '''
     Only load the module if iptables is installed
