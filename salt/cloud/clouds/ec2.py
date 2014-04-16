@@ -88,7 +88,6 @@ from salt._compat import ElementTree as ET
 # Import salt.cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
@@ -119,20 +118,18 @@ SIZE_MAP = {
 
 
 EC2_LOCATIONS = {
-    'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
-    'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
-    'eu-west-1': Provider.EC2_EU_WEST,
-    'sa-east-1': Provider.EC2_SA_EAST,
-    'us-east-1': Provider.EC2_US_EAST,
-    'us-west-1': Provider.EC2_US_WEST,
-    'us-west-2': Provider.EC2_US_WEST_OREGON
+    'ap-northeast-1': 'ec2_ap_northeast',
+    'ap-southeast-1': 'ec2_ap_southeast',
+    'ap-southeast-2': 'ec2_ap_southeast_2',
+    'eu-west-1': 'ec2_eu_west',
+    'sa-east-1': 'ec2_sa_east',
+    'us-east-1': 'ec2_us_east',
+    'us-west-1': 'ec2_us_west',
+    'us-west-2': 'ec2_us_west_oregon',
 }
 DEFAULT_LOCATION = 'us-east-1'
 
 DEFAULT_EC2_API_VERSION = '2013-10-01'
-
-if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
-    EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
 EC2_RETRY_CODES = [
     'RequestLimitExceeded',
@@ -1999,6 +1996,7 @@ def get_tags(name=None,
              instance_id=None,
              call=None,
              location=None,
+             kwargs=None,
              resource_id=None):  # pylint: disable=W0613
     '''
     Retrieve tags for a resource. Normally a VM name or instance_id is passed
@@ -2010,14 +2008,19 @@ def get_tags(name=None,
         salt-cloud -a get_tags mymachine
         salt-cloud -a get_tags resource_id=vol-3267ab32
     '''
-    if instance_id is None:
-        if location is None:
-            location = get_location()
+    if location is None:
+        location = get_location()
 
+    if instance_id is None:
         if resource_id is None:
-            instances = list_nodes_full(location)
-            if name in instances:
-                instance_id = instances[name]['instanceId']
+            if name:
+                instances = list_nodes_full(location)
+                if name in instances:
+                    instance_id = instances[name]['instanceId']
+            elif 'instance_id' in kwargs:
+                instance_id = kwargs['instance_id']
+            elif 'resource_id' in kwargs:
+                instance_id = kwargs['resource_id']
         else:
             instance_id = resource_id
 
