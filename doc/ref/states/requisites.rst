@@ -284,6 +284,7 @@ behavior will be the same: Apache restarts each time the Django git state change
     apache:
       pkg:
         - installed
+        - name: httpd
       service:
         - watch:
           - git: django_git
@@ -291,6 +292,7 @@ behavior will be the same: Apache restarts each time the Django git state change
     django_git:
       git:
         - latest
+        - name: git@github.com/example/mydjangoproject.git
 
 However, by using ``watch_in``, the approach is improved. By writing ``watch_in`` in
 the depending states (such as the Django state and any other states that require Apache
