@@ -49,7 +49,7 @@ Example::
 
 tl;dr: want to just have your computers update? add this your sls:
 updates:
-    win_update.install
+    win_update.installed
 
 '''
 
@@ -391,7 +391,7 @@ def installed(name, categories=None, includes=None, retries=10):
     name:
         if categories is left empty, it will be assumed that you are passing the category option
         through the name. These are seperate because you can only have one name, but can have
-        multiple categories. 
+        multiple categories.
 
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
@@ -463,7 +463,7 @@ def downloaded(name, categories=None, includes=None, retries=10):
     name:
         if categories is left empty, it will be assumed that you are passing the category option
         through the name. These are seperate because you can only have one name, but can have
-        multiple categories. 
+        multiple categories.
 
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
