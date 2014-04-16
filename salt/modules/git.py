@@ -35,24 +35,49 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     env = {}
 
     if identity:
-        env = {
-            'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
-                                    'git/ssh-id-wrapper'),
-            'GIT_IDENTITY': identity
-        }
+        stderrs = []
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=cwd,
-                                     runas=runas,
-                                     env=env,
-                                     **kwargs)
+        # if the statefile provides multiple identities, they need to be tried
+        # (but also allow a string instead of a list)
+        if not isinstance(identity, list):
+            # force it into a list
+            identity = [identity]
 
-    retcode = result['retcode']
+        # try each of the identities, independently
+        for id_file in identity:
+            env = {
+                'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
+                                        'git/ssh-id-wrapper'),
+                'GIT_IDENTITY': id_file
+            }
 
-    if retcode == 0:
-        return result['stdout']
+            result = __salt__['cmd.run_all'](cmd,
+                                             cwd=cwd,
+                                             runas=runas,
+                                             env=env,
+                                             **kwargs)
+
+            # if the command was successful, no need to try additional IDs
+            if result['retcode'] == 0:
+                return result['stdout']
+            else:
+                stderrs.append(result['stderr'])
+
+        # we've tried all IDs and still haven't passed, so error out
+        raise exceptions.CommandExecutionError("\n\n".join(stderrs))
+
     else:
-        raise exceptions.CommandExecutionError(result['stderr'])
+        result = __salt__['cmd.run_all'](cmd,
+                                         cwd=cwd,
+                                         runas=runas,
+                                         env=env,
+                                         **kwargs)
+        retcode = result['retcode']
+
+        if retcode == 0:
+            return result['stdout']
+        else:
+            raise exceptions.CommandExecutionError(result['stderr'])
 
 
 def _git_getdir(cwd, user=None):

@@ -167,6 +167,12 @@ from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network
 
+# Import Third party libs
+try:
+    import zmq
+except ImportError:
+    pass
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name

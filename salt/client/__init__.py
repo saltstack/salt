@@ -724,6 +724,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
+            show_jid=False,
             **kwargs):
         '''
         Starts a watcher looking at the return data for a specified JID
@@ -734,6 +735,8 @@ class LocalClient(object):
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
             print('-' * len(msg) + '\n')
+        elif show_jid:
+            print('jid: {0}'.format(jid))
         if timeout is None:
             timeout = self.opts['timeout']
         fret = {}
@@ -1084,7 +1087,8 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
-            verbose=False):
+            verbose=False,
+            show_jid=False):
         '''
         Get the returns for the command line interface via the event system
         '''
@@ -1094,6 +1098,9 @@ class LocalClient(object):
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
             print('-' * len(msg) + '\n')
+        elif show_jid:
+            print('jid: {0}'.format(jid))
+
         if timeout is None:
             timeout = self.opts['timeout']
         jid_dir = salt.utils.jid_dir(jid,
@@ -1159,6 +1166,7 @@ class LocalClient(object):
             tgt_type='glob',
             verbose=False,
             show_timeout=False,
+            show_jid=False,
             **kwargs):
         '''
         Get the returns for the command line interface via the event system
@@ -1174,6 +1182,9 @@ class LocalClient(object):
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
             print('-' * len(msg) + '\n')
+        elif show_jid:
+            print('jid: {0}'.format(jid))
+
         if timeout is None:
             timeout = self.opts['timeout']
         jid_dir = salt.utils.jid_dir(jid,

@@ -42,8 +42,7 @@ import logging
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-from salt.cloud.libcloudfuncs import destroy as libcloudfuncs_destroy
+
 from salt.cloud.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
@@ -51,6 +50,28 @@ from salt.cloud.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+
+try:
+    from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+    from salt.cloud.libcloudfuncs import destroy as libcloudfuncs_destroy
+    from libcloud.compute.types import Provider
+
+    EC2_LOCATIONS = {
+        'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
+        'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
+        'eu-west-1': Provider.EC2_EU_WEST,
+        'sa-east-1': Provider.EC2_SA_EAST,
+        'us-east-1': Provider.EC2_US_EAST,
+        'us-west-1': Provider.EC2_US_WEST,
+        'us-west-2': Provider.EC2_US_WEST_OREGON
+    }
+    DEFAULT_LOCATION = 'us-east-1'
+    if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
+        EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
+
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -64,6 +85,9 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
+    if not HAS_LIBCLOUD:
+        return False
+
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
@@ -124,21 +148,6 @@ def __virtual__():
     show_instance = namespaced_function(show_instance, globals())
 
     return __virtualname__
-
-
-EC2_LOCATIONS = {
-    'ap-northeast-1': Provider.EC2_AP_NORTHEAST,
-    'ap-southeast-1': Provider.EC2_AP_SOUTHEAST,
-    'eu-west-1': Provider.EC2_EU_WEST,
-    'sa-east-1': Provider.EC2_SA_EAST,
-    'us-east-1': Provider.EC2_US_EAST,
-    'us-west-1': Provider.EC2_US_WEST,
-    'us-west-2': Provider.EC2_US_WEST_OREGON
-}
-DEFAULT_LOCATION = 'us-east-1'
-
-if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
-    EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
 
 def get_configured_provider():

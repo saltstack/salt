@@ -39,7 +39,11 @@ import socket
 import pprint
 
 # Import libcloud
-from libcloud.compute.base import NodeState
+try:
+    from libcloud.compute.base import NodeState
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -82,6 +86,9 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for Rackspace configuration.
     '''
+    if not HAS_LIBCLOUD:
+        return False
+
     if get_configured_provider() is False:
         return False
 
