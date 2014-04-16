@@ -3,7 +3,6 @@ Manage Windows Package Repository
 '''
 
 # Python Libs
-import logging
 import os
 import stat
 import itertools
@@ -12,9 +11,6 @@ import itertools
 import salt.runner
 import salt.config
 
-# Settings
-log = logging.getLogger(__name__)
-
 
 def __virtual__():
     '''
@@ -22,15 +18,6 @@ def __virtual__():
     '''
 
     return 'winrepo' if 'salt-master' in __grains__['roles'] else False
-
-
-def _get_runner_client():
-    '''
-    Create the runner client
-    '''
-    return salt.runner.RunnerClient(
-        salt.config.master_config(__pillar__['master']['conf_file'])
-    )
 
 
 def genrepo(name, force=False, allow_empty=False):
@@ -52,8 +39,9 @@ def genrepo(name, force=False, allow_empty=False):
            'comment': ''}
 
     # TODO - get from salt.config without the need of pillar
-    win_repo = __pillar__['master']['win_repo']
-    win_repo_mastercachefile = __pillar__['master']['win_repo_mastercachefile']
+    master_config = __pillar__['master']
+    win_repo = master_config['win_repo']
+    win_repo_mastercachefile = master_config['win_repo_mastercachefile']
 
     # Check if the win_repo directory exists
     # if not search for a file with a newer mtime than the win_repo_mastercachefile file
@@ -83,7 +71,9 @@ def genrepo(name, force=False, allow_empty=False):
     if not execute and not force:
         return ret
 
-    runner = _get_runner_client()
+    runner = salt.runner.RunnerClient(
+        salt.config.master_config(master_config['conf_file'])
+    )
     runner_ret = runner.cmd('winrepo.genrepo', [])
     ret['changes'] = {'winrepo': runner_ret}
     if isinstance(runner_ret, dict) and runner_ret == {} and not allow_empty:
