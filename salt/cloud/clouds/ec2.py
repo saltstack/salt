@@ -1904,26 +1904,55 @@ def start(name, call=None):
     return result
 
 
-def set_tags(name, tags, call=None, location=None, instance_id=None):
+def set_tags(name=None,
+             tags=None,
+             call=None,
+             location=None,
+             instance_id=None,
+             resource_id=None,
+             kwargs=None):  # pylint: disable=W0613
     '''
-    Set tags for a node
+    Set tags for a resource. Normally a VM name or instance_id is passed in,
+    but a resource_id may be passed instead. If both are passed in, the
+    instance_id will be used.
 
-    CLI Example::
+    CLI Examples::
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
+        salt-cloud -a set_tags resource_id=vol-3267ab32 tag=somestuff
     '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The set_tags action must be called with -a or --action.'
-        )
+    if kwargs is None:
+        kwargs = {}
 
     if instance_id is None:
-        instance_id = _get_node(name, location)['instanceId']
+        if 'resource_id' in kwargs:
+            resource_id = kwargs['resource_id']
+            del kwargs['resource_id']
+
+        if 'instance_id' in kwargs:
+            instance_id = kwargs['instance_id']
+            del kwargs['instance_id']
+
+        if resource_id is None:
+            if instance_id is None:
+                instance_id = _get_node(name, location)['instanceId']
+        else:
+            instance_id = resource_id
+
+    # This second check is a safety, in case the above still failed to produce
+    # a usable ID
+    if instance_id is None:
+        return {
+            'Error': 'A valid instance_id or resource_id was not specified.'
+        }
 
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
 
     log.debug('Tags to set for {0}: {1}'.format(name, tags))
+
+    if kwargs and not tags:
+        tags = kwargs
 
     for idx, (tag_k, tag_v) in enumerate(tags.iteritems()):
         params['Tag.{0}.Key'.format(idx)] = tag_k
@@ -1966,48 +1995,69 @@ def set_tags(name, tags, call=None, location=None, instance_id=None):
     )
 
 
-def get_tags(name=None, instance_id=None, call=None, location=None):
+def get_tags(name=None,
+             instance_id=None,
+             call=None,
+             location=None,
+             resource_id=None):  # pylint: disable=W0613
     '''
-    Retrieve tags for a node
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The get_tags action must be called with -a or --action.'
-        )
+    Retrieve tags for a resource. Normally a VM name or instance_id is passed
+    in, but a resource_id may be passed instead. If both are passed in, the
+    instance_id will be used.
 
+    CLI Examples::
+
+        salt-cloud -a get_tags mymachine
+        salt-cloud -a get_tags resource_id=vol-3267ab32
+    '''
     if instance_id is None:
         if location is None:
             location = get_location()
 
-        instances = list_nodes_full(location)
-        if name in instances:
-            instance_id = instances[name]['instanceId']
+        if resource_id is None:
+            instances = list_nodes_full(location)
+            if name in instances:
+                instance_id = instances[name]['instanceId']
+        else:
+            instance_id = resource_id
 
     params = {'Action': 'DescribeTags',
               'Filter.1.Name': 'resource-id',
               'Filter.1.Value': instance_id}
+
     return query(params, setname='tagSet', location=location)
 
 
-def del_tags(name, kwargs, call=None):
+def del_tags(name=None,
+             kwargs=None,
+             call=None,
+             instance_id=None,
+             resource_id=None):  # pylint: disable=W0613
     '''
-    Delete tags for a node
+    Delete tags for a resource. Normally a VM name or instance_id is passed in,
+    but a resource_id may be passed instead. If both are passed in, the
+    instance_id will be used.
 
-    CLI Example::
+    CLI Examples::
 
-        salt-cloud -a del_tags mymachine tag1,tag2,tag3
+        salt-cloud -a del_tags mymachine tags=tag1,tag2,tag3
+        salt-cloud -a del_tags resource_id=vol-3267ab32 tags=tag1,tag2,tag3
     '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The del_tags action must be called with -a or --action.'
-        )
+    if kwargs is None:
+        kwargs = {}
 
     if not 'tags' in kwargs:
         raise SaltCloudSystemExit(
             'A tag or tags must be specified using tags=list,of,tags'
         )
 
-    instance_id = _get_node(name)['instanceId']
+    if not name and 'resource_id' in kwargs:
+        instance_id = kwargs['resource_id']
+        del kwargs['resource_id']
+
+    if not instance_id:
+        instance_id = _get_node(name)['instanceId']
+
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
 
@@ -2016,7 +2066,10 @@ def del_tags(name, kwargs, call=None):
 
     query(params, setname='tagSet')
 
-    return get_tags(name, call='action')
+    if resource_id:
+        return get_tags(resource_id=resource_id)
+    else:
+        return get_tags(instance_id=instance_id)
 
 
 def rename(name, kwargs, call=None):
