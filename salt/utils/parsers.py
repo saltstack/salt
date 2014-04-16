@@ -1549,6 +1549,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Display minions that timeout')
         )
         self.add_option(
+            '--show-jid',
+            default=False,
+            action='store_true',
+            help=('Displays jid without the additional output of --verbose')
+        )
+        self.add_option(
             '-b', '--batch',
             '--batch-size',
             default='',
