@@ -117,7 +117,7 @@ def _do_search(conf):
     '''
     # Build LDAP connection args
     connargs = {}
-    for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
+    for name in ['uri', 'tls', 'no_verify', 'anonymous', 'binddn', 'bindpw']:
         connargs[name] = _config(name, conf)
     # Build search args
     try:
