@@ -80,7 +80,7 @@ def build_minion_target(options, vm_name):
     return target
 
 
-def generate_vm_name(platform):
+def generate_vm_name(options):
     '''
     Generate a random enough vm name
     '''
@@ -90,7 +90,7 @@ def generate_vm_name(platform):
         random_part = hashlib.md5(
             str(random.randint(1, 100000000))).hexdigest()[:6]
 
-    return 'ZJENKINS-{0}-{1}'.format(platform, random_part)
+    return '{0}-{1}-{2}'.format(options.vm_prefix, options.platform, random_part)
 
 
 def delete_vm(options):
@@ -119,7 +119,7 @@ def echo_parseable_environment(options):
     output = []
 
     if options.platform:
-        name = generate_vm_name(options.platform)
+        name = generate_vm_name(options)
         output.extend([
             'JENKINS_SALTCLOUD_VM_PLATFORM={0}'.format(options.platform),
             'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name)
@@ -315,7 +315,7 @@ def run(opts):
     '''
     vm_name = os.environ.get(
         'JENKINS_SALTCLOUD_VM_NAME',
-        generate_vm_name(opts.platform)
+        generate_vm_name(opts)
     )
 
     if opts.download_remote_reports:
@@ -613,6 +613,11 @@ def parse():
     Parse the CLI options
     '''
     parser = optparse.OptionParser()
+    parser.add_option(
+        '--vm-prefix',
+        default=os.environ.get('JENKINS_VM_NAME_PREFIX', 'ZJENKINS'),
+        help='The bootstrapped machine name prefix'
+    )
     parser.add_option(
         '-w', '--workspace',
         default=os.path.abspath(
