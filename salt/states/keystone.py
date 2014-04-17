@@ -138,7 +138,8 @@ def user_present(name,
                                              **connection_args)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Enabled'] = 'Now {0}'.format(enabled)
-        if tenant and user[name]['tenant_id'] != tenant_id:
+        if tenant and ('tenant_id' not in user[name] or
+                       user[name]['tenant_id'] != tenant_id):
             __salt__['keystone.user_update'](name=name, tenant=tenant,
                                              profile=profile,
                                              **connection_args)
