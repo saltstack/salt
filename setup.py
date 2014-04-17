@@ -513,7 +513,7 @@ FREEZER_INCLUDES = [
     'email.mime.*',
 ]
 
-if hasattr(zmq, 'pyzmq_version_info'):
+if HAS_ZMQ and hasattr(zmq, 'pyzmq_version_info'):
     if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
         # We're freezing, and when freezing ZMQ needs to be installed, so this
         # works fine
