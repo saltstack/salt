@@ -2,6 +2,8 @@
 '''
 Module for managing partitions on POSIX-like systems.
 
+:depends:   - parted, partprobe, lsblk (usually parted and util-linux packages)
+
 Some functions may not be available, depending on your version of parted.
 
 Check the manpage for ``parted(8)`` for more information, or the online docs
@@ -42,9 +44,14 @@ VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work on POSIX-like systems, which have parted and lsblk installed.
+    These are usually provided by the ``parted`` and ``util-linux`` packages.
     '''
     if salt.utils.is_windows():
+        return False
+    if not salt.utils.which('parted'):
+        return False
+    if not salt.utils.which('lsblk'):
         return False
     return __virtualname__
 
@@ -735,6 +742,8 @@ def exists(device=''):
 def get_block_device():
     '''
     Retrieve a list of disk devices
+
+    .. versionadded:: Helium
 
     CLI Example:
 
