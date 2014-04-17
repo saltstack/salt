@@ -45,9 +45,13 @@ def test():
         mode = os.stat(localFilepath).st_mode
         print mode
 
-
     cacheDirpath = os.path.join('/tmp/raet', 'cache', 'master')
+    if not os.path.exists(cacheDirpath):
+        os.makedirs(cacheDirpath)
+
     sockDirpath = os.path.join('/tmp/raet', 'sock', 'master')
+    if not os.path.exists(sockDirpath):
+            os.makedirs(sockDirpath)
 
     opts = dict(
                 pki_dir=pkiDirpath,
