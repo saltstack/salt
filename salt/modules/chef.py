@@ -3,19 +3,14 @@
 Execute chef in server or solo mode
 '''
 
+# Import Python libs
 import logging
 
+# Import Salt libs
+import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
-
-CHEF_BINARIES = (
-   'chef-client',
-   'chef-solo',
-   'ohai',
-)
-
-# Import salt libs
-import salt.utils
 
 
 def __virtual__():
@@ -23,18 +18,11 @@ def __virtual__():
     Only load if chef is installed
     '''
     if salt.utils.which('chef-client'):
-        return 'chef'
+        return True
     return False
 
 
-def _check_chef():
-    '''
-    Checks if chef is installed
-    '''
-    for _ in CHEF_BINARIES:
-        salt.utils.check_or_die(_)
-
-
+@decorators.which('chef-client')
 def client(*args, **kwargs):
     '''
     Execute a chef client run and return a dict with the stderr, stdout,
@@ -46,11 +34,11 @@ def client(*args, **kwargs):
 
         salt '*' chef.client server=https://localhost -l debug
     '''
-    _check_chef()
     args += ('chef-client',)
     return __exec_cmd(*args, **kwargs)
 
 
+@decorators.which('chef-solo')
 def solo(*args, **kwargs):
     '''
     Execute a chef solo run and return a dict with the stderr, stdout,
@@ -62,11 +50,11 @@ def solo(*args, **kwargs):
 
         salt '*' chef.solo config=/etc/chef/solo.rb -l debug
     '''
-    _check_chef()
     args += ('chef-solo',)
     return __exec_cmd(*args, **kwargs)
 
 
+@decorators.which('ohai')
 def ohai(*args, **kwargs):
     '''
     Execute a ohai and return a dict with the stderr, stdout,
@@ -78,7 +66,6 @@ def ohai(*args, **kwargs):
 
         salt '*' chef.ohai
     '''
-    _check_chef()
     args += ('ohai',)
     return __exec_cmd(*args, **kwargs)
 
@@ -88,6 +75,6 @@ def __exec_cmd(*args, **kwargs):
     cmd_args = ''.join([
          ' --{0} {1}'.format(k, v) for k, v in kwargs.items() if not k.startswith('__')]
     )
-    cmd_exec = "{0} {1}".format(cmd, cmd_args)
-    log.debug("ChefCommand: %s", cmd_exec)
+    cmd_exec = '{0} {1}'.format(cmd, cmd_args)
+    log.debug('ChefCommand: {0}'.format(cmd_exec))
     return __salt__['cmd.run'](cmd_exec)
