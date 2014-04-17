@@ -76,7 +76,7 @@ To start setting up the pillar, the /srv/pillar directory needs to be present:
 
     mkdir /srv/pillar
 
-Now ceate a simple top file, following the same format as the top file used for
+Now create a simple top file, following the same format as the top file used for
 states:
 
 ``/srv/pillar/top.sls``:
