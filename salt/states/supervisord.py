@@ -109,27 +109,66 @@ def running(name,
     )
 
     # parse process groups
-    process_groups = []
+    process_groups = set()
     for proc in all_processes:
         if ':' in proc:
-            process_groups.append(proc[:proc.index(':') + 1])
-    process_groups = list(set(process_groups))
+            process_groups.add(proc[:proc.index(':') + 1])
+    process_groups = sorted(process_groups)
 
-    # determine if this process/group needs loading
-    needs_update = name not in all_processes and name not in process_groups
+    matches = {}
+    if name in all_processes:
+        matches[name] = (all_processes[name]['state'].lower() == 'running')
+    elif name in process_groups:
+        for process in (x for x in all_processes if x.startswith(name)):
+            matches[process] = (
+                all_processes[process]['state'].lower() == 'running'
+            )
+    to_add = not bool(matches)
 
     if __opts__['test']:
-        ret['result'] = None
-        _msg = 'restarted' if restart else 'started'
-        _update = ', but service needs to be added' if needs_update else ''
-        ret['comment'] = (
-            'Service {0} is set to be {1}{2}'.format(
-                name, _msg, _update))
+        if not to_add:
+            # Process/group already present, check if any need to be started
+            to_start = [x for x, y in matches.iteritems() if y is False]
+            if to_start:
+                ret['result'] = None
+                if name.endswith(':'):
+                    # Process group
+                    if len(to_start) == len(matches):
+                        ret['comment'] = (
+                            'All services in group {0!r} will be started'
+                            .format(name)
+                        )
+                    else:
+                        ret['comment'] = (
+                            'The following services will be started: {0}'
+                            .format(' '.join(to_start))
+                        )
+                else:
+                    # Single program
+                    ret['comment'] = 'Service {0} will be started'.format(name)
+            else:
+                if name.endswith(':'):
+                    # Process group
+                    ret['comment'] = (
+                        'All services in group {0!r} are already running'
+                        .format(name)
+                    )
+                else:
+                    ret['comment'] = ('Service {0} is already running'
+                                      .format(name))
+        else:
+            ret['result'] = None
+            # Process/group needs to be added
+            if name.endswith(':'):
+                _type = 'Group {0!r}'.format(name)
+            else:
+                _type = 'Service {0}'.format(name)
+            ret['comment'] = '{0} will be added and started'.format(_type)
         return ret
 
     changes = []
     just_updated = False
-    if needs_update:
+    if to_add:
         comment = 'Adding service: {0}'.format(name)
         __salt__['supervisord.reread'](
             user=user,
