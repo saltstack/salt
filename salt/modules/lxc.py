@@ -1360,32 +1360,35 @@ def read_conf(conf_file, out_format='simple'):
 
 def write_conf(conf_file, conf):
     '''
-    Write out an LXC configuration file. This is normally only used internally.
-    The format of the data structure must match that which is returned from
-    ``lxc.read_conf()``, with ``out_format`` set to ``commented``. An example
-    might look like:
+    Write out an LXC configuration file
 
-    [
-        {'lxc.utsname': '$CONTAINER_NAME'},
-        '# This is a commented line\n',
-        '\n',
-        {'lxc.mount': '$CONTAINER_FSTAB'},
-        {'lxc.rootfs': {'comment': 'This is another test',
-                        'value': 'This is another test'}},
-        '\n',
-        {'lxc.network.type': 'veth'},
-        {'lxc.network.flags': 'up'},
-        {'lxc.network.link': 'br0'},
-        {'lxc.network.hwaddr': '$CONTAINER_MACADDR'},
-        {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
-        {'lxc.network.name': '$CONTAINER_DEVICENAME'},
-    ]
+    This is normally only used internally. The format of the data structure
+    must match that which is returned from ``lxc.read_conf()``, with
+    ``out_format`` set to ``commented``.
+
+    An example might look like::
+
+        [
+            {'lxc.utsname': '$CONTAINER_NAME'},
+            '# This is a commented line\n',
+            '\n',
+            {'lxc.mount': '$CONTAINER_FSTAB'},
+            {'lxc.rootfs': {'comment': 'This is another test',
+                            'value': 'This is another test'}},
+            '\n',
+            {'lxc.network.type': 'veth'},
+            {'lxc.network.flags': 'up'},
+            {'lxc.network.link': 'br0'},
+            {'lxc.network.hwaddr': '$CONTAINER_MACADDR'},
+            {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
+            {'lxc.network.name': '$CONTAINER_DEVICENAME'},
+        ]
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \
+        salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \\
             out_format=commented
     '''
     if type(conf) is not list:
