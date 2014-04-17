@@ -20,7 +20,11 @@ import ioflo.base.deeding
 
 class WorkerFork(ioflo.base.deeding.Deed):
     '''
-    For off the worker procs
+    Fork off the worker procs
+    FloScript:
+
+    do worker fork at enter
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'access_keys': '.salt.access_keys'}
@@ -68,7 +72,13 @@ class WorkerFork(ioflo.base.deeding.Deed):
         self._make_workers()
 
 
-class SetupWorker(ioflo.base.deeding.Deed):
+class WorkerSetup(ioflo.base.deeding.Deed):
+    '''
+    FloScript:
+
+    do worker setup at enter
+
+    '''
     Ioinits = {
             'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',
@@ -106,7 +116,13 @@ class SetupWorker(ioflo.base.deeding.Deed):
         self.uxd_stack.value.serviceAll()
 
 
-class RouterWorker(ioflo.base.deeding.Deed):
+class WorkerRouter(ioflo.base.deeding.Deed):
+    '''
+    FloScript:
+
+    do worker router
+
+    '''
     Ioinits = {
             'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',

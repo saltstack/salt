@@ -15,12 +15,12 @@ framer masterudpstack be active first setup
         go spawnworkers
     frame spawnworkers
         enter
-            do fork worker
+            do worker fork
         go start
     frame start
-        do salt raet udp stack per inode ".raet.udp.stack"
+        do salt raet road stack per inode ".raet.udp.stack"
         exit
-            do salt raet udp stack closer per inode ".raet.udp.stack."
+            do salt raet road stack closer per inode ".raet.udp.stack."
 
 framer inbound be active first start
     frame start
