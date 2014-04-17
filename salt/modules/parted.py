@@ -730,3 +730,23 @@ def exists(device=''):
             return True
 
     return False
+
+
+def get_block_device():
+    '''
+    Retrieve a list of disk devices
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' partition.get_block_device
+    '''
+    ret = []
+    cmd = '/bin/lsblk -n -io KNAME -d -e 1,7,11 -l'
+    devs = __salt__['cmd.run'](cmd).splitlines()
+    for dev in devs:
+        if dev not in os.listdir('/dev'):
+            continue
+        ret.append(dev)
+    return ret
