@@ -5,6 +5,7 @@ Support for iptables
 
 # Import python libs
 import os
+import re
 import sys
 import shlex
 
@@ -102,8 +103,22 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
         salt '*' iptables.build_rule match=state \\
             connstate=RELATED,ESTABLISHED jump=ACCEPT
+
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
             full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+
+        salt '*' iptables.build_rule filter INPUT command=A \\
+            full=True match=state state=RELATED,ESTABLISHED \\
+            source='127.0.0.1' jump=ACCEPT
+
+        .. Invert Rules
+        salt '*' iptables.build_rule filter INPUT command=A \\
+            full=True match=state state=RELATED,ESTABLISHED \\
+            source='! 127.0.0.1' jump=ACCEPT
+
+        salt '*' iptables.build_rule filter INPUT command=A \\
+            full=True match=state state=RELATED,ESTABLISHED \\
+            destination='not 127.0.0.1' jump=ACCEPT
 
         IPv6:
         salt '*' iptables.build_rule match=state \\
@@ -123,12 +138,29 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             del kwargs[ignore]
 
     rule = ''
+    bang_not_pat = re.compile(r'[!,not]\s?')
 
     if 'if' in kwargs:
+        if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
+            kwargs['if'] = re.sub(bang_not_pat, '', kwargs['if'])
+            rule += '! '
+
         rule += '-i {0} '.format(kwargs['if'])
         del kwargs['if']
 
+    if 'of' in kwargs:
+        if kwargs['of'].startswith('!') or kwargs['of'].startswith('not'):
+            kwargs['of'] = re.sub(bang_not_pat, '', kwargs['of'])
+            rule += '! '
+
+        rule += '-i {0} '.format(kwargs['of'])
+        del kwargs['of']
+
     if 'proto' in kwargs:
+        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
+            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
+            rule += '! '
+
         rule += '-p {0} '.format(kwargs['proto'])
 
     if 'match' in kwargs:
@@ -147,18 +179,34 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['state']
 
     if 'connstate' in kwargs:
+        if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
+            kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
+            rule += '! '
+
         rule += '--state {0} '.format(kwargs['connstate'])
         del kwargs['connstate']
 
     if 'proto' in kwargs:
+        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
+            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
+            rule += '! '
+
         rule += '-m {0} '.format(kwargs['proto'])
         del kwargs['proto']
 
     if 'dport' in kwargs:
+        if kwargs['dport'].startswith('!') or kwargs['dport'].startswith('not'):
+            kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
+            rule += '! '
+
         rule += '--dport {0} '.format(kwargs['dport'])
         del kwargs['dport']
 
     if 'sport' in kwargs:
+        if kwargs['sport'].startswith('!') or kwargs['sport'].startswith('not'):
+            kwargs['sport'] = re.sub(bang_not_pat, '', kwargs['sport'])
+            rule += '! '
+
         rule += '--sport {0} '.format(kwargs['sport'])
         del kwargs['sport']
 
@@ -167,9 +215,16 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '-m multiport '
 
         if isinstance(kwargs['dports'], list):
+            if [item for item in kwargs['dports'] if item.startswith('!') or item.startswith('not')]:
+                kwargs['dports'] = [re.sub(bang_not_pat, '', item) for item in kwargs['dports']]
+                rule += '! '
             dports = ','.join(kwargs['dports'])
         else:
-            dports = kwargs['dports']
+            if kwargs['dports'].startswith('!') or kwargs['dports'].startswith('not'):
+                dports = re.sub(bang_not_pat, '', kwargs['dports'])
+                rule += '! '
+            else:
+                dports = kwargs['dports']
 
         rule += '--dports {0} '.format(dports)
         del kwargs['dports']
@@ -179,9 +234,16 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '-m multiport '
 
         if isinstance(kwargs['sports'], list):
+            if [item for item in kwargs['sports'] if item.startswith('!') or item.startswith('not')]:
+                kwargs['sports'] = [re.sub(bang_not_pat, '', item) for item in kwargs['sports']]
+                rule += '! '
             sports = ','.join(kwargs['sports'])
         else:
-            sports = kwargs['dports']
+            if kwargs['sports'].startswith('!') or kwargs['sports'].startswith('not'):
+                sports = re.sub(bang_not_pat, '', kwargs['sports'])
+                rule += '! '
+            else:
+                sports = kwargs['sports']
 
         rule += '--sports {0} '.format(sports)
         del kwargs['sports']
@@ -193,6 +255,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if 'set' in kwargs and kwargs['set']:
+        if kwargs['set'].startswith('!') or kwargs['set'].startswith('not'):
+            kwargs['set'] = re.sub(bang_not_pat, '', kwargs['set'])
+            rule += '! '
+
         rule += '--match-set {0} '.format(kwargs['set'])
         del kwargs['set']
 
@@ -225,6 +291,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['reject-with']
 
     for item in kwargs:
+        if kwargs[item].startswith('!') or kwargs[item].startswith('not'):
+            kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
+            rule += '! '
+
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
         else:
