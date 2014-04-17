@@ -107,7 +107,6 @@ import salt.version
 
 
 formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
@@ -167,12 +166,10 @@ extlinks = {
 locale_dirs = ['locale/']
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
-### HTML options
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'saltstack'
 
+
+### HTML options
+html_theme = 'saltstack'
 html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
