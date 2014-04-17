@@ -23,7 +23,7 @@ def __virtual__():
     Only load if chef is installed
     '''
     if salt.utils.which('chef-client'):
-        return 'chef'
+        return True
     return False
 
 
