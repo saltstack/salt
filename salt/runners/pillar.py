@@ -41,24 +41,32 @@ def show_pillar(minion='*', **kwargs):
     '''
     Returns the compiled pillar either of a specific minion
     or just the global available pillars. I assume that no minion
-    is using the id '*'.
+    is using the id ``*``.
 
     CLI Example:
 
     shows minion specific pillar:
+
     .. code-block:: bash
+
         salt-run pillar.show_pillar 'www.example.com'
 
     shows global pillar:
+
     .. code-block:: bash
+
         salt-run pillar.show_pillar
 
     shows global pillar for 'dev' pillar environment:
+
     .. code-block:: bash
+
         salt-run pillar.show_pillar 'saltenv=dev'
 
     API Example:
+
     .. code-block:: python
+
         import salt.config
         import salt.runner
         opts = salt.config.master_config('/etc/salt/master')

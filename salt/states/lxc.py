@@ -200,7 +200,8 @@ def created(name,
     size
         Which size
     backing
-        Wich backing
+        Which backing
+
         None
            Filesystem
         lvm

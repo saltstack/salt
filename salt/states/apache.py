@@ -5,33 +5,35 @@ Apache state
 Allows for inputting a yaml dictionary into a file for apache configuration
 files.
 
-The variable 'this' is special and signifies what should be included with
+The variable ``this`` is special and signifies what should be included with
 the above word between angle brackets (<>).
 
-/etc/httpd/conf.d/website.com.conf:
-  apache.config:
-    - config:
-      - VirtualHost:
-          this: '*:80'
-          ServerName:
-            -website.com
-          ServerAlias:
-            - www.website.com
-            - dev.website.com
-          ErrorLog: logs/website.com-error_log
-          CustomLog: logs/website.com-access_log combinded
-          DocumentRoot: /var/www/vhosts/website.com
-          Directory:
-            this: /var/www/vhosts/website.com
-            Order: Deny,Allow
-            Deny from: all
-            Allow from:
-              - 127.0.0.1
-              - 192.168.100.0/24
-            Options:
-              - +Indexes
-              - FollowSymlinks
-            AllowOverride: All
+.. code-block:: yaml
+
+    /etc/httpd/conf.d/website.com.conf:
+      apache.config:
+        - config:
+          - VirtualHost:
+              this: '*:80'
+              ServerName:
+                -website.com
+              ServerAlias:
+                - www.website.com
+                - dev.website.com
+              ErrorLog: logs/website.com-error_log
+              CustomLog: logs/website.com-access_log combinded
+              DocumentRoot: /var/www/vhosts/website.com
+              Directory:
+                this: /var/www/vhosts/website.com
+                Order: Deny,Allow
+                Deny from: all
+                Allow from:
+                  - 127.0.0.1
+                  - 192.168.100.0/24
+                Options:
+                  - +Indexes
+                  - FollowSymlinks
+                AllowOverride: All
 '''
 
 from __future__ import with_statement, print_function

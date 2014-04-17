@@ -8,17 +8,21 @@ Retrieve Pillar data by doing a MySQL query
 
 Theory of mysql ext_pillar
 =====================================
+
 Ok, here's the theory for how this works...
+
 - If there's a keyword arg of mysql_query, that'll go first.
 - Then any non-keyworded args are processed in order.
 - Finally, remaining keywords are processed.
+
 We do this so that it's backward compatible with older configs.
 Keyword arguments are sorted before being appended, so that they're predictable,
 but they will always be applied last so overall it's moot.
 
 For each of those items we process, it depends on the object type:
-- Strings are executed as is and the pillar depth is determined by the number of
-  fields returned.
+
+- Strings are executed as is and the pillar depth is determined by the number
+  of fields returned.
 - A list has the first entry used as the query, the second as the pillar depth.
 - A mapping uses the keys "query" and "depth" as the tuple
 
@@ -27,7 +31,9 @@ exact settings.
 
 Configuring the mysql ext_pillar
 =====================================
+
 First an example of how legacy queries were specified.
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -35,6 +41,7 @@ First an example of how legacy queries were specified.
         mysql_query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
 
 Alternatively, a list of queries can be passed in
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -43,6 +50,7 @@ Alternatively, a list of queries can be passed in
         - "SELECT pillar,value FROM more_pillars WHERE minion_id = %s"
 
 Or you can pass in a mapping
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -52,6 +60,7 @@ Or you can pass in a mapping
 
 The query can be provided as a string as we have just shown, but they can be
 provided as lists
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -60,6 +69,7 @@ provided as lists
           2
 
 Or as a mapping
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -69,15 +79,20 @@ Or as a mapping
 
 The depth defines how the dicts are constructed.
 Essentially if you query for fields a,b,c,d for each row you'll get:
+
 - With depth 1: {a: {"b": b, "c": c, "d": d}}
 - With depth 2: {a: {b: {"c": c, "d": d}}}
 - With depth 3: {a: {b: {c: d}}}
+
 Depth greater than 3 wouldn't be different from 3 itself.
 Depth of 0 translates to the largest depth needed, so 3 in this case.
 (max depth == key count - 1)
+
 The legacy compatibility translates to depth 1.
+
 Then they are merged the in a similar way to plain pillar data, in the order
 returned by MySQL.
+
 Thus subsequent results overwrite previous ones when they collide.
 
 If you specify `as_list: True` in the mapping expression it will convert
@@ -85,28 +100,29 @@ collisions to lists.
 
 If you specify `with_lists: '...'` in the mapping expression it will
 convert the specified depths to list.  The string provided is a sequence
-numbers that are comma separated.  The string '1,3' will result in:
+numbers that are comma separated.  The string '1,3' will result in::
 
-a,b,c,d,e,1  # field 1 same, field 3 differs
-a,b,c,f,g,2  # ^^^^
-a,z,h,y,j,3  # field 1 same, field 3 same
-a,z,h,y,k,4  # ^^^^
-  ^   ^
+    a,b,c,d,e,1  # field 1 same, field 3 differs
+    a,b,c,f,g,2  # ^^^^
+    a,z,h,y,j,3  # field 1 same, field 3 same
+    a,z,h,y,k,4  # ^^^^
+      ^   ^
+
 These columns define list grouping
 
 .. code-block:: python
 
-{a: [
-      {c: [
-          {e: 1},
-          {g: 2}
-          ]
-      },
-      {h: [
-          {j: 3, k: 4 }
-          ]
-      }
-]}
+    {a: [
+          {c: [
+              {e: 1},
+              {g: 2}
+              ]
+          },
+          {h: [
+              {j: 3, k: 4 }
+              ]
+          }
+    ]}
 
 The range for with_lists is 1 to number_of_fiels, inclusive.
 Numbers outside this range are ignored.
@@ -127,6 +143,7 @@ Required python modules: MySQLdb
 
 More complete example
 =====================================
+
 .. code-block:: yaml
 
     mysql:
