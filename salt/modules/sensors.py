@@ -14,14 +14,11 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'sensors'
-
 
 def __virtual__():
     if salt.utils.which('sensors'):
-        return __virtualname__
-    else:
-        return False
+        return True
+    return False
 
 
 def sense(chip, fahrenheit=False):
