@@ -459,8 +459,8 @@ def run(name,
         docked_onlyif=None,
         docked_unless=None,
         *args, **kwargs):
-    '''Run a command in a specific container
-
+    '''
+    Run a command in a specific container
 
     You can match by either name or hostname
 
@@ -487,9 +487,10 @@ def run(name,
 
     '''
     if hostname:
-        salt.utils.warn_until((0, 19),
-                              'The argument \'hostname\' argument'
-                              ' has been deprecated.')
+        salt.utils.warn_until(
+            'Helium',
+            'The \'hostname\' argument has been deprecated.'
+        )
     retcode = __salt__['docker.retcode']
     drun_all = __salt__['docker.run_all']
     valid = functools.partial(_valid, name=name)
