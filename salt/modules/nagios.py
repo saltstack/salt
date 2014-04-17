@@ -129,19 +129,25 @@ def run_all(plugin, args=''):
 def retcode_pillar(pillar_name):
     '''
     Run one or more nagios plugins from pillar data and get the result of cdm.retcode
-    The pillar have to be in this format:
-    ------
-    webserver:
-        Ping_google:
-            - check_icmp:8.8.8.8
-            - check_icmp:google.com
-        Load:
-            - check_load:-w 0.8 -c 1
-        APT:
-            - check_apt
-    -------
-    webserver is the role to check, the next keys are the group and the items the check with the arguments if needed
-    You must to group different checks(one o more) and always it will return the highest value of all the checks
+    The pillar have to be in this format::
+
+        ------
+        webserver:
+            Ping_google:
+                - check_icmp:8.8.8.8
+                - check_icmp:google.com
+            Load:
+                - check_load:-w 0.8 -c 1
+            APT:
+                - check_apt
+        -------
+
+    webserver is the role to check, the next keys are the group and the items
+    the check with the arguments if needed
+
+    You must to group different checks(one o more) and always it will return
+    the highest value of all the checks
+
     CLI Example:
 
     .. code-block:: bash
@@ -184,19 +190,24 @@ def retcode_pillar(pillar_name):
 def run_pillar(pillar_name):
     '''
     Run one or more nagios plugins from pillar data and get the result of cdm.run
-    The pillar have to be in this format:
-    ------
-    webserver:
-        Ping_google:
-            - check_icmp:8.8.8.8
-            - check_icmp:google.com
-        Load:
-            - check_load:-w 0.8 -c 1
-        APT:
-            - check_apt
-    -------
-    webserver is the role to check, the next keys are the group and the items the check with the arguments if needed
+    The pillar have to be in this format::
+
+        ------
+        webserver:
+            Ping_google:
+                - check_icmp:8.8.8.8
+                - check_icmp:google.com
+            Load:
+                - check_load:-w 0.8 -c 1
+            APT:
+                - check_apt
+        -------
+
+    webserver is the role to check, the next keys are the group and the items
+    the check with the arguments if needed
+
     You have to group different checks in a group
+
     CLI Example:
 
     .. code-block:: bash
@@ -211,19 +222,24 @@ def run_pillar(pillar_name):
 def run_all_pillar(pillar_name):
     '''
     Run one or more nagios plugins from pillar data and get the result of cdm.run_all
-    The pillar have to be in this format:
-    ------
-    webserver:
-        Ping_google:
-            - check_icmp:8.8.8.8
-            - check_icmp:google.com
-        Load:
-            - check_load:-w 0.8 -c 1
-        APT:
-            - check_apt
-    -------
-    webserver is the role to check, the next keys are the group and the items the check with the arguments if needed
+    The pillar have to be in this format::
+
+        ------
+        webserver:
+            Ping_google:
+                - check_icmp:8.8.8.8
+                - check_icmp:google.com
+            Load:
+                - check_load:-w 0.8 -c 1
+            APT:
+                - check_apt
+        -------
+
+    webserver is the role to check, the next keys are the group and the items
+    the check with the arguments if needed
+
     You have to group different checks in a group
+
     CLI Example:
 
     .. code-block:: bash
