@@ -538,10 +538,10 @@ def symlink(src, link):
     '''
     Create a symbolic link to a file
 
-    This is only supported with Windows Vista or later and must be executed by a
-    user with the SeCreateSymbolicLink privilege.
+    This is only supported with Windows Vista or later and must be executed by
+    a user with the SeCreateSymbolicLink privilege.
 
-    The behaviour of this function matches the *nix equivalent, with one
+    The behaviour of this function matches the \*nix equivalent, with one
     exception - invalid symlinks cannot be created. The source path must exist.
     If it doesn't, an error will be raised.
 
@@ -599,9 +599,9 @@ def readlink(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with *nix behaviour, this function will raise an error if the path is
-    not a symlink, however, the error raised will be a SaltInvocationError, not
-    an OSError.
+    Inline with \*nix behaviour, this function will raise an error if the path
+    is not a symlink, however, the error raised will be a SaltInvocationError,
+    not an OSError.
 
     CLI Example:
 
