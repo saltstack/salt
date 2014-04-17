@@ -8,6 +8,9 @@ NOTE: This currently only works with local user accounts, not domain accounts
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     import win32net
@@ -391,8 +394,11 @@ def list_users():
                 res,
                 win32netcon.MAX_PREFERRED_LENGTH
             )
+            log.debug('Res num: {0}'.format(res))
+            log.debug('USERS!: {0}'.format(users))
             for user in users:
                 user_list.append(user['name'])
+                log.debug('User: {0}'.format(str(user)))
         return user_list
     except win32net.error:
         pass
