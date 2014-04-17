@@ -179,6 +179,12 @@ html_logo = None # specfied in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
+# Use Google customized search or use Sphinx built-in JavaScript search
+if 'SALT_GOOGLE_SEARCH' in os.environ:
+    html_search_template = 'googlesearch.html'
+else:
+    html_search_template = 'searchbox.html'
+
 html_additional_pages = {
     '404': '404.html',
 }
@@ -187,7 +193,7 @@ html_default_sidebars = [
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
-    'searchbox.html',
+    html_search_template,
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
@@ -195,7 +201,7 @@ html_sidebars = {
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
-        'searchbox.html',
+        html_search_template,
     ],
     'ref/formula/all/*': [
     ],
