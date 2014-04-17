@@ -382,11 +382,13 @@ def list_users():
     '''
     Return a list of users on Windows
     '''
-    res = 1
+    res = 0
     users = []
     user_list = []
+    dowhile = True
     try:
-        while res:
+        while res or dowhile:
+            dowhile = False
             (users, _, res) = win32net.NetUserEnum(
                 'localhost',
                 3,
@@ -394,8 +396,6 @@ def list_users():
                 res,
                 win32netcon.MAX_PREFERRED_LENGTH
             )
-            log.debug('Res num: {0}'.format(res))
-            log.debug('USERS!: {0}'.format(users))
             for user in users:
                 user_list.append(user['name'])
                 log.debug('User: {0}'.format(str(user)))
