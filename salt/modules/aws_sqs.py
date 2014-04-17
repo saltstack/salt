@@ -38,6 +38,15 @@ def _run_aws(cmd, region, opts, user, **kwargs):
     kwargs
         Key-value arguments to pass to the command
     '''
+    # These args need a specific key value that aren't
+    # valid python parameter keys
+    receipthandle = kwargs.pop('receipthandle', None)
+    if receipthandle:
+        kwargs['receipt-handle'] = receipthandle
+    num = kwargs.pop('num', None)
+    if num:
+        kwargs['max-number-of-messages'] = num
+
     _formatted_args = [
         '--{0} "{1}"'.format(k, v) for k, v in kwargs.iteritems()]
 
@@ -50,6 +59,81 @@ def _run_aws(cmd, region, opts, user, **kwargs):
     rtn = __salt__['cmd.run'](cmd, runas=user)
 
     return json.loads(rtn) if rtn else ''
+
+
+def receive_message(queue, region, num=1, opts=None, user=None):
+    '''
+    Receive one or more messages from a queue in a region
+
+    queue
+        The name of the queue to receive messages from
+
+    region
+        Region where SQS queues exists
+
+    num : 1
+        The max number of messages to receive
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.receive_message <sqs queue> <region>
+        salt '*' aws_sqs.receive_message <sqs queue> <region> num=10
+
+    .. versionadded:: Helium
+
+    '''
+    queues = list_queues(region, opts, user)
+    url_map = _parse_queue_list(queues)
+
+    out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
+                   num=num)
+    ret = {'Messages': out['Messages'],}
+    return ret
+
+
+def delete_message(queue, region, receipthandle, opts=None, user=None):
+    '''
+    Delete one or more messages from a queue in a region
+
+    queue
+        The name of the queue to delete messages from
+
+    region
+        Region where SQS queues exists
+
+    receipthandle
+        The ReceiptHandle of the message to delete. The ReceiptHandle
+        is obtained in the return from receive_message
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.delete_message <sqs queue> <region> receipthandle='<sqs ReceiptHandle>'
+
+    .. versionadded:: Helium
+
+    '''
+    queues = list_queues(region, opts, user)
+    url_map = _parse_queue_list(queues)
+
+    out = _run_aws('delete-message', region, opts, user,
+                   receipthandle=receipthandle, queue=url_map[queue],)
+    return True
 
 
 def list_queues(region, opts=None, user=None):
