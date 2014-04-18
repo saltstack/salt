@@ -11,6 +11,8 @@ import logging
 import os
 import time
 import glob
+import shutil
+import datetime
 from copy import deepcopy
 
 # Import salt libs
@@ -18,6 +20,19 @@ import salt.payload
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+'''
+Filenames for the cache
+'''
+# load is the published job
+LOAD_P = '.load.p'
+# the list of minions that the job is targeted to (best effort match on the master side)
+MINIONS_P = '.minions.p'
+# return is the "return" from the minion data
+RETURN_P = 'return.p'
+# out is the "out" from the minion data
+OUT_P = 'out.p'
+
 
 
 def _jid_dir(jid, makedirs=False):
@@ -44,7 +59,7 @@ def _walk_through(job_dir):
         t_path = os.path.join(job_dir, top)
 
         for final in os.listdir(t_path):
-            load_path = os.path.join(t_path, final, '.load.p')
+            load_path = os.path.join(t_path, final, LOAD_P)
 
             if not os.path.isfile(load_path):
                 continue
@@ -72,17 +87,16 @@ def returner(load):
     '''
     Return data to the local job cache
     '''
-    new_loadp = False
-    if load['jid'] == 'req':
-        new_loadp = load.get('nocache', True) and True
-
     serial = salt.payload.Serial(__opts__)
     jid_dir = _jid_dir(load['jid'], makedirs=True)
     if os.path.exists(os.path.join(jid_dir, 'nocache')):
         return
-    if new_loadp:
-        with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
+
+    # do we need to rewrite the load?
+    if load['jid'] == 'req' and bool(load.get('nocache', True)):
+        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as fp_:
             serial.dump(load, fp_)
+
     hn_dir = os.path.join(jid_dir, load['id'])
 
     try:
@@ -110,7 +124,7 @@ def returner(load):
         # Use atomic open here to avoid the file being read before it's
         # completely written to. Refs #1935
         salt.utils.atomicfile.atomic_open(
-            os.path.join(hn_dir, 'return.p'), 'w+b'
+            os.path.join(hn_dir, RETURN_P), 'w+b'
         )
     )
 
@@ -120,7 +134,7 @@ def returner(load):
             # Use atomic open here to avoid the file being read before
             # it's completely written to. Refs #1935
             salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'out.p'), 'w+b'
+                os.path.join(hn_dir, OUT_P), 'w+b'
             )
         )
 
@@ -145,13 +159,13 @@ def save_load(jid, clear_load):
         # save the minions to a cache so we can see in the UI
         serial.dump(
             minions,
-            salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
+            salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
             )
 
     # Save the invocation information
     serial.dump(
         clear_load,
-        salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
+        salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
         )
 
 
@@ -165,9 +179,9 @@ def get_load(jid):
         return {}
     serial = salt.payload.Serial(__opts__)
 
-    ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'rb'))
+    ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb'))
 
-    minions_path = os.path.join(jid_dir, '.minions.p')
+    minions_path = os.path.join(jid_dir, MINIONS_P)
     if os.path.isfile(minions_path):
         ret['Minions'] = serial.load(salt.utils.fopen(minions_path, 'rb'))
 
@@ -189,8 +203,8 @@ def get_jid(jid):
         if fn_.startswith('.'):
             continue
         if fn_ not in ret:
-            retp = os.path.join(jid_dir, fn_, 'return.p')
-            outp = os.path.join(jid_dir, fn_, 'out.p')
+            retp = os.path.join(jid_dir, fn_, RETURN_P)
+            outp = os.path.join(jid_dir, fn_, OUT_P)
             if not os.path.isfile(retp):
                 continue
             while fn_ not in ret:

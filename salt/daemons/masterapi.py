@@ -8,8 +8,6 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import re
 import logging
-import shutil
-import datetime
 try:
     import pwd
 except ImportError:
