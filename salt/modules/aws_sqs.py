@@ -104,7 +104,7 @@ def receive_message(queue, region, num=1, opts=None, user=None):
 
     out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
                    num=num)
-    ret['Messages'] =  out['Messages']
+    ret['Messages'] = out['Messages']
     return ret
 
 
