@@ -490,7 +490,6 @@ class RemoteFuncs(object):
         for returner in self.opts['master_job_caches']:
             fstr = '{0}.returner'.format(returner)
             self.mminion.returners[fstr](load)
-        return
 
 
     def _syndic_return(self, load):

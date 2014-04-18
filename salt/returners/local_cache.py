@@ -41,7 +41,7 @@ def _job_dir():
 
 def _jid_dir(jid, makedirs=False):
     '''
-    Return the jid_dir
+    Return the jid_dir, and optionally create it
     '''
     jid_dir = salt.utils.jid_dir(
                 jid,
@@ -49,8 +49,6 @@ def _jid_dir(jid, makedirs=False):
                 __opts__['hash_type']
                 )
 
-    # TODO: remove, this is just to make sure we don't have other refs to another place
-    jid_dir = os.path.join('/tmp/jids', str(jid))
     if makedirs and not os.path.isdir(jid_dir):
         os.makedirs(jid_dir)
 
