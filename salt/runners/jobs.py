@@ -79,8 +79,6 @@ def lookup_jid(jid, ext_source=None, output=True):
         salt.output.display_output(ret, out, __opts__)
         return ret
 
-
-
     # Fall back to the local job cache
     client = salt.client.get_local_client(__opts__['conf_file'])
 
@@ -132,7 +130,6 @@ def list_job(jid, ext_source=None):
     load_path = os.path.join(jid_dir, '.load.p')
     job = serial.load(salt.utils.fopen(load_path, 'rb'))
     ret.update(_format_jid_instance(jid, job))
-
 
     # get the hosts information using the localclient (instead of re-implementing the code...)
     client = salt.client.get_local_client(__opts__['conf_file'])
@@ -195,7 +192,6 @@ def print_job(jid, ext_source=None):
         salt.output.display_output(ret, out, __opts__)
         return ret
 
-
     jid_dir = salt.utils.jid_dir(
                 jid,
                 __opts__['cachedir'],
@@ -223,7 +219,6 @@ def print_job(jid, ext_source=None):
         ret[jid]['Result'].update({mid: minion_data})
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
-
 
 
 def _get_returner(returners):
