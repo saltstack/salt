@@ -105,7 +105,7 @@ def list_job(jid, ext_source=None):
     '''
     ret = {'jid': jid}
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_ext_job_cache']))
-    if returner and False:
+    if returner:
         out = 'nested'
         mminion = salt.minion.MasterMinion(__opts__)
         job = mminion.returners['{0}.get_load'.format(returner)](jid)
