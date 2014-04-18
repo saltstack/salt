@@ -18,7 +18,7 @@ execution functions, grains, pillar, etc. They are:
   python SLS file. To use a different environment, the environment should be
   set when executing the state. This can be done in a couple different ways:
 
-  - Using the ``saltenv`` argument (i.e. ``salt '*' state.sls foo.bar.baz saltenv=env_name``).
+  - Using the ``saltenv`` argument on the salt CLI (i.e. ``salt '*' state.sls foo.bar.baz saltenv=env_name``).
   - By adding a ``saltenv`` argument to an individual state within the SLS
     file. In other words, adding a line like this to the state's data
     structure: ``{'saltenv': 'env_name'}``
