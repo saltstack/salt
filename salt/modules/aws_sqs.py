@@ -134,6 +134,8 @@ def delete_message(queue, region, receipthandle, opts=None, user=None):
     '''
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
+    if queue not in url_map:
+        return '"{0}" queue does not exist.'.format(queue)
 
     out = _run_aws('delete-message', region, opts, user,
                    receipthandle=receipthandle, queue=url_map[queue],)
