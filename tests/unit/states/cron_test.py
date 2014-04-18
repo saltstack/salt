@@ -242,7 +242,7 @@ class CronTestCase(TestCase):
         self.assertEqual(cron._check_cron('root', cmd, hour='2', minute='0'),
                          'present')
         ret = cron.present(cmd, 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'],  {})
+        self.assertEqual(ret['changes'], {})
         self.assertEqual(
             ret['comment'],
             'Cron find /var/www -type f -mtime -7 -print0 '
@@ -282,7 +282,7 @@ class CronTestCase(TestCase):
         self.assertEqual(cron._check_cron(
             'root', cmd, hour='2', minute='0', identifier=1), 'present')
         ret = cron.present(cmd, 'root', minute='0', hour='2', identifier='1')
-        self.assertEqual(ret['changes'],  {})
+        self.assertEqual(ret['changes'], {})
         self.assertEqual(
             ret['comment'],
             'Cron find /var/www -type f -mtime -7 -print0 '
@@ -304,7 +304,6 @@ class CronTestCase(TestCase):
             '0 3 * * * find /var/www -type f -mtime -7 -print0 |'
             ' xargs -0 clamscan -i --no-summary 2>/dev/null')
 
-
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
     @patch('salt.modules.cron._write_cron_lines',
@@ -323,7 +322,7 @@ class CronTestCase(TestCase):
         self.assertEqual(cron._check_cron('root', cmd, hour='2', minute='0'),
                          'present')
         ret = cron.present(cmd, 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'],  {})
+        self.assertEqual(ret['changes'], {})
         self.assertEqual(
             ret['comment'],
             'Cron find /var/www -type f -mtime -7 -print0 '
