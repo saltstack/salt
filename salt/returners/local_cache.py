@@ -33,7 +33,11 @@ RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
 
-
+def _job_dir():
+    '''
+    Return root of the jobs cache directory
+    '''
+    return os.path.join(__opts__['cachedir'], 'jobs')
 
 def _jid_dir(jid, makedirs=False):
     '''
@@ -225,8 +229,7 @@ def get_jids():
     Return a list of all job ids
     '''
     ret = {}
-    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, job, t_path, final in _walk_through(job_dir):
+    for jid, job, t_path, final in _walk_through(_job_dir()):
         ret[jid] = _format_jid_instance(jid, job)
     return ret
 
@@ -235,10 +238,9 @@ def clean_old_jobs():
     Clean out the old jobs from the job cache
     '''
     if __opts__['keep_jobs'] != 0:
-        jid_root = os.path.join(__opts__['cachedir'], 'jobs')
         cur = datetime.datetime.now()
 
-        if os.path.exists(jid_root):
+        if os.path.exists(_job_dir()):
             for top in os.listdir(jid_root):
                 t_path = os.path.join(jid_root, top)
                 for final in os.listdir(t_path):
