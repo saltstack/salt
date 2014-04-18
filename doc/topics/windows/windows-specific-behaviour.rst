@@ -46,8 +46,7 @@ To avoid such issues, always pretend Windows is case-sensitive and use the right
 case for names, e.g. specify ``user=Administrator`` instead of
 ``user=administrator``.
 
-Follow `#11801<https://github.com/saltstack/salt/issues/11801>`_ for any changes
-to this behaviour.
+Follow :issue:`11801` for any changes to this behaviour.
 
 
 Dealing with various username forms
@@ -60,8 +59,7 @@ the username without the domain or host information.
 Using these alternative forms will likely confuse Salt and cause odd errors to
 happen. Use only the raw username value in the correct case to avoid problems.
 
-Follow `#11801<https://github.com/saltstack/salt/issues/11801>`_ for any changes
-to this behaviour.
+Follow :issue:`11801` for any changes to this behaviour.
 
 
 Specifying the None group

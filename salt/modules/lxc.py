@@ -1370,12 +1370,12 @@ def write_conf(conf_file, conf):
 
         [
             {'lxc.utsname': '$CONTAINER_NAME'},
-            '# This is a commented line\n',
-            '\n',
+            '# This is a commented line\\n',
+            '\\n',
             {'lxc.mount': '$CONTAINER_FSTAB'},
             {'lxc.rootfs': {'comment': 'This is another test',
                             'value': 'This is another test'}},
-            '\n',
+            '\\n',
             {'lxc.network.type': 'veth'},
             {'lxc.network.flags': 'up'},
             {'lxc.network.link': 'br0'},

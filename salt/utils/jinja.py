@@ -293,6 +293,7 @@ class SerializerExtension(Extension, object):
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
+    .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
