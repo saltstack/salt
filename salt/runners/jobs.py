@@ -192,7 +192,6 @@ def print_job(jid, ext_source=None):
         salt.output.display_output(ret, out, __opts__)
         return ret
 
-
     jid_dir = salt.utils.jid_dir(
                 jid,
                 __opts__['cachedir'],
