@@ -127,11 +127,16 @@ def __get_conn():
         '''
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
+    if 'virt.connect' in __opts__:
+        conn_str = __opts__['virt.connect']
+    else:
+        conn_str = 'qemu:///system'
+
     conn_func = {
         'esxi': [libvirt.openAuth, [__esxi_uri(),
                                     __esxi_auth(),
                                     0]],
-        'qemu': [libvirt.open, ['qemu:///system']],
+        'qemu': [libvirt.open, [conn_str]],
         }
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
