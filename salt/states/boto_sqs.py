@@ -66,7 +66,7 @@ def __virtual__():
 
 def created(
         name,
-        attributes={},
+        attributes=None
         region=None,
         key=None,
         keyid=None,
@@ -113,10 +113,11 @@ def created(
     attrs_to_set = {}
     _attributes = __salt__['boto_sqs.get_attributes'](name, region, key, keyid,
                                                       profile)
-    for attr, val in attributes.iteritems():
-        _val = _attributes.get(attr, None)
-        if str(_val) != str(val):
-            attrs_to_set[attr] = val
+    if attributes:
+        for attr, val in attributes.iteritems():
+            _val = _attributes.get(attr, None)
+            if str(_val) != str(val):
+                attrs_to_set[attr] = val
     attr_names = ','.join(attrs_to_set.keys())
     if attrs_to_set:
         if __opts__['test']:
