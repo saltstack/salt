@@ -45,7 +45,7 @@ def _jid_dir(jid, makedirs=False):
     '''
     jid_dir = salt.utils.jid_dir(
                 jid,
-                __opts__['cachedir'],
+                os.path.join(__opts__['cachedir'], 'NEWPATHFORTESTING'),
                 __opts__['hash_type']
                 )
 
@@ -238,37 +238,40 @@ def clean_old_jobs():
     if __opts__['keep_jobs'] != 0:
         cur = datetime.datetime.now()
 
-        if os.path.exists(_job_dir()):
-            for top in os.listdir(jid_root):
-                t_path = os.path.join(jid_root, top)
-                for final in os.listdir(t_path):
-                    f_path = os.path.join(t_path, final)
-                    jid_file = os.path.join(f_path, 'jid')
-                    if not os.path.isfile(jid_file):
-                        # No jid file means corrupted cache entry, scrub it
+        jid_root = _job_dir()
+        if not os.path.exists(jid_root):
+            return
+
+        for top in os.listdir(jid_root):
+            t_path = os.path.join(jid_root, top)
+            for final in os.listdir(t_path):
+                f_path = os.path.join(t_path, final)
+                jid_file = os.path.join(f_path, 'jid')
+                if not os.path.isfile(jid_file):
+                    # No jid file means corrupted cache entry, scrub it
+                    shutil.rmtree(f_path)
+                else:
+                    with salt.utils.fopen(jid_file, 'r') as fn_:
+                        jid = fn_.read()
+                    if len(jid) < 18:
+                        # Invalid jid, scrub the dir
                         shutil.rmtree(f_path)
                     else:
-                        with salt.utils.fopen(jid_file, 'r') as fn_:
-                            jid = fn_.read()
-                        if len(jid) < 18:
+                        # Parse the jid into a proper datetime object.
+                        # We only parse down to the minute, since keep
+                        # jobs is measured in hours, so a minute
+                        # difference is not important.
+                        try:
+                            jidtime = datetime.datetime(int(jid[0:4]),
+                                                        int(jid[4:6]),
+                                                        int(jid[6:8]),
+                                                        int(jid[8:10]),
+                                                        int(jid[10:12]))
+                        except ValueError as e:
                             # Invalid jid, scrub the dir
                             shutil.rmtree(f_path)
-                        else:
-                            # Parse the jid into a proper datetime object.
-                            # We only parse down to the minute, since keep
-                            # jobs is measured in hours, so a minute
-                            # difference is not important.
-                            try:
-                                jidtime = datetime.datetime(int(jid[0:4]),
-                                                            int(jid[4:6]),
-                                                            int(jid[6:8]),
-                                                            int(jid[8:10]),
-                                                            int(jid[10:12]))
-                            except ValueError as e:
-                                # Invalid jid, scrub the dir
-                                shutil.rmtree(f_path)
-                            difference = cur - jidtime
-                            hours_difference = difference.seconds / 3600.0
-                            if hours_difference > __opts__['keep_jobs']:
-                                shutil.rmtree(f_path)
+                        difference = cur - jidtime
+                        hours_difference = difference.seconds / 3600.0
+                        if hours_difference > __opts__['keep_jobs']:
+                            shutil.rmtree(f_path)
 
