@@ -5,15 +5,11 @@ Return data to local job cache
 '''
 
 # Import python libs
-import json
 import errno
 import logging
 import os
-import time
-import glob
 import shutil
 import datetime
-from copy import deepcopy
 
 # Import salt libs
 import salt.payload
@@ -39,6 +35,7 @@ def _job_dir():
     '''
     return os.path.join(__opts__['cachedir'], 'jobs')
 
+
 def _jid_dir(jid, makedirs=False):
     '''
     Return the jid_dir, and optionally create it
@@ -53,6 +50,7 @@ def _jid_dir(jid, makedirs=False):
         os.makedirs(jid_dir)
 
     return jid_dir
+
 
 def _walk_through(job_dir):
     serial = salt.payload.Serial(__opts__)
@@ -69,6 +67,7 @@ def _walk_through(job_dir):
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             yield jid, job, t_path, final
+
 
 def _format_job_instance(job):
     return {'Function': job.get('fun', 'unknown-function'),
@@ -147,7 +146,6 @@ def save_load(jid, clear_load):
     '''
     jid_dir = _jid_dir(clear_load['jid'], makedirs=True)
 
-
     serial = salt.payload.Serial(__opts__)
 
     # if you have a tgt, save that for the UI etc
@@ -169,7 +167,6 @@ def save_load(jid, clear_load):
         clear_load,
         salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
         )
-
 
 
 def get_load(jid):
@@ -231,6 +228,7 @@ def get_jids():
         ret[jid] = _format_jid_instance(jid, job)
     return ret
 
+
 def clean_old_jobs():
     '''
     Clean out the old jobs from the job cache
@@ -274,4 +272,3 @@ def clean_old_jobs():
                         hours_difference = difference.seconds / 3600.0
                         if hours_difference > __opts__['keep_jobs']:
                             shutil.rmtree(f_path)
-

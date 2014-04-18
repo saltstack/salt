@@ -768,7 +768,6 @@ class LocalClient(object):
             if len(found.intersection(minions)) >= len(minions):
                 raise StopIteration()
 
-
     def get_iter_returns(
             self,
             jid,
@@ -947,7 +946,7 @@ class LocalClient(object):
                 else:
                     m_data['ret'] = data[minion].get('return')
                 if 'out' in data[minion]:
-                    md_data['out'] = data[minion]['out']
+                    m_data['out'] = data[minion]['out']
                 if minion in ret:
                     ret[minion].update(m_data)
                 else:
@@ -991,7 +990,7 @@ class LocalClient(object):
                 else:
                     m_data['ret'] = data[minion].get('return')
                 if 'out' in data[minion]:
-                    md_data['out'] = data[minion]['out']
+                    m_data['out'] = data[minion]['out']
                 if minion in ret:
                     ret[minion].update(m_data)
                 else:

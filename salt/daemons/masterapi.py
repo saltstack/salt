@@ -110,7 +110,6 @@ def clean_old_jobs(opts):
             mminion.returners[fstr]()
 
 
-
 def access_keys(opts):
     '''
     A key needs to be placed in the filesystem with permissions 0400 so
@@ -490,7 +489,6 @@ class RemoteFuncs(object):
         for returner in self.opts['master_job_caches']:
             fstr = '{0}.returner'.format(returner)
             self.mminion.returners[fstr](load)
-
 
     def _syndic_return(self, load):
         '''
@@ -1259,7 +1257,7 @@ class LocalFuncs(object):
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
+                self.mminion.returners[fstr](load['jid'], load)
             except KeyError:
                 log.critical(
                     'The specified returner used for the external job cache '
@@ -1277,7 +1275,7 @@ class LocalFuncs(object):
         for returner in self.opts['master_job_caches']:
             try:
                 fstr = '{0}.save_load'.format(returner)
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
+                self.mminion.returners[fstr](load['jid'], load)
             except KeyError:
                 log.critical(
                     'The specified returner used for the external job cache '

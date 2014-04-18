@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Helper functions for returners
 '''
@@ -13,5 +14,3 @@ def valid_jid(jid, returners, mminion):
             valid_jid = True
             break
     return valid_jid
-
-
