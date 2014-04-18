@@ -3,6 +3,8 @@
 Manage SQS Queues
 =================
 
+.. versionadded:: Helium
+
 Create and destroy SQS queues. Be aware that this interacts with Amazon's
 services, and so may incur charges.
 
@@ -21,6 +23,14 @@ in the minion's config file::
     sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
     sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
+It's also possible to specify key, keyid and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
+
+    myprofile:
+        keyid: GKTADJGHEIQSXMKKRBJ08H
+        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
+
 .. code-block:: yaml
 
     myqueue:
@@ -30,6 +40,20 @@ in the minion's config file::
             - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             - attributes:
                 ReceiveMessageWaitTimeSeconds: 20
+
+    # Using a profile from pillars
+    myqueue:
+        aws_sqs.exists:
+            - region: us-east-1
+            - profile: mysqsprofile
+
+    # Passing in a profile
+    myqueue:
+        aws_sqs.exists:
+            - region: us-east-1
+            - profile:
+                key: GKTADJGHEIQSXMKKRBJ08H
+                keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
 
@@ -45,7 +69,8 @@ def created(
         attributes={},
         region=None,
         key=None,
-        keyid=None):
+        keyid=None,
+        profile=None):
     '''
     Ensure the SQS queue exists.
 
@@ -60,17 +85,22 @@ def created(
 
     keyid
         Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_created = __salt__['boto_sqs.exists'](name, region, key, keyid)
+    is_created = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
     if not is_created:
         ret['comment'] = 'AWS SQS queue {0} is set to be created.'.format(name)
         if __opts__['test']:
             ret['result'] = None
             return ret
-        created = __salt__['boto_sqs.create'](name, region, key, keyid)
+        created = __salt__['boto_sqs.create'](name, region, key, keyid,
+                                              profile)
         if created:
             ret['changes']['old'] = None
             ret['changes']['new'] = {'queue': name}
@@ -81,7 +111,8 @@ def created(
     else:
         ret['comment'] = '{0} present.'.format(name)
     attrs_to_set = {}
-    _attributes = __salt__['boto_sqs.get_attributes'](name, region, key, keyid)
+    _attributes = __salt__['boto_sqs.get_attributes'](name, region, key, keyid,
+                                                      profile)
     for attr, val in attributes.iteritems():
         _val = _attributes.get(attr, None)
         if str(_val) != str(val):
@@ -102,7 +133,8 @@ def created(
             ret['changes']['new'] = {'attributes_set': []}
         for attr, val in attrs_to_set.iteritems():
             set_attr = __salt__['boto_sqs.set_attributes'](name, {attr: val},
-                                                           region, key, keyid)
+                                                           region, key, keyid,
+                                                           profile)
             if not set_attr:
                 ret['result'] = False
             msg = 'Set attribute {0}.'.format(attr)
@@ -116,7 +148,8 @@ def deleted(
         name,
         region=None,
         key=None,
-        keyid=None):
+        keyid=None,
+        profile=None):
     '''
     Delete the named SQS queue if it exists.
 
@@ -131,18 +164,23 @@ def deleted(
 
     keyid
         Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    is_created = __salt__['boto_sqs.exists'](name, region, key, keyid)
+    is_created = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
     if is_created:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
-                    name)
+                name)
             return ret
-        deleted = __salt__['boto_sqs.delete'](name, region, key, keyid)
+        deleted = __salt__['boto_sqs.delete'](name, region, key, keyid,
+                                              profile)
         if deleted:
             ret['result'] = True
             ret['changes']['old'] = name
