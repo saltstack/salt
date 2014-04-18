@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 def fire_master(name, data):
     '''
     Fire an event on the Salt master event bus
@@ -16,6 +17,7 @@ def fire_master(name, data):
 
         # ...snip bunch of states below
     '''
+
 
 def wait(name, sfun=None):
     '''
@@ -46,6 +48,7 @@ def wait(name, sfun=None):
             - watch:
               - service: apache
     '''
+
 
 def mod_watch(name, sfun=None):
     '''

@@ -63,14 +63,15 @@ def parse():
     return opts
 
 
-def listen(sock_dir, node, id=None):
+#def listen(sock_dir, node):
+def listen(opts):
     '''
     Attach to the pub socket and grab messages
     '''
     event = salt.utils.event.SaltEvent(
-            node,
-            sock_dir,
-            id=id
+            opts['node'],
+            opts['sock_dir'],
+            opts
             )
     print(event.puburi)
     jid_counter = 0
@@ -98,4 +99,4 @@ def listen(sock_dir, node, id=None):
 
 if __name__ == '__main__':
     opts = parse()
-    listen(opts['sock_dir'], opts['node'], id=opts.get('id', ''))
+    listen(opts)

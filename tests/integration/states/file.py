@@ -8,6 +8,7 @@ Tests for the file state
 import os
 import glob
 import shutil
+import pwd
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -183,19 +184,23 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         desired_mode = 511  # 0777 in octal
         name = os.path.join(integration.TMP, 'a', 'managed_dir_mode_test_file')
+        desired_owner = 'nobody'
         ret = self.run_state(
             'file.managed',
             name=name,
             source='salt://grail/scene33',
             mode=600,
             makedirs=True,
+            user=desired_owner,
             dir_mode=oct(desired_mode)  # 0777
         )
         resulting_mode = stat.S_IMODE(
             os.stat(os.path.join(integration.TMP, 'a')).st_mode
         )
+        resulting_owner = pwd.getpwuid(os.stat(os.path.join(integration.TMP, 'a')).st_uid).pw_name
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
+        self.assertEqual(desired_owner, resulting_owner)
 
     def test_test_managed(self):
         '''
