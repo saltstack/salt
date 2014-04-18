@@ -34,7 +34,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 .. code-block:: yaml
 
     myqueue:
-        aws_sqs.present:
+        boto_sqs.present:
             - region: us-east-1
             - key: GKTADJGHEIQSXMKKRBJ08H
             - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -43,13 +43,13 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
     # Using a profile from pillars
     myqueue:
-        aws_sqs.present:
+        boto_sqs.present:
             - region: us-east-1
             - profile: mysqsprofile
 
     # Passing in a profile
     myqueue:
-        aws_sqs.present:
+        boto_sqs.present:
             - region: us-east-1
             - profile:
                 key: GKTADJGHEIQSXMKKRBJ08H
@@ -59,7 +59,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 def __virtual__():
     '''
-    Only load if aws is available.
+    Only load if boto is available.
     '''
     return 'boto_sqs' if 'boto_sqs.exists' in __salt__ else False
 
