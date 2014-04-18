@@ -48,7 +48,7 @@ def system(name):
         return ret
 
 def present(name):
-        '''
+    '''
     Generate a locale if it is not present
 
     name
