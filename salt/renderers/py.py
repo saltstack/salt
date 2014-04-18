@@ -2,12 +2,23 @@
 '''
 Pure python state renderer
 
-The sls file should contain a function called ``run`` which returns high state
-data
+The SLS file should contain a function called ``run`` which returns high state
+data.
 
-In this module, a few objects are defined for you, including the usual
-(with``__`` added) ``__salt__`` dictionary, ``__grains__``,
-``__pillar__``, ``__opts__``, ``__env__``, and ``__sls__``.
+In this module, a few objects are defined for you, giving access to Salt's
+execution functions, grains, pillar, etc. They are:
+
+* ``__salt__`` - :ref:`Execution functions <all-salt.modules>` (i.e.
+  ``__salt__['test.echo']('foo')``)
+* ``__grains__`` - :ref:`Grains <targeting-grains>` (i.e. ``__grains__['os']``)
+* ``__pillar__`` - :ref:`Pillar data <pillar>` (i.e. ``__pillar__['foo']``)
+* ``__opts__`` - Minion configuration options
+* ``__env__`` - The effective salt fileserver environment
+* ``__sls__`` - The SLS path of the file. For example, if the root of the base
+  environment is ``/srv/salt``, and the SLS file is
+  ``/srv/salt/foo/bar/baz.sls``, then ``__sls__`` in that file will be
+  ``foo.bar.baz``.
+
 
 .. code-block:: python
    :linenos:
