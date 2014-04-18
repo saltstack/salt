@@ -126,6 +126,14 @@ def mounted(name,
             device_list.append(alt_device)
         if uuid_device and uuid_device not in device_list:
             device_list.append(uuid_device)
+        if opts:
+            for opt in opts:
+                if opt not in active[real_name]['opts']:
+                    ret['changes']['umount'] = "Forced remount because " \
+                                                + "options changed"
+                    remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                    ret['result'] = remount_result
+                    return ret
         if real_device not in device_list:
             # name matches but device doesn't - need to umount
             ret['changes']['umount'] = "Forced unmount because devices " \
