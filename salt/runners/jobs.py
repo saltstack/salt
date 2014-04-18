@@ -37,18 +37,16 @@ def active():
                 ret[job['jid']].update({'Running': [{minion: job.get('pid', None)}], 'Returned': []})
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
+
+    mminion = salt.minion.MasterMinion(__opts__)
     for jid in ret:
-        jid_dir = salt.utils.jid_dir(
-                jid,
-                __opts__['cachedir'],
-                __opts__['hash_type'])
-        if not os.path.isdir(jid_dir):
-            continue
-        for minion in os.listdir(jid_dir):
-            if minion.startswith('.') or minion == 'jid':
-                continue
-            if os.path.exists(os.path.join(jid_dir, minion)):
-                ret[jid]['Returned'].append(minion)
+        returners = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_caches']))
+        for returner in returners:
+            data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+            for minion in data:
+                if minion not in ret[jid]['Returned']:
+                    ret[jid]['Returned'].append(minion)
+
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
@@ -64,10 +62,10 @@ def lookup_jid(jid, ext_source=None, output=True):
         salt-run jobs.lookup_jid 20130916125524463507
     '''
     ret = {}
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_ext_job_cache']))
-    if returner:
+    mminion = salt.minion.MasterMinion(__opts__)
+    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
+    for returner in returners:
         out = 'nested'
-        mminion = salt.minion.MasterMinion(__opts__)
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
         for minion in data:
             if u'return' in data[minion]:
@@ -77,19 +75,6 @@ def lookup_jid(jid, ext_source=None, output=True):
             if 'out' in data[minion]:
                 out = data[minion]['out']
         salt.output.display_output(ret, out, __opts__)
-        return ret
-
-    # Fall back to the local job cache
-    client = salt.client.get_local_client(__opts__['conf_file'])
-
-    for mid, data in client.get_full_returns(jid, [], 0).items():
-        ret[mid] = data.get('ret')
-        if output:
-            salt.output.display_output(
-                {mid: ret[mid]},
-                data.get('out', None),
-                __opts__)
-
     return ret
 
 
@@ -104,43 +89,14 @@ def list_job(jid, ext_source=None):
         salt-run jobs.list_job 20130916125524463507
     '''
     ret = {'jid': jid}
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_ext_job_cache']))
-    if returner:
+    mminion = salt.minion.MasterMinion(__opts__)
+    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
+    for returner in returners:
         out = 'nested'
-        mminion = salt.minion.MasterMinion(__opts__)
         job = mminion.returners['{0}.get_load'.format(returner)](jid)
         ret.update(_format_jid_instance(jid, job))
         ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
         salt.output.display_output(ret, out, __opts__)
-        return ret
-
-    jid_dir = salt.utils.jid_dir(
-                jid,
-                __opts__['cachedir'],
-                __opts__['hash_type']
-                )
-
-    if not os.path.exists(jid_dir):
-        return ret
-
-    # we have to copy/paste this code, because we don't seem to have a good API
-    serial = salt.payload.Serial(__opts__)
-
-    # get the load info
-    load_path = os.path.join(jid_dir, '.load.p')
-    job = serial.load(salt.utils.fopen(load_path, 'rb'))
-    ret.update(_format_jid_instance(jid, job))
-
-    # get the hosts information using the localclient (instead of re-implementing the code...)
-    client = salt.client.get_local_client(__opts__['conf_file'])
-
-    ret['Result'] = {}
-    minions_path = os.path.join(jid_dir, '.minions.p')
-    if os.path.isfile(minions_path):
-        minions = serial.load(salt.utils.fopen(minions_path, 'rb'))
-        ret['Minions'] = minions
-
-    salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
 
@@ -154,19 +110,12 @@ def list_jobs(ext_source=None):
 
         salt-run jobs.list_jobs
     '''
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_ext_job_cache']))
-    if returner:
+    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
+    mminion = salt.minion.MasterMinion(__opts__)
+    for returner in returners:
         out = 'nested'
-        mminion = salt.minion.MasterMinion(__opts__)
         ret = mminion.returners['{0}.get_jids'.format(returner)]()
         salt.output.display_output(ret, out, __opts__)
-        return ret
-
-    ret = {}
-    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, job, t_path, final in _walk_through(job_dir):
-        ret[jid] = _format_jid_instance(jid, job)
-    salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
 
@@ -182,61 +131,39 @@ def print_job(jid, ext_source=None):
     '''
     ret = {}
 
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_ext_job_cache']))
-    if returner and False:
+    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
+    mminion = salt.minion.MasterMinion(__opts__)
+    for returner in returners:
         out = 'nested'
-        mminion = salt.minion.MasterMinion(__opts__)
         job = mminion.returners['{0}.get_load'.format(returner)](jid)
         ret[jid] = _format_jid_instance(jid, job)
         ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
         salt.output.display_output(ret, out, __opts__)
-        return ret
-
-    jid_dir = salt.utils.jid_dir(
-                jid,
-                __opts__['cachedir'],
-                __opts__['hash_type']
-                )
-
-    if not os.path.exists(jid_dir):
-        return ret
-
-    # we have to copy/paste this code, because we don't seem to have a good API
-    serial = salt.payload.Serial(__opts__)
-
-    # get the load info
-    load_path = os.path.join(jid_dir, '.load.p')
-    job = serial.load(salt.utils.fopen(load_path, 'rb'))
-    ret[jid] = _format_jid_instance(jid, job)
-
-    # get the hosts information using the localclient (instead of re-implementing the code...)
-    client = salt.client.get_local_client(__opts__['conf_file'])
-
-    ret[jid]['Result'] = {}
-    for mid, data in client.get_full_returns(jid, [], 0).items():
-        # have to make it say return so that it matches everyone else...
-        minion_data = {'return': data.get('ret')}
-        ret[jid]['Result'].update({mid: minion_data})
-    salt.output.display_output(ret, 'yaml', __opts__)
     return ret
 
 
-def _get_returner(returners):
+def _get_returner(returner_types):
     '''
-    Helper to iterate over retuerners and pick the first one
+    Helper to iterate over retuerner_types and pick the first one
     '''
-    for ret in returners:
-        if ret:
-            return ret
+    for returners in returner_types:
+        if returners:
+            if type(returners) != list:
+                return [returners]
+            return returners
 
 
 def _format_job_instance(job):
-    return {'Function': job.get('fun', 'unknown-function'),
-            'Arguments': list(job.get('arg', [])),
-            # unlikely but safeguard from invalid returns
-            'Target': job.get('tgt', 'unknown-target'),
-            'Target-type': job.get('tgt_type', []),
-            'User': job.get('user', 'root')}
+    ret = {'Function': job.get('fun', 'unknown-function'),
+           'Arguments': list(job.get('arg', [])),
+           # unlikely but safeguard from invalid returns
+           'Target': job.get('tgt', 'unknown-target'),
+           'Target-type': job.get('tgt_type', []),
+           'User': job.get('user', 'root')}
+
+    if 'Minions' in job:
+        ret['Minions'] = job['Minions']
+    return ret
 
 
 def _format_jid_instance(jid, job):
