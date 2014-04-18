@@ -170,7 +170,7 @@ class CronTestCase(TestCase):
             self.assertEqual(
                 c1,
                 '# Lines below here are managed by Salt, do not edit\n'
-                '* * * * * ls'
+                '* * * * * ls\n'
             )
             cron.set_job(
                 user='root',
