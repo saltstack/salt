@@ -479,7 +479,7 @@ def wait_script(name,
 
         .. warning::
 
-            The above illustrates two common PyYAML pitfall, that **yes**,
+            The above illustrates two common PyYAML pitfalls, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. 
@@ -560,7 +560,7 @@ def run(name,
                 - env:
                     BATCH: 'yes'
 
-            The above illustrates two common PyYAML pitfall, that **yes**,
+            The above illustrates two common PyYAML pitfalls, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. 
@@ -747,7 +747,7 @@ def script(name,
                 - env:
                     BATCH: 'yes'
 
-            The above illustrates two common PyYAML pitfall, that **yes**,
+            The above illustrates two common PyYAML pitfalls, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. 
