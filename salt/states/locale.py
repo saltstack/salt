@@ -72,5 +72,5 @@ def present(name):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to generate system locale'
+        ret['comment'] = 'Failed to generate locale'
         return ret
