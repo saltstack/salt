@@ -1269,7 +1269,6 @@ class AESFuncs(object):
             fstr = '{0}.returner'.format(returner)
             self.mminion.returners[fstr](load)
 
-
     def _syndic_return(self, load):
         '''
         Receive a syndic minion return and format it to look like returns from

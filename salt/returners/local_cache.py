@@ -17,9 +17,6 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-'''
-Filenames for the cache
-'''
 # load is the published job
 LOAD_P = '.load.p'
 # the list of minions that the job is targeted to (best effort match on the master side)
@@ -28,6 +25,7 @@ MINIONS_P = '.minions.p'
 RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
+
 
 def _job_dir():
     '''

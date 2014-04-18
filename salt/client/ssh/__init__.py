@@ -461,7 +461,6 @@ class SSH(object):
         for returner in self.opts['master_job_caches']:
             self.mminion.returners['{0}.save_load'.format(returner)](jid, job_load)
 
-
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
