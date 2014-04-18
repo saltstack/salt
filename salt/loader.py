@@ -109,7 +109,19 @@ def _create_loader(
 
 def minion_mods(opts, context=None, whitelist=None):
     '''
-    Returns the minion modules
+    Load execution modules
+
+    Returns a dictionary of execution modules appropriate for the current
+    system by evaluating the __virtual__() function in each module.
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __salt__ = salt.loader.minion_mods(__opts__)
+        __salt__['test.ping']()
     '''
     load = _create_loader(opts, 'modules', 'module')
     if context is None:
@@ -131,6 +143,15 @@ def minion_mods(opts, context=None, whitelist=None):
 def raw_mod(opts, name, functions):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        testmod = salt.loader.raw_mod(__opts__, 'test', None)
+        testmod['test.ping']()
     '''
     load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
@@ -226,6 +247,14 @@ def roster(opts, whitelist=None):
 def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        statemods = salt.loader.states(__opts__, None)
     '''
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
@@ -300,6 +329,15 @@ def grains(opts):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __grains__ = salt.loader.grains(__opts__)
+        print __grains__['id']
     '''
     if opts.get('skip_grains', False):
         return {}
