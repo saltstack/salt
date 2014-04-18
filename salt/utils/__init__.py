@@ -605,6 +605,11 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     '''
     Return the load data for a given job id
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'Getting the load has been moved into the returner interface '
+                    'please get the data from the returners listedin master_job_caches '
+                )
     _dir = jid_dir(jid, cachedir, sum_type)
     load_fn = os.path.join(_dir, '.load.p')
     if not os.path.isfile(load_fn):
