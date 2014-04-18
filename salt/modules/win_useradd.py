@@ -8,6 +8,9 @@ NOTE: This currently only works with local user accounts, not domain accounts
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     import win32net
@@ -379,11 +382,13 @@ def list_users():
     '''
     Return a list of users on Windows
     '''
-    res = 1
+    res = 0
     users = []
     user_list = []
+    dowhile = True
     try:
-        while res:
+        while res or dowhile:
+            dowhile = False
             (users, _, res) = win32net.NetUserEnum(
                 'localhost',
                 3,
@@ -393,6 +398,7 @@ def list_users():
             )
             for user in users:
                 user_list.append(user['name'])
+                log.debug('User: {0}'.format(str(user)))
         return user_list
     except win32net.error:
         pass
