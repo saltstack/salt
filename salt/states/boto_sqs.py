@@ -34,7 +34,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 .. code-block:: yaml
 
     myqueue:
-        aws_sqs.exists:
+        aws_sqs.present:
             - region: us-east-1
             - key: GKTADJGHEIQSXMKKRBJ08H
             - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -43,13 +43,13 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
     # Using a profile from pillars
     myqueue:
-        aws_sqs.exists:
+        aws_sqs.present:
             - region: us-east-1
             - profile: mysqsprofile
 
     # Passing in a profile
     myqueue:
-        aws_sqs.exists:
+        aws_sqs.present:
             - region: us-east-1
             - profile:
                 key: GKTADJGHEIQSXMKKRBJ08H
@@ -64,9 +64,9 @@ def __virtual__():
     return 'boto_sqs' if 'boto_sqs.exists' in __salt__ else False
 
 
-def created(
+def present(
         name,
-        attributes=None
+        attributes=None,
         region=None,
         key=None,
         keyid=None,
@@ -92,9 +92,9 @@ def created(
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_created = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
+    is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
-    if not is_created:
+    if not is_present:
         ret['comment'] = 'AWS SQS queue {0} is set to be created.'.format(name)
         if __opts__['test']:
             ret['result'] = None
@@ -145,14 +145,14 @@ def created(
     return ret
 
 
-def deleted(
+def absent(
         name,
         region=None,
         key=None,
         keyid=None,
         profile=None):
     '''
-    Delete the named SQS queue if it exists.
+    Ensure the named sqs queue is deleted.
 
     name
         Name of the SQS queue.
@@ -172,9 +172,9 @@ def deleted(
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    is_created = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
+    is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
-    if is_created:
+    if is_present:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
@@ -188,7 +188,7 @@ def deleted(
             ret['changes']['new'] = None
         else:
             ret['result'] = False
-            ret['comment'] = 'Failed to remove {0} sqs queue.'.format(name)
+            ret['comment'] = 'Failed to delete {0} sqs queue.'.format(name)
     else:
         ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
 
