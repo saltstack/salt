@@ -2,6 +2,8 @@
 '''
 Connection module for Amazon SQS
 
+.. versionadded:: Helium
+
 :configuration: This module accepts explicit sqs credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
@@ -21,6 +23,14 @@ Connection module for Amazon SQS
 
     If a region is not specified, the default is us-east-1.
 
+    It's also possible to specify key, keyid and region via a profile, either
+    as a passed in dict, or as a string to pull from pillars or minion config:
+
+        myprofile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
+
 :depends: boto
 '''
 
@@ -38,6 +48,8 @@ try:
 except ImportError:
     HAS_BOTO = False
 
+from salt._compat import string_types
+
 
 def __virtual__():
     '''
@@ -48,7 +60,7 @@ def __virtual__():
     return True
 
 
-def exists(name, region=None, key=None, keyid=None):
+def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a queue exists.
 
@@ -56,7 +68,7 @@ def exists(name, region=None, key=None, keyid=None):
 
         salt myminion sqs.exists myqueue region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
     if conn.get_queue(name):
@@ -65,7 +77,7 @@ def exists(name, region=None, key=None, keyid=None):
         return False
 
 
-def create(name, region=None, key=None, keyid=None):
+def create(name, region=None, key=None, keyid=None, profile=None):
     '''
     Create an SQS queue.
 
@@ -73,7 +85,7 @@ def create(name, region=None, key=None, keyid=None):
 
         salt myminion sqs.create myqueue region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
     if not conn.get_queue(name):
@@ -87,7 +99,7 @@ def create(name, region=None, key=None, keyid=None):
     return True
 
 
-def delete(name, region=None, key=None, keyid=None):
+def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an SQS queue.
 
@@ -95,7 +107,7 @@ def delete(name, region=None, key=None, keyid=None):
 
         salt myminion sqs.delete myqueue region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
     queue_obj = conn.get_queue(name)
@@ -108,7 +120,7 @@ def delete(name, region=None, key=None, keyid=None):
     return True
 
 
-def get_attributes(name, region=None, key=None, keyid=None):
+def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if attributes are set on an SQS queue.
 
@@ -116,7 +128,7 @@ def get_attributes(name, region=None, key=None, keyid=None):
 
         salt myminion sqs.get_attributes myqueue
     '''
-    conn = _get_conn(region, key, keyid)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return {}
     queue_obj = conn.get_queue(name)
@@ -126,7 +138,8 @@ def get_attributes(name, region=None, key=None, keyid=None):
     return conn.get_queue_attributes(queue_obj)
 
 
-def set_attributes(name, attributes, region=None, key=None, keyid=None):
+def set_attributes(name, attributes, region=None, key=None, keyid=None,
+                   profile=None):
     '''
     Set attributes on an SQS queue.
 
@@ -135,7 +148,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None):
         salt myminion sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
     '''
     ret = True
-    conn = _get_conn(region, key, keyid)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
     queue_obj = conn.get_queue(name)
@@ -154,10 +167,19 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None):
     return ret
 
 
-def _get_conn(region, key, keyid):
+def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to SQS.
     '''
+    if profile:
+        if isinstance(profile, string_types):
+            log.error(_profile)
+        elif isinstance(profile, dict):
+            _profile = profile
+        key = _profile.get('key', None)
+        keyid = _profile.get('keyid', None)
+        region = _profile.get('keyid', None)
+
     if not region and __salt__['config.option']('sqs.region'):
         region = __salt__['config.option']('sqs.region')
 
