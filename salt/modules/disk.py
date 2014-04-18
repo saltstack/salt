@@ -211,7 +211,7 @@ def blkid(device=None):
         device = comps[0][:-1]
         info = {}
         device_attributes = re.split(('\"*\"'), line.partition(' ')[2])
-        for key,value in zip(*[iter(device_attributes)]*2):
+        for key, value in zip(*[iter(device_attributes)]*2):
             key = key.strip('=').strip(' ')
             info[key] = value.strip('"')
         ret[device] = info

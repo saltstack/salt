@@ -109,9 +109,9 @@ def mounted(name,
     # Note the double-dash escaping.
     # So, let's call that the canonical device name
     # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
-    m = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
-    if m:
-        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in m.groupdict().iteritems())
+    lvs_match = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
+    if lvs_match:
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in lvs_match.groupdict().iteritems())
         mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
         if os.path.exists(mapper_device):
             real_device = mapper_device
