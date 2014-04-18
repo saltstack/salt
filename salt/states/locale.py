@@ -46,3 +46,31 @@ def system(name):
         ret['result'] = False
         ret['comment'] = 'Failed to set system locale'
         return ret
+
+def present(name):
+        '''
+    Generate a locale if it is not present
+
+    name
+        The name of the locale to be present
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+    if __salt__['locale.avail'](name):
+        ret['result'] = True
+        ret['comment'] = 'Locale {0} is already present'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Locale {0} needs to be generated'.format(name)
+        return ret
+    if __salt__['locale.gen_locale'](name):
+        ret['changes'] = {'locale': name}
+        ret['result'] = True
+        ret['comment'] = 'Generated locale {0}'.format(name)
+        return ret
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to generate system locale'
+        return ret
