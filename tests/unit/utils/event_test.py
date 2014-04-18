@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+from salt.master import clean_proc
 from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
@@ -46,8 +47,7 @@ def eventpublisher_process():
             time.sleep(2)
         yield
     finally:
-        proc.terminate()
-        proc.join()
+        clean_proc(proc)
 
 
 class EventSender(Process):
@@ -76,8 +76,7 @@ def eventsender_process(data, tag, wait=0):
     try:
         yield
     finally:
-        proc.terminate()
-        proc.join()
+        clean_proc(proc)
 
 
 @skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
