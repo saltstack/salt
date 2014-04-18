@@ -2,10 +2,13 @@
 '''
 Support for the Amazon Simple Queue Service.
 '''
+import logging
 import json
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 _OUTPUT = '--output json'
 
@@ -90,16 +93,18 @@ def receive_message(queue, region, num=1, opts=None, user=None):
     .. versionadded:: Helium
 
     '''
+    ret = {
+            'Messages': None,
+          }
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
-        return '"{0}" queue does not exist.'.format(queue)
+        log.info('"{0}" queue does not exist.'.format(queue))
+        return ret
 
     out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
                    num=num)
-    ret = {
-            'Messages': out['Messages'],
-          }
+    ret['Messages'] =  out['Messages']
     return ret
 
 
@@ -135,7 +140,8 @@ def delete_message(queue, region, receipthandle, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
     if queue not in url_map:
-        return '"{0}" queue does not exist.'.format(queue)
+        log.info('"{0}" queue does not exist.'.format(queue))
+        return False
 
     out = _run_aws('delete-message', region, opts, user,
                    receipthandle=receipthandle, queue=url_map[queue],)
