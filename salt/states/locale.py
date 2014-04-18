@@ -44,7 +44,7 @@ def system(name):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to set system locale'
+        ret['comment'] = 'Failed to set system locale to {0}'.format(name)
         return ret
 
 def present(name):
@@ -72,5 +72,5 @@ def present(name):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to generate locale'
+        ret['comment'] = 'Failed to generate locale {0}'.format(name)
         return ret
