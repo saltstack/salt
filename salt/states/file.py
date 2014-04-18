@@ -41,6 +41,11 @@ If using a template, any user-defined template variables in the file defined in
 arguments. The general best practice is to place default values in
 ``defaults``, with conditional overrides going into ``context``, as seen above.
 
+The template will receive a variable ``custom_var``, which would be accessed in
+the template using ``{{ custom_var }}``. If the operating system is Ubuntu, the
+value of the variable ``custom_var`` would be *override*, otherwise it is the
+default *default value*
+
 The ``source`` parameter can be specified as a list. If this is done, then the
 first file to be matched will be the one that is used. This allows you to have
 a default file on which to fall back if the desired file does not exist on the

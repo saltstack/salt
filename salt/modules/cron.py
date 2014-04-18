@@ -379,8 +379,12 @@ def set_job(user,
     for cron in lst['crons']:
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
+            test_setted_id = (
+                cron['identifier'] is None
+                and SALT_CRON_NO_IDENTIFIER
+                or cron['identifier'])
             tests = [(cron['comment'], comment),
-                     (cron['identifier'], identifier),
+                     (identifier, test_setted_id),
                      (cron['minute'], minute),
                      (cron['hour'], hour),
                      (cron['daymonth'], daymonth),
