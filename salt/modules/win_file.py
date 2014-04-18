@@ -256,7 +256,7 @@ def gid_to_group(gid):
     behaves the same as uid_to_user.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with *nix. Use the uid_to_user function
+    exists for API compatibility with \*nix. Use the uid_to_user function
     instead; an info level log entry will be generated if this function is used
     directly.
 
@@ -282,7 +282,7 @@ def group_to_gid(group):
     behaves the same as user_to_uid, except if None is given, '' is returned.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with *nix. Use the user_to_uid function
+    exists for API compatibility with \*nix. Use the user_to_uid function
     instead; an info level log entry will be generated if this function is used
     directly.
 
@@ -372,7 +372,7 @@ def get_gid(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles *nix behaviour for API compatibility reasons. When
+    somewhat resembles \*nix behaviour for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -406,7 +406,7 @@ def get_group(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles *nix behaviour for API compatibility reasons. When
+    somewhat resembles \*nix behaviour for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -495,7 +495,7 @@ def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
-    Symlinks are followed by default to mimic *nix behaviour. Specify
+    Symlinks are followed by default to mimic \*nix behaviour. Specify
     `follow_symlinks=False` to turn off this behaviour.
 
     CLI Example:
@@ -527,7 +527,7 @@ def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
-    Symlinks are followed by default to mimic *nix behaviour. Specify
+    Symlinks are followed by default to mimic \*nix behaviour. Specify
     `follow_symlinks=False` to turn off this behaviour.
 
     CLI Example:
@@ -764,7 +764,7 @@ def chgrp(path, group):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to do nothing while still being
-    compatible with *nix behaviour. When managing Windows systems,
+    compatible with \*nix behaviour. When managing Windows systems,
     this function is superfluous and will generate an info level log entry if
     used directly.
 
@@ -797,7 +797,7 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps these properties to keep some kind of
-    compatibility with *nix behaviour. If the 'primary group' is required, it
+    compatibility with \*nix behaviour. If the 'primary group' is required, it
     can be accessed in the `pgroup` and `pgid` properties.
 
     CLI Example:
@@ -994,7 +994,7 @@ def symlink(src, link):
     This is only supported with Windows Vista or later and must be executed by
     a user with the SeCreateSymbolicLink privilege.
 
-    The behaviour of this function matches the *nix equivalent, with one
+    The behaviour of this function matches the \*nix equivalent, with one
     exception - invalid symlinks cannot be created. The source path must exist.
     If it doesn't, an error will be raised.
 
@@ -1052,7 +1052,7 @@ def is_link(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with *nix behaviour, this function will raise an error if the path
+    Inline with \*nix behaviour, this function will raise an error if the path
     is not a symlink, however, the error raised will be a SaltInvocationError,
     not an OSError.
 
@@ -1142,7 +1142,7 @@ def readlink(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with *nix behaviour, this function will raise an error if the path is
+    Inline with \*nix behaviour, this function will raise an error if the path is
     not a symlink, however, the error raised will be a SaltInvocationError, not
     an OSError.
 
