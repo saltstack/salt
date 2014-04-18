@@ -66,7 +66,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
     CLI example::
 
-        salt myminion sqs.exists myqueue region=us-east-1
+        salt myminion boto_sqs.exists myqueue region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -83,7 +83,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
 
     CLI example to create a queue::
 
-        salt myminion sqs.create myqueue region=us-east-1
+        salt myminion boto_sqs.create myqueue region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -105,7 +105,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
     CLI example to delete a queue::
 
-        salt myminion sqs.delete myqueue region=us-east-1
+        salt myminion boto_sqs.delete myqueue region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -126,7 +126,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
 
     CLI example::
 
-        salt myminion sqs.get_attributes myqueue
+        salt myminion boto_sqs.get_attributes myqueue
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -145,7 +145,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
 
     CLI example to set attributes on a queue::
 
-        salt myminion sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
+        salt myminion boto_sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
     '''
     ret = True
     conn = _get_conn(region, key, keyid, profile)
