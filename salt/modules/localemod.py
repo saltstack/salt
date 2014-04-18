@@ -151,7 +151,7 @@ def _normalize_locale(locale):
     lang_encoding[0] = '_'.join(lang_split)
     if len(lang_encoding) > 1:
         if len(lang_split) > 1:
-           lang_encoding[1] = lang_encoding[1].lower().replace('-', '')
+            lang_encoding[1] = lang_encoding[1].lower().replace('-', '')
     return '.'.join(lang_encoding)
     
 def avail(locale):
