@@ -17,7 +17,7 @@
 
 
 Name:           salt
-Version:        2014.1.1
+Version:        2014.1.3
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -31,10 +31,13 @@ BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
+BuildRequires:  python-yaml
 BuildRequires:  python-devel
 BuildRequires:  python-msgpack-python
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq
+BuildRequires:  python-psutil
+BuildRequires:  python-requests
 BuildRequires:  python-apache-libcloud >= 0.14.0
 
 %if 0%{?sles_version}
@@ -62,9 +65,13 @@ BuildRequires:  python-sphinx
 
 Requires:       logrotate
 Requires:       python-Jinja2
+Requires:       python-yaml
 Requires:       python-PyYAML
+Requires:       python-yaml
 Requires:       python-apache-libcloud
 Requires:       python-xml
+Requires:       python-psutil
+Requires:       python-requests
 Requires(pre): %fillup_prereq
 %if 0%{?suse_version} < 1210
 Requires(pre): %insserv_prereq
@@ -199,7 +206,6 @@ python setup.py build
 ## documentation
 cd doc && make html && rm _build/html/.buildinfo && rm _build/html/_images/proxy_minions.png && cd _build/html && chmod -R -x+X *
 
-
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
 %fdupes %{buildroot}%{_prefix}
@@ -256,8 +262,11 @@ install -Dpm 0644  pkg/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotat
 ## install SuSEfirewall2 rules
 install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
-#%%check
-#%%{__python} setup.py test --runtests-opts=-u
+%check
+# don't test on factory because of ssl2 method deprication
+#%%if 0%{?suse_version} < 1310
+%{__python} setup.py test --runtests-opts=-u
+#%%endif
 
 %preun syndic
 %if 0%{?_unitdir:1}
