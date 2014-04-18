@@ -42,7 +42,7 @@ def __virtual__():
 
 def created(
         name,
-        attributes=None,
+        attributes={},
         region=None,
         key=None,
         keyid=None):
@@ -86,14 +86,14 @@ def created(
         _val = _attributes.get(attr, None)
         if str(_val) != str(val):
             attrs_to_set[attr] = val
+    attr_names = ','.join(attrs_to_set.keys())
     if attrs_to_set:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Attributes {0} to be set on {1}'.format(
-                attrs_to_set.keys(), name)
+            ret['comment'] = 'Attribute(s) {0} to be set on {1}.'.format(
+                attr_names, name)
             return ret
-        attr_names = ','.join(attrs_to_set.keys())
-        msg = (' Setting {0} attributes.'.format(attr_names))
+        msg = (' Setting {0} attribute(s).'.format(attr_names))
         ret['comment'] = ret['comment'] + msg
         ret['result'] = True
         if 'new' in ret['changes']:
@@ -139,7 +139,7 @@ def deleted(
     if is_created:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'AWS SQS queue {0} is set to be removed'.format(
+            ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
                     name)
             return ret
         deleted = __salt__['boto_sqs.delete'](name, region, key, keyid)
@@ -151,6 +151,6 @@ def deleted(
             ret['result'] = False
             ret['comment'] = 'Failed to remove {0} sqs queue.'.format(name)
     else:
-        ret['comment'] = u'{0} does not exist in {1}'.format(name, region)
+        ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
 
     return ret
