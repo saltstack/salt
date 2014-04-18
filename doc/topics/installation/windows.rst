@@ -15,7 +15,8 @@ of the Salt States currently work on Windows, as well.
 Windows Installer
 =================
 
-A Salt Minion Windows installer can be found here:
+Salt Minion Windows installers can be found here. The output of `md5sum <salt
+minion exe>` should match the contents of the corresponding md5 file.
 
 .. admonition:: Download here
 
