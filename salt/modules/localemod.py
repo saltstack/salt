@@ -155,7 +155,7 @@ def _normalize_locale(locale):
     return '.'.join(lang_encoding)
     
 def avail(locale):
-        '''
+    '''
     Check if a locale is available
 
     CLI Example:
