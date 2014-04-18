@@ -99,15 +99,15 @@ def clean_old_jobs(opts):
     Clean out the old jobs from the job cache
     '''
     mminion = salt.minion.MasterMinion(
-                self.opts,
+                opts,
                 states=False,
                 rend=False,
                 )
     # for all master_job_caches, clean out the old jobs-- if they implemented it
     for returner in opts['master_job_caches']:
         fstr = '{0}.clean_old_jobs'.format(returner)
-        if fstr in self.mminion.returners:
-            self.mminion.returners[fstr]()
+        if fstr in mminion.returners:
+            mminion.returners[fstr]()
 
 
 
