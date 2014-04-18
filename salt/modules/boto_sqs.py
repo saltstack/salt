@@ -173,7 +173,7 @@ def _get_conn(region, key, keyid, profile):
     '''
     if profile:
         if isinstance(profile, string_types):
-            log.error(_profile)
+            _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
         key = _profile.get('key', None)
