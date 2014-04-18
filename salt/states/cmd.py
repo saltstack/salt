@@ -475,14 +475,19 @@ def wait_script(name,
             salt://scripts/foo.sh:
               cmd.script:
                 - env:
-                  - BATCH: 'yes'
+                    BATCH: 'yes'
 
         .. warning::
 
-            The above illustrates a common PyYAML pitfall, that **yes**,
+            The above illustrates two common PyYAML pitfall, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
-            quotes to be used as strings. More info on this (and other) PyYAML
+            quotes to be used as strings. 
+            
+            It also illustrates the use of ``  `` 'two spaces' instead of ``- ``
+            'dash space' to represent a dict.
+            
+            More info on this (and other) PyYAML
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
@@ -553,14 +558,17 @@ def run(name,
             salt://scripts/foo.sh:
               cmd.script:
                 - env:
-                  - BATCH: 'yes'
+                    BATCH: 'yes'
 
-        .. warning::
-
-            The above illustrates a common PyYAML pitfall, that **yes**,
+            The above illustrates two common PyYAML pitfall, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
-            quotes to be used as strings. More info on this (and other) PyYAML
+            quotes to be used as strings. 
+            
+            It also illustrates the use of ``  `` 'two spaces' instead of ``- ``
+            'dash space' to represent a dict.
+            
+            More info on this (and other) PyYAML
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
@@ -630,7 +638,7 @@ def run(name,
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
-    if env is not None and not isinstance(env, (list, dict)):
+    if env is not None and not isinstance(env, dict):
         ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
                           'documentation.')
         return ret
@@ -737,14 +745,17 @@ def script(name,
             salt://scripts/foo.sh:
               cmd.script:
                 - env:
-                  - BATCH: 'yes'
+                    BATCH: 'yes'
 
-        .. warning::
-
-            The above illustrates a common PyYAML pitfall, that **yes**,
+            The above illustrates two common PyYAML pitfall, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
-            quotes to be used as strings. More info on this (and other) PyYAML
+            quotes to be used as strings. 
+            
+            It also illustrates the use of ``  `` 'two spaces' instead of ``- ``
+            'dash space' to represent a dict.
+            
+            More info on this (and other) PyYAML
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
@@ -784,7 +795,7 @@ def script(name,
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
-    if env is not None and not isinstance(env, (list, dict)):
+    if env is not None and not isinstance(env, dict):
         ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
                           'documentation.')
         return ret
