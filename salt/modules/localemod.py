@@ -166,7 +166,8 @@ def avail(locale):
     '''
     normalized_locale = _normalize_locale(locale)
     avail_locales = __salt__['locale.list_avail']()
-    locale_exists = next((True for x in avail_locales if _normalize_locale(x.strip()) == normalized_locale), False)
+    locale_exists = next((True for x in avail_locales
+       if _normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
     
 def gen_locale(locale):
