@@ -34,6 +34,7 @@ def _job_dir():
     '''
     return os.path.join(__opts__['cachedir'], 'jobs')
 
+
 def _jid_dir(jid):
     '''
     Return the jid_dir for the given job id
@@ -84,7 +85,7 @@ def _format_jid_instance(jid, job):
 def prep_jid(nocache=False):
     '''
     Return a job id and prepare the job id directory
-    This is the function responsible for making sure jids don't collide
+    This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
     jid = salt.utils.gen_jid()
@@ -96,8 +97,7 @@ def prep_jid(nocache=False):
     try:
         os.makedirs(jid_dir_)
     except OSError:
-        # TODO: some sort of sleep?
-        # or maybe add a random number to the end of the jid?? weird to spin
+        # TODO: some sort of sleep or something? Spinning is generally bad practice
         return prep_jid(nocache=nocache)
 
     with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
