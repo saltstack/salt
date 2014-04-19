@@ -1618,7 +1618,7 @@ def truncate(path, length):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
-    Seek to a position on a file and write to it
+    Seek to a position on a file and delete everything after that point
 
     CLI Example:
 
