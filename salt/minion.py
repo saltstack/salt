@@ -1455,6 +1455,11 @@ class Minion(object):
             tagify([self.opts['id'], 'start'], 'minion'),
         )
         loop_interval = int(self.opts['loop_interval'])
+
+        # On first startup execute a state run if configured to do so
+        self._state_run()
+        time.sleep(.5)
+
         while self._running is True:
             try:
                 socks = dict(self.poller.poll(
