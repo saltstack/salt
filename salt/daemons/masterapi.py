@@ -476,10 +476,8 @@ class RemoteFuncs(object):
             return False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[fstr](nocache=load.get('nocache', False))
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
@@ -1231,11 +1229,8 @@ class LocalFuncs(object):
                 }
         # Retrieve the jid
         if not load['jid']:
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    extra.get('nocache', False)
-                    )
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
         self.event.fire_event({'minions': minions}, load['jid'])
 
         new_job_load = {
