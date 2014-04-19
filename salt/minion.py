@@ -1408,6 +1408,11 @@ class Minion(MinionBase):
         self._fire_master_minion_start()
 
         loop_interval = int(self.opts['loop_interval'])
+
+        # On first startup execute a state run if configured to do so
+        self._state_run()
+        time.sleep(.5)
+
         while self._running is True:
             try:
                 socks = self._do_poll(loop_interval)
