@@ -32,8 +32,14 @@ def __virtual__():
     return True
 
 
-def bootstrap(platform, root, img_format='dir', fs_format='ext2', arch=None,
-              flavor=None, repo_url=None, static_qemu=None):
+def bootstrap(platform,
+              root,
+              img_format='dir',
+              fs_format='ext2',
+              arch=None,
+              flavor=None,
+              repo_url=None,
+              static_qemu=None):
     '''
     Create an image for a specific platform.
 
