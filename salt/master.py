@@ -1249,10 +1249,8 @@ class AESFuncs(object):
             load['arg'] = load.get('arg', load.get('fun_args', []))
             load['tgt_type'] = 'glob'
             load['tgt'] = load['id']
-            load['jid'] = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type'],
-                load.get('nocache', False))
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[fstr](nocache=load.get('nocache', False))
             new_loadp = load.get('nocache', True) and True
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
@@ -2465,11 +2463,8 @@ class ClearFuncs(object):
                 }
         # Retrieve the jid
         if not clear_load['jid']:
-            clear_load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    extra.get('nocache', False)
-                    )
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {

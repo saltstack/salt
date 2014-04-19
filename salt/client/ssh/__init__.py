@@ -432,10 +432,8 @@ class SSH(object):
         '''
         Execute the overall routine
         '''
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type'],
-                self.opts['user'])
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.mminion.returners[fstr]()
 
         # Save the invocation information
         arg_str = self.opts['arg_str']
