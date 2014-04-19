@@ -1667,8 +1667,10 @@ class Syndic(Minion):
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
-                    for returner in self.opts['master_job_caches']:
-                        jdict['__load__'].update(self.mminion.returners['{0}.get_jid'.format(returner)](event['data']['jid']))
+                    fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
+                    jdict['__load__'].update(
+                        self.mminion.returners[fstr](event['data']['jid'])
+                        )
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here

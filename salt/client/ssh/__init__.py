@@ -424,8 +424,9 @@ class SSH(object):
         '''
         Cache the job information
         '''
-        for returner in self.opts['master_job_caches']:
-            self.mminion.returners['{0}.returner'.format(returner)]({'jid': jid, 'id': id_, 'return': ret})
+        self.mminion.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid, 
+                                                                                      'id': id_, 
+                                                                                      'return': ret})
 
     def run(self):
         '''
@@ -458,8 +459,8 @@ class SSH(object):
             'arg': args,
             }
 
-        for returner in self.opts['master_job_caches']:
-            self.mminion.returners['{0}.save_load'.format(returner)](jid, job_load)
+        # save load to the master job cache
+        self.mminion.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)

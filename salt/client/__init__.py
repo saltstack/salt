@@ -35,7 +35,6 @@ import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.minions
-import salt.utils.returners
 import salt.utils.verify
 import salt.syspaths as syspaths
 from salt.exceptions import (
@@ -793,7 +792,7 @@ class LocalClient(object):
         timeout_at = start + timeout
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not salt.utils.returners.valid_jid(jid, self.opts['master_job_caches'], self.mminion):
+        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
@@ -896,7 +895,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not salt.utils.returners.valid_jid(jid, self.opts['master_job_caches'], self.mminion):
+        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             return ret
 
@@ -937,20 +936,19 @@ class LocalClient(object):
         # create the iterator-- since we want to get anyone in the middle
         event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
 
-        for returner in self.opts['master_job_caches']:
-            data = self.mminion.returners['{0}.get_jid'.format(returner)](jid)
-            for minion in data:
-                m_data = {}
-                if u'return' in data[minion]:
-                    m_data['ret'] = data[minion].get(u'return')
-                else:
-                    m_data['ret'] = data[minion].get('return')
-                if 'out' in data[minion]:
-                    m_data['out'] = data[minion]['out']
-                if minion in ret:
-                    ret[minion].update(m_data)
-                else:
-                    ret[minion] = m_data
+        data = self.mminion.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        for minion in data:
+            m_data = {}
+            if u'return' in data[minion]:
+                m_data['ret'] = data[minion].get(u'return')
+            else:
+                m_data['ret'] = data[minion].get('return')
+            if 'out' in data[minion]:
+                m_data['out'] = data[minion]['out']
+            if minion in ret:
+                ret[minion].update(m_data)
+            else:
+                ret[minion] = m_data
 
         # if we have all the minion returns, lets just return
         if len(set(ret.keys()).intersection(minions)) >= len(minions):
@@ -981,20 +979,19 @@ class LocalClient(object):
         '''
         ret = {}
 
-        for returner in self.opts['master_job_caches']:
-            data = self.mminion.returners['{0}.get_jid'.format(returner)](jid)
-            for minion in data:
-                m_data = {}
-                if u'return' in data[minion]:
-                    m_data['ret'] = data[minion].get(u'return')
-                else:
-                    m_data['ret'] = data[minion].get('return')
-                if 'out' in data[minion]:
-                    m_data['out'] = data[minion]['out']
-                if minion in ret:
-                    ret[minion].update(m_data)
-                else:
-                    ret[minion] = m_data
+        data = self.mminion.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        for minion in data:
+            m_data = {}
+            if u'return' in data[minion]:
+                m_data['ret'] = data[minion].get(u'return')
+            else:
+                m_data['ret'] = data[minion].get('return')
+            if 'out' in data[minion]:
+                m_data['out'] = data[minion]['out']
+            if minion in ret:
+                ret[minion].update(m_data)
+            else:
+                ret[minion] = m_data
 
         return ret
 
@@ -1027,7 +1024,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not salt.utils.returners.valid_jid(jid, self.opts['master_job_caches'], self.mminion):
+        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             return ret
         # Wait for the hosts to check in
@@ -1104,7 +1101,7 @@ class LocalClient(object):
         timeout_at = start + timeout
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not salt.utils.returners.valid_jid(jid, self.opts['master_job_caches'], self.mminion):
+        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
@@ -1202,7 +1199,7 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not salt.utils.returners.valid_jid(jid, self.opts['master_job_caches'], self.mminion):
+        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid

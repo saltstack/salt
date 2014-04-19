@@ -1265,9 +1265,8 @@ class AESFuncs(object):
             return
 
         # otherwise, write to the master cache
-        for returner in self.opts['master_job_caches']:
-            fstr = '{0}.returner'.format(returner)
-            self.mminion.returners[fstr](load)
+        fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
         '''
@@ -1279,9 +1278,8 @@ class AESFuncs(object):
             return None
         # if we have a load, save it
         if 'load' in load:
-            for returner in self.opts['master_job_caches']:
-                fstr = '{0}.save_load'.format(returner)
-                self.mminion.returners[fstr](load['jid'], load)
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load)
 
         # Format individual return loads
         for key, item in load['return'].items():
@@ -2506,22 +2504,21 @@ class ClearFuncs(object):
                 )
 
         # always write out to the master job caches
-        for returner in self.opts['master_job_caches']:
-            try:
-                fstr = '{0}.save_load'.format(returner)
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
-            except KeyError:
-                log.critical(
-                    'The specified returner used for the external job cache '
-                    '"{0}" does not have a save_load function!'.format(
-                        returner
-                    )
+        try:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](clear_load['jid'], clear_load)
+        except KeyError:
+            log.critical(
+                'The specified returner used for the external job cache '
+                '"{0}" does not have a save_load function!'.format(
+                    returner
                 )
-            except Exception:
-                log.critical(
-                    'The specified returner threw a stack trace:\n',
-                    exc_info=True
-                )
+            )
+        except Exception:
+            log.critical(
+                'The specified returner threw a stack trace:\n',
+                exc_info=True
+            )
 
         # Set up the payload
         payload = {'enc': 'aes'}

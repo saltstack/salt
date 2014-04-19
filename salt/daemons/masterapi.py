@@ -98,16 +98,16 @@ def clean_old_jobs(opts):
     '''
     Clean out the old jobs from the job cache
     '''
+    # TODO: better way to not require creating the masterminion every time?
     mminion = salt.minion.MasterMinion(
                 opts,
                 states=False,
                 rend=False,
                 )
-    # for all master_job_caches, clean out the old jobs-- if they implemented it
-    for returner in opts['master_job_caches']:
-        fstr = '{0}.clean_old_jobs'.format(returner)
-        if fstr in mminion.returners:
-            mminion.returners[fstr]()
+    # If the master job cache has a clean_old_jobs, call it
+    fstr = '{0}.clean_old_jobs'.format(opts['master_job_cache'])
+    if fstr in mminion.returners:
+        mminion.returners[fstr]()
 
 
 def access_keys(opts):
@@ -486,9 +486,9 @@ class RemoteFuncs(object):
         self.event.fire_ret_load(load)
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
-        for returner in self.opts['master_job_caches']:
-            fstr = '{0}.returner'.format(returner)
-            self.mminion.returners[fstr](load)
+
+        fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
         '''
@@ -500,9 +500,8 @@ class RemoteFuncs(object):
             return None
         # if we have a load, save it
         if 'load' in load:
-            for returner in self.opts['master_job_caches']:
-                fstr = '{0}.save_load'.format(returner)
-                self.mminion.returners[fstr](load['jid'], load['load'])
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
         for key, item in load['return'].items():
@@ -1271,23 +1270,22 @@ class LocalFuncs(object):
                     exc_info=True
                 )
 
-        # always write out to the master job caches
-        for returner in self.opts['master_job_caches']:
-            try:
-                fstr = '{0}.save_load'.format(returner)
-                self.mminion.returners[fstr](load['jid'], load)
-            except KeyError:
-                log.critical(
-                    'The specified returner used for the external job cache '
-                    '"{0}" does not have a save_load function!'.format(
-                        returner
-                    )
+        # always write out to the master job cache
+        try:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load)
+        except KeyError:
+            log.critical(
+                'The specified returner used for the external job cache '
+                '"{0}" does not have a save_load function!'.format(
+                    returner
                 )
-            except Exception:
-                log.critical(
-                    'The specified returner threw a stack trace:\n',
-                    exc_info=True
-                )
+            )
+        except Exception:
+            log.critical(
+                'The specified returner threw a stack trace:\n',
+                exc_info=True
+            )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
