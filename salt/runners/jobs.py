@@ -40,12 +40,11 @@ def active():
 
     mminion = salt.minion.MasterMinion(__opts__)
     for jid in ret:
-        returners = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_caches']))
-        for returner in returners:
-            data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-            for minion in data:
-                if minion not in ret[jid]['Returned']:
-                    ret[jid]['Returned'].append(minion)
+        returner = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_cache']))
+        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+        for minion in data:
+            if minion not in ret[jid]['Returned']:
+                ret[jid]['Returned'].append(minion)
 
     salt.output.display_output(ret, 'yaml', __opts__)
     return ret
@@ -63,18 +62,18 @@ def lookup_jid(jid, ext_source=None, output=True):
     '''
     ret = {}
     mminion = salt.minion.MasterMinion(__opts__)
-    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
-    for returner in returners:
-        out = 'nested'
-        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        for minion in data:
-            if u'return' in data[minion]:
-                ret[minion] = data[minion].get(u'return')
-            else:
-                ret[minion] = data[minion].get('return')
-            if 'out' in data[minion]:
-                out = data[minion]['out']
-        salt.output.display_output(ret, out, __opts__)
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+
+    out = 'nested'
+    data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    for minion in data:
+        if u'return' in data[minion]:
+            ret[minion] = data[minion].get(u'return')
+        else:
+            ret[minion] = data[minion].get('return')
+        if 'out' in data[minion]:
+            out = data[minion]['out']
+    salt.output.display_output(ret, out, __opts__)
     return ret
 
 
@@ -90,13 +89,13 @@ def list_job(jid, ext_source=None):
     '''
     ret = {'jid': jid}
     mminion = salt.minion.MasterMinion(__opts__)
-    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
-    for returner in returners:
-        out = 'nested'
-        job = mminion.returners['{0}.get_load'.format(returner)](jid)
-        ret.update(_format_jid_instance(jid, job))
-        ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        salt.output.display_output(ret, out, __opts__)
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+
+    out = 'nested'
+    job = mminion.returners['{0}.get_load'.format(returner)](jid)
+    ret.update(_format_jid_instance(jid, job))
+    ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    salt.output.display_output(ret, out, __opts__)
     return ret
 
 
@@ -110,12 +109,13 @@ def list_jobs(ext_source=None):
 
         salt-run jobs.list_jobs
     '''
-    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     mminion = salt.minion.MasterMinion(__opts__)
-    for returner in returners:
-        out = 'nested'
-        ret = mminion.returners['{0}.get_jids'.format(returner)]()
-        salt.output.display_output(ret, out, __opts__)
+
+    out = 'nested'
+    ret = mminion.returners['{0}.get_jids'.format(returner)]()
+    salt.output.display_output(ret, out, __opts__)
+
     return ret
 
 
@@ -131,14 +131,15 @@ def print_job(jid, ext_source=None):
     '''
     ret = {}
 
-    returners = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_caches']))
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     mminion = salt.minion.MasterMinion(__opts__)
-    for returner in returners:
-        out = 'nested'
-        job = mminion.returners['{0}.get_load'.format(returner)](jid)
-        ret[jid] = _format_jid_instance(jid, job)
-        ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        salt.output.display_output(ret, out, __opts__)
+
+    out = 'nested'
+    job = mminion.returners['{0}.get_load'.format(returner)](jid)
+    ret[jid] = _format_jid_instance(jid, job)
+    ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    salt.output.display_output(ret, out, __opts__)
+
     return ret
 
 
@@ -146,11 +147,9 @@ def _get_returner(returner_types):
     '''
     Helper to iterate over retuerner_types and pick the first one
     '''
-    for returners in returner_types:
-        if returners:
-            if type(returners) != list:
-                return [returners]
-            return returners
+    for returner in returner_types:
+        if returner:
+            return returner
 
 
 def _format_job_instance(job):
