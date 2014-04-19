@@ -22,7 +22,7 @@ class ManageTest(integration.ShellCase):
         '''
         ret = self.run_run_plus('jobs.active')
         self.assertEqual(ret['fun'], {})
-        self.assertEqual(ret['out'], ['{}'])
+        self.assertEqual(ret['out'], [])
 
     def test_lookup_jid(self):
         '''
