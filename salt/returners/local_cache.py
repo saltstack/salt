@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import datetime
+import hashlib
 
 # Import salt libs
 import salt.payload
@@ -33,21 +34,18 @@ def _job_dir():
     '''
     return os.path.join(__opts__['cachedir'], 'jobs')
 
-
-def _jid_dir(jid, makedirs=False):
+def _jid_dir(jid):
     '''
-    Return the jid_dir, and optionally create it
+    Return the jid_dir for the given job id
     '''
-    jid_dir = salt.utils.jid_dir(
-                jid,
-                os.path.join(__opts__['cachedir'], 'NEWPATHFORTESTING'),
-                __opts__['hash_type']
-                )
-
-    if makedirs and not os.path.isdir(jid_dir):
-        os.makedirs(jid_dir)
-
-    return jid_dir
+    jid = str(jid)
+    jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
+    return os.path.join(__opts__['cachedir'],
+                        # TODO: remove this string...
+                        'NEWPATHFORTESTING',
+                        'jobs',
+                        jhash[:2],
+                        jhash[2:])
 
 
 def _walk_through(job_dir):
@@ -82,12 +80,39 @@ def _format_jid_instance(jid, job):
     return ret
 
 
+#TODO: add to returner docs-- this is a new one
+def prep_jid(nocache=False):
+    '''
+    Return a job id and prepare the job id directory
+    '''
+    jid = salt.utils.gen_jid()
+
+    jid_dir_ = _jid_dir(jid)
+
+    # make sure we create the jid dir, otherwise someone else is using it,
+    # meaning we need a new jid
+    try:
+        os.makedirs(jid_dir_)
+    except OSError:
+        # TODO: some sort of sleep?
+        # or maybe add a random number to the end of the jid?? weird to spin
+        return prep_jid(nocache=nocache)
+
+    with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+        fn_.write(jid)
+    if nocache:
+        with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'w+') as fn_:
+            fn_.write('')
+
+    return jid
+
+
 def returner(load):
     '''
     Return data to the local job cache
     '''
     serial = salt.payload.Serial(__opts__)
-    jid_dir = _jid_dir(load['jid'], makedirs=True)
+    jid_dir = _jid_dir(load['jid'])
     if os.path.exists(os.path.join(jid_dir, 'nocache')):
         return
 
@@ -142,7 +167,7 @@ def save_load(jid, clear_load):
     '''
     Save the load to the specified jid
     '''
-    jid_dir = _jid_dir(clear_load['jid'], makedirs=True)
+    jid_dir = _jid_dir(clear_load['jid'])
 
     serial = salt.payload.Serial(__opts__)
 
