@@ -1276,9 +1276,9 @@ class LocalFuncs(object):
             self.mminion.returners[fstr](load['jid'], load)
         except KeyError:
             log.critical(
-                'The specified returner used for the external job cache '
+                'The specified returner used for the master job cache '
                 '"{0}" does not have a save_load function!'.format(
-                    returner
+                    self.opts['master_job_cache']
                 )
             )
         except Exception:

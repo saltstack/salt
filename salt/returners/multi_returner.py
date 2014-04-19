@@ -26,15 +26,15 @@ def _mminion():
 
     if MMINION is None:
         MMINION = salt.minion.MasterMinion(__opts__)
-    
+
     return MMINION
-    
+
 
 def returner(load):
     '''
     Write return to all returners in multi_returner
     '''
-    
+
     for returner in __opts__[CONFIG_KEY]:
         _mminion().returners['{0}.returner'.format(returner)](load)
 
@@ -54,7 +54,7 @@ def get_load(jid):
     ret = {}
     for returner in __opts__[CONFIG_KEY]:
         ret.update(_mminion().returners['{0}.get_load'.format(returner)](jid))
-    
+
     return ret
 
 
@@ -65,7 +65,7 @@ def get_jid(jid):
     ret = {}
     for returner in __opts__[CONFIG_KEY]:
         ret.update(_mminion().returners['{0}.get_jid'.format(returner)](jid))
-    
+
     return ret
 
 
@@ -76,7 +76,7 @@ def get_jids():
     ret = {}
     for returner in __opts__[CONFIG_KEY]:
         ret.update(_mminion().returners['{0}.get_jids'.format(returner)]())
-    
+
     return ret
 
 

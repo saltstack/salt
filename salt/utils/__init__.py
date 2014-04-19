@@ -573,12 +573,15 @@ def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
+    # TODO: re-enable
+    '''
     salt.utils.warn_until(
                     'Boron',
                     'All job_cache management has been moved into the local_cache '
                     'returner, this util function will be removed-- please use '
                     'the returner'
                 )
+    '''
     jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)

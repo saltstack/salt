@@ -424,8 +424,8 @@ class SSH(object):
         '''
         Cache the job information
         '''
-        self.mminion.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid, 
-                                                                                      'id': id_, 
+        self.mminion.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid,
+                                                                                      'id': id_,
                                                                                       'return': ret})
 
     def run(self):
