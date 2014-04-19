@@ -106,7 +106,7 @@ def bootstrap(platform,
         return _bootstrap_yum(root)
     elif platform == 'deb':
         return _bootstrap_deb(
-            root, arch=arch, flavor=flavor, static_qemu=static_qemu
+            root, arch=arch, flavor=flavor, repo_url=repo_url, static_qemu=static_qemu
         )
     elif platform == 'pacman':
         return _bootstrap_pacman(root)
@@ -139,7 +139,7 @@ def _bootstrap_deb(
         root,
         arch,
         flavor,
-        repo_url='http://ftp.debian.org/debian/',
+        repo_url=None,
         static_qemu=None
     ):
     '''
@@ -163,6 +163,9 @@ def _bootstrap_deb(
         Local path to the static qemu binary required for this arch.
         (e.x.: /usr/bin/qemu-amd64-static)
     '''
+
+    if repo_url is None:
+        repo_url = 'http://ftp.debian.org/debian/'
 
     __salt__['cmd.run'](
         'debootstrap --foreign --arch {arch} {flavor} {root} {url}'.format(
