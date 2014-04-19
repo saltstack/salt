@@ -30,11 +30,31 @@ def _mminion():
     return MMINION
 
 
+def prep_jid(nocache=False):
+    '''
+    Call both with prep_jid on all returners in multi_returner
+
+    TODO: finish this, what do do when you get different jids from 2 returners...
+    since our jids are time based, this make this problem hard, beacuse they
+    aren't unique, meaning that we have to make sure that no one else got the jid
+    and if they did we spin to get a new one, which means "locking" the jid in 2
+    returners is non-trivial
+    '''
+
+    jid = None
+    for returner in __opts__[CONFIG_KEY]:
+        if jid is None:
+            jid = _mminion().returners['{0}.prep_jid'.format(returner)](nocache=nocache)
+        else:
+            r_jid = _mminion().returners['{0}.prep_jid'.format(returner)](nocache=nocache)
+            if r_jid != jid:
+                print 'Uhh.... crud the jids do not match'
+    return jid
+
 def returner(load):
     '''
     Write return to all returners in multi_returner
     '''
-
     for returner in __opts__[CONFIG_KEY]:
         _mminion().returners['{0}.returner'.format(returner)](load)
 
