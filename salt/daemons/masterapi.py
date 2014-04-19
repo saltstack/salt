@@ -476,8 +476,12 @@ class RemoteFuncs(object):
             return False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
-            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            load['jid'] = self.mminion.returners[fstr](nocache=load.get('nocache', False))
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[prep_fstr](nocache=load.get('nocache', False))
+
+            # save the load, since we don't have it
+            saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
