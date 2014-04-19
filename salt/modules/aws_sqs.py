@@ -218,7 +218,6 @@ def delete_queue(name, region, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
 
-    import logging
     logger = logging.getLogger(__name__)
     logger.debug('map ' + unicode(url_map))
     if name in url_map:
