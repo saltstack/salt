@@ -32,7 +32,10 @@ def _job_dir():
     '''
     Return root of the jobs cache directory
     '''
-    return os.path.join(__opts__['cachedir'], 'jobs')
+    return os.path.join(__opts__['cachedir'],
+                        # TODO: remove this string
+                        'NEWPATHFORTESTING',
+                        'jobs')
 
 
 def _jid_dir(jid):
@@ -41,10 +44,7 @@ def _jid_dir(jid):
     '''
     jid = str(jid)
     jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
-    return os.path.join(__opts__['cachedir'],
-                        # TODO: remove this string...
-                        'NEWPATHFORTESTING',
-                        'jobs',
+    return os.path.join(_job_dir(),
                         jhash[:2],
                         jhash[2:])
 
