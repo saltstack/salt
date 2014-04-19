@@ -2547,29 +2547,34 @@ def append(name,
 
     count = 0
 
-    for chunk in text:
+    try:
+        for chunk in text:
 
-        if __salt__['file.contains_regex_multiline'](
-                name, salt.utils.build_whitespace_split_regex(chunk)):
-            continue
+            if __salt__['file.contains_regex_multiline'](
+                    name, salt.utils.build_whitespace_split_regex(chunk)):
+                continue
 
-        try:
-            lines = chunk.splitlines()
-        except AttributeError:
-            log.debug(
-                'Error appending text to {0}; given object is: {1}'.format(
-                    name, type(chunk)
+            try:
+                lines = chunk.splitlines()
+            except AttributeError:
+                log.debug(
+                    'Error appending text to {0}; given object is: {1}'.format(
+                        name, type(chunk)
+                    )
                 )
-            )
-            return _error(ret, 'Given text is not a string')
+                return _error(ret, 'Given text is not a string')
 
-        for line in lines:
-            if __opts__['test']:
-                ret['comment'] = 'File {0} is set to be updated'.format(name)
-                ret['result'] = None
-                return ret
-            __salt__['file.append'](name, line)
-            count += 1
+            for line in lines:
+                if __opts__['test']:
+                    ret['comment'] = 'File {0} is set to be updated'.format(name)
+                    ret['result'] = None
+                    return ret
+                __salt__['file.append'](name, line)
+                count += 1
+    except TypeError:
+        ret['comment'] = 'No text found to append. Nothing appended'
+        ret['result'] = False
+        return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
