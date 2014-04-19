@@ -21,6 +21,7 @@ import fnmatch
 import logging
 import traceback
 import datetime
+import pprint
 
 # Import salt libs
 import salt.utils
@@ -1300,19 +1301,18 @@ class State(object):
         '''
         Fire event at the completion of a state call.
         '''
-        log.debug(pprint.pformat(low))
-        event_data = low['event']
-        tag = 'state/event/{0}'.format(event_data['tag']) \
-            if 'tag' in event_data else 'state/event/{0}'.format(low['name'])
-        if 'target' in event_data and event_data['target'] == 'master':
-            transport= event_data['transport'] if 'transport' in event else 'zeromq'
-            return None
-        else:
-            event = salt.utils.event.get_event(
-                'minion',
-                listen=False
-            )
-            return event.fire_event(event_data['data'], tag)
+        for event_data in low['event']:
+            tag = 'state/event/{0}'.format(event_data['tag']) \
+                if 'tag' in event_data else 'state/event/{0}'.format(low['name'])
+            if 'target' in event_data and event_data['target'] == 'master':
+                transport= event_data['transport'] if 'transport' in event else 'zeromq'
+                return None
+            else:
+                event = salt.utils.event.SaltEvent(
+                    'minion',
+                    opts=self.opts
+                )
+                return event.fire_event(event_data['data'], tag)
 
     def call(self, low, chunks=None, running=None):
         '''
@@ -1437,8 +1437,8 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        log.debug('low info: \n{0}'.format(low))
-        if 'event' in running:
+        if 'event' in low and ret['changes']:
+            log.debug('Event Data:\n{0}'.format(pprint.pformat(low['event'])))
             self.fire_event(low)
         log.info('Completed state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
         return ret
