@@ -77,6 +77,41 @@ def host_to_ip(host):
     return ip
 
 
+def get_hostname():
+    '''
+    Returns the hostname
+
+    CLI Example::
+
+        salt '*' network.get_hostname
+    '''
+    return socket.gethostname()
+
+
+def _get_fqhostname():
+    h_name = socket.gethostname()
+    h_fqdn = socket.getfqdn()
+    try:
+        addrinfo = socket.getaddrinfo(
+            h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+            socket.SOL_TCP, socket.AI_CANONNAME
+        )[0]
+    except IndexError:
+        # Handle possible empty struct returns
+        return h_fqdn
+    except socket.gaierror:
+        return h_fqdn
+    else:
+        # Struct contanis the following elements:
+        #     family, socktype, proto, canonname, sockaddr
+        try:
+            # Prevent returning an empty string by falling back to
+            # socket.getfqdn()
+            return addrinfo[3] or h_fqdn
+        except IndexError:
+            return h_fqdn
+
+
 def get_fqhostname():
     '''
     Returns the fully qualified hostname
@@ -85,30 +120,11 @@ def get_fqhostname():
 
         salt '*' network.get_fqhostname
     '''
-    h_name = socket.gethostname()
-    if h_name.find('.') >= 0:
+    h_name = get_hostname()
+    h_fqdn = _get_fqhostname()
+    if len(h_name) > len(h_fqdn):
         return h_name
-    else:
-        h_fqdn = socket.getfqdn()
-        try:
-            addrinfo = socket.getaddrinfo(
-                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
-                socket.SOL_TCP, socket.AI_CANONNAME
-            )[0]
-        except IndexError:
-            # Handle possible empty struct returns
-            return h_fqdn
-        except socket.gaierror:
-            return h_fqdn
-        else:
-            # Struct contanis the following elements:
-            #     family, socktype, proto, canonname, sockaddr
-            try:
-                # Prevent returning an empty string by falling back to
-                # socket.getfqdn()
-                return addrinfo[3] or h_fqdn
-            except IndexError:
-                return h_fqdn
+    return h_fqdn
 
 
 def ip_to_host(ip):
