@@ -1243,15 +1243,17 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        new_loadp = False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
             load['arg'] = load.get('arg', load.get('fun_args', []))
             load['tgt_type'] = 'glob'
             load['tgt'] = load['id']
-            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            load['jid'] = self.mminion.returners[fstr](nocache=load.get('nocache', False))
-            new_loadp = load.get('nocache', True) and True
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[prep_fstr](nocache=load.get('nocache', False))
+
+            # save the load, since we don't have it
+            saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(
