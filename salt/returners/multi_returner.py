@@ -51,6 +51,7 @@ def prep_jid(nocache=False):
                 print 'Uhh.... crud the jids do not match'
     return jid
 
+
 def returner(load):
     '''
     Write return to all returners in multi_returner
