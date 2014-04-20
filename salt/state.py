@@ -22,6 +22,7 @@ import logging
 import traceback
 import datetime
 import pprint
+import json
 
 # Import salt libs
 import salt.utils
@@ -1301,18 +1302,35 @@ class State(object):
         '''
         Fire event at the completion of a state call.
         '''
-        for event_data in low['event']:
-            tag = 'state/event/{0}'.format(event_data['tag']) \
-                if 'tag' in event_data else 'state/event/{0}'.format(low['name'])
-            if 'target' in event_data and event_data['target'] == 'master':
-                transport= event_data['transport'] if 'transport' in event else 'zeromq'
-                return None
-            else:
+        events = low['event']
+        event_data = {}
+        for e in events:
+            event_data[e.keys()[0]] = e.values()[0]
+        tag = 'state/event/{0}'.format(event_data['tag']) \
+            if 'tag' in event_data else 'state/event/{0}'.format(low['name'])
+        if 'target' in event_data and event_data['target'] == 'master':
+            transport= event_data['transport'] if 'transport' in event_data else 'zeromq'
+            try:
+                return salt.utils.event.MinionEvent(self.opts).fire_event(
+                    {
+                        'data': event_data['data'],
+                        'tag': tag,
+                        'events': None,
+                        'pretag': None
+                    },
+                    'fire_master'
+                )
+            except Exception:
+                return False
+        else:
+            try:
                 event = salt.utils.event.SaltEvent(
                     'minion',
                     opts=self.opts
                 )
                 return event.fire_event(event_data['data'], tag)
+            except Exception:
+                return False
 
     def call(self, low, chunks=None, running=None):
         '''
