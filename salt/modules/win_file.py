@@ -254,7 +254,7 @@ def _disable_privilege(privilege_name):
 
 
 def gid_to_group(gid):
-    '''
+    r'''
     Convert the group id to the group name on this system
 
     Under Windows, because groups are just another ACL entity, this function
@@ -280,7 +280,7 @@ def gid_to_group(gid):
 
 
 def group_to_gid(group):
-    '''
+    r'''
     Convert the group to the gid on this system
 
     Under Windows, because groups are just another ACL entity, this function
@@ -366,7 +366,7 @@ def get_pgroup(path, follow_symlinks=True):
 
 
 def get_gid(path, follow_symlinks=True):
-    '''
+    r'''
     Return the id of the group that owns a given file
 
     Under Windows, this will return the uid of the file.
@@ -400,7 +400,7 @@ def get_gid(path, follow_symlinks=True):
 
 
 def get_group(path, follow_symlinks=True):
-    '''
+    r'''
     Return the group that owns a given file
 
     Under Windows, this will return the user (owner) of the file.
@@ -497,7 +497,7 @@ def _user_to_uid(user):
 
 
 def get_uid(path, follow_symlinks=True):
-    '''
+    r'''
     Return the id of the user that owns a given file
 
     Symlinks are followed by default to mimic \*nix behaviour. Specify
@@ -529,7 +529,7 @@ def get_uid(path, follow_symlinks=True):
 
 
 def get_user(path, follow_symlinks=True):
-    '''
+    r'''
     Return the user that owns a given file
 
     Symlinks are followed by default to mimic \*nix behaviour. Specify
@@ -768,7 +768,7 @@ def chpgrp(path, group):
 
 
 def chgrp(path, group):
-    '''
+    r'''
     Change the group of a file
 
     Under Windows, this will do nothing.
@@ -802,7 +802,7 @@ def chgrp(path, group):
 
 
 def stats(path, hash_type='md5', follow_symlinks=True):
-    '''
+    r'''
     Return a dict containing the stats for a given file
 
     Under Windows, `gid` will equal `uid` and `group` will equal `user`.
@@ -1004,7 +1004,7 @@ def set_mode(path, mode):
 
 
 def symlink(src, link):
-    '''
+    r'''
     Create a symbolic link to a file
 
     This is only supported with Windows Vista or later and must be executed by
@@ -1063,7 +1063,7 @@ def _is_reparse_point(path):
 
 
 def is_link(path):
-    '''
+    r'''
     Return the path that a symlink points to
 
     This is only supported on Windows Vista or later.
@@ -1153,7 +1153,7 @@ def _get_reparse_data(path):
 
 
 def readlink(path):
-    '''
+    r'''
     Return the path that a symlink points to
 
     This is only supported on Windows Vista or later.
