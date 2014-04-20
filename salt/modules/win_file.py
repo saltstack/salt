@@ -176,9 +176,10 @@ def _change_privilege_state(privilege_name, enable):
     True.
     '''
     log.debug(
-        '%s the privilege %s for this process.',
-        'Enabling' if enable else 'Disabling',
-        privilege_name
+        '{0} the privilege {1} for this process.'.format(
+            'Enabling' if enable else 'Disabling',
+            privilege_name
+        )
     )
     # this is a pseudo-handle that doesn't need to be closed
     hProc = win32api.GetCurrentProcess()
@@ -204,14 +205,18 @@ def _change_privilege_state(privilege_name, enable):
                     'The requested privilege {0} is not available for this '
                     'process (check Salt user privileges).'.format(privilege_name))
             else:  # disable a privilege this process does not have
-                log.debug('Cannot disable privilege %s because this process '
-                          'does not have that privilege.', privilege_name)
+                log.debug(
+                    'Cannot disable privilege {0} because this process '
+                    'does not have that privilege.'.format(privilege_name)
+                )
                 return True
         else:
             # check if the privilege is already in the requested state
             if token_privileges[privilege] == privilege_attrs:
-                log.debug('The requested privilege %s is already in the '
-                          'requested state.', privilege_name)
+                log.debug(
+                    'The requested privilege {0} is already in the '
+                    'requested state.'.format(privilege_name)
+                )
                 return True
 
         changes = win32security.AdjustTokenPrivileges(
@@ -249,7 +254,7 @@ def _disable_privilege(privilege_name):
 
 
 def gid_to_group(gid):
-    '''
+    r'''
     Convert the group id to the group name on this system
 
     Under Windows, because groups are just another ACL entity, this function
@@ -268,14 +273,14 @@ def gid_to_group(gid):
     '''
     func_name = '{0}.gid_to_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details.'.format(func_name))
 
     return uid_to_user(gid)
 
 
 def group_to_gid(group):
-    '''
+    r'''
     Convert the group to the gid on this system
 
     Under Windows, because groups are just another ACL entity, this function
@@ -294,8 +299,8 @@ def group_to_gid(group):
     '''
     func_name = '{0}.group_to_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details.'.format(func_name))
 
     return _user_to_uid(group)
 
@@ -361,7 +366,7 @@ def get_pgroup(path, follow_symlinks=True):
 
 
 def get_gid(path, follow_symlinks=True):
-    '''
+    r'''
     Return the id of the group that owns a given file
 
     Under Windows, this will return the uid of the file.
@@ -387,15 +392,15 @@ def get_gid(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is the uid.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is the '
+                 'uid.'.format(func_name))
 
     return get_uid(path, follow_symlinks)
 
 
 def get_group(path, follow_symlinks=True):
-    '''
+    r'''
     Return the group that owns a given file
 
     Under Windows, this will return the user (owner) of the file.
@@ -421,9 +426,9 @@ def get_group(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is the user (owner).', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is the '
+                 'user (owner).'.format(func_name))
 
     return get_user(path, follow_symlinks)
 
@@ -445,11 +450,11 @@ def uid_to_user(uid):
     try:
         name, domain, account_type = win32security.LookupAccountSid(None, sid)
         return name
-    except pywinerror as e:
+    except pywinerror as exc:
         # if user does not exist...
         # 1332 = No mapping between account names and security IDs was carried
         # out.
-        if e.winerror == 1332:
+        if exc.winerror == 1332:
             return ''
         else:
             raise
@@ -479,11 +484,11 @@ def _user_to_uid(user):
 
     try:
         sid, domain, account_type = win32security.LookupAccountName(None, user)
-    except pywinerror as e:
+    except pywinerror as exc:
         # if user does not exist...
         # 1332 = No mapping between account names and security IDs was carried
         # out.
-        if e.winerror == 1332:
+        if exc.winerror == 1332:
             return ''
         else:
             raise
@@ -492,7 +497,7 @@ def _user_to_uid(user):
 
 
 def get_uid(path, follow_symlinks=True):
-    '''
+    r'''
     Return the id of the user that owns a given file
 
     Symlinks are followed by default to mimic \*nix behaviour. Specify
@@ -524,7 +529,7 @@ def get_uid(path, follow_symlinks=True):
 
 
 def get_user(path, follow_symlinks=True):
-    '''
+    r'''
     Return the user that owns a given file
 
     Symlinks are followed by default to mimic \*nix behaviour. Specify
@@ -558,9 +563,9 @@ def get_mode(path):
 
     func_name = '{0}.get_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is always None.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is '
+                 'always None.'.format(func_name))
 
     return None
 
@@ -595,8 +600,13 @@ def lchown(path, user, group=None, pgroup=None):
     if group:
         func_name = '{0}.lchown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using %s on Windows systems; see function docs for details.', func_name)
-        log.debug('win_file.py %s Ignoring the group parameter for %s', func_name, path)
+            log.info('The group parameter has no effect when using {0} on Windows '
+                     'systems; see function docs for details.'.format(func_name))
+        log.debug(
+            'win_file.py {0} Ignoring the group parameter for {1}'.format(
+                func_name, path
+            )
+        )
         group = None
 
     return chown(path, user, group, pgroup, follow_symlinks=False)
@@ -632,8 +642,13 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     if group:
         func_name = '{0}.chown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using %s on Windows systems; see function docs for details.', func_name)
-        log.debug('win_file.py %s Ignoring the group parameter for %s', func_name, path)
+            log.info('The group parameter has no effect when using {0} on Windows '
+                     'systems; see function docs for details.'.format(func_name))
+        log.debug(
+            'win_file.py {0} Ignoring the group parameter for {1}'.format(
+                func_name, path
+            )
+        )
         group = None
 
     err = ''
@@ -753,7 +768,7 @@ def chpgrp(path, group):
 
 
 def chgrp(path, group):
-    '''
+    r'''
     Change the group of a file
 
     Under Windows, this will do nothing.
@@ -779,14 +794,15 @@ def chgrp(path, group):
     '''
     func_name = '{0}.chgrp'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
-    log.debug('win_file.py %s Doing nothing for %s', func_name, path)
+        log.info('The function {0} should not be used on Windows systems; see '
+                 'function docs for details.'.format(func_name))
+    log.debug('win_file.py {0} Doing nothing for {1}'.format(func_name, path))
 
     return None
 
 
 def stats(path, hash_type='md5', follow_symlinks=True):
-    '''
+    r'''
     Return a dict containing the stats for a given file
 
     Under Windows, `gid` will equal `uid` and `group` will equal `user`.
@@ -980,15 +996,15 @@ def set_mode(path, mode):
     '''
     func_name = '{0}.set_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is always None.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is '
+                 'always None.'.format(func_name))
 
     return get_mode(path)
 
 
 def symlink(src, link):
-    '''
+    r'''
     Create a symbolic link to a file
 
     This is only supported with Windows Vista or later and must be executed by
@@ -1024,8 +1040,10 @@ def symlink(src, link):
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
-    except pywinerror as e:
-        raise CommandExecutionError('Could not create {0!r} - [{1}] {2}'.format(link, e.winerror, e.strerror))
+    except pywinerror as exc:
+        raise CommandExecutionError(
+            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+        )
 
 
 def _is_reparse_point(path):
@@ -1047,7 +1065,7 @@ def _is_reparse_point(path):
 
 
 def is_link(path):
-    '''
+    r'''
     Return the path that a symlink points to
 
     This is only supported on Windows Vista or later.
@@ -1137,7 +1155,7 @@ def _get_reparse_data(path):
 
 
 def readlink(path):
-    '''
+    r'''
     Return the path that a symlink points to
 
     This is only supported on Windows Vista or later.
@@ -1191,9 +1209,9 @@ def readlink(path):
     try:
         # comes out in 8.3 form; convert it to LFN to make it look nicer
         target = win32file.GetLongPathName(target)
-    except pywinerror as e:
+    except pywinerror as exc:
         # if file is not found (i.e. bad symlink), return it anyway like on *nix
-        if e.winerror == 2:
+        if exc.winerror == 2:
             return target
         raise
 
