@@ -287,7 +287,7 @@ def group_to_gid(group):
     behaves the same as user_to_uid, except if None is given, '' is returned.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with *nix. Use the user_to_uid function
+    exists for API compatibility with Unix. Use the user_to_uid function
     instead; an info level log entry will be generated if this function is used
     directly.
 
