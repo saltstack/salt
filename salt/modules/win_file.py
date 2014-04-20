@@ -254,14 +254,14 @@ def _disable_privilege(privilege_name):
 
 
 def gid_to_group(gid):
-    r'''
+    '''
     Convert the group id to the group name on this system
 
     Under Windows, because groups are just another ACL entity, this function
     behaves the same as uid_to_user.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with \*nix. Use the uid_to_user function
+    exists for API compatibility with Unix. Use the uid_to_user function
     instead; an info level log entry will be generated if this function is used
     directly.
 
@@ -280,14 +280,14 @@ def gid_to_group(gid):
 
 
 def group_to_gid(group):
-    r'''
+    '''
     Convert the group to the gid on this system
 
     Under Windows, because groups are just another ACL entity, this function
     behaves the same as user_to_uid, except if None is given, '' is returned.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with \*nix. Use the user_to_uid function
+    exists for API compatibility with *nix. Use the user_to_uid function
     instead; an info level log entry will be generated if this function is used
     directly.
 
@@ -366,7 +366,7 @@ def get_pgroup(path, follow_symlinks=True):
 
 
 def get_gid(path, follow_symlinks=True):
-    r'''
+    '''
     Return the id of the group that owns a given file
 
     Under Windows, this will return the uid of the file.
@@ -377,7 +377,7 @@ def get_gid(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles \*nix behaviour for API compatibility reasons. When
+    somewhat resembles Unix behaviour for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -400,7 +400,7 @@ def get_gid(path, follow_symlinks=True):
 
 
 def get_group(path, follow_symlinks=True):
-    r'''
+    '''
     Return the group that owns a given file
 
     Under Windows, this will return the user (owner) of the file.
@@ -411,7 +411,7 @@ def get_group(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles \*nix behaviour for API compatibility reasons. When
+    somewhat resembles Unix behaviour for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -497,10 +497,10 @@ def _user_to_uid(user):
 
 
 def get_uid(path, follow_symlinks=True):
-    r'''
+    '''
     Return the id of the user that owns a given file
 
-    Symlinks are followed by default to mimic \*nix behaviour. Specify
+    Symlinks are followed by default to mimic Unix behaviour. Specify
     `follow_symlinks=False` to turn off this behaviour.
 
     CLI Example:
@@ -529,10 +529,10 @@ def get_uid(path, follow_symlinks=True):
 
 
 def get_user(path, follow_symlinks=True):
-    r'''
+    '''
     Return the user that owns a given file
 
-    Symlinks are followed by default to mimic \*nix behaviour. Specify
+    Symlinks are followed by default to mimic Unix behaviour. Specify
     `follow_symlinks=False` to turn off this behaviour.
 
     CLI Example:
@@ -768,7 +768,7 @@ def chpgrp(path, group):
 
 
 def chgrp(path, group):
-    r'''
+    '''
     Change the group of a file
 
     Under Windows, this will do nothing.
@@ -779,7 +779,7 @@ def chgrp(path, group):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to do nothing while still being
-    compatible with \*nix behaviour. When managing Windows systems,
+    compatible with Unix behaviour. When managing Windows systems,
     this function is superfluous and will generate an info level log entry if
     used directly.
 
@@ -802,7 +802,7 @@ def chgrp(path, group):
 
 
 def stats(path, hash_type='md5', follow_symlinks=True):
-    r'''
+    '''
     Return a dict containing the stats for a given file
 
     Under Windows, `gid` will equal `uid` and `group` will equal `user`.
@@ -813,7 +813,7 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps these properties to keep some kind of
-    compatibility with \*nix behaviour. If the 'primary group' is required, it
+    compatibility with Unix behaviour. If the 'primary group' is required, it
     can be accessed in the `pgroup` and `pgid` properties.
 
     CLI Example:
@@ -1004,13 +1004,13 @@ def set_mode(path, mode):
 
 
 def symlink(src, link):
-    r'''
+    '''
     Create a symbolic link to a file
 
     This is only supported with Windows Vista or later and must be executed by
     a user with the SeCreateSymbolicLink privilege.
 
-    The behaviour of this function matches the \*nix equivalent, with one
+    The behaviour of this function matches the Unix equivalent, with one
     exception - invalid symlinks cannot be created. The source path must exist.
     If it doesn't, an error will be raised.
 
@@ -1065,12 +1065,12 @@ def _is_reparse_point(path):
 
 
 def is_link(path):
-    r'''
+    '''
     Return the path that a symlink points to
 
     This is only supported on Windows Vista or later.
 
-    Inline with \*nix behaviour, this function will raise an error if the path
+    Inline with Unix behaviour, this function will raise an error if the path
     is not a symlink, however, the error raised will be a SaltInvocationError,
     not an OSError.
 
@@ -1155,12 +1155,12 @@ def _get_reparse_data(path):
 
 
 def readlink(path):
-    r'''
+    '''
     Return the path that a symlink points to
 
     This is only supported on Windows Vista or later.
 
-    Inline with \*nix behaviour, this function will raise an error if the path is
+    Inline with Unix behaviour, this function will raise an error if the path is
     not a symlink, however, the error raised will be a SaltInvocationError, not
     an OSError.
 
