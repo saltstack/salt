@@ -889,7 +889,7 @@ class Cloud(object):
 
             vm_ = {
                 'name': name,
-                'profile': name,
+                'profile': None,
                 'provider': ':'.join([alias, driver])
             }
             minion_dict = salt.config.get_cloud_config_value(
