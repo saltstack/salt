@@ -22,7 +22,6 @@ import logging
 import traceback
 import datetime
 import pprint
-import json
 
 # Import salt libs
 import salt.utils
@@ -1309,7 +1308,7 @@ class State(object):
         tag = 'state/event/{0}'.format(event_data['tag']) \
             if 'tag' in event_data else 'state/event/{0}'.format(low['name'])
         if 'target' in event_data and event_data['target'] == 'master':
-            transport= event_data['transport'] if 'transport' in event_data else 'zeromq'
+            transport = event_data['transport'] if 'transport' in event_data else 'zeromq'
             try:
                 return salt.utils.event.MinionEvent(self.opts).fire_event(
                     {

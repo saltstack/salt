@@ -133,11 +133,11 @@ class Master(parsers.MasterOptionParser):
         if check_user(self.config['user']):
             self.master.start()
             #try:
-                #self.master.start()
+            #    self.master.start()
             #except MasterExit:
-                #self.shutdown()
+            #    self.shutdown()
             #finally:
-                #sys.exit()
+            #    sys.exit()
 
     def shutdown(self):
         '''
