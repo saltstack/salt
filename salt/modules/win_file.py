@@ -450,11 +450,11 @@ def uid_to_user(uid):
     try:
         name, domain, account_type = win32security.LookupAccountSid(None, sid)
         return name
-    except pywinerror as e:
+    except pywinerror as exc:
         # if user does not exist...
         # 1332 = No mapping between account names and security IDs was carried
         # out.
-        if e.winerror == 1332:
+        if exc.winerror == 1332:
             return ''
         else:
             raise
@@ -484,11 +484,11 @@ def _user_to_uid(user):
 
     try:
         sid, domain, account_type = win32security.LookupAccountName(None, user)
-    except pywinerror as e:
+    except pywinerror as exc:
         # if user does not exist...
         # 1332 = No mapping between account names and security IDs was carried
         # out.
-        if e.winerror == 1332:
+        if exc.winerror == 1332:
             return ''
         else:
             raise
@@ -1040,8 +1040,10 @@ def symlink(src, link):
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
-    except pywinerror as e:
-        raise CommandExecutionError('Could not create {0!r} - [{1}] {2}'.format(link, e.winerror, e.strerror))
+    except pywinerror as exc:
+        raise CommandExecutionError(
+            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+        )
 
 
 def _is_reparse_point(path):
@@ -1207,9 +1209,9 @@ def readlink(path):
     try:
         # comes out in 8.3 form; convert it to LFN to make it look nicer
         target = win32file.GetLongPathName(target)
-    except pywinerror as e:
+    except pywinerror as exc:
         # if file is not found (i.e. bad symlink), return it anyway like on *nix
-        if e.winerror == 2:
+        if exc.winerror == 2:
             return target
         raise
 
