@@ -33,8 +33,6 @@ def _job_dir():
     Return root of the jobs cache directory
     '''
     return os.path.join(__opts__['cachedir'],
-                        # TODO: remove this string
-                        'NEWPATHFORTESTING',
                         'jobs')
 
 
