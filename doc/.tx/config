@@ -266,12 +266,6 @@ source_file = _build/locale/ref/modules/all/salt.modules.apache.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.apache.rst
 
-[salt.ref--modules--all--salt_modules_apt]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.apt.po
-source_file = _build/locale/ref/modules/all/salt.modules.apt.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.apt.rst
-
 [salt.ref--modules--all--salt_modules_archive]
 file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.archive.po
 source_file = _build/locale/ref/modules/all/salt.modules.archive.pot
@@ -2168,18 +2162,6 @@ source_file = _build/locale/ref/states/writing.pot
 source_lang = en
 source_name = ref/states/writing.rst
 
-[salt.ref--syndic]
-file_filter = locale/<lang>/LC_MESSAGES/ref/syndic.po
-source_file = _build/locale/ref/syndic.pot
-source_lang = en
-source_name = ref/syndic.rst
-
-[salt.ref--topology]
-file_filter = locale/<lang>/LC_MESSAGES/ref/topology.po
-source_file = _build/locale/ref/topology.pot
-source_lang = en
-source_name = ref/topology.rst
-
 [salt.ref--tops--all--index]
 file_filter = locale/<lang>/LC_MESSAGES/ref/tops/all/index.po
 source_file = _build/locale/ref/tops/all/index.pot
@@ -2246,54 +2228,6 @@ source_file = _build/locale/ref/wheel/all/salt.wheel.pillar_roots.pot
 source_lang = en
 source_name = ref/wheel/all/salt.wheel.pillar_roots.rst
 
-[salt.ref--windows-package-manager]
-file_filter = locale/<lang>/LC_MESSAGES/ref/windows-package-manager.po
-source_file = _build/locale/ref/windows-package-manager.pot
-source_lang = en
-source_name = ref/windows-package-manager.rst
-
-[salt.topics--community]
-file_filter = locale/<lang>/LC_MESSAGES/topics/community.po
-source_file = _build/locale/topics/community.pot
-source_lang = en
-source_name = topics/community.rst
-
-[salt.topics--configuration]
-file_filter = locale/<lang>/LC_MESSAGES/topics/configuration.po
-source_file = _build/locale/topics/configuration.pot
-source_lang = en
-source_name = topics/configuration.rst
-
-[salt.topics--conventions--formulas]
-file_filter = locale/<lang>/LC_MESSAGES/topics/conventions/formulas.po
-source_file = _build/locale/topics/conventions/formulas.pot
-source_lang = en
-source_name = topics/conventions/formulas.rst
-
-[salt.topics--conventions--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/conventions/index.po
-source_file = _build/locale/topics/conventions/index.pot
-source_lang = en
-source_name = topics/conventions/index.rst
-
-[salt.topics--conventions--packaging]
-file_filter = locale/<lang>/LC_MESSAGES/topics/conventions/packaging.po
-source_file = _build/locale/topics/conventions/packaging.pot
-source_lang = en
-source_name = topics/conventions/packaging.rst
-
-[salt.topics--conventions--release]
-file_filter = locale/<lang>/LC_MESSAGES/topics/conventions/release.po
-source_file = _build/locale/topics/conventions/release.pot
-source_lang = en
-source_name = topics/conventions/release.rst
-
-[salt.topics--conventions--style]
-file_filter = locale/<lang>/LC_MESSAGES/topics/conventions/style.po
-source_file = _build/locale/topics/conventions/style.pot
-source_lang = en
-source_name = topics/conventions/style.rst
-
 [salt.topics--development--deprecations]
 file_filter = locale/<lang>/LC_MESSAGES/topics/development/deprecations.po
 source_file = _build/locale/topics/development/deprecations.pot
@@ -2353,18 +2287,6 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/event/index.po
 source_file = _build/locale/topics/event/index.pot
 source_lang = en
 source_name = topics/event/index.rst
-
-[salt.topics--git--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/git/index.po
-source_file = _build/locale/topics/git/index.pot
-source_lang = en
-source_name = topics/git/index.rst
-
-[salt.topics--hacking]
-file_filter = locale/<lang>/LC_MESSAGES/topics/hacking.po
-source_file = _build/locale/topics/hacking.pot
-source_lang = en
-source_name = topics/hacking.rst
 
 [salt.topics--index]
 file_filter = locale/<lang>/LC_MESSAGES/topics/index.po
@@ -2467,12 +2389,6 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/mine/index.po
 source_file = _build/locale/topics/mine/index.pot
 source_lang = en
 source_name = topics/mine/index.rst
-
-[salt.topics--nonroot]
-file_filter = locale/<lang>/LC_MESSAGES/topics/nonroot.po
-source_file = _build/locale/topics/nonroot.pot
-source_lang = en
-source_name = topics/nonroot.rst
 
 [salt.topics--pillar--index]
 file_filter = locale/<lang>/LC_MESSAGES/topics/pillar/index.po
@@ -2732,24 +2648,6 @@ source_file = _build/locale/topics/targeting/nodegroups.pot
 source_lang = en
 source_name = topics/targeting/nodegroups.rst
 
-[salt.topics--tests--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/tests/index.po
-source_file = _build/locale/topics/tests/index.pot
-source_lang = en
-source_name = topics/tests/index.rst
-
-[salt.topics--tests--integration]
-file_filter = locale/<lang>/LC_MESSAGES/topics/tests/integration.po
-source_file = _build/locale/topics/tests/integration.pot
-source_lang = en
-source_name = topics/tests/integration.rst
-
-[salt.topics--translating]
-file_filter = locale/<lang>/LC_MESSAGES/topics/translating.po
-source_file = _build/locale/topics/translating.pot
-source_lang = en
-source_name = topics/translating.rst
-
 [salt.topics--troubleshooting--index]
 file_filter = locale/<lang>/LC_MESSAGES/topics/troubleshooting/index.po
 source_file = _build/locale/topics/troubleshooting/index.pot
@@ -2761,12 +2659,6 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/troubleshooting/yaml_idiosyncrasi
 source_file = _build/locale/topics/troubleshooting/yaml_idiosyncrasies.pot
 source_lang = en
 source_name = topics/troubleshooting/yaml_idiosyncrasies.rst
-
-[salt.topics--tutorials--bootstrap_ec2]
-file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/bootstrap_ec2.po
-source_file = _build/locale/topics/tutorials/bootstrap_ec2.pot
-source_lang = en
-source_name = topics/tutorials/bootstrap_ec2.rst
 
 [salt.topics--tutorials--cloud_controller]
 file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/cloud_controller.po
@@ -3109,12 +3001,6 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/halite.po
 source_file = _build/locale/topics/tutorials/halite.pot
 source_lang = en
 source_name = topics/tutorials/halite.rst
-
-[salt.topics--tutorials--states_ordering]
-file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/states_ordering.po
-source_file = _build/locale/topics/tutorials/states_ordering.pot
-source_lang = en
-source_name = topics/tutorials/states_ordering.rst
 
 [salt.ref--cli--salt-cloud]
 file_filter = locale/<lang>/LC_MESSAGES/ref/cli/salt-cloud.po
@@ -3614,18 +3500,6 @@ source_file = _build/locale/topics/cloud/troubleshooting.pot
 source_lang = en
 source_name = topics/cloud/troubleshooting.rst
 
-[salt.topics--proxyminion--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/proxyminion/index.po
-source_file = _build/locale/topics/proxyminion/index.pot
-source_lang = en
-source_name = topics/proxyminion/index.rst
-
-[salt.topics--raet--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/raet/index.po
-source_file = _build/locale/topics/raet/index.pot
-source_lang = en
-source_name = topics/raet/index.rst
-
 [salt.topics--releases--0_10_1]
 file_filter = locale/<lang>/LC_MESSAGES/topics/releases/0.10.1.po
 source_file = _build/locale/topics/releases/0.10.1.pot
@@ -3721,18 +3595,6 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.0.po
 source_file = _build/locale/topics/releases/2014.1.0.pot
 source_lang = en
 source_name = topics/releases/2014.1.0.rst
-
-[salt.topics--salt_projects]
-file_filter = locale/<lang>/LC_MESSAGES/topics/salt_projects.po
-source_file = _build/locale/topics/salt_projects.pot
-source_lang = en
-source_name = topics/salt_projects.rst
-
-[salt.topics--tests--unit]
-file_filter = locale/<lang>/LC_MESSAGES/topics/tests/unit.po
-source_file = _build/locale/topics/tests/unit.pot
-source_lang = en
-source_name = topics/tests/unit.rst
 
 [salt.topics--troubleshooting--master]
 file_filter = locale/<lang>/LC_MESSAGES/topics/troubleshooting/master.po
