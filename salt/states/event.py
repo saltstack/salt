@@ -3,6 +3,7 @@
 Send events through Salt's event system during state runs
 '''
 
+
 def fire_master(name, data):
     '''
     Fire an event on the Salt master event bus
