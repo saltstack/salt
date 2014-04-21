@@ -72,17 +72,19 @@ logic defined above.
 Require
 -------
 
-The most basic requisite is ``require``. The behavior of require is
-simple: Make sure the dependent state is executed before the depending
-state. If the dependent state fails, don't run the depending state. In
-the first example, the file ``/etc/vimrc`` will only run after the vim
-package is installed and only if the vim package is installed successfully.
+The use of ``require`` demands that the dependent state executes before the
+depending state. The state containing the ``require`` requisite is defined as the
+depending state. The state specified in the ``require`` statement is defined as the
+dependent state. If the dependent state's execution succeeds, the depending state
+will then execute. If the dependent state's execution fails, the depending state
+will not execute. In the first example above, the file ``/etc/vimrc`` will only
+execute after the vim package is installed successfully.
 
 Require an entire sls file
 --------------------------
 
-As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first including
-the sls file and then setting a state to ``require`` the included sls file:
+As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first by
+including the sls file and then setting a state to ``require`` the included sls file:
 
 .. code-block:: yaml
 
@@ -97,15 +99,52 @@ the sls file and then setting a state to ``require`` the included sls file:
 Watch
 -----
 
-The watch statement does everything the require statement does, but with a
-little more. The watch statement looks into the state modules for a function
-called ``mod_watch``. If this function is not available in the corresponding
-state module, then watch does the same thing as require (not all state modules
-contain the ``mod_watch`` function). If the ``mod_watch`` function is in the
-state module, then the watched state is checked to see if it made any changes
-to the system, if it has changes, then ``mod_watch`` is called.
+``watch`` statements are used to monitor changes in other states. The state containing
+the ``watch`` requisite is defined as the watching state. The state specified in the
+``watch`` statement is defined as the watched state. When the watched state executes,
+it will return a dictionary containing a key named "changes". Here are two examples
+of the state return dictionaries, shown in json for clarity:
 
-Perhaps the best example of using watch is with a :mod:`service.running
+.. code-block:: json
+
+    "local": {
+        "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
+            "comment": "Directory /tmp/foo updated",
+            "__run_num__": 0,
+            "changes": {
+                "user": "bar"
+            },
+            "name": "/tmp/foo",
+            "result": true
+        }
+    }
+
+    "local": {
+        "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
+            "comment": "Package repo 'salt-minion' already configured",
+            "__run_num__": 0,
+            "changes": {},
+            "name": "salt-minion",
+            "result": true
+        }
+    }
+
+If the "changes" key contains a populated dictionary, it means that changes in
+the watched state occurred. The watching state will now execute. If the "changes"
+key contains an empty dictionary, this means that changes in the watched state
+did not occur and the watching state will not execute.
+
+The behavior of ``watch`` depends on the presence of a function called
+``mod_watch`` in the watching state module. Note: Not all state modules contain
+``mod_watch``. If ``mod_watch`` is present, the watched state is checked to see
+if it made any changes to the system. If the watched state returns changes, the
+``mod_watch`` function is called and the watching state executes. If the watching
+state does not contain ``mod_watch``, then watch behaves the same way as the
+``require`` requisite: the watching state will only execute if the watched state
+executes successfully. If the watched state fails, then the watching state will
+not run.
+
+Perhaps the best example of using ``watch`` is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
 the service is reloaded/restarted when the watched state changes:
 
@@ -122,18 +161,35 @@ the service is reloaded/restarted when the watched state changes:
 Prereq
 ------
 
-The ``prereq`` requisite is a powerful requisite added in 0.16.0. This
-requisite allows for actions to be taken based on the expected results of
-a state that has not yet been executed. In more practical terms, a service
-can be shut down because the ``prereq`` knows that underlying code is going to
-be updated and the service should be off-line while the update occurs.
+.. versionadded:: 0.16.0
 
-The motivation to add this requisite was to allow for routines to remove a
-system from a load balancer while code is being updated.
+``prereq`` allows for actions to be taken based on the expected results of
+a state that has not yet been executed. The state containing the ``prereq``
+requisite is defined as the pre-requiring state. The state specified in the
+``prereq`` statement is defined as the pre-required state.
 
-The ``prereq`` checks if the required state expects to have any changes by
-running the single state with ``test=True``. If the pre-required state returns
-changes, then the state requiring it will execute.
+When ``prereq`` is called, the pre-required state reports if it expects to
+have any changes. It does this by running the pre-required single state as a
+test-run by enabling ``test=True``. This test-run will return a dictionary
+containing a key named "changes". (See the ``watch`` section above for
+examples of "changes" dictionaries.)
+
+If the "changes" key contains a populated dictionary, it means that the
+pre-required state expects changes to occur when the state is actually
+executed, as opposed to the test-run. The pre-required state will now
+actually run. If the pre-required state executes successfully, the
+pre-requiring state will then execute. If the pre-required state fails, the
+pre-requiring state will not execute.
+
+If the "changes" key contains an empty dictionary, this means that changes are
+not expected by the pre-required state. Neither the pre-required state nor the
+pre-requiring state will run.
+
+The best way to define how ``prereq`` operates is displayed in the following
+practical example: When a service should be shut down because underlying code
+is going to change, the service should be off-line while the update occurs. In
+this example, ``graceful-down`` is the pre-requiring state and ``site-code``
+is the pre-required state.
 
 .. code-block:: yaml
 
@@ -192,8 +248,8 @@ Require In
 
 The ``require_in`` requisite is the literal reverse of ``require``. If
 a state declaration needs to be required by another state declaration then
-require_in can accommodate it. Therefore, these two sls files would be same in
-the end:
+require_in can accommodate it. Therefore, these two sls files would be the
+same in the end:
 
 Using ``require``
 
