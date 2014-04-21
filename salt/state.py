@@ -21,6 +21,7 @@ import fnmatch
 import logging
 import traceback
 import datetime
+import pprint
 
 # Import salt libs
 import salt.utils
@@ -30,6 +31,9 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
+import salt.crypt
+import salt.payload
+import salt.transport
 from salt.utils import context, immutabletypes
 from salt._compat import string_types
 from salt.template import compile_template, compile_template_str
@@ -42,6 +46,7 @@ log = logging.getLogger(__name__)
 STATE_INTERNAL_KEYWORDS = frozenset([
     # These are keywords passed to state module functions which are to be used
     # by salt in this state module and not on the actual state module function
+    'event',
     'fun',
     'order',
     'state',
@@ -1292,6 +1297,40 @@ class State(object):
         errors.extend(req_in_errors)
         return req_in_high, errors
 
+    def fire_event(self, low):
+        '''
+        Fire event at the completion of a state call.
+        '''
+        events = low['event']
+        event_data = {}
+        for e in events:
+            event_data[e.keys()[0]] = e.values()[0]
+        tag = 'state/event/{0}'.format(event_data['tag']) \
+            if 'tag' in event_data else 'state/event/{0}'.format(low['name'])
+        if 'target' in event_data and event_data['target'] == 'master':
+            transport = event_data['transport'] if 'transport' in event_data else 'zeromq'
+            try:
+                return salt.utils.event.MinionEvent(self.opts).fire_event(
+                    {
+                        'data': event_data['data'],
+                        'tag': tag,
+                        'events': None,
+                        'pretag': None
+                    },
+                    'fire_master'
+                )
+            except Exception:
+                return False
+        else:
+            try:
+                event = salt.utils.event.SaltEvent(
+                    'minion',
+                    opts=self.opts
+                )
+                return event.fire_event(event_data['data'], tag)
+            except Exception:
+                return False
+
     def call(self, low, chunks=None, running=None):
         '''
         Call a state directly with the low data structure, verify data
@@ -1415,6 +1454,9 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        if 'event' in low and ret['changes']:
+            log.debug('Event Data:\n{0}'.format(pprint.pformat(low['event'])))
+            self.fire_event(low)
         log.info('Completed state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
         return ret
 

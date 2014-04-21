@@ -2132,6 +2132,12 @@ source_file = _build/locale/ref/states/requisites.pot
 source_lang = en
 source_name = ref/states/requisites.rst
 
+[salt.ref--states--events]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/requisites.po
+source_file = _build/locale/ref/states/requisites.pot
+source_lang = en
+source_name = ref/states/events.rst
+
 [salt.ref--states--startup]
 file_filter = locale/<lang>/LC_MESSAGES/ref/states/startup.po
 source_file = _build/locale/ref/states/startup.pot
