@@ -664,11 +664,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertFalse(os.path.exists(name))
         except AssertionError:
             os.remove(name)
-
-        ret = self.run_state('file.append', name=name, text='cheese')
-        # A non existing file is touched, the text is NOT appended.
-        self.assertSaltFalseReturn(ret)
-
         try:
             # Non existing file get's touched
             if os.path.isfile(name):
