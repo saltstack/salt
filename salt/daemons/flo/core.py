@@ -646,7 +646,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
                 yid=0,
-                prefix=self.opts['id'],
+                lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir']
                 )
         ret_stack.addRemote(main_yard)
@@ -691,7 +691,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
             log.debug('Command details {0}'.format(data))
             ex_yard = RemoteYard(
                     yid=data['jid'],
-                    prefix=self.opts['id'],
+                    lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
             self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(
