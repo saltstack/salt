@@ -29,8 +29,19 @@ for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
         - watch:
           - file: /etc/network/interfaces
 
-All arguments are passed through to the module function being executed.
-However, due to how the state system works, if a module function accepts an
+All arguments that the ``module`` state does not consume are passed through to
+the execution module function being executed:
+
+.. code-block:: yaml
+
+    fetch_out_of_band:
+      module.run:
+        - name: git.fetch
+        - cwd: /path/to/my/repo
+        - user: myuser
+        - opts: '--all' 
+
+Due to how the state system works, if a module function accepts an
 argument called, ``name``, then ``m_name`` must be used to specify that
 argument, to avoid a collision with the ``name`` argument. For example:
 
