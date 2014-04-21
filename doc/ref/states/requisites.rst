@@ -83,7 +83,7 @@ execute after the vim package is installed successfully.
 Require an entire sls file
 --------------------------
 
-As of Salt 0.16.0, it is possible to require an entire sls file. Do this by first by
+As of Salt 0.16.0, it is possible to require an entire sls file. Do this first by
 including the sls file and then setting a state to ``require`` the included sls file:
 
 .. code-block:: yaml
@@ -103,7 +103,7 @@ Watch
 the ``watch`` requisite is defined as the watching state. The state specified in the
 ``watch`` statement is defined as the watched state. When the watched state executes,
 it will return a dictionary containing a key named "changes". Here are two examples
-of the state return dictionaries, shown in json for clarity:
+of state return dictionaries, shown in json for clarity:
 
 .. code-block:: json
 
@@ -144,7 +144,7 @@ state does not contain ``mod_watch``, then watch behaves the same way as the
 executes successfully. If the watched state fails, then the watching state will
 not run.
 
-Perhaps the best example of using ``watch`` is with a :mod:`service.running
+A good example of using ``watch`` is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
 the service is reloaded/restarted when the watched state changes:
 
