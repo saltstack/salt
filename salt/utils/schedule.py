@@ -158,22 +158,6 @@ class Schedule(object):
 
         ret['pid'] = os.getpid()
 
-        if 'splay' in data:
-            if isinstance(data['splay'], dict):
-                if data['splay']['end'] > data['splay']['start']:
-                    splay = random.randint(data['splay']['start'], data['splay']['end'])
-                else:
-                    log.info('schedule.handle_func: Invalid Splay end must be larger than start.  '
-                              'Skipping splay')
-                    splay = None
-            else:
-                splay = random.randint(0, data['splay'])
-
-            if splay:
-                log.debug('schedule.handle_func: delaying run for splay of '
-                          '{0} seconds'.format(splay))
-                time.sleep(splay)
-
         if 'jid_include' not in data or data['jid_include']:
             log.debug('schedule.handle_func: adding this job to the jobcache '
                       'with data {0}'.format(ret))
@@ -284,9 +268,28 @@ class Schedule(object):
                     run = True
             else:
                 run = True
+                if 'splay' in data:
+                    data['_seconds'] = data['seconds']
+
             if not run:
                 continue
             else:
+                if 'splay' in data:
+                    if isinstance(data['splay'], dict):
+                        if data['splay']['end'] > data['splay']['start']:
+                            splay = random.randint(data['splay']['start'], data['splay']['end'])
+                        else:
+                            log.info('schedule.handle_func: Invalid Splay, end must be larger than start. Ignoring splay.')
+                            splay = None
+                    else:
+                        splay = random.randint(0, data['splay'])
+
+                    if splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+
+                        data['seconds'] = data['_seconds'] + splay
+
                 log.debug('Running scheduled job: {0}'.format(job))
 
             if 'jid_include' not in data or data['jid_include']:
