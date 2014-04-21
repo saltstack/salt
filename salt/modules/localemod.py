@@ -143,6 +143,7 @@ def set_locale(locale):
 
     return True
 
+
 def _normalize_locale(locale):
     lang_encoding = locale.split('.')
     lang_split = lang_encoding[0].split('_')
@@ -153,7 +154,8 @@ def _normalize_locale(locale):
         if len(lang_split) > 1:
             lang_encoding[1] = lang_encoding[1].lower().replace('-', '')
     return '.'.join(lang_encoding)
-    
+
+
 def avail(locale):
     '''
     Check if a locale is available
@@ -169,7 +171,8 @@ def avail(locale):
     locale_exists = next((True for x in avail_locales
        if _normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
-    
+
+
 def gen_locale(locale):
     '''
     Generate a locale
