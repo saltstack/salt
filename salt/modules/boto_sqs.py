@@ -178,7 +178,7 @@ def _get_conn(region, key, keyid, profile):
             _profile = profile
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
-        region = _profile.get('keyid', None)
+        region = _profile.get('region', None)
 
     if not region and __salt__['config.option']('sqs.region'):
         region = __salt__['config.option']('sqs.region')
