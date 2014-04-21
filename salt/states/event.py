@@ -32,7 +32,7 @@ def fire_master(name, data):
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     ret['changes'] = {'tag': name, 'data': data}
 
-    if __opts__['test'] == True:
+    if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Event would have been fired'
         return ret
