@@ -1468,9 +1468,16 @@ class State(object):
             present = True
         if 'onfail' in low:
             present = True
+        if 'onchanges' in low:
+            present = True
         if not present:
             return 'met'
-        reqs = {'require': [], 'watch': [], 'prereq': [], 'onfail': []}
+        reqs = {
+                'require': [],
+                'watch': [],
+                'prereq': [],
+                'onfail': [],
+                'onchanges': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
@@ -1512,6 +1519,10 @@ class State(object):
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
+                        fun_stats.add('fail')
+                        continue
+                if r_state == 'onchanges':
+                    if not run_dict[tag]['changes']:
                         fun_stats.add('fail')
                         continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
@@ -1558,7 +1569,7 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get('prerequired'):
             self.active.add(tag)
-        requisites = ['require', 'watch', 'prereq', 'onfail']
+        requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
             status = self.check_requisite(low, running, chunks, True)
@@ -1597,7 +1608,7 @@ class State(object):
                                 found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost.get('prerequired'):
+            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost['onchanges'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     if not lreqs:
