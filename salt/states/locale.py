@@ -47,6 +47,7 @@ def system(name):
         ret['comment'] = 'Failed to set system locale to {0}'.format(name)
         return ret
 
+
 def present(name):
     '''
     Generate a locale if it is not present
