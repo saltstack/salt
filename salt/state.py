@@ -1097,12 +1097,20 @@ class State(object):
         req_in = set([
             'require_in',
             'watch_in',
+            'onfail_in',
+            'onchanges_in',
             'use',
             'use_in',
             'prereq',
             'prereq_in',
             ])
-        req_in_all = req_in.union(set(['require', 'watch']))
+        req_in_all = req_in.union(
+                set([
+                    'require',
+                    'watch',
+                    'onfail',
+                    'onchanges',
+                    ]))
         extend = {}
         errors = []
         for id_, body in high.items():
