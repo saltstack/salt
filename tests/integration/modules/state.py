@@ -362,7 +362,7 @@ fi
         ])
         ret = self.run_function('state.sls', mods='syntax.badlist2')
         self.assertEqual(ret, [
-            'The state "C" in sls syntax.badlist2 is not formed as a list'
+            'State \'C\' in SLS \'syntax.badlist2\' is not formed as a list'
         ])
 
     def test_requisites_mixed_require_prereq_use(self):
