@@ -32,7 +32,6 @@ import salt.utils.event
 import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
-import salt.utils.event
 from salt._compat import string_types
 
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
