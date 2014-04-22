@@ -1,66 +1,76 @@
-# Raet Test FloScript
+# Salt Minion floscript
 
 house minion
 
-init .raet.udp.stack.local to eid 0 name "minion" host "" port 7531
-init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 init name in .raet.udp.stack.local from value in .salt.etc.id
 
 
-framer minionudpstack be active first start
-   frame start
-      do raet udp stack per inode ".raet.udp.stack"
-      exit
-         do raet udp stack closer per inode ".raet.udp.stack."
+framer minionudpstack be active first setup
+    frame setup
+        enter
+            do setup
+        go start
+    frame start
+        do salt raet road stack per inode ".raet.udp.stack"
+        exit
+            do salt raet road stack closer per inode ".raet.udp.stack."
+
+framer inbound be active first start
+    frame start
+        do rx
 
 framer bootstrap be active first join
-   frame join
-      print Joining...
-      enter
-         do salt raet udp stack joiner per inode ".raet.udp.stack."
-      recur
-         do raet udp stack joined per inode ".raet.udp.stack."
+    frame join
+        print Joining...
+        enter
+            do salt raet road stack joiner per inode ".raet.udp.stack."
+        recur
+            do salt raet road stack joined per inode ".raet.udp.stack."
 
-      go next if joined in .raet.udp.stack.status
-      go abort if elapsed >= 10
+        go next if joined in .raet.udp.stack.status
+        #go abort if elapsed >= 10
 
-   frame joined
-      print Joined
-      go next
+    frame joined
+        print Joined
+        go next
 
-   frame allow
-      print Allowing...
-      enter
-         do raet udp stack allower per inode ".raet.udp.stack."
-      recur
-         do raet udp stack allowed per inode ".raet.udp.stack."
+    frame allow
+        print Allowing...
+        enter
+            do salt raet road stack allower per inode ".raet.udp.stack."
+        recur
+            do salt raet road stack allowed per inode ".raet.udp.stack."
 
-      go next if allowed in .raet.udp.stack.status
-      go abort if elapsed >= 5
+        go next if allowed in .raet.udp.stack.status
+        go abort if elapsed >= 5
 
+    frame allowed
+        print Allowed
+        go next
 
-   frame allowed
-      print Allowed
-      go next
+    frame loading
+        enter
+            do load modules
+        go next
 
-   frame message
-      print Messaging...
-      enter
-         do raet udp stack messenger to contents "Minion 1 Hello" code 15 \
-            per inode ".raet.udp.stack."
-      go next
+    frame router
+        do router
 
-   frame loading
-      enter
-         do load modules
-      go next
+    frame abort
+        bid stop all
 
-   frame router
-      do minion router
-
-   frame abort
-      bid stop all
+framer eventing be active first event
+    frame event
+        do eventer
 
 framer functionmanager be active first checkexec
-   frame checkexec
-      do nix function
+    frame checkexec
+        do nix executor
+
+framer outbound be active first start
+    frame start
+        do tx
+
+#framer scheduler be active first start
+#    frame start
+#        do schedule

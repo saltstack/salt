@@ -101,6 +101,24 @@ class LoadAuth(object):
             time.sleep(0.001)
         return False
 
+    def get_groups(self, load):
+        '''
+        Read in a load and return the groups a user is a member of
+        by asking the appropriate provider
+        '''
+        if 'eauth' not in load:
+            return False
+        fstr = '{0}.groups'.format(load['eauth'])
+        if fstr not in self.auth:
+            return False
+        fcall = salt.utils.format_call(self.auth[fstr], load)
+        try:
+            return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
+        except IndexError:
+            return False
+        except Exception:
+            return None
+
     def mk_token(self, load):
         '''
         Run time_auth and create a token. Return False or the token
@@ -109,10 +127,11 @@ class LoadAuth(object):
         if ret is False:
             return {}
         fstr = '{0}.auth'.format(load['eauth'])
-        tok = str(hashlib.md5(os.urandom(512)).hexdigest())
+        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(self.opts['token_dir'], tok)
         while os.path.isfile(t_path):
-            tok = hashlib.md5(os.urandom(512)).hexdigest()
+            tok = str(hash_type(os.urandom(512)).hexdigest())
             t_path = os.path.join(self.opts['token_dir'], tok)
         fcall = salt.utils.format_call(self.auth[fstr], load)
         tdata = {'start': time.time(),
@@ -339,12 +358,13 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
+        oldmask = os.umask(0177)
         try:
-            oldmask = os.umask(0177)
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
-            os.umask(oldmask)
         except (IOError, OSError):
+            pass
+        finally:
             os.umask(oldmask)
         return tdata
 

@@ -15,8 +15,10 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt.transport.road.raet import stacking
-from salt.transport.road.raet import yarding
+from raet import raeting
+from raet.lane.stacking import LaneStack
+from raet.lane.yarding import RemoteYard
+
 log = logging.getLogger(__name__)
 
 
@@ -24,30 +26,31 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, **kwargs):
+    def __init__(self, node, sock_dir=None, listen=True):
         '''
         Set up the stack and remote yard
         '''
+        #import  wingdbstub
+
         self.node = node
         self.sock_dir = sock_dir
+        self.listen = listen
         self.__prep_stack()
 
     def __prep_stack(self):
-        yid = salt.utils.gen_jid()
-        self.stack = stacking.StackUxd(
-                yid=yid,
+        self.yid = salt.utils.gen_jid()
+        self.connected = False
+        self.stack = LaneStack(
+                yid=self.yid,
                 lanename=self.node,
-                dirpath=self.sock_dir)
-        self.router_yard = yarding.Yard(
-                prefix='master',
+                sockdirpath=self.sock_dir)
+        self.stack.Pk = raeting.packKinds.pack
+        self.router_yard = RemoteYard(
+                prefix=self.node,
                 yid=0,
                 dirpath=self.sock_dir)
-        self.stack.addRemoteYard(self.router_yard)
-        route = {'dst': (None, self.router_yard.name, 'event_req'),
-                 'src': (None, self.stack.yard.name, None)}
-        msg = {'route': route, 'load': {'yid': yid, 'dirpath': self.sock_dir}}
-        self.stack.transmit(msg, self.router_yard.name)
-        self.stack.serviceAll()
+        self.stack.addRemote(self.router_yard)
+        self.connect_pub()
 
     def subscribe(self, tag=None):
         '''
@@ -65,12 +68,24 @@ class SaltEvent(object):
         '''
         Establish the publish connection
         '''
-        return
+        if not self.connected and self.listen:
+            try:
+                route = {'dst': (None, self.router_yard.name, 'event_req'),
+                         'src': (None, self.stack.local.name, None)}
+                msg = {
+                        'route': route,
+                        'load': {'yid': self.yid, 'dirpath': self.sock_dir}}
+                self.stack.transmit(msg, self.router_yard.uid)
+                self.stack.serviceAll()
+                self.connected = True
+            except Exception:
+                pass
 
     def connect_pull(self, timeout=1000):
         '''
         Included for compat with zeromq events, not required
         '''
+        return
 
     @classmethod
     def unpack(cls, raw, serial=None):
@@ -87,6 +102,7 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
         '''
+        self.connect_pub()
         start = time.time()
         while True:
             self.stack.serviceAll()
@@ -105,11 +121,13 @@ class SaltEvent(object):
                     return event['data']
             if start + wait < time.time():
                 return None
+            time.sleep(0.01)
 
     def get_event_noblock(self):
         '''
         Get the raw event without blocking or any other niceties
         '''
+        self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
             event = self.stack.rxMsgs.popleft()
@@ -133,6 +151,7 @@ class SaltEvent(object):
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
         '''
+        self.connect_pub()
         # Timeout is retained for compat with zeromq events
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
@@ -140,7 +159,7 @@ class SaltEvent(object):
         if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
         route = {'dst': (None, self.router_yard.name, 'event_fire'),
-                 'src': (None, self.stack.yard.name, None)}
+                 'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
         self.stack.transmit(msg)
         self.stack.serviceAll()

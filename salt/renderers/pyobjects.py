@@ -124,6 +124,42 @@ a state.
     Service.running(extend('apache'),
                     watch=[File('/etc/httpd/extra/httpd-vhosts.conf')])
 
+
+Importing from other state files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Like any Python project that grows you will likely reach a point where you want
+to create reusability in your state tree and share objects between state files,
+Map Data (described below) is a perfect example of this.
+
+To facilitate this Python's ``import`` statement has been augmented to allow
+for a special case when working with a Salt state tree. If you specify a Salt
+url (``salt://...``) as the target for importing from then the pyobjects
+renderer will take care of fetching the file for you, parsing it with all of
+the pyobjects features available and then place the requested objects in the
+global scope of the template being rendered.
+
+This works for both types of import statements, ``import X`` and
+``from X import Y``.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    import salt://myfile.sls
+    from salt://something/data.sls import Object
+
+
+See the Map Data section for a more practical use.
+
+Caveats:
+
+* You cannot use the ``as`` syntax, you can only import objects using their
+  existing name.
+
+* Imported objects are ALWAYS put into the global scope of your template,
+  regardless of where your import statement is.
+
 Salt object
 ^^^^^^^^^^^
 In the spirit of the object interface for creating state data pyobjects also
@@ -168,74 +204,152 @@ The following pairs of lines are functionally equivalent:
     value = __salt__['mine.get']('os:Fedora', 'network.interfaces', 'grain')
 
 
+Map Data
+^^^^^^^^
+When building complex states or formulas you often need a way of building up a
+map of data based on grain data. The most common use of this is tracking the
+package and service name differences between distributions.
+
+To build map data using pyobjects we provide a class named Map that you use to
+build your own classes with inner classes for each set of values for the
+different grain matches.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    class Samba(Map):
+        merge = 'samba:lookup'
+
+        class Debian:
+            server = 'samba'
+            client = 'samba-client'
+            service = 'samba'
+
+        class Ubuntu:
+            __grain__ = 'os'
+            service = 'smbd'
+
+        class RedHat:
+            server = 'samba'
+            client = 'samba'
+            service = 'smb'
+
+To use this new data you can import it into your state file and then access
+your attributes. To access the data in the map you simply access the attribute
+name on the base class that is extending Map. Assuming the above Map was in the
+file ``samba/map.sls``, you could do the following.
+
+.. code-block:: python
+   :linenos:
+
+    #!pyobjects
+
+    from salt://samba/map.sls import Samba
+
+    with Pkg.installed("samba", names=[Samba.server, Samba.client]):
+        Service.running("samba", name=Samba.service)
+
 TODO
 ^^^^
 * Interface for working with reactor files
 '''
 
 import logging
+import re
 import sys
 
-from salt.utils.pyobjects import StateRegistry, StateFactory, SaltObject
+from salt.loader import _create_loader
+from salt.fileclient import get_file_client
+from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
+
+# our import regexes
+FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
+IMPORT_RE = r'^\s*import\s+(salt:\/\/.*)$'
 
 log = logging.getLogger(__name__)
 
+try:
+    __context__['pyobjects_loaded'] = True
+except NameError:
+    __context__ = {}
 
-def render(template, saltenv='base', sls='',
-           tmplpath=None, rendered_sls=None,
-           _states=None, **kwargs):
+
+def load_states():
+    '''
+    This loads our states into the salt __context__
+    '''
+    states = {}
+
+    # the loader expects to find pillar & grian data
+    __opts__['grains'] = __grains__
+    __opts__['pillar'] = __pillar__
+
+    # we need to build our own loader so that we can process the virtual names
+    # in our own way.
+    load = _create_loader(__opts__, 'states', 'states')
+    load.load_modules()
+    for mod in load.modules:
+        module_name = mod.__name__.rsplit('.', 1)[-1]
+
+        (virtual_ret, virtual_name) = load.process_virtual(mod, module_name)
+
+        # if the module returned a True value and a new name use that
+        # otherwise use the default module name
+        if virtual_ret and virtual_name != module_name:
+            module_name = virtual_name
+
+        # load our functions from the module, pass None in as the module_name
+        # so that our function names come back unprefixed
+        states[module_name] = load.load_functions(mod, None)
+
+    __context__['pyobjects_states'] = states
+
+
+def render(template, saltenv='base', sls='', **kwargs):
+    if 'pyobjects_states' not in __context__:
+        load_states()
 
     # these hold the scope that our sls file will be executed with
     _globals = {}
     _locals = {}
 
-    # create our registry
-    _registry = StateRegistry()
-
-    # if we haven't been provided a list of states (which really only happens
-    # from the tests) then try to use the __states__ global that the renderer
-    # loader should provide (see commit cc8539f), if the global doesn't exist
-    # (also usually from the tests) then we load the states ourself
-    if _states is None:
-        try:
-            _states = __states__
-        except NameError:
-            from salt.loader import states
-            __opts__['grains'] = __grains__
-            __opts__['pillar'] = __pillar__
-            _states = states(__opts__, __salt__)
-
-    # build our list of states and functions that we will use to build our
-    # StateFactory objects
-    _st_funcs = {}
-    for func in _states:
-        (mod, func) = func.split(".")
-        if mod not in _st_funcs:
-            _st_funcs[mod] = []
-        _st_funcs[mod].append(func)
+    # this will be used to fetch any import files
+    client = get_file_client(__opts__)
 
     # create our StateFactory objects
-    _st_globals = {'StateFactory': StateFactory, '_registry': _registry}
-    for mod in _st_funcs:
-        _st_locals = {}
-        _st_funcs[mod].sort()
+    mod_globals = {'StateFactory': StateFactory}
+    for mod in __context__['pyobjects_states']:
+        mod_locals = {}
         mod_camel = ''.join([
             part.capitalize()
             for part in mod.split('_')
         ])
-        mod_cmd = "%s = StateFactory('%s', registry=_registry, valid_funcs=['%s'])" % (
-            mod_camel, mod,
-            "','".join(_st_funcs[mod])
+        valid_funcs = "','".join(
+            __context__['pyobjects_states'][mod].keys()
         )
-        if sys.version > 3:
-            exec(mod_cmd, _st_globals, _st_locals)
+        mod_cmd = "{0} = StateFactory('{1!s}', valid_funcs=['{2}'])".format(
+            mod_camel,
+            mod,
+            valid_funcs
+        )
+        if sys.version_info[0] > 2:
+            # in py3+ exec is a function
+            exec(mod_cmd, mod_globals, mod_locals)
         else:
-            exec mod_cmd in _st_globals, _st_locals
-        _globals[mod_camel] = _st_locals[mod_camel]
+            # prior to that it is a statement
+            exec mod_cmd in mod_globals, mod_locals
+
+        _globals[mod_camel] = mod_locals[mod_camel]
 
     # add our include and extend functions
-    _globals['include'] = _registry.include
-    _globals['extend'] = _registry.make_extend
+    _globals['include'] = Registry.include
+    _globals['extend'] = Registry.make_extend
+
+    # add our map class
+    Map.__salt__ = __salt__
+    _globals['Map'] = Map
 
     # add some convenience methods to the global scope as well as the "dunder"
     # format of all of the salt objects
@@ -255,11 +369,79 @@ def render(template, saltenv='base', sls='',
     except NameError:
         pass
 
-    # now exec our template using our created scopes
-    # in py3+ exec is a function, prior to that it is a statement
-    if sys.version > 3:
-        exec(template.read(), _globals, _locals)
-    else:
-        exec template.read() in _globals, _locals
+    # process our sls imports
+    #
+    # we allow pyobjects users to use a special form of the import statement
+    # so that they may bring in objects from other files. while we do this we
+    # disable the registry since all we're looking for here is python objects,
+    # not salt state data
+    #
+    # once we have our template we scan through it and look for any "from X
+    # import Y" statements and if X ends in .sls then we process it by passing
+    # the file in X through the pyobjects renderer and putting the requested
+    # variables into our template
+    template_data = []
+    Registry.enabled = False
+    for line in template.readlines():
+        line = line.rstrip('\r\n')
+        matched = False
+        for RE in (IMPORT_RE, FROM_RE):
+            matches = re.match(RE, line)
+            if not matches:
+                continue
 
-    return _registry.salt_data()
+            import_file = matches.group(1).strip()
+            try:
+                imports = matches.group(2).split(',')
+            except IndexError:
+                # if we don't have a third group in the matches object it means
+                # that we're importing everything
+                imports = None
+
+            state_file = client.cache_file(import_file, saltenv)
+            if not state_file:
+                raise ImportError("Could not find the file {0!r}".format(import_file))
+
+            with open(state_file) as f:
+                state_contents = f.read()
+
+            state_locals = {}
+            if sys.version_info[0] > 2:
+                # in py3+ exec is a function
+                exec(state_contents, _globals, state_locals)
+            else:
+                # prior to that it is a statement
+                exec state_contents in _globals, state_locals
+
+            if imports is None:
+                imports = state_locals.keys()
+
+            for name in imports:
+                name = name.strip()
+                if name not in state_locals:
+                    raise ImportError("{0!r} was not found in {1!r}".format(
+                        name,
+                        import_file
+                    ))
+                _globals[name] = state_locals[name]
+
+            matched = True
+            break
+
+        if not matched:
+            template_data.append(line)
+
+    final_template = "\n".join(template_data)
+
+    # re-enable the registry
+    Registry.enabled = True
+
+    # now exec our template using our created scopes
+    if sys.version_info[0] > 2:
+        # in py3+ exec is a function
+        exec(final_template, _globals, _locals)
+    else:
+        # prior to that it is a statement
+        exec final_template in _globals, _locals
+
+    return Registry.salt_data()

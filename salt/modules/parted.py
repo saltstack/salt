@@ -2,6 +2,8 @@
 '''
 Module for managing partitions on POSIX-like systems.
 
+:depends:   - parted, partprobe, lsblk (usually parted and util-linux packages)
+
 Some functions may not be available, depending on your version of parted.
 
 Check the manpage for ``parted(8)`` for more information, or the online docs
@@ -16,6 +18,7 @@ reference the man page for ``sfdisk(8)``.
 
 # Import python libs
 import os
+import stat
 import string
 import logging
 
@@ -41,9 +44,14 @@ VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work on POSIX-like systems, which have parted and lsblk installed.
+    These are usually provided by the ``parted`` and ``util-linux`` packages.
     '''
     if salt.utils.is_windows():
+        return False
+    if not salt.utils.which('parted'):
+        return False
+    if not salt.utils.which('lsblk'):
         return False
     return __virtualname__
 
@@ -417,7 +425,7 @@ def _validate_partition_boundary(boundary):
         )
 
 
-def mkpart(device, part_type, fs_type, start, end):
+def mkpart(device, part_type, fs_type=None, start=None, end=None):
     '''
     partition.mkpart device part_type fs_type start end
 
@@ -425,12 +433,18 @@ def mkpart(device, part_type, fs_type, start, end):
         ending at end (by default in megabytes).  part_type should be one of
         "primary", "logical", or "extended".
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
+        salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
+    if not start or not end:
+        raise CommandExecutionError(
+            'partition.mkpart requires a start and an end'
+        )
+
     dev = device.replace('/dev/', '')
     if dev not in os.listdir('/dev'):
         raise CommandExecutionError(
@@ -443,7 +457,7 @@ def mkpart(device, part_type, fs_type, start, end):
         )
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
         )
@@ -451,9 +465,15 @@ def mkpart(device, part_type, fs_type, start, end):
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
-    cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-        device, part_type, fs_type, start, end
-    )
+    if fs_type:
+        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
+            device, part_type, fs_type, start, end
+        )
+    else:
+        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
+            device, part_type, start, end
+        )
+
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -486,7 +506,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
         )
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
+                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpartfs'
         )
@@ -696,3 +716,46 @@ def toggle(device, partition, flag):
     cmd = 'parted -m -s {0} toggle {1} {2} {3}'.format(device, partition, flag)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
+
+
+def exists(device=''):
+    '''
+    partition.exists device
+
+    Check to see if the partition exists
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' partition.exists /dev/sdb1
+    '''
+    if os.path.exists(device):
+        dev = os.stat(device).st_mode
+
+        if stat.S_ISBLK(dev):
+            return True
+
+    return False
+
+
+def get_block_device():
+    '''
+    Retrieve a list of disk devices
+
+    .. versionadded:: Helium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' partition.get_block_device
+    '''
+    ret = []
+    cmd = '/bin/lsblk -n -io KNAME -d -e 1,7,11 -l'
+    devs = __salt__['cmd.run'](cmd).splitlines()
+    for dev in devs:
+        if dev not in os.listdir('/dev'):
+            continue
+        ret.append(dev)
+    return ret

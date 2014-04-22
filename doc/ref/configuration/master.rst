@@ -840,8 +840,8 @@ translated into salt environments.
 
     As of the upcoming **Helium** release (and right now in the development
     branch), it is possible to have per-repo versions of the
-    :conf_master:`gitfs_root` and :conf_master:`gitfs_mountpoint` parameters.
-    For example:
+    :conf_master:`gitfs_base`, :conf_master:`gitfs_root`, and
+    :conf_master:`gitfs_mountpoint` parameters. For example:
 
     .. code-block:: yaml
 
@@ -850,6 +850,7 @@ translated into salt environments.
           - https://foo.com/bar.git:
             - root: salt
             - mountpoint: salt://foo/bar/baz
+            - base: salt-base
           - https://foo.com/baz.git:
             - root: salt/states
 
@@ -942,6 +943,10 @@ Default: ``master``
 
 Defines which branch/tag should be used as the ``base`` environment.
 
+.. versionchanged:: Helium
+    Can also be configured on a per-remote basis, see :conf_master:`here
+    <gitfs_remotes>` for more info.
+
 .. code-block:: yaml
 
     gitfs_base: salt
@@ -957,14 +962,15 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted.
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
 
 If used, only branches/tags/SHAs which match one of the specified expressions
 will be exposed as fileserver environments.
 
 If used in conjunction with :conf_master:`gitfs_env_blacklist`, then the subset
-of hosts which match the whitelist but do *not* match the blacklist will be
-exposed as fileserver environments.
+of branches/tags/SHAs which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
@@ -984,14 +990,15 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are accepted.
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
 
 If used, branches/tags/SHAs which match one of the specified expressions will
 *not* be exposed as fileserver environments.
 
 If used in conjunction with :conf_master:`gitfs_env_whitelist`, then the subset
-of hosts which match the whitelist but do *not* match the blacklist will be
-exposed as fileserver environments.
+of branches/tags/SHAs which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
 
 .. code-block:: yaml
 
@@ -1029,18 +1036,21 @@ translated into salt environments, as defined by the
 
     As of the upcoming **Helium** release (and right now in the development
     branch), it is possible to have per-repo versions of the
-    :conf_master:`hgfs_root` and :conf_master:`hgfs_mountpoint` parameters.
+    :conf_master:`hgfs_root`, :conf_master:`hgfs_mountpoint`,
+    :conf_master:`hgfs_base`, and :conf_master:`hgfs_branch_method` parameters.
     For example:
 
     .. code-block:: yaml
 
         hgfs_remotes:
           - https://username@bitbucket.org/username/repo1
+            - base: saltstates
           - https://username@bitbucket.org/username/repo2:
             - root: salt
             - mountpoint: salt://foo/bar/baz
           - https://username@bitbucket.org/username/repo3:
             - root: salt/states
+            - branch_method: mixed
 
 .. conf_master:: hgfs_branch_method
 
@@ -1133,6 +1143,62 @@ bookmark should be used as the ``base`` environment.
 .. code-block:: yaml
 
     hgfs_base: salt
+
+.. conf_master:: hgfs_env_whitelist
+
+``hgfs_env_whitelist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your hgfs remotes contain many branches/bookmarks/tags. Full names, globs,
+and regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, only branches/bookmarks/tags which match one of the specified
+expressions will be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`hgfs_env_blacklist`, then the subset
+of branches/bookmarks/tags which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    hgfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: hgfs_env_blacklist
+
+``hgfs_env_blacklist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your hgfs remotes contain many branches/bookmarks/tags. Full names, globs,
+and regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, branches/bookmarks/tags which match one of the specified expressions
+will *not* be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`hgfs_env_whitelist`, then the subset
+of branches/bookmarks/tags which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    hgfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
 
 svn: Subversion Remote File Server Backend
 ------------------------------------------
@@ -1281,6 +1347,152 @@ for more info.
 .. code-block:: yaml
 
     svnfs_tags: tags
+
+.. conf_master:: svnfs_env_whitelist
+
+``svnfs_env_whitelist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your svnfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the expression
+must match the entire minion ID.
+
+If used, only branches/tags which match one of the specified expressions will
+be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`svnfs_env_blacklist`, then the subset
+of branches/tags which match the whitelist but do *not* match the blacklist
+will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    svnfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: svnfs_env_blacklist
+
+``svnfs_env_blacklist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your svnfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, branches/tags which match one of the specified expressions will *not*
+be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`svnfs_env_whitelist`, then the subset
+of branches/tags which match the whitelist but do *not* match the blacklist
+will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    svnfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+minion: MinionFS Remote File Server Backend
+-------------------------------------------
+
+.. conf_master:: minionfs_env
+
+``minionfs_env``
+****************
+
+.. versionadded:: Helium
+
+Default: ``base``
+
+Environment from which MinionFS files are made available.
+
+.. code-block:: yaml
+
+    minionfs_env: minionfs
+
+.. conf_master:: minionfs_mountpoint
+
+``minionfs_mountpoint``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which minionfs files are served.
+
+.. code-block:: yaml
+
+    minionfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: minionfs_whitelist
+
+``minionfs_whitelist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which minions' pushed files are exposed via minionfs. If using
+a regular expression, the expression must match the entire minion ID.
+
+If used, only the pushed files from minions which match one of the specified
+expressions will be exposed.
+
+If used in conjunction with :conf_master:`minionfs_blacklist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed.
+
+.. code-block:: yaml
+
+    minionfs_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: minionfs_blacklist
+
+``minionfs_blacklist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which minions' pushed files are exposed via minionfs. If using
+a regular expression, the expression must match the entire minion ID.
+
+If used, only the pushed files from minions which match one of the specified
+expressions will *not* be exposed.
+
+If used in conjunction with :conf_master:`minionfs_whitelist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed.
+
+.. code-block:: yaml
+
+    minionfs_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
 
 
 .. _pillar-configuration:

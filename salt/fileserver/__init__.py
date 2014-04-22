@@ -150,8 +150,15 @@ def generate_mtime_map(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
                 for item in filenames:
-                    file_path = os.path.join(directory, item)
-                    file_map[file_path] = os.path.getmtime(file_path)
+                    try:
+                        file_path = os.path.join(directory, item)
+                        file_map[file_path] = os.path.getmtime(file_path)
+                    except (OSError, IOError):
+                        # skip dangling symlinks
+                        log.info(
+                            'Failed to get mtime on {0}, '
+                            'dangling symlink ?'.format(file_path))
+                        continue
     return file_map
 
 
@@ -161,16 +168,16 @@ def diff_mtime_map(map1, map2):
     '''
     # check if the file lists are different
     if cmp(sorted(map1.keys()), sorted(map2.keys())) != 0:
-        log.debug('diff_mtime_map: the keys are different')
+        #log.debug('diff_mtime_map: the keys are different')
         return True
 
     # check if the mtimes are the same
     if cmp(sorted(map1), sorted(map2)) != 0:
-        log.debug('diff_mtime_map: the maps are different')
+        #log.debug('diff_mtime_map: the maps are different')
         return True
 
     # we made it, that means we have no changes
-    log.debug('diff_mtime_map: the maps are the same')
+    #log.debug('diff_mtime_map: the maps are the same')
     return False
 
 
@@ -271,7 +278,7 @@ class Fileserver(object):
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
-                log.debug('Updating fileserver cache')
+                #log.debug('Updating fileserver cache')
                 self.servers[fstr]()
 
     def envs(self, back=None, sources=False):

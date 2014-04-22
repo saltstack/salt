@@ -16,14 +16,14 @@ OSI Layers
 4: Transport: Format: Segments (Reliable delivery of Message, Transactions, Segmentation, Error checking)
 3: Network: Format: Packets/Datagrams (Addressing Routing)
 2: Link: Format: Frames ( Reliable per frame communications connection, Media access controller )
-1: Physical: Bits (Transciever communication connection not reliable)
+1: Physical: Bits (Transceiver communication connection not reliable)
 
 Link is hidden from Raet
 Network is IP host address and Udp Port
 Transport is Raet transactions, service kind, tail error checking, 
 Could include header signing as part of transport reliable delivery serialization of header
 Session is session id key exchange for signing. Grouping is Road (like 852 channel)
-Presentation is Encrpt Decript body Serialize Deserialize Body
+Presentation is Encrypt Decrypt body Serialize Deserialize Body
 Application is body data dictionary
 
 Header signing spans both the Transport and Session layers.
@@ -137,7 +137,7 @@ Session ID
 SID
 sid
 
-GUID hash to guarantee uniqueness since no guarantee of nonvolitile storage
+GUID hash to guarantee uniqueness since no guarantee of nonvolatile storage
 or require file storage to keep last session ID used.
 
 Service Types or Modular Services
@@ -215,7 +215,7 @@ B2) Exactly One
 C) One of sequence
 D) End to End
 
-A) Sender creates transaction id for number of repeats but reciever does not 
+A) Sender creates transaction id for number of repeats but receiver does not
 keep transaction alive 
 
 B1) Sender creates transaction id  keeps it for retries.

@@ -102,10 +102,11 @@ def _sync(form, saltenv=None):
             log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
-                srch = hashlib.md5(
+                hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+                srch = hash_type(
                     salt.utils.fopen(fn_, 'r').read()
                 ).hexdigest()
-                dsth = hashlib.md5(
+                dsth = hash_type(
                     salt.utils.fopen(dest, 'r').read()
                 ).hexdigest()
                 if srch != dsth:
@@ -439,6 +440,37 @@ def running():
     return ret
 
 
+def cached():
+    '''
+    Return the data on all cached salt jobs on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.cached
+    '''
+    ret = []
+    serial = salt.payload.Serial(__opts__)
+    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
+    if not os.path.isdir(proc_dir):
+        return []
+    for fn_ in os.listdir(proc_dir):
+        path = os.path.join(proc_dir, fn_, 'return.p')
+        with salt.utils.fopen(path, 'rb') as fp_:
+            buf = fp_.read()
+            fp_.close()
+            if buf:
+                data = serial.loads(buf)
+            else:
+                continue
+        if not isinstance(data, dict):
+            # Invalid serial object
+            continue
+        ret.append(data)
+    return ret
+
+
 def find_job(jid):
     '''
     Return the data for a specific job id
@@ -450,6 +482,22 @@ def find_job(jid):
         salt '*' saltutil.find_job <job id>
     '''
     for data in running():
+        if data['jid'] == jid:
+            return data
+    return {}
+
+
+def find_cached_job(jid):
+    '''
+    Return the data for a specific cached job id
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.find_cached_job <job id>
+    '''
+    for data in cached():
         if data['jid'] == jid:
             return data
     return {}
@@ -562,6 +610,29 @@ def revoke_auth():
     return False
 
 
+def _get_ssh_or_api_client(cfgfile, ssh=False):
+    if ssh:
+        client = salt.client.SSHClient(cfgfile)
+    else:
+        client = salt.client.get_local_client(cfgfile)
+    return client
+
+
+def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+    ret = {}
+    seen = 0
+    for ret_comp in client.cmd_iter(
+            tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+        ret.update(ret_comp)
+        seen += 1
+        # ret can be empty, so we cannot len the whole return dict
+        if expr_form == 'list' and len(tgt) == seen:
+            # do not wait for timeout when explicit list matching
+            # and all results are there
+            break
+    return ret
+
+
 def cmd(tgt,
         fun,
         arg=(),
@@ -580,21 +651,22 @@ def cmd(tgt,
 
         salt '*' saltutil.cmd
     '''
-    if ssh:
-        client = salt.client.SSHClient(__opts__['conf_file'])
-    else:
-        client = salt.client.LocalClient(__opts__['conf_file'])
-    ret = {}
-    for ret_comp in client.cmd_iter(
-            tgt,
-            fun,
-            arg,
-            timeout,
-            expr_form,
-            ret,
-            kwarg,
-            **kwargs):
-        ret.update(ret_comp)
+    cfgfile = __opts__['conf_file']
+    client = _get_ssh_or_api_client(cfgfile, ssh)
+    ret = _exec(
+        client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+    # if return is empty, we may have not used the right conf,
+    # try with the 'minion relative master configuration counter part
+    # if available
+    master_cfgfile = '{0}master'.format(cfgfile[:-6])  # remove 'minion'
+    if (
+        not ret
+        and cfgfile.endswith('{0}{1}'.format(os.path.sep, 'minion'))
+        and os.path.exists(master_cfgfile)
+    ):
+        client = _get_ssh_or_api_client(master_cfgfile, ssh)
+        ret = _exec(
+            client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
     return ret
 
 
@@ -619,7 +691,7 @@ def cmd_iter(tgt,
     if ssh:
         client = salt.client.SSHClient(__opts__['conf_file'])
     else:
-        client = salt.client.LocalClient(__opts__['conf_file'])
+        client = salt.client.get_local_client(__opts__['conf_file'])
     for ret in client.cmd_iter(
             tgt,
             fun,

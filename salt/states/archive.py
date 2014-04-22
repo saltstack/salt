@@ -57,6 +57,10 @@ def extracted(name,
     source
         Archive source, same syntax as file.managed source argument.
 
+    source_hash
+        Hash of source file, or file with list of hash-to-file mappings.
+        It uses the same syntax as the file.managed source_hash argument.
+
     archive_format
         tar, zip or rar
 
@@ -147,10 +151,13 @@ def extracted(name,
         else:
             # this is needed until merging PR 2651
             log.debug("Untar %s in %s", filename, name)
-            for opt in ['x', 'f']:
+            for opt in ['x']:
                 if not opt in tar_options:
                     tar_options = '-{0} {1}'.format(opt, tar_options)
-            results = __salt__['cmd.run_all']('tar {0} "{1}"'.format(
+            # Want to ensure -f is the last argument before the filename
+            if 'f' in tar_options:
+                tar_options.remove('f')
+            results = __salt__['cmd.run_all']('tar {0} -f "{1}"'.format(
                 tar_options, filename), cwd=name)
             if results['retcode'] != 0:
                 ret['result'] = False

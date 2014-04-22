@@ -117,8 +117,14 @@ def get(key, default=''):
     _get_files(pillar_name)
 
     defaults = _load(pillar_name, defaults_path)
-    data = salt.utils.dictupdate.update(defaults, __salt__['pillar.get'](pillar_name, {}))
-    value = salt.utils.traverse_dict(data, key, default)
+
+    value = __salt__['pillar.get']('{0}:{1}'.format(pillar_name, key), None)
+
+    if value is None:
+        value = salt.utils.traverse_dict(defaults, key, None)
+
+    if value is None:
+        value = default
 
     if isinstance(value, unicode):
         value = str(value)

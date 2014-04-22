@@ -1,43 +1,47 @@
-===========================
-Getting Started With LXC
-===========================
-The LXC module is designed to install a LXC container  Salt via a salt master on a
-controlled and possible remote minion.
+.. _config_lxc:
 
-In other words, we connect to a minion, then from that minion:
-    - we provision and configure a container for networking access
-    - We use saltify to deploy salt and rattach to master
+========================
+Getting Started With LXC
+========================
+
+The LXC module is designed to install Salt in an LXC container on a controlled
+and possibly remote minion.
+
+In other words, Salt will connect to a minion, then from that minion:
+
+- Provision and configure a container for networking access
+- Use saltify to deploy salt and re-attach to master
 
 Limitation
 ------------
 - You can only act on one minion and one provider at a time.
-- Listing images must be targeted to a particular driver (nothing will be outputted with 'all')
+- Listing images must be targeted to a particular driver (nothing will be
+  outputted with ``all``)
 
 Operation
 ---------
-This do not use lxc.init to provide a more generic fashion to tie minions
+This does not use lxc.init to provide a more generic fashion to tie minions
 to their master (if any and defined) to allow custom association code.
 
-Order of operation
+Order of operation:
 
-    - Spin up the lxc template container using salt.modules.lxc
-      on desired minion (clone or template)
-    - Change lxc config option if any to be changed
-    - Start container
-    - Change base passwords if any
-    - Change base DNS base configuration if neccessary
-    - Wait for lxc container to be up and ready for ssh
-    - Test ssh connection and bailout in error
-    - Via ssh (with the help of saltify, upload deploy script and seeds
-      and reattach minion.
+- Spin up the LXC template container using :mod:`the LXC execution module
+  <salt.modules.lxc>` on the desired minion (clone or template)
+- Change LXC config option (if any need to be changed)
+- Start container
+- Change base passwords if any
+- Change base DNS base configuration if neccessary
+- Wait for LXC container to be up and ready for ssh
+- Test SSH connection and bailout in error
+- Via SSH (with the help of saltify, upload deploy script and seeds and
+  re-attach minion.
 
 
 Provider configuration
 ----------------------
-Here are the options to configure your containers
 
+Here is a simple configuration example:
 
-Exemple:
 .. code-block:: yaml
 
     # Note: This example is for /etc/salt/cloud.providers or any file in the
@@ -47,8 +51,9 @@ Exemple:
       provider: lxc
 
 Profile configuration
-----------------------
-Here are the options to configure your containers
+---------------------
+
+Here are the options to configure your containers::
 
     target
         Host minion id to install the lxc Container into
@@ -79,6 +84,16 @@ Here are the options to configure your containers
         sysadmin ssh_username (ubuntu) of the container
     sudo
         Do we use sudo
+    ssh_gateway
+        if the minion is not in your 'topmaster' networ, use
+        that gateway to connect to the lxc container.
+        This may be the public ip of the hosting minion
+    ssh_gateway_key
+        When using gateway, additionnal parameters as in saltify
+    ssh_gateway_port
+        When using gateway, additionnal parameters as in saltify
+    ssh_gateway_user
+        When using gateway, additionnal parameters as in saltify
     password
         password for root and sysadmin (ubuntu)
     mac
@@ -117,8 +132,9 @@ Here are the options to configure your containers
       lxc_conf:
         - lxc.utsname: superlxc
 
-The driver support
-------------------
+Driver Support
+--------------
+
 - Container creation
-- Image listing (lxc templates)
-- Running container informations (ips , etc)
+- Image listing (LXC templates)
+- Running container informations (IP addresses, etc.)

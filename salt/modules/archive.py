@@ -8,7 +8,6 @@ A module to wrap archive calls
 # Import salt libs
 import salt._compat
 from salt.utils import which as _which, which_bin as _which_bin
-from salt.exceptions import SaltInvocationError
 import salt.utils.decorators as decorators
 
 # TODO: Check that the passed arguments are correct
@@ -24,7 +23,7 @@ def __virtual__():
     # If none of the above commands are in $PATH this module is a no-go
     if not any(_which(cmd) for cmd in commands):
         return False
-    return 'archive'
+    return True
 
 
 @decorators.which('tar')
@@ -81,19 +80,16 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
         salt '*' archive.tar foo.tar xf dest=/target/directory
 
     '''
-    if sources is not None and dest is not None:
-        raise SaltInvocationError(
-            'The \'sources\' and \'dest\' arguments are mutually exclusive'
-        )
-
     if isinstance(sources, salt._compat.string_types):
         sources = [s.strip() for s in sources.split(',')]
+
+    if dest:
+        options = 'C {0} -{1}'.format(dest, options)
 
     cmd = 'tar -{0} {1}'.format(options, tarfile)
     if sources:
         cmd += ' {0}'.format(' '.join(sources))
-    elif dest:
-        cmd += ' -C {0}'.format(dest)
+
     return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
 
 

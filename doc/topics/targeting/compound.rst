@@ -53,3 +53,18 @@ Excluding a minion based on its ID is also possible:
 .. code-block:: bash
 
     salt -C '* and not web-dc1-srv' test.ping
+
+Precedence Matching
+-------------------
+
+Matches can be grouped together with parentheses to explicitely declare precedence amongst groups.
+
+.. code-block:: bash
+
+    salt -C '( ms-1 or G@id:ms-3 ) and G@id:ms-3' test.ping
+
+.. note::
+    
+    Be certain to note that spaces are required between the parantheses and targets. Failing to obey this
+    rule may result in incorrect targeting!
+

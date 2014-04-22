@@ -8,7 +8,6 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import re
 import logging
-import getpass
 import shutil
 import datetime
 try:
@@ -32,12 +31,12 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
-import salt.transport.table
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
@@ -47,24 +46,54 @@ log = logging.getLogger(__name__)
 # only accept valid minion ids
 
 
-def master_keys(opts):
+def init_git_pillar(opts):
     '''
-    Generate and return the master long term key data
+    Clear out the ext pillar caches, used when the master starts
     '''
-    keyfile = os.path.join(
-            opts['pki_dir'],
-            'priv.{0}'.format(opts['crypt_backend'])
+    pillargitfs = []
+    for opts_dict in [x for x in opts.get('ext_pillar', [])]:
+        if 'git' in opts_dict:
+            parts = opts_dict['git'].strip().split()
+            try:
+                br = parts[0]
+                loc = parts[1]
+            except IndexError:
+                log.critical(
+                    'Unable to extract external pillar data: {0}'
+                    .format(opts_dict['git'])
+                )
+            else:
+                pillargitfs.append(
+                    git_pillar.GitPillar(
+                        br,
+                        loc,
+                        opts
+                    )
+                )
+    return pillargitfs
+
+
+def clean_fsbackend(opts):
+    '''
+    Clean ou the old fileserver backends
+    '''
+    # Clear remote fileserver backend env cache so it gets recreated
+    for backend in ('git', 'hg', 'svn'):
+        if backend in opts['fileserver_backend']:
+            env_cache = os.path.join(
+                opts['cachedir'],
+                '{0}fs'.format(backend),
+                'envs.p'
             )
-    if not os.path.isfile(keyfile):
-        public = salt.transport.table.Public(
-                backend=opts['crypt_backend'],
-                serial='msgpack')
-        public.save(keyfile)
-        return public
-    return salt.transport.table.Public(
-            backend=opts['crypt_backend'],
-            keyfile=keyfile,
-            serial='msgpack')
+            if os.path.isfile(env_cache):
+                log.debug('Clearing {0}fs env cache'.format(backend))
+                try:
+                    os.remove(env_cache)
+                except (IOError, OSError) as exc:
+                    log.critical(
+                        'Unable to clear env cache file {0}: {1}'
+                        .format(env_cache, exc)
+                    )
 
 
 def clean_old_jobs(opts):
@@ -73,7 +102,7 @@ def clean_old_jobs(opts):
     '''
     if opts['keep_jobs'] != 0:
         jid_root = os.path.join(opts['cachedir'], 'jobs')
-        cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
+        cur = datetime.datetime.now()
 
         if os.path.exists(jid_root):
             for top in os.listdir(jid_root):
@@ -82,15 +111,32 @@ def clean_old_jobs(opts):
                     f_path = os.path.join(t_path, final)
                     jid_file = os.path.join(f_path, 'jid')
                     if not os.path.isfile(jid_file):
-                        continue
-                    with salt.utils.fopen(jid_file, 'r') as fn_:
-                        jid = fn_.read()
-                    if len(jid) < 18:
-                        # Invalid jid, scrub the dir
+                        # No jid file means corrupted cache entry, scrub it
                         shutil.rmtree(f_path)
-                    elif int(cur) - int(jid[:10]) > \
-                            opts['keep_jobs']:
-                        shutil.rmtree(f_path)
+                    else:
+                        with salt.utils.fopen(jid_file, 'r') as fn_:
+                            jid = fn_.read()
+                        if len(jid) < 18:
+                            # Invalid jid, scrub the dir
+                            shutil.rmtree(f_path)
+                        else:
+                            # Parse the jid into a proper datetime object.
+                            # We only parse down to the minute, since keep
+                            # jobs is measured in hours, so a minute
+                            # difference is not important.
+                            try:
+                                jidtime = datetime.datetime(int(jid[0:4]),
+                                                            int(jid[4:6]),
+                                                            int(jid[6:8]),
+                                                            int(jid[8:10]),
+                                                            int(jid[10:12]))
+                            except ValueError as e:
+                                # Invalid jid, scrub the dir
+                                shutil.rmtree(f_path)
+                            difference = cur - jidtime
+                            hours_difference = difference.seconds / 3600.0
+                            if hours_difference > opts['keep_jobs']:
+                                shutil.rmtree(f_path)
 
 
 def access_keys(opts):
@@ -103,7 +149,7 @@ def access_keys(opts):
     acl_users = set(opts['client_acl'].keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
-    acl_users.add(getpass.getuser())
+    acl_users.add(salt.utils.get_user())
     for user in pwd.getpwall():
         users.append(user.pw_name)
     for user in acl_users:
@@ -168,13 +214,17 @@ class RemoteFuncs(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(mopts=self.opts)
         # Create the master minion to access the external job cache
         self.mminion = salt.minion.MasterMinion(
                 self.opts,
@@ -454,7 +504,7 @@ class RemoteFuncs(object):
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
         if load['jid'] == 'req':
-        # The minion is returning a standalone job, request a jobid
+            # The minion is returning a standalone job, request a jobid
             load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
                     self.opts['hash_type'],
@@ -759,9 +809,13 @@ class LocalFuncs(object):
         self.serial = salt.payload.Serial(opts)
         self.key = key
         # Create the event manager
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(mopts=self.opts)
         # Make an minion checker object
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
@@ -1210,7 +1264,7 @@ class LocalFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif load['user'] == getpass.getuser():
+            elif load['user'] == salt.utils.get_user():
                 if load.pop('key') != self.key.get(load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
@@ -1248,7 +1302,7 @@ class LocalFuncs(object):
                     )
                     return ''
         else:
-            if load.pop('key') != self.key[getpass.getuser()]:
+            if load.pop('key') != self.key[salt.utils.get_user()]:
                 log.warning(
                     'Authentication failure of type "other" occurred.'
                 )

@@ -53,6 +53,8 @@ Alternatively, a value can be associated with a key through indentation.
 
 In Python, the above maps to:
 
+.. code-block:: python
+
     {'my_key': 'my_value'}
 
 Dictionaries can be nested:
@@ -72,7 +74,7 @@ And in Python:
         }
     }
 
-Rules Three: Dashes
+Rule Three: Dashes
 -------------------
 
 To represent lists of items, a single dash followed by a space is used. Multiple
@@ -92,3 +94,17 @@ Lists can be the value of a key-value pair. This is quite common in Salt:
       - list_value_one
       - list_value_two
       - list_value_three
+
+In Python, the above maps to:
+
+.. code-block:: python
+
+    {'my_dictionary': ['list_value_one', 'list_value_two', 'list_value_three']}
+
+Learning More
+-------------
+
+One easy way to learn more about how YAML gets rendered into Python data structures is
+to use an online YAML parser to see the Python output. 
+
+One excellent choice for experimenting with YAML parsing is: http://yaml-online-parser.appspot.com/

@@ -172,9 +172,12 @@ def get_template(path,
                  template='jinja',
                  saltenv='base',
                  env=None,
+                 makedirs=False,
                  **kwargs):
     '''
-    Render a file as a template before setting it down
+    Render a file as a template before setting it down.
+    Warning, order is not the same as in fileclient.cp for
+    non breaking old API.
 
     CLI Example:
 
@@ -204,7 +207,7 @@ def get_template(path,
             path,
             dest,
             template,
-            False,
+            makedirs,
             saltenv,
             **kwargs)
 
@@ -655,6 +658,8 @@ def push_dir(path, glob=None):
     to the salt master in the master's minion files cachedir (defaults to
     ``/var/cache/salt/master/minions/minion-id/files``).  It also has a glob
     for matching specific files using globbing.
+
+    .. versionadded:: Helium
 
     Since this feature allows a minion to push files up to the master server it
     is disabled by default for security purposes. To enable, set ``file_recv``

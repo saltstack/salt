@@ -39,6 +39,7 @@ def display_output(data, out, opts=None):
         display_data = get_printout('nested', opts)(data).rstrip()
 
     output_filename = opts.get('output_file', None)
+    log.trace('data = {0}'.format(data))
     try:
         if output_filename is not None:
             with salt.utils.fopen(output_filename, 'a') as ofh:

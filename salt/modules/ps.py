@@ -20,9 +20,6 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-# Define the module's virtual name
-__virtualname__ = 'ps'
-
 
 def __virtual__():
     if not HAS_PSUTIL:
@@ -36,7 +33,7 @@ def __virtual__():
     # most distributions have already moved to later versions (for example,
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
-        return __virtualname__
+        return True
     return False
 
 
@@ -496,7 +493,7 @@ def boot_time():
     return psutil.get_boot_time()
 
 
-def network_io_counters():
+def network_io_counters(interface=None):
     '''
     Return network I/O statisitics.
 
@@ -505,11 +502,20 @@ def network_io_counters():
     .. code-block:: bash
 
         salt '*' ps.network_io_counters
+
+        salt '*' ps.network_io_counters interface=eth0
     '''
-    return dict(psutil.network_io_counters()._asdict())
+    if not interface:
+        return dict(psutil.network_io_counters()._asdict())
+    else:
+        stats = psutil.network_io_counters(pernic=True)
+        if interface in stats:
+            return dict(stats[interface]._asdict())
+        else:
+            return False
 
 
-def disk_io_counters():
+def disk_io_counters(device=None):
     '''
     Return disk I/O statisitics.
 
@@ -518,8 +524,17 @@ def disk_io_counters():
     .. code-block:: bash
 
         salt '*' ps.disk_io_counters
+
+        salt '*' ps.disk_io_counters device=sda1
     '''
-    return dict(psutil.disk_io_counters()._asdict())
+    if not device:
+        return dict(psutil.disk_io_counters()._asdict())
+    else:
+        stats = psutil.disk_io_counters(perdisk=True)
+        if device in stats:
+            return dict(stats[device]._asdict())
+        else:
+            return False
 
 
 def get_users():

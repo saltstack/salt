@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Lxc Module
-==============
-The LXC module is designed to install Salt via a salt master on a
-controlled minion LXC container.
+Install Salt on an LXC Container
+================================
+
+.. versionadded:: Helium
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''
@@ -12,6 +12,7 @@ Please read :ref:`core config documentation <config_lxc>`.
 import json
 import os
 import logging
+import copy
 import time
 from pprint import pformat
 
@@ -23,8 +24,8 @@ import salt.utils.cloud
 import salt.config as config
 from salt.cloud.exceptions import SaltCloudSystemExit
 
-from salt.client import LocalClient
-from salt.runner import RunnerClient
+import salt.client
+import salt.runner
 import salt.syspaths
 
 
@@ -67,7 +68,7 @@ def _minion_opts(cfg='minion'):
         default_dir = salt.syspaths.CONFIG_DIR,
     cfg = os.environ.get(
         'SALT_MINION_CONFIG', os.path.join(default_dir, cfg))
-    opts = config.minion_conf(cfg)
+    opts = config.minion_config(cfg)
     return opts
 
 
@@ -81,13 +82,13 @@ def _master_opts(cfg='master'):
 
 
 def _client():
-    return LocalClient(mopts=_master_opts())
+    return salt.client.get_local_client(mopts=_master_opts())
 
 
 def _runner():
     # opts = _master_opts()
     # opts['output'] = 'quiet'
-    return RunnerClient(_master_opts())
+    return salt.runner.RunnerClient(_master_opts())
 
 
 def _salt(fun, *args, **kw):
@@ -150,6 +151,8 @@ def _salt(fun, *args, **kw):
         runner = _runner()
         rkwargs = kwargs.copy()
         rkwargs['timeout'] = timeout
+        rkwargs.setdefault('expr_form', 'list')
+        kwargs.setdefault('expr_form', 'list')
         jid = conn.cmd_async(tgt=target,
                              fun=fun,
                              arg=args,
@@ -220,16 +223,16 @@ def list_nodes(conn=None, call=None):
     hide = False
     names = __opts__.get('names', [])
     profile = __opts__.get('profile', [])
-    destroy = __opts__.get('destroy', False)
+    destroy_opt = __opts__.get('destroy', False)
     action = __opts__.get('action', '')
     for opt in ['full_query', 'select_query', 'query']:
         if __opts__.get(opt, False):
             call = 'full'
-    if destroy:
+    if destroy_opt:
         call = 'full'
     if action and not call:
         call = 'action'
-    if profile and names and not destroy:
+    if profile and names and not destroy_opt:
         hide = True
     if not get_configured_provider():
         return
@@ -247,7 +250,7 @@ def list_nodes(conn=None, call=None):
             }
             # in creation mode, we need to go inside the create method
             # so we hide the running vm from being seen as already installed
-            # do not also mask half configured nodes which are explictly asked
+            # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
             if (
                 (call in ['full'] or not hide)
@@ -320,9 +323,9 @@ last message: {comment}'''.format(**ret)
 
 def destroy(vm_, call=None):
     '''Destroy a lxc container'''
-    destroy = __opts__.get('destroy', False)
+    destroy_opt = __opts__.get('destroy', False)
     action = __opts__.get('action', '')
-    if action != 'destroy' and not destroy:
+    if action != 'destroy' and not destroy_opt:
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d, --destroy, '
             '-a or --action.'
@@ -337,13 +340,9 @@ def destroy(vm_, call=None):
             'destroying instance',
             'salt/cloud/{0}/destroying'.format(vm_),
             {'name': vm_, 'instance_id': vm_},
+            transport=__opts__['transport']
         )
-        gid = 'lxc.{0}.initial_pass'.format(vm_)
-        _salt('grains.setval', gid, False)
-        gid = 'lxc.{0}.initial_dns'.format(vm_)
-        _salt('grains.setval', gid, False)
         cret = _salt('lxc.destroy', vm_, stop=True)
-        _salt('saltutil.sync_grains')
         ret['result'] = cret['change']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
@@ -352,6 +351,7 @@ def destroy(vm_, call=None):
                 'destroyed instance',
                 'salt/cloud/{0}/destroyed'.format(vm_),
                 {'name': vm_, 'instance_id': vm_},
+                transport=__opts__['transport']
             )
     return ret
 
@@ -384,6 +384,11 @@ def create(vm_, call=None):
     netmask = vm_.get('netmask', '24')
     bridge = vm_.get('bridge', 'lxcbr0')
     gateway = vm_.get('gateway', 'auto')
+    autostart = vm_.get('autostart', True)
+    if autostart:
+        autostart = "1"
+    else:
+        autostart = "0"
     size = vm_.get('size', '10G')
     ssh_username = vm_.get('ssh_username', 'user')
     sudo = vm_.get('sudo', True)
@@ -401,6 +406,7 @@ def create(vm_, call=None):
     if backing in ['dir', 'overlayfs']:
         fstype = None
         size = None
+    if backing in ['dir']:
         snapshot = False
     for k in ['password',
               'ssh_username']:
@@ -415,6 +421,7 @@ def create(vm_, call=None):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
     if not dnsservers:
         dnsservers = ['8.8.8.8', '4.4.4.4']
@@ -451,6 +458,7 @@ def create(vm_, call=None):
             lxc_conf.append({'lxc.network.ipv4.gateway': gateway})
         if bridge is not None:
             lxc_conf.append({'lxc.network.link': bridge})
+    lxc_conf.append({'lxc.start.auto': autostart})
     changes['100_creation'] = ''
     created = False
     cret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
@@ -542,8 +550,11 @@ def create(vm_, call=None):
     # first time provisionning only, set the default user/password
     changes['250_password'] = 'Passwords in place'
     ret['comment'] = changes['250_password']
-    gid = 'lxc.{0}.initial_pass'.format(name, False)
-    if not __grains__.get(gid):
+    gid = '/.lxc.{0}.initial_pass'.format(name, False)
+    lxcret = _salt('lxc.run_cmd',
+                   name, 'test -e {0}'.format(gid),
+                   stdout=False, stderr=False)
+    if lxcret:
         cret = _salt('lxc.set_pass',
                      name,
                      password=password, users=users)
@@ -553,8 +564,18 @@ def create(vm_, call=None):
             changes['250_password'] = 'Failed to update passwords'
         ret['comment'] = changes['250_password']
         _checkpoint(ret)
-        if _salt('grains.setval', gid, True):
-            _salt('saltutil.sync_grains')
+        try:
+            lxcret = int(
+                _salt('lxc.run_cmd',
+                      name,
+                      'sh -c \'touch "{0}"; '
+                      'test -e "{0}";echo ${{?}}\''.format(gid)))
+        except ValueError:
+            lxcret = 1
+        ret['result'] = not bool(lxcret)
+        if not cret['result']:
+            changes['250_password'] = 'Failed to test password file marker'
+        _checkpoint(ret)
         changed = True
 
     def wait_for_ip():
@@ -587,7 +608,11 @@ def create(vm_, call=None):
     changes['350_dns'] = 'DNS in place'
     ret['comment'] = changes['350_dns']
     gid = 'lxc.{0}.initial_dns'.format(name, False)
-    if dnsservers and not __grains__.get(gid):
+    lxcret = _salt('lxc.run_cmd',
+                   name,
+                   'test -e {0}'.format(gid),
+                   stdout=False, stderr=False,)
+    if dnsservers and not lxcret:
         cret = _salt('lxc.set_dns',
                      name,
                      dnsservers=dnsservers)
@@ -597,8 +622,18 @@ def create(vm_, call=None):
             ret['result'] = False
             changes['350_dns'] = 'DNS provisionning error'
             ret['comment'] = changes['350_dns']
-        if _salt('grains.setval', gid, True):
-            _salt('saltutil.sync_grains')
+        try:
+            lxcret = int(
+                _salt('lxc.run_cmd',
+                      name,
+                      'sh -c \'touch "{0}"; '
+                      'test -e "{0}";echo ${{?}}\''.format(gid)))
+        except ValueError:
+            lxcret = 1
+        ret['result'] = not lxcret
+        if not cret['result']:
+            changes['250_password'] = 'Failed to test DNS set marker'
+        _checkpoint(ret)
         changed = True
     _checkpoint(ret)
 
@@ -625,7 +660,19 @@ def create(vm_, call=None):
             vm_['ssh_host'] = ip
             vm_['sudo'] = sudo
             vm_['sudo_password'] = password
-            sret = __salt__['saltify.create'](vm_)
+            svm_ = copy.deepcopy(vm_)
+            if 'gateway' in svm_:
+                del svm_['gateway']
+            if 'ssh_gateway' in vm_:
+                svm_['gateway'] = ssh_gateway_opts = {}
+                for k in ['ssh_gateway_key',
+                          'ssh_gateway',
+                          'ssh_gateway_user',
+                          'ssh_gateway_port']:
+                    val = vm_.get(k, None)
+                    if val:
+                        ssh_gateway_opts[ssh_gateway_opts.get(k, k)] = val
+            sret = __salt__['saltify.create'](svm_)
             changes['400_salt'] = 'This vm is now a salt minion'
             if 'Error' in sret:
                 ret['result'] = False

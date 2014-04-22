@@ -60,13 +60,8 @@ def __virtual__():
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Azure cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading Azure cloud module')
     return __virtualname__
 
 
@@ -414,6 +409,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -474,6 +470,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         event_kwargs,
+        transport=__opts__['transport']
     )
     log.debug('vm_kwargs: {0}'.format(vm_kwargs))
 
@@ -531,6 +528,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': hostname,
             'username': ssh_username,
             'password': ssh_password,
@@ -614,6 +612,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -650,6 +649,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

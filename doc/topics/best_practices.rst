@@ -15,6 +15,8 @@ General rules
 2. Create clear relations between pillars and states.
 3. Use variables when it makes sense but don't overuse them.
 4. Store sensitive data in pillar.
+5. Don't use grains for matching in your pillar top file for any sensitive
+   pillars.
 
 
 Structuring States and Formulas
@@ -25,9 +27,9 @@ directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
 name. 
 
-Reviewing the `MySQL Salt formula
-<https://github.com/saltstack-formulas/mysql-formula>`_ it is clear to see
-the benefits to the end-user when reviewing a sample of the available states:
+Reviewing the :formula:`MySQL Salt Formula <mysql-formula>`
+it is clear to see the benefits to the end-user when reviewing a sample of the
+available states:
 
 .. code-block:: bash
 
@@ -52,8 +54,7 @@ file in the following way:
 This clear definition ensures that the user is properly informed of what each
 state will do.
 
-Another example comes from the `vim formula 
-<https://github.com/saltstack-formulas/vim-formula>`_:
+Another example comes from the :formula:`vim-formula`:
 
 .. code-block:: bash
 
@@ -84,9 +85,8 @@ The usage of a clear top-level directory as well as properly named states
 reduces the overall complexity and leads a user to both understand what will
 be included at a glance and where it is located.
 
-In addition
-`Formulas <https://docs.saltstack.com/topics/conventions/formulas.html>`_
-should be used as often as possible.
+In addition :ref:`Formulas <conventions-formula>` should
+be used as often as possible.
 
 .. note::
 
@@ -97,7 +97,7 @@ should be used as often as possible.
 Structuring Pillar Files
 ------------------------
 
-`Pillars <https://docs.saltstack.com/topics/pillar/>`_ are used to store 
+:ref:`Pillars <pillar>` are used to store 
 secure and insecure data pertaining to minions. When designing the structure
 of the ``/srv/pillar`` directory, the pillars contained within 
 should once again be focused on clear and concise data which users can easily
@@ -313,9 +313,9 @@ state!). There is also still the concern of the configuration file data living
 in the same state as the service and package.
 
 In the next example steps will be taken to begin addressing these issues.
-Starting with the addition of a map.jinja file (as noted in the 
-`Formula documentation <https://docs.saltstack.com/topics/conventions/formulas.html>`_)
-, and modification of static values:
+Starting with the addition of a map.jinja file (as noted in the
+:ref:`Formula documentation <conventions-formula>`), and
+modification of static values:
 
 /srv/salt/apache/map.jinja:
 

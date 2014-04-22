@@ -19,6 +19,10 @@ configuration at:
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer_hw
 
+The SoftLayer Python Library needs to be installed in ordere to use the
+SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
+
+:depends: softlayer
 '''
 # pylint: disable=E0102
 
@@ -55,21 +59,11 @@ def __virtual__():
     Set up the libcloud functions and check for SoftLayer configurations.
     '''
     if not HAS_SLLIBS:
-        log.debug(
-            'The SoftLayer Python Library needs to be installed in ordere to '
-            'use the SoftLayer HW salt.cloud module. See: '
-            'https://pypi.python.org/pypi/SoftLayer'
-        )
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no SoftLayer cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading SoftLayer cloud module')
     return True
 
 
@@ -407,6 +401,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -482,6 +477,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': kwargs},
+        transport=__opts__['transport']
     )
 
     try:
@@ -563,6 +559,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
             'username': ssh_username,
             'password': passwd,
@@ -644,6 +641,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -679,6 +677,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -775,6 +774,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     node = show_instance(name, call='action')
@@ -794,6 +794,7 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     return response

@@ -10,61 +10,117 @@
 # Import python libs
 import os
 import stat
+import pprint
 
 # Import salt testing libs
 from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath
 
-INTEGRATION_TEST_DIR = os.path.dirname(
-    os.path.normpath(os.path.abspath(__file__))
-)
+ensure_in_syspath('..')
 
-CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
+from integration import CODE_DIR
 
-EXEMPT_FILES = ['setup.py',
-                'runtests.py',
-                'saltsh.py',
-                'PKGBUILD-git',
-                'Makefile',
-                'PKGBUILD',
-                'salt-minion',
-                'build.py',
-                'salt-syncic',
-                'salt-master',
-                'install.sh',
-                'salt-minion',
-                'salt-call',
-                'salt-cp',
-                'salt-ssh',
-                'salt-key',
-                'salt-cloud',
-                'salt-run',
-                'salt-syndic',
-                'salt',
-                'rules',
-                'pre-applypatch.sample',
-                'pre-commit.sample',
-                'commit-msg.sample',
-                'pre-push.sample',
-                'update.sample',
-                'pre-rebase.sample',
-                'post-update.sample',
-                'prepare-commit-msg.sample',
-                'applypatch-msg.sample',
-                'master.py',
-                'build_shar.sh']
+EXEMPT_DIRS = []
+EXEMPT_FILES = [
+    'debian/rules',
+    'doc/.scripts/compile-translation-catalogs',
+    'doc/.scripts/download-translation-catalog',
+    'doc/.scripts/setup-transifex-config',
+    'doc/.scripts/update-transifex-source-translations',
+    'pkg/arch/Makefile',
+    'pkg/arch/PKGBUILD',
+    'pkg/arch/PKGBUILD-git',
+    'pkg/arch/PKGBUILD-local',
+    'pkg/arch/git/PKGBUILD',
+    'pkg/rpm/build.py',
+    'pkg/rpm/salt-master',
+    'pkg/rpm/salt-minion',
+    'pkg/rpm/salt-syndic',
+    'pkg/shar/build_shar.sh',
+    'pkg/smartos/esky/install.sh',
+    'salt/cloud/deploy/bootstrap-salt.sh',
+    'salt/templates/git/ssh-id-wrapper',
+    'salt/templates/lxc/salt_tarball',
+    'scripts/salt',
+    'scripts/salt-call',
+    'scripts/salt-cloud',
+    'scripts/salt-cp',
+    'scripts/salt-key',
+    'scripts/salt-master',
+    'scripts/salt-minion',
+    'scripts/salt-run',
+    'scripts/salt-ssh',
+    'scripts/salt-syndic',
+    'setup.py',
+    'tests/integration/mockbin/su',
+    'tests/runtests.py',
+    'tests/saltsh.py',
+]
 
-EXEMPT_DIRS = ['tests', '.git', 'doc']
+IGNORE_PATHS = [
+    '.git',
+    '.wti',
+    'build',
+    'dist',
+    'salt.egg-info',
+    '.ropeproject',
+]
 
 
 class GitPermTestCase(TestCase):
     def test_perms(self):
-        suspect_files = []
-        for root, dirs, files in os.walk(CODE_DIR, topdown=True):
-            dirs[:] = [dir for dir in dirs if dir not in EXEMPT_DIRS]
-            for fn_ in files:
-                fn_path = os.path.join(root, fn_)
-                fn_mode = stat.S_IMODE(os.stat(fn_path).st_mode)  # In octal! 420 == 0644
-                if fn_mode != 420 and fn_ not in EXEMPT_FILES:
-                    suspect_files.append(fn_)
+        suspect_entries = []
+        for root, dirnames, filenames in os.walk(CODE_DIR, topdown=True):
+            for dirname in dirnames:
+                entry = os.path.relpath(
+                    os.path.join(root, dirname), CODE_DIR
+                )
+                if entry in IGNORE_PATHS:
+                    continue
 
-        self.assertEqual(suspect_files, [], 'Found file(s) with incorrect permissions: {0}'.format(suspect_files))
+                skip_entry = False
+                for ignore_path in IGNORE_PATHS:
+                    if entry.startswith(ignore_path):
+                        skip_entry = True
+                        break
+
+                if skip_entry:
+                    continue
+
+                fn_mode = stat.S_IMODE(os.stat(entry).st_mode)
+                if fn_mode != 493 and entry not in EXEMPT_DIRS:  # In octal! 493 == 0755
+                    suspect_entries.append(entry)
+
+            for filename in filenames:
+                entry = os.path.relpath(
+                    os.path.join(root, filename), CODE_DIR
+                )
+                if entry in IGNORE_PATHS:
+                    continue
+
+                skip_entry = False
+                for ignore_path in IGNORE_PATHS:
+                    if entry.startswith(ignore_path):
+                        skip_entry = True
+                        break
+
+                if skip_entry:
+                    continue
+
+                fn_mode = stat.S_IMODE(os.stat(entry).st_mode)
+                if fn_mode != 420 and entry not in EXEMPT_FILES:  # In octal! 420 == 0644
+                    suspect_entries.append(entry)
+
+        try:
+            self.assertEqual(suspect_entries, [])
+        except AssertionError:
+            self.fail(
+                'Found file(s) with incorrect permissions:\n{0}'.format(
+                    pprint.pformat(sorted(suspect_entries))
+                )
+            )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(GitPermTestCase, needs_daemon=False)

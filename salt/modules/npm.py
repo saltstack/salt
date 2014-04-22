@@ -43,7 +43,8 @@ def _valid_version():
 
 def install(pkg=None,
             dir=None,
-            runas=None):
+            runas=None,
+            registry=None):
     '''
     Install an NPM package.
 
@@ -62,6 +63,11 @@ def install(pkg=None,
     runas
         The user to run NPM with
 
+    registry
+        The NPM registry to install the package from.
+
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
@@ -78,6 +84,9 @@ def install(pkg=None,
 
     if dir is None:
         cmd += ' --global'
+
+    if registry:
+        cmd += ' --registry="{0}"'.format(registry)
 
     if pkg:
         cmd += ' "{0}"'.format(pkg)

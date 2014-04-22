@@ -162,9 +162,9 @@ def item(*args, **kwargs):
     return ret
 
 
-def setval(key, val, destructive=False):
+def setvals(grains, destructive=False):
     '''
-    Set a grains value in the grains config file
+    Set new grains values in the grains config file
 
     :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
 
@@ -172,9 +172,11 @@ def setval(key, val, destructive=False):
 
     .. code-block:: bash
 
-        salt '*' grains.setval key val
-        salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
+        salt '*' grains.setvals "{'key1': 'vali1', 'key2': 'val2'}"
     '''
+    new_grains = grains
+    if not isinstance(new_grains, collections.Mapping):
+        raise SaltException('setvals grains must be a dictionary.')
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
         gfn = os.path.join(
@@ -200,11 +202,15 @@ def setval(key, val, destructive=False):
                 return 'Unable to read existing grains file: {0}'.format(e)
         if not isinstance(grains, dict):
             grains = {}
-    if val is None and destructive is True:
-        if key in grains:
-            del grains[key]
-    else:
-        grains[key] = val
+    for key, val in new_grains.items():
+        if val is None and destructive is True:
+            if key in grains:
+                del grains[key]
+                if key in __grains__:
+                    del __grains__[key]
+        else:
+            grains[key] = val
+            __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
@@ -222,11 +228,26 @@ def setval(key, val, destructive=False):
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
-    __grains__[key] = val
     # Sync the grains
     __salt__['saltutil.sync_grains']()
-    # Return the grain we just set to confirm everything was OK
-    return {key: val}
+    # Return the grains we just set to confirm everything was OK
+    return new_grains
+
+
+def setval(key, val, destructive=False):
+    '''
+    Set a grains value in the grains config file
+
+    :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.setval key val
+        salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
+    '''
+    return setvals({key: val}, destructive)
 
 
 def append(key, val):

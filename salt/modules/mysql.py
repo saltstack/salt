@@ -153,7 +153,7 @@ def __virtual__():
     Only load this module if the mysql libraries exist
     '''
     if HAS_MYSQLDB:
-        return 'mysql'
+        return True
     return False
 
 
@@ -208,19 +208,22 @@ def _connect(**kwargs):
     '''
     connargs = dict()
 
-    def _connarg(name, key=None):
+    def _connarg(name, key=None, get_opts=True):
         '''
-        Add key to connargs, only if name exists in our kwargs or as
-        mysql.<name> in __opts__ or __pillar__ Evaluate in said order - kwargs,
-        opts then pillar. To avoid collision with other functions, kwargs-based
-        connection arguments are prefixed with 'connection_' (i.e.
-        'connection_host', 'connection_user', etc.).
+        Add key to connargs, only if name exists in our kwargs or,
+        if get_opts is true, as mysql.<name> in __opts__ or __pillar__
+
+        If get_opts is true, evaluate in said order - kwargs, opts
+        then pillar. To avoid collision with other functions,
+        kwargs-based connection arguments are prefixed with 'connection_'
+        (i.e. 'connection_host', 'connection_user', etc.).
         '''
         if key is None:
             key = name
+
         if name in kwargs:
             connargs[key] = kwargs[name]
-        else:
+        elif get_opts:
             prefix = 'connection_'
             if name.startswith(prefix):
                 try:
@@ -231,15 +234,22 @@ def _connect(**kwargs):
             if val is not None:
                 connargs[key] = val
 
-    _connarg('connection_host', 'host')
-    _connarg('connection_user', 'user')
-    _connarg('connection_pass', 'passwd')
-    _connarg('connection_port', 'port')
-    _connarg('connection_db', 'db')
-    _connarg('connection_conv', 'conv')
-    _connarg('connection_unix_socket', 'unix_socket')
-    _connarg('connection_default_file', 'read_default_file')
-    _connarg('connection_default_group', 'read_default_group')
+    # If a default file is explicitly passed to kwargs, don't grab the
+    # opts/pillar settings, as it can override info in the defaults file
+    if 'connection_default_file' in kwargs:
+        get_opts = False
+    else:
+        get_opts = True
+
+    _connarg('connection_host', 'host', get_opts)
+    _connarg('connection_user', 'user', get_opts)
+    _connarg('connection_pass', 'passwd', get_opts)
+    _connarg('connection_port', 'port', get_opts)
+    _connarg('connection_db', 'db', get_opts)
+    _connarg('connection_conv', 'conv', get_opts)
+    _connarg('connection_unix_socket', 'unix_socket', get_opts)
+    _connarg('connection_default_file', 'read_default_file', get_opts)
+    _connarg('connection_default_group', 'read_default_group', get_opts)
     # MySQLdb states that this is required for charset usage
     # but in fact it's more than it's internally activated
     # when charset is used, activating use_unicode here would
@@ -379,8 +389,11 @@ def _grant_to_tokens(grant):
             # the shlex splitter may have split on special database characters `
             database += token
             # Read-ahead
-            if exploded_grant[position_tracker + 1] == '.':
-                phrase = 'tables'
+            try:
+                if exploded_grant[position_tracker + 1] == '.':
+                    phrase = 'tables'
+            except IndexError:
+                break
 
         elif phrase == 'user':
             if dict_mode:
@@ -397,15 +410,19 @@ def _grant_to_tokens(grant):
 
         position_tracker += 1
 
-    if not dict_mode:
-        user = user.strip("'")
-        host = host.strip("'")
-    log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
-        user,
-        host,
-        grant_tokens,
-        database
-    ))
+    try:
+        if not dict_mode:
+            user = user.strip("'")
+            host = host.strip("'")
+        log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
+            user,
+            host,
+            grant_tokens,
+            database
+        ))
+    except UnboundLocalError:
+        host = ''
+
     return dict(user=user,
                 host=host,
                 grant=grant_tokens,
@@ -1582,7 +1599,7 @@ def grant_add(grant,
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
     try:
         _execute(cur, qry['qry'], qry['args'])
-    except MySQLdb.OperationalError as exc:
+    except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)

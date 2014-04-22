@@ -64,10 +64,51 @@ def host_to_ip(host):
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname(host)
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
+
+        if family == socket.AF_INET:
+            ip, port = sockaddr
+        elif family == socket.AF_INET6:
+            ip, port, flow_info, scope_id = sockaddr
+
     except Exception:
         ip = None
     return ip
+
+
+def get_fqhostname():
+    '''
+    Returns the fully qualified hostname
+
+    CLI Example::
+
+        salt '*' network.get_fqhostname
+    '''
+    h_name = socket.gethostname()
+    if h_name.find('.') >= 0:
+        return h_name
+    else:
+        h_fqdn = socket.getfqdn()
+        try:
+            addrinfo = socket.getaddrinfo(
+                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+                socket.SOL_TCP, socket.AI_CANONNAME
+            )[0]
+        except IndexError:
+            # Handle possible empty struct returns
+            return h_fqdn
+        except socket.gaierror:
+            return h_fqdn
+        else:
+            # Struct contanis the following elements:
+            #     family, socktype, proto, canonname, sockaddr
+            try:
+                # Prevent returning an empty string by falling back to
+                # socket.getfqdn()
+                return addrinfo[3] or h_fqdn
+            except IndexError:
+                return h_fqdn
 
 
 def ip_to_host(ip):

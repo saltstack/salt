@@ -4,32 +4,36 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import print_function
+import copy
+import getpass
+import json
+import logging
+import multiprocessing
 import os
+import re
+import shutil
 import tarfile
 import tempfile
-import json
-import getpass
-import shutil
-import copy
 import time
-import multiprocessing
-import re
-import logging
 import yaml
 
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
+import salt.config
+import salt.exceptions
+import salt.loader
+import salt.minion
+import salt.roster
+import salt.state
 import salt.utils
+import salt.utils.args
+import salt.utils.event
+import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.event
-import salt.roster
-import salt.state
-import salt.loader
-import salt.minion
-import salt.exceptions
-import salt.config
+from salt._compat import string_types
 
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
@@ -59,12 +63,12 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
          MISS_PKG="$MISS_PKG tar"
       fi
 
-      for py_candidate in \\
-            python27      \\
-            python2.7     \\
-            python26      \\
-            python2.6     \\
-            python2       \\
+      for py_candidate in \
+            python27      \
+            python2.7     \
+            python26      \
+            python2.6     \
+            python2       \
             python        ;
       do
          command -v $py_candidate >/dev/null
@@ -83,10 +87,11 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
       SALT="/tmp/.salt/salt-call"
       if [ "{{2}}" = "md5" ]
       then
-         for md5_candidate in \\
-            md5sum            \\
-            md5               \\
-            csum              ;
+         for md5_candidate in \
+            md5sum            \
+            md5               \
+            csum              \
+            digest            ;
          do
             command -v $md5_candidate >/dev/null
             if [ $? -eq 0 ]
@@ -96,7 +101,8 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
             fi
          done
       else
-         if [ $(command -v "{{2}}" >/dev/null) ]
+         command -v "{{2}}" >/dev/null
+         if [ $? -eq 0 ]
          then
             SUMCHECK="{{2}}"
          fi
@@ -121,11 +127,15 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
       elif [ "$SUMCHECK" = "csum" ]
       then
          SUMCHECK="csum -h MD5"
+      # MD5 check for Solaris systems.
+      elif [ "$SUMCHECK" = "digest" ]
+      then
+         SUMCHECK="digest -a md5"
       fi
 
       if [ -f "$SALT" ]
       then
-         if [ "$(cat /tmp/.salt/version)" != "{0}" ]
+         if [ "`cat /tmp/.salt/version`" != "{0}" ]
          then
             {{0}} rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
             if [ $? -ne 0 ]; then
@@ -136,7 +146,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
             exit 1
          fi
       else
-         PY_TOO_OLD="$($PYTHON -c "import sys; print sys.hexversion < 0x02060000")"
+         PY_TOO_OLD=`$PYTHON -c "import sys; print sys.hexversion < 0x02060000"`
          if [ "$PY_TOO_OLD" = "True" ];
          then
             echo "Python too old" >&2
@@ -144,7 +154,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
          fi
          if [ -f /tmp/.salt/salt-thin.tgz ]
          then
-             if [ "$($SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ )" = "{{3}}" ]
+             if [ "`$SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ `" = "{{3}}" ]
              then
                  cd /tmp/.salt/ && gunzip -c salt-thin.tgz | {{0}} tar opxvf -
              else
@@ -176,16 +186,20 @@ class SSH(object):
                 opts['interface'],
                 opts['publish_port'],
                 opts['ret_port']):
-            self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+            self.event = salt.utils.event.get_event(
+                    'master',
+                    opts['sock_dir'],
+                    opts['transport'],
+                    listen=False)
         else:
             self.event = None
         self.opts = opts
-        tgt_type = self.opts['selected_target_option'] \
+        self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
-                tgt_type)
+                self.tgt_type)
         priv = self.opts.get(
                 'ssh_priv',
                 os.path.join(
@@ -252,7 +266,7 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], basestring):
+        if not isinstance(ret[host], string_types):
             if self.opts.get('ssh_key_deploy'):
                 target = self.targets[host]
                 if 'passwd' in target:
@@ -287,9 +301,9 @@ class SSH(object):
                 **target)
         if salt.utils.which('ssh-copy-id'):
             # we have ssh-copy-id, use it!
-            single.shell.copy_id()
+            stdout, stderr, retcode = single.shell.copy_id()
         else:
-            ret = single.run()
+            stdout, stderr, retcode = single.run()
         if re_run:
             target.pop('passwd')
             single = Single(
@@ -305,7 +319,9 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        return ret
+        if os.EX_OK != retcode:
+            return {host: stderr}
+        return {host: stdout}
 
     def handle_routine(self, que, opts, host, target):
         '''
@@ -451,6 +467,41 @@ class SSH(object):
                 self.opts['cachedir'],
                 self.opts['hash_type'],
                 self.opts['user'])
+
+        jid_dir = salt.utils.jid_dir(jid, self.opts['cachedir'], self.opts['hash_type'])
+        # Save the invocation information
+        arg_str = self.opts['arg_str']
+
+        if self.opts['raw_shell']:
+            fun = 'ssh._raw'
+            args = [arg_str]
+        else:
+            cmd_args = arg_str.split(None, 1)
+            fun = cmd_args.pop()
+            args = []
+            if cmd_args:
+                args = [cmd_args]
+
+        job_load = {
+            'jid': jid,
+            'tgt_type': self.tgt_type,
+            'tgt': self.opts['tgt'],
+            'user': self.opts['user'],
+            'fun': fun,
+            'arg': args,
+            }
+        self.serial.dump(
+                job_load,
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
+                )
+        # save the targets to a cache so we can see them in the UI
+        targets = self.targets.keys()
+        targets.sort()
+        self.serial.dump(
+                targets,
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
+                )
+
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -458,7 +509,7 @@ class SSH(object):
             print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
-            #self.cache_job(jid, host, ret)
+            self.cache_job(jid, host, ret)
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
@@ -496,7 +547,7 @@ class Single(object):
             **kwargs):
         self.opts = opts
         self.arg_str = arg_str
-        self.fun, self.arg = self.__arg_comps()
+        self.fun, self.arg, self.kwargs = self.__arg_comps()
         self.id = id_
 
         args = {'host': host,
@@ -524,8 +575,16 @@ class Single(object):
         '''
         comps = self.arg_str.split()
         fun = comps[0] if comps else ''
-        arg = comps[1:]
-        return fun, arg
+        args = comps[1:]
+        s_args = []
+        kws = {}
+        for arg in args:
+            if '=' in arg:
+                (key, val) = arg.split('=')
+                kws[key] = val
+            else:
+                s_args.append(arg)
+        return fun, s_args, kws
 
     def deploy(self):
         '''
@@ -630,7 +689,7 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
-        ret = json.dumps(self.wfuncs[self.fun](*self.arg))
+        ret = json.dumps(self.wfuncs[self.fun](*self.arg, **self.kwargs))
         return ret, '', None
 
     def cmd(self):
@@ -644,8 +703,10 @@ class Single(object):
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
         if self.arg_str.startswith('state.sls'):
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                    self.sls_seed, self.arg)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.sls_seed,
+                salt.utils.args.parse_input(self.arg)
+            )
             self.sls_seed(*args, **kwargs)
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(

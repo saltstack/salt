@@ -13,7 +13,7 @@ only to the relevant minion.
 
 .. note::
 
-    Grains and Pillar are somtimes confused, just remember that Grains
+    Grains and Pillar are sometimes confused, just remember that Grains
     is data about a minion which is stored or generated from the minion.
     This is why information like the OS and CPU type are found in Grains.
     Pillar is information about a minion or many minions stored or generated
@@ -76,7 +76,7 @@ To start setting up the pillar, the /srv/pillar directory needs to be present:
 
     mkdir /srv/pillar
 
-Now ceate a simple top file, following the same format as the top file used for
+Now create a simple top file, following the same format as the top file used for
 states:
 
 ``/srv/pillar/top.sls``:

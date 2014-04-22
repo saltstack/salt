@@ -30,6 +30,8 @@ Connection module for Amazon S3
 
     This module should be usable to query other S3-like services, such as
     Eucalyptus.
+
+:depends: requests
 '''
 
 # Import Python libs
@@ -46,7 +48,7 @@ def __virtual__():
     '''
     Should work on any modern Python installation
     '''
-    return 's3'
+    return True
 
 
 def delete(bucket, path=None, action=None, key=None, keyid=None,

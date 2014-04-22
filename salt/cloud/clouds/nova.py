@@ -62,11 +62,32 @@ examples could be set up in the cloud configuration at
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
 
+Note: For api use, you will need an auth plugin.  The base novaclient does not
+support apikeys, but some providers such as rackspace have extended keystone to
+accept them
+
 .. code-block:: yaml
 
     my-openstack-config:
       # Ignore IP addresses on this network for bootstrap
       ignore_cidr: 192.168.50.0/24
+
+    my-nova:
+      identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
+      compute_region: IAD
+      user: myusername
+      password: mypassword
+      tenant: <userid>
+      provider: nova
+
+    my-api:
+      identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
+      compute_region: IAD
+      user: myusername
+      api_key: <api_key>
+      os_auth_plugin: rackspace
+      tenant: <userid>
+      provider: nova
 
 '''
 # pylint: disable=E0102
@@ -88,6 +109,7 @@ from salt.utils.openstack import nova
 HASNOVA = False
 try:
     from novaclient.v1_1 import client  # pylint: disable=W0611
+    import novaclient.exceptions
     HASNOVA = True
 except ImportError:
     pass
@@ -122,8 +144,6 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
 script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
@@ -136,13 +156,8 @@ def __virtual__():
     Check for Nova configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Nova cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Openstack Nova cloud module')
     return True
 
 
@@ -162,15 +177,19 @@ def get_conn():
     '''
     vm_ = get_configured_provider()
 
-    kwargs = {
-        'username': vm_['user'],
-        'api_key': vm_['password'],
-        'project_id': vm_['tenant'],
-        'auth_url': vm_['identity_url'],
-        'region_name': vm_['compute_region']
-    }
+    kwargs = vm_.copy()  # pylint: disable=E1103
 
-    return nova.SaltNova(**kwargs)
+    kwargs['username'] = vm_['user']
+    kwargs['project_id'] = vm_['tenant']
+    kwargs['auth_url'] = vm_['identity_url']
+    kwargs['region_name'] = vm_['compute_region']
+
+    if 'password' in vm_:
+        kwargs['password'] = vm_['password']
+
+    conn = nova.SaltNova(**kwargs)
+
+    return conn
 
 
 def get_image(conn, vm_):
@@ -187,12 +206,19 @@ def get_image(conn, vm_):
         if vm_image in (image_list[img]['id'], img):
             return image_list[img]['id']
 
-    raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
-    )
+    try:
+        image = conn.image_show(vm_image)
+        return image['id']
+    except novaclient.exceptions.NotFound as exc:
+        raise SaltCloudNotFound(
+            'The specified image, {0!r}, could not be found: {1}'.format(
+                vm_image,
+                exc.message
+            )
+        )
 
 
-def show_instance(name, call=None, **kwargs):
+def show_instance(name, call=None):
     '''
     Show the details from the provider concerning an instance
     '''
@@ -311,6 +337,7 @@ def destroy(name, conn=None, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     if not conn:
@@ -329,8 +356,8 @@ def destroy(name, conn=None, call=None):
             flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
-        client = salt.client.LocalClient(__opts__['conf_file'])
-        minions = client.cmd(name, 'mine.flush')
+        salt_client = salt.client.get_local_client(__opts__['conf_file'])
+        minions = salt_client.cmd(name, 'mine.flush')
 
     log.info('Clearing Salt Mine: {0}, {1}'.format(
         name,
@@ -341,12 +368,12 @@ def destroy(name, conn=None, call=None):
     if ret:
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
-        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
         salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
+            transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
             salt.utils.cloud.remove_sshkey(node.public_ips[0])
@@ -388,6 +415,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -476,6 +504,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image_id'],
                     'size': kwargs['flavor_id']}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -635,6 +664,7 @@ def create(vm_):
     )
 
     deploy_kwargs = {
+         'opts': __opts__,
         'host': ip_address,
         'name': vm_['name'],
         'sock_dir': __opts__['sock_dir'],
@@ -740,6 +770,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -778,6 +809,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -891,14 +923,13 @@ def volume_delete(name, **kwargs):
     return conn.volume_delete(name)
 
 
-def volume_detach(name, server_name, **kwargs):
+def volume_detach(name, **kwargs):
     '''
     Detach block volume
     '''
     conn = get_conn()
     return conn.volume_detach(
         name,
-        server_name,
         timeout=300
     )
 

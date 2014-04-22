@@ -5,40 +5,14 @@ Installation
 ============
 .. seealso::
 
-    :doc:`Installing Salt for development </topics/hacking>` and contributing
-    to the project.
+    :doc:`Installing Salt for development </topics/development/hacking>` and
+    contributing to the project.
 
 Quick Install
 -------------
 
-On most distributions, you can set up a **Salt Minion** with the bootstrap script:
-
-.. code-block:: bash
-
-    curl -L http://bootstrap.saltstack.org | sudo sh
-
-or, to connect immediately to a running Salt Master:
-
-.. code-block:: bash
-
-    curl -L http://bootstrap.saltstack.org | sudo sh -s -- -A saltmaster.example.com
-
-To set up a **Salt Master**:
-
-.. code-block:: bash
-
-    curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M -N
-
-Currently the install script has been tested to work on:
-
-* Ubuntu 10.x/11.x/12.x
-* Debian 6.x
-* CentOS 6.3
-* Fedora
-* Arch
-* FreeBSD 9.0
-
-See `Salt Bootstrap`_ for more information.
+On most distributions, you can set up a **Salt Minion** with the
+`Salt Bootstrap`_.
 
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 

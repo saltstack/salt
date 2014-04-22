@@ -8,6 +8,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.state
 from salt.utils.doc import strip_rst as _strip_rst
 
 log = logging.getLogger(__name__)
@@ -141,3 +142,56 @@ def argspec(module=''):
         salt '*' sys.argspec
     '''
     return salt.utils.argspec_report(__salt__, module)
+
+
+def list_state_functions(*args, **kwargs):
+    '''
+    List the functions for all state modules. Optionally, specify a state
+    module or modules from which to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_state_functions
+        salt '*' sys.list_state_functions file
+        salt '*' sys.list_state_functions pkg user
+    '''
+    ### NOTE: **kwargs is used here to prevent a traceback when garbage
+    ###       arguments are tacked on to the end.
+
+    st_ = salt.state.State(__opts__)
+    if not args:
+        # We're being asked for all functions
+        return sorted(st_.states)
+
+    names = set()
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            module = module + '.' if not module.endswith('.') else module
+        for func in st_.states:
+            if func.startswith(module):
+                names.add(func)
+    return sorted(names)
+
+
+def list_state_modules():
+    '''
+    List the modules loaded on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_modules
+    '''
+    st_ = salt.state.State(__opts__)
+    modules = set()
+    for func in st_.states:
+        comps = func.split('.')
+        if len(comps) < 2:
+            continue
+        modules.add(comps[0])
+    return sorted(modules)

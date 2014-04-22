@@ -24,9 +24,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_extension' if (
-        'postgres.create_extension' in __salt__
-    ) else False
+    return 'postgres.create_extension' in __salt__
 
 
 def present(name,

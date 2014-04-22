@@ -34,6 +34,13 @@ import warnings
 import yaml
 from calendar import month_abbr as months
 
+# Try to load pwd, fallback to getpass if unsuccessful
+try:
+    import pwd
+except ImportError:
+    import getpass
+    pwd = None
+
 try:
     import timelib
     HAS_TIMELIB = True
@@ -65,6 +72,20 @@ try:
 except ImportError:
     # Running as purely local
     pass
+
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    # grp is not available on windows
+    HAS_GRP = False
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
 
 # Import salt libs
 import salt._compat
@@ -100,9 +121,6 @@ WHITE = '\033[1;37m'
 DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
-
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -225,6 +243,16 @@ def get_context(template, line, num_lines=5, marker=None):
     buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
+
+
+def get_user():
+    '''
+    Get the current user
+    '''
+    if pwd is not None:
+        return pwd.getpwuid(os.geteuid()).pw_name
+    else:
+        return getpass.getuser()
 
 
 def daemonize(redirect_out=True):
@@ -675,7 +703,7 @@ def backup_minion(path, bkroot):
     dname, bname = os.path.split(path)
     fstat = os.stat(path)
     msecs = str(int(time.time() * 1000000))[-6:]
-    stamp = time.asctime().replace(' ', '_')
+    stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')
     stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
     bkpath = os.path.join(bkroot,
                           dname[1:],
@@ -1359,30 +1387,23 @@ def check_state_result(running):
     '''
     if not isinstance(running, dict):
         return False
+
     if not running:
         return False
-    for host in running:
-        if not isinstance(running[host], dict):
+
+    for state_result in running.itervalues():
+        if not isinstance(state_result, dict):
+            # return false when hosts return a list instead of a dict
             return False
 
-        if host.find('_|-') >= 3:
-            # This is a single ret, no host associated
-            rets = running[host]
-        else:
-            rets = running[host].values()
-
-        if isinstance(rets, dict) and 'result' in rets:
-            if rets['result'] is False:
+        if 'result' in state_result:
+            if state_result.get('result', False) is False:
                 return False
             return True
 
-        for ret in rets:
-            if not isinstance(ret, dict):
-                return False
-            if 'result' not in ret:
-                return False
-            if ret['result'] is False:
-                return False
+        # Check nested state results
+        return check_state_result(state_result)
+
     return True
 
 
@@ -1618,26 +1639,6 @@ def namespaced_function(function, global_dict, defaults=None):
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
-
-
-def parse_kwarg(string_):
-    '''
-    Parses the string and looks for the kwarg format:
-    "{argument name}={argument value}"
-    For example:
-    "my_message=Hello world"
-    The argument name must have a valid python identifier format (it should
-    match the following regular expression: [^\\d\\W]\\w*).
-    If the string matches, then this function returns the following tuple:
-    ({argument name}, {value})
-    Or else it returns:
-    (None, None)
-    '''
-    match = KWARG_REGEX.match(string_)
-    if match:
-        return match.groups()
-    else:
-        return None, None
 
 
 def _win_console_event_handler(event):
@@ -2094,3 +2095,90 @@ def repack_dictlist(data):
                 return {}
             ret.update(element)
     return ret
+
+
+def get_group_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group names of which the user
+    is a member.
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
+    group_names = None
+    ugroups = set()
+    if not isinstance(user, string_types):
+        raise Exception
+    if hasattr(os, 'getgrouplist'):
+        # Try os.getgrouplist, available in python >= 3.3
+        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        try:
+            group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+        except Exception:
+            pass
+    else:
+        # Try pysss.getgrouplist
+        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        try:
+            import pysss
+            group_names = list(pysss.getgrouplist(user))
+        except Exception:
+            pass
+    if group_names is None:
+        # Fall back to generic code
+        # Include the user's default group to behave like
+        # os.getgrouplist() and pysss.getgrouplist() do
+        log.trace('Trying generic group list for {0!r}'.format(user))
+        group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            if default_group not in group_names:
+                group_names.append(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+    ugroups.update(group_names)
+    if include_default is False:
+        # Historically, saltstack code for getting group lists did not
+        # include the default group. Some things may only want
+        # supplemental groups, so include_default=False omits the users
+        # default group.
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            ugroups.remove(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
+    return sorted(ugroups)
+
+
+def get_group_dict(user=None, include_default=True):
+    '''
+    Returns a dict of all of the system groups as keys, and group ids
+    as values, of which the user is a member.
+    E.g: {'staff': 501, 'sudo': 27}
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty dict
+        return {}
+    group_dict = {}
+    group_names = get_group_list(user, include_default=include_default)
+    for group in group_names:
+        group_dict.update({group: grp.getgrnam(group).gr_gid})
+    return group_dict
+
+
+def get_gid_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group IDs of which the user
+    is a member.
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
+    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    return sorted(set(gid_list))

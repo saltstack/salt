@@ -30,8 +30,8 @@ Available Functions
   .. code-block:: yaml
 
       corp/mysuperdocker_img:
-          docker.built:
-              - path: /path/to/dir/container/Dockerfile
+        docker.built:
+          - path: /path/to/dir/container/Dockerfile
 
 - pulled
 
@@ -45,52 +45,59 @@ Available Functions
   .. code-block:: yaml
 
       mysuperdocker-container:
-          docker.installed:
-              - name: mysuperdocker
-              - hostname: superdocker
-              - image: corp/mysuperdocker_img
+        docker.installed:
+          - name: mysuperdocker
+          - hostname: superdocker
+          - image: corp/mysuperdocker_img
 - running
 
   .. code-block:: yaml
 
       my_service:
-          docker.running:
-              - container: mysuperdocker
-              - port_bindings:
-                  "5000/tcp":
-                      HostIp: ""
-                      HostPort: "5000"
+        docker.running:
+          - container: mysuperdocker
+          - port_bindings:
+              "5000/tcp":
+                  HostIp: ""
+                  HostPort: "5000"
+
+  .. note::
+
+      The ``port_bindings`` argument above is a dictionary. Note the
+      double-indentation, this is required for PyYAML to load the data
+      structure properly as a dictionary. More information can be found
+      :ref:`here <nested-dict-indentation>`
 
 
 - absent
 
   .. code-block:: yaml
 
-       mys_old_uperdocker:
-          docker.absent
+      mys_old_uperdocker:
+        docker.absent
 
 - run
 
   .. code-block:: yaml
 
-       /finish-install.sh:
-           docker.run:
-               - container: mysuperdocker
-               - unless: grep -q something /var/log/foo
-               - docker_unless: grep -q done /install_log
+      /finish-install.sh:
+        docker.run:
+          - container: mysuperdocker
+          - unless: grep -q something /var/log/foo
+          - docker_unless: grep -q done /install_log
 
 .. note::
 
-    The docker modules are named `dockerio` because
+    The docker modules are named ``dockerio`` because
     the name 'docker' would conflict with the underlying docker-py library.
 
     We should add magic to all methods to also match containers by name
     now that the 'naming link' stuff has been merged in docker.
     This applies for example to:
 
-        - running
-        - absent
-        - run
+    - running
+    - absent
+    - run
 
 
 '''
@@ -116,15 +123,6 @@ def __virtual__():
 INVALID_RESPONSE = 'We did not get an acceptable answer from docker'
 VALID_RESPONSE = ''
 NOTSET = object()
-#Use a proxy mapping to allow queries & updates after the initial grain load
-MAPPING_CACHE = {}
-FN_CACHE = {}
-
-
-def __salt(fn):
-    if not fn in FN_CACHE:
-        FN_CACHE[fn] = __salt__[fn]
-    return FN_CACHE[fn]
 
 
 def _ret_status(exec_status=None,
@@ -188,8 +186,7 @@ def mod_watch(name, sfun=None, *args, **kw):
                                     name=name)
         installed_status = installed(name=name, **kw)
         result = installed_status['result'] and remove_status['result']
-        comment = '\n'.join((remove_status['comment'],
-                             installed_status['comment']))
+        comment = remove_status['comment']
         status = _ret_status(installed_status, name=name,
                              result=result,
                              changes={name: result},
@@ -230,17 +227,18 @@ def pulled(name, force=False, *args, **kwargs):
     force
         Pull even if the image is already pulled
     '''
-    ins = __salt('docker.inspect_image')
-    iinfos = ins(name)
-    if iinfos['status'] and not force:
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
-    previous_id = iinfos['out']['id'] if iinfos['status'] else None
-    func = __salt('docker.pull')
-    returned = func(name)
+    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    pull = __salt__['docker.pull']
+    returned = pull(name)
     if previous_id != returned['id']:
-        changes = {name: True}
+        changes = {name: {'old': previous_id,
+                          'new': returned['id']}}
     else:
         changes = {}
     return _ret_status(returned, name, changes=changes)
@@ -265,15 +263,15 @@ def built(name,
         or filesystem path to the dockerfile
 
     '''
-    ins = __salt('docker.inspect_image')
-    iinfos = ins(name)
-    if iinfos['status'] and not force:
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
-                name, iinfos['out']['id']))
-    previous_id = iinfos['out']['id'] if iinfos['status'] else None
-    func = __salt('docker.build')
+                name, image_infos['out']['id']))
+    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    build = __salt__['docker.build']
     kw = dict(tag=name,
               path=path,
               quiet=quiet,
@@ -281,12 +279,15 @@ def built(name,
               rm=rm,
               timeout=timeout,
               )
-    returned = func(**kw)
+    returned = build(**kw)
     if previous_id != returned['id']:
-        changes = {name: True}
+        changes = {name: {'old': previous_id,
+                          'new': returned['id']}}
     else:
         changes = {}
-    return _ret_status(returned, name, changes=changes)
+    return _ret_status(exec_status=returned,
+                       name=name,
+                       changes=changes)
 
 
 def installed(name,
@@ -336,9 +337,9 @@ def installed(name,
         This command does not verify that the named container
         is running the specified image.
     '''
-    ins_image = __salt('docker.inspect_image')
-    ins_container = __salt('docker.inspect_container')
-    create = __salt('docker.create_container')
+    ins_image = __salt__['docker.inspect_image']
+    ins_container = __salt__['docker.inspect_container']
+    create = __salt__['docker.create_container']
     iinfos = ins_image(image)
     if not iinfos['status']:
         return _invalid(comment='image "{0}" does not exist'.format(image))
@@ -417,7 +418,7 @@ def absent(name):
         # destroy if we found meat to do
         if is_running:
             __salt__['docker.stop'](cid)
-            is_running = __salt('docker.is_running')(cid)
+            is_running = __salt__['docker.is_running'](cid)
             if is_running:
                 return _invalid(
                     comment=('Container {!r}'
@@ -441,7 +442,7 @@ def present(name):
     name:
         container id
     '''
-    ins_container = __salt('docker.inspect_container')
+    ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
@@ -453,14 +454,13 @@ def present(name):
 def run(name,
         cid=None,
         hostname=None,
-        stateful=False,
         onlyif=None,
         unless=None,
         docked_onlyif=None,
         docked_unless=None,
         *args, **kwargs):
-    '''Run a command in a specific container
-
+    '''
+    Run a command in a specific container
 
     You can match by either name or hostname
 
@@ -472,9 +472,6 @@ def run(name,
 
     state_id
         state_id
-
-    stateful
-        stateful mode
 
     onlyif
         Only execute cmd if statement on the host returns 0
@@ -490,9 +487,10 @@ def run(name,
 
     '''
     if hostname:
-        salt.utils.warn_until((0, 19),
-                              'The argument \'hostname\' argument'
-                              ' has been deprecated.')
+        salt.utils.warn_until(
+            'Helium',
+            'The \'hostname\' argument has been deprecated.'
+        )
     retcode = __salt__['docker.retcode']
     drun_all = __salt__['docker.run_all']
     valid = functools.partial(_valid, name=name)
@@ -565,7 +563,7 @@ def running(name, container=None, port_bindings=None, binds=None,
         .. code-block:: yaml
 
             - binds:
-                - /var/log/service: /var/log/service
+                /var/log/service: /var/log/service
 
     publish_all_ports
 
@@ -588,7 +586,7 @@ def running(name, container=None, port_bindings=None, binds=None,
                     HostIp: ""
                     HostPort: "5000"
     '''
-    is_running = __salt('docker.is_running')(container)
+    is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
             comment='Container {!r} is started'.format(container))

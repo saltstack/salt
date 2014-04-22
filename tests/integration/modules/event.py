@@ -61,7 +61,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MinionEvent(**self.minion_opts)
+            me = event.MinionEvent(self.minion_opts)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )
@@ -90,7 +90,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MinionEvent(**self.sub_minion_opts)
+            me = event.MinionEvent(self.sub_minion_opts)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )

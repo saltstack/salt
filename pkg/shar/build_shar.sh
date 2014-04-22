@@ -7,7 +7,7 @@
 # This script will use GNU sharutils to build an installable shar archive, with
 # an install prefix of "/opt". This has a couple uses:
 #
-#   1. Installing salt (by cd'ing to root and running "sh /path/to/sharfile")
+#   1. Installing salt (by su'ing to root and running "sh /path/to/sharfile")
 #   2. To be used as a basis for creating your own salt rpm/deb.
 #
 # It will fetch libzmq and build it as a pyzmq extension.
@@ -143,7 +143,7 @@ function _unpack_salt_tarball {
 }
 
 function _usage {
-    printf "USAGE: build_shar.sh [-i <build_id>] [-r <requirements file> |-s <alternate salt tarball>|-v <version from pypi>]\n\n" 1>&2
+    printf "USAGE: build_shar.sh [-i <build_id>] [-r <requirements file> | -s <alternate salt tarball> | -v <version from pypi>]\n\n" 1>&2
     exit 2
 }
 

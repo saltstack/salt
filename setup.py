@@ -20,6 +20,7 @@ from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
+from distutils.command.install_lib import install_lib
 # pylint: enable=E0611
 
 try:
@@ -173,7 +174,7 @@ class CloudSdist(sdist):
                     )
                     with open(deploy_path, 'w') as fp_:
                         fp_.write(req.read())
-                except (OSError, IOError), err:
+                except (OSError, IOError) as err:
                     log.error(
                         'Failed to write the updated script: {0}'.format(err)
                     )
@@ -380,6 +381,28 @@ class Install(install):
         install.run(self)
 
 
+class InstallLib(install_lib):
+    def run(self):
+        executables = [
+                'salt/templates/git/ssh-id-wrapper',
+                'salt/templates/lxc/salt_tarball',
+                ]
+        install_lib.run(self)
+
+        # input and outputs match 1-1
+        inp = self.get_inputs()
+        out = self.get_outputs()
+        chmod = []
+
+        for idx, inputfile in enumerate(inp):
+            for executeable in executables:
+                if inputfile.endswith(executeable):
+                    chmod.append(idx)
+        for idx in chmod:
+            filename = out[idx]
+            os.chmod(filename, 0755)
+
+
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
@@ -448,23 +471,21 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.search',
                              'salt.states',
                              'salt.tops',
+                             'salt.templates',
                              'salt.transport',
-                             'salt.transport.road',
-                             'salt.transport.road.raet',
-                             'salt.transport.table',
-                             'salt.transport.table.handshake',
-                             'salt.transport.table.public',
-                             'salt.transport.table.secret',
                              'salt.utils',
                              'salt.utils.decorators',
                              'salt.utils.openstack',
                              'salt.utils.validate',
+                             'salt.utils.serializers',
                              'salt.wheel',
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
-                                    'virt/*.jinja'
+                                    'virt/*.jinja',
+                                    'git/*',
+                                    'lxc/*',
                                     ],
                                  'salt.daemons.flo': [
                                     '*.flo'
@@ -488,6 +509,7 @@ SETUP_KWARGS = {'name': NAME,
 
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
+    SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
     #SETUP_KWARGS['packages'].extend(['salt.cloud',
     #                                 'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
@@ -549,6 +571,7 @@ if IS_WINDOWS_PLATFORM:
         '_winreg',
         'wmi',
         'site',
+        'psutil',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):

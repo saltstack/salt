@@ -148,13 +148,14 @@ __docformat__ = 'restructuredtext en'
 
 import datetime
 import json
+import logging
 import os
 import re
 import traceback
 import shutil
 
 from salt.modules import cmdmod
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 import salt.utils
 from salt.utils.odict import OrderedDict
@@ -165,7 +166,8 @@ try:
 except ImportError:
     HAS_DOCKER = False
 
-import logging
+HAS_NSENTER = bool(salt.utils.which('nsenter'))
+
 
 log = logging.getLogger(__name__)
 
@@ -728,7 +730,7 @@ def port(container, private_port, *args, **kwargs):
     try:
         port_info = client.port(
             _get_container_infos(container)['id'],
-            port)
+            private_port)
         valid(status, id=container, out=port_info)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
@@ -905,6 +907,10 @@ def start(container, binds=None, ports=None, port_bindings=None,
         binds = {}
     if not ports:
         ports = {}
+
+    if not isinstance(binds, dict):
+        raise SaltInvocationError('binds must be formatted as a dictionary')
+
     client = _get_client()
     status = base_status.copy()
     try:
@@ -912,9 +918,15 @@ def start(container, binds=None, ports=None, port_bindings=None,
         if not is_running(container):
             bindings = None
             if port_bindings is not None:
-                bindings = {}
-                for k, v in port_bindings.iteritems():
-                    bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+                try:
+                    bindings = {}
+                    for k, v in port_bindings.iteritems():
+                        bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+                except AttributeError:
+                    raise SaltInvocationError(
+                        'port_bindings must be formatted as a dictionary of '
+                        'dictionaries'
+                    )
             client.start(dcontainer, binds=binds, port_bindings=bindings,
                          lxc_conf=lxc_conf,
                          publish_all_ports=publish_all_ports, links=links,
@@ -1424,11 +1436,15 @@ def build(path=None,
                     valid(status, id=image_id, out=out, comment='Image built')
                 else:
                     invalid(status, id=image_id, out=out)
+            else:
+                raise NotImplementedError(
+                    'Unknown response type for build() {0!r}'.format(ret))
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
-            return status
+    else:
+        invalid(status, comment='`path` or `fileobj` must be given')
     return status
 
 
@@ -1749,42 +1765,59 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     '''
     Wrapper to a cmdmod function
 
-    Idea is to prefix the call to cmdrun with the relevant lxc-attach to
+    Idea is to prefix the call to cmdrun with the relevant driver to
     execute inside a container context
+
+    .. note::
+
+        Only lxc and native drivers are implemented.
 
     status
         status object
     container
-        container id or grain to execute in
+        container id to execute in
     func
         cmd function to execute
     cmd
-        command to execute in container
+        command to execute in the container
     '''
+
+    client = _get_client()
+    # For old version of docker. lxc was the only supported driver.
+    # We can safely hardcode it
+    driver = client.info().get('ExecutionDriver', 'lxc-')
+    container_info = _get_container_infos(container)
+    container_id = container_info['id']
+    if driver.startswith('lxc-'):
+        full_cmd = 'lxc-attach -n {0} -- {1}'.format(container_id, cmd)
+    elif driver.startswith('native-') and HAS_NSENTER:
+        # http://jpetazzo.github.io/2014/03/23/lxc-attach-nsinit-nsenter-docker-0-9/
+        container_pid = container_info['State']['Pid']
+        if container_pid == 0:
+            invalid(status, id=container, comment='Container is not running')
+            return status
+        full_cmd = ('nsenter --target {pid} --mount --uts --ipc --net --pid'
+                    ' {cmd}'.format(pid=container_pid, cmd=cmd))
+    else:
+        raise NotImplementedError(
+            'Unknown docker ExecutionDriver {0!r}. Or didn\'t found command'
+            ' to attach to the container'.format(driver))
+
+    # now execute the command
+    comment = 'Executed {0}'.format(full_cmd)
     try:
-        cid = _get_container_infos(container)['id']
-        dcmd = 'lxc-attach -n {0} -- {1}'.format(cid, cmd)
-        comment = 'Executed {0}'.format(dcmd)
-        try:
-            f = __salt__[func]
-            ret = f(dcmd, *args, **kwargs)
-            if (
-                (
-                    isinstance(ret, dict)
-                    and (
-                        ('retcode' in ret)
-                        and (ret['retcode'] != 0)
-                    )
-                )
-                or (func == 'cmd.retcode' and ret != 0)
-            ):
-                return invalid(status, id=container, out=ret, comment=comment)
-            valid(status, id=container, out=ret, comment=comment,)
-        except Exception:
-            invalid(status, id=container,
-                    comment=comment, out=traceback.format_exc())
+        f = __salt__[func]
+        ret = f(full_cmd, *args, **kwargs)
+        if ((isinstance(ret, dict) and
+                ('retcode' in ret) and
+                (ret['retcode'] != 0))
+                or (func == 'cmd.retcode' and ret != 0)):
+            return invalid(status, id=container, out=ret,
+                            comment=comment)
+        valid(status, id=container, out=ret, comment=comment,)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        invalid(status, id=container,
+                comment=comment, out=traceback.format_exc())
     return status
 
 

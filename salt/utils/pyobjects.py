@@ -5,11 +5,16 @@
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 '''
+import inspect
+import logging
+
 from collections import namedtuple
 
 from salt.utils.odict import OrderedDict
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
+
+log = logging.getLogger(__name__)
 
 
 class StateException(Exception):
@@ -24,76 +29,101 @@ class InvalidFunction(StateException):
     pass
 
 
-class StateRegistry(object):
+class Registry(object):
     '''
     The StateRegistry holds all of the states that have been created.
     '''
-    def __init__(self):
-        self.empty()
+    states = OrderedDict()
+    requisites = []
+    includes = []
+    extends = OrderedDict()
+    enabled = True
 
-    def empty(self):
-        self.states = OrderedDict()
-        self.requisites = []
-        self.includes = []
-        self.extends = OrderedDict()
+    @classmethod
+    def empty(cls):
+        cls.states = OrderedDict()
+        cls.requisites = []
+        cls.includes = []
+        cls.extends = OrderedDict()
 
-    def include(self, *args):
-        self.includes += args
+    @classmethod
+    def include(cls, *args):
+        if not cls.enabled:
+            return
 
-    def salt_data(self):
+        cls.includes += args
+
+    @classmethod
+    def salt_data(cls):
         states = OrderedDict([
             (id_, states_)
-            for id_, states_ in self.states.iteritems()
+            for id_, states_ in cls.states.iteritems()
         ])
 
-        if self.includes:
-            states['include'] = self.includes
+        if cls.includes:
+            states['include'] = cls.includes
 
-        if self.extends:
+        if cls.extends:
             states['extend'] = OrderedDict([
                 (id_, states_)
-                for id_, states_ in self.extends.iteritems()
+                for id_, states_ in cls.extends.iteritems()
             ])
 
-        self.empty()
+        cls.empty()
 
         return states
 
-    def add(self, id_, state, extend=False):
+    @classmethod
+    def add(cls, id_, state, extend=False):
+        if not cls.enabled:
+            return
+
         if extend:
-            attr = self.extends
+            attr = cls.extends
         else:
-            attr = self.states
+            attr = cls.states
 
         if id_ in attr:
             if state.full_func in attr[id_]:
-                raise DuplicateState("A state with id '%s', type '%s' exists" % (
-                    id_,
-                    state.full_func
-                ))
+                raise DuplicateState(
+                    "A state with id '{0!r}', type '{1!r}' exists".format(
+                        id_,
+                        state.full_func
+                    )
+                )
         else:
             attr[id_] = OrderedDict()
 
         # if we have requisites in our stack then add them to the state
-        if len(self.requisites) > 0:
-            for req in self.requisites:
+        if len(cls.requisites) > 0:
+            for req in cls.requisites:
                 if req.requisite not in state.kwargs:
                     state.kwargs[req.requisite] = []
                 state.kwargs[req.requisite].append(req())
 
         attr[id_].update(state())
 
-    def extend(self, id_, state):
-        self.add(id_, state, extend=True)
+    @classmethod
+    def extend(cls, id_, state):
+        cls.add(id_, state, extend=True)
 
-    def make_extend(self, name):
+    @classmethod
+    def make_extend(cls, name):
         return StateExtend(name)
 
-    def push_requisite(self, requisite):
-        self.requisites.append(requisite)
+    @classmethod
+    def push_requisite(cls, requisite):
+        if not cls.enabled:
+            return
 
-    def pop_requisite(self):
-        del self.requisites[-1]
+        cls.requisites.append(requisite)
+
+    @classmethod
+    def pop_requisite(cls):
+        if not cls.enabled:
+            return
+
+        del cls.requisites[-1]
 
 
 class StateExtend(object):
@@ -102,20 +132,19 @@ class StateExtend(object):
 
 
 class StateRequisite(object):
-    def __init__(self, requisite, module, id_, registry):
+    def __init__(self, requisite, module, id_):
         self.requisite = requisite
         self.module = module
         self.id_ = id_
-        self.registry = registry
 
     def __call__(self):
         return {self.module: self.id_}
 
     def __enter__(self):
-        self.registry.push_requisite(self)
+        Registry.push_requisite(self)
 
     def __exit__(self, type, value, traceback):
-        self.registry.pop_requisite()
+        Registry.pop_requisite()
 
 
 class StateFactory(object):
@@ -133,24 +162,25 @@ class StateFactory(object):
 
     The kwargs are passed through to the State object
     '''
-    def __init__(self, module, registry, valid_funcs=None):
+    def __init__(self, module, valid_funcs=None):
         self.module = module
-        self.registry = registry
         if valid_funcs is None:
             valid_funcs = []
         self.valid_funcs = valid_funcs
 
     def __getattr__(self, func):
         if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
-            raise InvalidFunction("The function '%s' does not exist in the "
-                                  "StateFactory for '%s'" % (func, self.module))
+            raise InvalidFunction('The function {0!r} does not exist in the '
+                                  'StateFactory for {1!r}'.format(
+                                      func,
+                                      self.module
+                                  ))
 
         def make_state(id_, **kwargs):
             return State(
                 id_,
                 self.module,
                 func,
-                registry=self.registry,
                 **kwargs
             )
         return make_state
@@ -160,8 +190,7 @@ class StateFactory(object):
         When an object is called it is being used as a requisite
         '''
         # return the correct data structure for the requisite
-        return StateRequisite(requisite, self.module, id_,
-                              registry=self.registry)
+        return StateRequisite(requisite, self.module, id_)
 
 
 class State(object):
@@ -171,26 +200,21 @@ class State(object):
     The id_ is the id of the state, the func is the full name of the salt
     state (ie. file.managed). All the keyword args you pass in become the
     properties of your state.
-
-    The registry is where the state should be stored. It is optional and will
-    use the default registry if not specified.
     '''
 
-    def __init__(self, id_, module, func, registry, **kwargs):
+    def __init__(self, id_, module, func, **kwargs):
         self.id_ = id_
         self.module = module
         self.func = func
         self.kwargs = kwargs
-        self.registry = registry
 
         if isinstance(self.id_, StateExtend):
-            self.registry.extend(self.id_.name, self)
+            Registry.extend(self.id_.name, self)
             self.id_ = self.id_.name
         else:
-            self.registry.add(self.id_, self)
+            Registry.add(self.id_, self)
 
-        self.requisite = StateRequisite('require', self.module, self.id_,
-                                        registry=self.registry)
+        self.requisite = StateRequisite('require', self.module, self.id_)
 
     @property
     def attrs(self):
@@ -221,10 +245,10 @@ class State(object):
 
     @property
     def full_func(self):
-        return "%s.%s" % (self.module, self.func)
+        return "{0!s}.{1!s}".format(self.module, self.func)
 
     def __str__(self):
-        return "%s = %s:%s" % (self.id_, self.full_func, self.attrs)
+        return "{0!s} = {1!s}:{2!s}".format(self.id_, self.full_func, self.attrs)
 
     def __call__(self):
         return {
@@ -232,10 +256,10 @@ class State(object):
         }
 
     def __enter__(self):
-        self.registry.push_requisite(self.requisite)
+        Registry.push_requisite(self.requisite)
 
     def __exit__(self, type, value, traceback):
-        self.registry.pop_requisite()
+        Registry.pop_requisite()
 
 
 class SaltObject(object):
@@ -258,9 +282,9 @@ class SaltObject(object):
 
         # now transform using namedtuples
         self.mods = {}
-        for mod in _mods:
-            mod_object = namedtuple('%sModule' % mod.capitalize(),
-                                    _mods[mod].keys())
+        for mod in _mods.keys():
+            mod_name = '{0}Module'.format(str(mod).capitalize())
+            mod_object = namedtuple(mod_name, _mods[mod].keys())
 
             self.mods[mod] = mod_object(**_mods[mod])
 
@@ -269,3 +293,76 @@ class SaltObject(object):
             raise AttributeError
 
         return self.mods[mod]
+
+
+class MapMeta(type):
+    '''
+    This is the metaclass for our Map class, used for building data maps based
+    off of grain data.
+    '''
+    def __init__(cls, name, bases, nmspc):
+        cls.__set_attributes__()
+        super(MapMeta, cls).__init__(name, bases, nmspc)
+
+    def __set_attributes__(cls):
+        match_groups = OrderedDict([])
+
+        # find all of our filters
+        for item in cls.__dict__:
+            if item[0] == '_':
+                continue
+
+            filt = cls.__dict__[item]
+
+            # only process classes
+            if not inspect.isclass(filt):
+                continue
+
+            # which grain are we filtering on
+            grain = getattr(filt, '__grain__', 'os_family')
+            if grain not in match_groups:
+                match_groups[grain] = OrderedDict([])
+
+            # does the object pointed to have a __match__ attribute?
+            # if so use it, otherwise use the name of the object
+            # this is so that you can match complex values, which the python
+            # class name syntax does not allow
+            if hasattr(filt, '__match__'):
+                match = filt.__match__
+            else:
+                match = item
+
+            match_groups[grain][match] = OrderedDict([])
+            for name in filt.__dict__:
+                if name[0] == '_':
+                    continue
+
+                match_groups[grain][match][name] = filt.__dict__[name]
+
+        attrs = {}
+        for grain in match_groups:
+            filtered = Map.__salt__['grains.filter_by'](match_groups[grain],
+                                                        grain=grain)
+            if filtered:
+                attrs.update(filtered)
+
+        if hasattr(cls, 'merge'):
+            pillar = Map.__salt__['pillar.get'](cls.merge)
+            if pillar:
+                attrs.update(pillar)
+
+        for name in attrs:
+            setattr(cls, name, attrs[name])
+
+
+def need_salt(*a, **k):
+    log.error("Map needs __salt__ set before it can be used!")
+    return {}
+
+
+class Map(object):
+    __metaclass__ = MapMeta
+    __salt__ = {
+        'grains.filter_by': need_salt,
+        'pillar.get': need_salt
+    }

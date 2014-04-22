@@ -45,8 +45,10 @@ def present(name, value):
         ret['result'] = None
         if name not in __grains__:
             ret['comment'] = 'Grain {0} is set to be added'.format(name)
+            ret['changes'] = {'new': name}
         else:
             ret['comment'] = 'Grain {0} is set to be changed'.format(name)
+            ret['changes'] = {'new': name}
         return ret
     grain = __salt__['grains.setval'](name, value)
     if grain != {name: value}:
@@ -98,19 +100,22 @@ def list_present(name, value):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Value {1} is set to be appended to grain {0}'.format(name, value)
+            ret['changes'] = {'new': grain}
             return ret
 
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Grain {0} is set to be added'.format(name)
+        ret['changes'] = {'new': grain}
         return ret
 
-    __salt__['grains.append'](name, value)
+    new_grains = __salt__['grains.append'](name, value)
     if value not in __grains__.get(name):
         ret['result'] = False
         ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
         return ret
     ret['comment'] = 'Append value {1} to grain {0}'.format(name, value)
+    ret['changes'] = {'new': new_grains}
     return ret
 
 
@@ -151,8 +156,10 @@ def list_absent(name, value):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Value {1} is set to be remove from grain {0}'.format(name, value)
+            ret['changes'] = {'old': grain}
             return ret
         __salt__['grains.remove'](name, value)
+        ret['changes'] = {'old': grain}
 
         if value in __grains__.get(name):
             ret['result'] = False

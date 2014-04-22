@@ -30,9 +30,8 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
-from salt.utils import context
+from salt.utils import context, immutabletypes
 from salt._compat import string_types
-from salt.utils.immutabletypes import ImmutableLazyProxy
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
@@ -52,6 +51,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'prereq_in',
     'require',
     'require_in',
+    'onfail',
     'fail_hard',
     'reload_modules',
     'saltenv',
@@ -604,10 +604,11 @@ class State(object):
         Refresh all the modules
         '''
         log.debug('Refreshing modules...')
-        # In case a package has been installed into the current python
-        # process 'site-packages', the 'site' module needs to be reloaded in
-        # order for the newly installed package to be importable.
-        reload(site)
+        if self.opts['grains'].get('os') != 'MacOS':
+            # In case a package has been installed into the current python
+            # process 'site-packages', the 'site' module needs to be reloaded in
+            # order for the newly installed package to be importable.
+            reload(site)
         self.load_modules()
         self.functions['saltutil.refresh_modules']()
 
@@ -998,7 +999,7 @@ class State(object):
                         name = id_
                     else:
                         errors.append(
-                            'Cannot extend ID {0} in "{1}:{2}". It is not '
+                            'Cannot extend ID {0} in \'{1}:{2}\'. It is not '
                             'part of the high state.'.format(
                                 name,
                                 body.get('__env__', 'base'),
@@ -1096,12 +1097,20 @@ class State(object):
         req_in = set([
             'require_in',
             'watch_in',
+            'onfail_in',
+            'onchanges_in',
             'use',
             'use_in',
             'prereq',
             'prereq_in',
             ])
-        req_in_all = req_in.union(set(['require', 'watch']))
+        req_in_all = req_in.union(
+                set([
+                    'require',
+                    'watch',
+                    'onfail',
+                    'onchanges',
+                    ]))
         extend = {}
         errors = []
         for id_, body in high.items():
@@ -1335,9 +1344,9 @@ class State(object):
             # the current state dictionaries.
             # We pass deep copies here because we don't want any misbehaving
             # state module to change these at runtime.
-            '__low__': ImmutableLazyProxy(low),
-            '__running__': ImmutableLazyProxy(running) if running else {},
-            '__lowstate__': ImmutableLazyProxy(chunks) if chunks else {}
+            '__low__': immutabletypes.freeze(low),
+            '__running__': immutabletypes.freeze(running) if running else {},
+            '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
         if low.get('__prereq__'):
@@ -1354,9 +1363,12 @@ class State(object):
             # not found we default to 'base'
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
-            elif cdata['kwargs'].get('env', None) is not None:
+            elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
-                # format_call
+                # format_call.
+                # We check for a string type since module functions which
+                # allow setting the OS environ also make use of the "env"
+                # keyword argument, which is not a string
                 inject_globals['__env__'] = cdata['kwargs']['env']
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
@@ -1462,11 +1474,18 @@ class State(object):
             present = True
         if 'prereq' in low:
             present = True
-        if 'postmortem' in low:
+        if 'onfail' in low:
+            present = True
+        if 'onchanges' in low:
             present = True
         if not present:
             return 'met'
-        reqs = {'require': [], 'watch': [], 'prereq': [], 'postmortem': []}
+        reqs = {
+                'require': [],
+                'watch': [],
+                'prereq': [],
+                'onfail': [],
+                'onchanges': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
@@ -1502,12 +1521,16 @@ class State(object):
                 if tag not in run_dict:
                     fun_stats.add('unmet')
                     continue
-                if r_state == 'postmortem':
+                if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
                         fun_stats.add('fail')
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
+                        fun_stats.add('fail')
+                        continue
+                if r_state == 'onchanges':
+                    if not run_dict[tag]['changes']:
                         fun_stats.add('fail')
                         continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
@@ -1554,7 +1577,7 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get('prerequired'):
             self.active.add(tag)
-        requisites = ['require', 'watch', 'prereq', 'postmortem']
+        requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
             status = self.check_requisite(low, running, chunks, True)
@@ -1593,7 +1616,7 @@ class State(object):
                                 found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch'] or lost['prereq'] or lost['postmortem'] or lost.get('prerequired'):
+            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost['onchanges'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     if not lreqs:
@@ -1624,6 +1647,8 @@ class State(object):
                             if tag not in self.pre:
                                 low['__prereq__'] = True
                                 self.pre[ctag] = self.call(low, chunks, running)
+                                return running
+                            else:
                                 return running
                         elif ctag not in running:
                             log.error('Recursive requisite found')
@@ -1672,11 +1697,13 @@ class State(object):
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
-            running[tag] = {'changes': {},
-                            'result': True,
-                            'comment': 'No changes detected',
-                            '__run_num__': self.__run_num,
-                            '__sls__': low['__sls__']}
+            pre_ret = {'changes': {},
+                       'result': True,
+                       'comment': 'No changes detected',
+                       '__run_num__': self.__run_num,
+                       '__sls__': low['__sls__']}
+            running[tag] = pre_ret
+            self.pre[tag] = pre_ret
             self.__run_num += 1
         else:
             if low.get('__prereq__'):
@@ -1964,19 +1991,22 @@ class BaseHighState(object):
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
                         continue
-                    for tgt in targets:
-                        if tgt not in top[saltenv]:
-                            top[saltenv][tgt] = ctop[saltenv][tgt]
-                            continue
-                        matches = []
-                        states = set()
-                        for comp in top[saltenv][tgt]:
-                            if isinstance(comp, dict):
-                                matches.append(comp)
-                            if isinstance(comp, string_types):
-                                states.add(comp)
-                        top[saltenv][tgt] = matches
-                        top[saltenv][tgt].extend(list(states))
+                    try:
+                        for tgt in targets:
+                            if tgt not in top[saltenv]:
+                                top[saltenv][tgt] = ctop[saltenv][tgt]
+                                continue
+                            matches = []
+                            states = set()
+                            for comp in top[saltenv][tgt]:
+                                if isinstance(comp, dict):
+                                    matches.append(comp)
+                                if isinstance(comp, string_types):
+                                    states.add(comp)
+                            top[saltenv][tgt] = matches
+                            top[saltenv][tgt].extend(list(states))
+                    except TypeError:
+                        raise SaltRenderError('Unable to render top file. No targets found.')
         return top
 
     def verify_tops(self, tops):
@@ -1997,11 +2027,11 @@ class BaseHighState(object):
                     'string'.format(saltenv)
                 )
             if saltenv == '':
-                errors.append('Empty environment statement in top file')
+                errors.append('Empty saltenv statement in top file')
             if not isinstance(matches, dict):
                 errors.append(
-                    'The top file matches for environment {0} are not '
-                    'laid out as a dict'.format(saltenv)
+                    'The top file matches for saltenv {0} are not '
+                    'formatted as a dict'.format(saltenv)
                 )
             for slsmods in matches.values():
                 if not isinstance(slsmods, list):
@@ -2015,7 +2045,7 @@ class BaseHighState(object):
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
-                                    'in environment {0}: {1} file'.format(
+                                    'in saltenv {0}: {1} file'.format(
                                         slsmod,
                                         val
                                     )
@@ -2101,7 +2131,7 @@ class BaseHighState(object):
         fn_ = state_data.get('dest', False)
         if not fn_:
             errors.append(
-                'Specified SLS {0} in environment {1} is not '
+                'Specified SLS {0} in saltenv {1} is not '
                 'available on the salt master'.format(sls, saltenv)
             )
         state = None
@@ -2111,7 +2141,7 @@ class BaseHighState(object):
                 sls, rendered_sls=mods
             )
         except SaltRenderError as exc:
-            msg = 'Rendering SLS "{0}:{1}" failed: {2}'.format(
+            msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
                 saltenv, sls, exc
             )
             log.critical(msg)
@@ -2157,6 +2187,14 @@ class BaseHighState(object):
                         env_key, inc_sls = inc_sls.popitem()
                     else:
                         env_key = saltenv
+
+                    if env_key not in self.avail:
+                        msg = ('Nonexistant saltenv {0!r} found in include '
+                               'of {1!r} within SLS \'{2}:{3}\''
+                               .format(env_key, inc_sls, saltenv, sls))
+                        log.error(msg)
+                        errors.append(msg)
+                        continue
 
                     if inc_sls.startswith('.'):
                         p_comps = sls.split('.')
@@ -2210,13 +2248,13 @@ class BaseHighState(object):
                         msg = ''
                         if not resolved_envs:
                             msg = ('Unknown include: Specified SLS {0}: {1} is not available on the salt '
-                                   'master in environment(s): {2} '
+                                   'master in saltenv(s): {2} '
                                    ).format(env_key,
                                             inc_sls,
                                             ', '.join(matches) if env_key == xenv_key else env_key)
                         elif len(resolved_envs) > 1:
                             msg = ('Ambiguous include: Specified SLS {0}: {1} is available on the salt master '
-                                   'in multiple available environments: {2}'
+                                   'in multiple available saltenvs: {2}'
                                    ).format(env_key,
                                             inc_sls,
                                             ', '.join(resolved_envs))
@@ -2377,20 +2415,31 @@ class BaseHighState(object):
         for saltenv, states in matches.items():
             for sls_match in states:
                 statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
+
+                # if we did not found any sls in the fileserver listing, this
+                # may be because the sls was generated or added later, we can
+                # try to directly execute it, and if it fails, anyway it will
+                # return the former error
                 if not statefiles:
-                    # No matching sls file was found!  Output an error
-                    all_errors.append(
-                        'No matching sls found for {0!r} in env {1!r}'.format(
-                            sls_match, saltenv
-                        )
-                    )
+                    statefiles = [sls_match]
+
                 for sls in statefiles:
                     r_env = '{0}:{1}'.format(saltenv, sls)
                     if r_env in mods:
                         continue
-                    state, errors = self.render_state(sls, saltenv, mods, matches)
+                    state, errors = self.render_state(
+                        sls, saltenv, mods, matches)
                     if state:
                         self.merge_included_states(highstate, state, errors)
+                    for i, error in enumerate(errors[:]):
+                        if 'is not available on the salt master' in error:
+                            # match SLS foobar in environment
+                            this_sls = 'SLS {0} in saltenv'.format(
+                                sls_match)
+                            if this_sls in error:
+                                errors[i] = (
+                                    'No matching sls found for {0!r} '
+                                    'in env {1!r}'.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
@@ -2419,8 +2468,8 @@ class BaseHighState(object):
                     errors.append((
                             'Detected conflicting IDs, SLS'
                             ' IDs need to be globally unique.\n    The'
-                            ' conflicting ID is "{0}" and is found in SLS'
-                            ' "{1}:{2}" and SLS "{3}:{4}"').format(
+                            ' conflicting ID is {0!r} and is found in SLS'
+                            ' \'{1}:{2}\' and SLS \'{3}:{4}\'').format(
                                     id_,
                                     highstate[id_]['__env__'],
                                     highstate[id_]['__sls__'],
@@ -2473,6 +2522,9 @@ class BaseHighState(object):
         err = []
         try:
             top = self.get_top()
+        except SaltRenderError as err:
+            ret[tag_name]['comment'] = err.error
+            return ret
         except Exception:
             trb = traceback.format_exc()
             err.append(trb)
@@ -2631,7 +2683,7 @@ class MasterHighState(HighState):
     def __init__(self, master_opts, minion_opts, grains, id_,
                  saltenv=None,
                  env=None):
-        if env is not None:
+        if isinstance(env, string_types):
             salt.utils.warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '

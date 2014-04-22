@@ -76,7 +76,7 @@ def __virtual__():
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
     '''
-    return 'pkg' if 'pkg.install' in __salt__ else False
+    return 'pkg.install' in __salt__
 
 
 def __gen_rtag():
@@ -336,7 +336,6 @@ def installed(
         skip_verify=False,
         skip_suggestions=False,
         pkgs=None,
-        names=None,
         sources=None,
         **kwargs):
     '''
@@ -353,11 +352,62 @@ def installed(
     fromrepo
         Specify a repository from which to install
 
+        .. note::
+
+            Distros which use APT (Debian, Ubuntu, etc.) do not have a concept
+            of repositories, in the same way as YUM-based distros do. When a
+            source is added, it is assigned to a given release. Consider the
+            following source configuration::
+
+                deb http://ppa.launchpad.net/saltstack/salt/ubuntu precise main
+
+            The packages provided by this source would be made available via
+            the ``precise`` release, therefore ``fromrepo`` would need to be
+            set to ``precise`` for Salt to install the package from this
+            source.
+
+            Having multiple sources in the same release may result in the
+            default install candidate being newer than what is desired. If this
+            is the case, the desired version must be specified using the
+            ``version`` parameter.
+
+            If the ``pkgs`` parameter is being used to install multiple
+            packages in the same state, then instead of using ``version``,
+            use the method of version specification described in the **Multiple
+            Package Installation Options** section below.
+
+            Running the shell command ``apt-cache policy pkgname`` on a minion
+            can help elucidate the APT configuration and aid in properly
+            configuring states:
+
+            .. code-block:: bash
+
+                root@saltmaster:~# salt ubuntu01 cmd.run 'apt-cache policy ffmpeg'
+                ubuntu01:
+                    ffmpeg:
+                    Installed: (none)
+                    Candidate: 7:0.10.11-1~precise1
+                    Version table:
+                        7:0.10.11-1~precise1 0
+                            500 http://ppa.launchpad.net/jon-severinsson/ffmpeg/ubuntu/ precise/main amd64 Packages
+                        4:0.8.10-0ubuntu0.12.04.1 0
+                            500 http://us.archive.ubuntu.com/ubuntu/ precise-updates/main amd64 Packages
+                            500 http://security.ubuntu.com/ubuntu/ precise-security/main amd64 Packages
+                        4:0.8.1-0ubuntu1 0
+                            500 http://us.archive.ubuntu.com/ubuntu/ precise/main amd64 Packages
+
+            The release is located directly after the source's URL. The actual
+            release name is the part before the slash, so to install version
+            **4:0.8.10-0ubuntu0.12.04.1** either ``precise-updates`` or
+            ``precise-security`` could be used for the ``fromrepo`` value.
+
     skip_verify
         Skip the GPG verification check for the package to be installed
 
     skip_suggestions
-        Force strict package naming. Disable lookup of package alternatives
+        Force strict package naming. Disables lookup of package alternatives.
+
+        .. versionadded:: 2014.1.1
 
     version
         Install a specific version of a package. This option is ignored if
@@ -372,7 +422,15 @@ def installed(
         Update the repo database of available packages prior to installing the
         requested package.
 
-    Usage::
+    hold
+        Force the package to be held at the current installed version.
+        Currently works with YUM & APT based systems.
+
+        .. versionadded:: Helium
+
+    Example:
+
+    .. code-block:: yaml
 
         httpd:
           pkg.installed:
@@ -381,6 +439,7 @@ def installed(
             - skip_suggestions: True
             - version: 2.0.6~ubuntu3
             - refresh: True
+            - hold: False
 
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
@@ -388,7 +447,9 @@ def installed(
         A list of packages to install from a software repository. All packages
         listed under ``pkgs`` will be installed via a single command.
 
-    Usage::
+    Example:
+
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -396,12 +457,15 @@ def installed(
               - foo
               - bar
               - baz
+            - hold: True
 
     ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
     :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
     and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
-    in the ``pkgs`` argument. Example::
+    in the ``pkgs`` argument. For example:
+
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -413,8 +477,10 @@ def installed(
     Additionally, :mod:`ebuild <salt.modules.ebuild>`,
     :mod:`pacman <salt.modules.pacman>` and
     :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-    ``>`` operators for more control over what versions will be installed.
-    Example::
+    ``>`` operators for more control over what versions will be installed. For
+    example:
+
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -429,69 +495,29 @@ def installed(
     With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
     flag list and/or if the given packages should be in package.accept_keywords
     file and/or the overlay from which you want the package to be installed.
-    Example::
+    For example:
+
+    .. code-block:: yaml
 
         mypkgs:
-            pkg.installed:
-                - pkgs:
-                    - foo: '~'
-                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
-                    - baz
+          pkg.installed:
+            - pkgs:
+              - foo: '~'
+              - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+              - baz
 
     names
         A list of packages to install from a software repository. Each package
         will be installed individually by the package manager.
 
-    Usage::
+        .. warning::
 
-        mypkgs:
-          pkg.installed:
-            - names:
-              - foo
-              - bar
-              - baz
-
-    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
-    :mod:`ebuild <salt.modules.ebuild>`,
-    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
-    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
-    in the ``names`` argument. Example::
-
-        mypkgs:
-          pkg.installed:
-            - names:
-              - foo
-              - bar: 1.2.3-4
-              - baz
-
-    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
-    :mod:`pacman <salt.modules.pacman>` and
-    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-    ``>`` operators for more control over what versions will be installed.
-    Example::
-
-        mypkgs:
-          pkg.installed:
-            - names:
-              - foo
-              - bar: '>=1.2.3-4'
-              - baz
-
-    ``NOTE:`` When using comparison operators, the expression must be enclosed
-    in quotes to avoid a YAML render error.
-
-    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
-    flag list and/or if the given packages should be in package.accept_keywords
-    file and/or the overlay from which you want the package to be installed.
-    Example::
-
-        mypkgs:
-            pkg.installed:
-                - names:
-                    - foo: '~'
-                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
-                    - baz
-
+            Unlike ``pkgs``, the ``names`` parameter cannot specify a version.
+            In addition, it makes a separate call to the package management
+            frontend to install each package, whereas ``pkgs`` makes just a
+            single call. It is therefore recommended to use ``pkgs`` instead of
+            ``names`` to install multiple packages, both for the additional
+            features and the performance improvement that it brings.
 
     sources
         A list of packages to install, along with the source URI or local path
@@ -510,6 +536,7 @@ def installed(
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
     '''
+    kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
     refresh = bool(
         salt.utils.is_true(refresh)
@@ -523,10 +550,40 @@ def installed(
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
                                    **kwargs)
+
     try:
         desired, targets, to_unpurge = result
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
+
+        # check that the hold function is available
+        if 'pkg.hold' in __salt__:
+            if 'hold' in kwargs:
+                if kwargs['hold']:
+                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs)
+                else:
+                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
+
+                modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
+                not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
+                failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
+
+                if modified_hold:
+                    for i in modified_hold:
+                        result['comment'] += ' {0}'.format(i['comment'])
+                        result['result'] = i['result']
+                        change_name = i['name']
+                        result['changes'][change_name] = i['changes']
+
+                if not_modified_hold:
+                    for i in not_modified_hold:
+                        result['comment'] += ' {0}'.format(i['comment'])
+                        result['result'] = i['result']
+
+                if failed_hold:
+                    for i in failed_hold:
+                        result['comment'] += ' {0}'.format(i['comment'])
+                        result['result'] = i['result']
         return result
 
     if to_unpurge and 'lowpkg.unpurge' not in __salt__:
@@ -563,6 +620,9 @@ def installed(
                 'comment': ' '.join(comment)}
 
     changes = {'installed': {}}
+    modified_hold = None
+    not_modified_hold = None
+    failed_hold = None
     if targets:
         try:
             pkg_ret = __salt__['pkg.install'](name,
@@ -582,6 +642,17 @@ def installed(
                     'result': False,
                     'comment': 'An error was encountered while installing '
                             'package(s): {0}'.format(exc)}
+
+        if 'pkg.hold' in __salt__:
+            if 'hold' in kwargs:
+                if kwargs['hold']:
+                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs)
+                else:
+                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
+
+                modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
+                not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
+                failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
@@ -628,6 +699,17 @@ def installed(
                 )
             )
 
+    if modified_hold:
+        for i in modified_hold:
+            comment.append(i['comment'])
+            change_name = i['name']
+            if len(changes[change_name]['new']) > 0:
+                changes[change_name]['new'] += '\n'
+            changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
+            if len(changes[change_name]['old']) > 0:
+                changes[change_name]['old'] += '\n'
+            changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
+
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -646,6 +728,10 @@ def installed(
                 )
             )
 
+    if not_modified_hold:
+        for i in not_modified_hold:
+            comment.append(i['comment'])
+
     if failed:
         if sources:
             summary = ', '.join(failed)
@@ -654,6 +740,11 @@ def installed(
                                  for x in failed])
         comment.insert(0, 'The following packages failed to '
                           'install/update: {0}.'.format(summary))
+
+    if failed_hold:
+        for i in failed_hold:
+            comment.append(i['comment'])
+
         return {'name': name,
                 'changes': changes,
                 'result': False,
@@ -993,7 +1084,7 @@ def removed(name, pkgs=None, **kwargs):
 def purged(name, pkgs=None, **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
-    to purge the package.
+    to purge the package. All configuration files are also removed.
 
     name
         The name of the package to be purged.

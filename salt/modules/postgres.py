@@ -16,6 +16,9 @@ Module to provide Postgres compatibility to salt.
     be left at the default setting.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
+
+:note: This module uses MD5 hashing which may not be compliant with certain
+    security audits.
 '''
 
 # Import python libs
@@ -35,6 +38,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +61,7 @@ def __virtual__():
     Only load this module if the psql bin exists
     '''
     if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
-        return 'postgres'
+        return True
     return False
 
 
@@ -640,14 +644,14 @@ def _role_cmd_args(name,
         # first is passwd set
         # second is for handling NOPASSWD
         and (
-            isinstance(rolepassword, basestring) and bool(rolepassword)
+            isinstance(rolepassword, string_types) and bool(rolepassword)
         )
         or (
             isinstance(rolepassword, bool)
         )
     ):
         skip_passwd = True
-    if isinstance(rolepassword, basestring) and bool(rolepassword):
+    if isinstance(rolepassword, string_types) and bool(rolepassword):
         escaped_password = '{0!r}'.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),

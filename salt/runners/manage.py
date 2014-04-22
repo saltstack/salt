@@ -33,7 +33,7 @@ def status(output=True):
 
         salt-run manage.status
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
 
     key = salt.key.Key(__opts__)
@@ -72,7 +72,7 @@ def key_regen():
 
         salt-run manage.key_regen
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'saltutil.regen_keys')
 
     for root, dirs, files in os.walk(__opts__['pki_dir']):
@@ -132,10 +132,16 @@ def up():  # pylint: disable=C0103
     return ret
 
 
-def present():
+def present(subset=None, show_ipv4=False):
     '''
     Print a list of all minions that are up according to Salt's presence
     detection, no commands will be sent
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
 
     CLI Example:
 
@@ -144,7 +150,10 @@ def present():
         salt-run manage.present
     '''
     ckminions = salt.utils.minions.CkMinions(__opts__)
-    connected = sorted(ckminions.connected_ids())
+
+    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+    connected = dict(minions) if show_ipv4 else sorted(minions)
+
     salt.output.display_output(connected, '', __opts__)
     return connected
 
@@ -211,7 +220,7 @@ def versions():
 
         salt-run manage.versions
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
 
     labels = {

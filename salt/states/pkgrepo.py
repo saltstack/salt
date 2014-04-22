@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Management of package repos
-===========================
+Management of APT/YUM package repos
+===================================
 
-Package repositories can be managed with the pkgrepo state:
+Package repositories for APT-based and YUM-based distros can be managed with
+these states. Here is some example SLS:
 
 .. code-block:: yaml
 
@@ -69,7 +70,7 @@ def __virtual__():
     '''
     Only load if modifying repos is available for this package type
     '''
-    return 'pkgrepo' if 'pkg.mod_repo' in __salt__ else False
+    return 'pkg.mod_repo' in __salt__
 
 
 def managed(name, **kwargs):
@@ -173,7 +174,7 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web URL to retrieve the GPG key from.
+       URL to retrieve a GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
@@ -267,7 +268,7 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](**kwargs)
+        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
     except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.

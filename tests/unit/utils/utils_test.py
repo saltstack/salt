@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt import utils
+from salt.utils import args
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
 
 # Import Python libraries
@@ -147,7 +148,6 @@ class UtilsTestCase(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
     def test_format_call(self, arg_lookup, get_function_argspec):
-    # def test_format_call(self):
         def dummy_func(first=None, second=None, third=None):
             pass
 
@@ -223,14 +223,10 @@ class UtilsTestCase(TestCase):
         self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
 
     def test_check_state_result(self):
-        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
-        self.assertFalse(utils.check_state_result({'host1': []}),
-                         "Failed to handle an invalid data structure for a host")
+        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result({}), "Failed to handle an empty dictionary.")
         self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid host data structure.")
-
-        self.assertTrue(utils.check_state_result({'    _|-': {}}))
 
         test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
         self.assertTrue(utils.check_state_result(test_valid_state))
@@ -280,10 +276,10 @@ class UtilsTestCase(TestCase):
         self.assertRaises(ValueError, utils.get_hash, '/tmp/foo/', form='INVALID')
 
     def test_parse_kwarg(self):
-        ret = utils.parse_kwarg('foo=bar')
+        ret = args.parse_kwarg('foo=bar')
         self.assertEqual(ret, ('foo', 'bar'))
 
-        ret = utils.parse_kwarg('foobar')
+        ret = args.parse_kwarg('foobar')
         self.assertEqual(ret, (None, None))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -514,3 +510,7 @@ class UtilsTestCase(TestCase):
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(UtilsTestCase, needs_daemon=False)

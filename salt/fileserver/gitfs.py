@@ -49,6 +49,7 @@ to specify which provider should be used.
 '''
 
 # Import python libs
+import copy
 import distutils.version  # pylint: disable=E0611
 import glob
 import hashlib
@@ -61,7 +62,7 @@ from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PYGIT2_TRANSPORTS = ('http', 'https', 'file')
-PER_REMOTE_PARAMS = ('mountpoint', 'root')
+PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
 
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set gitfs_provider to '
@@ -90,6 +91,7 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
+from salt._compat import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 
@@ -108,6 +110,7 @@ except ImportError:
     HAS_PYGIT2 = False
 
 try:
+    import dulwich.errors
     import dulwich.repo
     import dulwich.client
     import dulwich.config
@@ -145,6 +148,11 @@ def _verify_gitpython(quiet=False):
             'Git fileserver backend is enabled in master config file, but '
             'the GitPython version is earlier than {0}. Version {1} '
             'detected.'.format(minver_str, git.__version__)
+        )
+    if not salt.utils.which('git'):
+        errors.append(
+            'The git command line utility is required by the Git fileserver '
+            'backend when using the \'gitpython\' provider.'
         )
     if errors:
         if HAS_PYGIT2 and not quiet:
@@ -321,24 +329,26 @@ _dulwich_env_refs = lambda refs: [x for x in refs
                                   and not x.endswith('^{}')]
 
 
-def _get_tree_gitpython(repo, short):
+def _get_tree_gitpython(repo, tgt_env):
     '''
     Return a git.Tree object if the branch/tag/SHA is found, otherwise None
     '''
-    if short == __opts__['gitfs_base'] or short in envs():
-        for ref in repo.refs:
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    if tgt_env == repo['base'] or tgt_env in envs():
+        for ref in repo['repo'].refs:
             if isinstance(ref, (git.RemoteReference, git.TagReference)):
                 parted = ref.name.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
                 rspec = rspec.replace('/', '_')
-                if rspec == short:
+                if rspec == tgt_env:
                     return ref.commit.tree
 
-    # Branch or tag not matched, check if 'short' is a commit
-    if not _env_is_exposed(short):
+    # Branch or tag not matched, check if 'tgt_env' is a commit
+    if not _env_is_exposed(tgt_env):
         return None
     try:
-        commit = repo.rev_parse(short)
+        commit = repo['repo'].rev_parse(tgt_env)
     except gitdb.exc.BadObject:
         pass
     else:
@@ -346,25 +356,27 @@ def _get_tree_gitpython(repo, short):
     return None
 
 
-def _get_tree_pygit2(repo, short):
+def _get_tree_pygit2(repo, tgt_env):
     '''
     Return a pygit2.Tree object if the branch/tag/SHA is found, otherwise None
     '''
-    if short == __opts__['gitfs_base'] or short in envs():
-        for ref in repo.listall_references():
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    if tgt_env == repo['base'] or tgt_env in envs():
+        for ref in repo['repo'].listall_references():
             _, rtype, rspec = ref.split('/', 2)
             if rtype in ('remotes', 'tags'):
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
                 rspec = rspec.replace('/', '_')
-                if rspec == short and _env_is_exposed(rspec):
-                    return repo.lookup_reference(ref).get_object().tree
+                if rspec == tgt_env and _env_is_exposed(rspec):
+                    return repo['repo'].lookup_reference(ref).get_object().tree
 
-    # Branch or tag not matched, check if 'short' is a commit
-    if not _env_is_exposed(short):
+    # Branch or tag not matched, check if 'tgt_env' is a commit
+    if not _env_is_exposed(tgt_env):
         return None
     try:
-        commit = repo.revparse_single(short)
+        commit = repo['repo'].revparse_single(tgt_env)
     except (KeyError, TypeError):
         # Not a valid commit, likely not a commit SHA
         pass
@@ -373,27 +385,29 @@ def _get_tree_pygit2(repo, short):
     return None
 
 
-def _get_tree_dulwich(repo, short):
+def _get_tree_dulwich(repo, tgt_env):
     '''
     Return a dulwich.objects.Tree object if the branch/tag/SHA is found,
     otherwise None
     '''
-    if short == __opts__['gitfs_base'] or short in envs():
-        refs = repo.get_refs()
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    if tgt_env == repo['base'] or tgt_env in envs():
+        refs = repo['repo'].get_refs()
         # Sorting ensures we check heads (branches) before tags
         for ref in sorted(_dulwich_env_refs(refs)):
             # ref will be something like 'refs/heads/master'
             rtype, rspec = ref[5:].split('/', 1)
             rspec = rspec.replace('/', '_')
-            if rspec == short and _env_is_exposed(rspec):
+            if rspec == tgt_env and _env_is_exposed(rspec):
                 if rtype == 'heads':
-                    commit = repo.get_object(refs[ref])
+                    commit = repo['repo'].get_object(refs[ref])
                 elif rtype == 'tags':
-                    tag = repo.get_object(refs[ref])
+                    tag = repo['repo'].get_object(refs[ref])
                     if isinstance(tag, dulwich.objects.Tag):
                         # Tag.get_object() returns a 2-tuple, the 2nd element
                         # of which is the commit SHA to which the tag refers
-                        commit = repo.get_object(tag.object[1])
+                        commit = repo['repo'].get_object(tag.object[1])
                     elif isinstance(tag, dulwich.objects.Commit):
                         commit = tag
                     else:
@@ -402,47 +416,48 @@ def _get_tree_dulwich(repo, short):
                             '_get_tree_dulwich. This is a bug, please report '
                             'it.'.format(tag.type_name)
                         )
-                return repo.get_object(commit.tree)
+                return repo['repo'].get_object(commit.tree)
 
-    # Branch or tag not matched, check if 'short' is a commit. This is more
-    # difficult with Dulwich because of its inability to deal with shortened
+    # Branch or tag not matched, check if 'tgt_env' is a commit. This is more
+    # difficult with Dulwich because of its inability to deal with tgt_envened
     # SHA-1 hashes.
-    if not _env_is_exposed(short):
+    if not _env_is_exposed(tgt_env):
         return None
     try:
-        int(short, 16)
+        int(tgt_env, 16)
     except ValueError:
         # Not hexidecimal, likely just a non-matching environment
         return None
 
     try:
-        if len(short) == 40:
-            sha_obj = repo.get_object(short)
+        if len(tgt_env) == 40:
+            sha_obj = repo['repo'].get_object(tgt_env)
             if isinstance(sha_obj, dulwich.objects.Commit):
                 sha_commit = sha_obj
         else:
             matches = set([
                 x for x in (
-                    repo.get_object(x) for x in repo.object_store
-                    if x.startswith(short)
+                    repo['repo'].get_object(x)
+                    for x in repo['repo'].object_store
+                    if x.startswith(tgt_env)
                 )
                 if isinstance(x, dulwich.objects.Commit)
             ])
             if len(matches) > 1:
-                log.warning('Ambiguous commit ID {0!r}'.format(short))
+                log.warning('Ambiguous commit ID {0!r}'.format(tgt_env))
                 return None
             try:
                 sha_commit = matches.pop()
             except IndexError:
                 pass
     except TypeError as exc:
-        log.warning('Invalid environment {0}: {1}'.format(short, exc))
+        log.warning('Invalid environment {0}: {1}'.format(tgt_env, exc))
     except KeyError:
         # No matching SHA
         return None
 
     try:
-        return repo.get_object(sha_commit.tree)
+        return repo['repo'].get_object(sha_commit.tree)
     except NameError:
         # No matching sha_commit object was created. Unable to find SHA.
         pass
@@ -479,8 +494,43 @@ def init():
     ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) else 'false'
     new_remote = False
     repos = []
-    gitfs_remotes = salt.utils.repack_dictlist(__opts__['gitfs_remotes'])
-    for repo_uri, repo_conf_params in gitfs_remotes.iteritems():
+
+    per_remote_defaults = {}
+    for param in PER_REMOTE_PARAMS:
+        per_remote_defaults[param] = __opts__['gitfs_{0}'.format(param)]
+
+    for remote in __opts__['gitfs_remotes']:
+        repo_conf = copy.deepcopy(per_remote_defaults)
+        if isinstance(remote, dict):
+            repo_uri = next(iter(remote))
+            per_remote_conf = salt.utils.repack_dictlist(remote[repo_uri])
+            if not per_remote_conf:
+                log.error(
+                    'Invalid per-remote configuration for remote {0}. If no '
+                    'per-remote parameters are being specified, there may be '
+                    'a trailing colon after the URI, which should be removed. '
+                    'Check the master configuration file.'.format(repo_uri)
+                )
+            for param in (x for x in per_remote_conf
+                          if x not in PER_REMOTE_PARAMS):
+                log.error(
+                    'Invalid configuration parameter {0!r} in remote {1}. '
+                    'Valid parameters are: {2}. See the documentation for '
+                    'further information.'.format(
+                        param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
+                    )
+                )
+                per_remote_conf.pop(param)
+            repo_conf.update(per_remote_conf)
+        else:
+            repo_uri = remote
+
+        if not isinstance(repo_uri, string_types):
+            log.error(
+                'Invalid gitfs remote {0}. Remotes must be strings, you may '
+                'need to enclose the URI in quotes'.format(repo_uri)
+            )
+            continue
 
         # Check repo_uri against the list of valid protocols
         if provider == 'pygit2':
@@ -490,34 +540,12 @@ def init():
                 continue
             elif transport.lower() not in PYGIT2_TRANSPORTS:
                 log.error(
-                    'Invalid transport {0!r} in gitfs remote {1!r}. Valid '
+                    'Invalid transport {0!r} in gitfs remote {1}. Valid '
                     'transports for pygit2 provider: {2}'
                     .format(transport, repo_uri, ', '.join(PYGIT2_TRANSPORTS))
                 )
                 continue
 
-        # Validate and compile per-remote configuration parameters, if present
-        repo_conf = dict([(x, None) for x in PER_REMOTE_PARAMS])
-        if repo_conf_params is not None:
-            repo_conf_params = salt.utils.repack_dictlist(repo_conf_params)
-            if not repo_conf_params:
-                log.error(
-                    'Invalid per-remote configuration for remote {0!r}'
-                    .format(repo_uri)
-                )
-            else:
-                for param, value in repo_conf_params.iteritems():
-                    if param in PER_REMOTE_PARAMS:
-                        repo_conf[param] = value
-                    else:
-                        log.error(
-                            'Invalid configuration parameter {0!r} in remote '
-                            '{1!r}. Valid parameters are: {2}. See the '
-                            'documentation for further information.'
-                            .format(
-                                param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
-                            )
-                        )
         try:
             repo_conf['mountpoint'] = salt.utils.strip_proto(
                 repo_conf['mountpoint']
@@ -526,7 +554,8 @@ def init():
             # mountpoint not specified
             pass
 
-        repo_hash = hashlib.md5(repo_uri).hexdigest()
+        hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+        repo_hash = hash_type(repo_uri).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
@@ -576,12 +605,8 @@ def init():
             with salt.utils.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# gitfs_remote map as of {0}\n'.format(timestamp))
-                for repo_conf in repos:
-                    fp_.write(
-                        '{0} = {1}\n'.format(
-                            repo_conf['hash'], repo_conf['uri']
-                        )
-                    )
+                for repo in repos:
+                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['uri']))
         except OSError:
             pass
         else:
@@ -691,14 +716,17 @@ def _init_dulwich(rp_, repo_uri, ssl_verify):
 
 
 def purge_cache():
+    '''
+    Purge the fileserver cache
+    '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     try:
         remove_dirs = os.listdir(bp_)
     except OSError:
         remove_dirs = []
-    for repo_conf in init():
+    for repo in init():
         try:
-            remove_dirs.remove(repo_conf['hash'])
+            remove_dirs.remove(repo['hash'])
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
@@ -720,24 +748,28 @@ def update():
     provider = _get_provider()
     pid = os.getpid()
     data['changed'] = purge_cache()
-    for repo_conf in init():
-        repo = repo_conf['repo']
+    for repo in init():
         if provider == 'gitpython':
-            origin = repo.remotes[0]
-            working_dir = repo.working_dir
+            origin = repo['repo'].remotes[0]
+            working_dir = repo['repo'].working_dir
         elif provider == 'pygit2':
-            origin = repo.remotes[0]
-            working_dir = repo.workdir
+            origin = repo['repo'].remotes[0]
+            working_dir = repo['repo'].workdir
         elif provider == 'dulwich':
             # origin is just a uri here, there is no origin object
-            origin = repo_conf['uri']
-            working_dir = repo.path
+            origin = repo['uri']
+            working_dir = repo['repo'].path
         lk_fn = os.path.join(working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         try:
+            log.debug('Fetching from {0}'.format(repo['uri']))
             if provider == 'gitpython':
-                for fetch in origin.fetch():
+                try:
+                    fetch_results = origin.fetch()
+                except AssertionError:
+                    fetch_results = origin.fetch()
+                for fetch in fetch_results:
                     if fetch.old_commit is not None:
                         data['changed'] = True
             elif provider == 'pygit2':
@@ -749,9 +781,16 @@ def update():
                     dulwich.client.get_transport_and_path_from_url(
                         origin, thin_packs=True
                     )
-                refs_pre = repo.get_refs()
+                refs_pre = repo['repo'].get_refs()
                 try:
-                    refs_post = client.fetch(path, repo)
+                    refs_post = client.fetch(path, repo['repo'])
+                except dulwich.errors.NotGitRepository:
+                    log.critical(
+                        'Dulwich does not recognize remote {0} as a valid '
+                        'remote URI. Perhaps it is missing \'.git\' at the '
+                        'end.'.format(repo['uri'])
+                    )
+                    continue
                 except KeyError:
                     log.critical(
                         'Local repository cachedir {0!r} (corresponding '
@@ -759,14 +798,14 @@ def update():
                         'attempt to remove the local checkout to allow it to '
                         'be re-initialized in the next fileserver cache '
                         'update.'
-                        .format(repo_conf['cachedir'], repo_conf['uri'])
+                        .format(repo['cachedir'], repo['uri'])
                     )
                     try:
-                        salt.utils.rm_rf(repo_conf['cachedir'])
+                        salt.utils.rm_rf(repo['cachedir'])
                     except OSError as exc:
                         log.critical(
                             'Unable to remove {0!r}: {1}'
-                            .format(repo_conf['cachedir'], exc)
+                            .format(repo['cachedir'], exc)
                         )
                     continue
                 if refs_post is None:
@@ -780,15 +819,15 @@ def update():
                     data['changed'] = True
                     # Update local refs
                     for ref in _dulwich_env_refs(refs_post):
-                        repo[ref] = refs_post[ref]
+                        repo['repo'][ref] = refs_post[ref]
                     # Prune stale refs
-                    for ref in repo.get_refs():
+                    for ref in repo['repo'].get_refs():
                         if ref not in refs_post:
-                            del repo[ref]
+                            del repo['repo'][ref]
         except Exception as exc:
             log.error(
                 'Exception {0} caught while fetching gitfs remote {1}'
-                .format(exc, repo_conf['uri']),
+                .format(exc, repo['uri']),
                 exc_info=log.isEnabledFor(logging.DEBUG)
             )
         try:
@@ -798,6 +837,9 @@ def update():
 
     env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
+        env_cachedir = os.path.dirname(env_cache)
+        if not os.path.exists(env_cachedir):
+            os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
         with salt.utils.fopen(env_cache, 'w+') as fp_:
@@ -806,7 +848,11 @@ def update():
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
         event.fire_event(data, tagify(['gitfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
@@ -839,16 +885,15 @@ def envs(ignore_cache=False):
         cache_match = salt.fileserver.check_env_cache(__opts__, env_cache)
         if cache_match is not None:
             return cache_match
-    base_branch = __opts__['gitfs_base']
     provider = _get_provider()
     ret = set()
-    for repo_conf in init():
+    for repo in init():
         if provider == 'gitpython':
-            ret.update(_envs_gitpython(repo_conf['repo'], base_branch))
+            ret.update(_envs_gitpython(repo))
         elif provider == 'pygit2':
-            ret.update(_envs_pygit2(repo_conf['repo'], base_branch))
+            ret.update(_envs_pygit2(repo))
         elif provider == 'dulwich':
-            ret.update(_envs_dulwich(repo_conf['repo'], base_branch))
+            ret.update(_envs_dulwich(repo))
         else:
             # Should never get here because the provider has been verified
             # in __virtual__(). Log an error and return an empty list.
@@ -860,19 +905,19 @@ def envs(ignore_cache=False):
     return sorted(ret)
 
 
-def _envs_gitpython(repo, base_branch):
+def _envs_gitpython(repo):
     '''
     Check the refs and return a list of the ones which can be used as salt
     environments.
     '''
     ret = set()
-    remote = repo.remotes[0]
-    for ref in repo.refs:
+    remote = repo['repo'].remotes[0]
+    for ref in repo['repo'].refs:
         parted = ref.name.partition('/')
         rspec = parted[2] if parted[2] else parted[0]
         rspec = rspec.replace('/', '_')
         if isinstance(ref, git.Head):
-            if rspec == base_branch:
+            if rspec == repo['base']:
                 rspec = 'base'
             if ref not in remote.stale_refs and _env_is_exposed(rspec):
                 ret.add(rspec)
@@ -881,15 +926,14 @@ def _envs_gitpython(repo, base_branch):
     return ret
 
 
-def _envs_pygit2(repo, base_branch):
+def _envs_pygit2(repo):
     '''
     Check the refs and return a list of the ones which can be used as salt
     environments.
     '''
     ret = set()
-    remote = repo.remotes[0]
-    stale_refs = _stale_refs_pygit2(repo)
-    for ref in repo.listall_references():
+    stale_refs = _stale_refs_pygit2(repo['repo'])
+    for ref in repo['repo'].listall_references():
         ref = re.sub('^refs/', '', ref)
         rtype, rspec = ref.split('/', 1)
         if rtype == 'remotes':
@@ -897,7 +941,7 @@ def _envs_pygit2(repo, base_branch):
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
                 rspec = rspec.replace('/', '_')
-                if rspec == base_branch:
+                if rspec == repo['base']:
                     rspec = 'base'
                 if _env_is_exposed(rspec):
                     ret.add(rspec)
@@ -906,18 +950,18 @@ def _envs_pygit2(repo, base_branch):
     return ret
 
 
-def _envs_dulwich(repo, base_branch):
+def _envs_dulwich(repo):
     '''
     Check the refs and return a list of the ones which can be used as salt
     environments.
     '''
     ret = set()
-    for ref in _dulwich_env_refs(repo.get_refs()):
+    for ref in _dulwich_env_refs(repo['repo'].get_refs()):
         # ref will be something like 'refs/heads/master'
         rtype, rspec = ref[5:].split('/', 1)
         rspec = rspec.replace('/', '_')
         if rtype == 'heads':
-            if rspec == base_branch:
+            if rspec == repo['base']:
                 rspec = 'base'
             if _env_is_exposed(rspec):
                 ret.add(rspec)
@@ -926,22 +970,17 @@ def _envs_dulwich(repo, base_branch):
     return ret
 
 
-def find_file(path, tgt_env='base', **kwargs):
+def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     Find the first file to match the path and ref, read the file out of git
     and send the path to the newly cached file
     '''
     fnd = {'path': '',
            'rel': ''}
-    if os.path.isabs(path):
+    if os.path.isabs(path) or tgt_env not in envs():
         return fnd
 
     provider = _get_provider()
-    base_branch = __opts__['gitfs_base']
-    gitfs_root = __opts__['gitfs_root']
-    gitfs_mountpoint = salt.utils.strip_proto(__opts__['gitfs_mountpoint'])
-    if tgt_env == 'base':
-        tgt_env = base_branch
     dest = os.path.join(__opts__['cachedir'], 'gitfs/refs', tgt_env, path)
     hashes_glob = os.path.join(__opts__['cachedir'],
                                'gitfs/hash',
@@ -958,22 +997,27 @@ def find_file(path, tgt_env='base', **kwargs):
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
     if not os.path.isdir(destdir):
-        os.makedirs(destdir)
+        try:
+            os.makedirs(destdir)
+        except OSError:
+            # Path exists and is a file, remove it and retry
+            os.remove(destdir)
+            os.makedirs(destdir)
     if not os.path.isdir(hashdir):
-        os.makedirs(hashdir)
+        try:
+            os.makedirs(hashdir)
+        except OSError:
+            # Path exists and is a file, remove it and retry
+            os.remove(hashdir)
+            os.makedirs(hashdir)
 
-    for repo_conf in init():
-        repo = repo_conf['repo']
-        root = repo_conf['root'] if repo_conf['root'] is not None \
-            else gitfs_root
-        mountpoint = repo_conf['mountpoint'] \
-            if repo_conf['mountpoint'] is not None \
-            else gitfs_mountpoint
-        if mountpoint and not path.startswith(mountpoint + os.path.sep):
+    for repo in init():
+        if repo['mountpoint'] \
+                and not path.startswith(repo['mountpoint'] + os.path.sep):
             continue
-        repo_path = path[len(mountpoint):].lstrip(os.path.sep)
-        if root:
-            repo_path = os.path.join(root, repo_path)
+        repo_path = path[len(repo['mountpoint']):].lstrip(os.path.sep)
+        if repo['root']:
+            repo_path = os.path.join(repo['root'], repo_path)
 
         if provider == 'gitpython':
             tree = _get_tree_gitpython(repo, tgt_env)
@@ -992,7 +1036,8 @@ def find_file(path, tgt_env='base', **kwargs):
                 # Branch/tag/SHA not found in repo, try the next
                 continue
             try:
-                blob = repo[tree[repo_path].oid]
+                oid = tree[repo_path].oid
+                blob = repo['repo'][oid]
             except KeyError:
                 continue
             blob_hexsha = blob.hex
@@ -1000,14 +1045,14 @@ def find_file(path, tgt_env='base', **kwargs):
         elif provider == 'dulwich':
             prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
             tree = _get_tree_dulwich(repo, tgt_env)
-            tree = _dulwich_walk_tree(repo, tree, prefix_dirs)
+            tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
             if not isinstance(tree, dulwich.objects.Tree):
                 # Branch/tag/SHA not found in repo, try the next
                 continue
             try:
                 # Referencing the path in the tree returns a tuple, the
                 # second element of which is the object ID of the blob
-                blob = repo.get_object(tree[filename][1])
+                blob = repo['repo'].get_object(tree[filename][1])
             except KeyError:
                 continue
             blob_hexsha = blob.sha().hexdigest()
@@ -1060,7 +1105,7 @@ def serve_file(load, fnd):
 
     ret = {'data': '',
            'dest': ''}
-    if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
+    if not all(x in load for x in ('path', 'loc', 'saltenv')):
         return ret
     if not fnd['path']:
         return ret
@@ -1088,18 +1133,14 @@ def file_hash(load, fnd):
         )
         load['saltenv'] = load.pop('env')
 
-    if 'path' not in load or 'saltenv' not in load:
+    if not all(x in load for x in ('path', 'saltenv')):
         return ''
     ret = {'hash_type': __opts__['hash_type']}
-    short = load['saltenv']
-    base_branch = __opts__['gitfs_base']
-    if short == 'base':
-        short = base_branch
     relpath = fnd['rel']
     path = fnd['path']
     hashdest = os.path.join(__opts__['cachedir'],
                             'gitfs/hash',
-                            short,
+                            load['saltenv'],
                             '{0}.hash.{1}'.format(relpath,
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
@@ -1176,131 +1217,132 @@ def _get_file_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    base_branch = __opts__['gitfs_base']
-    gitfs_root = __opts__['gitfs_root']
-    gitfs_mountpoint = salt.utils.strip_proto(__opts__['gitfs_mountpoint'])
     provider = _get_provider()
-    if 'saltenv' not in load:
+    if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
-    if load['saltenv'] == 'base':
-        load['saltenv'] = base_branch
     ret = set()
-    for repo_conf in init():
-        repo = repo_conf['repo']
-        root = repo_conf['root'] if repo_conf['root'] is not None \
-            else gitfs_root
-        mountpoint = repo_conf['mountpoint'] \
-            if repo_conf['mountpoint'] is not None \
-            else gitfs_mountpoint
-
+    for repo in init():
         if provider == 'gitpython':
             ret.update(
-                _file_list_gitpython(repo, load['saltenv'], root, mountpoint)
+                _file_list_gitpython(repo, load['saltenv'])
             )
         elif provider == 'pygit2':
             ret.update(
-                _file_list_pygit2(repo, load['saltenv'], root, mountpoint)
+                _file_list_pygit2(repo, load['saltenv'])
             )
         elif provider == 'dulwich':
             ret.update(
-                _file_list_dulwich(repo, load['saltenv'], root, mountpoint)
+                _file_list_dulwich(repo, load['saltenv'])
             )
     return sorted(ret)
 
 
-def _file_list_gitpython(repo, tgt, root, mountpoint):
+def _file_list_gitpython(repo, tgt_env):
     '''
     Get file list using GitPython
     '''
     ret = set()
-    tree = _get_tree_gitpython(repo, tgt)
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    tree = _get_tree_gitpython(repo, tgt_env)
     if not tree:
         return ret
-    if root:
+    if repo['root']:
         try:
-            tree = tree / root
+            tree = tree / repo['root']
         except KeyError:
             return ret
     for blob in tree.traverse():
         if not isinstance(blob, git.Blob):
             continue
-        if root:
-            path = os.path.relpath(blob.path, root)
+        if repo['root']:
+            path = os.path.relpath(blob.path, repo['root'])
         else:
             path = blob.path
-        ret.add(os.path.join(mountpoint, path))
+        ret.add(os.path.join(repo['mountpoint'], path))
     return ret
 
 
-def _file_list_pygit2(repo, ref_tgt, root, mountpoint):
+def _file_list_pygit2(repo, tgt_env):
     '''
     Get file list using pygit2
     '''
-    def _traverse(tree, repo, blobs, prefix):
+    def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a pygit2 Tree object recursively, accumulating all the
         blob paths within it in the "blobs" list
         '''
         for entry in iter(tree):
-            blob = repo[entry.oid]
+            blob = repo_obj[entry.oid]
             if isinstance(blob, pygit2.Blob):
                 blobs.append(os.path.join(prefix, entry.name))
             elif isinstance(blob, pygit2.Tree):
-                _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
+                _traverse(blob,
+                          repo_obj,
+                          blobs,
+                          os.path.join(prefix, entry.name))
     ret = set()
-    tree = _get_tree_pygit2(repo, ref_tgt)
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    tree = _get_tree_pygit2(repo, tgt_env)
     if not tree:
         return ret
-    if root:
+    if repo['root']:
         try:
             # This might need to be changed to account for a root that
             # spans more than one directory
-            tree = repo[tree[root].oid]
+            oid = tree[repo['root']].oid
+            tree = repo['repo'][oid]
         except KeyError:
             return ret
         if not isinstance(tree, pygit2.Tree):
             return ret
     blobs = []
     if len(tree):
-        _traverse(tree, repo, blobs, root)
+        _traverse(tree, repo['repo'], blobs, repo['root'])
     for blob in blobs:
-        if root:
-            blob = os.path.relpath(blob, root)
-        ret.add(os.path.join(mountpoint, blob))
+        if repo['root']:
+            blob = os.path.relpath(blob, repo['root'])
+        ret.add(os.path.join(repo['mountpoint'], blob))
     return ret
 
 
-def _file_list_dulwich(repo, ref_tgt, root, mountpoint):
+def _file_list_dulwich(repo, tgt_env):
     '''
     Get file list using dulwich
     '''
-    def _traverse(tree, repo, blobs, prefix):
+    def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a dulwich Tree object recursively, accumulating all the
         blob paths within it in the "blobs" list
         '''
         for item in tree.items():
-            obj = repo.get_object(item.sha)
+            obj = repo_obj.get_object(item.sha)
             if isinstance(obj, dulwich.objects.Blob):
                 blobs.append(os.path.join(prefix, item.path))
             elif isinstance(obj, dulwich.objects.Tree):
-                _traverse(obj, repo, blobs, os.path.join(prefix, item.path))
+                _traverse(obj,
+                          repo_obj,
+                          blobs,
+                          os.path.join(prefix, item.path))
     ret = set()
-    tree = _get_tree_dulwich(repo, ref_tgt)
-    tree = _dulwich_walk_tree(repo, tree, root)
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    tree = _get_tree_dulwich(repo, tgt_env)
+    tree = _dulwich_walk_tree(repo['repo'], tree, repo['root'])
     if not isinstance(tree, dulwich.objects.Tree):
         return ret
     blobs = []
     if len(tree):
-        _traverse(tree, repo, blobs, root)
+        _traverse(tree, repo['repo'], blobs, repo['root'])
     for blob in blobs:
-        if root:
-            blob = os.path.relpath(blob, root)
-        ret.add(os.path.join(mountpoint, blob))
+        if repo['root']:
+            blob = os.path.relpath(blob, repo['root'])
+        ret.add(os.path.join(repo['mountpoint'], blob))
     return ret
 
 
-def file_list_emptydirs(load):
+def file_list_emptydirs(load):  # pylint: disable=W0613
     '''
     Return a list of all empty directories on the master
     '''
@@ -1327,125 +1369,126 @@ def _get_dir_list(load):
         )
         load['saltenv'] = load.pop('env')
 
-    base_branch = __opts__['gitfs_base']
-    gitfs_root = __opts__['gitfs_root']
-    gitfs_mountpoint = salt.utils.strip_proto(__opts__['gitfs_mountpoint'])
     provider = _get_provider()
-    if 'saltenv' not in load:
+    if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
-    if load['saltenv'] == 'base':
-        load['saltenv'] = base_branch
     ret = set()
-    for repo_conf in init():
-        repo = repo_conf['repo']
-        root = repo_conf['root'] if repo_conf['root'] is not None \
-            else gitfs_root
-        mountpoint = repo_conf['mountpoint'] \
-            if repo_conf['mountpoint'] is not None \
-            else gitfs_mountpoint
-
+    for repo in init():
         if provider == 'gitpython':
             ret.update(
-                _dir_list_gitpython(repo, load['saltenv'], root, mountpoint)
+                _dir_list_gitpython(repo, load['saltenv'])
             )
         elif provider == 'pygit2':
             ret.update(
-                _dir_list_pygit2(repo, load['saltenv'], root, mountpoint)
+                _dir_list_pygit2(repo, load['saltenv'])
             )
         elif provider == 'dulwich':
             ret.update(
-                _dir_list_dulwich(repo, load['saltenv'], root, mountpoint)
+                _dir_list_dulwich(repo, load['saltenv'])
             )
     return sorted(ret)
 
 
-def _dir_list_gitpython(repo, tgt, root, mountpoint):
+def _dir_list_gitpython(repo, tgt_env):
     '''
     Get list of directories using GitPython
     '''
     ret = set()
-    tree = _get_tree_gitpython(repo, tgt)
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    tree = _get_tree_gitpython(repo, tgt_env)
     if not tree:
         return ret
-    if root:
+    if repo['root']:
         try:
-            tree = tree / root
+            tree = tree / repo['root']
         except KeyError:
             return ret
     for blob in tree.traverse():
         if not isinstance(blob, git.Tree):
             continue
-        if root:
-            path = os.path.relpath(blob.path, root)
+        if repo['root']:
+            path = os.path.relpath(blob.path, repo['root'])
         else:
             path = blob.path
-        ret.add(os.path.join(mountpoint, path))
+        ret.add(os.path.join(repo['mountpoint'], path))
     return ret
 
 
-def _dir_list_pygit2(repo, ref_tgt, root, mountpoint):
+def _dir_list_pygit2(repo, tgt_env):
     '''
     Get a list of directories using pygit2
     '''
-    def _traverse(tree, repo, blobs, prefix):
+    def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a pygit2 Tree object recursively, accumulating all the
         empty directories within it in the "blobs" list
         '''
         for entry in iter(tree):
-            blob = repo[entry.oid]
+            blob = repo_obj[entry.oid]
             if not isinstance(blob, pygit2.Tree):
                 continue
             blobs.append(os.path.join(prefix, entry.name))
             if len(blob):
-                _traverse(blob, repo, blobs, os.path.join(prefix, entry.name))
+                _traverse(blob,
+                          repo_obj,
+                          blobs,
+                          os.path.join(prefix, entry.name))
     ret = set()
-    tree = _get_tree_pygit2(repo, ref_tgt)
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    tree = _get_tree_pygit2(repo, tgt_env)
     if not tree:
         return ret
-    if root:
+    if repo['root']:
         try:
-            tree = repo[tree[root].oid]
+            oid = tree[repo['root']].oid
+            tree = repo['repo'][oid]
         except KeyError:
             return ret
         if not isinstance(tree, pygit2.Tree):
             return ret
     blobs = []
     if len(tree):
-        _traverse(tree, repo, blobs, root)
+        _traverse(tree, repo['repo'], blobs, repo['root'])
     for blob in blobs:
-        if root:
-            blob = os.path.relpath(blob, root)
-        ret.add(os.path.join(mountpoint, blob))
+        if repo['root']:
+            blob = os.path.relpath(blob, repo['root'])
+        ret.add(os.path.join(repo['mountpoint'], blob))
     return ret
 
 
-def _dir_list_dulwich(repo, ref_tgt, root, mountpoint):
+def _dir_list_dulwich(repo, tgt_env):
     '''
     Get a list of directories using pygit2
     '''
-    def _traverse(tree, repo, blobs, prefix):
+    def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a dulwich Tree object recursively, accumulating all
         the empty directories within it in the "blobs" list
         '''
         for item in tree.items():
-            obj = repo.get_object(item.sha)
+            obj = repo_obj.get_object(item.sha)
             if not isinstance(obj, dulwich.objects.Tree):
                 continue
             blobs.append(os.path.join(prefix, item.path))
-            if len(repo.get_object(item.sha)):
-                _traverse(obj, repo, blobs, os.path.join(prefix, item.path))
+            if len(repo_obj.get_object(item.sha)):
+                _traverse(obj,
+                          repo_obj,
+                          blobs,
+                          os.path.join(prefix, item.path))
     ret = set()
-    tree = _get_tree_dulwich(repo, ref_tgt)
-    tree = _dulwich_walk_tree(repo, tree, root)
+    if tgt_env == 'base':
+        tgt_env = repo['base']
+    tree = _get_tree_dulwich(repo, tgt_env)
+    tree = _dulwich_walk_tree(repo['repo'], tree, repo['root'])
     if not isinstance(tree, dulwich.objects.Tree):
         return ret
     blobs = []
     if len(tree):
-        _traverse(tree, repo, blobs, root)
+        _traverse(tree, repo['repo'], blobs, repo['root'])
     for blob in blobs:
-        if root:
-            blob = os.path.relpath(blob, root)
-        ret.add(os.path.join(mountpoint, blob))
+        if repo['root']:
+            blob = os.path.relpath(blob, repo['root'])
+        ret.add(os.path.join(repo['mountpoint'], blob))
     return ret

@@ -21,7 +21,9 @@ Getting Started
     Getting Started With Linode <linode>
     Getting Started With OpenStack <openstack>
     Getting Started With Parallels <parallels>
+    Getting Started With Proxmox <proxmox>
     Getting Started With Rackspace <rackspace>
+    Getting Started With HP Cloud <hpcloud>
     Getting Started With SoftLayer <softlayer>
 
 Core Configuration

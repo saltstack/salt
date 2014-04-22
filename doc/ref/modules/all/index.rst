@@ -30,6 +30,7 @@ Full list of builtin execution modules
     bridge
     bsd_shadow
     cassandra
+    chef
     chocolatey
     cloud
     cmdmod
@@ -57,6 +58,7 @@ Full list of builtin execution modules
     eix
     environ
     eselect
+    etcd_mod
     event
     extfs
     file
@@ -67,6 +69,7 @@ Full list of builtin execution modules
     freebsdports
     freebsdservice
     gem
+    genesis
     gentoo_service
     gentoolkitmod
     git
@@ -78,12 +81,16 @@ Full list of builtin execution modules
     grub_legacy
     guestfs
     hadoop
+    haproxyconn
     hg
     hosts
     htpasswd
     img
     incron
+    influx
     ini_manage
+    introspect
+    ipset
     iptables
     junos
     key
@@ -103,6 +110,7 @@ Full list of builtin execution modules
     lxc
     mac_group
     mac_user
+    macports
     makeconf
     match
     mdadm
@@ -115,10 +123,12 @@ Full list of builtin execution modules
     mount
     munin
     mysql
+    nagios
     netbsd_sysctl
     netbsdservice
     network
     nfs3
+    nftables
     nginx
     nova
     npm
@@ -174,6 +184,8 @@ Full list of builtin execution modules
     smartos_imgadm
     smartos_vmadm
     smf
+    smtp
+    softwareupdate
     solaris_group
     solaris_shadow
     solaris_user
@@ -185,6 +197,7 @@ Full list of builtin execution modules
     status
     supervisord
     svn
+    swift
     sysbench
     sysmod
     system
@@ -222,6 +235,6 @@ Full list of builtin execution modules
     yumpkg
     zcbuildout
     zfs
-    zpool
     znc
+    zpool
     zypper

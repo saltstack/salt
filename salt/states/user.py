@@ -26,7 +26,7 @@ as either absent or present
 
 # Import python libs
 import logging
-import sys
+import os
 
 # Import salt libs
 import salt.utils
@@ -52,6 +52,7 @@ def _changes(name,
              optional_groups=None,
              remove_groups=True,
              home=None,
+             createhome=True,
              password=None,
              enforce_password=True,
              shell=None,
@@ -105,6 +106,9 @@ def _changes(name,
     if home:
         if lusr['home'] != home:
             change['home'] = home
+        if createhome and not os.path.isdir(home):
+            change['homeDoesNotExist'] = home
+
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -328,6 +332,7 @@ def present(name,
                        present_optgroups,
                        remove_groups,
                        home,
+                       createhome,
                        password,
                        enforce_password,
                        shell,
@@ -361,6 +366,12 @@ def present(name,
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
                 continue
+            if key == 'home' or key == 'homeDoesNotExist':
+                if createhome:
+                    __salt__['user.chhome'](name, val, True)
+                else:
+                    __salt__['user.chhome'](name, val, False)
+                continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)
                 continue
@@ -382,11 +393,6 @@ def present(name,
                 )
             else:
                 __salt__['user.ch{0}'.format(key)](name, val)
-
-        # Clear cached groups
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('user.getgrall', None)
 
         post = __salt__['user.info'](name)
         spost = {}
@@ -410,6 +416,7 @@ def present(name,
                            present_optgroups,
                            remove_groups,
                            home,
+                           createhome,
                            password,
                            enforce_password,
                            shell,
@@ -554,11 +561,9 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
-        beforegroups = set(
-                [g['name'] for g in __salt__['group.getent'](refresh=True)])
+        beforegroups = set(salt.utils.get_group_list(name))
         ret['result'] = __salt__['user.delete'](name, purge, force)
-        aftergroups = set(
-                [g['name'] for g in __salt__['group.getent'](refresh=True)])
+        aftergroups = set([g for g in beforegroups if __salt__['group.info'](g)])
         if ret['result']:
             ret['changes'] = {}
             for g in beforegroups - aftergroups:

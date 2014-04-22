@@ -5,6 +5,7 @@ Manage the shadow file
 
 # Import python libs
 import os
+import datetime
 try:
     import spwd
 except ImportError:
@@ -15,7 +16,7 @@ import salt.utils
 
 
 def __virtual__():
-    return 'shadow' if __grains__.get('kernel', '') == 'Linux' else False
+    return __grains__.get('kernel', '') == 'Linux'
 
 
 def default_hash():
@@ -166,7 +167,9 @@ def set_password(name, password, use_usermod=False):
                 if comps[0] != name:
                     lines.append(line)
                     continue
+                changed_date = datetime.datetime.today() - datetime.datetime(1970, 1, 1)
                 comps[1] = password
+                comps[2] = str(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
         with salt.utils.fopen(s_file, 'w+') as fp_:

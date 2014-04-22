@@ -34,9 +34,8 @@ def tune(device, **kwargs):
 
         salt '*' blockdev.tune /dev/sda1 read-ahead=1024 read-write=True
 
-    Valid options are::
-
-  read-ahead:
+    Valid options are: ``read-ahead``, ``filesystem-read-ahead``,
+    ``read-only``, ``read-write``.
 
     See the ``blockdev(8)`` manpage for a more complete description of these
     options.

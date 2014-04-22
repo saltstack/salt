@@ -6,10 +6,10 @@ Return config information
 # Import python libs
 import re
 import os
-import urllib2
 
 # Import salt libs
 import salt.utils
+import salt._compat
 import salt.syspaths as syspaths
 
 __proxyenabled__ = ['*']
@@ -38,9 +38,12 @@ DEFAULTS = {'mongo.db': 'salt',
             'solr.num_backups': 1,
             'poudriere.config': '/usr/local/etc/poudriere.conf',
             'poudriere.config_dir': '/usr/local/etc/poudriere.d',
+            'ldap.uri': '',
             'ldap.server': 'localhost',
             'ldap.port': '389',
             'ldap.tls': False,
+            'ldap.no_verify': False,
+            'ldap.anonymous': True,
             'ldap.scope': 2,
             'ldap.attrs': None,
             'ldap.binddn': '',
@@ -79,8 +82,13 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    ret = str(mode).lstrip('0').zfill(4)
+    if not isinstance(mode, salt._compat.string_types):
+        # Make it a string in case it's not
+        mode = str(mode)
+    # Strip any quotes and initial 0, though zero-pad it up to 4
+    ret = mode.strip('"').strip('\'').lstrip('0').zfill(4)
     if ret[0] != '0':
+        # Always include a leading zero
         return '0{0}'.format(ret)
     return ret
 
@@ -252,20 +260,17 @@ def dot_vals(value):
     return ret
 
 
-def gather_bootstrap_script(replace=False):
+def gather_bootstrap_script():
     '''
-    Download the salt-bootstrap script, set replace to True to refresh the
-    script if it has already been downloaded
+    Download the salt-bootstrap script, and return the first location
+    downloaded to.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' config.gather_bootstrap_script True
+        salt '*' config.gather_bootstrap_script
     '''
-    fn_ = os.path.join(__opts__['cachedir'], 'bootstrap.sh')
-    if not replace and os.path.isfile(fn_):
-        return fn_
-    with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write(urllib2.urlopen('http://bootstrap.saltstack.org').read())
-    return fn_
+    ret = salt.utils.cloud.update_bootstrap(__opts__)
+    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
+        return ret['Success']['Files updated'][0]

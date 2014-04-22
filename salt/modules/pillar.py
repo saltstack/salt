@@ -9,16 +9,20 @@ import yaml
 # Import salt libs
 import salt.pillar
 import salt.utils
+from salt._compat import string_types
 
 __proxyenabled__ = ['*']
 
 
-def get(key, default=''):
+def get(key, default='', merge=False):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
+
+    If the merge parameter is set to `True`, the default will be recursively
+    merged into the returned pillar data.
 
     The value can also represent a value in a nested dict using a ":" delimiter
     for the dict. This means that if a dict in pillar looks like this::
@@ -36,6 +40,10 @@ def get(key, default=''):
 
         salt '*' pillar.get pkg:apache
     '''
+    if merge:
+        return salt.utils.dictupdate.update(default,
+            salt.utils.traverse_dict(__pillar__, key, ''))
+
     return salt.utils.traverse_dict(__pillar__, key, default)
 
 
@@ -128,7 +136,7 @@ def ext(external):
 
         salt '*' pillar.ext '{libvirt: _}'
     '''
-    if isinstance(external, basestring):
+    if isinstance(external, string_types):
         external = yaml.safe_load(external)
     pillar = salt.pillar.get_pillar(
         __opts__,

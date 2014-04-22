@@ -5,7 +5,6 @@ Support for the Git SCM
 
 # Import python libs
 import os
-import tempfile
 try:
     import pipes
     HAS_PIPES = True
@@ -22,37 +21,7 @@ def __virtual__():
     '''
     if not all((utils.which('git'), HAS_PIPES)):
         return False
-    return 'git'
-
-
-def _git_ssh_helper(identity):
-    '''
-    Returns the path to a helper script which can be used in the GIT_SSH env
-    var to use a custom private key file.
-    '''
-    opts = {
-        'StrictHostKeyChecking': 'no',
-        'PasswordAuthentication': 'no',
-        'KbdInteractiveAuthentication': 'no',
-        'ChallengeResponseAuthentication': 'no',
-    }
-
-    helper = tempfile.NamedTemporaryFile(delete=False)
-
-    helper.writelines([
-        '#!/bin/sh\n',
-        'exec ssh {opts} -i {identity} $*\n'.format(
-            opts=' '.join('-o%s=%s' % (key, value)
-                          for key, value in opts.items()),
-            identity=identity,
-        )
-    ])
-
-    helper.close()
-
-    os.chmod(helper.name, 0755)
-
-    return helper.name
+    return True
 
 
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
@@ -66,27 +35,49 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     env = {}
 
     if identity:
-        helper = _git_ssh_helper(identity)
+        stderrs = []
 
-        env = {
-            'GIT_SSH': helper
-        }
+        # if the statefile provides multiple identities, they need to be tried
+        # (but also allow a string instead of a list)
+        if not isinstance(identity, list):
+            # force it into a list
+            identity = [identity]
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=cwd,
-                                     runas=runas,
-                                     env=env,
-                                     **kwargs)
+        # try each of the identities, independently
+        for id_file in identity:
+            env = {
+                'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
+                                        'git/ssh-id-wrapper'),
+                'GIT_IDENTITY': id_file
+            }
 
-    if identity:
-        os.unlink(helper)
+            result = __salt__['cmd.run_all'](cmd,
+                                             cwd=cwd,
+                                             runas=runas,
+                                             env=env,
+                                             **kwargs)
 
-    retcode = result['retcode']
+            # if the command was successful, no need to try additional IDs
+            if result['retcode'] == 0:
+                return result['stdout']
+            else:
+                stderrs.append(result['stderr'])
 
-    if retcode == 0:
-        return result['stdout']
+        # we've tried all IDs and still haven't passed, so error out
+        raise exceptions.CommandExecutionError("\n\n".join(stderrs))
+
     else:
-        raise exceptions.CommandExecutionError(result['stderr'])
+        result = __salt__['cmd.run_all'](cmd,
+                                         cwd=cwd,
+                                         runas=runas,
+                                         env=env,
+                                         **kwargs)
+        retcode = result['retcode']
+
+        if retcode == 0:
+            return result['stdout']
+        else:
+            raise exceptions.CommandExecutionError(result['stderr'])
 
 
 def _git_getdir(cwd, user=None):

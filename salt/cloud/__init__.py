@@ -17,7 +17,6 @@ import multiprocessing
 from itertools import groupby
 
 # Import salt.cloud libs
-import salt.utils.event
 from salt.cloud.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
@@ -32,6 +31,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 from salt.utils import context
+from salt._compat import string_types
 
 # Import third party libs
 import yaml
@@ -253,6 +253,13 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults())
         return mapper.map_providers_parallel(query_type)
 
+    def min_query(self, query_type='list_nodes_min'):
+        '''
+        Query select instance information
+        '''
+        mapper = salt.cloud.Map(self._opts_defaults())
+        return mapper.map_providers_parallel(query_type)
+
     def profile(self, profile, names, vm_overrides=None, **kwargs):
         '''
         Pass in a profile to create, names is a list of vm names to allocate
@@ -315,9 +322,11 @@ class CloudClient(object):
 
         Example:
 
-        client.volume_action(names=['myblock'], action='create',
-            provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
-        )
+        .. code-block:: python
+
+            client.volume_action(names=['myblock'], action='create',
+                provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
+            )
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
@@ -353,6 +362,8 @@ class CloudClient(object):
         Execute a single action via the cloud plugin backend
 
         Examples:
+
+        .. code-block:: python
 
             client.action(fun='show_instance', names=['myinstance'])
             client.action(fun='show_image', provider='my-ec2-config',
@@ -509,6 +520,8 @@ class Cloud(object):
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
             for driver, details in drivers.iteritems():
+                if '{0}.list_nodes_min'.format(driver) in self.clouds:
+                    query = 'list_nodes_min'
                 fun = '{0}.{1}'.format(driver, query)
                 if fun not in self.clouds:
                     log.error(
@@ -548,7 +561,7 @@ class Cloud(object):
 
     def get_running_by_names(self, names, query='list_nodes', cached=False,
                              profile=None):
-        if isinstance(names, basestring):
+        if isinstance(names, string_types):
             names = [names]
 
         matches = {}
@@ -874,8 +887,16 @@ class Cloud(object):
             if not ret:
                 continue
 
+            vm_ = {
+                'name': name,
+                'profile': None,
+                'provider': ':'.join([alias, driver])
+            }
+            minion_dict = salt.config.get_cloud_config_value(
+                'minion', vm_, self.opts, default={}
+            )
             key_file = os.path.join(
-                self.opts['pki_dir'], 'minions', name
+                self.opts['pki_dir'], 'minions', minion_dict.get('id', name)
             )
             globbed_key_file = glob.glob('{0}.*'.format(key_file))
 
@@ -889,7 +910,7 @@ class Cloud(object):
 
             if os.path.isfile(key_file) and not globbed_key_file:
                 # Single key entry. Remove it!
-                salt.utils.cloud.remove_key(self.opts['pki_dir'], name)
+                salt.utils.cloud.remove_key(self.opts['pki_dir'], os.path.basename(key_file))
                 continue
 
             if not os.path.isfile(key_file) and globbed_key_file:
@@ -1093,7 +1114,7 @@ class Cloud(object):
 
                 # a small pause makes the sync work reliably
                 time.sleep(3)
-                client = salt.client.LocalClient()
+                client = salt.client.get_local_client(mopts=self.opts)
                 ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
                     self.opts['sync_after_install']
                 ))
@@ -1118,7 +1139,7 @@ class Cloud(object):
                     self.opts['start_action'], vm_['name']
                 )
             )
-            client = salt.client.LocalClient()
+            client = salt.client.get_local_client(mopts=self.opts)
             action_out = client.cmd(
                 vm_['name'],
                 self.opts['start_action'],
@@ -1504,7 +1525,7 @@ class Map(Cloud):
             if isinstance(mapped, (list, tuple)):
                 entries = {}
                 for mapping in mapped:
-                    if isinstance(mapping, basestring):
+                    if isinstance(mapping, string_types):
                         # Foo:
                         #   - bar1
                         #   - bar2
@@ -1536,7 +1557,7 @@ class Map(Cloud):
                 map_[profile] = entries
                 continue
 
-            if isinstance(mapped, basestring):
+            if isinstance(mapped, string_types):
                 # If it's a single string entry, let's make iterable because of
                 # the next step
                 mapped = [mapped]
@@ -1965,7 +1986,7 @@ class Map(Cloud):
                             self.opts['start_action'], ', '.join(group)
                         )
                     )
-                    client = salt.client.LocalClient()
+                    client = salt.client.get_local_client()
                     out.update(client.cmd(
                         ','.join(group), self.opts['start_action'],
                         timeout=self.opts['timeout'] * 60, expr_form='list'

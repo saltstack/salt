@@ -84,3 +84,8 @@ class LocalClientTestCase(TestCase,
                 self.assertRaises(SaltInvocationError,
                                   self.local_client.pub,
                                   'non_existant_group', 'test.ping', expr_form='nodegroup')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(LocalClientTestCase, needs_daemon=False)

@@ -191,3 +191,8 @@ class DigTestCase(TestCase):
                  ['50', 'alt4.aspmx.l.google.com.'],
                  ['30', 'alt2.aspmx.l.google.com.']]
             )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(DigTestCase, needs_daemon=False)

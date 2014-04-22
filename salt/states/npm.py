@@ -35,7 +35,8 @@ def installed(name,
               dir=None,
               runas=None,
               user=None,
-              force_reinstall=False):
+              force_reinstall=False,
+              registry=None):
     '''
     Verify that the given package is installed and is at the correct version
     (if specified).
@@ -64,6 +65,11 @@ def installed(name,
         The user to run NPM with
 
         .. versionadded:: 0.17.0
+
+    registry
+        The NPM registry to install the package from.
+
+        .. versionadded:: Helium
 
     force_reinstall
         Install the package even if it is already installed
@@ -97,7 +103,9 @@ def installed(name,
     prefix = name.split('@')[0].strip()
 
     try:
-        installed_pkgs = __salt__['npm.list'](pkg=name, dir=dir)
+        installed_pkgs = __salt__['npm.list'](pkg=name,
+                                              dir=dir,
+                                              registry=registry)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)

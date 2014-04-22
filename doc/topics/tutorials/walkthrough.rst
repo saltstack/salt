@@ -194,46 +194,23 @@ The easiest way to accept the minion key is to accept all pending keys:
 .. note::
 
     Keys should be verified! The secure thing to do before accepting a key is
-    to run ``salt-key -p minion-id`` to print the public key for the minion.
-    This can then be compared against the minion's public key file, which is
-    located (on the minion, of course) at ``/etc/salt/pki/minion/minion.pub``.
+    to run ``salt-key -f minion-id`` to print the fingerprint of the minion's
+    public key. This fingerprint can then be compared against the fingerprint
+    generated on the minion.
 
     On the master::
 
-        # salt-key -p foo.domain.com
-        Accepted Keys:
-        foo.domain.com:  -----BEGIN PUBLIC KEY-----
-        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0JcA0IEp/yqghK5V2VLM
-        jbG7FWV6qtw/ubTDBnpDGQgrvSNOtd0QcJsAzAtDcHwrudQgyxTZGVJqPY7gLc7P
-        5b4EFWt5E1w3+KZ+XXy4YtW5oOzVN5BvsJ85g7c0TUnmjL7p3MUUXE4049Ue/zgX
-        jtbFJ0aa1HB8bnlQdWWOeflYRNEQL8482ZCmXXATFP1l5uJA9Pr6/ltdWtQTsXUA
-        bEseUGEpmq83vAkwtZIyJRG2cJh8ZRlJ6whSMg6wr7lFvStHQQzKHt9pRPml3lLK
-        ba2X07myAEJq/lpJNXJm5bkKV0+o8hqYQZ1ndh9HblHb2EoDBNbuIlhYft1uv8Tp
-        8beaEbq8ZST082sS/NjeL7W1T9JS6w2rw4GlUFuQlbqW8FSl1VDo+Alxu0VAr4GZ
-        gZpl2DgVoL59YDEVrlB464goly2c+eY4XkNT+JdwQ9LwMr83/yAAG6EGNpjT3pZg
-        Wey7WRnNTIF7H7ISwEzvik1GrhyBkn6K1RX3uAf760ZsQdhxwHmop+krgVcC0S93
-        xFjbBFF3+53mNv7BNPPgl0iwgA9/WuPE3aoE0A8Cm+Q6asZjf8P/h7KS67rIBEKV
-        zrQtgf3aZBbW38CT4fTzyWAP138yrU7VSGhPMm5KfTLywNsmXeaR5DnZl6GGNdL1
-        fZDM+J9FIGb/50Ee77saAlUCAwEAAQ==
-        -----END PUBLIC KEY-----
+        # salt-key -f foo.domain.com
+        Unaccepted Keys:
+        foo.domain.com:  39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
 
     On the minion::
 
-        # cat /etc/salt/pki/minion/minion.pub
-        -----BEGIN PUBLIC KEY-----
-        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0JcA0IEp/yqghK5V2VLM
-        jbG7FWV6qtw/ubTDBnpDGQgrvSNOtd0QcJsAzAtDcHwrudQgyxTZGVJqPY7gLc7P
-        5b4EFWt5E1w3+KZ+XXy4YtW5oOzVN5BvsJ85g7c0TUnmjL7p3MUUXE4049Ue/zgX
-        jtbFJ0aa1HB8bnlQdWWOeflYRNEQL8482ZCmXXATFP1l5uJA9Pr6/ltdWtQTsXUA
-        bEseUGEpmq83vAkwtZIyJRG2cJh8ZRlJ6whSMg6wr7lFvStHQQzKHt9pRPml3lLK
-        ba2X07myAEJq/lpJNXJm5bkKV0+o8hqYQZ1ndh9HblHb2EoDBNbuIlhYft1uv8Tp
-        8beaEbq8ZST082sS/NjeL7W1T9JS6w2rw4GlUFuQlbqW8FSl1VDo+Alxu0VAr4GZ
-        gZpl2DgVoL59YDEVrlB464goly2c+eY4XkNT+JdwQ9LwMr83/yAAG6EGNpjT3pZg
-        Wey7WRnNTIF7H7ISwEzvik1GrhyBkn6K1RX3uAf760ZsQdhxwHmop+krgVcC0S93
-        xFjbBFF3+53mNv7BNPPgl0iwgA9/WuPE3aoE0A8Cm+Q6asZjf8P/h7KS67rIBEKV
-        zrQtgf3aZBbW38CT4fTzyWAP138yrU7VSGhPMm5KfTLywNsmXeaR5DnZl6GGNdL1
-        fZDM+J9FIGb/50Ee77saAlUCAwEAAQ==
-        -----END PUBLIC KEY-----
+        # salt-call key.finger --local
+        local:
+            39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
+            
+    If they match, approve the key with ``salt-key -a foo.domain.com``.
 
 
 Sending the First Commands
@@ -257,15 +234,19 @@ start with looks like this:
 
 The ``*`` is the target, which specifies all minions.
 
-``test.ping`` tells the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function.
+``test.ping`` tells the minion to run the :py:func:`test.ping
+<salt.modules.test.ping>` function.
 
-In the case of ``test.ping``, ``test`` refers to a :doc:`execution module </ref/modules/>`.
-``ping`` refers to the :py:func:`ping <salt.modules.test.ping>` function contained in the
-aforementioned ``test`` module.
+In the case of ``test.ping``, ``test`` refers to a :doc:`execution module
+</ref/modules/index>`.  ``ping`` refers to the :py:func:`ping
+<salt.modules.test.ping>` function contained in the aforementioned ``test``
+module.
 
 .. note::
-    Execution modules are the workhorses of Salt. They do the work on the system to perform
-    various tasks, such as manipulating files and restarting services.
+
+    Execution modules are the workhorses of Salt. They do the work on the
+    system to perform various tasks, such as manipulating files and restarting
+    services.
 
 The result of running this command will be the master instructing all of the
 minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel
@@ -281,8 +262,9 @@ connected.
     the minion's hostname, but can be explicitly defined in the minion config as
     well by using the :conf_minion:`id` parameter.
 
-Of course, there are hundreds of other modules that can be called just as ``test.ping`` can.
-For example, the following would return disk usage on all targeted minions:
+Of course, there are hundreds of other modules that can be called just as
+``test.ping`` can.  For example, the following would return disk usage on all
+targeted minions:
 
 .. code-block:: bash
 

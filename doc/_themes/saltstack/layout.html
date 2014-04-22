@@ -76,9 +76,18 @@
             {%- include sidebartemplate %}
         {%- endfor %}
 
-        <h3>Upcoming SaltStack Events</h3>
-        <script src="http://cdn.lanyrd.net/badges/person-v1.min.js"></script>
-        <div class="lanyrd-target-splat"><a href="http://lanyrd.com/profile/saltstackinc/" class="lanyrd-splat lanyrd-number-3 lanyrd-context-future" rel="me">My conferences on Lanyrd</a></div>
+        <p><a href="http://www.saltstack.com/events">Connect with SaltStack at
+            upcoming events, webinars and local meet ups and user groups</a></p>
+
+        <h4>SaltStack training</h4>
+        <img src="{{ pathto('_static/images/salt-training.png', 1) }}" alt="" style="padding-bottom: 1em;">
+
+        <ul>
+            <li><a href="https://saltnyc.eventbrite.com/">NYC, May 5-7</a></li>
+            <li><a href="http://saltlondon.eventbrite.com/"> London, May 28-30</a></li>
+            <li><a href="http://saltslc.eventbrite.com/">Salt Lake City, June 11-13</a></li>
+        </ul>
+
     </div>
     </div>
     {%- endif %}
@@ -276,11 +285,13 @@
 
         <script src="{{ pathto('_static/js/main.js', 1) }}"></script>
 
+        {% if html_docs_saltstack_org %}
         <script>
             var _gaq=[['_setAccount','UA-26984928-1'],['_trackPageview']];
             (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
             g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
             s.parentNode.insertBefore(g,s)}(document,'script'));
         </script>
+        {% endif %}
     </body>
 </html>

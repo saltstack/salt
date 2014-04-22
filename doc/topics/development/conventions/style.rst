@@ -18,11 +18,13 @@ improve Salt)!!
 Linting
 =======
 
-Most Salt style conventions are codified in Salt's `.pylintrc` file. This file
+Most Salt style conventions are codified in Salt's ``.pylintrc`` file. This file
 is found in the root of the Salt project and can be passed as an argument to the
 pylint_ program as follows:
 
-`pylint --rcfile=/path/to/salt/.pylintrc salt/dir/to/lint`
+.. code-block:: bash
+
+    pylint --rcfile=/path/to/salt/.pylintrc salt/dir/to/lint
 
 .. _pylint: http://www.pylint.org
 
@@ -238,6 +240,20 @@ instance:
     Making function and class definitions vertical is only required if the
     arguments are longer then 80 characters. Otherwise, the formatting is
     optional and both are acceptable.
+
+
+
+Line Length
+-----------
+
+For function definitions and function calls, Salt adheres to the PEP-8 
+specification of at most 80 characters per line.
+
+Non function definitions or function calls, please adopt a soft limit of 120 
+characters per line. If breaking the line reduces the code readability, don't 
+break it. Still, try to avoid passing that 120 characters limit and remember, 
+**vertical is better...  unless it isn't**
+
 
 Indenting
 =========

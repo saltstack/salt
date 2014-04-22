@@ -64,6 +64,55 @@ class FileReplaceTestCase(TestCase):
         with open(self.tfile.name, 'rb') as fp:
             self.assertIn('Salticus', fp.read())
 
+    def test_replace_append_if_not_found(self):
+        '''
+        Check that file.replace append_if_not_found works
+        '''
+        args = {
+                'pattern': '#*baz=(?P<value>.*)',
+                'repl': 'baz=\\g<value>',
+                'append_if_not_found': True,
+        }
+        base = 'foo=1\nbar=2'
+        expected = '{base}\n{repl}\n'.format(base=base, **args)
+        # File ending with a newline, no match
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base + '\n')
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # File not ending with a newline, no match
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base)
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # A newline should not be added in empty files
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), args['repl'] + '\n')
+        # Using not_found_content, rather than repl
+        with tempfile.NamedTemporaryFile() as tfile:
+            args['not_found_content'] = 'baz=3'
+            expected = '{base}\n{not_found_content}\n'.format(base=base, **args)
+            tfile.write(base)
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # not appending if matches
+        with tempfile.NamedTemporaryFile() as tfile:
+            base = 'foo=1\n#baz=42\nbar=2\n'
+            expected = 'foo=1\nbaz=42\nbar=2\n'
+            tfile.write(base)
+            tfile.flush()
+            filemod.replace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+
     def test_backup(self):
         fext = '.bak'
         bak_file = '{0}{1}'.format(self.tfile.name, fext)
@@ -211,6 +260,40 @@ class FileBlockReplaceTestCase(TestCase):
             self.assertIn('#-- START BLOCK 2'
                           + "\n" + new_content
                           + "\n" + '#-- END BLOCK 2', fp.read())
+
+    def test_replace_append_newline_at_eof(self):
+        '''
+        Check that file.blockreplace works consistently on files with and
+        without newlines at end of file.
+        '''
+        base = 'bar'
+        args = {
+                'marker_start': '#start',
+                'marker_end': '#stop',
+                'content': 'baz',
+                'append_if_not_found': True,
+        }
+        block = '{marker_start}\n{content}\n{marker_end}\n'.format(**args)
+        expected = base + '\n' + block
+        # File ending with a newline
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base + '\n')
+            tfile.flush()
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # File not ending with a newline
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base)
+            tfile.flush()
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # A newline should not be added in empty files
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), block)
 
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
@@ -413,6 +496,22 @@ class FileModuleTestCase(TestCase):
                 'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
                 'hash_type': 'sha1'
             })
+
+    def test_user_to_uid_int(self):
+        '''
+        Tests if user is passed as an integer
+        '''
+        user = 5034
+        ret = filemod.user_to_uid(user)
+        self.assertEqual(ret, user)
+
+    def test_group_to_gid_int(self):
+        '''
+        Tests if group is passed as an integer
+        '''
+        group = 5034
+        ret = filemod.group_to_gid(group)
+        self.assertEqual(ret, group)
 
 
 if __name__ == '__main__':

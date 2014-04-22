@@ -7,7 +7,6 @@ All salt configuration loading and defaults should be in this module
 import glob
 import os
 import re
-import socket
 import logging
 import urlparse
 from copy import deepcopy
@@ -28,6 +27,8 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+import salt.utils.validate.path
+from salt._compat import string_types
 
 import sys
 #can't use salt.utils.is_windows, because config.py is included from salt.utils
@@ -103,12 +104,15 @@ VALID_OPTS = {
     'log_granular_levels': dict,
     'test': bool,
     'cython_enable': bool,
+    'show_timeout': bool,
+    'show_jid': bool,
     'state_verbose': bool,
     'state_output': str,
     'state_auto_order': bool,
     'state_events': bool,
     'acceptance_wait_time': float,
     'acceptance_wait_time_max': float,
+    'rejected_retry': bool,
     'loop_interval': float,
     'dns_check': bool,
     'verify_env': bool,
@@ -146,12 +150,20 @@ VALID_OPTS = {
     'hgfs_root': str,
     'hgfs_base': str,
     'hgfs_branch_method': str,
+    'hgfs_env_whitelist': list,
+    'hgfs_env_blacklist': list,
     'svnfs_remotes': list,
     'svnfs_mountpoint': str,
     'svnfs_root': str,
     'svnfs_trunk': str,
     'svnfs_branches': str,
     'svnfs_tags': str,
+    'svnfs_env_whitelist': list,
+    'svnfs_env_blacklist': list,
+    'minionfs_env': str,
+    'minionfs_mountpoint': str,
+    'minionfs_whitelist': list,
+    'minionfs_blacklist': list,
     'ext_pillar': list,
     'pillar_version': int,
     'pillar_opts': bool,
@@ -214,6 +226,7 @@ VALID_OPTS = {
 
 # default configurations
 DEFAULT_MINION_OPTS = {
+    'interface': '0.0.0.0',
     'master': 'salt',
     'master_port': '4506',
     'master_finger': '',
@@ -281,9 +294,10 @@ DEFAULT_MINION_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'state_auto_order': True,
-    'state_events': True,
+    'state_events': False,
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
+    'rejected_retry': False,
     'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
@@ -295,7 +309,7 @@ DEFAULT_MINION_OPTS = {
     'retry_dns': 30,
     'recon_max': 5000,
     'recon_default': 100,
-    'recon_randomize': False,
+    'recon_randomize': True,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -308,10 +322,10 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'transport': 'zeromq',
-    'auth_timeout': 3,
+    'auth_timeout': 60,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
-    'ioflo_verbose': 3,
+    'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4510,
@@ -351,12 +365,22 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
+    'hgfs_env_whitelist': [],
+    'hgfs_env_blacklist': [],
+    'show_timeout': False,
+    'show_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
     'svnfs_root': '',
     'svnfs_trunk': 'trunk',
     'svnfs_branches': 'branches',
     'svnfs_tags': 'tags',
+    'svnfs_env_whitelist': [],
+    'svnfs_env_blacklist': [],
+    'minionfs_env': 'base',
+    'minionfs_mountpoint': '',
+    'minionfs_whitelist': [],
+    'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
@@ -412,7 +436,7 @@ DEFAULT_MASTER_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'state_auto_order': True,
-    'state_events': True,
+    'state_events': False,
     'search': '',
     'search_index_interval': 3600,
     'loop_interval': 60,
@@ -444,7 +468,9 @@ DEFAULT_MASTER_OPTS = {
     'ssh_timeout': 60,
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
-    'ioflo_verbose': 3,
+    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
+    'maintinance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
+    'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4506,
@@ -628,7 +654,7 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    if os.path.isfile(path):
+    if salt.utils.validate.path.is_readable(path):
         opts = _read_conf_file(path)
         opts['conf_file'] = path
         return opts
@@ -922,7 +948,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, basestring):
+    if isinstance(deploy_scripts_search_path, string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing
@@ -1681,7 +1707,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Guess the id of the minion.
 
     - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
-    - If socket.getfqdn() returns us something other than localhost, use it
+    - If salt.utils.network.get_fqhostname returns us something other than
+      localhost, use it
     - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
@@ -1719,10 +1746,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    # Check socket.getfqdn()
-    fqdn = socket.getfqdn()
+    # Check salt.utils.network.get_fqhostname()
+    fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        log.info('Found minion id from get_fqhostname(): {0}'.format(fqdn))
         if minion_id and cache:
             _cache_id(fqdn, id_cache)
         return fqdn, False

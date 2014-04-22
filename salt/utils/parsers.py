@@ -15,7 +15,6 @@
 from __future__ import print_function
 import os
 import sys
-import getpass
 import logging
 import optparse
 import traceback
@@ -24,32 +23,15 @@ from functools import partial
 # Import salt libs
 import salt.config as config
 import salt.loader as loader
+import salt.log.setup as log
+import salt.syspaths as syspaths
 import salt.utils as utils
 import salt.version as version
-import salt.syspaths as syspaths
-import salt.log.setup as log
+import salt.utils.args
 from salt.utils.validate.path import is_writeable
-from salt._compat import string_types
 
 if not utils.is_windows():
     import salt.cloud.exceptions
-
-
-def parse_args_kwargs(args):
-    '''
-    Parse out the args and kwargs from an args string
-    '''
-    _args = []
-    _kwargs = {}
-    for arg in args:
-        if isinstance(arg, string_types):
-            arg_name, arg_value = salt.utils.parse_kwarg(arg)
-            if arg_name:
-                _kwargs[arg_name] = arg_value
-            else:
-                _args.append(arg)
-
-    return _args, _kwargs
 
 
 def _sorted(mixins_or_funcs):
@@ -423,7 +405,12 @@ class ConfigDirMixIn(object):
         if hasattr(self, 'setup_config'):
             if not hasattr(self, 'config'):
                 self.config = {}
-            self.config.update(self.setup_config())
+            try:
+                self.config.update(self.setup_config())
+            except (IOError, OSError) as exc:
+                self.error(
+                    'Failed to load configuration: {0}'.format(exc)
+                )
 
     def get_config_file_path(self, configfile=None):
         if configfile is None:
@@ -655,7 +642,7 @@ class LogLevelMixIn(object):
             # Since we're not be able to write to the log file or it's parent
             # directory(if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
-            current_user = getpass.getuser()
+            current_user = salt.utils.get_user()
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
@@ -1562,6 +1549,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Display minions that timeout')
         )
         self.add_option(
+            '--show-jid',
+            default=False,
+            action='store_true',
+            help=('Displays jid without the additional output of --verbose')
+        )
+        self.add_option(
             '-b', '--batch',
             '--batch-size',
             default='',
@@ -1679,13 +1672,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                                 self.config['arg'][cmd_index].append(arg)
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
-                                          'defining all arguments.')
+                                          'defining all arguments.\n')
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
 
                 # parse the args and kwargs before sending to the publish interface
-                self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
+                self.config['arg'] = \
+                    salt.utils.args.parse_input(self.config['arg'])
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 

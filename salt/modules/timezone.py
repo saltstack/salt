@@ -20,7 +20,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'timezone'
+    return True
 
 
 def get_zone():
@@ -136,7 +136,7 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     '''
-    Checks the md5sum between the given timezone, and the one set in
+    Checks the hash sum between the given timezone, and the one set in
     /etc/localtime. Returns True if they match, and False if not. Mostly useful
     for running state checks.
 
@@ -155,11 +155,12 @@ def zone_compare(timezone):
     if not os.path.exists(tzfile):
         return 'Error: {0} does not exist.'.format(tzfile)
 
+    hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
     with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = hashlib.md5(fp_.read()).hexdigest()
+        usrzone = hash_type(fp_.read()).hexdigest()
 
     with salt.utils.fopen(tzfile, 'r') as fp_:
-        etczone = hashlib.md5(fp_.read()).hexdigest()
+        etczone = hash_type(fp_.read()).hexdigest()
 
     if usrzone == etczone:
         return True
@@ -193,7 +194,7 @@ def get_hwclock():
     elif 'Debian' in __grains__['os_family']:
         #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
+        out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=')
         if len(out) > 1:
             if out[1] == 'yes':
                 return 'UTC'

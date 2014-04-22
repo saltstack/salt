@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
@@ -530,3 +531,20 @@ def file_dict(*packages):
                 ret[comps[0]] = []
             ret[comps[0]].append((' '.join(comps[1:])))
     return {'errors': errors, 'packages': ret}
+
+
+def owner(*paths):
+    '''
+    Return the name of the package that owns the specified file. Files may be
+    passed as a string (``path``) or as a list of strings (``paths``). If
+    ``path`` contains a comma, it will be converted to ``paths``. If a file
+    name legitimately contains a comma, pass it in via ``paths``.
+
+    CLI Example:
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+    '''
+    cmd = 'pacman -Qqo {0}'
+    return salt.utils.pkg.find_owner(
+        __salt__['cmd.run'], cmd, *paths)

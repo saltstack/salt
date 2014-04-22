@@ -100,3 +100,8 @@ class DockerStateTestCase(TestCase):
                                   'comment': ('docked_unless execution'
                                               ' succeeded'),
                                   'changes': {}})
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(DockerStateTestCase, needs_daemon=False)

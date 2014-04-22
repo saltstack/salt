@@ -19,6 +19,7 @@ import salt.utils
 import salt.state
 import salt.payload
 from salt._compat import string_types
+from salt.exceptions import SaltInvocationError
 
 
 __proxyenabled__ = ['*']
@@ -249,10 +250,13 @@ def highstate(test=None, queue=False, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = copy.deepcopy(__opts__)
 
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
+    if test is None:
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = test
 
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -265,6 +269,10 @@ def highstate(test=None, queue=False, **kwargs):
         opts['environment'] = kwargs['saltenv']
 
     pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
 
     st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
     st_.push_active()
@@ -365,6 +373,10 @@ def sls(mods,
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
 
     serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
@@ -463,7 +475,14 @@ def top(topfn, test=None, queue=False, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.HighState(opts)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     try:
@@ -532,6 +551,57 @@ def show_lowstate(queue=False, **kwargs):
         ret = st_.compile_low_chunks()
     finally:
         st_.pop_active()
+    return ret
+
+
+def sls_id(
+        id_,
+        mods,
+        saltenv,
+        test=None,
+        queue=False,
+        **kwargs):
+    '''
+    Call a single ID from the named module(s) and handle all requisites
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls_id apache http
+    '''
+    if queue:
+        _wait(kwargs.get('__pub_jid'))
+    else:
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
+    orig_test = __opts__.get('test', None)
+    opts = copy.deepcopy(__opts__)
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = __opts__.get('test', None)
+    st_ = salt.state.HighState(opts)
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
+    st_.push_active()
+    try:
+        high_, errors = st_.render_highstate({saltenv: mods})
+    finally:
+        st_.pop_active()
+    errors += st_.state.verify_high(high_)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    chunks = st_.state.compile_high_data(high_)
+    for chunk in chunks:
+        if chunk.get('__id__', '') == id_:
+            ret = st_.state.call_chunk(chunk, {}, chunks)
+    # Work around Windows multiprocessing bug, set __opts__['test'] back to
+    # value from before this function was run.
+    __opts__['test'] = orig_test
     return ret
 
 
@@ -713,12 +783,20 @@ def single(fun, name, test=None, queue=False, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.State(opts)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.State(opts, pillar)
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
         return err
 
+    st_._mod_init(kwargs)
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
@@ -772,8 +850,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')
-        # Verify that the tarball does not extract outside of the intended
-        # root
+    # Verify that the tarball does not extract outside of the intended root
     members = s_pkg.getmembers()
     for member in members:
         if member.path.startswith((os.sep, '..{0}'.format(os.sep))):

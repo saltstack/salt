@@ -18,7 +18,6 @@ try:
     import pwd
 except ImportError:  # This is in case windows minion is importing
     pass
-import getpass
 import resource
 import subprocess
 import multiprocessing
@@ -52,7 +51,6 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
-from salt.pillar import git_pillar
 
 # Import halite libs
 try:
@@ -149,54 +147,24 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
+        # Set up search object
         search = salt.search.Search(self.opts)
+        # Make Start Times
         last = int(time.time())
         rotate = int(time.time())
+        # Init fileserver manager
         fileserver = salt.fileserver.Fileserver(self.opts)
+        # Load Runners
         runners = salt.loader.runner(self.opts)
+        # Init Scheduler
         schedule = salt.utils.schedule.Schedule(self.opts, runners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
+        # Make Event bus for firing
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-
-        pillargitfs = []
-        for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
-            if 'git' in opts_dict:
-                parts = opts_dict['git'].strip().split()
-                try:
-                    br = parts[0]
-                    loc = parts[1]
-                except IndexError:
-                    log.critical(
-                        'Unable to extract external pillar data: {0}'
-                        .format(opts_dict['git'])
-                    )
-                else:
-                    pillargitfs.append(
-                        git_pillar.GitPillar(
-                            br,
-                            loc,
-                            self.opts
-                        )
-                    )
-
-        # Clear remote fileserver backend env cache so it gets recreated during
-        # the first loop_interval
-        for backend in ('git', 'hg', 'svn'):
-            if backend in self.opts['fileserver_backend']:
-                env_cache = os.path.join(
-                    self.opts['cachedir'],
-                    '{0}fs'.format(backend),
-                    'envs.p'
-                )
-                if os.path.isfile(env_cache):
-                    log.debug('Clearing {0}fs env cache'.format(backend))
-                    try:
-                        os.remove(env_cache)
-                    except (IOError, OSError) as exc:
-                        log.critical(
-                            'Unable to clear env cache file {0}: {1}'
-                            .format(env_cache, exc)
-                        )
+        # Init any values needed by the git ext pillar
+        pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
+        # Clean out the fileserver backend cache
+        salt.daemons.masterapi.clean_fsbackend(self.opts)
 
         old_present = set()
         while True:
@@ -207,7 +175,9 @@ class Master(SMaster):
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
-                    salt.crypt.dropfile(self.opts['cachedir'])
+                    salt.crypt.dropfile(
+                            self.opts['cachedir'],
+                            self.opts['user'])
                     rotate = now
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
@@ -324,7 +294,7 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user {0!r}'.format(getpass.getuser())
+            'salt-master is starting as user {0!r}'.format(salt.utils.get_user())
         )
 
         enable_sigusr1_handler()
@@ -734,7 +704,7 @@ class AESFuncs(object):
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Create the master minion to access the external job cache
         self.mminion = salt.minion.MasterMinion(
                 self.opts,
@@ -1195,6 +1165,13 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        load['grains']['id'] = load['id']
+        mods = set()
+        for func in self.mminion.functions.values():
+            mods.add(func.__module__)
+        for mod in mods:
+            sys.modules[mod].__grains__ = load['grains']
+
         pillar = salt.pillar.Pillar(
                 self.opts,
                 load['grains'],
@@ -1214,6 +1191,8 @@ class AESFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+        for mod in mods:
+            sys.modules[mod].__grains__ = self.opts['grains']
         return data
 
     def _minion_event(self, load):
@@ -1683,7 +1662,7 @@ class ClearFuncs(object):
         # Create the event manager
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Make an minion checker object
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
@@ -1704,13 +1683,12 @@ class ClearFuncs(object):
             return True
 
         # After we've ascertained we're not on windows
-        import grp
         try:
             user = self.opts['user']
             pwnam = pwd.getpwnam(user)
             uid = pwnam[2]
             gid = pwnam[3]
-            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+            groups = salt.utils.get_gid_list(user, include_default=False)
         except KeyError:
             log.error(
                 'Failed to determine groups for user {0}. The user is not '
@@ -2446,18 +2424,26 @@ class ClearFuncs(object):
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
+
             except Exception as exc:
                 log.error(
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
                 return ''
+
+            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
+
+            # Auth has succeeded, get groups this user is a member of
+            groups = self.loadauth.get_groups(extra)
+
+            if groups:
+                auth_list = self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name]
-                        if name in self.opts['external_auth'][extra['eauth']]
-                        else self.opts['external_auth'][extra['eauth']]['*'],
+                    auth_list,
                     clear_load['fun'],
                     clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
+                    clear_load.get('tgt_type', 'glob')
+                    )
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':
@@ -2489,7 +2475,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif clear_load['user'] == getpass.getuser():
+            elif clear_load['user'] == salt.utils.get_user():
                 if clear_load.pop('key') != self.key.get(clear_load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
@@ -2527,7 +2513,7 @@ class ClearFuncs(object):
                     )
                     return ''
         else:
-            if clear_load.pop('key') != self.key[getpass.getuser()]:
+            if clear_load.pop('key') != self.key[salt.utils.get_user()]:
                 log.warning(
                     'Authentication failure of type "other" occurred.'
                 )

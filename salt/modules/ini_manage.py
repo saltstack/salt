@@ -25,8 +25,8 @@ def __virtual__():
 
 comment_regexp = re.compile(r'^\s*#\s*(.*)')
 section_regexp = re.compile(r'\s*\[(.+)\]\s*')
-option_regexp1 = re.compile(r'\s*(.+?)\s*(=)\s*(.+)\s*')
-option_regexp2 = re.compile(r'\s*(.+?)\s*(:)\s*(.+)\s*')
+option_regexp1 = re.compile(r'\s*(.+?)\s*(=)(.*)')
+option_regexp2 = re.compile(r'\s*(.+?)\s*(:)(.*)')
 
 
 def set_option(file_name, sections=None, summary=True):
@@ -47,7 +47,7 @@ def set_option(file_name, sections=None, summary=True):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.set_option',
                ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
 
@@ -107,7 +107,7 @@ def get_option(file_name, section, option):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.get_option',
                [path_to_ini_file, section_name, option])
 
@@ -134,7 +134,7 @@ def remove_option(file_name, section, option):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.remove_option',
                [path_to_ini_file, section_name, option])
 
@@ -162,7 +162,7 @@ def get_section(file_name, section):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.get_section',
                [path_to_ini_file, section_name])
 
@@ -190,7 +190,7 @@ def remove_section(file_name, section):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.remove_section',
                [path_to_ini_file, section_name])
 
@@ -278,7 +278,13 @@ class _Ini(object):
         current_section = _Section('DEFAULT_IMPLICIT')
         self.sections.append(current_section)
         with open(self.file_name, 'r') as inifile:
+            previous_line = None
             for line in inifile.readlines():
+
+                # Make sure the empty lines between options are preserved
+                if _Ini.isempty(previous_line) and not _Ini.isnewsection(line):
+                    current_section.append('\n')
+
                 if _Ini.iscomment(line):
                     current_section.append(_Ini.decrypt_comment(line))
                 elif _Ini.isnewsection(line):
@@ -286,6 +292,7 @@ class _Ini(object):
                     current_section = self.sections[-1]
                 elif _Ini.isoption(line):
                     current_section.append(_Ini.decrypt_option(line))
+                previous_line = line
         return self
 
     def flush(self):
@@ -304,6 +311,8 @@ class _Ini(object):
                 if isinstance(item, _Option):
                     file_contents += '%s%s%s\n' % (item.name, item.separator,
                                                    item.value)
+                elif item == '\n':
+                    file_contents += '\n'
                 else:
                     file_contents += '# %s\n' % item
             file_contents += '\n'
@@ -360,6 +369,10 @@ class _Ini(object):
     @staticmethod
     def iscomment(line):
         return re.match(comment_regexp, line)
+
+    @staticmethod
+    def isempty(line):
+        return line == '\n'
 
     @staticmethod
     def isnewsection(line):

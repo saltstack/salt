@@ -13,7 +13,6 @@ import logging
 import salt.log
 import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
-from salt._compat import pickle
 
 # Import third party libs
 try:
@@ -91,13 +90,7 @@ class Serial(object):
         '''
         Run the correct loads serialization format
         '''
-        if self.serial == 'msgpack':
-            return msgpack.loads(msg, use_list=True)
-        elif self.serial == 'pickle':
-            try:
-                return pickle.loads(msg)
-            except Exception:
-                return msgpack.loads(msg, use_list=True)
+        return msgpack.loads(msg, use_list=True)
 
     def load(self, fn_):
         '''
@@ -111,35 +104,32 @@ class Serial(object):
         '''
         Run the correct dumps serialization format
         '''
-        if self.serial == 'pickle':
-            return pickle.dumps(msg)
-        else:
-            try:
-                return msgpack.dumps(msg)
-            except TypeError:
-                if msgpack.version >= (0, 2, 0):
-                    # Should support OrderedDict serialization, so, let's
-                    # raise the exception
-                    raise
+        try:
+            return msgpack.dumps(msg)
+        except TypeError:
+            if msgpack.version >= (0, 2, 0):
+                # Should support OrderedDict serialization, so, let's
+                # raise the exception
+                raise
 
-                # msgpack is < 0.2.0, let's make it's life easier
-                # Since OrderedDict is identified as a dictionary, we can't
-                # make use of msgpack custom types, we will need to convert by
-                # hand.
-                # This means iterating through all elements of a dictionary or
-                # list/tuple
-                def odict_encoder(obj):
-                    if isinstance(obj, dict):
-                        for key, value in obj.copy().iteritems():
-                            obj[key] = odict_encoder(value)
-                        return dict(obj)
-                    elif isinstance(obj, (list, tuple)):
-                        obj = list(obj)
-                        for idx, entry in enumerate(obj):
-                            obj[idx] = odict_encoder(entry)
-                        return obj
+            # msgpack is < 0.2.0, let's make it's life easier
+            # Since OrderedDict is identified as a dictionary, we can't
+            # make use of msgpack custom types, we will need to convert by
+            # hand.
+            # This means iterating through all elements of a dictionary or
+            # list/tuple
+            def odict_encoder(obj):
+                if isinstance(obj, dict):
+                    for key, value in obj.copy().iteritems():
+                        obj[key] = odict_encoder(value)
+                    return dict(obj)
+                elif isinstance(obj, (list, tuple)):
+                    obj = list(obj)
+                    for idx, entry in enumerate(obj):
+                        obj[idx] = odict_encoder(entry)
                     return obj
-                return msgpack.dumps(odict_encoder(msg))
+                return obj
+            return msgpack.dumps(odict_encoder(msg))
 
     def dump(self, msg, fn_):
         '''

@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only load if the cloud module is available in __salt__
     '''
-    return 'cloud' if 'cloud.profile' in __salt__ else False
+    return 'cloud.profile' in __salt__
 
 
 def _check_name(name):
@@ -250,7 +250,17 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
     info = __salt__['cloud.profile'](profile, name, vm_overrides=kwargs)
-    if info and not 'Error' in info:
+
+    # get either {Error: ''} or {namestring: {Error: ''}}
+    # which is what we can get from providers returns
+    main_error = info.get('Error', '')
+    name_error = ''
+    if isinstance(info, dict):
+        subinfo = info.get(name, {})
+        if isinstance(subinfo, dict):
+            name_error = subinfo.get('Error', None)
+    error = main_error or name_error
+    if info and not error:
         node_info = info.get(name)
         ret['result'] = True
         default_msg = 'Created instance {0} using profile {1}'.format(
@@ -262,13 +272,13 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         else:
             ret['changes'] = info
             ret['comment'] = default_msg
-    elif 'Error' in info:
+    elif error:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
-                          'using profile {1}: {2}').format(
+                          ' using profile {1}: {2}').format(
             name,
             profile,
-            info['Error'],
+            '{0}\n{1}\n'.format(main_error, name_error).strip(),
         )
     else:
         ret['result'] = False
@@ -311,6 +321,40 @@ def volume_present(name, provider=None, **kwargs):
     else:
         ret['result'] = False
         ret['comment'] = 'Volume {0} failed to create.'.format(name)
+    return ret
+
+
+def volume_absent(name, provider=None, **kwargs):
+    '''
+    Check that a block volume exists.
+    '''
+    ret = _check_name(name)
+    if not ret['result']:
+        return ret
+
+    volumes = __salt__['cloud.volume_list'](provider=provider)
+
+    if not name in volumes.keys():
+        ret['comment'] = 'Volume is absent.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Volume {0} will be deleted.'.format(name)
+        ret['result'] = None
+        return ret
+
+    response = __salt__['cloud.volume_delete'](
+        names=name,
+        provider=provider,
+        **kwargs
+    )
+    if response:
+        ret['result'] = True
+        ret['comment'] = 'Volume {0} was deleted'.format(name)
+        ret['changes'] = {'old': volumes[name], 'new': response}
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Volume {0} failed to delete.'.format(name)
     return ret
 
 
@@ -366,4 +410,61 @@ def volume_attached(name, server_name, provider=None, **kwargs):
     else:
         ret['result'] = False
         ret['comment'] = 'Volume {0} failed to attach.'.format(name)
+    return ret
+
+
+def volume_detached(name, server_name=None, provider=None, **kwargs):
+    '''
+    Check if a block volume is attached.
+    '''
+    ret = _check_name(name)
+    if not ret['result']:
+        return ret
+
+    if not server_name is None:
+        ret = _check_name(server_name)
+        if not ret['result']:
+            return ret
+
+    volumes = __salt__['cloud.volume_list'](provider=provider)
+    if server_name:
+        instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    else:
+        instance = None
+
+    if name in volumes.keys() and not volumes[name]['attachments']:
+        volume = volumes[name]
+        ret['comment'] = (
+            'Volume {name} is not currently attached to anything.'
+        ).format(**volumes[name])
+        ret['result'] = True
+        return ret
+    elif not name in volumes.keys():
+        ret['comment'] = 'Volume {0} does not exist'.format(name)
+        ret['result'] = False
+        return ret
+    elif not instance and not server_name is None:
+        ret['comment'] = 'Server {0} does not exist'.format(server_name)
+        ret['result'] = False
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Volume {0} will be will be detached.'.format(
+            name
+        )
+        ret['result'] = None
+        return ret
+
+    response = __salt__['cloud.volume_detach'](
+        provider=provider,
+        names=name,
+        server_name=server_name,
+        **kwargs
+    )
+    if response:
+        ret['result'] = True
+        ret['comment'] = 'Volume {0} was created'.format(name)
+        ret['changes'] = {'old': volumes[name], 'new': response}
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Volume {0} failed to detach.'.format(name)
     return ret

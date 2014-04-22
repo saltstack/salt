@@ -129,6 +129,7 @@ class PrintableDict(OrderedDict):
     Ensures that dict str() and repr() are YAML friendly.
 
     .. code-block:: python
+
         mapping = OrderedDict([('a', 'b'), ('c', None)])
         print mapping
         # OrderedDict([('a', 'b'), ('c', None)])
@@ -136,7 +137,6 @@ class PrintableDict(OrderedDict):
         decorated = PrintableDict(mapping)
         print decorated
         # {'a': 'b', 'c': None}
-
     '''
     def __str__(self):
         output = []
@@ -192,8 +192,7 @@ class SerializerExtension(Extension, object):
     '''
     Yaml and Json manipulation.
 
-    Format filters
-    ~~~~~~~~~~~~~~
+    **Format filters**
 
     Allows to jsonify or yamlify any datastructure. For example, this dataset:
 
@@ -218,10 +217,11 @@ class SerializerExtension(Extension, object):
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
         python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
 
-    Load filters
-    ~~~~~~~~~~~~
+    **Load filters**
 
-    Parse strings variable with the selected serializer:
+    Strings and variables can be deserialized with **load_yaml** and
+    **load_json** tags and filters. It allows one to manipulate data directly
+    in templates, easily:
 
     .. code-block:: jinja
 
@@ -233,11 +233,10 @@ class SerializerExtension(Extension, object):
 
         Dude, it works for real!
 
-    Load tags
-    ~~~~~~~~~
+    **Load tags**
 
-    Like the load filters, it parses blocks with the selected serializer,
-    and assign it to the relevant variable
+    Salt implements **import_yaml** and **import_json** tags. They work like
+    the `import tag`_, except that the document is also deserialized.
 
     Syntaxe are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
     and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
@@ -260,8 +259,7 @@ class SerializerExtension(Extension, object):
 
         Dude, it works for real!
 
-    Import tags
-    ~~~~~~~~~~~
+    **Import tags**
 
     External files can be imported and made available as a Jinja variable.
 
@@ -271,8 +269,7 @@ class SerializerExtension(Extension, object):
         {% import_json "defaults.json" as defaults %}
         {% import_text "completeworksofshakespeare.txt" as poems %}
 
-    Catalog
-    ~~~~~~~
+    **Catalog**
 
     ``import_*`` and ``load_*`` tags will automatically expose their
     target variable to import. This feature makes catalog of data to
@@ -281,6 +278,7 @@ class SerializerExtension(Extension, object):
     for example:
 
     .. code-block:: jinja
+
         # doc1.sls
         {% load_yaml as var1 %}
             foo: it works
@@ -290,10 +288,12 @@ class SerializerExtension(Extension, object):
         {% endload %}
 
     .. code-block:: jinja
+
         # doc2.sls
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
+    .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',

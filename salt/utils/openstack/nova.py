@@ -7,6 +7,8 @@ Nova class
 HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
+    import novaclient.auth_plugin
+    import novaclient.exceptions
     HAS_NOVA = True
 except ImportError:
     pass
@@ -17,6 +19,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.cloud.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -57,19 +60,44 @@ class NovaServer(object):
         return self.__dict__
 
 
+def get_entry(dict_, key, value):
+    for entry in dict_:
+        if entry[key] == value:
+            return entry
+    raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+
+
+def sanatize_novaclient(kwargs):
+    variables = (
+        'username', 'api_key', 'project_id', 'auth_url', 'insecure',
+        'timeout', 'proxy_tenant_id', 'proxy_token', 'region_name',
+        'endpoint_type', 'extensions', 'service_type', 'service_name',
+        'volume_service_name', 'timings', 'bypass_url', 'os_cache',
+        'no_cache', 'http_log_debug', 'auth_system', 'auth_plugin',
+        'auth_token', 'cacert', 'tenant_id'
+    )
+    ret = {}
+    for var in kwargs.keys():
+        if var in variables:
+            ret[var] = kwargs[var]
+
+    return ret
+
+
 # Function alias to not shadow built-ins
 class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
-
     def __init__(
         self,
         username,
-        api_key,
         project_id,
         auth_url,
-        region_name=None
+        region_name=None,
+        password=None,
+        os_auth_plugin=None,
+        **kwargs
     ):
         '''
         Set up nova credentials
@@ -77,20 +105,59 @@ class SaltNova(object):
         if not HAS_NOVA:
             return None
 
-        self.kwargs = {
-            'username': username,
-            'api_key': api_key,
-            'project_id': project_id,
-            'auth_url': auth_url,
-            'region_name': region_name,
-            'service_type': 'volume'
-        }
-
-        self.volume_conn = client.Client(**self.kwargs)
-
+        self.kwargs = kwargs.copy()
+        self.kwargs['username'] = username
+        self.kwargs['project_id'] = project_id
+        self.kwargs['auth_url'] = auth_url
+        self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
+        if not os_auth_plugin is None:
+            novaclient.auth_plugin.discover_auth_systems()
+            auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
+            self.kwargs['auth_plugin'] = auth_plugin
+            self.kwargs['auth_system'] = os_auth_plugin
+
+        if not 'api_key' in self.kwargs.keys():
+            self.kwargs['api_key'] = password
+
+        self.kwargs = sanatize_novaclient(self.kwargs)
+
+        conn = client.Client(**self.kwargs)
+        try:
+            conn.client.authenticate()
+        except novaclient.exceptions.AmbiguousEndpoints:
+            raise SaltCloudSystemExit(
+                "Nova provider requires a 'region_name' to be specified"
+            )
+
+        self.kwargs['auth_token'] = conn.client.auth_token
+        self.catalog = \
+            conn.client.service_catalog.catalog['access']['serviceCatalog']
+
+        if not region_name is None:
+            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry(
+                servers_endpoints,
+                'region',
+                region_name.upper()
+            )['publicURL']
 
         self.compute_conn = client.Client(**self.kwargs)
+
+        if not region_name is None:
+            servers_endpoints = get_entry(
+                self.catalog,
+                'type',
+                'volume'
+            )['endpoints']
+            kwargs['bypass_url'] = get_entry(
+                servers_endpoints,
+                'region',
+                region_name.upper()
+            )['publicURL']
+
+        self.kwargs['service_type'] = 'volume'
+        self.volume_conn = client.Client(**self.kwargs)
 
     def server_show_libcloud(self, uuid):
         '''
@@ -191,11 +258,11 @@ class SaltNova(object):
         volumes = self.volume_list(
             search_opts={'display_name': name},
         )
-        try:
-            volume = volumes[name]
-        except KeyError:
-            # volume doesn't exist
-            return {'name': name, 'status': 'deleted'}
+        volume = volumes[name]
+#        except Exception as esc:
+#            # volume doesn't exist
+#            log.error(esc.strerror)
+#            return {'name': name, 'status': 'deleted'}
 
         return volume
 
@@ -219,20 +286,22 @@ class SaltNova(object):
         '''
         nt_ks = self.volume_conn
         volume = self.volume_show(name)
+        if volume['status'] == 'deleted':
+            return volume
         response = nt_ks.volumes.delete(volume['id'])
         return self.volume_show(name)
 
     def volume_detach(self,
                       name,
-                      server_name,
                       timeout=300):
         '''
         Detach a block device
         '''
         volume = self.volume_show(name)
-        server = self.server_by_name(server_name)
+        if not volume['attachments']:
+            return True
         response = self.compute_conn.volumes.delete_server_volume(
-            server.id,
+            volume['attachments'][0]['server_id'],
             volume['attachments'][0]['id']
         )
         trycount = 0
@@ -348,8 +417,8 @@ class SaltNova(object):
     list_sizes = flavor_list
 
     def flavor_create(self,
-                      name,      # pylint: disable=C0103
-                      id=0,      # pylint: disable=C0103
+                      name,             # pylint: disable=C0103
+                      flavor_id=0,      # pylint: disable=C0103
                       ram=0,
                       disk=0,
                       vcpus=1):
@@ -358,21 +427,21 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         nt_ks.flavors.create(
-            name=name, flavorid=id, ram=ram, disk=disk, vcpus=vcpus
+            name=name, flavorid=flavor_id, ram=ram, disk=disk, vcpus=vcpus
         )
         return {'name': name,
-                'id': id,
+                'id': flavor_id,
                 'ram': ram,
                 'disk': disk,
                 'vcpus': vcpus}
 
-    def flavor_delete(self, id):  # pylint: disable=C0103
+    def flavor_delete(self, flavor_id):  # pylint: disable=C0103
         '''
         Delete a flavor
         '''
         nt_ks = self.compute_conn
-        nt_ks.flavors.delete(id)
-        return 'Flavor deleted: {0}'.format(id)
+        nt_ks.flavors.delete(flavor_id)
+        return 'Flavor deleted: {0}'.format(flavor_id)
 
     def keypair_list(self):
         '''
@@ -410,6 +479,32 @@ class SaltNova(object):
         nt_ks.keypairs.delete(name)
         return 'Keypair deleted: {0}'.format(name)
 
+    def image_show(self, image_id):
+        '''
+        Show image details and metadata
+        '''
+        nt_ks = self.compute_conn
+        image = nt_ks.images.get(image_id)
+        links = {}
+        for link in image.links:
+            links[link['rel']] = link['href']
+        ret = {
+            'name': image.name,
+            'id': image.id,
+            'status': image.status,
+            'progress': image.progress,
+            'created': image.created,
+            'updated': image.updated,
+            'metadata': image.metadata,
+            'links': links,
+        }
+        if hasattr(image, 'minDisk'):
+            ret['minDisk'] = image.minDisk
+        if hasattr(image, 'minRam'):
+            ret['minRam'] = image.minRam
+
+        return ret
+
     def image_list(self, name=None):
         '''
         List server images
@@ -441,7 +536,7 @@ class SaltNova(object):
     list_images = image_list
 
     def image_meta_set(self,
-                       id=None,
+                       image_id=None,
                        name=None,
                        **kwargs):  # pylint: disable=C0103
         '''
@@ -451,14 +546,14 @@ class SaltNova(object):
         if name:
             for image in nt_ks.images.list():
                 if image.name == name:
-                    id = image.id  # pylint: disable=C0103
-        if not id:
+                    image_id = image.id  # pylint: disable=C0103
+        if not image_id:
             return {'Error': 'A valid image name or id was not specified'}
-        nt_ks.images.set_meta(id, kwargs)
-        return {id: kwargs}
+        nt_ks.images.set_meta(image_id, kwargs)
+        return {image_id: kwargs}
 
     def image_meta_delete(self,
-                          id=None,     # pylint: disable=C0103
+                          image_id=None,     # pylint: disable=C0103
                           name=None,
                           keys=None):
         '''
@@ -468,12 +563,12 @@ class SaltNova(object):
         if name:
             for image in nt_ks.images.list():
                 if image.name == name:
-                    id = image.id  # pylint: disable=C0103
+                    image_id = image.id  # pylint: disable=C0103
         pairs = keys.split(',')
-        if not id:
+        if not image_id:
             return {'Error': 'A valid image name or id was not specified'}
-        nt_ks.images.delete_meta(id, pairs)
-        return {id: 'Deleted: {0}'.format(pairs)}
+        nt_ks.images.delete_meta(image_id, pairs)
+        return {image_id: 'Deleted: {0}'.format(pairs)}
 
     def server_list(self):
         '''
@@ -495,18 +590,7 @@ class SaltNova(object):
                 }
         return ret
 
-    def list_nodes(self):
-        '''
-        List Servers
-        '''
-        ret = {}
-        servers = self.server_list()
-        for server in servers.keys():
-            ret.append(self.server_show_libcloud(servers[server]['id']))
-
-        return ret
-
-    def server_list_detailed(self,):
+    def server_list_detailed(self):
         '''
         Detailed list of servers
         '''
