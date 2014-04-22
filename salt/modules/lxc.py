@@ -209,11 +209,19 @@ def get_base(**kwargs):
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
             create(name, **kwargs)
+            if kwargs.get('vgname'):
+                rootfs = os.path.join('/dev', kwargs['vgname'], name)
+                lxc_info = info(name)
+                edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
         return name
     elif kwargs.get('template'):
         name = '__base_{0}'.format(kwargs['template'])
         if name not in cntrs:
             create(name, **kwargs)
+            if kwargs.get('vgname'):
+                rootfs = os.path.join('/dev', kwargs['vgname'], name)
+                lxc_info = info(name)
+                edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
         return name
     return ''
 
