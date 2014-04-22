@@ -113,6 +113,11 @@
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
 
+# Passing very large events can cause the minion to consume large amounts of
+# memory. This value tunes the maximum size of a message allowed onto the
+# master event bus. The value is expressed in bytes.
+#max_event_size: 100000
+
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
