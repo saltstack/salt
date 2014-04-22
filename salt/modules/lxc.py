@@ -446,7 +446,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
             __salt__['cmd.retcode'](cmd)
         log.warn('lxc-create failed to create container')
         return {'created': False, 'error':
-                'container could not be created: {0}'.format(ret['stderr'])}
+                'container could not be created with cmd "{0}": {1}'.format(cmd, ret['stderr'])}
 
 
 def clone(name,
@@ -533,7 +533,7 @@ def clone(name,
             __salt__['cmd.retcode'](cmd)
         log.warn('lxc-clone failed to create container')
         return {'cloned': False, 'error':
-                'container could not be created: {0}'.format(ret['stderr'])}
+                'container could not be created with cmd "{0}": {1}'.format(cmd, ret['stderr'])}
 
 
 def ls():
