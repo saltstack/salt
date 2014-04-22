@@ -322,7 +322,9 @@ def init(name,
                                          profile=profile, **kwargs)
         if not ret.get('created', False):
             return ret
-    rootfs = info(name)['rootfs']
+    lxc_info = info(name)
+    rootfs = lxc_info['rootfs']
+    #lxc_config = lxc_info['config']
     if seed:
         ret['seeded'] = __salt__['lxc.bootstrap'](
             name, config=salt_config, approve_key=approve_key, install=install)
@@ -396,6 +398,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
     template = select('template')
     backing = select('backing')
+    if vgname and not backing:
+        backing = 'lvm'
     lvname = select('lvname')
     fstype = select('fstype')
     size = select('size', '1G')
@@ -924,6 +928,7 @@ def info(name):
     ret['ipv4_ips'] = []
     ret['ipv6_ips'] = []
     ret['size'] = None
+    ret['config'] = f
 
     if ret['state'] == 'running':
         limit = int(get_parameter(name, 'memory.limit_in_bytes').get(
