@@ -29,6 +29,8 @@ __outputter__ = {
     'top': 'highstate',
     'single': 'highstate',
     'highstate': 'highstate',
+    'template': 'highstate',
+    'template_str': 'highstate',
 }
 
 log = logging.getLogger(__name__)
