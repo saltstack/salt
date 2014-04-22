@@ -177,7 +177,7 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
 
     .. code-block:: bash
 
-        salt myminion s3.put mybucket remotepath local_path=/path/to/file
+        salt myminion s3.put mybucket remotepath local_file=/path/to/file
     '''
     key, keyid, service_url = _get_key(key, keyid, service_url)
 
