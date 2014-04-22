@@ -199,7 +199,7 @@ class SaltSafe(object):
         self.saltRaetKey.accept(match=mid, include_rejected=True)
 
 
-def clearAllRoadSafe(dirpath, opts):
+def clearAllKeepSafe(dirpath, opts):
     '''
     Convenience function to clear all road and safe keep data in dirpath
     '''
