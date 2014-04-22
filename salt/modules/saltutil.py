@@ -446,14 +446,13 @@ def clear_cache():
 
     WARNING: The safest way to clear a minion cache is by first stopping
     the minion and then deleting the cache files before restarting it.
- 
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.clear_cache
     '''
- 
     for root, dirs, files in salt.utils.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
