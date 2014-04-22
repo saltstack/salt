@@ -2351,7 +2351,7 @@ class BaseHighState(object):
                     if comps[0] in skeys:
                         errors.append(
                             'ID {0!r} in SLS {1!r} contains multiple state '
-                            'declarationss of the same type'.format(name, sls)
+                            'declarations of the same type'.format(name, sls)
                         )
                         continue
                     state[name][comps[0]] = state[name].pop(key)
