@@ -1114,7 +1114,7 @@ class Cloud(object):
 
                 # a small pause makes the sync work reliably
                 time.sleep(3)
-                client = salt.client.get_local_client()
+                client = salt.client.get_local_client(mopts=self.opts)
                 ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
                     self.opts['sync_after_install']
                 ))
@@ -1139,7 +1139,7 @@ class Cloud(object):
                     self.opts['start_action'], vm_['name']
                 )
             )
-            client = salt.client.get_local_client()
+            client = salt.client.get_local_client(mopts=self.opts)
             action_out = client.cmd(
                 vm_['name'],
                 self.opts['start_action'],
