@@ -610,7 +610,8 @@ class State(object):
             # order for the newly installed package to be importable.
             reload(site)
         self.load_modules()
-        self.functions['saltutil.refresh_modules']()
+        if not self.opts.get('local', False):
+            self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):
         '''
@@ -2115,7 +2116,10 @@ class BaseHighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        syncd = self.state.functions['saltutil.sync_all'](list(matches))
+        if self.opts.get('local', False):
+            syncd = self.state.functions['saltutil.sync_all'](list(matches), refresh=False)
+        else:
+            syncd = self.state.functions['saltutil.sync_all'](list(matches))
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()
