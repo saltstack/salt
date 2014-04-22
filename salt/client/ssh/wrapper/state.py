@@ -36,27 +36,27 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     if isinstance(mods, str):
         mods = mods.split(',')
-    high, errors = st_.render_highstate({saltenv: mods})
+    high_data, errors = st_.render_highstate({saltenv: mods})
     if exclude:
         if isinstance(exclude, str):
             exclude = exclude.split(',')
-        if '__exclude__' in high:
-            high['__exclude__'].extend(exclude)
+        if '__exclude__' in high_data:
+            high_data['__exclude__'].extend(exclude)
         else:
-            high['__exclude__'] = exclude
-    high, ext_errors = st_.state.reconcile_extend(high)
+            high_data['__exclude__'] = exclude
+    high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
-    errors += st_.state.verify_high(high)
+    errors += st_.state.verify_high(high_data)
     if errors:
         return errors
-    high, req_in_errors = st_.state.requisite_in(high)
+    high_data, req_in_errors = st_.state.requisite_in(high_data)
     errors += req_in_errors
-    high = st_.state.apply_exclude(high)
+    high_data = st_.state.apply_exclude(high_data)
     # Verify that the high data is structurally sound
     if errors:
         return errors
     # Compile and verify the raw chunks
-    chunks = st_.state.compile_high_data(high)
+    chunks = st_.state.compile_high_data(high_data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
@@ -284,19 +284,19 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     else:
         opts['test'] = __opts__.get('test', None)
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
-    high, errors = st_.render_highstate({saltenv: mods})
-    high, ext_errors = st_.state.reconcile_extend(high)
+    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
-    errors += st_.state.verify_high(high)
+    errors += st_.state.verify_high(high_data)
     if errors:
         return errors
-    high, req_in_errors = st_.state.requisite_in(high)
+    high_data, req_in_errors = st_.state.requisite_in(high_data)
     errors += req_in_errors
-    high = st_.state.apply_exclude(high)
+    high_data = st_.state.apply_exclude(high_data)
     # Verify that the high data is structurally sound
     if errors:
         return errors
-    return high
+    return high_data
 
 
 def show_top():
@@ -311,10 +311,10 @@ def show_top():
     '''
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
-    top = st_.get_top()
+    top_data = st_.get_top()
     errors = []
-    errors += st_.verify_tops(top)
+    errors += st_.verify_tops(top_data)
     if errors:
         return errors
-    matches = st_.top_matches(top)
+    matches = st_.top_matches(top_data)
     return matches
