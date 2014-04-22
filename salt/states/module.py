@@ -39,7 +39,7 @@ the execution module function being executed:
         - name: git.fetch
         - cwd: /path/to/my/repo
         - user: myuser
-        - opts: '--all' 
+        - opts: '--all'
 
 Due to how the state system works, if a module function accepts an
 argument called, ``name``, then ``m_name`` must be used to specify that
