@@ -499,6 +499,7 @@ def _instance_profile_disassociated(
             ret['comment'] = msg.format(name)
     return ret
 
+
 def _dict_merge(a, b):
     '''
     Recursively merges dict's. not just simple a['key'] = b['key'], if
@@ -514,7 +515,7 @@ def _dict_merge(a, b):
     result = copy.deepcopy(a)
     for k, v in b.iteritems():
         if k in result and isinstance(result[k], dict):
-                result[k] = _dict_merge(result[k], v)
+            result[k] = _dict_merge(result[k], v)
         else:
             result[k] = copy.deepcopy(v)
     return result
