@@ -9,7 +9,6 @@ Connection library for GitHub
 import json
 import requests
 import logging
-import pprint
 
 log = logging.getLogger(__name__)
 
