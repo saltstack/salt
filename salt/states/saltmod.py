@@ -209,7 +209,7 @@ def state(
         if changes:
             ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
         if no_change:
-            ret['comment'] += ' Without changing {0}.'.format(', '.join(no_change))
+            ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
     if failures:
         ret['comment'] += '\nFailures:\n'
         for minion, failure in failures.iteritems():
