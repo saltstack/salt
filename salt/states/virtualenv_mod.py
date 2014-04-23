@@ -36,7 +36,6 @@ def managed(name,
             never_download=None,
             prompt=None,
             user=None,
-            runas=None,
             no_chown=False,
             cwd=None,
             index_url=None,
@@ -80,32 +79,6 @@ def managed(name,
         ret['result'] = False
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Let\'s support \'runas\' until salt {0} is out, after which it will'
-        'stop being supported'.format(
-            salt.version.SaltStackVersion.from_name('Helium').formatted_version
-        ),
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if salt.utils.is_windows():
         venv_py = os.path.join(name, 'Scripts', 'python.exe')
