@@ -520,8 +520,6 @@ class Cloud(object):
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
             for driver, details in drivers.iteritems():
-                if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                    query = 'list_nodes_min'
                 fun = '{0}.{1}'.format(driver, query)
                 if fun not in self.clouds:
                     log.error(
