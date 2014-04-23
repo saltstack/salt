@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-
-Management of LVS(Linux Virtual Server) Service.
+Management of LVS (Linux Virtual Server) Service
 ================================================
-
-This lvs_service module is used to create and manage LVS Service. Service can be set as either absent or present.
 '''
 
 
 def __virtual__():
     '''
-
     Only load if the lvs module is available in __salt__
     '''
     return 'lvs_service' if 'lvs.get_rules' in __salt__ else False
@@ -99,7 +95,6 @@ def present(name,
 
 def absent(name, protocol=None, service_address=None):
     '''
-
     Ensure the LVS service is absent.
 
     name
