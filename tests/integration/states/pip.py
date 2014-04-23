@@ -182,73 +182,6 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, '6912-wrong-owner'
         )
-        # ----- Using runas ------------------------------------------------->
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
-        )
-        if venv_create['retcode'] > 0:
-            self.skipTest(
-                'Failed to create testcase virtual environment: {0}'.format(
-                    venv_create
-                )
-            )
-
-        # Using the package name.
-        try:
-            ret = self.run_state(
-                'pip.installed', name='pep8', runas=username, bin_env=venv_dir
-            )
-            self.assertSaltTrueReturn(ret)
-            uinfo = pwd.getpwnam(username)
-            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
-                for path in glob.glob(globmatch):
-                    self.assertEqual(
-                        uinfo.pw_uid, os.stat(path).st_uid
-                    )
-
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
-
-        # Using a requirements file
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
-        )
-        if venv_create['retcode'] > 0:
-            self.skipTest(
-                'Failed to create testcase virtual environment: {0}'.format(
-                    ret
-                )
-            )
-        req_filename = os.path.join(
-            integration.TMP_STATE_TREE, 'issue-6912-requirements.txt'
-        )
-        with salt.utils.fopen(req_filename, 'wb') as reqf:
-            reqf.write('pep8')
-
-        try:
-            ret = self.run_state(
-                'pip.installed', name='', runas=username, bin_env=venv_dir,
-                requirements='salt://issue-6912-requirements.txt'
-            )
-            self.assertSaltTrueReturn(ret)
-            uinfo = pwd.getpwnam(username)
-            for globmatch in (os.path.join(venv_dir, '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '**', 'pep8*'),
-                              os.path.join(venv_dir, '*', '*', '**', 'pep8*')):
-                for path in glob.glob(globmatch):
-                    self.assertEqual(
-                        uinfo.pw_uid, os.stat(path).st_uid
-                    )
-
-        finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
-            os.unlink(req_filename)
-        # <---- Using runas --------------------------------------------------
-
         # ----- Using user -------------------------------------------------->
         venv_create = self.run_function(
             'virtualenv.create', [venv_dir], runas=username
@@ -256,7 +189,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if venv_create['retcode'] > 0:
             self.skipTest(
                 'Failed to create testcase virtual environment: {0}'.format(
-                    ret
+                    venv_create
                 )
             )
 

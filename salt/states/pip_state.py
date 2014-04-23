@@ -24,7 +24,6 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -95,7 +94,6 @@ def installed(name,
               log=None,
               proxy=None,
               timeout=None,
-              repo=None,
               editable=None,
               find_links=None,
               index_url=None,
@@ -117,7 +115,6 @@ def installed(name,
               install_options=None,
               global_options=None,
               user=None,
-              runas=None,
               no_chown=False,
               cwd=None,
               activate=False,
@@ -241,20 +238,6 @@ def installed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
-    if repo is not None:
-        msg = ('The \'repo\' argument to pip.installed is deprecated and will '
-               'be removed in Salt {version}. Please use \'name\' instead. '
-               'The current value for name, {0!r} will be replaced by the '
-               'value of repo, {1!r}'.format(
-                   name,
-                   repo,
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
-               ))
-        salt.utils.warn_until('Hydrogen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        name = repo
-
     from_vcs = False
 
     if name and not requirements:
@@ -307,27 +290,6 @@ def installed(name,
     else:
         prefix = ''
         version_spec = []
-
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
-               'will be removed in Salt {version}. Please use \'user\' '
-               'instead.'.format(
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
-               ))
-        salt.utils.warn_until('Hydrogen', msg)
-        ret.setdefault('warnings', []).append(msg)
-
-        # "There can only be one"
-        if user:
-            raise CommandExecutionError(
-                'The \'runas\' and \'user\' arguments are mutually exclusive. '
-                'Please use \'user\' as \'runas\' is being deprecated.'
-            )
-        # Support deprecated 'runas' arg
-        else:
-            user = runas
 
     # Replace commas (used for version ranges) with semicolons (which are not
     # supported) in name so it does not treat them as multiple packages.  Comma
@@ -488,7 +450,6 @@ def removed(name,
             proxy=None,
             timeout=None,
             user=None,
-            runas=None,
             cwd=None):
     '''
     Make sure that a package is not installed.
@@ -501,27 +462,6 @@ def removed(name,
         the pip executable or virtualenenv to use
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
-               'will be removed in Salt {version}. Please use \'user\' '
-               'instead.'.format(
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
-               ))
-        salt.utils.warn_until('Hydrogen', msg)
-        ret.setdefault('warnings', []).append(msg)
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = runas
 
     try:
         pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
