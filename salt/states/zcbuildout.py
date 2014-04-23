@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 Management of zc.buildout
-===========================
+=========================
 
 This module is inspired from minitage's buildout maker
 (https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py)
