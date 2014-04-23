@@ -23,6 +23,10 @@ lxc_network_link="br0"
 default_path="/var/lib/lxc"
 
 deploy_tar() {
+    if [ -f ${path}/config]
+    then
+        cp ${path}/config ${path}/_orig_config
+    fi
     tar xvf ${imgtar} -C ${path}
 }
 
