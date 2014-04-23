@@ -47,6 +47,7 @@ except ImportError:
 
 # Import salt libs
 from salt._compat import string_types
+import salt.utils
 from salt.utils.odict import OrderedDict
 
 
