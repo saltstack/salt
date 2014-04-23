@@ -2,10 +2,14 @@
 '''
 .. versionadded:: Helium
 
-This is the default local master event queue built on sqlite.
-queue_dir must be configured in /etc/salt/master like the following:
+This is the default local master event queue built on sqlite.  By default,
+an sqlite3 database file is created in the `sqlite_queue_dir` which is found at::
 
-queue_dir: /var/cache/salt/master/queues
+    /var/cache/salt/master/queues
+
+It's possible to store the sqlite3 database files by setting `sqlite_queue_dir` to another location::
+
+    sqlite_queue_dir: /var/cache/salt/master/queues
 
 This queue runner can be executed with salt-run, but also will tie into the
 Salt scheduler to periodically process the queues.
@@ -23,6 +27,15 @@ import sqlite3 as lite
 from salt.output import display_output
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'sqlite'
+
+
+def __virtual__():
+    # All python servers should have sqlite3 and so be able to use
+    # this default sqlite queue system
+    return __virtualname__
 
 
 def _conn(queue):
