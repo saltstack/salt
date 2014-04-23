@@ -42,7 +42,6 @@ def present(name,
             login=None,
             password=None,
             groups=None,
-            runas=None,
             user=None,
             maintenance_db=None,
             db_password=None,
@@ -95,11 +94,6 @@ def present(name,
     groups
         A string of comma separated groups the user should be in
 
-    runas
-        System user all operations should be performed on behalf of
-
-        .. deprecated:: 0.17.0
-
     user
         System user all operations should be performed on behalf of
 
@@ -122,12 +116,6 @@ def present(name,
            'result': True,
            'comment': 'User {0} is already present'.format(name)}
 
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
     if createuser:
         createroles = True
     # default to encrypted passwords
@@ -137,24 +125,6 @@ def present(name,
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)
-
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     db_args = {
         'maintenance_db': maintenance_db,
@@ -237,7 +207,6 @@ def present(name,
 
 
 def absent(name,
-           runas=None,
            user=None,
            maintenance_db=None,
            db_password=None,
@@ -249,11 +218,6 @@ def absent(name,
 
     name
         The username of the user to remove
-
-    runas
-        System user all operations should be performed on behalf of
-
-        .. deprecated:: 0.17.0
 
     user
         System user all operations should be performed on behalf of
@@ -276,30 +240,6 @@ def absent(name,
            'changes': {},
            'result': True,
            'comment': ''}
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     db_args = {
         'maintenance_db': maintenance_db,
