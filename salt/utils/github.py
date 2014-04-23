@@ -12,6 +12,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def get_user_pubkeys(users):
     '''
     Retrieve a set of public keys from GitHub for the specified list of users.
