@@ -93,6 +93,16 @@ __grants__ = [
     'USAGE'
 ]
 
+__ssl_options_parameterized__ = [
+    'CIPHER',
+    'ISSUER',
+    'SUBJECT'
+]
+__ssl_options__ = __ssl_options_parameterized__ + [
+    'SSL',
+    'X509'
+]
+
 ################################################################################
 # DEVELOPPER NOTE: ABOUT arguments management, escapes, formats, arguments and
 # security of SQL.
@@ -1434,12 +1444,39 @@ def __grant_normalize(grant):
     return grant
 
 
+def __ssl_option_sanitize(ssl_option):
+    new_ssl_option = []
+
+    # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
+    for opt in ssl_option:
+        key = opt.keys()[0]
+        value = opt[key]
+
+        normal_key = key.strip().upper()
+
+        if not normal_key in __ssl_options__:
+            raise Exception('Invalid SSL option : {0!r}'.format(
+                key
+            ))
+
+        if normal_key in __ssl_options_parameterized__:
+            # SSL option parameters (cipher, issuer, subject) are pasted directly to SQL so
+            # we need to sanitize for single quotes...
+            new_ssl_option.append("%s '%s'" % (normal_key, opt[key].replace("'", '')))
+        # omit if falsey
+        elif opt[key]:
+            new_ssl_option.append(normal_key)
+
+    return ' REQUIRE ' + ' AND '.join(new_ssl_option)
+
+
 def __grant_generate(grant,
                     database,
                     user,
                     host='localhost',
                     grant_option=False,
-                    escape=True):
+                    escape=True,
+                    ssl_option=False):
     '''
     Validate grants and build the query that could set the given grants
 
@@ -1468,6 +1505,8 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
+    if isinstance(ssl_option, type([])) and len(ssl_option):
+        qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
     log.debug('Grant Query generated: {0} args {1}'.format(qry, repr(args)))
@@ -1576,6 +1615,7 @@ def grant_add(grant,
               host='localhost',
               grant_option=False,
               escape=True,
+              ssl_option=False,
               **connection_args):
     '''
     Adds a grant to the MySQL server.
@@ -1596,7 +1636,7 @@ def grant_add(grant,
 
     # Avoid spaces problems
     grant = grant.strip()
-    qry = __grant_generate(grant, database, user, host, grant_option, escape)
+    qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
     try:
         _execute(cur, qry['qry'], qry['args'])
     except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
