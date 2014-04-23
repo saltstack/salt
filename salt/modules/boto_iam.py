@@ -47,8 +47,7 @@ except ImportError:
 
 # Import salt libs
 from salt._compat import string_types
-import salt.utils
-from salt.utils.odict import OrderedDict
+import salt.utils.odict as odict
 
 
 def __virtual__():
@@ -343,7 +342,7 @@ def get_role_policy(role_name, policy_name, region=None, key=None,
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
         _policy = urllib.unquote(_policy)
-        _policy = json.loads(_policy, object_pairs_hook=OrderedDict)
+        _policy = json.loads(_policy, object_pairs_hook=odict.OrderedDict)
         return _policy
     except boto.exception.BotoServerError:
         return {}
@@ -369,7 +368,7 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
             return True
         mode = 'modify'
     if isinstance(policy, string_types):
-        policy = json.loads(policy, object_pairs_hook=OrderedDict)
+        policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
     try:
         _policy = json.dumps(policy)
         conn.put_role_policy(role_name, policy_name, _policy)
