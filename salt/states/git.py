@@ -36,7 +36,6 @@ def __virtual__():
 def latest(name,
            rev=None,
            target=None,
-           runas=None,
            user=None,
            force=None,
            force_checkout=False,
@@ -60,11 +59,6 @@ def latest(name,
 
     target
         Name of the target directory where repository is about to be cloned
-
-    runas
-        Name of the user performing repository management operations
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user performing repository management operations
@@ -120,35 +114,9 @@ def latest(name,
     if not target:
         return _fail(ret, '"target" option is required')
 
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
-    run_check_cmd_kwargs = {'runas': user}
-
     # check if git.latest should be applied
     cret = _run_check(
-        run_check_cmd_kwargs, onlyif, unless
+        {'runas': user}, onlyif, unless
     )
     if isinstance(cret, dict):
         ret.update(cret)
@@ -322,7 +290,7 @@ def latest(name,
     return ret
 
 
-def present(name, bare=True, runas=None, user=None, force=False):
+def present(name, bare=True, user=None, force=False):
     '''
     Make sure the repository is present in the given directory
 
@@ -331,11 +299,6 @@ def present(name, bare=True, runas=None, user=None, force=False):
 
     bare
         Create a bare repository (Default: True)
-
-    runas
-        Name of the user performing repository management operations
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user performing repository management operations
@@ -347,30 +310,6 @@ def present(name, bare=True, runas=None, user=None, force=False):
         (deletes contents)
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     # If the named directory is a git repo return True
     if os.path.isdir(name):
