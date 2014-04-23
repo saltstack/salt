@@ -4238,3 +4238,15 @@ source_file = _build/locale/topics/yaml/index.pot
 source_lang = en
 source_name = topics/yaml/index.rst
 
+[salt.topics--development--contributing]
+file_filter = locale/<lang>/LC_MESSAGES/topics/development/contributing.po
+source_file = _build/locale/topics/development/contributing.pot
+source_lang = en
+source_name = topics/development/contributing.rst
+
+[salt.topics--releases--2014_1_3]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.3.po
+source_file = _build/locale/topics/releases/2014.1.3.pot
+source_lang = en
+source_name = topics/releases/2014.1.3.rst
+
