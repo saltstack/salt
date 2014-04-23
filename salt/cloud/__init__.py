@@ -1202,7 +1202,14 @@ class Cloud(object):
         vms = alias_data.setdefault(driver, {})
 
         for name in names:
-            if name in vms and vms[name]['state'].lower() != 'terminated':
+            name_exists = False
+            if name in vms:
+                if 'state' in vms[name]:
+                    if vms[name]['state'].lower() != 'terminated':
+                        name_exists = True
+                else:
+                    name_exists = True
+            if name_exists:
                 msg = '{0} already exists under {0}:{1}'.format(
                     name, alias, driver
                 )
