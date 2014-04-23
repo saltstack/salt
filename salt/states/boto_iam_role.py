@@ -70,6 +70,7 @@ with the role. This is the default behavior of the AWS console.
 '''
 import salt.utils.dictupdate as dictupdate
 
+
 def __virtual__():
     '''
     Only load if boto is available.
