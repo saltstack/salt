@@ -17,11 +17,11 @@ except ImportError:
     else:
         string_types = basestring
 
-# ----- ATTENTION ----------------------------------------------------------->
+# ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
 # For version bumps, please update `__saltstack_version__` below
 #
-# <---- ATTENTION ------------------------------------------------------------
+# <---- ATTENTION ----------------------------------------------------------------------------------------------------
 
 
 class SaltStackVersion(object):
@@ -52,9 +52,9 @@ class SaltStackVersion(object):
         # latest release so we can map deprecation warnings to versions.
 
 
-        # ----- Please refrain from fixing PEP-8 E203 ----------------------->
+        # ----- Please refrain from fixing PEP-8 E203 --------------------------------------------------------------->
         # The idea is keep this readable
-        # --------------------------------------------------------------------
+        # ------------------------------------------------------------------------------------------------------------
         'Hydrogen': (2014, 1, 0, 0),
         'Helium': (sys.maxint - 107, 0, 0, 0),
         'Lithium': (sys.maxint - 106, 0, 0, 0),
@@ -164,7 +164,7 @@ class SaltStackVersion(object):
         #'Bohrium'      : (sys.maxint - 2  , 0, 0, 0),
         #'Hassium'      : (sys.maxint - 1  , 0, 0, 0),
         #'Meitnerium'   : (sys.maxint - 0  , 0, 0, 0),
-        # <---- Please refrain from fixing PEP-8 E203 ------------------------
+        # <---- Please refrain from fixing PEP-8 E203 ----------------------------------------------------------------
     }
 
     LNAMES = dict((k.lower(), v) for (k, v) in NAMES.iteritems())
@@ -330,17 +330,26 @@ class SaltStackVersion(object):
         return '<{0} {1}>'.format(self.__class__.__name__, ' '.join(parts))
 
 
-# ----- Hardcoded Salt Version Information ---------------------------------->
+# ----- Hardcoded Salt Version Information -------------------------------------------------------------------------->
 #
-# Please bump version information for __saltstack_version__ on new releases
-# ----------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion(2014, 1, 0)
+# ALL version bumps should be done in the SaltStackVersion.NAMES dictionary, ie:
+#
+#    class SaltStackVersion(object):
+#
+#        NAMES = {
+#            'Hydrogen': (2014, 1, 0, 0),   # <- This is the tuple to bump versions
+#            ( ... )
+#        }
+#
+# --------------------------------------------------------------------------------------------------------------------
+# There's no need to edit any of the version dunder objects below, see above why and where to update
+__saltstack_version__ = SaltStackVersion.from_name('Hydrogen')
 __version_info__ = __saltstack_version__.info
 __version__ = __saltstack_version__.string
-# <---- Hardcoded Salt Version Information -----------------------------------
+# <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
-# ----- Dynamic/Runtime Salt Version Information ---------------------------->
+# ----- Dynamic/Runtime Salt Version Information -------------------------------------------------------------------->
 def __get_version(version, version_info):
     '''
     If we can get a version provided at installation time or from Git, use
@@ -348,7 +357,7 @@ def __get_version(version, version_info):
     '''
     try:
         # Try to import the version information provided at install time
-        from salt._version import __version__, __version_info__  # pylint: disable=E0611
+        from salt._version import __version__, __version_info__  # pylint: disable=E0611,F0401
         return __version__, __version_info__
     except ImportError:
         pass
@@ -434,7 +443,7 @@ def __get_version(version, version_info):
 __version__, __version_info__ = __get_version(__version__, __version_info__)
 # This function has executed once, we're done with it. Delete it!
 del __get_version
-# <---- Dynamic/Runtime Salt Version Information -----------------------------
+# <---- Dynamic/Runtime Salt Version Information ---------------------------------------------------------------------
 
 
 def versions_information(include_salt_cloud=False):
