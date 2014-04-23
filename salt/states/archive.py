@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-
-"""
+'''
 Archive states.
 
 .. versionadded:: 2014.1.0 (Hydrogen)
-"""
+'''
 
 import logging
 import os
