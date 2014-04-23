@@ -1181,11 +1181,18 @@ class Minion(MinionBase):
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        while True:
+        
+        timeouts = 0
+        creds = 'retry'
+        while creds == 'retry' or creds == 'timeout':
             creds = auth.sign_in(timeout, safe)
-            if creds != 'retry':
-                log.info('Authentication with master successful!')
-                break
+            if creds == 'timeout':
+                timeouts += 1
+                if timeouts > 10:
+                    raise SaltReqTimeoutError('Remote system not responding')
+            else:
+                timeouts = 0
+            
             log.info('Waiting for minion key to be accepted by the master.')
             if acceptance_wait_time:
                 log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
@@ -1193,6 +1200,8 @@ class Minion(MinionBase):
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+                    
+        log.info('Authentication with master successful!')  
         self.aes = creds['aes']
         if self.opts.get('syndic_master_publish_port'):
             self.publish_port = self.opts.get('syndic_master_publish_port')
