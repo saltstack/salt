@@ -327,7 +327,7 @@ class Auth(object):
             aes, token = self.decrypt_aes(payload, False)
             return aes
 
-    def sign_in(self, timeout=60, safe=True):
+    def sign_in(self, timeout=60, safe=True, tries=1):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -339,17 +339,18 @@ class Auth(object):
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
+        
         try:
             payload = sreq.send_auto(
                 self.minion_sign_in_payload(),
+                tries=tries,
                 timeout=timeout
             )
         except SaltReqTimeoutError as e:
-            self.opts.update(salt.minion.resolve_dns(self.opts))
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
-            raise SaltClientError
+            raise SaltClientError('Failed sign in')
 
         if 'load' in payload:
             if 'ret' in payload['load']:
@@ -518,8 +519,9 @@ class SAuth(Auth):
         '''
         while True:
             creds = self.sign_in(
-                self.opts['auth_timeout'],
-                self.opts.get('_safe_auth', True)
+                self.opts.get('auth_timeout', 60),
+                self.opts.get('auth_safemode', self.opts.get('_safe_auth', True)),
+                self.opts.get('auth_tries', 1)
             )
             if creds == 'retry':
                 if self.opts.get('caller'):
