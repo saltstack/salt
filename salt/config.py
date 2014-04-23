@@ -323,12 +323,15 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'auth_timeout': 60,
+    'auth_timeout_count_max': None,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4510,
+    'restart_on_error': False,
+    'hartbeat_wait_time': None,
 }
 
 DEFAULT_MASTER_OPTS = {

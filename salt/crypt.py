@@ -345,10 +345,9 @@ class Auth(object):
                 timeout=timeout
             )
         except SaltReqTimeoutError as e:
-            self.opts.update(salt.minion.resolve_dns(self.opts))
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
-                return 'retry'
+                return 'timeout'
             raise SaltClientError
 
         if 'load' in payload:
@@ -521,7 +520,7 @@ class SAuth(Auth):
                 self.opts['auth_timeout'],
                 self.opts.get('_safe_auth', True)
             )
-            if creds == 'retry':
+            if creds == 'retry' or creds == 'timeout':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
