@@ -102,6 +102,11 @@ def running(name,
         user = runas
         runas = None
 
+    if 'supervisord.status' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'Supervisord module not activated. Do you need to install supervisord?'
+        return ret
+
     all_processes = __salt__['supervisord.status'](
         user=user,
         conf_file=conf_file,
@@ -194,7 +199,6 @@ def running(name,
             bin_env=bin_env
         )
         ret.update(_check_error(result, comment))
-        changes.append(comment)
         log.debug(comment)
 
         if '{0}: updated'.format(name) in result:
