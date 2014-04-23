@@ -177,11 +177,12 @@ class SREQ(object):
             tried += 1
             if polled:
                 break
-            elif tried >= tries:
+            if tries > 1:
+                log.info('SaltReqTimeoutError: after {0} seconds. (Try {1} of {2})'.format(
+                  timeout, tried, tries))
+            if tried >= tries:
                 raise SaltReqTimeoutError(
-                    'Waited {0} seconds'.format(
-                        timeout * tried
-                    )
+                    'SaltReqTimeoutError: after {0} seconds, ran {1} tries'.format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())
 
