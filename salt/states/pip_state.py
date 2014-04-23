@@ -24,7 +24,6 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -95,7 +94,6 @@ def installed(name,
               log=None,
               proxy=None,
               timeout=None,
-              repo=None,
               editable=None,
               find_links=None,
               index_url=None,
@@ -239,20 +237,6 @@ def installed(name,
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
-
-    if repo is not None:
-        msg = ('The \'repo\' argument to pip.installed is deprecated and will '
-               'be removed in Salt {version}. Please use \'name\' instead. '
-               'The current value for name, {0!r} will be replaced by the '
-               'value of repo, {1!r}'.format(
-                   name,
-                   repo,
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
-               ))
-        salt.utils.warn_until('Hydrogen', msg)
-        ret.setdefault('warnings', []).append(msg)
-        name = repo
 
     from_vcs = False
 
