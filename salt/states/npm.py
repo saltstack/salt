@@ -20,7 +20,6 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 '''
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
