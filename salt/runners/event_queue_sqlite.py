@@ -6,6 +6,9 @@ This is the default local master event queue built on sqlite.
 queue_dir must be configured in /etc/salt/master like the following:
 
 queue_dir: /var/cache/salt/master/queues
+
+This queue runner can be executed with salt-run, but also will tie into the
+Salt scheduler to periodically process the queues.
 '''
 
 # Import python libs
