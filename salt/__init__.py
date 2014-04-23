@@ -77,6 +77,7 @@ class Master(parsers.MasterOptionParser):
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
                         self.config['token_dir'],
+                        self.config['queue_dir'],
                     ]
                 if self.config.get('transport') == 'raet':
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))

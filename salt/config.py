@@ -222,6 +222,7 @@ VALID_OPTS = {
     'ssh_timeout': float,
     'ssh_user': str,
     'raet_port': int,
+    'queue_dir': str,
 }
 
 # default configurations
@@ -474,6 +475,7 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4506,
+    'queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
