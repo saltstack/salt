@@ -12,9 +12,6 @@ The postgres_users module is used to create and manage Postgres users.
 '''
 
 # Import Python libs
-
-# Import salt libs
-import salt.utils
 import logging
 
 # Salt imports
