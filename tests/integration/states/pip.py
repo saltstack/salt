@@ -189,7 +189,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         if venv_create['retcode'] > 0:
             self.skipTest(
                 'Failed to create testcase virtual environment: {0}'.format(
-                    ret
+                    venv_create
                 )
             )
 
