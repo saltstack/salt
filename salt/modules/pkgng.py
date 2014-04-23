@@ -569,7 +569,7 @@ def install(name=None,
             local=False,
             dryrun=False,
             quiet=False,
-            require=False,
+            reinstall_requires=False,
             regex=False,
             pcre=False,
             **kwargs):
@@ -652,7 +652,7 @@ def install(name=None,
 
             salt '*' pkg.install <package name> quiet=True
 
-    require
+    reinstall_requires
         When used with force, reinstalls any packages that require the
         given package.
 
@@ -660,7 +660,10 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install <package name> require=True force=True
+            salt '*' pkg.install <package name> reinstall_requires=True force=True
+
+        .. versionchanged:: Helium
+            ``require`` kwarg renamed to ``reinstall_requires``
 
     fromrepo
         In multi-repo mode, override the pkg.conf ordering and only attempt
@@ -716,7 +719,7 @@ def install(name=None,
         opts += 'y'
     if salt.utils.is_true(quiet):
         opts += 'q'
-    if salt.utils.is_true(require):
+    if salt.utils.is_true(reinstall_requires):
         opts += 'R'
     if salt.utils.is_true(fromrepo):
         repo_opts += 'r {0}'.format(fromrepo)
