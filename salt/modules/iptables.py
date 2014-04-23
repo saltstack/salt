@@ -195,7 +195,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['proto']
 
     if 'dport' in kwargs:
-        if kwargs['dport'].startswith('!') or kwargs['dport'].startswith('not'):
+        if str(kwargs['dport']).startswith('!') or str(kwargs['dport']).startswith('not'):
             kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
             rule += '! '
 
@@ -203,7 +203,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['dport']
 
     if 'sport' in kwargs:
-        if kwargs['sport'].startswith('!') or kwargs['sport'].startswith('not'):
+        if str(kwargs['sport']).startswith('!') or str(kwargs['sport']).startswith('not'):
             kwargs['sport'] = re.sub(bang_not_pat, '', kwargs['sport'])
             rule += '! '
 
@@ -215,12 +215,12 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '-m multiport '
 
         if isinstance(kwargs['dports'], list):
-            if [item for item in kwargs['dports'] if item.startswith('!') or item.startswith('not')]:
-                kwargs['dports'] = [re.sub(bang_not_pat, '', item) for item in kwargs['dports']]
+            if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
+                kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
                 rule += '! '
             dports = ','.join(kwargs['dports'])
         else:
-            if kwargs['dports'].startswith('!') or kwargs['dports'].startswith('not'):
+            if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
                 dports = re.sub(bang_not_pat, '', kwargs['dports'])
                 rule += '! '
             else:
@@ -234,12 +234,12 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '-m multiport '
 
         if isinstance(kwargs['sports'], list):
-            if [item for item in kwargs['sports'] if item.startswith('!') or item.startswith('not')]:
-                kwargs['sports'] = [re.sub(bang_not_pat, '', item) for item in kwargs['sports']]
+            if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
+                kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
                 rule += '! '
             sports = ','.join(kwargs['sports'])
         else:
-            if kwargs['sports'].startswith('!') or kwargs['sports'].startswith('not'):
+            if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
                 sports = re.sub(bang_not_pat, '', kwargs['sports'])
                 rule += '! '
             else:
