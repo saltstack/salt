@@ -1480,6 +1480,7 @@ class Syndic(Minion):
         self._syndic = True
         opts['loop_interval'] = 1
         super(Syndic, self).__init__(opts)
+        self.mminion = salt.minion.MasterMinion(opts)
 
     def _handle_aes(self, load, sig=None):
         '''
@@ -1670,10 +1671,11 @@ class Syndic(Minion):
                 if not jdict:
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
-                    jdict['__load__'] = salt.utils.jid_load(
-                        event['data']['jid'],
-                        self.local.opts['cachedir'],
-                        self.opts['hash_type'])
+                    jdict['__load__'] = {}
+                    fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
+                    jdict['__load__'].update(
+                        self.mminion.returners[fstr](event['data']['jid'])
+                        )
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here

@@ -8,8 +8,6 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import re
 import logging
-import shutil
-import datetime
 try:
     import pwd
 except ImportError:
@@ -100,43 +98,16 @@ def clean_old_jobs(opts):
     '''
     Clean out the old jobs from the job cache
     '''
-    if opts['keep_jobs'] != 0:
-        jid_root = os.path.join(opts['cachedir'], 'jobs')
-        cur = datetime.datetime.now()
-
-        if os.path.exists(jid_root):
-            for top in os.listdir(jid_root):
-                t_path = os.path.join(jid_root, top)
-                for final in os.listdir(t_path):
-                    f_path = os.path.join(t_path, final)
-                    jid_file = os.path.join(f_path, 'jid')
-                    if not os.path.isfile(jid_file):
-                        # No jid file means corrupted cache entry, scrub it
-                        shutil.rmtree(f_path)
-                    else:
-                        with salt.utils.fopen(jid_file, 'r') as fn_:
-                            jid = fn_.read()
-                        if len(jid) < 18:
-                            # Invalid jid, scrub the dir
-                            shutil.rmtree(f_path)
-                        else:
-                            # Parse the jid into a proper datetime object.
-                            # We only parse down to the minute, since keep
-                            # jobs is measured in hours, so a minute
-                            # difference is not important.
-                            try:
-                                jidtime = datetime.datetime(int(jid[0:4]),
-                                                            int(jid[4:6]),
-                                                            int(jid[6:8]),
-                                                            int(jid[8:10]),
-                                                            int(jid[10:12]))
-                            except ValueError as e:
-                                # Invalid jid, scrub the dir
-                                shutil.rmtree(f_path)
-                            difference = cur - jidtime
-                            hours_difference = difference.seconds / 3600.0
-                            if hours_difference > opts['keep_jobs']:
-                                shutil.rmtree(f_path)
+    # TODO: better way to not require creating the masterminion every time?
+    mminion = salt.minion.MasterMinion(
+                opts,
+                states=False,
+                rend=False,
+                )
+    # If the master job cache has a clean_old_jobs, call it
+    fstr = '{0}.clean_old_jobs'.format(opts['master_job_cache'])
+    if fstr in mminion.returners:
+        mminion.returners[fstr]()
 
 
 def access_keys(opts):
@@ -505,64 +476,21 @@ class RemoteFuncs(object):
             return False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[prep_fstr](nocache=load.get('nocache', False))
+
+            # save the load, since we don't have it
+            saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
-        if self.opts['master_ext_job_cache']:
-            fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
-            self.mminion.returners[fstr](load)
-            return
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: {jid}'.format(**load)
-            )
-            return False
-        if os.path.exists(os.path.join(jid_dir, 'nocache')):
-            return
-        hn_dir = os.path.join(jid_dir, load['id'])
-        if not os.path.isdir(hn_dir):
-            os.makedirs(hn_dir)
-        # Otherwise the minion has already returned this jid and it should
-        # be dropped
-        else:
-            log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    load['id']
-                )
-            )
-            return False
 
-        self.serial.dump(
-            load['return'],
-            # Use atomic open here to avoid the file being read before it's
-            # completely written to. Refs #1935
-            salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+b'
-            )
-        )
-        if 'out' in load:
-            self.serial.dump(
-                load['out'],
-                # Use atomic open here to avoid the file being read before
-                # it's completely written to. Refs #1935
-                salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+b'
-                )
-            )
+        fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
         '''
@@ -572,29 +500,10 @@ class RemoteFuncs(object):
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
             return None
-        # set the write flag
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
-            if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
-                    self.serial.dump(load['load'], fp_)
-        wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
-        try:
-            with salt.utils.fopen(wtag, 'w+') as fp_:
-                fp_.write('')
-        except (IOError, OSError):
-            log.error(
-                'Failed to commit the write tag for the syndic return, are '
-                'permissions correct in the cache dir: {0}?'.format(
-                    self.opts['cachedir']
-                )
-            )
-            return False
+        # if we have a load, save it
+        if 'load' in load:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
         for key, item in load['return'].items():
@@ -604,8 +513,6 @@ class RemoteFuncs(object):
             if 'out' in load:
                 ret['out'] = load['out']
             self._return(ret)
-        if os.path.isfile(wtag):
-            os.remove(wtag)
 
     def minion_runner(self, load):
         '''
@@ -1326,17 +1233,9 @@ class LocalFuncs(object):
                 }
         # Retrieve the jid
         if not load['jid']:
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    extra.get('nocache', False)
-                    )
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
         self.event.fire_event({'minions': minions}, load['jid'])
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
 
         new_job_load = {
                 'jid': load['jid'],
@@ -1352,19 +1251,7 @@ class LocalFuncs(object):
         self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([load['jid'], 'new'], 'job'))
 
-        # Verify the jid dir
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
         # Save the invocation information
-        self.serial.dump(
-                load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
-                )
-        # save the minions to a cache so we can see in the UI
-        self.serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
-                )
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
@@ -1381,6 +1268,23 @@ class LocalFuncs(object):
                     'The specified returner threw a stack trace:\n',
                     exc_info=True
                 )
+
+        # always write out to the master job cache
+        try:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load)
+        except KeyError:
+            log.critical(
+                'The specified returner used for the master job cache '
+                '"{0}" does not have a save_load function!'.format(
+                    self.opts['master_job_cache']
+                )
+            )
+        except Exception:
+            log.critical(
+                'The specified returner threw a stack trace:\n',
+                exc_info=True
+            )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here

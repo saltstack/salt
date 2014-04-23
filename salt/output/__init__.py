@@ -27,7 +27,7 @@ STATIC = (
 )
 
 
-def display_output(data, out, opts=None):
+def display_output(data, out=None, opts=None):
     '''
     Print the passed data using the desired output
     '''

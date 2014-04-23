@@ -236,6 +236,7 @@ class SSH(object):
             ),
         }
         self.serial = salt.payload.Serial(opts)
+        self.mminion = salt.minion.MasterMinion(self.opts)
 
     def verify_env(self):
         '''
@@ -422,52 +423,17 @@ class SSH(object):
         '''
         Cache the job information
         '''
-        jid_dir = salt.utils.jid_dir(
-                jid,
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: {0}'.format(jid)
-            )
-            return False
-        if os.path.exists(os.path.join(jid_dir, 'nocache')):
-            return
-        hn_dir = os.path.join(jid_dir, id_)
-        if not os.path.isdir(hn_dir):
-            os.makedirs(hn_dir)
-        # Otherwise the minion has already returned this jid and it should
-        # be dropped
-        else:
-            log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    id_
-                )
-            )
-            return False
-
-        self.serial.dump(
-            ret,
-            # Use atomic open here to avoid the file being read before it's
-            # completely written to. Refs #1935
-            salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+b'
-            )
-        )
+        self.mminion.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid,
+                                                                                      'id': id_,
+                                                                                      'return': ret})
 
     def run(self):
         '''
         Execute the overall routine
         '''
-        jid = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type'],
-                self.opts['user'])
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.mminion.returners[fstr]()
 
-        jid_dir = salt.utils.jid_dir(jid, self.opts['cachedir'], self.opts['hash_type'])
         # Save the invocation information
         arg_str = self.opts['arg_str']
 
@@ -489,17 +455,9 @@ class SSH(object):
             'fun': fun,
             'arg': args,
             }
-        self.serial.dump(
-                job_load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
-                )
-        # save the targets to a cache so we can see them in the UI
-        targets = self.targets.keys()
-        targets.sort()
-        self.serial.dump(
-                targets,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
-                )
+
+        # save load to the master job cache
+        self.mminion.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)

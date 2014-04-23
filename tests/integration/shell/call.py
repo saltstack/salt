@@ -116,9 +116,9 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                        if 'returnTOmaster' in j][0]
         jid, idx = None, first_match[0]
         while idx > 0:
-            jid = re.match("('|\")([0-9]+)('|\"):", jobs[idx])
+            jid = re.match("([0-9]+):", jobs[idx])
             if jid:
-                jid = jid.group(2)
+                jid = jid.group(1)
                 break
             idx -= 1
         assert idx > 0
