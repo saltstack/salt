@@ -20,9 +20,6 @@ import logging
 import os
 import shutil
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
