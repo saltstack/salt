@@ -226,7 +226,7 @@ def status(name, sig=None):
 
 
 def _osrel():
-    osrel =  __grains__.get('osrelease', _DEFAULT_VER)
+    osrel = __grains__.get('osrelease', _DEFAULT_VER)
     if not osrel:
         osrel = _DEFAULT_VER
     return osrel
