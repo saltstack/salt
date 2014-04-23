@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 '''
-
 Support for LVS (Linux Virtual Server)
 '''
 
