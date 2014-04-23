@@ -157,6 +157,7 @@ def main():
                     ['-r', resource_name],
                     tx_root
                 )
+                handled_resources.remove(resource_name)
             except Exception as err:
                 sys.stdout.write('An error occurred: {0}\n'.format(err))
             finally:
