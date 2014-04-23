@@ -68,8 +68,7 @@ with the role. This is the default behavior of the AWS console.
                 key: GKTADJGHEIQSXMKKRBJ08H
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-import copy
-
+import salt.utils.dictupdate as dictupdate
 
 def __virtual__():
     '''
@@ -125,21 +124,21 @@ def present(
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_present(name, region, key, keyid, profile)
-    ret['changes'] = _dict_merge(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_associated(name, region, key, keyid, profile)
-    ret['changes'] = _dict_merge(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _policies_present(name, policies, region, key, keyid, profile)
-    ret['changes'] = _dict_merge(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
@@ -343,21 +342,21 @@ def absent(
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_disassociated(name, region, key, keyid, profile)
-    ret['changes'] = _dict_merge(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_absent(name, region, key, keyid, profile)
-    ret['changes'] = _dict_merge(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _role_absent(name, region, key, keyid, profile)
-    ret['changes'] = _dict_merge(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
@@ -498,24 +497,3 @@ def _instance_profile_disassociated(
             msg = 'Failed to disassociate {0} instance profile from {1} role.'
             ret['comment'] = msg.format(name)
     return ret
-
-
-def _dict_merge(a, b):
-    '''
-    Recursively merges dict's. not just simple a['key'] = b['key'], if
-    both a and b have a key who's value is a dict then dict_merge is called
-    on both values and the result stored in the returned dictionary.
-
-    :type a: dict
-    :type b: dict
-    :rtype: dict
-    '''
-    if not isinstance(b, dict):
-        return b
-    result = copy.deepcopy(a)
-    for k, v in b.iteritems():
-        if k in result and isinstance(result[k], dict):
-            result[k] = _dict_merge(result[k], v)
-        else:
-            result[k] = copy.deepcopy(v)
-    return result
