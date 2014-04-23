@@ -1924,7 +1924,7 @@ class Map(Cloud):
                 # Already deployed, it's the master's minion
                 continue
 
-            if profile['minion'].get('local_master', False) and \
+            if 'minion' in profile and profile['minion'].get('local_master', False) and \
                     profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
                 # explicitely saying it's the local one
