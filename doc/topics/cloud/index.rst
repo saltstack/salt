@@ -25,6 +25,7 @@ Getting Started
     Getting Started With Rackspace <rackspace>
     Getting Started With HP Cloud <hpcloud>
     Getting Started With SoftLayer <softlayer>
+    Getting Started With VEXXHOST <vexxhost>
 
 Core Configuration
 ==================
