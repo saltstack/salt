@@ -3,7 +3,7 @@ Description=The Salt Master Server
 After=syslog.target network.target
 
 [Service]
-Type=Notify
+Type=notify
 ExecStart=/usr/bin/salt-master
 
 [Install]
