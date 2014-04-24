@@ -282,9 +282,11 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         log.warning('\'refresh\' argument not implemented for solarispkg '
                     'module')
 
+    # pkgs is not supported, but must be passed here for API compatibility
+    pkgs = kwargs.pop('pkgs', None)
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, kwargs.get('pkgs'), sources, **kwargs
+            name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
