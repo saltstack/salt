@@ -1626,7 +1626,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.args.insert(1, 'sys.doc')
             if self.args[1] != 'sys.doc':
                 self.args.insert(1, 'sys.doc')
-                self.args[2] = self.args[2]
+            if len(self.args) > 3:
+                self.error('You can only get documentation for one method at one time.')
 
         if self.options.list:
             try:
