@@ -36,6 +36,8 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser
       # The OpenStack keypair name
       ssh_key_name: mykey
+      # Skip SSL certificate validation
+      insecure: false
       # The ssh key file
       ssh_key_file: /path/to/keyfile/test.pem
       # The OpenStack network UUIDs
