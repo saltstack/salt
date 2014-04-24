@@ -62,7 +62,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if passing additional arguments shows an error
         '''
-        data = self.run_call('-d salt ldap.search "filter=ou=People"', catch_stderr=True)
+        data = self.run_call('-d virtualenv.create /tmp/ve', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
 
     def test_issue_6973_state_highstate_exit_code(self):
