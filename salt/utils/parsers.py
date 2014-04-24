@@ -2044,14 +2044,16 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     )
 
     def _mixin_after_parsed(self):
-        if not self.args and not self.options.grains_run \
-                and not self.options.doc:
+        if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
             self.exit(1)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
                 self.error('-g/--grains does not accept any arguments')
+
+            if self.options.doc and len(self.args) > 1:
+                self.error('You can only get documentation for one method at one time')
 
             self.config['fun'] = self.args[0]
             self.config['arg'] = self.args[1:]

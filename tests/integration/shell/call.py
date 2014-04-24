@@ -58,6 +58,13 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             ''.join(ret)
         )
 
+    def test_salt_documentation_too_many_arguments(self):
+        '''
+        Test to see if passing additional arguments shows an error
+        '''
+        data = self.run_call('-d salt ldap.search "filter=ou=People"', catch_stderr=True)
+        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+
     def test_issue_6973_state_highstate_exit_code(self):
         '''
         If there is no tops/master_tops or state file matches
