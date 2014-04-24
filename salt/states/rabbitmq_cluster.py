@@ -34,7 +34,7 @@ def join(name, host, user='rabbit', runas=None):
     Ensure the RabbitMQ plugin is enabled.
 
     name
-        Irrelavent, not used (recommended: user@host)
+        Irrelevant, not used (recommended: user@host)
     user
         The user to join the cluster as (default: rabbit)
     host
