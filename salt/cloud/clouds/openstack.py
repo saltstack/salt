@@ -464,22 +464,32 @@ def create(vm_):
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
-            pool = OpenStack_1_1_FloatingIpPool(
-                '', conn.connection
-            )
-            for idx in pool.list_floating_ips():
-                if idx.node_id is None:
-                    floating.append(idx)
-            if not floating:
-                # Note(pabelanger): We have no available floating IPs.
-                # For now, we raise an exception and exit.
-                # A future enhancement might be to allow salt-cloud to
-                # dynamically allocate new address but that might be
-                # tricky to manage.
-                raise SaltCloudSystemExit(
-                    'There are no more floating IP addresses '
-                    'available, please create some more'
+            try:
+                # This try/except is here because it appears some
+                # *cough* Rackspace *cough*
+                # OpenStack providers return a 404 Not Found for the
+                # floating ip pool URL if there are no pools setup
+                pool = OpenStack_1_1_FloatingIpPool(
+                    '', conn.connection
                 )
+                for idx in pool.list_floating_ips():
+                    if idx.node_id is None:
+                        floating.append(idx)
+                if not floating:
+                    # Note(pabelanger): We have no available floating IPs.
+                    # For now, we raise an exception and exit.
+                    # A future enhancement might be to allow salt-cloud to
+                    # dynamically allocate new address but that might be
+                    # tricky to manage.
+                    raise SaltCloudSystemExit(
+                        'There are no more floating IP addresses '
+                        'available, please create some more'
+                    )
+            except Exception as e:
+                if str(e).startswith('404'):
+                    pass
+                else:
+                    raise
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
