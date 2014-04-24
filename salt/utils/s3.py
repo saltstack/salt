@@ -141,7 +141,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     try:
         result = requests.request(method, requesturl, headers=headers)
-        response = result.text
+        response = result.content
     except requests.exceptions.HTTPError as exc:
         log.error('There was an error::')
         if hasattr(exc, 'code') and hasattr(exc, 'msg'):
