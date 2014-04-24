@@ -265,7 +265,6 @@ def create(vm_):
             'password': template_password,
             'script': deploy_script,
             'name': vm_['name'],
-            'deploy_command': '/tmp/deploy.sh',
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],
             'sock_dir': __opts__['sock_dir'],
