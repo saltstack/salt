@@ -29,7 +29,7 @@ deploy_tar() {
     fi
     tar xvf ${imgtar} -C ${path}
     sed -i '/lxc.rootfs/d' ${path}/config
-    echo "lxc.rootfs = ${path}/rootfs" > ${path}/config
+    echo "lxc.rootfs = ${path}/rootfs" >> ${path}/config
 }
 
 usage() {
