@@ -4250,3 +4250,9 @@ source_file = _build/locale/topics/releases/2014.1.3.pot
 source_lang = en
 source_name = topics/releases/2014.1.3.rst
 
+[salt.topics--cloud--vexxhost]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/vexxhost.po
+source_file = _build/locale/topics/cloud/vexxhost.pot
+source_lang = en
+source_name = topics/cloud/vexxhost.rst
+
