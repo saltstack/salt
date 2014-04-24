@@ -1082,6 +1082,24 @@ class Minion(MinionBase):
                         'minutes': refresh_interval_in_minutes
                     }
             })
+                    
+                    
+    def _alive_test_watcher(self, interval_in_minutes = 10):
+        '''
+        Create a loop that will fire a ping test
+        '''
+        if '__alive_test' not in self.opts.get('schedule', {}):
+            if not 'schedule' in self.opts:
+                self.opts['schedule'] = {}
+            self.opts['schedule'].update({
+                '__alive_test':
+                    {
+                        'function': 'event.fire',
+                        'args': [{}, 'ping'],
+                        'minutes': interval_in_minutes
+                    }
+            })
+
 
     def _set_tcp_keepalive(self):
         if hasattr(zmq, 'TCP_KEEPALIVE'):
@@ -1348,7 +1366,10 @@ class Minion(MinionBase):
                 'Exception occurred in attempt to initialize grain refresh routine during minion tune-in: {0}'.format(
                     exc)
             )
-
+        
+        # start a ping test to run every 10 min
+        self._alive_test_watcher(10)
+        
         while self._running is True:
             loop_interval = self.process_schedule(self, loop_interval)
             try:
