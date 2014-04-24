@@ -88,6 +88,15 @@ def profile(prof, names, **kwargs):
     return info
 
 
+def map_run(path, **kwargs):
+    '''
+    Execute a salt cloud map file
+    '''
+    client = _get_client()
+    info = client.map_run(path, **kwargs)
+    return info
+
+
 def destroy(names):
     '''
     Destroy the named vm(s)
