@@ -6,10 +6,7 @@ Resources needed by pkg providers
 # Import python libs
 import fnmatch
 import logging
-import os
 import pprint
-import re
-import sys
 
 # Import third party libs
 import yaml
