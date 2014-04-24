@@ -13,6 +13,14 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 from salt._compat import configparser, string_types
 
 
+def __virtual__():
+    HAS_SUPER = salt.utils.which('supervisorctl')
+    if HAS_SUPER:
+        return True
+    else:
+        return False
+
+
 def _get_supervisorctl_bin(bin_env):
     '''
     Return supervisorctl command to call, either from a virtualenv, an argument
