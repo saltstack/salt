@@ -18,8 +18,6 @@ from salt.exceptions import (
 
 log = logging.getLogger(__name__)
 
-# This is imported in salt.modules.pkg_resource._parse_pkg_meta. Don't change
-# it without considering its impact there.
 __QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 
 # These arches compiled from the rpmUtils.arch python module source
@@ -63,8 +61,6 @@ def __virtual__():
     return False
 
 
-# This is imported in salt.modules.pkg_resource._parse_pkg_meta. Don't change
-# it without considering its impact there.
 def _parse_pkginfo(line):
     '''
     A small helper to parse a repoquery; returns a namedtuple
