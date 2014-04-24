@@ -365,7 +365,6 @@ def query(params=None, setname=None, requesturl=None, location=None,
         return {'error': data}
 
     response = result.text
-    result.close()
 
     root = ET.fromstring(response)
     items = root[1]
