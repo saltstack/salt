@@ -155,7 +155,7 @@ def extracted(name,
                     tar_options = '-{0} {1}'.format(opt, tar_options)
             # Want to ensure -f is the last argument before the filename
             if 'f' in tar_options:
-                tar_options.remove('f')
+                tar_options = tar_options.replace('f', '')
             results = __salt__['cmd.run_all']('tar {0} -f "{1}"'.format(
                 tar_options, filename), cwd=name)
             if results['retcode'] != 0:
