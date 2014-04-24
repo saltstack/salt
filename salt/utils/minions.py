@@ -380,7 +380,7 @@ class CkMinions(object):
             log.debug('Evaluating final compound matching expr: {0}'
                       .format(results))
             try:
-                return list(eval(results))
+                return list(eval(results))  # pylint: disable=W0123
             except Exception:
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []

@@ -1905,7 +1905,7 @@ class Matcher(object):
                 results.append(str(self.glob_match(match)))
         results = ' '.join(results)
         try:
-            return eval(results)
+            return eval(results)  # pylint: disable=W0123
         except Exception:
             log.error('Invalid compound target: {0}'.format(tgt))
             return False
