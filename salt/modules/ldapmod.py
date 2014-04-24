@@ -76,9 +76,6 @@ def _config(name, key=None, **kwargs):
         value = kwargs[name]
     else:
         value = __salt__['config.option']('ldap.{0}'.format(key))
-        if not value:
-            msg = 'missing ldap.{0} in config or {1} in args'.format(key, name)
-            raise SaltInvocationError(msg)
     return value
 
 
