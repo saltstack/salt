@@ -462,7 +462,7 @@ def create(vm_):
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
-	    try:
+            try:
                 # This try/except is here because it appears some
                 # *cough* Rackspace *cough*
                 # OpenStack providers return a 404 Not Found for the
@@ -484,10 +484,10 @@ def create(vm_):
                         'available, please create some more'
                     )
             except Exception as e:
-		if str(e).startswith('404'):
-		    pass
-		else:
-		    raise
+                if str(e).startswith('404'):
+                    pass
+                else:
+                    raise
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
