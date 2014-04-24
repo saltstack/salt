@@ -1747,20 +1747,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
 
     def _mixin_setup(self):
-        # XXX: Remove '--key-logfile' support in 2014.1.0
-        utils.warn_until(
-            'Hydrogen',
-            'Remove \'--key-logfile\' support',
-            _dont_call_warnings=True
-        )
-        self.logging_options_group.add_option(
-            '--key-logfile',
-            default=None,
-            help='Send all output to a file. Default is {0!r}'.format(
-                self._default_logging_logfile_
-            )
-        )
-
         actions_group = optparse.OptionGroup(self, 'Actions')
         actions_group.add_option(
             '-l', '--list',
@@ -1945,20 +1931,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Schedule __create_keys_dir() to run if there's a value for
         # --create-keys-dir
         self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
-
-    def process_key_logfile(self):
-        if self.options.key_logfile:
-            # XXX: Remove '--key-logfile' support in 2014.1.0
-            # In < 2014.1.0 error out
-            utils.warn_until(
-                'Hydrogen',
-                'Remove \'--key-logfile\' support',
-                _dont_call_warnings=True
-            )
-            self.error(
-                'The \'--key-logfile\' option has been deprecated in favour '
-                'of \'--log-file\''
-            )
 
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is
