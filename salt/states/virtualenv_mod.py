@@ -78,7 +78,7 @@ def managed(name,
         return ret
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Let\'s support \'runas\' until salt {0} is out, after which it will'
         'stop being supported'.format(
             salt.version.SaltStackVersion.from_name('Helium').formatted_version
