@@ -2119,6 +2119,9 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def _mixin_after_parsed(self):
+        if self.options.doc and len(self.args) > 1:
+            self.error('You can only get documentation for one method at one time')
+
         if len(self.args) > 0:
             self.config['fun'] = self.args[0]
         else:
