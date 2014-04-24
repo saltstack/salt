@@ -28,6 +28,8 @@ deploy_tar() {
         cp ${path}/config ${path}/_orig_config
     fi
     tar xvf ${imgtar} -C ${path}
+    sed -i '/lxc.rootfs/d' ${path}/config
+    echo "lxc.rootfs = ${path}/rootfs" > ${path}/config
 }
 
 usage() {
