@@ -376,7 +376,7 @@ def init(name,
         if not ret.get('created', False):
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
-        for comp in _config_list(**kwargs):
+        for comp in _config_list(nic=nic, nic_opts=nic_opts, cpuset=cpuset, cpushare=cpushare, memory=memory):
             edit_conf(path, **comp)
     lxc_info = info(name)
     rootfs = lxc_info['rootfs']
