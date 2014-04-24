@@ -1340,10 +1340,28 @@ class Minion(MinionBase):
                     exc)
             )
 
+        ping_master_delta = 500
+        ping_master_at = time.time() + ping_master_delta
         while self._running is True:
             loop_interval = self.process_schedule(self, loop_interval)
             try:
                 socks = self._do_poll(loop_interval)
+                
+                if socks:
+                  ping_master_at = time.time() + ping_master_delta
+                  
+                if ping_master_at < time.time():
+                  ## TODO: im not sure how to check if a connection is still alife...  this ping test is an example
+                  ## the ping will always fail because the master was not updated to respond to this ping message.
+                  log.debug('Ping master because {0} seconds passed without a message.'.format(ping_master_delta))
+                  self.epub_sock.send('ping')
+                  socks = self._do_poll(5)
+                  if socks:
+                    ping_master_at = time.time() + ping_master_delta
+                    continue
+                  ## throw error that will cause the stack to drop back to ./salt/__init__.py  class Minion: def start(self):
+                  raise Exception('Master is not responding to ping,')
+                
                 self._do_socket_recv(socks)
 
                 # Check the event system
@@ -1387,6 +1405,7 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
+                raise Exception('Master is not responding.  Should reconnect to master')
 
     def tune_in_no_block(self):
         '''
