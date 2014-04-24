@@ -10,7 +10,7 @@ and possibly remote minion.
 In other words, Salt will connect to a minion, then from that minion:
 
 - Provision and configure a container for networking access
-- Use saltify to deploy salt and re-attach to master
+- Use :ref:`saltify <config_saltify>` to deploy salt and re-attach to master
 
 Limitation
 ------------
@@ -20,8 +20,9 @@ Limitation
 
 Operation
 ---------
-This does not use lxc.init to provide a more generic fashion to tie minions
-to their master (if any and defined) to allow custom association code.
+Salt's LXC support does not use lxc.init.  This enables it to tie minions
+to a master in a more generic fashion (if any masters are defined)
+and allows other custom association code.
 
 Order of operation:
 
@@ -30,11 +31,11 @@ Order of operation:
 - Change LXC config option (if any need to be changed)
 - Start container
 - Change base passwords if any
-- Change base DNS base configuration if neccessary
+- Change base DNS configuration if necessary
 - Wait for LXC container to be up and ready for ssh
 - Test SSH connection and bailout in error
-- Via SSH (with the help of saltify, upload deploy script and seeds and
-  re-attach minion.
+- Via SSH (with the help of saltify), upload deploy script and seeds,
+  then re-attach the minion.
 
 
 Provider configuration
