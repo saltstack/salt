@@ -102,7 +102,7 @@ def list_queues():
 
     CLI Example:
 
-        salt-run queue.list_queue_files
+        salt-run queue.list_queues
     '''
     queues = _list_queues()
     return queues
