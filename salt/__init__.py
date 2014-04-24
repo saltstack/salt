@@ -241,18 +241,23 @@ class Minion(parsers.MinionOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
-        try:
-            if check_user(self.config['user']):
-                self.minion.tune_in()
-        except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
-            if isinstance(exc, KeyboardInterrupt):
+        reconnect = True
+        while reconnect:
+            reconnect = False
+            try:
+                self.prepare()
+                if check_user(self.config['user']):
+                    self.minion.tune_in()
+            except KeyboardInterrupt as exc:
+                logger.warn('Stopping the Salt Minion')
                 logger.warn('Exiting on Ctrl-c')
-            else:
-                logger.error(str(exc))
-        finally:
-            self.shutdown()
+            except SaltSystemExit as exc:
+                logger.error(exc)
+                if self.config.get('restart_on_error'):
+                    logger.warn('** Restarting minion **')
+                    reconnect = True
+            finally:
+                self.shutdown()
 
     def shutdown(self):
         '''
