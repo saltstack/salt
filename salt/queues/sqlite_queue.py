@@ -23,9 +23,6 @@ import logging
 import os
 import sqlite3 as lite
 
-# Import salt libs
-from salt.output import display_output
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -108,7 +105,6 @@ def list_queues():
         salt-run queue.list_queue_files
     '''
     queues = _list_queues()
-    display_output(queues, 'nested', opts=__opts__)
     return queues
 
 
@@ -124,7 +120,6 @@ def list_items(queue):
     '''
     itemstuple = _list_items(queue)
     items = [item[0] for item in itemstuple]
-    display_output(items, 'nested', opts=__opts__)
     return items
 
 
@@ -139,7 +134,6 @@ def list_length(queue):
         salt-run queue.list_length myqueue
     '''
     items = _list_items(queue)
-    display_output(len(items), 'nested', opts=__opts__)
     return len(items)
 
 
@@ -163,8 +157,8 @@ def insert(queue, items):
             try:
                 cur.execute(cmd)
             except lite.IntegrityError as esc:
-                display_output('Item already exists in this queue. '
-                       'sqlite error: {0}'.format(esc), 'nested', opts=__opts__)
+                return('Item already exists in this queue. '
+                       'sqlite error: {0}'.format(esc))
         if isinstance(items, list):
             cmd = 'INSERT INTO {0}(name) VALUES(?)'.format(queue)
             log.debug('SQL Query: {0}'.format(cmd))
@@ -175,10 +169,8 @@ def insert(queue, items):
             try:
                 cur.executemany(cmd, newitems)
             except lite.IntegrityError as esc:
-                #print('One or more item already exists in this queue. '
-                      #'sqlite error: {0}'.format(esc))
-                display_output('One or more items already exists in this queue. '
-                      'sqlite error: {0}'.format(esc), 'nested', opts=__opts__)
+                return('One or more items already exists in this queue. '
+                      'sqlite error: {0}'.format(esc))
     return True
 
 
@@ -243,5 +235,4 @@ def pop(queue, quantity=1):
             cur.execute(del_cmd)
         con.commit()
     log.info(items)
-    display_output(items, 'nested', opts=__opts__)
     return items
