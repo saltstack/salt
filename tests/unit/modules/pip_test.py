@@ -946,7 +946,7 @@ class PipTestCase(TestCase):
                 pip.install('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'will be removed in Salt Lithium (Unreleased). Please '
                     'use \'user\' instead.', str(w[-1].message)
                 )
 
@@ -961,7 +961,7 @@ class PipTestCase(TestCase):
                 pip.uninstall('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'will be removed in Salt Lithium (Unreleased). Please '
                     'use \'user\' instead.', str(w[-1].message)
                 )
 
@@ -976,7 +976,7 @@ class PipTestCase(TestCase):
                 pip.freeze('/tmp/pip-env', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'will be removed in Salt Lithium (Unreleased). Please '
                     'use \'user\' instead.', str(w[-1].message)
                 )
 
@@ -991,7 +991,7 @@ class PipTestCase(TestCase):
                 pip.list_('blah', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Hydrogen (Unreleased). Please '
+                    'will be removed in Salt Lithium (Unreleased). Please '
                     'use \'user\' instead.', str(w[-1].message)
                 )
 

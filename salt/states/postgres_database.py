@@ -90,7 +90,7 @@ def present(name,
            'comment': 'Database {0} is already present'.format(name)}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -228,7 +228,7 @@ def absent(name,
            'result': True,
            'comment': ''}
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

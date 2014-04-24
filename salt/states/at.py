@@ -20,7 +20,7 @@ def __virtual__():
     return 'at.at' in __salt__
 
 
-def present(name, timespec, tag=None, runas=None, job=None):
+def present(name, timespec, tag=None, runas=None, user=None, job=None):
     '''
     Add a job to queue.
 
@@ -36,6 +36,13 @@ def present(name, timespec, tag=None, runas=None, job=None):
     runas
         Users run the job.
 
+        .. deprecated:: 2014.1.4 (Hydrogen)
+
+    user
+        The user to run the at job
+
+        .. versionadded:: 2014.1.4 (Hydrogen)
+
     .. code-block:: yaml
 
         rose:
@@ -43,7 +50,7 @@ def present(name, timespec, tag=None, runas=None, job=None):
             - job: 'echo "I love saltstack" > love'
             - timespec: '9:9 11/09/13'
             - tag: love
-            - runas: jam
+            - user: jam
 
     '''
     if job:
@@ -53,6 +60,30 @@ def present(name, timespec, tag=None, runas=None, job=None):
            'result': True,
            'comment': 'job {0} is add and will run on {1}'.format(job,
                                                                   timespec)}
+
+    salt.utils.warn_until(
+        'Lithium',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 2014.1.4 (Hydrogen). Support will be removed in {version}.',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor of \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
 
     binary = salt.utils.which('at')
 
