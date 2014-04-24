@@ -39,7 +39,7 @@ def list_queues(backend):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_queues'.format(backend)
-    ret = queue_funcs[cmd](queue=queue, items=items)
+    ret = queue_funcs[cmd]()
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
@@ -50,7 +50,7 @@ def list_length(backend, queue):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_length'.format(backend)
-    ret = queue_funcs[cmd](queue=queue, items=items)
+    ret = queue_funcs[cmd](queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
