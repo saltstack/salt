@@ -1082,6 +1082,24 @@ class Minion(MinionBase):
                         'minutes': refresh_interval_in_minutes
                     }
             })
+                    
+                    
+    def _alive_test_watcher(self, interval_in_minutes = 10):
+        '''
+        Create a loop that will fire a ping test
+        '''
+        if '__alive_test' not in self.opts.get('schedule', {}):
+            if not 'schedule' in self.opts:
+                self.opts['schedule'] = {}
+            self.opts['schedule'].update({
+                '__alive_test':
+                    {
+                        'function': 'event.fire',
+                        'args': [{}, 'ping'],
+                        'minutes': interval_in_minutes
+                    }
+            })
+
 
     def _set_tcp_keepalive(self):
         if hasattr(zmq, 'TCP_KEEPALIVE'):
@@ -1181,11 +1199,18 @@ class Minion(MinionBase):
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        while True:
+        
+        timeouts = 0
+        creds = 'retry'
+        while creds == 'retry' or creds == 'timeout':
             creds = auth.sign_in(timeout, safe)
-            if creds != 'retry':
-                log.info('Authentication with master successful!')
-                break
+            if creds == 'timeout':
+                timeouts += 1
+                if timeouts > 10:
+                    raise SaltReqTimeoutError('Remote system not responding')
+            else:
+                timeouts = 0
+            
             log.info('Waiting for minion key to be accepted by the master.')
             if acceptance_wait_time:
                 log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
@@ -1193,6 +1218,8 @@ class Minion(MinionBase):
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+                    
+        log.info('Authentication with master successful!')  
         self.aes = creds['aes']
         if self.opts.get('syndic_master_publish_port'):
             self.publish_port = self.opts.get('syndic_master_publish_port')
@@ -1339,7 +1366,10 @@ class Minion(MinionBase):
                 'Exception occurred in attempt to initialize grain refresh routine during minion tune-in: {0}'.format(
                     exc)
             )
-
+        
+        # start a ping test to run every 10 min
+        self._alive_test_watcher(10)
+        
         while self._running is True:
             loop_interval = self.process_schedule(self, loop_interval)
             try:

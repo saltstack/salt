@@ -41,7 +41,7 @@ try:
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit, MasterExit
+from salt.exceptions import SaltSystemExit, MasterExit, SaltReqTimeoutError
 
 
 # Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
@@ -241,18 +241,26 @@ class Minion(parsers.MinionOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
-        try:
-            if check_user(self.config['user']):
-                self.minion.tune_in()
-        except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
-            if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
-            else:
-                logger.error(str(exc))
-        finally:
-            self.shutdown()
+        reconnect = True
+        while reconnect:
+            reconnect = False
+            try:
+                self.prepare()
+                if check_user(self.config['user']):
+                    self.minion.tune_in()
+            except (KeyboardInterrupt, SaltSystemExit) as exc:
+                logger.warn('Stopping the Salt Minion')
+                if isinstance(exc, KeyboardInterrupt):
+                    logger.warn('Exiting on Ctrl-c')
+                else:
+                    logger.error(str(exc))
+            except SaltReqTimeoutError, exc:
+                logger.warn(exc)
+                logger.warn('Restarting minion')
+                #if self.config['auto_restart']:
+                reconnect = True
+            finally:
+                self.shutdown()
 
     def shutdown(self):
         '''
