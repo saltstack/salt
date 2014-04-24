@@ -43,7 +43,7 @@ Some examples:
 Context Managers and requisites
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 How about something a little more complex. Here we're going to get into the
-core of what makes pyobjects the best way to write states.
+core of how to use pyobjects to write states.
 
 .. code-block:: python
    :linenos:
