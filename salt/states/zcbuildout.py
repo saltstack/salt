@@ -50,9 +50,7 @@ def __virtual__():
     '''
     Only load if zc.buildout libs available
     '''
-    if True:
-        return __virtualname__
-    return False
+    return __virtualname__
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from docker'
