@@ -2411,12 +2411,16 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
             perms['cgroup'] = group
     if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
+            if os.path.islink(name) and not follow_symlinks:
+                chown_func = lchown
+            else:
+                chown_func = chown
             if user is None:
                 user = perms['luser']
             if group is None:
                 group = perms['lgroup']
             try:
-                chown(name, user, group)
+                chown_func(name, user, group)
             except OSError:
                 ret['result'] = False
 

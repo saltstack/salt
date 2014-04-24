@@ -1299,6 +1299,7 @@ def directory(name,
               clean=False,
               require=None,
               exclude_pat=None,
+              follow_symlinks=False,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1355,6 +1356,13 @@ def directory(name,
     exclude_pat
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
+
+    follow_symlinks : False
+        If the desired path is a symlink (or ``recurse`` is defined and a
+        symlink is encountered while recursing), follow it and check the
+        permissions of the directory/file to which the symlink points.
+
+        .. versionadded:: 2014.1.4
     '''
     # Remove trailing slash, if present
     if name[-1] == '/':
@@ -1423,7 +1431,12 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name, ret, user, group, dir_mode)
+    ret, perms = __salt__['file.check_perms'](name,
+                                              ret,
+                                              user,
+                                              group,
+                                              dir_mode,
+                                              follow_symlinks)
 
     if recurse:
         if not isinstance(recurse, list):
@@ -1480,7 +1493,8 @@ def directory(name,
                         ret,
                         user,
                         group,
-                        file_mode)
+                        file_mode,
+                        follow_symlinks)
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
                     ret, perms = __salt__['file.check_perms'](
@@ -1488,7 +1502,8 @@ def directory(name,
                         ret,
                         user,
                         group,
-                        dir_mode)
+                        dir_mode,
+                        follow_symlinks)
 
     if clean:
         keep = _gen_keep_files(name, require)
