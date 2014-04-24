@@ -93,6 +93,51 @@ def _lxc_profile(profile):
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
 
+def _config_list(**kwargs):
+    '''
+    Return a list of dicts from the salt level configurations
+    '''
+    ret = []
+    memory = kwargs.pop('memory', None)
+    if memory:
+        memory = memory * 1024 * 1024
+    ret.append({'lxc.cgroup.memory.limit_in_bytes': memory})
+    cpuset = kwargs.pop('cpuset', None)
+    if cpuset:
+        ret.append({'lxc.cgroup.cpuset.cpus': cpuset})
+    cpushare = kwargs.pop('cpushare', None)
+    if cpushare:
+        ret.append({'lxc.cgroup.cpu.shares': cpushare})
+
+    nic = kwargs.pop('nic')
+    if nic:
+        nicp = __salt__['config.option']('lxc.nic', {}).get(
+                    nic, DEFAULT_NIC_PROFILE
+                )
+        nic_opts = kwargs.pop('nic_opts', None)
+
+        for dev, args in nicp.items():
+            ret.append({'lxc.network.type': args.pop('type', 'veth')})
+            ret.append({'lxc.network.name': dev})
+            ret.append({'lxc.network.flags': args.pop('flags', 'up')})
+            opts = nic_opts.get(dev) if nic_opts else None
+            if opts:
+                mac = opts.get('mac')
+                ipv4 = opts.get('ipv4')
+                ipv6 = opts.get('ipv6')
+            else:
+                ipv4, ipv6 = None, None
+                mac = salt.utils.gen_mac()
+            ret.append({'lxc.network.hwaddr': mac})
+            if ipv4:
+                ret.append({'lxc.network.ipv4': ipv4})
+            if ipv6:
+                ret.append({'lxc.network.ipv6': ipv6})
+            for k, v in args.items():
+                ret.append({'lxc.network.{0}'.format(k): v})
+    return ret
+
+
 class _LXCConfig(object):
     '''
     LXC configuration data
@@ -330,6 +375,9 @@ def init(name,
                                          profile=profile, **kwargs)
         if not ret.get('created', False):
             return ret
+        path = '/var/lib/lxc/{0}/config'.format(name)
+        for comp in _config_list(**kwargs):
+            edit_conf(path, **comp)
     lxc_info = info(name)
     rootfs = lxc_info['rootfs']
     #lxc_config = lxc_info['config']
