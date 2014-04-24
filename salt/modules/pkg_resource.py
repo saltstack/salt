@@ -22,124 +22,6 @@ log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
 
 
-def _parse_pkg_meta(path):
-    '''
-    Parse metadata from a binary package and return the package's name and
-    version number.
-    '''
-    def parse_rpm_redhat(path):
-        try:
-            from salt.modules.yumpkg import __QUERYFORMAT, _parse_pkginfo
-            from salt.utils import namespaced_function as _namespaced_function
-            _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
-        except ImportError:
-            log.critical('Error importing helper functions. This is almost '
-                         'certainly a bug.')
-            return '', ''
-        pkginfo = __salt__['cmd.run_stdout'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(
-                # Binary packages have no REPOID, replace this so the rpm
-                # command does not fail with "invalid tag" error
-                __QUERYFORMAT.replace('%{REPOID}', 'binarypkg'),
-                path
-            )
-        ).strip()
-        pkginfo = _parse_pkginfo(pkginfo)
-        if pkginfo is None:
-            return '', ''
-        else:
-            return pkginfo.name, pkginfo.version
-
-    def parse_rpm_suse(path):
-        pkginfo = __salt__['cmd.run_stdout'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(
-                r'%{NAME}_|-%{VERSION}_|-%{RELEASE}\n',
-                path
-            )
-        ).strip()
-        name, pkg_version, rel = path.split('_|-')
-        if rel:
-            pkg_version = '-'.join((pkg_version, rel))
-        return name, pkg_version
-
-    def parse_pacman(path):
-        name = ''
-        pkg_version = ''
-        result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
-        if result['retcode'] == 0:
-            for line in result['stdout'].splitlines():
-                if not name:
-                    match = re.match(r'^Name\s*:\s*(\S+)', line)
-                    if match:
-                        name = match.group(1)
-                        continue
-                if not pkg_version:
-                    match = re.match(r'^Version\s*:\s*(\S+)', line)
-                    if match:
-                        pkg_version = match.group(1)
-                        continue
-        return name, pkg_version
-
-    def parse_deb(path):
-        name = ''
-        pkg_version = ''
-        arch = ''
-        # This is ugly, will have to try to find a better way of accessing the
-        # __grains__ global.
-        cpuarch = sys.modules[
-            __salt__['test.ping'].__module__
-        ].__grains__.get('cpuarch', '')
-        osarch = sys.modules[
-            __salt__['test.ping'].__module__
-        ].__grains__.get('osarch', '')
-
-        result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
-        if result['retcode'] == 0:
-            for line in result['stdout'].splitlines():
-                if not name:
-                    try:
-                        name = re.match(
-                            r'^\s*Package\s*:\s*(\S+)',
-                            line
-                        ).group(1)
-                    except AttributeError:
-                        continue
-                if not pkg_version:
-                    try:
-                        pkg_version = re.match(
-                            r'^\s*Version\s*:\s*(\S+)',
-                            line
-                        ).group(1)
-                    except AttributeError:
-                        continue
-                if cpuarch == 'x86_64' and not arch:
-                    try:
-                        arch = re.match(
-                            r'^\s*Architecture\s*:\s*(\S+)',
-                            line
-                        ).group(1)
-                    except AttributeError:
-                        continue
-        if arch and cpuarch == 'x86_64':
-            if arch != 'all' and osarch == 'amd64' and osarch != arch:
-                name += ':{0}'.format(arch)
-        return name, pkg_version
-
-    if __grains__['os_family'] in ('RedHat', 'Mandriva'):
-        metaparser = parse_rpm_redhat
-    elif __grains__['os_family'] in ('Suse',):
-        metaparser = parse_rpm_suse
-    elif __grains__['os_family'] in ('Arch',):
-        metaparser = parse_pacman
-    elif __grains__['os_family'] in ('Debian',):
-        metaparser = parse_deb
-    else:
-        log.error('No metadata parser found for {0}'.format(path))
-        return '', ''
-
-    return metaparser(path)
-
-
 def _repack_pkgs(pkgs):
     '''
     Repack packages specified using "pkgs" argument to pkg states into a single
@@ -185,33 +67,6 @@ def pack_sources(sources):
             key = next(iter(source))
             ret[_normalize_name(key)] = source[key]
     return ret
-
-
-def _verify_binary_pkg(srcinfo):
-    '''
-    Compares package files (s) against the metadata to confirm that they match
-    what is expected.
-    '''
-    problems = []
-    for pkg_name, pkg_uri, pkg_path, pkg_type in srcinfo:
-        pkgmeta_name, pkgmeta_version = _parse_pkg_meta(pkg_path)
-        if not pkgmeta_name:
-            if pkg_type == 'remote':
-                problems.append('Failed to cache {0}. Are you sure this '
-                                'path is correct?'.format(pkg_uri))
-            elif pkg_type == 'local':
-                if not os.path.isfile(pkg_path):
-                    problems.append('Package file {0} not found. Are '
-                                    'you sure this path is '
-                                    'correct?'.format(pkg_path))
-                else:
-                    problems.append('Unable to parse package metadata for '
-                                    '{0}.'.format(pkg_path))
-        elif pkg_name != pkgmeta_name:
-            problems.append('Package file {0} (Name: {1}) does not '
-                            'match the specified package name '
-                            '({2}).'.format(pkg_uri, pkgmeta_name, pkg_name))
-    return problems
 
 
 def parse_targets(name=None,
@@ -270,18 +125,6 @@ def parse_targets(name=None,
             else:
                 # Package file local to the minion
                 srcinfo.append((pkg_name, pkg_src, pkg_src, 'local'))
-
-        # Check metadata to make sure the name passed matches the source
-        if __grains__['os_family'] not in ('Solaris',) \
-                and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
-            problems = _verify_binary_pkg(srcinfo)
-            # If any problems are found in the caching or metadata parsing done
-            # in the above for loop, log each problem and return None,None,
-            # which will keep package installation from proceeding.
-            if problems:
-                for problem in problems:
-                    log.error(problem)
-                return None, None
 
         # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
         # the package path (3rd element of tuple).
