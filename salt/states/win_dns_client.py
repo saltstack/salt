@@ -94,10 +94,9 @@ def dns_dhcp(name, interface='Local Area Connection'):
 
     return ret
 
-def suffix(name,
+def primary_suffix(name,
         suffix=None,
-        updates=False,
-        **kwargs):
+        updates=False):
     '''
     .. versionadded:: TODO
 
@@ -123,7 +122,6 @@ def suffix(name,
             'changes': {},
             'result': True,
             'comment': 'No changes needed'
-            # TODO: REMOVE: 'comment': 'Global primary DNS suffix is set to {0!r}.'.format(suffix)
     }
 
     suffix = str(suffix)
@@ -143,7 +141,7 @@ def suffix(name,
     reg_data = {
             'suffix': {
                 'hkey': 'HKEY_LOCAL_MACHINE',
-                'path': 'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
+                'path': r'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
                 'key':  'NV Domain',
                 'type': 'REG_SZ',
                 'old':  None,
@@ -151,7 +149,7 @@ def suffix(name,
             },
             'updates': {
                 'hkey': 'HKEY_LOCAL_MACHINE',
-                'path': 'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
+                'path': r'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
                 'key':  'SyncDomainWithMembership',
                 'type': 'REG_DWORD',
                 'old':  None,
@@ -168,7 +166,7 @@ def suffix(name,
             reg_data['updates']['hkey'],
             reg_data['updates']['path'],
             reg_data['updates']['key'],))
- 
+
     updates_operation = 'enabled' if reg_data['updates']['new'] else 'disabled'
 
     # No changes to suffix needed
