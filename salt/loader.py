@@ -183,7 +183,15 @@ def returner(name, opts, functions):
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_module(name, functions, pack)
+
+    tmp = load.gen_module(name, functions, pack)
+    # TODO: maybe don't do this in the gen_module?
+    for key, val in tmp.items():
+        new_key = key.replace('{0}.'.format(name), '')
+        tmp[new_key] = val
+        del tmp[key]
+
+    return tmp
 
 
 def pillars(opts, functions):
