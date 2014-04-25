@@ -73,6 +73,12 @@ Either a password or an API key must also be specified:
       # The OpenStack API key
       apikey: 901d3f579h23c8v73q9
 
+Optionally, if you don't want to save plain-text password in your configuration file, you can use keyring:
+.. code-block:: yaml
+
+    my-openstack-keyring-config:
+      # The OpenStack password is stored in keyring
+      password: USE_KEYRING
 
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
@@ -236,27 +242,42 @@ def get_conn():
         import libcloud.security
         libcloud.security.VERIFY_SSL_CERT = False
 
+    user = config.get_cloud_config_value(
+        'user', vm_, __opts__, search_global=False
+    )
     password = config.get_cloud_config_value(
         'password', vm_, __opts__, search_global=False
     )
+
     if password is not None:
         authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
+        if password == 'USE_KEYRING':
+            # retrieve password from system keyring
+            credential_id = "salt.cloud.provider.%s" % __active_provider_name__
+            logging.debug("Retrieving keyring password for %s (%s)" %
+                (credential_id, user)
+            )
+            actual_password = salt.utils.cloud.retrieve_password_from_keyring(
+                credential_id,
+                user)
+            if actual_password is None:
+                raise RuntimeError(
+                    "Unable to retrieve password from keyring for provider %s" %
+                    __active_provider_name__
+                )
+        else:
+            actual_password = password
         return driver(
-            config.get_cloud_config_value(
-                'user', vm_, __opts__, search_global=False
-            ),
-            password,
+            user,
+            actual_password,
             **authinfo
         )
 
     authinfo['ex_force_auth_version'] = '2.0_apikey'
     log.debug('OpenStack authenticating using apikey')
     return driver(
-        config.get_cloud_config_value('user',
-                                      vm_,
-                                      __opts__,
-                                      search_global=False),
+        user,
         config.get_cloud_config_value('apikey', vm_, __opts__,
                                       search_global=False), **authinfo)
 
