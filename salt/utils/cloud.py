@@ -19,8 +19,7 @@ import json
 import traceback
 import copy
 import re
-import keyring
-import getpass
+
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows
@@ -58,6 +57,18 @@ from salt.cloud.exceptions import (
 # Import third party libs
 from jinja2 import Template
 import yaml
+
+try:
+    import keyring
+    HAS_KEYRING = True
+except ImportError:
+    HAS_KEYRING = False
+
+try:
+    import getpass
+    HAS_GETPASS = True
+except ImportError:
+    HAS_GETPASS = False
 
 NSTATES = {
     0: 'running',
@@ -2044,18 +2055,28 @@ def retrieve_password_from_keyring(credential_id, username):
     '''
     Retrieve particular user's password for a specified credential set from system keyring.
     '''
+    if not HAS_KEYRING:
+        log.error('USE_KEYRING configured as a password, but no keyring module is installed')
+        return False
     return keyring.get_password(credential_id, username)
 
 def _save_password_in_keyring(credential_id, username, password):
     '''
     Saves provider password in system keyring
     '''
+    if not HAS_KEYRING:
+        log.error('Tried to store password in keyring, but no keyring module is installed')
+        return False
     return keyring.set_password(credential_id, username, password)
 
 def store_password_in_keyring(credential_id, username):
     '''
     Interactively prompts user for a password and stores it in system keyring
     '''
+    if not HAS_KEYRING:
+        log.error('Tried to store password in keyring, but no keyring module is installed')
+        return False
+
     prompt = "Please enter password for %s:" % credential_id
     try:
         password = getpass.getpass(prompt)

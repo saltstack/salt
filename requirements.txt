@@ -7,4 +7,3 @@ pyzmq >= 2.2.0
 MarkupSafe
 apache-libcloud >= 0.14.0
 requests
-keyring
