@@ -3,7 +3,7 @@
 Management of dockers
 =====================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 .. note::
 
@@ -12,18 +12,17 @@ Management of dockers
 General notes
 -------------
 
-- As we use states, we don't want to pop continuously dockers, we will map each
-  container id  (or image) with a grain whenever it is relevant.
-- As a corollary, we will resolve for a container id either directly this
-  container id or try to find a container id matching something stocked in
-  grain
+- As we use states, we don't want to be continuously popping dockers, so we
+  will map each container id (or image) with a grain whenever it is relevant.
+- As a corollary, we will resolve a container id either directly by the id
+  or try to find a container id matching something stocked in grain.
 
 Installation prerequisites
 --------------------------
 
 - You will need the 'docker-py' python package in your python installation
   running salt. The version of docker-py should support `version 1.6 of docker
-  remote API. <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
+  remote API. <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 - For now, you need docker-py from sources:
 
     https://github.com/dotcloud/docker-py
@@ -149,13 +148,14 @@ __docformat__ = 'restructuredtext en'
 
 import datetime
 import json
+import logging
 import os
 import re
 import traceback
 import shutil
 
 from salt.modules import cmdmod
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 import salt.utils
 from salt.utils.odict import OrderedDict
@@ -166,7 +166,8 @@ try:
 except ImportError:
     HAS_DOCKER = False
 
-import logging
+HAS_NSENTER = bool(salt.utils.which('nsenter'))
+
 
 log = logging.getLogger(__name__)
 
@@ -222,6 +223,12 @@ def _set_status(m,
 def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
     '''
     Return invalid status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.invalid
     '''
     return _set_status(m, status=False, id=id, comment=comment, out=out)
 
@@ -229,6 +236,12 @@ def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
 def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
     '''
     Return valid status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.valid
     '''
     return _set_status(m, status=True, id=id, comment=comment, out=out)
 
@@ -302,11 +315,12 @@ def _get_image_infos(image):
     '''
     Verify that the image exists
     We will try to resolve either by:
-        - the mapping grain->docker id or directly
-        - dockerid
+        - name
+        - image_id
+        - tag
 
     image
-        Image Id / grain name
+        Image Name / Image Id / Image Tag
 
     Returns the image id
     '''
@@ -344,11 +358,11 @@ def _get_container_infos(container):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.inspect_container(container)
-        if info:
+        container_info = client.inspect_container(container)
+        if container_info:
             valid(status,
-                  id=info['ID'],
-                  out=info)
+                  id=container_info['ID'],
+                  out=container_info)
     except Exception:
         pass
     if not status['id']:
@@ -420,8 +434,8 @@ def logs(container, *args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.logs(_get_container_infos(container)['id'])
-        valid(status, id=container, out=info)
+        container_logs = client.logs(_get_container_infos(container)['id'])
+        valid(status, id=container, out=container_logs)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -461,7 +475,7 @@ def commit(container,
     client = _get_client()
     try:
         container = _get_container_infos(container)['id']
-        info = client.commit(
+        commit_info = client.commit(
             container,
             repository=repository,
             tag=tag,
@@ -469,15 +483,15 @@ def commit(container,
             author=author,
             conf=conf)
         found = False
-        for k in 'Id', 'id', 'ID':
-            if k in info:
+        for k in ('Id', 'id', 'ID'):
+            if k in commit_info:
                 found = True
-                id = info[k]
+                image_id = commit_info[k]
         if not found:
             raise Exception('Invalid commit return')
-        image = _get_image_infos(id)['id']
+        image = _get_image_infos(image_id)['id']
         comment = 'Image {0} created from {1}'.format(image, container)
-        valid(status, id=image, out=info, comment=comment)
+        valid(status, id=image, out=commit_info, comment=comment)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -499,8 +513,8 @@ def diff(container, *args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.diff(_get_container_infos(container)['id'])
-        valid(status, id=container, out=info)
+        container_diff = client.diff(_get_container_infos(container)['id'])
+        valid(status, id=container, out=container_diff)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -546,7 +560,7 @@ def export(container, path, *args, **kwargs):
 
 
 def create_container(image,
-                     command='/sbin/init',
+                     command=None,
                      hostname=None,
                      user=None,
                      detach=True,
@@ -558,7 +572,6 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
-                     privileged=False,
                      name=None,
                      *args, **kwargs):
     '''
@@ -592,8 +605,6 @@ def create_container(image,
         let stdin open
     volumes_from
         container to get volumes definition from
-    privileged
-        run container in privileged mode
     name
         name given to container
 
@@ -624,7 +635,7 @@ def create_container(image,
                     mounted = parts[0]
                 mountpoints[mountpoint] = {}
                 binds[mounted] = mountpoint
-        info = client.create_container(
+        container_info = client.create_container(
             image=image,
             command=command,
             hostname=hostname,
@@ -638,15 +649,14 @@ def create_container(image,
             dns=dns,
             volumes=mountpoints,
             volumes_from=volumes_from,
-            privileged=privileged,
             name=name,
         )
-        container = info['Id']
+        container = container_info['Id']
         callback = valid
         comment = 'Container created'
         out = {
             'info': _get_container_infos(container),
-            'out': info
+            'out': container_info
         }
         return callback(status, id=container, comment=comment, out=out)
     except Exception:
@@ -667,8 +677,8 @@ def version(*args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.version()
-        valid(status, out=info)
+        docker_version = client.version()
+        valid(status, out=docker_version)
     except Exception:
         invalid(status, out=traceback.format_exc())
     return status
@@ -690,8 +700,8 @@ def info(*args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.info()
-        valid(status, out=info)
+        version_info = client.info()
+        valid(status, out=version_info)
     except Exception:
         invalid(status, out=traceback.format_exc())
     return status
@@ -718,10 +728,10 @@ def port(container, private_port, *args, **kwargs):
     status = base_status.copy()
     client = _get_client()
     try:
-        info = client.port(
+        port_info = client.port(
             _get_container_infos(container)['id'],
-            port)
-        valid(status, id=container, out=info)
+            private_port)
+        valid(status, id=container, out=port_info)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
     return status
@@ -774,7 +784,7 @@ def stop(container, timeout=10, *args, **kwargs):
     except Exception:
         invalid(status, id=container, out=traceback.format_exc(),
                 comment=(
-                    'An exception occured while stopping '
+                    'An exception occurred while stopping '
                     'your container {0}').format(container))
     return status
 
@@ -874,8 +884,9 @@ def restart(container, timeout=10, *args, **kwargs):
     return status
 
 
-def start(container, binds=None, ports=None, port_bindings=None,
+def start(container, binds=None, port_bindings=None,
           lxc_conf=None, publish_all_ports=None, links=None,
+          privileged=False,
           *args, **kwargs):
     '''
     restart the specified container
@@ -894,16 +905,30 @@ def start(container, binds=None, ports=None, port_bindings=None,
     '''
     if not binds:
         binds = {}
-    if not ports:
-        ports = {}
+
+    if not isinstance(binds, dict):
+        raise SaltInvocationError('binds must be formatted as a dictionary')
+
     client = _get_client()
     status = base_status.copy()
     try:
         dcontainer = _get_container_infos(container)['id']
         if not is_running(container):
-            client.start(dcontainer, binds=binds, port_bindings=port_bindings,
+            bindings = None
+            if port_bindings is not None:
+                try:
+                    bindings = {}
+                    for k, v in port_bindings.iteritems():
+                        bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+                except AttributeError:
+                    raise SaltInvocationError(
+                        'port_bindings must be formatted as a dictionary of '
+                        'dictionaries'
+                    )
+            client.start(dcontainer, binds=binds, port_bindings=bindings,
                          lxc_conf=lxc_conf,
-                         publish_all_ports=publish_all_ports, links=links)
+                         publish_all_ports=publish_all_ports, links=links,
+                         privileged=privileged)
             if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),
@@ -1196,19 +1221,19 @@ def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
     try:
         is_invalid = False
         status['out'] += '\n' + ret
-        for log in logs:
-            if isinstance(log, dict):
-                if 'errorDetail' in log:
-                    if 'code' in log['errorDetail']:
+        for err_log in logs:
+            if isinstance(err_log, dict):
+                if 'errorDetail' in err_log:
+                    if 'code' in err_log['errorDetail']:
                         msg = '\n{0}\n{1}: {2}'.format(
-                            log['error'],
-                            log['errorDetail']['code'],
-                            log['errorDetail']['message']
+                            err_log['error'],
+                            err_log['errorDetail']['code'],
+                            err_log['errorDetail']['message']
                         )
                     else:
                         msg = '\n{0}\n{1}'.format(
-                            log['error'],
-                            log['errorDetail']['message'],
+                            err_log['error'],
+                            err_log['errorDetail']['message'],
                         )
                     comment += msg
     except Exception:
@@ -1247,10 +1272,10 @@ def import_image(src, repo, tag=None, *args, **kwargs):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            logs, info = _parse_image_multilogs_string(ret)
-            _create_image_assemble_error_status(status, ret, logs)
+            image_logs, _info = _parse_image_multilogs_string(ret, repo)
+            _create_image_assemble_error_status(status, ret, image_logs)
             if status['status'] is not False:
-                infos = _get_image_infos(logs[0]['status'])
+                infos = _get_image_infos(image_logs[0]['status'])
                 valid(status,
                       comment='Image {0} was created'.format(infos['id']),
                       id=infos['id'],
@@ -1404,16 +1429,20 @@ def build(path=None,
                                rm=rm,
                                nocache=nocache)
             if isinstance(ret, tuple):
-                id, out = ret[0], ret[1]
-                if id:
-                    valid(status, id=id, out=out, comment='Image built')
+                image_id, out = ret[0], ret[1]
+                if image_id:
+                    valid(status, id=image_id, out=out, comment='Image built')
                 else:
-                    invalid(status, id=id, out=out)
+                    invalid(status, id=image_id, out=out)
+            else:
+                raise NotImplementedError(
+                    'Unknown response type for build() {0!r}'.format(ret))
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
-            return status
+    else:
+        invalid(status, comment='`path` or `fileobj` must be given')
     return status
 
 
@@ -1490,11 +1519,11 @@ def inspect_image(image, *args, **kwargs):
     return status
 
 
-def _parse_image_multilogs_string(ret):
+def _parse_image_multilogs_string(ret, repo):
     '''
     Parse image log strings into grokable data
     '''
-    logs, infos = [], None
+    image_logs, infos = [], None
     if ret and ret.startswith('{') and ret.endswith('}'):
         pushd = 0
         buf = ''
@@ -1509,19 +1538,16 @@ def _parse_image_multilogs_string(ret):
                     buf = json.loads(buf)
                 except Exception:
                     pass
-                logs.append(buf)
+                image_logs.append(buf)
                 buf = ''
-        logs.reverse()
+        image_logs.reverse()
         # search last layer grabbed
-        for l in logs:
+        for l in image_logs:
             if isinstance(l, dict):
-                if (
-                    l.get('progress', 'not complete') == 'complete'
-                    and l.get('id', None)
-                ):
-                    infos = _get_image_infos(l['id'])
+                if l.get('status') == 'Download complete' and l.get('id'):
+                    infos = _get_image_infos(repo)
                     break
-    return logs, infos
+    return image_logs, infos
 
 
 def _pull_assemble_error_status(status, ret, logs):
@@ -1541,19 +1567,19 @@ def _pull_assemble_error_status(status, ret, logs):
     out = ''
     try:
         out = '\n' + ret
-        for log in logs:
-            if isinstance(log, dict):
-                if 'errorDetail' in log:
-                    if 'code' in log['errorDetail']:
+        for err_log in logs:
+            if isinstance(err_log, dict):
+                if 'errorDetail' in err_log:
+                    if 'code' in err_log['errorDetail']:
                         msg = '\n{0}\n{1}: {2}'.format(
-                            log['error'],
-                            log['errorDetail']['code'],
-                            log['errorDetail']['message']
+                            err_log['error'],
+                            err_log['errorDetail']['code'],
+                            err_log['errorDetail']['message']
                         )
                     else:
                         msg = '\n{0}\n{1}'.format(
-                            log['error'],
-                            log['errorDetail']['message'],
+                            err_log['error'],
+                            err_log['errorDetail']['message'],
                         )
                     comment += msg
     except Exception:
@@ -1594,24 +1620,20 @@ def pull(repo, tag=None, *args, **kwargs):
                 ----------
                 - id:
                     2c80228370c9
-                - progress:
-                    complete
                 - status:
-                    Download
+                    Download complete
                 ----------
                 - id:
                     2c80228370c9
                 - progress:
-                    image (latest) from NAME, endpoint: URL
+                    [=========================>                         ]
                 - status:
-                    Pulling
+                    Downloading
                 ----------
                 - id:
                     2c80228370c9
-                - progress:
-                    image (latest) from foo/ubuntubox
-                - status:
-                    Pulling
+                - status
+                    Pulling image (latest) from foo/ubuntubox
                 ----------
                 - status:
                     Pulling repository foo/ubuntubox
@@ -1629,18 +1651,19 @@ def pull(repo, tag=None, *args, **kwargs):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            logs, infos = _parse_image_multilogs_string(ret)
+            image_logs, infos = _parse_image_multilogs_string(ret, repo)
             if infos and infos.get('id', None):
                 repotag = repo
                 if tag:
                     repotag = '{0}:{1}'.format(repo, tag)
                 valid(status,
-                      out=logs and logs or ret,
+                      out=image_logs if image_logs else ret,
+                      id=infos['id'],
                       comment='Image {0} was pulled ({1})'.format(
                           repotag, infos['id']))
 
             else:
-                _pull_assemble_error_status(status, ret, logs)
+                _pull_assemble_error_status(status, ret, image_logs)
         else:
             invalid(status)
     except Exception:
@@ -1665,19 +1688,19 @@ def _push_assemble_error_status(status, ret, logs):
     status['out'] = ''
     try:
         status['out'] += '\n' + ret
-        for log in logs:
-            if isinstance(log, dict):
-                if 'errorDetail' in log:
-                    if 'code' in log['errorDetail']:
+        for err_log in logs:
+            if isinstance(err_log, dict):
+                if 'errorDetail' in err_log:
+                    if 'code' in err_log['errorDetail']:
                         msg = '\n{0}\n{1}: {2}'.format(
-                            log['error'],
-                            log['errorDetail']['code'],
-                            log['errorDetail']['message']
+                            err_log['error'],
+                            err_log['errorDetail']['code'],
+                            err_log['errorDetail']['message']
                         )
                     else:
                         msg = '\n{0}\n{1}'.format(
-                            log['error'],
-                            log['errorDetail']['message'],
+                            err_log['error'],
+                            err_log['errorDetail']['message'],
                         )
                     comment += msg
     except Exception:
@@ -1714,9 +1737,9 @@ def push(repo, *args, **kwargs):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     ret = client.push(repo)
-    logs, infos = _parse_image_multilogs_string(ret)
-    if logs:
-        laststatus = logs[0].get('status', None)
+    image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
+    if image_logs:
+        laststatus = image_logs[0].get('status', None)
         if laststatus and (
             ('already pushed' in laststatus)
             or ('Pushing tags for rev' in laststatus)
@@ -1725,14 +1748,14 @@ def push(repo, *args, **kwargs):
             status['id'] = _get_image_infos(repo)['id']
             status['comment'] = 'Image {0}({1}) was pushed'.format(
                 repo, status['id'])
-            if logs:
-                status['out'] = logs
+            if image_logs:
+                status['out'] = image_logs
             else:
                 status['out'] = ret
         else:
-            _push_assemble_error_status(status, ret, logs)
+            _push_assemble_error_status(status, ret, image_logs)
     else:
-        _push_assemble_error_status(status, ret, logs)
+        _push_assemble_error_status(status, ret, image_logs)
     return status
 
 
@@ -1740,42 +1763,59 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     '''
     Wrapper to a cmdmod function
 
-    Idea is to prefix the call to cmdrun with the relevant lxc-attach to
+    Idea is to prefix the call to cmdrun with the relevant driver to
     execute inside a container context
+
+    .. note::
+
+        Only lxc and native drivers are implemented.
 
     status
         status object
     container
-        container id or grain to execute in
+        container id to execute in
     func
         cmd function to execute
     cmd
-        command to execute in container
+        command to execute in the container
     '''
+
+    client = _get_client()
+    # For old version of docker. lxc was the only supported driver.
+    # We can safely hardcode it
+    driver = client.info().get('ExecutionDriver', 'lxc-')
+    container_info = _get_container_infos(container)
+    container_id = container_info['id']
+    if driver.startswith('lxc-'):
+        full_cmd = 'lxc-attach -n {0} -- {1}'.format(container_id, cmd)
+    elif driver.startswith('native-') and HAS_NSENTER:
+        # http://jpetazzo.github.io/2014/03/23/lxc-attach-nsinit-nsenter-docker-0-9/
+        container_pid = container_info['State']['Pid']
+        if container_pid == 0:
+            invalid(status, id=container, comment='Container is not running')
+            return status
+        full_cmd = ('nsenter --target {pid} --mount --uts --ipc --net --pid'
+                    ' {cmd}'.format(pid=container_pid, cmd=cmd))
+    else:
+        raise NotImplementedError(
+            'Unknown docker ExecutionDriver {0!r}. Or didn\'t found command'
+            ' to attach to the container'.format(driver))
+
+    # now execute the command
+    comment = 'Executed {0}'.format(full_cmd)
     try:
-        cid = _get_container_infos(container)['id']
-        dcmd = 'lxc-attach -n {0} -- {1}'.format(cid, cmd)
-        comment = 'Executed {0}'.format(dcmd)
-        try:
-            f = __salt__[func]
-            ret = f(dcmd, *args, **kwargs)
-            if (
-                (
-                    isinstance(ret, dict)
-                    and (
-                        ('retcode' in ret)
-                        and (ret['retcode'] != 0)
-                    )
-                )
-                or (func == 'cmd.retcode' and ret != 0)
-            ):
-                return invalid(status, id=container, out=ret, comment=comment)
-            valid(status, id=container, out=ret, comment=comment,)
-        except Exception:
-            invalid(status, id=container,
-                    comment=comment, out=traceback.format_exc())
+        f = __salt__[func]
+        ret = f(full_cmd, *args, **kwargs)
+        if ((isinstance(ret, dict) and
+                ('retcode' in ret) and
+                (ret['retcode'] != 0))
+                or (func == 'cmd.retcode' and ret != 0)):
+            return invalid(status, id=container, out=ret,
+                            comment=comment)
+        valid(status, id=container, out=ret, comment=comment,)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        invalid(status, id=container,
+                comment=comment, out=traceback.format_exc())
     return status
 
 

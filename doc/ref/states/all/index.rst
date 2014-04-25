@@ -12,10 +12,13 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apache
     apt
     archive
+    at
     augeas
     aws_sqs
+    blockdev
     cloud
     cmd
     composer
@@ -24,15 +27,24 @@ Full list of builtin state modules
     debconfmod
     disk
     dockerio
+    environ
     eselect
+    event
     file
     gem
     git
+    glusterfs
     gnomedesktop
     grains
     group
     hg
     host
+    htpasswd
+    incron
+    influxdb_database
+    influxdb_user
+    ini_manage
+    ipset
     iptables
     keyboard
     keystone
@@ -43,9 +55,11 @@ Full list of builtin state modules
     lvm
     lvs_server
     lvs_service
+    lxc
     makeconf
     mdadm
     memcached
+    modjk
     modjk_worker
     module
     mongodb_database
@@ -53,11 +67,14 @@ Full list of builtin state modules
     mount
     mysql_database
     mysql_grants
+    mysql_query
     mysql_user
     network
+    nftables
     npm
     ntp
     openstack_config
+    pagerduty
     pecl
     pip_state
     pkg
@@ -66,6 +83,7 @@ Full list of builtin state modules
     portage_config
     ports
     postgres_database
+    postgres_extension
     postgres_group
     postgres_user
     powerpath
@@ -83,6 +101,7 @@ Full list of builtin state modules
     saltmod
     selinux
     service
+    smtp
     ssh_auth
     ssh_known_hosts
     stateconf
@@ -90,6 +109,7 @@ Full list of builtin state modules
     supervisord
     svn
     sysctl
+    test
     timezone
     tomcat
     user
@@ -100,4 +120,5 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    xmpp
     zcbuildout

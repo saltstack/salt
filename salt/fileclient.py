@@ -9,7 +9,9 @@ import logging
 import hashlib
 import os
 import shutil
+import time
 import subprocess
+import requests
 
 # Import third party libs
 import yaml
@@ -20,12 +22,14 @@ import salt.client
 import salt.crypt
 import salt.loader
 import salt.payload
+import salt.transport
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
 from salt._compat import (
-    URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse, url_open,
+    URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse,
     url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener)
+from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +186,8 @@ class Client(object):
             ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
         return ret
 
-    def cache_dir(self, path, saltenv='base', include_empty=False, env=None):
+    def cache_dir(self, path, saltenv='base', include_empty=False,
+                  include_pat=None, exclude_pat=None, env=None):
         '''
         Download all of the files in a subdir of the master
         '''
@@ -211,9 +216,11 @@ class Client(object):
         )
         #go through the list of all files finding ones that are in
         #the target directory and caching them
-        ret.extend([self.cache_file('salt://' + fn_, saltenv)
-                    for fn_ in self.file_list(saltenv)
-                    if fn_.strip() and fn_.startswith(path)])
+        for fn_ in self.file_list(saltenv):
+            if fn_.strip() and fn_.startswith(path):
+                if salt.utils.check_include_exclude(
+                        fn_, include_pat, exclude_pat):
+                    ret.append(self.cache_file('salt://' + fn_, saltenv))
 
         if include_empty:
             # Break up the path into a list containing the bottom-level
@@ -518,6 +525,38 @@ class Client(object):
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
+
+        if url_data.scheme == 's3':
+            try:
+                salt.utils.s3.query(method='GET',
+                                    bucket=url_data.netloc,
+                                    path=url_data.path[1:],
+                                    return_bin=False,
+                                    local_file=dest,
+                                    action=None,
+                                    key=self.opts.get('s3.key', None),
+                                    keyid=self.opts.get('s3.keyid', None),
+                                    service_url=self.opts.get('s3.service_url',
+                                                              None),
+                                    verify_ssl=self.opts.get('s3.verify_ssl',
+                                                              True))
+                return dest
+            except Exception as ex:
+                raise MinionError('Could not fetch from {0}'.format(url))
+
+        if url_data.scheme == 'swift':
+            try:
+                swift_conn = SaltSwift(self.opts.get('keystone.user', None),
+                                             self.opts.get('keystone.tenant', None),
+                                             self.opts.get('keystone.auth_url', None),
+                                             self.opts.get('keystone.password', None))
+                swift_conn.get_object(url_data.netloc,
+                                      url_data.path[1:],
+                                      dest)
+                return dest
+            except Exception as ex:
+                raise MinionError('Could not fetch from {0}'.format(url))
+
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
             _, netloc = url_data.netloc.split('@', 1)
@@ -533,9 +572,9 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            with contextlib.closing(url_open(fixed_url)) as srcfp:
-                with salt.utils.fopen(dest, 'wb') as destfp:
-                    shutil.copyfileobj(srcfp, destfp)
+            req = requests.get(fixed_url)
+            with salt.utils.fopen(dest, 'wb') as destfp:
+                destfp.write(req.content)
             return dest
         except HTTPError as ex:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
@@ -776,9 +815,11 @@ class LocalClient(Client):
                 log.warning(err.format(path))
                 return ret
             else:
+                opts_hash_type = self.opts.get('hash_type', 'md5')
+                hash_type = getattr(hashlib, opts_hash_type)
                 with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hashlib.md5(ifile.read()).hexdigest()
-                ret['hash_type'] = 'md5'
+                    ret['hsum'] = hash_type(ifile.read()).hexdigest()
+                ret['hash_type'] = opts_hash_type
                 return ret
         path = self._find_file(path, saltenv)['path']
         if not path:
@@ -852,28 +893,11 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.payload.SREQ(self.opts['master_uri'])
-
-    def _crypted_transfer(self, load, tries=3, timeout=60, payload='aes'):
-        '''
-        In case of authentication errors, try to renegotiate authentication
-        and retry the method.
-        Indeed, we can fail too early in case of a master restart during a
-        minion state execution call
-        '''
-        def _do_transfer():
-            return self.auth.crypticle.loads(
-                self.sreq.send(payload,
-                               self.auth.crypticle.dumps(load),
-                               tries,
-                               timeout)
-            )
-        try:
-            return _do_transfer()
-        except salt.crypt.AuthenticationError:
-            self.auth = salt.crypt.SAuth(self.opts)
-            return _do_transfer()
+        channel = salt.transport.Channel.factory(self.opts)
+        if channel.ttype == 'zeromq':
+            self.auth = salt.crypt.SAuth(opts)
+        else:
+            self.auth = ''
 
     def get_file(self,
                  path,
@@ -942,15 +966,23 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         while True:
+            init_retries = 10
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
             try:
-                data = self._crypted_transfer(load)
+                channel = salt.transport.Channel.factory(
+                        self.opts,
+                        auth=self.auth)
+                data = channel.send(load)
             except SaltReqTimeoutError:
                 return ''
-
+            if not data:
+                if init_retries:
+                    init_retries -= 1
+                    time.sleep(0.02)
+                    continue
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master
@@ -1012,7 +1044,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
         try:
-            return self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1034,7 +1069,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         try:
-            self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1056,7 +1094,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_dir_list'}
         try:
-            return self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1068,7 +1109,10 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
         try:
-            return self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1097,15 +1141,19 @@ class RemoteClient(Client):
                 return {}
             else:
                 ret = {}
+                hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(
-                    path, form='md5', chunk_size=4096)
-                ret['hash_type'] = 'md5'
+                    path, form=hash_type, chunk_size=4096)
+                ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
         try:
-            return self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1126,7 +1174,10 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         try:
-            return self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1136,7 +1187,10 @@ class RemoteClient(Client):
         '''
         load = {'cmd': '_master_opts'}
         try:
-            return self._crypted_transfer(load)
+            channel = salt.transport.Channel.factory(
+                    self.opts,
+                    auth=self.auth)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1145,11 +1199,15 @@ class RemoteClient(Client):
         Return the metadata derived from the external nodes system on the
         master.
         '''
+        channel = salt.transport.Channel.factory(
+                self.opts,
+                auth=self.auth)
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
-                'opts': self.opts,
-                'tok': self.auth.gen_token('salt')}
+                'opts': self.opts}
+        if self.auth:
+            load['tok'] = self.auth.gen_token('salt')
         try:
-            return self._crypted_transfer(load)
+            return channel.send(load)
         except SaltReqTimeoutError:
             return ''

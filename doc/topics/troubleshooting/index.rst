@@ -225,12 +225,15 @@ sure the master of minion are running in the foreground:
     salt-master -l debug
     salt-minion -l debug
 
-The pass the signal to the master or minion when it seems to be unresponsive:
+Then pass the signal to the master or minion when it seems to be unresponsive:
 
 .. code-block:: bash
 
     killall -SIGUSR1 salt-master
     killall -SIGUSR1 salt-minion
+
+Also under BSD and Mac OS X in addition to SIGUSR1 signal, debug subroutine set
+up for SIGINFO which has an advantage of being sent by Ctrl+T shortcut.
 
 When filing an issue or sending questions to the mailing list for a problem
 with an unresponsive daemon this information can be invaluable.
@@ -242,3 +245,17 @@ As of release 0.17.1 you can no longer run different versions of Salt on your
 Master and Minion servers. This is due to a protocol change for security
 purposes. The Salt team will continue to attempt to ensure versions are as
 backwards compatible as possible.
+
+
+Debugging the Master and Minion
+===============================
+
+.. toctree::
+    master
+    minion
+
+Debugging YAML
+==============
+
+.. toctree::
+    yaml_idiosyncrasies

@@ -17,7 +17,7 @@ The salt.state declaration can call out a highstate or a list of sls:
           - core
         - saltenv: prod
 
-    databasees:
+    databases:
       salt.state:
         - tgt: role:database
         - tgt_type: grain
@@ -29,6 +29,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt._compat
 
 log = logging.getLogger(__name__)
 
@@ -48,14 +49,16 @@ def state(
         tgt,
         ssh=False,
         tgt_type=None,
+        expr_form=None,
         ret='',
         highstate=None,
         sls=None,
         env=None,
         test=False,
-        fail_minions='',
+        fail_minions=None,
         allow_fail=0,
-        **kwargs):
+        concurrent=False,
+        timeout=None):
     '''
     Invoke a state run on a given target
 
@@ -91,11 +94,21 @@ def state(
 
     fail_minions
         An optional list of targeted minions where failure is an option
+
+    concurrent
+        Allow multiple state runs to occur at once.
+
+        WARNING: This flag is potentially dangerous. It is designed
+        for use when multiple state runs can safely be run at the same
+        Do not use this flag for performance optimization.
     '''
+    cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+
     if env is not None:
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -107,11 +120,17 @@ def state(
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    cmd_kw = {'arg': []}
-    if 'expr_form' in kwargs and not tgt_type:
-        tgt_type = kwargs['expr_form']
-    if not tgt_type:
+    if expr_form and tgt_type:
+        ret.setdefault('warnings', []).append(
+            'Please only use \'tgt_type\' or \'expr_form\' not both. '
+            'Preferring \'tgt_type\' over \'expr_form\''
+        )
+        expr_form = None
+    elif expr_form and not tgt_type:
+        tgt_type = expr_form
+    elif not tgt_type and not expr_form:
         tgt_type = 'glob'
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     if highstate:
@@ -125,12 +144,19 @@ def state(
         ret['comment'] = 'No highstate or sls specified, no execution made'
         ret['result'] = False
         return ret
+
     if test:
-        cmd_kw['arg'].append('test={0}'.format(test))
-    if __env__ != 'base':
-        cmd_kw['arg'].append('saltenv={0}'.format(__env__))
-    if ret:
-        cmd_kw['ret'] = ret
+        cmd_kw['kwarg']['test'] = test
+
+    cmd_kw['kwarg']['saltenv'] = __env__
+
+    if isinstance(concurrent, bool):
+        cmd_kw['kwarg']['concurrent'] = concurrent
+    else:
+        ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
+        ret['result'] = False
+        return ret
+
     if __opts__['test'] is True:
         ret['comment'] = (
                 'State run to be executed on target {0} as test={1}'
@@ -138,22 +164,64 @@ def state(
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    ret['changes'] = cmd_ret
+
+    changes = {}
     fail = set()
-    if isinstance(fail_minions, str):
-        fail_minions = [fail_minions]
-    for minion, m_ret in cmd_ret.items():
-        if minion in fail_minions:
-            continue
+    failures = {}
+    no_change = set()
+
+    if fail_minions is None:
+        fail_minions = ()
+    elif isinstance(fail_minions, salt._compat.string_types):
+        fail_minions = [minion.strip() for minion in fail_minions.split(',')]
+    elif not isinstance(fail_minions, list):
+        ret.setdefault('warnings', []).append(
+            '\'fail_minions\' needs to be a list or a comma separated '
+            'string. Ignored.'
+        )
+        fail_minions = ()
+
+    for minion, mdata in cmd_ret.iteritems():
+        if mdata['out'] != 'highstate':
+            log.warning("Output from salt state not highstate")
+        m_ret = mdata['ret']
         m_state = salt.utils.check_state_result(m_ret)
+
         if not m_state:
-            fail.add(minion)
+            if minion not in fail_minions:
+                fail.add(minion)
+            failures[minion] = m_ret
+            continue
+        for state_item in m_ret.itervalues():
+            if state_item['changes']:
+                changes[minion] = m_ret
+                break
+        else:
+            no_change.add(minion)
+
+    if changes:
+        ret['changes'] = {'out': 'highstate', 'ret': changes}
     if fail:
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
-        return ret
-    ret['comment'] = 'States ran successfully on {0}'.format(
-            ', '.join(cmd_ret))
+    else:
+        ret['comment'] = 'States ran successfully.'
+        if changes:
+            ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
+        if no_change:
+            ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
+    if failures:
+        ret['comment'] += '\nFailures:\n'
+        for minion, failure in failures.iteritems():
+            ret['comment'] += '\n'.join(
+                    (' ' * 4 + l)
+                    for l in salt.output.out_format(
+                        {minion: failure},
+                        'highstate',
+                        __opts__,
+                        ).splitlines()
+                    )
+            ret['comment'] += '\n'
     return ret
 
 
@@ -162,9 +230,11 @@ def function(
         tgt,
         ssh=False,
         tgt_type=None,
+        expr_form=None,
         ret='',
-        arg=(),
-        **kwargs):
+        arg=None,
+        kwarg=None,
+        timeout=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -180,26 +250,39 @@ def function(
     arg
         The list of arguments to pass into the function
 
+    kwarg
+        The list of keyword arguments to pass into the function
+
     ret
         Optionally set a single or a list of returners to use
 
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
+    if kwarg is None:
+        kwarg = {}
+
+    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
-    cmd_kw = {'arg': []}
-    if 'expr_form' in kwargs and not tgt_type:
-        tgt_type = kwargs['expr_form']
-    if not tgt_type:
+
+    if expr_form and tgt_type:
+        ret['warnings'] = [
+            'Please only use \'tgt_type\' or \'expr_form\' not both. '
+            'Preferring \'tgt_type\' over \'expr_form\''
+        ]
+        expr_form = None
+    elif expr_form and not tgt_type:
+        tgt_type = expr_form
+    elif not tgt_type and not expr_form:
         tgt_type = 'glob'
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     fun = name
-    if ret:
-        cmd_kw['ret'] = ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     ret['changes'] = cmd_ret
     ret['comment'] = 'Function {0} ran successfully on {0}'.format(

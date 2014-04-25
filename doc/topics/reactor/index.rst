@@ -1,3 +1,9 @@
+.. _reactor:
+
+.. index:: Reactor
+    single: Reactor; events
+    see: events; Reactor
+
 ==============
 Reactor System
 ==============
@@ -51,7 +57,7 @@ and each event tag has a list of reactor SLS files to be run.
 Reactor sls files are similar to state and pillar sls files.  They are
 by default yaml + Jinja templates and are passed familar context variables.
 
-They differ because of the addtion of the ``tag`` and ``data`` variables.
+They differ because of the addition of the ``tag`` and ``data`` variables.
 
 - The ``tag`` variable is just the tag in the fired event.
 - The ``data`` variable is the event's data dict.
@@ -145,6 +151,19 @@ Example output:
      'pretag': None,
      'tag': 'salt/minion/fuzzer.domain.tld/start'}
 
+Debugging the Reactor
+=====================
+
+The best window into the Reactor is to run the master in the foreground with
+debug logging enabled. The output will include when the master sees the event,
+what the master does in response to that event, and it will also include the
+rendered SLS file (or any errors generated while rendering the SLS file).
+
+1.  Stop the master.
+2.  Start the master manually::
+
+        salt-master -l debug
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 
@@ -235,10 +254,6 @@ The Reactor then fires a ``state.sls`` command targeted to the HAProxy servers
 and passes the ID of the new minion from the event to the state file via inline
 Pillar.
 
-Note, the Pillar data will need to be passed as a string since that is how it
-is passed at the CLI. That string will be parsed as YAML on the minion (same as
-how it works at the CLI).
-
 :file:`/srv/salt/haproxy/react_new_minion.sls`:
 
 .. code-block:: yaml
@@ -249,7 +264,9 @@ how it works at the CLI).
         - tgt: 'haproxy*'
         - arg:
           - haproxy.refresh_pool
-          - 'pillar={new_minion: {{ data['id'] }}}'
+        - kwarg:
+            pillar:
+              new_minion: {{ data['id'] }}
     {% endif %}
 
 The above command is equivalent to the following command at the CLI:

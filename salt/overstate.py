@@ -40,7 +40,7 @@ class OverState(object):
         self.saltenv = saltenv
         self.over = self.__read_over(overstate)
         self.names = self._names()
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         self.over_run = {}
 
     def __read_over(self, overstate):

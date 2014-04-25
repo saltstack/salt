@@ -48,3 +48,8 @@ class PayloadTestCase(TestCase):
             odata = payload.loads(payload.dumps(idata.copy()))
             self.assertNoOrderedDict(odata)
             self.assertEqual(idata, odata)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PayloadTestCase, needs_daemon=False)

@@ -11,4 +11,6 @@ include tests/unit/templates/files/*
 recursive-include doc *
 recursive-include scripts *
 include conf/*
+recursive-include pkg *
 recursive-include salt *.jinja
+include salt/templates/git/ssh-id-wrapper

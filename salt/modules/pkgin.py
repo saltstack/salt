@@ -214,8 +214,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     pkgin = _check_pkgin()
@@ -228,9 +229,10 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     out = __salt__['cmd.run'](pkg_command, output_loglevel='debug')
     for line in out.splitlines():
-        if not line:
+        try:
+            pkg, ver = line.split(' ')[0].rsplit('-', 1)
+        except ValueError:
             continue
-        pkg, ver = line.split(' ')[0].rsplit('-', 1)
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)

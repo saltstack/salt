@@ -10,15 +10,15 @@ See http://code.google.com/p/psutil.
 # Import python libs
 import time
 
+# Import salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import psutil
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-
-# Define the module's virtual name
-__virtualname__ = 'ps'
 
 
 def __virtual__():
@@ -33,7 +33,7 @@ def __virtual__():
     # most distributions have already moved to later versions (for example,
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
-        return __virtualname__
+        return True
     return False
 
 
@@ -63,7 +63,10 @@ def top(num_processes=5, interval=3):
     time.sleep(interval)
     usage = set()
     for process, start in start_usage.items():
-        user, system = process.get_cpu_times()
+        try:
+            user, system = process.get_cpu_times()
+        except psutil.NoSuchProcess:
+            continue
         now = user + system
         diff = now - start
         usage.add((diff, process))
@@ -79,11 +82,14 @@ def top(num_processes=5, interval=3):
                 'user': process.username,
                 'status': process.status,
                 'pid': process.pid,
-                'create_time': process.create_time}
+                'create_time': process.create_time,
+                'cpu': {},
+                'mem': {},
+                }
         for key, value in process.get_cpu_times()._asdict().items():
-            info['cpu.{0}'.format(key)] = value
+            info['cpu'][key] = value
         for key, value in process.get_memory_info()._asdict().items():
-            info['mem.{0}'.format(key)] = value
+            info['mem'][key] = value
         result.append(info)
 
     return result
@@ -104,7 +110,7 @@ def get_pid_list():
 
 def kill_pid(pid, signal=15):
     '''
-    Kill a proccess by PID.
+    Kill a process by PID.
 
     .. code-block:: bash
 
@@ -278,8 +284,41 @@ def cpu_times(per_cpu=False):
     return result
 
 
+def virtual_memory():
+    '''
+    .. versionadded:: Helium
+
+    Return a dict that describes statistics about system memory usage.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.virtual_memory
+    '''
+    return dict(psutil.virtual_memory()._asdict())
+
+
+def swap_memory():
+    '''
+    .. versionadded:: Helium
+
+    Return a dict that describes swap memory statistics.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.swap_memory
+    '''
+    return dict(psutil.swap_memory()._asdict())
+
+
 def physical_memory_usage():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return a dict that describes free and available physical memory.
 
     CLI Examples:
@@ -288,11 +327,20 @@ def physical_memory_usage():
 
         salt '*' ps.physical_memory_usage
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.physical_memory_usage\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return dict(psutil.phymem_usage()._asdict())
 
 
 def virtual_memory_usage():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return a dict that describes free and available memory, both physical
     and virtual.
 
@@ -302,11 +350,20 @@ def virtual_memory_usage():
 
         salt '*' ps.virtual_memory_usage
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.virtual_memory_usage\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return dict(psutil.virtmem_usage()._asdict())
 
 
 def cached_physical_memory():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return the amount cached memory.
 
     CLI Example:
@@ -315,11 +372,20 @@ def cached_physical_memory():
 
         salt '*' ps.cached_physical_memory
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.cached_physical_memory\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return psutil.cached_phymem()
 
 
 def physical_memory_buffers():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return the amount of physical memory buffers.
 
     CLI Example:
@@ -328,6 +394,12 @@ def physical_memory_buffers():
 
         salt '*' ps.physical_memory_buffers
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.physical_memory_buffers\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return psutil.phymem_buffers()
 
 
@@ -418,10 +490,10 @@ def boot_time():
 
         salt '*' ps.boot_time
     '''
-    return psutil.BOOT_TIME
+    return psutil.get_boot_time()
 
 
-def network_io_counters():
+def network_io_counters(interface=None):
     '''
     Return network I/O statisitics.
 
@@ -430,11 +502,20 @@ def network_io_counters():
     .. code-block:: bash
 
         salt '*' ps.network_io_counters
+
+        salt '*' ps.network_io_counters interface=eth0
     '''
-    return dict(psutil.network_io_counters()._asdict())
+    if not interface:
+        return dict(psutil.network_io_counters()._asdict())
+    else:
+        stats = psutil.network_io_counters(pernic=True)
+        if interface in stats:
+            return dict(stats[interface]._asdict())
+        else:
+            return False
 
 
-def disk_io_counters():
+def disk_io_counters(device=None):
     '''
     Return disk I/O statisitics.
 
@@ -443,8 +524,17 @@ def disk_io_counters():
     .. code-block:: bash
 
         salt '*' ps.disk_io_counters
+
+        salt '*' ps.disk_io_counters device=sda1
     '''
-    return dict(psutil.disk_io_counters()._asdict())
+    if not device:
+        return dict(psutil.disk_io_counters()._asdict())
+    else:
+        stats = psutil.disk_io_counters(perdisk=True)
+        if device in stats:
+            return dict(stats[device]._asdict())
+        else:
+            return False
 
 
 def get_users():

@@ -24,7 +24,6 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import path_join
-from salt import syspaths
 
 
 class PathJoinTestCase(TestCase):

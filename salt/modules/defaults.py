@@ -82,9 +82,31 @@ def get(key, default=''):
     key is not defined.
     '''
 
-    stack = inspect.stack()
-    sls = inspect.getargvalues(stack[2][0]).locals.get('sls')
-    tmplpath = inspect.getargvalues(stack[2][0]).locals.get('tmplpath')
+    sls = None
+    tmplpath = None
+
+    for frame in inspect.stack():
+        if sls is not None and tmplpath is not None:
+            break
+
+        frame_args = inspect.getargvalues(frame[0]).locals
+
+        for _sls in (
+            None if not type(frame_args.get('context')) is dict else frame_args.get('context').get('__sls__'),
+            frame_args.get('mods', [None])[0],
+            frame_args.get('sls')
+        ):
+            if sls is not None:
+                break
+            sls = _sls
+
+        for _tmpl in (
+            frame_args.get('tmplpath'),
+            frame_args.get('tmplsrc')
+        ):
+            if tmplpath is not None:
+                break
+            tmplpath = _tmpl
 
     if not sls:  # this is the case when called from CLI
         return __salt__['pillar.get'](key, default)
@@ -95,8 +117,14 @@ def get(key, default=''):
     _get_files(pillar_name)
 
     defaults = _load(pillar_name, defaults_path)
-    data = salt.utils.dictupdate.update(defaults, __salt__['pillar.get'](pillar_name, {}))
-    value = salt.utils.traverse_dict(data, key, default)
+
+    value = __salt__['pillar.get']('{0}:{1}'.format(pillar_name, key), None)
+
+    if value is None:
+        value = salt.utils.traverse_dict(defaults, key, None)
+
+    if value is None:
+        value = default
 
     if isinstance(value, unicode):
         value = str(value)

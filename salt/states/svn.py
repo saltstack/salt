@@ -3,7 +3,7 @@
 Manage SVN repositories
 =======================
 
-Manage repositiry checkouts via the svn vcs system:
+Manage repository checkouts via the svn vcs system:
 
 .. code-block:: yaml
 
@@ -27,9 +27,7 @@ def __virtual__():
     '''
     Only load if svn is available
     '''
-    if __salt__['cmd.has_exec']('svn'):
-        return 'svn'
-    return False
+    return __salt__['cmd.has_exec']('svn')
 
 
 def latest(name,

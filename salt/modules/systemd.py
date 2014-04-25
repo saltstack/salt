@@ -72,6 +72,28 @@ def _systemctl_cmd(action, name):
     return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
 
 
+def _get_all_units():
+    '''
+    Get all units and their state. Units ending in .service
+    are normalized so that they can be referenced without a type suffix.
+    '''
+    rexp = re.compile(r'(?m)^(?P<name>.+)\.(?P<type>' +
+                      '|'.join(VALID_UNIT_TYPES) +
+                      r')\s+loaded\s+(?P<active>[^\s]+)')
+
+    out = __salt__['cmd.run_stdout'](
+        'systemctl --full --no-legend --no-pager list-units | col -b'
+    )
+
+    ret = {}
+    for match in rexp.finditer(out):
+        name = match.group('name')
+        if match.group('type') != 'service':
+            name += '.' + match.group('type')
+        ret[name] = match.group('active')
+    return ret
+
+
 def _get_all_unit_files():
     '''
     Get all unit files and their state. Unit files ending in .service
@@ -82,7 +104,7 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full list-unit-files | col -b'
+        'systemctl --full --no-legend --no-pager list-unit-files | col -b'
     )
 
     ret = {}
@@ -101,7 +123,7 @@ def _untracked_custom_unit_found(name):
     '''
     unit_path = os.path.join('/etc/systemd/system',
                              _canonical_unit_name(name))
-    return (name not in get_all() and os.access(unit_path, os.R_OK))
+    return name not in get_all() and os.access(unit_path, os.R_OK)
 
 
 def _unit_file_changed(name):
@@ -173,7 +195,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(_get_all_unit_files().keys())
+    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
 
 
 def available(name):
@@ -187,7 +209,15 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    return _canonical_template_unit_name(name) in get_all()
+    name = _canonical_template_unit_name(name)
+    units = get_all()
+    if name in units:
+        return True
+    elif '@' in name:
+        templatename = name[:name.find('@') + 1]
+        return templatename in units
+    else:
+        return False
 
 
 def missing(name):
@@ -202,7 +232,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not _canonical_template_unit_name(name) in get_all()
+    return not available(name)
 
 
 def start(name):
@@ -374,3 +404,49 @@ def disabled(name):
         salt '*' service.disabled <service name>
     '''
     return not _enabled(name)
+
+
+def show(name):
+    '''
+    Show properties of one or more units/jobs or the manager
+
+    CLI Example:
+
+        salt '*' service.show <service name>
+    '''
+    ret = {}
+    cmd = 'systemctl show {0}.service'.format(name)
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        comps = line.split('=')
+        name = comps[0]
+        value = '='.join(comps[1:])
+        if value.startswith('{'):
+            value = value.replace('{', '').replace('}', '')
+            ret[name] = {}
+            for item in value.split(' ; '):
+                comps = item.split('=')
+                ret[name][comps[0].strip()] = comps[1].strip()
+        elif name in ('Before', 'After', 'Wants'):
+            ret[name] = value.split()
+        else:
+            ret[name] = value
+
+    return ret
+
+
+def execs():
+    '''
+    Return a list of all files specified as ``ExecStart`` for all services.
+
+    CLI Example:
+
+        salt '*' service.execs
+    '''
+    execs_ = {}
+    for service in get_all():
+        data = show(service)
+        if not 'ExecStart' in data:
+            continue
+        execs_[service] = data['ExecStart']['path']
+
+    return execs_

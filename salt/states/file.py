@@ -41,6 +41,11 @@ If using a template, any user-defined template variables in the file defined in
 arguments. The general best practice is to place default values in
 ``defaults``, with conditional overrides going into ``context``, as seen above.
 
+The template will receive a variable ``custom_var``, which would be accessed in
+the template using ``{{ custom_var }}``. If the operating system is Ubuntu, the
+value of the variable ``custom_var`` would be *override*, otherwise it is the
+default *default value*
+
 The ``source`` parameter can be specified as a list. If this is done, then the
 first file to be matched will be the one that is used. This allows you to have
 a default file on which to fall back if the desired file does not exist on the
@@ -221,10 +226,9 @@ import os
 import shutil
 import difflib
 import logging
-import re
-import fnmatch
 import json
 import pprint
+import traceback
 
 # Import third party libs
 import yaml
@@ -233,7 +237,8 @@ import yaml
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
+from salt.utils.yamldumper import OrderedDumper
+from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
@@ -318,8 +323,8 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root) + 1:], None,
-                                              exclude_pat):
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -329,8 +334,8 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root) + 1:], None,
-                                              exclude_pat):
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -397,7 +402,9 @@ def _check_directory(name,
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
-                stats = __salt__['file.stats'](path, 'md5')
+                stats = __salt__['file.stats'](
+                    path, 'md5', follow_symlinks=False
+                )
                 if user is not None and user != stats.get('user'):
                     fchange['user'] = user
                 if group is not None and group != stats.get('group'):
@@ -420,8 +427,8 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, fname)
                 if path not in keep:
-                    if not _check_include_exclude(path[len(name) + 1:], None,
-                                                  exclude_pat):
+                    if not salt.utils.check_include_exclude(
+                            path[len(name) + 1:], None, exclude_pat):
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
@@ -429,8 +436,8 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, name_)
                 if path not in keep:
-                    if not _check_include_exclude(path[len(name) + 1:], None,
-                                                  exclude_pat):
+                    if not salt.utils.check_include_exclude(
+                            path[len(name) + 1:], None, exclude_pat):
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
@@ -453,7 +460,7 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name)
+    stats = __salt__['file.stats'](name, follow_symlinks=False)
     changes = {}
     if not stats:
         changes['directory'] = 'new'
@@ -476,7 +483,7 @@ def _check_touch(name, atime, mtime):
     '''
     if not os.path.exists(name):
         return None, 'File {0} is set to be created'.format(name)
-    stats = __salt__['file.stats'](name)
+    stats = __salt__['file.stats'](name, follow_symlinks=False)
     if atime is not None:
         if str(atime) != str(stats['atime']):
             return None, 'Times set to be updated on file {0}'.format(name)
@@ -498,35 +505,31 @@ def _check_symlink_ownership(path, user, group):
     Check if the symlink ownership matches the specified user and group
     '''
     cur_user, cur_group = _get_symlink_ownership(path)
-    return ((cur_user == user) and (cur_group == group))
+    return (cur_user == user) and (cur_group == group)
 
 
-def _set_symlink_ownership(path, uid, gid):
+def _set_symlink_ownership(path, user, group):
     '''
     Set the ownership of a symlink and return a boolean indicating
     success/failure
     '''
     try:
-        os.lchown(path, uid, gid)
+        __salt__['file.lchown'](path, user, group)
     except OSError:
         pass
-    return _check_symlink_ownership(
-        path,
-        __salt__['file.uid_to_user'](uid),
-        __salt__['file.gid_to_group'](gid)
-    )
+    return _check_symlink_ownership(path, user, group)
 
 
 def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
-    if not os.path.exists(name) and not os.path.islink(name):
+    if not os.path.exists(name) and not __salt__['file.is_link'](name):
         return None, 'Symlink {0} to {1} is set for creation'.format(
             name, target
         )
-    if os.path.islink(name):
-        if os.readlink(name) != target:
+    if __salt__['file.is_link'](name):
+        if __salt__['file.readlink'](name) != target:
             return None, 'Link {0} target is set to be changed to {1}'.format(
                 name, target
             )
@@ -547,56 +550,6 @@ def _symlink_check(name, target, force, user, group):
                           .format(name, target))
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name))
-
-
-def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
-    '''
-     Check for glob or regexp patterns for include_pat and exclude_pat in the
-     'path_str' string and return True/False conditions as follows.
-      - Default: return 'True' if no include_pat or exclude_pat patterns are
-        supplied
-      - If only include_pat or exclude_pat is supplied: return 'True' if string
-        passes the include_pat test or fails exclude_pat test respectively
-      - If both include_pat and exclude_pat are supplied: return 'True' if
-        include_pat matches AND exclude_pat does not match
-    '''
-    ret = True  # -- default true
-    # Before pattern match, check if it is regexp (E@'') or glob(default)
-    if include_pat:
-        if re.match('E@', include_pat):
-            retchk_include = True if re.search(
-                include_pat[2:],
-                path_str
-            ) else False
-        else:
-            retchk_include = True if fnmatch.fnmatch(
-                path_str,
-                include_pat
-            ) else False
-
-    if exclude_pat:
-        if re.match('E@', exclude_pat):
-            retchk_exclude = False if re.search(
-                exclude_pat[2:],
-                path_str
-            ) else True
-        else:
-            retchk_exclude = False if fnmatch.fnmatch(
-                path_str,
-                exclude_pat
-            ) else True
-
-    # Now apply include/exclude conditions
-    if include_pat and not exclude_pat:
-        ret = retchk_include
-    elif exclude_pat and not include_pat:
-        ret = retchk_exclude
-    elif include_pat and exclude_pat:
-        ret = retchk_include and retchk_exclude
-    else:
-        ret = True
-
-    return ret
 
 
 def _test_owner(kwargs, user=None):
@@ -671,9 +624,14 @@ def _get_template_texts(source_list=None,
         tmpctx = defaults if defaults else {}
         if context:
             tmpctx.update(context)
-        rndrd_templ_fn = __salt__['cp.get_template'](source, '',
-                                  template=template, env=__env__,
-                                  context=tmpctx, **kwargs)
+        rndrd_templ_fn = __salt__['cp.get_template'](
+            source,
+            '',
+            template=template,
+            env=__env__,
+            context=tmpctx,
+            **kwargs
+        )
         msg = 'cp.get_template returned {0} (Called with: {1})'
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
@@ -722,14 +680,14 @@ def symlink(
         The location that the symlink points to
 
     force
-        If the target of the symlink exists and is not a symlink and
+        If the name of the symlink exists and is not a symlink and
         force is set to False, the state will fail. If force is set to
         True, the file or directory in the way of the symlink file
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
     backupname
-        If the target of the symlink exists and is not a symlink, it will be
+        If the name of the symlink exists and is not a symlink, it will be
         renamed to the backupname. If the backupname already
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
@@ -738,6 +696,18 @@ def symlink(
         If the location of the symlink does not already have a parent directory
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
+
+    user
+        The user to own the file, this defaults to the user salt is running as
+        on the minion
+
+    group
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion. On Windows, this is ignored
+
+    mode
+        The permissions to set on this file, aka 644, 0775, 4664. Not supported
+        on Windows
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -750,6 +720,11 @@ def symlink(
 
     if user is None:
         user = __opts__['user']
+
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
+        group = user
 
     if group is None:
         group = __salt__['file.gid_to_group'](
@@ -796,9 +771,9 @@ def symlink(
                     os.path.dirname(name)
                 )
             )
-    if os.path.islink(name):
+    if __salt__['file.is_link'](name):
         # The link exists, verify that it matches the target
-        if os.readlink(name) != target:
+        if __salt__['file.readlink'](name) != target:
             # The target is wrong, delete the link
             os.remove(name)
         else:
@@ -807,7 +782,7 @@ def symlink(
                 ret['comment'] = ('Symlink {0} is present and owned by '
                                   '{1}:{2}'.format(name, user, group))
             else:
-                if _set_symlink_ownership(name, uid, gid):
+                if _set_symlink_ownership(name, user, group):
                     ret['comment'] = ('Set ownership of symlink {0} to '
                                       '{1}:{2}'.format(name, user, group))
                     ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
@@ -825,22 +800,24 @@ def symlink(
             # Make a backup first
             if os.path.lexists(backupname):
                 if not force:
-                    return _error(ret,
-                                   ('File exists where the backup target {0} should go'
-                                    .format(backupname)))
+                    return _error(ret, ((
+                        'File exists where the backup target {0} should go'
+                    ).format(backupname)))
                 elif os.path.isfile(backupname):
                     os.remove(backupname)
                 elif os.path.isdir(backupname):
                     shutil.rmtree(backupname)
                 else:
-                    return _error(ret,
-                                  ('Something exists where the backup target {0} should go'
-                                   .format(backupname)))
+                    return _error(ret, ((
+                        'Something exists where the backup target {0}'
+                        'should go'
+                    ).format(backupname)))
             os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
                 os.remove(name)
+                ret['changes']['forced'] = 'Symlink was forcibly replaced'
             else:
                 shutil.rmtree(name)
         else:
@@ -850,14 +827,14 @@ def symlink(
                               ('File exists where the symlink {0} should be'
                                .format(name)))
             else:
-                return _error(ret,
-                              ('Directory exists where the symlink {0} should be'
-                               .format(name)))
+                return _error(ret, ((
+                    'Directory exists where the symlink {0} should be'
+                ).format(name)))
 
     if not os.path.exists(name):
         # The link is not present, make it
         try:
-            os.symlink(target, name)
+            __salt__['file.symlink'](target, name)
         except OSError as exc:
             ret['result'] = False
             ret['comment'] = ('Unable to create new symlink {0} -> '
@@ -869,7 +846,7 @@ def symlink(
             ret['changes']['new'] = name
 
         if not _check_symlink_ownership(name, user, group):
-            if not _set_symlink_ownership(name, uid, gid):
+            if not _set_symlink_ownership(name, user, group):
                 ret['result'] = False
                 ret['comment'] += (', but was unable to set ownership to '
                                    '{0}:{1}'.format(user, group))
@@ -878,8 +855,9 @@ def symlink(
 
 def absent(name):
     '''
-    Verify that the named file or directory is absent, this will work to
-    reverse any of the functions in the file state module.
+    Make sure that the named file or directory is absent. If it exists, it will
+    be deleted. This will work to reverse any of the functions in the file
+    state module.
 
     name
         The path which should be deleted
@@ -982,6 +960,7 @@ def managed(name,
             create=True,
             contents=None,
             contents_pillar=None,
+            contents_pillar_newline=True,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -993,6 +972,11 @@ def managed(name,
     source
         The source file to download to the minion, this source file can be
         hosted on either the salt master server, or on an HTTP or FTP server.
+        Both HTTPS and HTTP are supported as well as downloading directly
+        from Amazon S3 compatible URLs with both pre-configured and automatic
+        IAM credentials. (see s3.get state documentation)
+        File retrieval from Openstack Swift object storage is supported via
+        swift://container/object_path URLs, see swift.get documentation.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
@@ -1002,20 +986,50 @@ def managed(name,
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
-    source_hash:
-        This can be either a file which contains a source hash string for
-        the source, or a source hash string. The source hash string is the
-        hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+    source_hash
+        This can be one of the following:
+            1. a source hash string
+            2. the URI of a file that contains source hash strings
 
-        The file can contain checksums for several files, in this case every
-        line must consist of full name of the file and checksum separated by
-        space:
+        The function accepts the first encountered long unbroken alphanumeric
+        string of correct length as a valid hash, in order from most secure to
+        least secure::
 
-        Example::
+            Type    Length
+            ======  ======
+            sha512     128
+            sha384      96
+            sha256      64
+            sha224      56
+            sha1        40
+            md5         32
 
-            /etc/rc.conf md5=ef6e82e4006dee563d98ada2a2a80a27
-            /etc/resolv.conf sha256=c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a
+        The file can contain several checksums for several files. Each line
+        must contain both the file name and the hash.  If no file name is
+        matched, the first hash encountered will be used, otherwise the most
+        secure hash with the correct source file name will be used.
+
+        Debian file type ``*.dsc`` is supported.
+
+        Examples::
+
+            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+            ead48423703509d37c4a90e6a0d53e143b6fc268
+
+        Known issues:
+            If the remote server URL has the hash file as an apparent
+            sub-directory of the source file, the module will discover that it
+            has already cached a directory where a file should be cached. For
+            example:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
 
 
     user
@@ -1024,10 +1038,11 @@ def managed(name,
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion
+        is running as on the minion On Windows, this is ignored
 
     mode
-        The permissions to set on this file, aka 644, 0775, 4664
+        The permissions to set on this file, aka 644, 0775, 4664. Not supported
+        on Windows
 
     template
         If this setting is applied then the named templating engine will be
@@ -1080,11 +1095,56 @@ def managed(name,
         contains newlines, as referencing a pillar variable using a jinja/mako
         template can result in YAML formatting issues due to the newlines
         causing indentation mismatches.
+
+        For example, the following could be used to deploy an SSH private key:
+
+        .. code-block:: yaml
+
+            /home/deployer/.ssh/id_rsa:
+              file.managed:
+                - user: deployer
+                - group: deployer
+                - mode: 600
+                - contents_pillar: userdata:deployer:id_rsa
+
+        This would populate ``/home/deployer/.ssh/id_rsa`` with the contents of
+        ``pillar['userdata']['deployer']['id_rsa']``. An example of this pillar
+        setup would be like so:
+
+        .. code-block:: yaml
+
+            userdata:
+              deployer:
+                id_rsa: |
+                  -----BEGIN RSA PRIVATE KEY-----
+                  MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+                  U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+                  B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+                  GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+                  -----END RSA PRIVATE KEY-----
+
+        .. note::
+
+            The private key above is shortened to keep the example brief, but
+            shows how to do multiline string in YAML. The key is followed by a
+            pipe character, and the mutliline string is indented two more
+            spaces.
+
+    contents_pillar_newline
+        .. versionadded:: Helium
+
+        When using content_pillar, a newline is inserted into the data gathered
+        from pillar. When loading some data this newline is better left off.
+        Setting contents_pillar_newline to False will omit this newline.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
     user = _test_owner(kwargs, user=user)
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
+        group = user
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -1132,17 +1192,14 @@ def managed(name,
     # If contents_pillar was used, get the pillar data
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
-        # Make sure file ends in newline
-        if not contents.endswith('\n'):
-            contents += '\n'
+        if contents_pillar_newline:
+            # Make sure file ends in newline
+            if not contents.endswith('\n'):
+                contents += '\n'
 
     if not replace and os.path.exists(name):
-       # Check and set the permissions if necessary
-        ret, perms = __salt__['file.check_perms'](name,
-                                                  ret,
-                                                  user,
-                                                  group,
-                                                  mode)
+        # Check and set the permissions if necessary
+        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -1155,30 +1212,34 @@ def managed(name,
             context = {}
         context['accumulator'] = _ACCUMULATORS[name]
 
-    if __opts__['test']:
-        ret['result'], ret['comment'] = __salt__['file.check_managed'](
-            name,
+    try:
+        if __opts__['test']:
+            ret['result'], ret['comment'] = __salt__['file.check_managed'](
+                name,
+                source,
+                source_hash,
+                user,
+                group,
+                mode,
+                template,
+                context,
+                defaults,
+                __env__,
+                contents,
+                **kwargs
+            )
+            return ret
+
+        # If the source is a list then find which file exists
+        source, source_hash = __salt__['file.source_list'](
             source,
             source_hash,
-            user,
-            group,
-            mode,
-            template,
-            makedirs,
-            context,
-            defaults,
-            __env__,
-            contents,
-            **kwargs
+            __env__
         )
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = 'Unable to manage file: {0}'.format(exc)
         return ret
-
-    # If the source is a list then find which file exists
-    source, source_hash = __salt__['file.source_list'](
-        source,
-        source_hash,
-        __env__
-    )
 
     # Gather the source file from the server
     try:
@@ -1197,6 +1258,7 @@ def managed(name,
         )
     except Exception as exc:
         ret['changes'] = {}
+        log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
     if comment_ and contents is None:
@@ -1214,13 +1276,16 @@ def managed(name,
                 mode,
                 __env__,
                 backup,
+                makedirs,
                 template,
                 show_diff,
                 contents,
-                dir_mode
+                dir_mode,
+                makedirs
             )
         except Exception as exc:
             ret['changes'] = {}
+            log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
 
@@ -1234,6 +1299,7 @@ def directory(name,
               clean=False,
               require=None,
               exclude_pat=None,
+              follow_symlinks=False,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1247,7 +1313,7 @@ def directory(name,
 
     group
         The group ownership set for the directory; this defaults to the group
-        salt is running as on the minion
+        salt is running as on the minion. On Windows, this is ignored
 
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
@@ -1266,11 +1332,12 @@ def directory(name,
                     - mode
 
     dir_mode / mode
-        The permissions mode to set any directories created.
+        The permissions mode to set any directories created. Not supported on
+        Windows
 
     file_mode
         The permissions mode to set any files created if 'mode' is ran in
-        'recurse'. This defaults to dir_mode.
+        'recurse'. This defaults to dir_mode. Not supported on Windows
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -1289,12 +1356,23 @@ def directory(name,
     exclude_pat
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
+
+    follow_symlinks : False
+        If the desired path is a symlink (or ``recurse`` is defined and a
+        symlink is encountered while recursing), follow it and check the
+        permissions of the directory/file to which the symlink points.
+
+        .. versionadded:: 2014.1.4
     '''
     # Remove trailing slash, if present
     if name[-1] == '/':
         name = name[:-1]
 
     user = _test_owner(kwargs, user=user)
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
+        group = user
 
     if 'mode' in kwargs and not dir_mode:
         dir_mode = kwargs.get('mode', [])
@@ -1353,7 +1431,12 @@ def directory(name,
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name, ret, user, group, dir_mode)
+    ret, perms = __salt__['file.check_perms'](name,
+                                              ret,
+                                              user,
+                                              group,
+                                              dir_mode,
+                                              follow_symlinks)
 
     if recurse:
         if not isinstance(recurse, list):
@@ -1370,7 +1453,7 @@ def directory(name,
                     # file.user_to_uid returns '' if user does not exist. Above
                     # check for user is not fatal, so we need to be sure user
                     # exists.
-                    if isinstance(uid, basestring):
+                    if isinstance(uid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
@@ -1380,11 +1463,13 @@ def directory(name,
                     ret['comment'] = 'user not specified, but configured as ' \
                                      'a target for recursive ownership ' \
                                      'management'
+            else:
+                user = None
             if 'group' in recurse:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
-                    if isinstance(gid, basestring):
+                    if isinstance(gid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
@@ -1393,6 +1478,12 @@ def directory(name,
                     ret['comment'] = 'group not specified, but configured ' \
                                      'as a target for recursive ownership ' \
                                      'management'
+            else:
+                group = None
+
+            if 'mode' not in recurse:
+                file_mode = None
+                dir_mode = None
 
             for root, dirs, files in os.walk(name):
                 for fn_ in files:
@@ -1402,7 +1493,8 @@ def directory(name,
                         ret,
                         user,
                         group,
-                        file_mode)
+                        file_mode,
+                        follow_symlinks)
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
                     ret, perms = __salt__['file.check_perms'](
@@ -1410,7 +1502,8 @@ def directory(name,
                         ret,
                         user,
                         group,
-                        dir_mode)
+                        dir_mode,
+                        follow_symlinks)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -1472,26 +1565,29 @@ def recurse(name,
         Require other resources such as packages or files
 
     user
-        The user to own the directory, this defaults to the user salt is
+        The user to own the directory. This defaults to the user salt is
         running as on the minion
 
     group
-        The group ownership set for the directory, this defaults to the group
-        salt is running as on the minion
+        The group ownership set for the directory. This defaults to the group
+        salt is running as on the minion. On Windows, this is ignored
 
     dir_mode
-        The permissions mode to set any directories created
+        The permissions mode to set on any directories created. Not supported on
+        Windows
 
     file_mode
-        The permissions mode to set any files created
+        The permissions mode to set on any files created. Not supported on
+        Windows
 
     sym_mode
-        The permissions mode to set on any symlink created
+        The permissions mode to set on any symlink created. Not supported on
+        Windows
 
     template
         If this setting is applied then the named templating engine will be
-        used to render the downloaded file, currently jinja, mako, and wempy
-        are supported
+        used to render the downloaded file. Supported templates are:
+        `jinja`, `mako` and `wempy`.
 
     .. note::
 
@@ -1518,8 +1614,8 @@ def recurse(name,
                                          'hello01' ...
 
     exclude_pat
-        When copying, exclude this pattern from the source. If both
-        include_pat and exclude_pat are supplied, then it will apply
+        Exclude this pattern from the source when copying. If both
+        `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -1533,8 +1629,8 @@ def recurse(name,
                                                    or TEMPDATA for exclusion
 
     maxdepth
-        When copying, only copy paths which are depth maxdepth from the source
-        path.
+        When copying, only copy paths which are of depth `maxdepth` from the
+        source path.
         Example::
 
           - maxdepth: 0      :: Only include files located in the source
@@ -1544,8 +1640,8 @@ def recurse(name,
 
     keep_symlinks
         Keep symlinks when copying from the source. This option will cause
-        the copy operation to terminate at the symlink. If you are after
-        rsync-ish behavior, then set this to True.
+        the copy operation to terminate at the symlink. If desire behavior
+        similar to rsync, then set this to True.
 
     force_symlinks
         Force symlink creation. This option will force the symlink creation.
@@ -1554,11 +1650,23 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     user = _test_owner(kwargs, user=user)
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': {}  # { path: [comment, ...] }
-           }
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning('The group arg for %s has been ignored as this is a Windows system.', name)
+        group = user
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': {}  # { path: [comment, ...] }
+    }
+
+    try:
+        source = source.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter must be a string'
+        return ret
 
     if 'mode' in kwargs:
         ret['result'] = False
@@ -1591,15 +1699,44 @@ def recurse(name,
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    # Verify the source exists.
-    _src_proto, _src_path = source.split('://', 1)
+    # Handle corner case where someone uses a numeric source
+    if isinstance(source, (integer_types, float)):
+        ret['result'] = False
+        ret['comment'] = ('Invalid source {0} (cannot be numeric)'
+                          .format(source))
+        return ret
 
-    if not _src_path:
-        pass
-    elif _src_path.strip('/') not in __salt__['cp.list_master_dirs'](__env__):
+    # Make sure that only salt fileserver paths are being used (no http(s)/ftp)
+    if isinstance(source, string_types):
+        source_precheck = [source]
+    else:
+        source_precheck = source
+    for precheck in source_precheck:
+        if not precheck.startswith('salt://'):
+            ret['result'] = False
+            ret['comment'] = ('Invalid source {0!r} (must be a salt:// URI)'
+                              .format(precheck))
+            return ret
+
+    # If source is a list, find which in the list actually exists
+    try:
+        source, source_hash = __salt__['file.source_list'](source, '', __env__)
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = 'Recurse failed: {0}'.format(exc)
+        return ret
+
+    # Check source path relative to fileserver root, make sure it is a
+    # directory
+    source_rel = source.partition('://')[2]
+    master_dirs = __salt__['cp.list_master_dirs'](__env__)
+    if source_rel not in master_dirs \
+            and not any((x for x in master_dirs
+                         if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
-            'The source: {0} does not exist on the master'.format(source)
+            'The directory {0!r} does not exist on the salt fileserver '
+            'in saltenv {1!r}'.format(source, __env__)
         )
         return ret
 
@@ -1615,7 +1752,7 @@ def recurse(name,
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
-        if isinstance(comment, basestring):
+        if isinstance(comment, string_types):
             comments.append(comment)
         else:
             comments.extend(comment)
@@ -1700,9 +1837,8 @@ def recurse(name,
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in symlinks.items():
-            if not _check_include_exclude(os.path.relpath(lname, srcpath),
-                                          include_pat,
-                                          exclude_pat):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
                 continue
             srelpath = os.path.relpath(lname, srcpath)
             # Check for max depth
@@ -1714,7 +1850,9 @@ def recurse(name,
                     continue
             # Check for all paths that begin with the symlink
             # and axe it leaving only the dirs/files below it.
-            _filenames = filenames
+            # This needs to use list() otherwise they reference
+            # the same list.
+            _filenames = list(filenames)
             for filename in _filenames:
                 if filename.startswith(lname):
                     log.debug('** skipping file ** {0}, it intersects a '
@@ -1735,9 +1873,8 @@ def recurse(name,
             merge_ret(os.path.join(name, srelpath), _ret)
             # Add the path to the keep set in case clean is set to True
             keep.add(os.path.join(name, srelpath))
+        vdir.update(keep)
         return filenames
-    # If source is a list, find which in the list actually exists
-    source, source_hash = __salt__['file.source_list'](source, '', __env__)
 
     keep = set()
     vdir = set()
@@ -1777,7 +1914,8 @@ def recurse(name,
 
         #- Check if it is to be excluded. Match only part of the path
         # relative to the target directory
-        if not _check_include_exclude(relname, include_pat, exclude_pat):
+        if not salt.utils.check_include_exclude(
+                relname, include_pat, exclude_pat):
             continue
         dest = os.path.join(name, relname)
         dirname = os.path.dirname(dest)
@@ -1794,18 +1932,22 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
         for mdir in mdirs:
-            if not _check_include_exclude(os.path.relpath(mdir, srcpath),
-                                          include_pat,
-                                          exclude_pat):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
-                for link in symlinks:
+                islink = False
+                for link in symlinks.keys():
                     if mdir.startswith(link, 0):
                         log.debug('** skipping empty dir ** {0}, it intersects'
                                   ' a symlink'.format(mdir))
+                        islink = True
+                        break
+                if islink:
                     continue
+
             manage_directory(mdest)
             keep.add(mdest)
 
@@ -1825,7 +1967,7 @@ def recurse(name,
     # Flatten comments until salt command line client learns
     # to display structured comments in a readable fashion
     ret['comment'] = '\n'.join('\n#### {0} ####\n{1}'.format(
-        k, v if isinstance(v, basestring) else '\n'.join(v)
+        k, v if isinstance(v, string_types) else '\n'.join(v)
     ) for (k, v) in ret['comment'].iteritems()).strip()
 
     if not ret['comment']:
@@ -1845,6 +1987,9 @@ def replace(name,
             count=0,
             flags=0,
             bufsize=1,
+            append_if_not_found=False,
+            prepend_if_not_found=False,
+            not_found_content=None,
             backup='.bak',
             show_changes=True):
     '''
@@ -1867,6 +2012,9 @@ def replace(name,
                                        count=count,
                                        flags=flags,
                                        bufsize=bufsize,
+                                       append_if_not_found=append_if_not_found,
+                                       prepend_if_not_found=prepend_if_not_found,
+                                       not_found_content=not_found_content,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes)
@@ -1881,22 +2029,23 @@ def replace(name,
     return ret
 
 
-def blockreplace(name,
-            marker_start='#-- start managed zone --',
-            marker_end='#-- end managed zone --',
-            content='',
-            append_if_not_found=False,
-            prepend_if_not_found=False,
-            backup='.bak',
-            show_changes=True):
+def blockreplace(
+        name,
+        marker_start='#-- start managed zone --',
+        marker_end='#-- end managed zone --',
+        content='',
+        append_if_not_found=False,
+        prepend_if_not_found=False,
+        backup='.bak',
+        show_changes=True):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
-    .. versionadded:: 0.18.0
+    .. versionadded:: 2014.1.0
 
     A block of content delimited by comments can help you manage several lines
-    entries without worrying about old entries removal. This can help you maintaining
-    an unmanaged file containing manual edits.
+    entries without worrying about old entries removal. This can help you
+    maintaining an un-managed file containing manual edits.
     Note: this function will store two copies of the file in-memory
     (the original version and the edited version) in order to detect changes
     and only edit the targeted file if necessary.
@@ -1910,8 +2059,9 @@ def blockreplace(name,
         the content block. Note that the whole line containing this marker will
         be considered, so whitespaces or extra content before or after the
         marker is included in final output.
-        Note: you can use file.accumulated and target this state. All accumulated
-        datas dictionnaries content will be added as new lines in the content.
+        Note: you can use file.accumulated and target this state. All
+        accumulated data dictionaries content will be added as new lines in the
+        content.
     :param content: The content to be used between the two lines identified by
         marker_start and marker_stop.
     :param append_if_not_found: False by default, if markers are not found and
@@ -1926,7 +2076,7 @@ def blockreplace(name,
 
     :rtype: bool or str
 
-     Exemple of usage with an accumulator and with a variable::
+     Example of usage with an accumulator and with a variable::
 
         {% set myvar = 42 %}
         hosts-config-block-{{ myvar }}:
@@ -1974,8 +2124,8 @@ def blockreplace(name,
 
     if name in _ACCUMULATORS:
         accumulator = _ACCUMULATORS[name]
-        # if we have multiple accumulators for a file, only apply the one required
-        # at a time
+        # if we have multiple accumulators for a file, only apply the one
+        # required at a time
         deps = _ACCUMULATORS_DEPS.get(name, [])
         filtered = [a for a in deps if
                     __low__['__id__'] in deps[a] and a in accumulator]
@@ -1989,15 +2139,17 @@ def blockreplace(name,
                 else:
                     content += "\n" + line
 
-    changes = __salt__['file.blockreplace'](name,
-                                       marker_start,
-                                       marker_end,
-                                       content=content,
-                                       append_if_not_found=append_if_not_found,
-                                       prepend_if_not_found=prepend_if_not_found,
-                                       backup=backup,
-                                       dry_run=__opts__['test'],
-                                       show_changes=show_changes)
+    changes = __salt__['file.blockreplace'](
+        name,
+        marker_start,
+        marker_end,
+        content=content,
+        append_if_not_found=append_if_not_found,
+        prepend_if_not_found=prepend_if_not_found,
+        backup=backup,
+        dry_run=__opts__['test'],
+        show_changes=show_changes
+    )
 
     if changes:
         ret['changes'] = {'diff': changes}
@@ -2387,6 +2539,154 @@ def append(name,
 
     check_res, check_msg = _check_file(name)
     if not check_res:
+        touch(name, makedirs=makedirs)
+        retry_res, retry_msg = _check_file(name)
+        if not retry_res:
+            return _error(ret, check_msg)
+
+    #Follow the original logic and re-assign 'text' if using source(s)...
+    if sl_:
+        tmpret = _get_template_texts(source_list=sl_,
+                                     template=template,
+                                     defaults=defaults,
+                                     context=context)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
+
+    if isinstance(text, string_types):
+        text = (text,)
+
+    with salt.utils.fopen(name, 'rb') as fp_:
+        slines = fp_.readlines()
+
+    count = 0
+
+    try:
+        for chunk in text:
+
+            if __salt__['file.contains_regex_multiline'](
+                    name, salt.utils.build_whitespace_split_regex(chunk)):
+                continue
+
+            try:
+                lines = chunk.splitlines()
+            except AttributeError:
+                log.debug(
+                    'Error appending text to {0}; given object is: {1}'.format(
+                        name, type(chunk)
+                    )
+                )
+                return _error(ret, 'Given text is not a string')
+
+            for line in lines:
+                if __opts__['test']:
+                    ret['comment'] = 'File {0} is set to be updated'.format(name)
+                    ret['result'] = None
+                    return ret
+                __salt__['file.append'](name, line)
+                count += 1
+    except TypeError:
+        ret['comment'] = 'No text found to append. Nothing appended'
+        ret['result'] = False
+        return ret
+
+    with salt.utils.fopen(name, 'rb') as fp_:
+        nlines = fp_.readlines()
+
+    if slines != nlines:
+        if not salt.utils.istextfile(name):
+            ret['changes']['diff'] = 'Replace binary file'
+        else:
+            # Changes happened, add them
+            ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(slines, nlines))
+            )
+
+    ret['comment'] = 'Appended {0} lines'.format(count)
+    ret['result'] = True
+    return ret
+
+
+def prepend(name,
+           text=None,
+           makedirs=False,
+           source=None,
+           source_hash=None,
+           template='jinja',
+           sources=None,
+           source_hashes=None,
+           defaults=None,
+           context=None):
+    '''
+    Ensure that some text appears at the beginning of a file
+
+    The text will not be prepended again if it already exists in the file. You
+    may specify a single line of text or a list of lines to append.
+
+    Multi-line example::
+
+        /etc/motd:
+          file.prepend:
+            - text: |
+                Thou hadst better eat salt with the Philosophers of Greece,
+                than sugar with the Courtiers of Italy.
+                - Benjamin Franklin
+
+    Multiple lines of text::
+
+        /etc/motd:
+          file.prepend:
+            - text:
+              - Trust no one unless you have eaten much salt with him.
+              - "Salt is born of the purest of parents: the sun and the sea."
+
+    Gather text from multiple template files::
+
+        /etc/motd:
+          file:
+              - prepend
+              - template: jinja
+              - sources:
+                  - salt://motd/devops-messages.tmpl
+                  - salt://motd/hr-messages.tmpl
+                  - salt://motd/general-messages.tmpl
+
+    .. versionadded:: Helium
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if sources is None:
+        sources = []
+
+    if source_hashes is None:
+        source_hashes = []
+
+    # Add sources and source_hashes with template support
+    # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
+    #       is re-assigned in the original code.
+    (ok_, err, sl_) = _unify_sources_and_hashes(source=source,
+                                                source_hash=source_hash,
+                                                sources=sources,
+                                                source_hashes=source_hashes)
+    if not ok_:
+        return _error(ret, err)
+
+    if makedirs is True:
+        dirname = os.path.dirname(name)
+        if not __salt__['file.directory_exists'](dirname):
+            __salt__['file.makedirs'](name)
+            check_res, check_msg = _check_directory(
+                dirname, None, None, False, None, False, False, None
+            )
+            if not check_res:
+                return _error(ret, check_msg)
+
+        # Make sure that we have a file
+        __salt__['file.touch'](name)
+
+    check_res, check_msg = _check_file(name)
+    if not check_res:
         return _error(ret, check_msg)
 
     #Follow the original logic and re-assign 'text' if using source(s)...
@@ -2407,6 +2707,7 @@ def append(name,
 
     count = 0
 
+    preface = []
     for chunk in text:
 
         if __salt__['file.contains_regex_multiline'](
@@ -2428,8 +2729,10 @@ def append(name,
                 ret['comment'] = 'File {0} is set to be updated'.format(name)
                 ret['result'] = None
                 return ret
-            __salt__['file.append'](name, line)
+            preface.append(line)
             count += 1
+
+    __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
@@ -2443,7 +2746,7 @@ def append(name,
                 ''.join(difflib.unified_diff(slines, nlines))
             )
 
-    ret['comment'] = 'Appended {0} lines'.format(count)
+    ret['comment'] = 'Prepended {0} lines'.format(count)
     ret['result'] = True
     return ret
 
@@ -2519,6 +2822,11 @@ def patch(name,
 
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
+    if not cached_source_path:
+        ret['comment'] = ('Unable to cache {0} from saltenv {1!r}'
+                          .format(source, __env__))
+        return ret
+
     log.debug(
         'State patch.applied cached source {0} -> {1}'.format(
             source, cached_source_path
@@ -2601,9 +2909,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
             ret, 'Directory not present to touch file {0}'.format(name)
         )
 
-    ret['result'] = __salt__['file.touch'](name, atime, mtime)
-
     extant = os.path.exists(name)
+
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
     if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
@@ -2611,6 +2919,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )
+        ret['changes']['touched'] = name
 
     return ret
 
@@ -2682,7 +2991,7 @@ def copy(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            os.makedirs(dname)
+            __salt__['file.makedirs'](dname)
         else:
             return _error(
                 ret,
@@ -2768,7 +3077,7 @@ def rename(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            os.makedirs(dname)
+            __salt__['file.makedirs'](dname)
         else:
             return _error(
                 ret,
@@ -2809,6 +3118,37 @@ def accumulated(name, filename, text, **kwargs):
     require_in / watch_in
         One of them required for sure we fill up accumulator before we manage
         the file. Probably the same as filename
+
+    Example:
+
+    Given the following::
+
+        animals_doing_things:
+          file.accumulated:
+            - filename: /tmp/animal_file.txt
+            - text: ' jumps over the lazy dog.'
+            - require_in:
+              - file: animal_file
+
+        animal_file:
+          file.managed:
+            - name: /tmp/animal_file.txt
+            - source: salt://animal_file.txt
+            - template: jinja
+
+    One might write a template for animal_file.txt like the following::
+
+        The quick brown fox{% for animal in accumulator['animals_doing_things'] %}{{ animal }}{% endfor %}
+
+    Collectively, the above states and template file will produce::
+
+        The quick brown fox jumps over the lazy dog.
+
+    Multiple accumulators can be "chained" together.
+
+    .. note::
+        The 'accumulator' data structure is a Python dictionary.
+        Do not expect any loop over the keys in a deterministic order!
     '''
     ret = {
         'name': name,
@@ -2847,6 +3187,44 @@ def accumulated(name, filename, text, **kwargs):
     return ret
 
 
+def _merge_dict(obj, k, v):
+    changes = {}
+    if k in obj:
+        if type(obj[k]) is list:
+            if type(v) is list:
+                for a in v:
+                    if not a in obj[k]:
+                        changes[k] = a
+                        obj[k].append(a)
+            else:
+                if obj[k] != v:
+                    changes[k] = v
+                    obj[k] = v
+        elif type(obj[k]) is dict:
+            if type(v) is dict:
+                for a, b in v.iteritems():
+                    if (type(b) is dict) or (type(b) is list):
+                        updates = _merge_dict(obj[k], a, b)
+                        for x, y in updates.iteritems():
+                            changes[k + "." + x] = y
+                    else:
+                        if obj[k][a] != b:
+                            changes[k + "." + a] = b
+                            obj[k][a] = b
+            else:
+                if obj[k] != v:
+                    changes[k] = v
+                    obj[k] = v
+        else:
+            if obj[k] != v:
+                changes[k] = v
+                obj[k] = v
+    else:
+        changes[k] = v
+        obj[k] = v
+    return changes
+
+
 def serialize(name,
               dataset,
               user=None,
@@ -2854,15 +3232,17 @@ def serialize(name,
               mode=None,
               env=None,
               backup='',
+              makedirs=False,
               show_diff=True,
               create=True,
+              merge_if_exists=False,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
     simple configuration files.
 
     name
-        The location of the symlink to create
+        The location of the file to create
 
     dataset
         the dataset that will be serialized
@@ -2888,6 +3268,11 @@ def serialize(name,
     backup
         Overrides the default backup mode for this specific file.
 
+    makedirs
+        Create parent directories for destination file.
+
+        .. versionadded:: 2014.1.2
+
     show_diff
         If set to False, the diff will not be shown.
 
@@ -2895,6 +3280,10 @@ def serialize(name,
         Default is True, if create is set to False then the file will only be
         managed if the file already exists on the system.
 
+    merge_if_exists
+        Default is False, if merge_if_exists is True then the existing file will
+        be parsed and the dataset passed in will be merged with the existing
+        content
 
     For example, this state::
 
@@ -2948,15 +3337,50 @@ def serialize(name,
             return ret
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
+
+    if merge_if_exists:
+        if os.path.isfile(name):
+            if formatter == 'yaml':
+                existing_data = yaml.load(file(name, 'r'))
+            elif formatter == 'json':
+                existing_data = json.load(file(name, 'r'))
+            else:
+                return {'changes': {},
+                        'comment': '{0} format is not supported for merging'.format(
+                            formatter.capitalized()),
+                        'name': name,
+                        'result': False
+                        }
+
+            if not existing_data is None:
+                for k, v in dataset.iteritems():
+                    if k in existing_data:
+                        ret['changes'].update(_merge_dict(existing_data, k, v))
+                    else:
+                        ret['changes'][k] = v
+                        existing_data[k] = v
+                dataset = existing_data
+
     if formatter == 'yaml':
-        contents = yaml.dump(dataset, default_flow_style=False)
+        contents = yaml.dump(
+            dataset,
+            default_flow_style=False,
+            Dumper=OrderedDumper
+        )
     elif formatter == 'json':
         contents = json.dumps(dataset,
                               indent=2,
                               separators=(',', ': '),
                               sort_keys=True)
     elif formatter == 'python':
-        contents = pprint.pformat(dataset)
+        # round-trip this through JSON to avoid OrderedDict types
+        # there's probably a more performant way to do this...
+        contents = pprint.pformat(
+            json.loads(
+                json.dumps(dataset),
+                object_hook=salt.utils.decode_dict
+            )
+        )
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
@@ -2973,8 +3397,9 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
-                                        env=__env__,
+                                        saltenv=__env__,
                                         backup=backup,
+                                        makedirs=makedirs,
                                         template=None,
                                         show_diff=show_diff,
                                         contents=contents)
@@ -3064,9 +3489,9 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         #if it is a character device
         elif not __salt__['file.is_chrdev'](name):
             if __opts__['test']:
-                ret['comment'] = 'Character device {0} is set to be created'.format(
-                    name
-                )
+                ret['comment'] = (
+                    'Character device {0} is set to be created'
+                ).format(name)
                 ret['result'] = None
             else:
                 ret = __salt__['file.mknod'](name,
@@ -3111,9 +3536,9 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         #  if it is a block device
         elif not __salt__['file.is_blkdev'](name):
             if __opts__['test']:
-                ret['comment'] = 'Block device {0} is set to be created'.format(
-                    name
-                )
+                ret['comment'] = (
+                    'Block device {0} is set to be created'
+                ).format(name)
                 ret['result'] = None
             else:
                 ret = __salt__['file.mknod'](name,

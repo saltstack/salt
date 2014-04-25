@@ -27,7 +27,7 @@ executed and allows for arguments to be passed in:
 .. code-block:: yaml
 
     mine_functions:
-      network.interfaces: []
+      network.interfaces: [eth0]
       test.ping: []
 
 Mine Interval

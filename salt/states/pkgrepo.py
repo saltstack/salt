@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Management of package repos
-===========================
+Management of APT/YUM package repos
+===================================
 
-Package repositories can be managed with the pkgrepo state:
+Package repositories for APT-based and YUM-based distros can be managed with
+these states. Here is some example SLS:
 
 .. code-block:: yaml
 
@@ -57,8 +58,11 @@ Package repositories can be managed with the pkgrepo state:
     once ``python-software-properties`` is installed.
 '''
 
+# Import python libs
+import sys
+
 # Import salt libs
-from salt.modules.apt import _strip_uri
+from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -66,7 +70,7 @@ def __virtual__():
     '''
     Only load if modifying repos is available for this package type
     '''
-    return 'pkgrepo' if 'pkg.mod_repo' in __salt__ else False
+    return 'pkg.mod_repo' in __salt__
 
 
 def managed(name, **kwargs):
@@ -170,7 +174,7 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web URL to retrieve the GPG key from.
+       URL to retrieve a GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
@@ -264,18 +268,24 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](**kwargs)
-    except Exception as e:
+        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+    except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
-        ret['comment'] = ('Failed to configure repo {0!r}: {1}'
-                          .format(name, str(e)))
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
+    else:
+        # Repo was modified, refresh the pkg db if on an apt-based OS. Other
+        # package managers do this sort of thing automatically.
+        if __grains__['os_family'] == 'Debian':
+            __salt__['pkg.refresh_db']()
+
     try:
-        repodict = __salt__['pkg.get_repo'](kwargs['repo'],
-                                            ppa_auth=kwargs.get('ppa_auth',
-                                                                None))
+        repodict = __salt__['pkg.get_repo'](
+            kwargs['repo'], ppa_auth=kwargs.get('ppa_auth', None)
+        )
         if repo:
             for kwarg in sanitizedkwargs:
                 if repodict.get(kwarg) != repo.get(kwarg):
@@ -287,10 +297,16 @@ def managed(name, **kwargs):
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0!r}'.format(name)
-    except Exception as e:
+    except Exception as exc:
         ret['result'] = False
-        ret['comment'] = 'Failed to confirm config of repo {0!r}: {1}'.format(
-            name, str(e))
+        ret['comment'] = \
+            'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
+    # Clear cache of available packages, if present, since changes to the
+    # repositories may change the packages that are available.
+    if ret['changes']:
+        sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('pkg._avail', None)
     return ret
 
 
@@ -336,8 +352,9 @@ def absent(name, **kwargs):
         kwargs['name'] = kwargs.pop('ppa')
 
     try:
-        repo = __salt__['pkg.get_repo'](name,
-                                        ppa_auth=kwargs.get('ppa_auth', None))
+        repo = __salt__['pkg.get_repo'](
+            name, ppa_auth=kwargs.get('ppa_auth', None)
+        )
     except Exception:
         pass
     if not repo:
@@ -354,10 +371,16 @@ def absent(name, **kwargs):
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
     if name not in repos.keys():
-        ret['changes'] = {'repo': name}
         ret['result'] = True
+        ret['changes'] = {'repo': name}
         ret['comment'] = 'Removed package repo {0}'.format(name)
-        return ret
-    ret['result'] = False
-    ret['comment'] = 'Failed to remove repo {0}'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to remove repo {0}'.format(name)
+    # Clear cache of available packages, if present, since changes to the
+    # repositories may change the packages that are available.
+    if ret['changes']:
+        sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('pkg._avail', None)
     return ret

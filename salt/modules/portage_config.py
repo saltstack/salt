@@ -62,6 +62,11 @@ def enforce_nice_config():
     Enforce a nice tree structure for /etc/portage/package.* configuration
     files.
 
+    .. seealso::
+       :py:func:`salt.modules.ebuild.ex_mod_init`
+         for information on automatically running this when pkg is used.
+
+
     CLI Example:
 
     .. code-block:: bash

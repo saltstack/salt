@@ -5,12 +5,14 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -125,8 +127,8 @@ fi
         testfile = os.path.join(integration.TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
-            'Name "{0}" in sls "issue-1876" contains multiple state decs of '
-            'the same type'.format(testfile),
+            'ID {0!r} in SLS \'issue-1876\' contains multiple state '
+            'declarations of the same type'.format(testfile),
             sls
         )
 
@@ -230,10 +232,8 @@ fi
                 if os.path.isfile(fname):
                     os.remove(fname)
 
+    @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'issue-2068-template-str'
         )
@@ -358,11 +358,11 @@ fi
         '''
         ret = self.run_function('state.sls', mods='syntax.badlist')
         self.assertEqual(ret, [
-            'The state "A" in sls syntax.badlist is not formed as a list'
+            'State \'A\' in SLS \'syntax.badlist\' is not formed as a list'
         ])
         ret = self.run_function('state.sls', mods='syntax.badlist2')
         self.assertEqual(ret, [
-            'The state "C" in sls syntax.badlist2 is not formed as a list'
+            'State \'C\' in SLS \'syntax.badlist2\' is not formed as a list'
         ])
 
     def test_requisites_mixed_require_prereq_use(self):
@@ -543,8 +543,8 @@ fi
 
         ret = self.run_function('state.sls', mods='requisites.require_error1')
         self.assertEqual(ret, [
-            'Cannot extend ID W in "base:requisites.require_error1".'
-            + ' It is not part of the high state.'
+            "Cannot extend ID W in 'base:requisites.require_error1'. "
+            "It is not part of the high state."
         ])
 
         # issue #8235
@@ -554,8 +554,8 @@ fi
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require_simple_nolist')
         self.assertEqual(ret, [
-            'The require statement in state "B" in sls '
-          + '"requisites.require_simple_nolist" needs to be formed as a list'
+            'The require statement in state \'B\' in SLS '
+          + '\'requisites.require_simple_nolist\' needs to be formed as a list'
         ])
 
         # commented until a fix is made for issue #8772

@@ -11,12 +11,20 @@ Provides an authenticate function that will allow the caller to authenticate
 a user against the Pluggable Authentication Modules (PAM) on the system.
 
 Implemented using ctypes, so no compilation is necessary.
+
+.. note:: PAM authentication will not work for the ``root`` user.
+
+    The Python interface to PAM does not support authenticating as ``root``.
+
 '''
 
 # Import python libs
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
+
+# Import Salt libs
+from salt.utils import get_group_list
 
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
@@ -109,10 +117,7 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    if HAS_PAM:
-        return 'pam'
-    else:
-        return False
+    return HAS_PAM
 
 
 def authenticate(username, password, service='login'):
@@ -161,3 +166,12 @@ def auth(username, password, **kwargs):
     Authenticate via pam
     '''
     return authenticate(username, password, kwargs.get('service', 'login'))
+
+
+def groups(username, *args, **kwargs):
+    '''
+    Retreive groups for a given user for this auth provider
+
+    Uses system groups
+    '''
+    return get_group_list(username)

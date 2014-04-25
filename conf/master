@@ -20,9 +20,10 @@
 # The tcp port used by the publisher
 #publish_port: 4505
 
-# The user to run the salt-master as. Salt will update all permissions to
-# allow the specified user to run the master. If the modified files cause
-# conflicts set verify_env to False.
+# The user under which the salt master will run. Salt will update all
+# permissions to allow the specified user to run the master. The exception is
+# the job cache, which must be deleted if this user is changed.  If the
+# modified files cause conflicts set verify_env to False.
 #user: root
 
 # Max open files
@@ -56,7 +57,8 @@
 #pidfile: /var/run/salt-master.pid
 
 # The root directory prepended to these options: pki_dir, cachedir,
-# sock_dir, log_file, autosign_file, extension_modules, key_logfile, pidfile.
+# sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
+# key_logfile, pidfile.
 #root_dir: /
 
 # Directory used to store public key data
@@ -64,6 +66,11 @@
 
 # Directory to store job and cache data
 #cachedir: /var/cache/salt/master
+
+# Directory for custom modules. This directory can contain subdirectories for
+# each of Salt's module types such as "runners", "output", "wheel", "modules",
+# "states", "returners", etc.
+#extension_modules: <no default>
 
 # Verify and set permissions on configuration directories at startup
 #verify_env: True
@@ -75,7 +82,7 @@
 # seconds
 #timeout: 5
 
-# The loop_interval option controls the seconds for the master's maintinance
+# The loop_interval option controls the seconds for the master's maintenance
 # process check cycle. This process updates file server backends, cleans the
 # job cache and executes the scheduler.
 #loop_interval: 60
@@ -134,10 +141,15 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# If the autosign_file is specified only incoming keys specified in
-# the autosign_file will be automatically accepted. This is insecure.
-# Regular expressions as well as globing lines are supported.
+# If the autosign_file is specified, incoming keys specified in the
+# autosign_file will be automatically accepted. This is insecure.  Regular
+# expressions as well as globing lines are supported.
 #autosign_file: /etc/salt/autosign.conf
+
+# Works like autosign_file, but instead allows you to specify minion IDs for
+# which keys will automatically be rejected. Will override both membership in
+# the autosign_file and the auto_accept setting.
+#autoreject_file: /etc/salt/autosign.conf
 
 # Enable permissive access to the salt keys.  This allows you to run the
 # master or minion as root, but have a non-root group be given access to
@@ -274,6 +286,7 @@
 # output for each changed state if set to 'full', but if set to 'terse'
 # the output will be shortened to a single line.  If set to 'mixed', the output
 # will be terse unless a state failed, in which case that output will be full.
+# If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
 
@@ -305,6 +318,10 @@
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
+#
+# Prior to changing this value, the master should be stopped and all Salt 
+# caches should be cleared.
+#
 #hash_type: md5
 
 # The buffer size in the file server can be adjusted here:
@@ -376,8 +393,20 @@
 #fileserver_events: False
 #
 # Git fileserver backend configuration
+#
+# Gitfs can be provided by one of two python modules: GitPython or pygit2. If
+# using pygit2, both libgit2 and git must also be installed.
+#gitfs_provider: gitpython
+#
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
+#
+# The repos will be searched in order to find the file requested by a client
+# and the first repo to have the file will return it.
+# When using the git backend branches and tags are translated into salt
+# environments.
+# Note:  file:// repos will be treated as a remote, so refs you want used must
+# exist in that repo as *local* refs.
 #
 #gitfs_remotes:
 #  - git://github.com/saltstack/salt-states.git
@@ -390,12 +419,6 @@
 # is a security concern, you may want to try using the ssh transport.
 #gitfs_ssl_verify: True
 #
-# The repos will be searched in order to find the file requested by a client
-# and the first repo to have the file will return it.
-# When using the git backend branches and tags are translated into salt
-# environments.
-# Note:  file:// repos will be treated as a remote, so refs you want used must
-# exist in that repo as *local* refs.
 #
 # The gitfs_root option gives the ability to serve files from a subdirectory
 # within the repository. The path is defined relative to the root of the
@@ -518,7 +541,7 @@
 #
 # mine_get:
 #   foo.example.com:
-#     - network.inetrfaces
+#     - network.interfaces
 #   web.*:
 #     - network.*
 #     - disk.*

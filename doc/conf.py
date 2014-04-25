@@ -55,6 +55,11 @@ MOCK_MODULES = [
     'libcloud.compute.deployment',
     'libcloud.compute.providers',
     'libcloud.compute.types',
+    'libcloud.loadbalancer',
+    'libcloud.loadbalancer.types',
+    'libcloud.loadbalancer.providers',
+    'libcloud.common',
+    'libcloud.common.google',
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
@@ -67,6 +72,7 @@ MOCK_MODULES = [
     'pymongo',
     'rabbitmq_server',
     'redis',
+    'requests',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
@@ -100,7 +106,7 @@ for path in addtl_paths:
 import salt.version
 
 
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
@@ -112,11 +118,11 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2013 SaltStack, Inc.'
+copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '0.17.4'
+release = '2014.1.3'
 
 language = 'en'
 locale_dirs = [
@@ -135,6 +141,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc
+    'shorturls',
 ]
 
 modindex_common_prefix = ['salt.']
@@ -144,13 +151,12 @@ autosummary_generate = True
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
-.. |latest| replace:: https://github.com/saltstack/salt/archive/v%s.tar.gz
-""" % salt.version.__version__
+"""
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
-    'download': ('https://github.com/downloads/saltstack/salt/%s', None),
+    'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
     'formula': ('https://github.com/saltstack-formulas/%s', ''),
 }
@@ -160,20 +166,27 @@ extlinks = {
 locale_dirs = ['locale/']
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
-### HTML options
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'saltstack'
 
+
+### HTML options
+html_theme = 'saltstack'
 html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = 'saltstack_logo.png'
+html_logo = None # specfied in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
+
+# Set a var if we're building docs for the live site or not
+html_docs_saltstack_org = 'SALT_GOOGLE_SEARCH' in os.environ
+
+# Use Google customized search or use Sphinx built-in JavaScript search
+if html_docs_saltstack_org:
+    html_search_template = 'googlesearch.html'
+else:
+    html_search_template = 'searchbox.html'
 
 html_additional_pages = {
     '404': '404.html',
@@ -183,7 +196,7 @@ html_default_sidebars = [
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
-    'searchbox.html',
+    html_search_template,
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
@@ -191,11 +204,14 @@ html_sidebars = {
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
-        'searchbox.html',
+        html_search_template,
+    ],
+    'ref/formula/all/*': [
     ],
 }
 
 html_context = {
+    'docs_saltstack_org': html_docs_saltstack_org,
     'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
@@ -207,15 +223,44 @@ html_last_updated_fmt = '%b %d, %Y'
 html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
-#html_use_opensearch = ''
 
 ### Latex options
 latex_documents = [
   ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
-latex_logo = '_static/saltstack_logo.png'
+latex_logo = '_static/salt-logo.pdf'
 
+### Linkcheck options
+linkcheck_ignore = [r'http://127.0.0.1',
+                    r'http://salt:\d+',
+                    r'http://local:\d+',
+                    r'https://console.aws.amazon.com',
+                    r'http://192.168.33.10',
+                    r'http://domain:\d+',
+                    r'http://123.456.789.012:\d+',
+                    r'http://localhost',
+                    r'https://groups.google.com/forum/#!forum/salt-users',
+                    r'http://logstash.net/docs/latest/inputs/udp',
+                    r'http://logstash.net/docs/latest/inputs/zeromq',
+                    r'http://www.youtube.com/saltstack',
+                    r'http://raven.readthedocs.org',
+                    r'https://getsentry.com',
+                    r'http://salt-cloud.readthedocs.org',
+                    r'http://salt.readthedocs.org',
+                    r'http://www.pip-installer.org/',
+                    r'http://www.windowsazure.com/',
+                    r'https://github.com/watching',
+                    r'dash-feed://',
+                    r'https://github.com/saltstack/salt/',
+                    r'http://bootstrap.saltstack.org',
+                    r'media.readthedocs.org/dash/salt/latest/salt.xml',
+                    r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
+                    r'https://help.github.com/articles/fork-a-repo',
+                    r'dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml'
+                    ]
+
+linkcheck_anchors = False
 
 ### Manpage options
 # One entry per manual page. List of tuples

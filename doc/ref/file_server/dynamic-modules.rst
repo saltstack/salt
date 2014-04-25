@@ -9,12 +9,6 @@ Under the root of any environment defined via the :conf_master:`file_roots`
 option on the master server directories corresponding to the type of module can
 be used.
 
-.. glossary::
-
-    Module sync
-        Automatically transfer and load modules, grains, renderers, returners,
-        states, etc from the master to the minions.
-
 The directories are prepended with an underscore:
 
   1. :file:`_modules`

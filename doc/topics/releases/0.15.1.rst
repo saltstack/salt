@@ -2,6 +2,8 @@
 Salt 0.15.1 Release Notes
 =========================
 
+:release: 2013-05-08
+
 The 0.15.1 release has been posted, this release includes fixes to a number of
 bugs in 0.15.1 and a three security patches.
 

@@ -24,7 +24,7 @@ def __virtual__():
 
 
 def managed(name,
-            venv_bin='virtualenv',
+            venv_bin=None,
             requirements=None,
             no_site_packages=None,
             system_site_packages=False,
@@ -42,7 +42,9 @@ def managed(name,
             index_url=None,
             extra_index_url=None,
             pre_releases=False,
-            no_deps=False):
+            no_deps=False,
+            pip_exists_action=None,
+            proxy=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -57,6 +59,11 @@ def managed(name,
         Prefer wheel archives (requires pip>=1.4)
     no_deps: False
         Pass `--no-deps` to `pip`.
+    pip_exists_action: None
+        Default action of pip when a path already exists: (s)witch, (i)gnore,
+        (w)wipe, (b)ackup
+    proxy: None
+        Proxy address which is passed to "pip install"
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -75,7 +82,7 @@ def managed(name,
         return ret
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Let\'s support \'runas\' until salt {0} is out, after which it will'
         'stop being supported'.format(
             salt.version.SaltStackVersion.from_name('Helium').formatted_version
@@ -163,7 +170,7 @@ def managed(name,
             extra_search_dir=extra_search_dir,
             never_download=never_download,
             prompt=prompt,
-            runas=user
+            user=user
         )
 
         ret['result'] = _ret['retcode'] == 0
@@ -196,13 +203,15 @@ def managed(name,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
-            runas=user,
+            user=user,
             cwd=cwd,
             index_url=index_url,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
             pre_releases=pre_releases,
+            exists_action=pip_exists_action,
             no_deps=no_deps,
+            proxy=proxy,
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

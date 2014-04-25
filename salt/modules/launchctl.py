@@ -47,11 +47,15 @@ def _available_services():
         for root, dirs, files in os.walk(launch_dir):
             for filename in files:
                 file_path = os.path.join(root, filename)
+                # Follow symbolic links of files in _launchd_paths
+                true_path = os.path.realpath(file_path)
+                # ignore broken symlinks
+                if not os.path.exists(true_path):
+                    continue
+
                 try:
                     # This assumes most of the plist files will be already in XML format
                     with open(file_path):
-                        # Follow symbolic links of files in _launchd_paths
-                        true_path = os.path.realpath(file_path)
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:

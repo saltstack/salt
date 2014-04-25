@@ -12,7 +12,7 @@
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 ensure_in_syspath('../../')
 
@@ -39,3 +39,8 @@ class SMTPReturnerTestCase(TestCase):
         with patch.dict(smtp.__salt__, {'config.option': MagicMock()}):
             smtp.returner(ret)
             self.assertTrue(mocked_smtplib.return_value.sendmail.called)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(SMTPReturnerTestCase, needs_daemon=False)

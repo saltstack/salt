@@ -15,6 +15,7 @@ configuration at ``/etc/salt/cloud.providers`` or
       provider: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
+      management_host: management.core.windows.net
 
 Information on creating the pem file to use, and uploading the associated cer
 file can be found at:
@@ -59,13 +60,8 @@ def __virtual__():
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Azure cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading Azure cloud module')
     return __virtualname__
 
 
@@ -76,7 +72,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'certificate_path',)
+        ('subscription_id', 'certificate_path')
     )
 
 
@@ -92,8 +88,15 @@ def get_conn():
         'subscription_id',
         get_configured_provider(), __opts__, search_global=False
     )
+    management_host = config.get_cloud_config_value(
+        'management_host',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='management.core.windows.net'
+    )
     return azure.servicemanagement.ServiceManagementService(
-        subscription_id, certificate_path
+        subscription_id, certificate_path, management_host
     )
 
 
@@ -406,6 +409,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -466,6 +470,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         event_kwargs,
+        transport=__opts__['transport']
     )
     log.debug('vm_kwargs: {0}'.format(vm_kwargs))
 
@@ -523,6 +528,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': hostname,
             'username': ssh_username,
             'password': ssh_password,
@@ -594,11 +600,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
@@ -606,6 +612,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -642,6 +649,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

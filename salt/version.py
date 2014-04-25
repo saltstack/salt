@@ -4,6 +4,7 @@ Set up the version of Salt
 '''
 
 # Import python libs
+from __future__ import print_function
 import re
 import sys
 
@@ -16,11 +17,11 @@ except ImportError:
     else:
         string_types = basestring
 
-# ----- ATTENTION ----------------------------------------------------------->
+# ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
 # For version bumps, please update `__saltstack_version__` below
 #
-# <---- ATTENTION ------------------------------------------------------------
+# <---- ATTENTION ----------------------------------------------------------------------------------------------------
 
 
 class SaltStackVersion(object):
@@ -34,13 +35,13 @@ class SaltStackVersion(object):
     __slots__ = ('name', 'major', 'minor', 'bugfix', 'rc', 'noc', 'sha')
 
     git_describe_regex = re.compile(
-        r'(?:[^\d]+)?(?P<major>[\d]{1,2})\.(?P<minor>[\d]{1,2})'
+        r'(?:[^\d]+)?(?P<major>[\d]{1,4})\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?(?:rc(?P<rc>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
     )
 
     # Salt versions after 0.17.0 will be numbered like:
-    #   <2-digit-year>.<month>.<bugfix>
+    #   <4-digit-year>.<month>.<bugfix>
     #
     # Since the actual version numbers will only be know on release dates, the
     # periodic table element names will be what's going to be used to name
@@ -51,10 +52,10 @@ class SaltStackVersion(object):
         # latest release so we can map deprecation warnings to versions.
 
 
-        # ----- Please refrain from fixing PEP-8 E203 ----------------------->
+        # ----- Please refrain from fixing PEP-8 E203 --------------------------------------------------------------->
         # The idea is keep this readable
-        # --------------------------------------------------------------------
-        'Hydrogen': (sys.maxint - 108, 0, 0, 0),
+        # ------------------------------------------------------------------------------------------------------------
+        'Hydrogen': (2014, 1, 0, 0),
         'Helium': (sys.maxint - 107, 0, 0, 0),
         'Lithium': (sys.maxint - 106, 0, 0, 0),
         'Beryllium': (sys.maxint - 105, 0, 0, 0),
@@ -163,11 +164,12 @@ class SaltStackVersion(object):
         #'Bohrium'      : (sys.maxint - 2  , 0, 0, 0),
         #'Hassium'      : (sys.maxint - 1  , 0, 0, 0),
         #'Meitnerium'   : (sys.maxint - 0  , 0, 0, 0),
-        # <---- Please refrain from fixing PEP-8 E203 ------------------------
+        # <---- Please refrain from fixing PEP-8 E203 ----------------------------------------------------------------
     }
 
     LNAMES = dict((k.lower(), v) for (k, v) in NAMES.iteritems())
     VNAMES = dict((v, k) for (k, v) in NAMES.iteritems())
+    RMATCH = dict((v[:2], k) for (k, v) in NAMES.iteritems())
 
     def __init__(self,              # pylint: disable=C0103
                  major,
@@ -274,14 +276,15 @@ class SaltStackVersion(object):
             version_string += 'rc{0}'.format(self.rc)
         if self.noc and self.sha:
             version_string += '-{0}-{1}'.format(self.noc, self.sha)
+
+        if (self.major, self.minor) in self.RMATCH:
+            version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
         return version_string
 
     @property
     def formatted_version(self):
         if self.name and self.major > 10000:
             return '{0} (Unreleased)'.format(self.name)
-        elif self.name:
-            return '{0} ({1})'.format(self.name, self.string)
         return self.string
 
     def __str__(self):
@@ -329,17 +332,26 @@ class SaltStackVersion(object):
         return '<{0} {1}>'.format(self.__class__.__name__, ' '.join(parts))
 
 
-# ----- Hardcoded Salt Version Information ---------------------------------->
+# ----- Hardcoded Salt Version Information -------------------------------------------------------------------------->
 #
-# Please bump version information for __saltstack_version__ on new releases
-# ----------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion(0, 17, 0)
+# ALL version bumps should be done in the SaltStackVersion.NAMES dictionary, ie:
+#
+#    class SaltStackVersion(object):
+#
+#        NAMES = {
+#            'Hydrogen': (2014, 1, 0, 0),   # <- This is the tuple to bump versions
+#            ( ... )
+#        }
+#
+# --------------------------------------------------------------------------------------------------------------------
+# There's no need to edit any of the version dunder objects below, see above why and where to update
+__saltstack_version__ = SaltStackVersion.from_name('Hydrogen')
 __version_info__ = __saltstack_version__.info
 __version__ = __saltstack_version__.string
-# <---- Hardcoded Salt Version Information -----------------------------------
+# <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
-# ----- Dynamic/Runtime Salt Version Information ---------------------------->
+# ----- Dynamic/Runtime Salt Version Information -------------------------------------------------------------------->
 def __get_version(version, version_info):
     '''
     If we can get a version provided at installation time or from Git, use
@@ -347,7 +359,7 @@ def __get_version(version, version_info):
     '''
     try:
         # Try to import the version information provided at install time
-        from salt._version import __version__, __version_info__  # pylint: disable=E0611
+        from salt._version import __version__, __version_info__  # pylint: disable=E0611,F0401
         return __version__, __version_info__
     except ImportError:
         pass
@@ -433,7 +445,7 @@ def __get_version(version, version_info):
 __version__, __version_info__ = __get_version(__version__, __version_info__)
 # This function has executed once, we're done with it. Delete it!
 del __get_version
-# <---- Dynamic/Runtime Salt Version Information -----------------------------
+# <---- Dynamic/Runtime Salt Version Information ---------------------------------------------------------------------
 
 
 def versions_information(include_salt_cloud=False):

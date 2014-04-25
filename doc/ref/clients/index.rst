@@ -53,8 +53,26 @@ default location.
     master_opts = salt.config.master_config(
         os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
 
-    minion_opts = salt.config.client_config(
+    minion_opts = salt.config.minion_config(
         os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion'))
+
+Salt's Loader Interface
+=======================
+
+Modules in the Salt ecosystem are loaded into memory using a custom loader
+system. This allows modules to have conditional requirements (OS, OS version,
+installed libraries, etc) and allows Salt to inject special variables
+(``__salt__``, ``__opts``, etc).
+
+Each module type has a corresponding loader function.
+
+.. autofunction:: salt.loader.minion_mods
+
+.. autofunction:: salt.loader.raw_mod
+
+.. autofunction:: salt.loader.states
+
+.. autofunction:: salt.loader.grains
 
 Salt's Python interface
 =======================
@@ -63,8 +81,8 @@ LocalClient
 -----------
 
 .. autoclass:: salt.client.LocalClient
-    :members: cmd, run_job, cmd_async, cmd_subset, cmd_iter, cmd_iter_no_block,
-        get_cli_returns, get_event_iter_returns
+    :members: cmd, run_job, cmd_async, cmd_subset, cmd_batch, cmd_iter,
+        cmd_iter_no_block, get_cli_returns, get_event_iter_returns
 
 Salt Caller
 -----------

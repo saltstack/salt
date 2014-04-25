@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 The setup script for salt
 '''
@@ -20,7 +20,14 @@ from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
+from distutils.command.install_lib import install_lib
 # pylint: enable=E0611
+
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
 
 # Change to salt source's directory prior to running any command
 try:
@@ -106,28 +113,39 @@ exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 class CloudSdist(sdist):
     user_options = sdist.user_options + [
         ('skip-bootstrap-download', None,
-         'Skip downloading the bootstrap-salt.sh script. This can also be '
-         'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
-         'variable.')
+         '[DEPRECATED] Skip downloading the bootstrap-salt.sh script. This '
+         'can also be triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an '
+         'environment variable.'),
+        ('download-bootstrap-script', None,
+         'Download the latest stable bootstrap-salt.sh script. This '
+         'can also be triggered by having `DOWNLOAD_BOOTSTRAP_SCRIPT=1` as an '
+         'environment variable.')
+
     ]
     boolean_options = sdist.boolean_options + [
-        'skip-bootstrap-download'
+        'skip-bootstrap-download',
+        'download-bootstrap-script'
     ]
 
     def initialize_options(self):
         sdist.initialize_options(self)
-        self.skip_bootstrap_download = False
+        self.skip_bootstrap_download = True
+        self.download_bootstrap_script = False
 
     def finalize_options(self):
         sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            skip_bootstrap_download = os.environ.get(
-                'SKIP_BOOTSTRAP_DOWNLOAD', '0'
+            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
+                '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
+
+        if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:
+            download_bootstrap_script = os.environ.get(
+                'DOWNLOAD_BOOTSTRAP_SCRIPT', '0'
             )
-            self.skip_bootstrap_download = skip_bootstrap_download == '1'
+            self.download_bootstrap_script = download_bootstrap_script == '1'
 
     def run(self):
-        if self.skip_bootstrap_download is False:
+        if self.download_bootstrap_script is True:
             # Let's update the bootstrap-script to the version defined to be
             # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
             url = (
@@ -156,7 +174,7 @@ class CloudSdist(sdist):
                     )
                     with open(deploy_path, 'w') as fp_:
                         fp_.write(req.read())
-                except (OSError, IOError), err:
+                except (OSError, IOError) as err:
                     log.error(
                         'Failed to write the updated script: {0}'.format(err)
                     )
@@ -363,6 +381,28 @@ class Install(install):
         install.run(self)
 
 
+class InstallLib(install_lib):
+    def run(self):
+        executables = [
+                'salt/templates/git/ssh-id-wrapper',
+                'salt/templates/lxc/salt_tarball',
+                ]
+        install_lib.run(self)
+
+        # input and outputs match 1-1
+        inp = self.get_inputs()
+        out = self.get_outputs()
+        chmod = []
+
+        for idx, inputfile in enumerate(inp):
+            for executeable in executables:
+                if inputfile.endswith(executeable):
+                    chmod.append(idx)
+        for idx in chmod:
+            filename = out[idx]
+            os.chmod(filename, 0755)
+
+
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
@@ -405,39 +445,51 @@ SETUP_KWARGS = {'name': NAME,
                                 'Topic :: System :: Distributed Computing',
                                 ],
                 'packages': ['salt',
+                             'salt.auth',
                              'salt.cli',
                              'salt.client',
+                             'salt.client.raet',
                              'salt.client.ssh',
                              'salt.client.ssh.wrapper',
-                             'salt.ext',
-                             'salt.auth',
-                             'salt.wheel',
-                             'salt.tops',
-                             'salt.grains',
-                             'salt.modules',
-                             'salt.pillar',
-                             'salt.renderers',
-                             'salt.returners',
-                             'salt.runners',
-                             'salt.states',
-                             'salt.fileserver',
-                             'salt.search',
-                             'salt.output',
-                             'salt.utils',
-                             'salt.utils.decorators',
-                             'salt.utils.validate',
-                             'salt.roster',
-                             'salt.log',
-                             'salt.log.handlers',
-                             'salt.templates',
                              'salt.cloud',
                              'salt.cloud.clouds',
+                             'salt.daemons',
+                             'salt.daemons.flo',
+                             'salt.ext',
+                             'salt.fileserver',
+                             'salt.grains',
+                             'salt.log',
+                             'salt.log.handlers',
+                             'salt.modules',
+                             'salt.output',
+                             'salt.pillar',
+                             'salt.proxy',
+                             'salt.renderers',
+                             'salt.returners',
+                             'salt.roster',
+                             'salt.runners',
+                             'salt.search',
+                             'salt.states',
+                             'salt.tops',
+                             'salt.templates',
+                             'salt.transport',
+                             'salt.utils',
+                             'salt.utils.decorators',
+                             'salt.utils.openstack',
+                             'salt.utils.validate',
+                             'salt.utils.serializers',
+                             'salt.wheel',
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
-                                    'virt/*.jinja'
+                                    'virt/*.jinja',
+                                    'git/*',
+                                    'lxc/*',
                                     ],
+                                 'salt.daemons.flo': [
+                                    '*.flo'
+                                    ]
                                 },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-cp.1',
@@ -457,6 +509,7 @@ SETUP_KWARGS = {'name': NAME,
 
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
+    SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
     #SETUP_KWARGS['packages'].extend(['salt.cloud',
     #                                 'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
@@ -494,16 +547,31 @@ FREEZER_INCLUDES = [
     'email.mime.*',
 ]
 
+if HAS_ZMQ and hasattr(zmq, 'pyzmq_version_info'):
+    if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
+        # We're freezing, and when freezing ZMQ needs to be installed, so this
+        # works fine
+        if 'zmq.core.*' in FREEZER_INCLUDES:
+            # For PyZMQ >= 0.14, freezing does not need 'zmq.core.*'
+            FREEZER_INCLUDES.remove('zmq.core.*')
+
 if IS_WINDOWS_PLATFORM:
     FREEZER_INCLUDES.extend([
         'win32api',
         'win32file',
         'win32con',
+        'win32com',
+        'win32net',
+        'win32netcon',
+        'win32gui',
         'win32security',
         'ntsecuritycon',
+        'pywintypes',
+        'pythoncom',
         '_winreg',
         'wmi',
         'site',
+        'psutil',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
@@ -511,6 +579,20 @@ elif sys.platform.startswith('linux'):
     try:
         import yum
         FREEZER_INCLUDES.append('yum')
+    except ImportError:
+        pass
+elif sys.platform.startswith('sunos'):
+    # (The sledgehammer approach)
+    # Just try to include everything
+    # (This may be a better way to generate FREEZER_INCLUDES generally)
+    try:
+        from bbfreeze.modulegraph.modulegraph import ModuleGraph
+        mf = ModuleGraph(sys.path[:])
+        for arg in glob.glob("salt/modules/*.py"):
+                mf.run_script(arg)
+        for mod in mf.flatten():
+            if type(mod).__name__ != "Script" and mod.filename:
+                FREEZER_INCLUDES.append(str(os.path.basename(mod.identifier)))
     except ImportError:
         pass
 
@@ -553,6 +635,7 @@ else:
     SETUP_KWARGS['scripts'] = ['scripts/salt-call',
                                'scripts/salt-cp',
                                'scripts/salt-minion',
+                               'scripts/salt-unity',
                                ]
 
     if IS_WINDOWS_PLATFORM is False:

@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+YAML Renderer for Salt
+'''
+
 from __future__ import absolute_import
 
 # Import python libs
@@ -8,9 +12,10 @@ from yaml.scanner import ScannerError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
-from salt.utils.yamlloader import CustomLoader, load
+from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +30,7 @@ def get_yaml_loader(argline):
     Return the ordered dict yaml loader
     '''
     def yaml_loader(*args):
-        return CustomLoader(*args, dictclass=OrderedDict)
+        return SaltYamlSafeLoader(*args, dictclass=OrderedDict)
     return yaml_loader
 
 
@@ -36,7 +41,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
 
     :rtype: A Python data structure
     '''
-    if not isinstance(yaml_data, basestring):
+    if not isinstance(yaml_data, string_types):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:
         try:
@@ -57,9 +62,12 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         if not data:
             data = {}
         else:
-            if 'config.get' in __salt__:
-                if __salt__['config.get']('yaml_utf8', False):
-                    data = _yaml_result_unicode_to_utf8(data)
+            if isinstance(__salt__, dict):
+                if 'config.get' in __salt__:
+                    if __salt__['config.get']('yaml_utf8', False):
+                        data = _yaml_result_unicode_to_utf8(data)
+            elif __opts__.get('yaml_utf8'):
+                data = _yaml_result_unicode_to_utf8(data)
         log.debug('Results of YAML rendering: \n{0}'.format(data))
         return data
 

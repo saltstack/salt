@@ -24,7 +24,11 @@ from salt.states import pip_state
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import pip
+try:
+    import pip
+    HAS_PIP = True
+except ImportError:
+    HAS_PIP = False
 
 pip_state.__env__ = 'base'
 pip_state.__opts__ = {'test': False}
@@ -32,6 +36,8 @@ pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PIP,
+        'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
     def test_installed_deprecated_runas(self):
@@ -49,7 +55,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 ret = pip_state.installed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', str(w[-1].message)
                 )
                 self.assertSaltTrueReturn({'testsuite': ret})
@@ -57,7 +63,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 # message?
                 self.assertInSalStatetWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', {'testsuite': ret}
                 )
 
@@ -87,7 +93,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 ret = pip_state.removed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', str(w[-1].message)
                 )
                 self.assertSaltTrueReturn({'testsuite': ret})
@@ -95,7 +101,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 # message?
                 self.assertInSalStatetWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', {'testsuite': ret}
                 )
 

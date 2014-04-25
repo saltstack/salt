@@ -47,15 +47,16 @@ def show():
     )
     cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     comps = ['']
-    for line in out:
+    for line in out.splitlines():
         # This might need to be converted to a regex, and more, as sysctl output
         # can for some reason contain entries such as:
         #
         # user.tzname_max = 255
         # kern.clockrate: hz = 100, tick = 10000, profhz = 100, stathz = 100
-        # kern.clockrate: { hz = 100, tick = 10000, tickadj = 2, profhz = 100, stathz = 100 }
+        # kern.clockrate: {hz = 100, tick = 10000, tickadj = 2, profhz = 100,
+        #                 stathz = 100}
         #
         # Yes. That's two `kern.clockrate`.
         #
@@ -76,6 +77,9 @@ def get(name):
     '''
     Return a single sysctl parameter for this minion
 
+    name
+        The name of the sysctl value to display.
+
     CLI Example:
 
     .. code-block:: bash
@@ -90,6 +94,12 @@ def get(name):
 def assign(name, value):
     '''
     Assign a single sysctl parameter for this minion
+
+    name
+        The name of ths sysctl value to edit.
+
+    value
+        The sysctl value to apply.
 
     CLI Example:
 
@@ -109,9 +119,23 @@ def assign(name, value):
     return ret
 
 
-def persist(name, value, config='/etc/sysctl.conf'):
+def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
     '''
     Assign and persist a simple sysctl parameter for this minion
+
+    name
+        The name of the sysctl value to edit.
+
+    value
+        The sysctl value to apply.
+
+    config
+        The location of the sysctl configuration file.
+
+    apply_change
+        Default is False; Default behavior only creates or edits
+        the sysctl.conf file. If apply is set to True, the changes are
+        applied to the system.
 
     CLI Example:
 
@@ -156,4 +180,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
         nlines.append('{0}={1}'.format(name, value))
     with salt.utils.fopen(config, 'w+') as ofile:
         ofile.writelines(nlines)
+    # If apply_change=True, apply edits to system
+    if apply_change is True:
+        assign(name, value)
+        return 'Updated and applied'
     return 'Updated'

@@ -54,11 +54,14 @@ class FunctionWrapper(object):
                     ''.join(arg_str),
                     **self.kwargs
             )
-            stdout, stderr = single.cmd_block()
+            stdout, _, _ = single.cmd_block()
             if stdout.startswith('deploy'):
                 single.deploy()
-                stdout, stderr = single.cmd_block()
-            ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
+                stdout, _, _ = single.cmd_block()
+            try:
+                ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
+            except ValueError:
+                ret = {'_error': 'Failed to return clean data'}
             if len(ret) < 2 and 'local' in ret:
                 ret = ret['local']
             return ret

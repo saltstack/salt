@@ -2,6 +2,8 @@
 Salt 0.9.5 Release Notes
 ========================
 
+:release: 2012-01-15
+
 Salt 0.9.5 is one of the largest steps forward in the development of Salt.
 
 0.9.5 comes with many milestones, this release has seen the community of
@@ -252,7 +254,7 @@ FreeBSD
 
 Salt on FreeBSD? There a port for that:
 
-http://www.freebsd.org/cgi/cvsweb.cgi/ports/sysutils/salt/pkg-descr
+http://svnweb.freebsd.org/ports/head/sysutils/py-salt/
 
 This port was developed and added by Christer Edwards. This also marks the
 first time Salt has been included in an upstream packaging system!
@@ -283,7 +285,7 @@ More to Come
 
 We are actively seeking inclusion in more distributions. Primarily getting
 Salt into Gentoo, SUSE, OpenBSD and preparing Solaris support are all turning
-into higher priorities. 
+into higher priorities.
 
 Refinement
 ==========

@@ -46,7 +46,7 @@ def isportopen(host, port):
         salt '*' network.isportopen 127.0.0.1 22
     '''
 
-    if not (1 <= int(port) <= 65535):
+    if not 1 <= int(port) <= 65535:
         return False
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -64,10 +64,51 @@ def host_to_ip(host):
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname(host)
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
+
+        if family == socket.AF_INET:
+            ip, port = sockaddr
+        elif family == socket.AF_INET6:
+            ip, port, flow_info, scope_id = sockaddr
+
     except Exception:
         ip = None
     return ip
+
+
+def get_fqhostname():
+    '''
+    Returns the fully qualified hostname
+
+    CLI Example::
+
+        salt '*' network.get_fqhostname
+    '''
+    h_name = socket.gethostname()
+    if h_name.find('.') >= 0:
+        return h_name
+    else:
+        h_fqdn = socket.getfqdn()
+        try:
+            addrinfo = socket.getaddrinfo(
+                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+                socket.SOL_TCP, socket.AI_CANONNAME
+            )[0]
+        except IndexError:
+            # Handle possible empty struct returns
+            return h_fqdn
+        except socket.gaierror:
+            return h_fqdn
+        else:
+            # Struct contanis the following elements:
+            #     family, socktype, proto, canonname, sockaddr
+            try:
+                # Prevent returning an empty string by falling back to
+                # socket.getfqdn()
+                return addrinfo[3] or h_fqdn
+            except IndexError:
+                return h_fqdn
 
 
 def ip_to_host(ip):
@@ -171,7 +212,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?([\w.]+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.\-]+)(?:@)?([\w.\-]+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):
@@ -346,7 +387,7 @@ def _interfaces_ipconfig(out):
             key, val = line.split(',', 1)
             key = key.strip(' .')
             val = val.strip()
-            if addr and key in ('Subnet Mask'):
+            if addr and key == 'Subnet Mask':
                 addr['netmask'] = val
             elif key in ('IP Address', 'IPv4 Address'):
                 if 'inet' not in iface:
@@ -362,9 +403,9 @@ def _interfaces_ipconfig(out):
                 addr = {'address': val.rstrip('(Preferred)'),
                         'prefixlen': None}
                 iface['inet6'].append(addr)
-            elif key in ('Physical Address'):
+            elif key == 'Physical Address':
                 iface['hwaddr'] = val
-            elif key in ('Media State'):
+            elif key == 'Media State':
                 # XXX seen used for tunnel adaptors
                 # might be useful
                 iface['up'] = (val != 'Media disconnected')
@@ -681,7 +722,7 @@ def remotes_on_local_tcp_port(port):
         # '127.0.0.1:4505->127.0.0.1:55703'
         local, remote = chunks[8].split('->')
         lhost, lport = local.split(':')
-        if not (int(lport) == port):  # ignore if local port not port
+        if int(lport) != port:  # ignore if local port not port
             continue
         rhost, rport = remote.split(':')
         remotes.add(rhost)

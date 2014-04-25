@@ -11,6 +11,7 @@ import logging
 import salt.crypt
 import salt.payload
 
+__proxyenabled__ = ['*']
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +80,13 @@ def update(clear=False):
             'clear': clear,
             'tok': auth.gen_token('salt'),
     }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
-    ret = sreq.send('aes', auth.crypticle.dumps(load))
-    return auth.crypticle.loads(ret)
+    # Changed for transport plugin
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # ret = sreq.send('aes', auth.crypticle.dumps(load))
+    # return auth.crypticle.loads(ret)
+    sreq = salt.transport.Channel.factory(__opts__)
+    ret = sreq.send(load)
+    return ret
 
 
 def send(func, *args, **kwargs):
@@ -128,9 +133,13 @@ def send(func, *args, **kwargs):
             'id': __opts__['id'],
             'tok': auth.gen_token('salt'),
     }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
-    ret = sreq.send('aes', auth.crypticle.dumps(load))
-    return auth.crypticle.loads(ret)
+    # Changed for transport plugin
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # ret = sreq.send('aes', auth.crypticle.dumps(load))
+    # return auth.crypticle.loads(ret)
+    sreq = salt.transport.Channel.factory(__opts__)
+    ret = sreq.send(load)
+    return ret
 
 
 def get(tgt, fun, expr_form='glob'):
@@ -144,6 +153,7 @@ def get(tgt, fun, expr_form='glob'):
         pcre
         grain
         grain_pcre
+        compound
 
     CLI Example:
 
@@ -151,6 +161,7 @@ def get(tgt, fun, expr_form='glob'):
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
+        salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
     '''
     if expr_form.lower == 'pillar':
         log.error('Pillar matching not supported on mine.get')
@@ -179,9 +190,13 @@ def get(tgt, fun, expr_form='glob'):
             'expr_form': expr_form,
             'tok': auth.gen_token('salt'),
     }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
-    ret = sreq.send('aes', auth.crypticle.dumps(load))
-    return auth.crypticle.loads(ret)
+    # Changed for transport plugin
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # ret = sreq.send('aes', auth.crypticle.dumps(load))
+    # return auth.crypticle.loads(ret)
+    sreq = salt.transport.Channel.factory(__opts__)
+    ret = sreq.send(load)
+    return ret
 
 
 def delete(fun):
@@ -206,9 +221,13 @@ def delete(fun):
             'fun': fun,
             'tok': auth.gen_token('salt'),
     }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
-    ret = sreq.send('aes', auth.crypticle.dumps(load))
-    return auth.crypticle.loads(ret)
+    # Changed for transport plugin
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # ret = sreq.send('aes', auth.crypticle.dumps(load))
+    # return auth.crypticle.loads(ret)
+    sreq = salt.transport.Channel.factory(__opts__)
+    ret = sreq.send(load)
+    return ret
 
 
 def flush():
@@ -229,6 +248,10 @@ def flush():
             'id': __opts__['id'],
             'tok': auth.gen_token('salt'),
     }
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
-    ret = sreq.send('aes', auth.crypticle.dumps(load))
-    return auth.crypticle.loads(ret)
+    # Changed for transport plugin
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    # ret = sreq.send('aes', auth.crypticle.dumps(load))
+    # return auth.crypticle.loads(ret)
+    sreq = salt.transport.Channel.factory(__opts__)
+    ret = sreq.send(load)
+    return ret

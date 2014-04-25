@@ -2,6 +2,8 @@
 Salt 0.9.6 Release Notes
 ========================
 
+:release: 2012-01-21
+
 Salt 0.9.6 is a release targeting a few bugs and changes. This is primarily
 targeting an issue found in the names declaration in the state system. But a
 few other bugs were also repaired, like missing support for grains in extmods.

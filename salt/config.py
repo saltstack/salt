@@ -7,10 +7,10 @@ All salt configuration loading and defaults should be in this module
 import glob
 import os
 import re
-import socket
 import logging
 import urlparse
 from copy import deepcopy
+import time
 
 # import third party libs
 import yaml
@@ -27,9 +27,13 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
+import salt.utils.validate.path
+from salt._compat import string_types
 
-# Import salt cloud libs
-import salt.cloud.exceptions
+import sys
+#can't use salt.utils.is_windows, because config.py is included from salt.utils
+if not sys.platform.lower().startswith('win'):
+    import salt.cloud.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -40,10 +44,15 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
+FLO_DIR = os.path.join(
+        os.path.dirname(__file__),
+        'daemons', 'flo')
+
 VALID_OPTS = {
     'master': str,
     'master_port': int,
     'master_finger': str,
+    'syndic_finger': str,
     'user': str,
     'root_dir': str,
     'pki_dir': str,
@@ -72,6 +81,7 @@ VALID_OPTS = {
     'module_dirs': list,
     'returner_dirs': list,
     'states_dirs': list,
+    'grains_dirs': list,
     'render_dirs': list,
     'outputter_dirs': list,
     'providers': dict,
@@ -94,12 +104,15 @@ VALID_OPTS = {
     'log_granular_levels': dict,
     'test': bool,
     'cython_enable': bool,
+    'show_timeout': bool,
+    'show_jid': bool,
     'state_verbose': bool,
     'state_output': str,
     'state_auto_order': bool,
     'state_events': bool,
     'acceptance_wait_time': float,
     'acceptance_wait_time_max': float,
+    'rejected_retry': bool,
     'loop_interval': float,
     'dns_check': bool,
     'verify_env': bool,
@@ -127,13 +140,30 @@ VALID_OPTS = {
     'keep_jobs': int,
     'master_roots': dict,
     'gitfs_remotes': list,
+    'gitfs_mountpoint': str,
     'gitfs_root': str,
     'gitfs_base': str,
+    'gitfs_env_whitelist': list,
+    'gitfs_env_blacklist': list,
     'hgfs_remotes': list,
+    'hgfs_mountpoint': str,
     'hgfs_root': str,
+    'hgfs_base': str,
     'hgfs_branch_method': str,
+    'hgfs_env_whitelist': list,
+    'hgfs_env_blacklist': list,
     'svnfs_remotes': list,
+    'svnfs_mountpoint': str,
     'svnfs_root': str,
+    'svnfs_trunk': str,
+    'svnfs_branches': str,
+    'svnfs_tags': str,
+    'svnfs_env_whitelist': list,
+    'svnfs_env_blacklist': list,
+    'minionfs_env': str,
+    'minionfs_mountpoint': str,
+    'minionfs_whitelist': list,
+    'minionfs_blacklist': list,
     'ext_pillar': list,
     'pillar_version': int,
     'pillar_opts': bool,
@@ -157,10 +187,11 @@ VALID_OPTS = {
     'order_masters': bool,
     'job_cache': bool,
     'ext_job_cache': str,
-    'master_ext_job_cache': str,
+    'master_job_cache': str,
     'minion_data_cache': bool,
     'publish_session': int,
     'reactor': list,
+    'reactor_refresh_interval': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
@@ -177,20 +208,37 @@ VALID_OPTS = {
     'jinja_trim_blocks': bool,
     'minion_id_caching': bool,
     'sign_pub_messages': bool,
-    'keysize': int
+    'keysize': int,
+    'transport': str,
+    'enumerate_proxy_minions': bool,
+    'gather_job_timeout': int,
+    'auth_timeout': int,
+    'random_master': bool,
+    'syndic_event_forward_timeout': float,
+    'syndic_max_event_process_time': float,
+    'ssh_passwd': str,
+    'ssh_port': str,
+    'ssh_sudo': bool,
+    'ssh_timeout': float,
+    'ssh_user': str,
+    'raet_port': int,
 }
 
 # default configurations
 DEFAULT_MINION_OPTS = {
+    'interface': '0.0.0.0',
     'master': 'salt',
     'master_port': '4506',
     'master_finger': '',
+    'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': None,
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
+    'grains_cache': False,
+    'grains_cache_expiration': 300,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
@@ -217,12 +265,14 @@ DEFAULT_MINION_OPTS = {
     'whitelist_modules': [],
     'module_dirs': [],
     'returner_dirs': [],
+    'grains_dirs': [],
     'states_dirs': [],
     'render_dirs': [],
     'outputter_dirs': [],
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
+    'auto_accept': True,
     'multiprocessing': True,
     'mine_interval': 60,
     'ipc_mode': 'ipc',
@@ -244,9 +294,10 @@ DEFAULT_MINION_OPTS = {
     'state_verbose': True,
     'state_output': 'full',
     'state_auto_order': True,
-    'state_events': True,
+    'state_events': False,
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
+    'rejected_retry': False,
     'loop_interval': 1,
     'dns_check': True,
     'verify_env': True,
@@ -258,7 +309,7 @@ DEFAULT_MINION_OPTS = {
     'retry_dns': 30,
     'recon_max': 5000,
     'recon_default': 100,
-    'recon_randomize': False,
+    'recon_randomize': True,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -269,7 +320,15 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
-    'keysize': 4096
+    'keysize': 4096,
+    'transport': 'zeromq',
+    'auth_timeout': 60,
+    'random_master': False,
+    'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
+    'ioflo_verbose': 0,
+    'ioflo_period': 0.01,
+    'ioflo_realtime': True,
+    'raet_port': 4510,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -296,13 +355,32 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'gitfs_remotes': [],
+    'gitfs_mountpoint': '',
     'gitfs_root': '',
     'gitfs_base': 'master',
+    'gitfs_env_whitelist': [],
+    'gitfs_env_blacklist': [],
     'hgfs_remotes': [],
+    'hgfs_mountpoint': '',
     'hgfs_root': '',
+    'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
+    'hgfs_env_whitelist': [],
+    'hgfs_env_blacklist': [],
+    'show_timeout': False,
+    'show_jid': False,
     'svnfs_remotes': [],
+    'svnfs_mountpoint': '',
     'svnfs_root': '',
+    'svnfs_trunk': 'trunk',
+    'svnfs_branches': 'branches',
+    'svnfs_tags': 'tags',
+    'svnfs_env_whitelist': [],
+    'svnfs_env_blacklist': [],
+    'minionfs_env': 'base',
+    'minionfs_mountpoint': '',
+    'minionfs_whitelist': [],
+    'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
@@ -335,7 +413,7 @@ DEFAULT_MASTER_OPTS = {
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
-    'master_ext_job_cache': '',
+    'master_job_cache': 'local_cache',
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipv6': False,
@@ -353,18 +431,19 @@ DEFAULT_MASTER_OPTS = {
     'cluster_mode': 'paranoid',
     'range_server': 'range:80',
     'reactor': [],
+    'reactor_refresh_interval': 60,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
     'state_auto_order': True,
-    'state_events': True,
+    'state_events': False,
     'search': '',
     'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
     'cython_enable': False,
     'enable_gpu_grains': False,
-    # XXX: Remove 'key_logfile' support in 0.18.0
+    # XXX: Remove 'key_logfile' support in 2014.1.0
     'key_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'key'),
     'verify_env': True,
     'permissive_pki_access': False,
@@ -377,7 +456,24 @@ DEFAULT_MASTER_OPTS = {
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
-    'keysize': 4096
+    'keysize': 4096,
+    'transport': 'zeromq',
+    'enumerate_proxy_minions': False,
+    'gather_job_timeout': 5,
+    'syndic_event_forward_timeout': 0.5,
+    'syndic_max_event_process_time': 0.5,
+    'ssh_passwd': '',
+    'ssh_port': '22',
+    'ssh_sudo': False,
+    'ssh_timeout': 60,
+    'ssh_user': 'root',
+    'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
+    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
+    'maintinance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
+    'ioflo_verbose': 0,
+    'ioflo_period': 0.01,
+    'ioflo_realtime': True,
+    'raet_port': 4506,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -558,7 +654,7 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    if os.path.isfile(path):
+    if salt.utils.validate.path.is_readable(path):
         opts = _read_conf_file(path)
         opts['conf_file'] = path
         return opts
@@ -636,7 +732,7 @@ def minion_config(path,
         # argument was then removed in `9d893e4` and `**kwargs` was then added
         # in `5d60f77` in order not to break backwards compatibility.
         #
-        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
             'Helium',
@@ -727,8 +823,8 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir',
-        'extension_modules', 'autosign_file', 'token_dir'
+        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'autosign_file', 'autoreject_file', 'token_dir'
     ]
     for config_key in ('log_file', 'key_logfile'):
         if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
@@ -852,7 +948,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, basestring):
+    if isinstance(deploy_scripts_search_path, string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing
@@ -1126,7 +1222,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
     vms = {}
 
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
             raise salt.cloud.exceptions.SaltCloudConfigError(
@@ -1283,7 +1379,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     providers = {}
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
         if not isinstance(val, (list, tuple)):
@@ -1611,7 +1707,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Guess the id of the minion.
 
     - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
-    - If socket.getfqdn() returns us something other than localhost, use it
+    - If salt.utils.network.get_fqhostname returns us something other than
+      localhost, use it
     - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
@@ -1632,7 +1729,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
 
     # Check for cached minion ID
     id_cache = os.path.join(root_dir,
-                            config_dir.lstrip('\\'),
+                            config_dir.lstrip(os.path.sep),
                             'minion_id')
 
     if cache:
@@ -1640,7 +1737,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
             if name:
-                log.info('Using cached minion ID: {0}'.format(name))
+                log.info('Using cached minion ID from {0}: {1}'
+                         .format(id_cache, name))
                 return name, False
         except (IOError, OSError):
             pass
@@ -1648,10 +1746,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    # Check socket.getfqdn()
-    fqdn = socket.getfqdn()
+    # Check salt.utils.network.get_fqhostname()
+    fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        log.info('Found minion id from get_fqhostname(): {0}'.format(fqdn))
         if minion_id and cache:
             _cache_id(fqdn, id_cache)
         return fqdn, False
@@ -1676,7 +1774,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         with salt.utils.fopen('/etc/hosts') as hfl:
             for line in hfl:
                 names = line.split()
-                ip_ = names.pop(0)
+                try:
+                    ip_ = names.pop(0)
+                except IndexError:
+                    continue
                 if ip_.startswith('127.'):
                     for name in names:
                         if name != 'localhost':
@@ -1688,29 +1789,30 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     except (IOError, OSError):
         pass
 
-    # Can Windows 'hosts' file help?
-    try:
-        windir = os.getenv('WINDIR')
-        with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
-            for line in hfl:
-                # skip commented or blank lines
-                if line[0] == '#' or len(line) <= 1:
-                    continue
-                # process lines looking for '127.' in first column
-                try:
-                    entry = line.split()
-                    if entry[0].startswith('127.'):
-                        for name in entry[1:]:  # try each name in the row
-                            if name != 'localhost':
-                                log.info('Found minion id in hosts file: {0}'
-                                         .format(name))
-                                if minion_id and cache:
-                                    _cache_id(name, id_cache)
-                                return name, False
-                except IndexError:
-                    pass  # could not split line (malformed entry?)
-    except (IOError, OSError):
-        pass
+    if salt.utils.is_windows():
+        # Can Windows 'hosts' file help?
+        try:
+            windir = os.getenv('WINDIR')
+            with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
+                for line in hfl:
+                    # skip commented or blank lines
+                    if line[0] == '#' or len(line) <= 1:
+                        continue
+                    # process lines looking for '127.' in first column
+                    try:
+                        entry = line.split()
+                        if entry[0].startswith('127.'):
+                            for name in entry[1:]:  # try each name in the row
+                                if name != 'localhost':
+                                    log.info('Found minion id in hosts file: {0}'
+                                            .format(name))
+                                    if minion_id and cache:
+                                        _cache_id(name, id_cache)
+                                    return name, False
+                    except IndexError:
+                        pass  # could not split line (malformed entry?)
+        except (IOError, OSError):
+            pass
 
     # What IP addresses do we have?
     ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
@@ -1743,7 +1845,7 @@ def apply_minion_config(overrides=None,
         # argument was then removed in `9d893e4` and `**kwargs` was then added
         # in `5d60f77` in order not to break backwards compatibility.
         #
-        # Showing a deprecation for 0.17.0 and 0.18.0 should be enough for any
+        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
         # api calls to be updated in order to stop it's use.
         salt.utils.warn_until(
             'Helium',
@@ -1871,7 +1973,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'token_dir'
+        'autosign_file', 'autoreject_file', 'token_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system
@@ -1956,9 +2058,9 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Update with the users salt dot file or with the environment variable
     opts.update(
         load_config(
-            os.path.expanduser('~/.salt'),
+            os.path.expanduser('~/.saltrc'),
             env_var,
-            os.path.expanduser('~/.salt')
+            os.path.expanduser('~/.saltrc')
         )
     )
     # Make sure we have a proper and absolute path to the token file
@@ -1970,8 +2072,19 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         )
     # If the token file exists, read and store the contained token
     if os.path.isfile(opts['token_file']):
-        with salt.utils.fopen(opts['token_file']) as fp_:
-            opts['token'] = fp_.read().strip()
+        # Make sure token is still valid
+        expire = opts.get('token_expire', 43200)
+        if os.stat(opts['token_file']).st_mtime + expire > time.mktime(time.localtime()):
+            with salt.utils.fopen(opts['token_file']) as fp_:
+                opts['token'] = fp_.read().strip()
+    # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
+    if opts['interface'] == '0.0.0.0':
+        opts['interface'] = '127.0.0.1'
+
+    # Make sure the master_uri is set
+    if 'master_uri' not in opts:
+        opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['interface'],
+                                                        port=opts['ret_port'])
     # Return the client options
     _validate_opts(opts)
     return opts

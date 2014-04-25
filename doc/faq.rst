@@ -66,6 +66,34 @@ runner:
 
     salt-run manage.down
 
+Also, if the Master is under heavy load, it is possible that the CLI will exit
+without displaying return data for all targeted Minions. However, this doesn't
+mean that the Minions did not return; this only means that the Salt CLI timed
+out waiting for a response. Minions will still send their return data back to
+the Master once the job completes. If any expected Minions are missing from the
+CLI output, the :mod:`jobs.list_jobs <salt.runners.jobs.list_jobs>` runner can
+be used to show the job IDs of the jobs that have been run, and the
+:mod:`jobs.lookup_jid <salt.runners.jobs.lookup_jid>` runner can be used to get
+the return data for that job.
+
+.. code-block:: bash
+
+    salt-run jobs.list_jobs
+    salt-run jobs.lookup_jid 20130916125524463507
+
+If you find that you are often missing Minion return data on the CLI, only to
+find it with the jobs runners, then this may be a sign that the
+:conf_master:`worker_threads` value may need to be increased in the master
+config file. Additionally, running your Salt CLI commands with the ``-t``
+option will make Salt wait longer for the return data before the CLI command
+exits. For instance, the below command will wait up to 60 seconds for the
+Minions to return:
+
+.. code-block:: bash
+
+    salt -t 60 '*' test.ping
+
+
 How does Salt determine the Minion's id?
 ----------------------------------------
 
@@ -120,7 +148,7 @@ This is most likely a PATH issue. Did you custom-compile the software which the
 module requires? RHEL/CentOS/etc. in particular override the root user's path
 in ``/etc/init.d/functions``, setting it to ``/sbin:/usr/sbin:/bin:/usr/bin``,
 making software installed into ``/usr/local/bin`` unavailable to Salt when the
-Minion is started using the initscript. In version 0.18.0, Salt will have a
+Minion is started using the initscript. In version 2014.1.0, Salt will have a
 better solution for these sort of PATH-related issues, but recompiling the
 software to install it into a location within the PATH should resolve the
 issue in the meantime. Alternatively, you can create a symbolic link within the
@@ -135,11 +163,21 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
 
-As of release 0.17.1 backwards compatibility was broken (specifically for
-0.17.1 trying to interface with older releases) due to a protocol change for
-security purposes. The Salt team continues to emphasize backwards compatiblity
-as an important feature and plans to support it to the best of our ability to
-do so.
+This depends on the versions.  In general, it is recommended that Master and
+Minion versions match.
+
+When upgrading Salt, the master(s) should always be upgraded first.  Backwards
+compatibility for minions running newer versions of salt than their masters is
+not guaranteed.
+
+Whenever possible, backwards compatibility between new masters
+and old minions will be preserved.  Generally, the only exception to this
+policy is in case of a security vulnerability.
+
+Recent examples of backwards compatibility breakage include the 0.17.1 release
+(where all backwards compatibility was broken due to a security fix), and the
+2014.1.0 release (which retained compatibility between 2014.1.0 masters and
+0.17 minions, but broke compatibility for 2014.1.0 minions and older masters).
 
 Does Salt support backing up managed files?
 -------------------------------------------

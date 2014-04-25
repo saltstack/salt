@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8 -*-
 '''
 Make me some salt!
 '''
@@ -65,11 +65,11 @@ class Master(parsers.MasterOptionParser):
 
         try:
             if self.config['verify_env']:
-                verify_env(
-                    [
+                v_dirs = [
                         self.config['pki_dir'],
                         os.path.join(self.config['pki_dir'], 'minions'),
                         os.path.join(self.config['pki_dir'], 'minions_pre'),
+                        os.path.join(self.config['pki_dir'], 'minions_denied'),
                         os.path.join(self.config['pki_dir'],
                                      'minions_rejected'),
                         self.config['cachedir'],
@@ -77,7 +77,13 @@ class Master(parsers.MasterOptionParser):
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
                         self.config['token_dir'],
-                    ],
+                    ]
+                if self.config.get('transport') == 'raet':
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                verify_env(
+                    v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
@@ -89,21 +95,27 @@ class Master(parsers.MasterOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
         logger.info('Setting up the Salt Master')
 
-        if not verify_socket(self.config['interface'],
-                             self.config['publish_port'],
-                             self.config['ret_port']):
-            self.exit(4, 'The ports are not available to bind\n')
-        self.config['interface'] = ip_bracket(self.config['interface'])
-        migrations.migrate_paths(self.config)
+        if self.config['transport'].lower() == 'zeromq':
+            if not verify_socket(self.config['interface'],
+                                 self.config['publish_port'],
+                                 self.config['ret_port']):
+                self.exit(4, 'The ports are not available to bind\n')
+            self.config['interface'] = ip_bracket(self.config['interface'])
+            migrations.migrate_paths(self.config)
 
-        # Late import so logging works correctly
-        import salt.master
-        self.master = salt.master.Master(self.config)
+            # Late import so logging works correctly
+            import salt.master
+            self.master = salt.master.Master(self.config)
+        else:
+            # Add a udp port check here
+            import salt.daemons.flo
+            self.master = salt.daemons.flo.IofloMaster(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
 
@@ -119,12 +131,13 @@ class Master(parsers.MasterOptionParser):
         '''
         self.prepare()
         if check_user(self.config['user']):
-            try:
-                self.master.start()
-            except MasterExit:
-                self.shutdown()
-            finally:
-                sys.exit()
+            self.master.start()
+            #try:
+                #self.master.start()
+            #except MasterExit:
+                #self.shutdown()
+            #finally:
+                #sys.exit()
 
     def shutdown(self):
         '''
@@ -165,14 +178,19 @@ class Minion(parsers.MinionOptionParser):
                     confd = os.path.join(
                         os.path.dirname(self.config['conf_file']), 'minion.d'
                     )
-                verify_env(
-                    [
+                v_dirs = [
                         self.config['pki_dir'],
                         self.config['cachedir'],
                         self.config['sock_dir'],
                         self.config['extension_modules'],
                         confd,
-                    ],
+                    ]
+                if self.config.get('transport') == 'raet':
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                verify_env(
+                    v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
@@ -182,8 +200,11 @@ class Minion(parsers.MinionOptionParser):
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0077)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
@@ -193,18 +214,22 @@ class Minion(parsers.MinionOptionParser):
             )
         )
         migrations.migrate_paths(self.config)
-        # Late import so logging works correctly
-        import salt.minion
-        # If the minion key has not been accepted, then Salt enters a loop
-        # waiting for it, if we daemonize later then the minion could halt
-        # the boot process waiting for a key to be accepted on the master.
-        # This is the latest safe place to daemonize
-        self.daemonize_if_required()
-        self.set_pidfile()
-        if isinstance(self.config.get('master'), list):
-            self.minion = salt.minion.MultiMinion(self.config)
+        if self.config['transport'].lower() == 'zeromq':
+            # Late import so logging works correctly
+            import salt.minion
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion could halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
+            self.daemonize_if_required()
+            self.set_pidfile()
+            if isinstance(self.config.get('master'), list):
+                self.minion = salt.minion.MultiMinion(self.config)
+            else:
+                self.minion = salt.minion.Minion(self.config)
         else:
-            self.minion = salt.minion.Minion(self.config)
+            import salt.daemons.flo
+            self.minion = salt.daemons.flo.IofloMinion(self.config)
 
     def start(self):
         '''
@@ -233,6 +258,115 @@ class Minion(parsers.MinionOptionParser):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
+
+
+class ProxyMinion(parsers.MinionOptionParser):
+    '''
+    Create a proxy minion server
+    '''
+    def prepare(self, proxydetails):
+        '''
+        Run the preparation sequence required to start a salt minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).prepare()
+        '''
+        self.parse_args()
+
+        try:
+            if self.config['verify_env']:
+                confd = self.config.get('default_include')
+                if confd:
+                    # If 'default_include' is specified in config, then use it
+                    if '*' in confd:
+                        # Value is of the form "minion.d/*.conf"
+                        confd = os.path.dirname(confd)
+                    if not os.path.isabs(confd):
+                        # If configured 'default_include' is not an absolute
+                        # path, consider it relative to folder of 'conf_file'
+                        # (/etc/salt by default)
+                        confd = os.path.join(
+                            os.path.dirname(self.config['conf_file']), confd
+                        )
+                else:
+                    confd = os.path.join(
+                        os.path.dirname(self.config['conf_file']), 'minion.d'
+                    )
+                verify_env(
+                    [
+                        self.config['pki_dir'],
+                        self.config['cachedir'],
+                        self.config['sock_dir'],
+                        self.config['extension_modules'],
+                        confd,
+                    ],
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir'],
+                )
+                if 'proxy_log' in proxydetails:
+                    logfile = proxydetails['proxy_log']
+                else:
+                    logfile = None
+                if logfile is not None and not logfile.startswith(('tcp://',
+                                                                   'udp://',
+                                                                   'file://')):
+                    # Logfile is not using Syslog, verify
+                    verify_files([logfile], self.config['user'])
+        except OSError as err:
+            logger.exception('Failed to prepare salt environment')
+            sys.exit(err.errno)
+
+        self.config['proxy'] = proxydetails
+        self.setup_logfile_logger()
+        logger.info(
+            'Setting up a Salt Proxy Minion "{0}"'.format(
+                self.config['id']
+            )
+        )
+        migrations.migrate_paths(self.config)
+        # Late import so logging works correctly
+        import salt.minion
+        # If the minion key has not been accepted, then Salt enters a loop
+        # waiting for it, if we daemonize later then the minion could halt
+        # the boot process waiting for a key to be accepted on the master.
+        # This is the latest safe place to daemonize
+        self.daemonize_if_required()
+        self.set_pidfile()
+        if isinstance(self.config.get('master'), list):
+            self.minion = salt.minion.MultiMinion(self.config)
+        else:
+            self.minion = salt.minion.ProxyMinion(self.config)
+
+    def start(self, proxydetails):
+        '''
+        Start the actual minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        self.prepare(proxydetails)
+        try:
+            self.minion.tune_in()
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
+            logger.warn('Stopping the Salt Proxy Minion')
+            if isinstance(exc, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(exc))
+        finally:
+            self.shutdown()
+
+    def shutdown(self):
+        '''
+        If sub-classed, run any shutdown operations on this method.
+        '''
+        if 'proxy' in self.minion.opts:
+            self.minion.opts['proxyobject'].shutdown(self.minion.opts)
 
 
 class Syndic(parsers.SyndicOptionParser):
@@ -269,6 +403,7 @@ class Syndic(parsers.SyndicOptionParser):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
         except OSError as err:
+            logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
         self.setup_logfile_logger()

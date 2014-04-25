@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-
-"""
+'''
 Archive states.
-"""
+
+.. versionadded:: 2014.1.0 (Hydrogen)
+'''
 
 import logging
 import os
+import tarfile
+from contextlib import closing
 
 log = logging.getLogger(__name__)
 
@@ -15,11 +18,26 @@ def extracted(name,
               archive_format,
               tar_options=None,
               source_hash=None,
-              if_missing=None):
+              if_missing=None,
+              keep=False):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     State that make sure an archive is extracted in a directory.
-    The downloaded archive is erased if succesfully extracted.
+    The downloaded archive is erased if successfully extracted.
     The archive is downloaded only if necessary.
+
+    .. code-block:: yaml
+
+        graylog2-server:
+          archive:
+            - extracted
+            - name: /opt/
+            - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
+            - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
+            - tar_options: J
+            - archive_format: tar
+            - if_missing: /opt/graylog2-server-0.9.6p1/
 
     .. code-block:: yaml
 
@@ -30,7 +48,6 @@ def extracted(name,
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
             - archive_format: tar
-            - tar_options: z
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
@@ -38,6 +55,10 @@ def extracted(name,
 
     source
         Archive source, same syntax as file.managed source argument.
+
+    source_hash
+        Hash of source file, or file with list of hash-to-file mappings.
+        It uses the same syntax as the file.managed source_hash argument.
 
     archive_format
         tar, zip or rar
@@ -49,8 +70,11 @@ def extracted(name,
 
     tar_options
         Only used for tar format, it need to be the tar argument specific to
-        this archive, such as 'j' for bzip2, 'z' for gzip, '' for uncompressed
-        tar, 'J' for LZMA.
+        this archive, such as 'J' for LZMA.
+        Using this option means that the tar executable on the target will
+        be used, which is less platform independent.
+        If this option is not set, then the Python tarfile module is used.
+        The tarfile module supports gzip and bz2 in Python 2.
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -61,15 +85,12 @@ def extracted(name,
             name, ','.join(valid_archives))
         return ret
 
-    if archive_format == 'tar' and tar_options is None:
-        ret['result'] = False
-        ret['comment'] = 'tar archive need argument tar_options'
-        return ret
-
     if if_missing is None:
         if_missing = name
-    if (__salt__['file.directory_exists'](if_missing) or
-        __salt__['file.file_exists'](if_missing)):
+    if (
+        __salt__['file.directory_exists'](if_missing)
+        or __salt__['file.file_exists'](if_missing)
+    ):
         ret['result'] = True
         ret['comment'] = '{0} already exists'.format(if_missing)
         return ret
@@ -82,8 +103,8 @@ def extracted(name,
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(source,
-                                                                         name)
+                'Archive {0} would have been downloaded in cache'.format(
+                    source, name)
             return ret
 
         log.debug("Archive file %s is not in cache, download it", source)
@@ -94,7 +115,8 @@ def extracted(name,
                     {'name': filename},
                     {'source': source},
                     {'source_hash': source_hash},
-                    {'makedirs': True}
+                    {'makedirs': True},
+                    {'saltenv': __env__}
                 ]
             }
         }
@@ -118,16 +140,34 @@ def extracted(name,
 
     if archive_format in ('zip', 'rar'):
         log.debug("Extract %s in %s", filename, name)
-        files = __salt__['archive.un{0}'.format(archive_format)](filename, name)
+        files = __salt__['archive.un{0}'.format(archive_format)](filename,
+                                                                 name)
     else:
-        # this is needed until merging PR 2651
-        log.debug("Untar %s in %s", filename, name)
-        results = __salt__['cmd.run_all']('tar -xv{0}f {1}'.format(tar_options,
-                                                             filename),
-                                          cwd=name)
-        if results['retcode'] != 0:
-            return results
-        files = results['stdout']
+        if tar_options is None:
+            with closing(tarfile.open(filename, 'r')) as tar:
+                files = tar.getnames()
+                tar.extractall(name)
+        else:
+            # this is needed until merging PR 2651
+            log.debug("Untar %s in %s", filename, name)
+            for opt in ['x']:
+                if not opt in tar_options:
+                    tar_options = '-{0} {1}'.format(opt, tar_options)
+            # Want to ensure -f is the last argument before the filename
+            if 'f' in tar_options:
+                tar_options = tar_options.replace('f', '')
+            results = __salt__['cmd.run_all']('tar {0} -f "{1}"'.format(
+                tar_options, filename), cwd=name)
+            if results['retcode'] != 0:
+                ret['result'] = False
+                ret['changes'] = results
+                return ret
+            if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
+                files = results['stderr']
+            else:
+                files = results['stdout']
+            if not files:
+                files = 'no tar output so far'
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
@@ -135,7 +175,8 @@ def extracted(name,
             ret['changes']['directories_created'].append(if_missing)
         ret['changes']['extracted_files'] = files
         ret['comment'] = "{0} extracted in {1}".format(source, name)
-        os.unlink(filename)
+        if not keep:
+            os.unlink(filename)
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False

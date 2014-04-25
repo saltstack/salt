@@ -2,6 +2,8 @@
 Salt 0.17.0 Release Notes
 =========================
 
+:release: 2013-09-26
+
 The 0.17.0 release is a very exciting release of Salt, this brings to Salt
 some very powerful new features and advances. The advances range from the
 state system to the test suite, covering new transport capabilities and

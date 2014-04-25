@@ -17,6 +17,12 @@ __func_alias__ = {
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+import logging
+log = logging.getLogger(__name__)
+
+
+_DEFAULT_VER = '7.0.0'
+
 
 def __virtual__():
     '''
@@ -25,6 +31,15 @@ def __virtual__():
     if __grains__['os'] in ('Debian', 'Raspbian') and not _sd_booted():
         return __virtualname__
     return False
+
+
+def _service_cmd(*args):
+    osmajor = _osrel()[0]
+    if osmajor < '6':
+        cmd = '/etc/init.d/{0} {1}'.format(args[0], ' '.join(args[1:]))
+    else:
+        cmd = 'service {0} {1}'.format(args[0], ' '.join(args[1:]))
+    return cmd
 
 
 def _get_runlevel():
@@ -133,7 +148,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'service {0} start'.format(name)
+    cmd = _service_cmd(name, 'start')
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -147,7 +162,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'service {0} stop'.format(name)
+    cmd = _service_cmd(name, 'stop')
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -161,7 +176,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = 'service {0} restart'.format(name)
+    cmd = _service_cmd(name, 'restart')
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -175,7 +190,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     '''
-    cmd = 'service {0} reload'.format(name)
+    cmd = _service_cmd(name, 'reload')
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -189,7 +204,7 @@ def force_reload(name):
 
         salt '*' service.force_reload <service name>
     '''
-    cmd = 'service {0} force-reload'.format(name)
+    cmd = _service_cmd(name, 'force-reload')
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -206,8 +221,15 @@ def status(name, sig=None):
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = 'service {0} status'.format(name)
+    cmd = _service_cmd(name, 'status')
     return not __salt__['cmd.retcode'](cmd)
+
+
+def _osrel():
+    osrel = __grains__.get('osrelease', _DEFAULT_VER)
+    if not osrel:
+        osrel = _DEFAULT_VER
+    return osrel
 
 
 def enable(name, **kwargs):
@@ -220,10 +242,17 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'update-rc.d {0} enable'.format(name)
-    osmajor = __grains__['osrelease'].split('.')[0]
-    if int(osmajor) >= 6:
-        cmd = 'insserv {0} && '.format(name) + cmd
+    osmajor = _osrel()[0]
+    if osmajor < '6':
+        cmd = 'update-rc.d -f {0} defaults 99'.format(name)
+    else:
+        cmd = 'update-rc.d {0} enable'.format(name)
+    try:
+        if int(osmajor) >= 6:
+            cmd = 'insserv {0} && '.format(name) + cmd
+    except ValueError:
+        if osmajor == 'testing/unstable' or osmajor == 'unstable':
+            cmd = 'insserv {0} && '.format(name) + cmd
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -237,7 +266,11 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'update-rc.d {0} disable'.format(name)
+    osmajor = _osrel()[0]
+    if osmajor < '6':
+        cmd = 'update-rc.d -f {0} remove'.format(name)
+    else:
+        cmd = 'update-rc.d {0} disable'.format(name)
     return not __salt__['cmd.retcode'](cmd)
 
 

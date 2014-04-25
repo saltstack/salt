@@ -10,6 +10,38 @@ import tarfile
 # Import third party libs
 import jinja2
 import yaml
+import msgpack
+import requests
+try:
+    import urllib3
+    HAS_URLLIB3 = True
+except ImportError:
+    # Import the bundled package
+    try:
+        from requests.packages import urllib3  # pylint: disable=E0611
+        HAS_URLLIB3 = True
+    except ImportError:
+        HAS_URLLIB3 = False
+try:
+    import six
+    HAS_SIX = True
+except ImportError:
+    # Import the bundled package
+    try:
+        from requests.packages.urllib3.packages import six  # pylint: disable=E0611
+        HAS_SIX = True
+    except ImportError:
+        HAS_SIX = False
+try:
+    import chardet
+    HAS_CHARDET = True
+except ImportError:
+    # Import the bundled package
+    try:
+        from requests.packages.urllib3.packages import chardet  # pylint: disable=E0611
+        HAS_CHARDET = True
+    except ImportError:
+        HAS_CHARDET = False
 try:
     import markupsafe
     HAS_MARKUPSAFE = True
@@ -60,12 +92,29 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
+            os.path.dirname(msgpack.__file__),
+            os.path.dirname(requests.__file__)
             ]
+
+    if HAS_URLLIB3:
+        tops.append(os.path.dirname(urllib3.__file__))
+
+    if HAS_SIX:
+        tops.append(six.__file__.replace('.pyc', '.py'))
+
+    if HAS_CHARDET:
+        tops.append(os.path.dirname(chardet.__file__))
+
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
             try:
                 locals()[mod] = __import__(mod)
-                tops.append(os.path.dirname(locals()[mod].__file__))
+                moddir, modname = os.path.split(locals()[mod].__file__)
+                base, ext = os.path.splitext(modname)
+                if base == '__init__':
+                    tops.append(moddir)
+                else:
+                    tops.append(os.path.join(moddir, base + '.py'))
             except ImportError:
                 # Not entirely sure this is the right thing, but the only
                 # options seem to be 1) fail, 2) spew errors, or 3) pass.
@@ -80,6 +129,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
     for top in tops:
         base = os.path.basename(top)
         os.chdir(os.path.dirname(top))
+        if not os.path.isdir(top):
+            # top is a single file module
+            tfp.add(base)
+            continue
         for root, dirs, files in os.walk(base):
             for name in files:
                 if not name.endswith(('.pyc', '.pyo')):

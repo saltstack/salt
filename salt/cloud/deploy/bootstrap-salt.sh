@@ -1,52 +1,52 @@
 #!/bin/sh -
-#===============================================================================
-# vim: softtabstop=4 shiftwidth=4 expandtab fenc=utf-8 spell spelllang=en cc=81
-#===============================================================================
+#======================================================================================================================
+# vim: softtabstop=4 shiftwidth=4 expandtab fenc=utf-8 spell spelllang=en cc=120
+#======================================================================================================================
 #
 #          FILE: bootstrap-salt.sh
 #
 #   DESCRIPTION: Bootstrap salt installation for various systems/distributions
 #
-#          BUGS: https://github.com/saltstack/salt-boostrap/issues
+#          BUGS: https://github.com/saltstack/salt-bootstrap/issues
 #
-#     COPYRIGHT: (c) 2012-2013 by the SaltStack Team, see AUTHORS.rst for more
+#     COPYRIGHT: (c) 2012-2014 by the SaltStack Team, see AUTHORS.rst for more
 #                details.
 #
 #       LICENSE: Apache 2.0
-#  ORGANIZATION: Salt Stack (saltstack.org)
+#  ORGANIZATION: SaltStack (saltstack.org)
 #       CREATED: 10/15/2012 09:49:37 PM WEST
-#===============================================================================
+#======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="1.5.9"
+__ScriptVersion="2014.04.16"
 __ScriptName="bootstrap-salt.sh"
 
-#===============================================================================
+#======================================================================================================================
 #  Environment variables taken into account.
-#-------------------------------------------------------------------------------
-#   * BS_COLORS:          If 0 disables colour support
-#   * BS_PIP_ALLOWED:     If 1 enable pip based installations(if needed)
-#   * BS_ECHO_DEBUG:      If 1 enable debug echo which can also be set by -D
-#   * BS_SALT_ETC_DIR:    Defaults to /etc/salt
-#   * BS_KEEP_TEMP_FILES: If 1, don't move temporary files, instead copy them
-#   * BS_FORCE_OVERWRITE: Force overriding copied files(config, init.d, etc)
-#   * BS_UPGRADE_SYS:     If 1 and an option, upgrade system. Default 0.
-#   * BS_GENTOO_USE_BINHOST: If 1 add `--getbinpkg` to gentoo's emerge
-#===============================================================================
+#----------------------------------------------------------------------------------------------------------------------
+#   * BS_COLORS:              If 0 disables colour support
+#   * BS_PIP_ALLOWED:         If 1 enable pip based installations(if needed)
+#   * BS_ECHO_DEBUG:          If 1 enable debug echo which can also be set by -D
+#   * BS_SALT_ETC_DIR:        Defaults to /etc/salt (Only tweak'able on git based installations)
+#   * BS_KEEP_TEMP_FILES:     If 1, don't move temporary files, instead copy them
+#   * BS_FORCE_OVERWRITE:     Force overriding copied files(config, init.d, etc)
+#   * BS_UPGRADE_SYS:         If 1 and an option, upgrade system. Default 0.
+#   * BS_GENTOO_USE_BINHOST:  If 1 add `--getbinpkg` to gentoo's emerge
+#======================================================================================================================
 
 
-#===============================================================================
+#======================================================================================================================
 #  LET THE BLACK MAGIC BEGIN!!!!
-#===============================================================================
+#======================================================================================================================
 
 
 # Bootstrap script truth values
 BS_TRUE=1
 BS_FALSE=0
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __detect_color_support
 #   DESCRIPTION:  Try to detect color support.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 _COLORS=${BS_COLORS:-$(tput colors 2>/dev/null || echo 0)}
 __detect_color_support() {
     if [ $? -eq 0 ] && [ "$_COLORS" -gt 2 ]; then
@@ -66,117 +66,63 @@ __detect_color_support() {
 __detect_color_support
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echoerr
 #   DESCRIPTION:  Echo errors to stderr.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echoerror() {
-    printf "${RC} * ERROR${EC}: $@\n" 1>&2;
+    printf "${RC} * ERROR${EC}: %s\n" "$@" 1>&2;
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echoinfo
 #   DESCRIPTION:  Echo information to stdout.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echoinfo() {
     printf "${GC} *  INFO${EC}: %s\n" "$@";
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echowarn
-#   DESCRIPTION:  Echo warning information to stdout.
-#-------------------------------------------------------------------------------
+#   DESCRIPTION:  Echo warning informations to stdout.
+#----------------------------------------------------------------------------------------------------------------------
 echowarn() {
     printf "${YC} *  WARN${EC}: %s\n" "$@";
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  echodebug
 #   DESCRIPTION:  Echo debug information to stdout.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 echodebug() {
     if [ $_ECHO_DEBUG -eq $BS_TRUE ]; then
         printf "${BC} * DEBUG${EC}: %s\n" "$@";
     fi
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  check_pip_allowed
 #   DESCRIPTION:  Simple function to let the users know that -P needs to be
 #                 used.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 check_pip_allowed() {
+    if [ $# -eq 1 ]; then
+        _PIP_ALLOWED_ERROR_MSG=$1
+    else
+        _PIP_ALLOWED_ERROR_MSG="pip based installations were not allowed. Retry using '-P'"
+    fi
+
     if [ $_PIP_ALLOWED -eq $BS_FALSE ]; then
-        echoerror "pip based installations were not allowed. Retry using '-P'"
+        echoerror "$_PIP_ALLOWED_ERROR_MSG"
         usage
         exit 1
     fi
 }
 
-#===  FUNCTION  ================================================================
-#         NAME:  usage
-#  DESCRIPTION:  Display usage information.
-#===============================================================================
-usage() {
-    cat << EOT
-
-  Usage :  ${__ScriptName} [options] <install-type> <install-type-args>
-
-  Installation types:
-    - stable (default)
-    - daily  (ubuntu specific)
-    - git
-
-  Examples:
-    $ ${__ScriptName}
-    $ ${__ScriptName} stable
-    $ ${__ScriptName} daily
-    $ ${__ScriptName} git
-    $ ${__ScriptName} git develop
-    $ ${__ScriptName} git v0.17.0
-    $ ${__ScriptName} git 8c3fadf15ec183e5ce8c63739850d543617e4357
-
-  Options:
-  -h  Display this message
-  -v  Display script version
-  -n  No colours.
-  -D  Show debug output.
-  -c  Temporary configuration directory
-  -k  Temporary directory holding the minion keys which will pre-seed
-      the master.
-  -M  Also install salt-master
-  -S  Also install salt-syndic
-  -N  Do not install salt-minion
-  -X  Do not start daemons after installation
-  -C  Only run the configuration function. This option automatically
-      bypasses any installation.
-  -P  Allow pip based installations. On some distributions the required salt
-      packages or its dependencies are not available as a package for that
-      distribution. Using this flag allows the script to use pip as a last
-      resort method. NOTE: This works for functions which actually implement
-      pip based installations.
-  -F  Allow copied files to overwrite existing(config, init.d, etc)
-  -U  If set, fully upgrade the system prior to bootstrapping salt
-  -K  If set, keep the temporary files in the temporary directories specified
-      with -c and -k.
-
-EOT
-}   # ----------  end of function usage  ----------
-
-#===  FUNCTION  ================================================================
-#         NAME:  __fetch_url
-#  DESCRIPTION:  Retrieves a URL and writes it to a given path
-#===============================================================================
-__fetch_url() {
-    curl --insecure -s -o "$1" "$2" >/dev/null 2>&1 ||
-        wget --no-check-certificate -q -O "$1" "$2" >/dev/null 2>&1 ||
-            fetch -q -o "$1" "$2" >/dev/null 2>&1
-}
-
-#===  FUNCTION  ================================================================
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #         NAME:  __check_config_dir
 #  DESCRIPTION:  Checks the config directory, retrieves URLs if provided.
-#===============================================================================
+#----------------------------------------------------------------------------------------------------------------------
 __check_config_dir() {
     CC_DIR_NAME="$1"
     CC_DIR_BASE=$(basename "${CC_DIR_NAME}")
@@ -222,15 +168,81 @@ __check_config_dir() {
     echo "${CC_DIR_NAME}"
 }
 
-#-----------------------------------------------------------------------
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#         NAME:  usage
+#  DESCRIPTION:  Display usage information.
+#----------------------------------------------------------------------------------------------------------------------
+usage() {
+    cat << EOT
+
+  Usage :  ${__ScriptName} [options] <install-type> <install-type-args>
+
+  Installation types:
+    - stable (default)
+    - daily  (ubuntu specific)
+    - git
+
+  Examples:
+    - ${__ScriptName}
+    - ${__ScriptName} stable
+    - ${__ScriptName} daily
+    - ${__ScriptName} git
+    - ${__ScriptName} git develop
+    - ${__ScriptName} git v0.17.0
+    - ${__ScriptName} git 8c3fadf15ec183e5ce8c63739850d543617e4357
+
+  Options:
+  -h  Display this message
+  -v  Display script version
+  -n  No colours.
+  -D  Show debug output.
+  -c  Temporary configuration directory
+  -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
+  -k  Temporary directory holding the minion keys which will pre-seed
+      the master.
+  -M  Also install salt-master
+  -S  Also install salt-syndic
+  -N  Do not install salt-minion
+  -X  Do not start daemons after installation
+  -C  Only run the configuration function. This option automatically
+      bypasses any installation.
+  -P  Allow pip based installations. On some distributions the required salt
+      packages or its dependencies are not available as a package for that
+      distribution. Using this flag allows the script to use pip as a last
+      resort method. NOTE: This only works for functions which actually
+      implement pip based installations.
+  -F  Allow copied files to overwrite existing(config, init.d, etc)
+  -U  If set, fully upgrade the system prior to bootstrapping salt
+  -K  If set, keep the temporary files in the temporary directories specified
+      with -c and -k.
+  -I  If set, allow insecure connections while downloading any files. For
+      example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
+  -A  Pass the salt-master DNS name or IP. This will be stored under
+      \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
+  -i  Pass the salt-minion id. This will be stored under
+      \${BS_SALT_ETC_DIR}/minion_id
+  -L  Install the Apache Libcloud package if possible(required for salt-cloud)
+  -p  Extra-package to install while installing salt dependencies. One package
+      per -p flag. You're responsible for providing the proper package name.
+
+EOT
+}   # ----------  end of function usage  ----------
+
+
+
+#----------------------------------------------------------------------------------------------------------------------
 #  Handle command line arguments
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 _KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 _TEMP_CONFIG_DIR="null"
+_SALTSTACK_REPO_URL="git://github.com/saltstack/salt.git"
+_SALT_REPO_URL=${_SALTSTACK_REPO_URL}
 _TEMP_KEYS_DIR="null"
 _INSTALL_MASTER=$BS_FALSE
 _INSTALL_SYNDIC=$BS_FALSE
 _INSTALL_MINION=$BS_TRUE
+_INSTALL_CLOUD=$BS_FALSE
 _START_DAEMONS=$BS_TRUE
 _ECHO_DEBUG=${BS_ECHO_DEBUG:-$BS_FALSE}
 _CONFIG_ONLY=$BS_FALSE
@@ -241,17 +253,25 @@ _FORCE_OVERWRITE=${BS_FORCE_OVERWRITE:-$BS_FALSE}
 _GENTOO_USE_BINHOST=${BS_GENTOO_USE_BINHOST:-$BS_FALSE}
 _EPEL_REPO=${BS_EPEL_REPO:-epel}
 _UPGRADE_SYS=${BS_UPGRADE_SYS:-$BS_FALSE}
+_INSECURE_DL=${BS_INSECURE_DL:-$BS_FALSE}
+_WGET_ARGS=${BS_WGET_ARGS:-}
+_CURL_ARGS=${BS_CURL_ARGS:-}
+_FETCH_ARGS=${BS_FETCH_ARGS:-}
+_SALT_MASTER_ADDRESS="null"
+_SALT_MINION_ID="null"
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
 __SIMPLIFY_VERSION=$BS_TRUE
+_LIBCLOUD_MIN_VERSION="0.14.0"
+_EXTRA_PACKAGES=""
 
-while getopts ":hvnDc:k:MSNXCPFUK" opt
+while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:" opt
 do
   case "${opt}" in
 
     h )  usage; exit 0                                  ;;
 
-    v )  echo "$0 -- Version $__ScriptVersion"; exit 0    ;;
-    n )  _COLORS=0; __detect_color_support               ;;
+    v )  echo "$0 -- Version $__ScriptVersion"; exit 0  ;;
+    n )  _COLORS=0; __detect_color_support              ;;
     D )  _ECHO_DEBUG=$BS_TRUE                           ;;
     c )  _TEMP_CONFIG_DIR=$(__check_config_dir "$OPTARG")
          # If the configuration directory does not exist, error out
@@ -264,6 +284,7 @@ do
              exit 1
          fi
          ;;
+    g ) _SALT_REPO_URL=$OPTARG                          ;;
     k )  _TEMP_KEYS_DIR="$OPTARG"
          # If the configuration directory does not exist, error out
          if [ ! -d "$_TEMP_KEYS_DIR" ]; then
@@ -280,6 +301,12 @@ do
     F )  _FORCE_OVERWRITE=$BS_TRUE                      ;;
     U )  _UPGRADE_SYS=$BS_TRUE                          ;;
     K )  _KEEP_TEMP_FILES=$BS_TRUE                      ;;
+    I )  _INSECURE_DL=$BS_TRUE                          ;;
+    A )  _SALT_MASTER_ADDRESS=$OPTARG                   ;;
+    i )  _SALT_MINION_ID=$OPTARG                        ;;
+    L )  _INSTALL_CLOUD=$BS_TRUE                        ;;
+    p )  _EXTRA_PACKAGES="$_EXTRA_PACKAGES $OPTARG"     ;;
+
 
     \?)  echo
          echoerror "Option does not exist : $OPTARG"
@@ -289,7 +316,7 @@ do
 
   esac    # --- end of case ---
 done
-shift $(($OPTIND-1))
+shift $((OPTIND-1))
 
 
 __check_unparsed_options() {
@@ -300,7 +327,7 @@ __check_unparsed_options() {
     else
         grep='grep'
     fi
-    unparsed_options=$( echo "$shellopts" | ${grep} -E '[-]+[[:alnum:]]' )
+    unparsed_options=$( echo "$shellopts" | ${grep} -E '(^|[[:space:]])[-]+[[:alnum:]]' )
     if [ "x$unparsed_options" != "x" ]; then
         usage
         echo
@@ -322,6 +349,19 @@ if [ $_CONFIG_ONLY -eq $BS_TRUE ] && [ "$_TEMP_CONFIG_DIR" = "null" ]; then
     exit 1
 fi
 
+# Check that we're installing a minion if we're being passed a master address
+if [ $_INSTALL_MINION -eq $BS_FALSE ] && [ $_SALT_MASTER_ADDRESS != "null" ]; then
+    echoerror "Don't pass a master address (-A) if no minion is going to be bootstrapped."
+    exit 1
+fi
+
+# Check that we're installing a minion if we're being passed a master address
+if [ $_INSTALL_MINION -eq $BS_FALSE ] && [ $_SALT_MINION_ID != "null" ]; then
+    echoerror "Don't pass a minion id (-i) if no minion is going to be bootstrapped."
+    exit 1
+fi
+
+
 # Define installation type
 if [ "$#" -eq 0 ];then
     ITYPE="stable"
@@ -340,7 +380,7 @@ fi
 # If doing a git install, check what branch/tag/sha will be checked out
 if [ $ITYPE = "git" ]; then
     if [ "$#" -eq 0 ];then
-        GIT_REV="master"
+        GIT_REV="develop"
     else
         __check_unparsed_options "$*"
         GIT_REV="$1"
@@ -371,7 +411,7 @@ if [ "$(${whoami})" != "root" ]; then
 fi
 
 # Let's discover how we're being called
-CALLER=$(echo `ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' '` | cut -d ' ' -f 2)
+CALLER="$(echo `ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' '` | cut -d ' ' -f 2)"
 if [ "${CALLER}x" = "${0}x" ]; then
     CALLER="PIPED THROUGH"
 fi
@@ -380,7 +420,7 @@ echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
 #echowarn "Running the unstable version of ${__ScriptName}"
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __exit_cleanup
 #   DESCRIPTION:  Cleanup any leftovers after script has ended
 #
@@ -395,9 +435,20 @@ echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
 #               9               SIGKILL
 #              14               SIGALRM
 #              15               SIGTERM
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __exit_cleanup() {
     EXIT_CODE=$?
+
+    if [ $ITYPE = "git" ] && [ -d /tmp/git/salt ]; then
+        if [ $_KEEP_TEMP_FILES -eq $BS_FALSE ]; then
+            # Clean up the checked out repositry
+            echodebug "Cleaning up the Salt Temporary Git Repository"
+            rm -rf /tmp/git/salt
+        else
+            echoinfo "Not cleaning up the Salt Temporary git repository on request"
+            echoinfo "Note that if you intend to re-run this script using the git approach, you might encounter some issues"
+        fi
+    fi
 
     # Remove the logging pipe when the script exits
     echodebug "Removing the logging pipe $LOGPIPE"
@@ -451,10 +502,30 @@ exec 2>&-
 exec 2>$LOGPIPE
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+# Handle the insecure flags
+if [ $_INSECURE_DL -eq $BS_TRUE ]; then
+    _CURL_ARGS="${_CURL_ARGS} --insecure"
+    _WGET_ARGS="${_WGET_ARGS} --no-check-certificate"
+    _FETCH_ARGS="${_FETCH_ARGS} --no-verify-peer"
+fi
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#         NAME:  __fetch_url
+#  DESCRIPTION:  Retrieves a URL and writes it to a given path
+#----------------------------------------------------------------------------------------------------------------------
+__fetch_url() {
+    curl $_CURL_ARGS -s -o "$1" "$2" >/dev/null 2>&1 ||
+        wget $_WGET_ARGS -q -O "$1" "$2" >/dev/null 2>&1 ||
+            fetch $_FETCH_ARGS -q -o "$1" "$2" >/dev/null 2>&1 ||
+                fetch -q -o "$1" "$2" >/dev/null 2>&1           # Pre FreeBSD 10
+
+}
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_hardware_info
 #   DESCRIPTION:  Discover hardware information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_hardware_info() {
     if [ -f /proc/cpuinfo ]; then
         CPU_VENDOR_ID=$(awk '/vendor_id|Processor/ {sub(/-.*$/,"",$3); print $3; exit}' /proc/cpuinfo )
@@ -474,10 +545,10 @@ __gather_hardware_info() {
 __gather_hardware_info
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_os_info
 #   DESCRIPTION:  Discover operating system information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_os_info() {
     OS_NAME=$(uname -s 2>/dev/null)
     OS_NAME_L=$( echo $OS_NAME | tr '[:upper:]' '[:lower:]' )
@@ -487,11 +558,11 @@ __gather_os_info() {
 __gather_os_info
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __parse_version_string
 #   DESCRIPTION:  Parse version strings ignoring the revision.
 #                 MAJOR.MINOR.REVISION becomes MAJOR.MINOR
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __parse_version_string() {
     VERSION_STRING="$1"
     PARSED_VERSION=$(
@@ -506,43 +577,43 @@ __parse_version_string() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __unquote_string
 #   DESCRIPTION:  Strip single or double quotes from the provided string.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __unquote_string() {
-    echo $@ | sed "s/^\([\"']\)\(.*\)\1\$/\2/g"
+    echo "${@}" | sed "s/^\([\"']\)\(.*\)\1\$/\2/g"
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __camelcase_split
 #   DESCRIPTION:  Convert CamelCased strings to Camel_Cased
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __camelcase_split() {
-    echo $@ | sed -r 's/([^A-Z-])([A-Z])/\1 \2/g'
+    echo "${@}" | sed -r 's/([^A-Z-])([A-Z])/\1 \2/g'
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __strip_duplicates
 #   DESCRIPTION:  Strip duplicate strings
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __strip_duplicates() {
-    echo $@ | tr -s '[:space:]' '\n' | awk '!x[$0]++'
+    echo "${@}" | tr -s '[:space:]' '\n' | awk '!x[$0]++'
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __sort_release_files
 #   DESCRIPTION:  Custom sort function. Alphabetical or numerical sort is not
 #                 enough.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __sort_release_files() {
     KNOWN_RELEASE_FILES=$(echo "(arch|centos|debian|ubuntu|fedora|redhat|suse|\
         mandrake|mandriva|gentoo|slackware|turbolinux|unitedlinux|lsb|system|\
-        os)(-|_)(release|version)" | sed -r 's:[[:space:]]::g')
+        oracle|os)(-|_)(release|version)" | sed -r 's:[[:space:]]::g')
     primary_release_files=""
     secondary_release_files=""
     # Sort know VS un-known files first
-    for release_file in $(echo $@ | sed -r 's:[[:space:]]:\n:g' | sort --unique --ignore-case); do
+    for release_file in $(echo "${@}" | sed -r 's:[[:space:]]:\n:g' | sort --unique --ignore-case); do
         match=$(echo $release_file | egrep -i ${KNOWN_RELEASE_FILES})
         if [ "x${match}" != "x" ]; then
             primary_release_files="${primary_release_files} ${release_file}"
@@ -571,10 +642,10 @@ __sort_release_files() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_linux_system_info
 #   DESCRIPTION:  Discover Linux system information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_linux_system_info() {
     DISTRO_NAME=""
     DISTRO_VERSION=""
@@ -583,17 +654,20 @@ __gather_linux_system_info() {
     rv=$(lsb_release >/dev/null 2>&1)
     if [ $? -eq 0 ]; then
         DISTRO_NAME=$(lsb_release -si)
-        if [ "x$(echo "$DISTRO_NAME" | grep RedHat)" != "x" ]; then
+        if [ "${DISTRO_NAME}" = "Scientific" ]; then
+            DISTRO_NAME="Scientific Linux"
+        elif [ "x$(echo "$DISTRO_NAME" | grep RedHat)" != "x" ]; then
             # Let's convert CamelCase to Camel Case
             DISTRO_NAME=$(__camelcase_split "$DISTRO_NAME")
-        fi
-        if [ "${DISTRO_NAME}" = "openSUSE project" ]; then
+        elif [ "${DISTRO_NAME}" = "openSUSE project" ]; then
             # lsb_release -si returns "openSUSE project" on openSUSE 12.3
             DISTRO_NAME="opensuse"
-        fi
-        if [ "${DISTRO_NAME}" = "SUSE LINUX" ]; then
+        elif [ "${DISTRO_NAME}" = "SUSE LINUX" ]; then
             # lsb_release -si returns "SUSE LINUX" on SLES 11 SP3
             DISTRO_NAME="suse"
+        elif [ "${DISTRO_NAME}" = "EnterpriseEnterpriseServer" ]; then
+            # This the Oracle Linux Enterprise ID before ORACLE LINUX 5 UPDATE 3
+            DISTRO_NAME="Oracle Linux"
         fi
         rv=$(lsb_release -sr)
         [ "${rv}x" != "x" ] && DISTRO_VERSION=$(__parse_version_string "$rv")
@@ -626,6 +700,8 @@ __gather_linux_system_info() {
             redhat             )
                 if [ ".$(egrep 'CentOS' /etc/${rsource})" != . ]; then
                     n="CentOS"
+                elif [ ".$(egrep 'Scientific' /etc/${rsource})" != . ]; then
+                    n="Scientific Linux"
                 elif [ ".$(egrep 'Red Hat Enterprise Linux' /etc/${rsource})" != . ]; then
                     n="<R>ed <H>at <E>nterprise <L>inux"
                 else
@@ -643,6 +719,7 @@ __gather_linux_system_info() {
             slackware          ) n="Slackware"      ;;
             turbolinux         ) n="TurboLinux"     ;;
             unitedlinux        ) n="UnitedLinux"    ;;
+            oracle             ) n="Oracle Linux"   ;;
             system             )
                 while read -r line; do
                     [ "${n}x" != "systemx" ] && break
@@ -654,8 +731,8 @@ __gather_linux_system_info() {
                 done < /etc/${rsource}
                 ;;
             os                 )
-                nn=$(__unquote_string $(grep '^ID=' /etc/os-release | sed -e 's/^ID=\(.*\)$/\1/g'))
-                rv=$(__unquote_string $(grep '^VERSION_ID=' /etc/os-release | sed -e 's/^VERSION_ID=\(.*\)$/\1/g'))
+                nn="$(__unquote_string $(grep '^ID=' /etc/os-release | sed -e 's/^ID=\(.*\)$/\1/g'))"
+                rv="$(__unquote_string $(grep '^VERSION_ID=' /etc/os-release | sed -e 's/^VERSION_ID=\(.*\)$/\1/g'))"
                 [ "${rv}x" != "x" ] && v=$(__parse_version_string "$rv") || v=""
                 case $(echo ${nn} | tr '[:upper:]' '[:lower:]') in
                     arch        )
@@ -668,6 +745,9 @@ __gather_linux_system_info() {
                             if [ "$(cat /etc/debian_version)" = "wheezy/sid" ]; then
                                 # I've found an EC2 wheezy image which did not tell its version
                                 v=$(__parse_version_string "7.0")
+                            elif [ "$(cat /etc/debian_version)" = "jessie/sid" ]; then
+                                # Let's start detecting the upcoming Debian 8 (Jessie)
+                                v=$(__parse_version_string "8.0")
                             fi
                         else
                             echowarn "Unable to parse the Debian Version"
@@ -687,10 +767,10 @@ __gather_linux_system_info() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_sunos_system_info
 #   DESCRIPTION:  Discover SunOS system info
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_sunos_system_info() {
     if [ -f /sbin/uname ]; then
         DISTRO_VERSION=$(/sbin/uname -X | awk '/[kK][eE][rR][nN][eE][lL][iI][dD]/ { print $3}')
@@ -720,7 +800,7 @@ __gather_sunos_system_info() {
                     DISTRO_NAME="Solaris"
                     # Let's make sure we not actually on a Joyent's SmartOS VM since some releases
                     # don't have SmartOS in `/etc/release`, only `Solaris`
-                    $(uname -v | grep joyent >/dev/null 2>&1)
+                    uname -v | grep joyent >/dev/null 2>&1
                     if [ $? -eq 0 ]; then
                         DISTRO_NAME="SmartOS"
                     fi
@@ -763,20 +843,20 @@ __gather_sunos_system_info() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_bsd_system_info
 #   DESCRIPTION:  Discover OpenBSD, NetBSD and FreeBSD systems information
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_bsd_system_info() {
     DISTRO_NAME=${OS_NAME}
     DISTRO_VERSION=$(echo "${OS_VERSION}" | sed -e 's;[()];;' -e 's/-.*$//')
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_system_info
 #   DESCRIPTION:  Discover which system and distribution we are running.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __gather_system_info() {
     case ${OS_NAME_L} in
         linux )
@@ -796,12 +876,12 @@ __gather_system_info() {
 
 }
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __ubuntu_derivatives_translation
 #   DESCRIPTION:  Map Ubuntu derivatives to their Ubuntu base versions.
 #                 If distro has a known Ubuntu base version, use those install
 #                 functions by pretending to be Ubuntu (i.e. change global vars)
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __ubuntu_derivatives_translation() {
     UBUNTU_DERIVATIVES="(trisquel|linuxmint|linaro)"
     # Mappings
@@ -811,6 +891,9 @@ __ubuntu_derivatives_translation() {
     #linuxmint_15_ubuntu_base="13.04"
     # Bug preventing add-apt-repository from working on Mint 15:
     # https://bugs.launchpad.net/linuxmint/+bug/1198751
+
+    linuxmint_16_ubuntu_base="13.10"
+
     linaro_12_ubuntu_base="12.04"
 
     # Translate Ubuntu derivatives to their base Ubuntu version
@@ -862,6 +945,10 @@ if [ $_INSTALL_SYNDIC -eq $BS_TRUE ]; then
     fi
 fi
 
+if [ $_INSTALL_CLOUD -eq $BS_TRUE ] && [ $_CONFIG_ONLY -eq $BS_FALSE ]; then
+    echoinfo "Installing Apache-Libcloud required for salt-cloud"
+fi
+
 if [ $_START_DAEMONS -eq $BS_FALSE ]; then
     echoinfo "Daemons will not be started"
 fi
@@ -906,12 +993,12 @@ if [ ${ITYPE} = "testing" ]; then
     _EPEL_REPO="epel-testing"
 fi
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __function_defined
 #   DESCRIPTION:  Checks if a function is defined within this scripts scope
 #    PARAMETERS:  function name
 #       RETURNS:  0 or 1 as in defined or not defined
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __function_defined() {
     FUNC_NAME=$1
     if [ "$(command -v $FUNC_NAME)x" != "x" ]; then
@@ -923,11 +1010,11 @@ __function_defined() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __git_clone_and_checkout
 #   DESCRIPTION:  (DRY) Helper function to clone and checkout salt to a
 #                 specific revision.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __git_clone_and_checkout() {
     SALT_GIT_CHECKOUT_DIR=/tmp/git/salt
     [ -d /tmp/git ] || mkdir /tmp/git
@@ -937,6 +1024,15 @@ __git_clone_and_checkout() {
         git fetch || return 1
         # Tags are needed because of salt's versioning, also fetch that
         git fetch --tags || return 1
+
+        # If we have the SaltStack remote set as upstream, we also need to fetch the tags from there
+        if [ "x$(git remote -v | grep $_SALTSTACK_REPO_URL)" != "x" ]; then
+            git fetch --tags upstream
+        else
+            git remote add upstream $_SALTSTACK_REPO_URL
+            git fetch --tags upstream
+        fi
+
         git reset --hard $GIT_REV || return 1
 
         # Just calling `git reset --hard $GIT_REV` on a branch name that has
@@ -949,36 +1045,44 @@ __git_clone_and_checkout() {
             git pull --rebase || return 1
         fi
     else
-        git clone git://github.com/saltstack/salt.git || return 1
+        git clone $_SALT_REPO_URL || return 1
         cd $SALT_GIT_CHECKOUT_DIR
+
+        if [ $_SALT_REPO_URL != $_SALTSTACK_REPO_URL ]; then
+            # We need to add the saltstack repository as a remote and fetch tags for proper versioning
+            git remote add upstream $_SALTSTACK_REPO_URL
+            git fetch --tags upstream
+        fi
+
         git checkout $GIT_REV || return 1
+
     fi
     return 0
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __apt_get_install_noinput
 #   DESCRIPTION:  (DRY) apt-get install with noinput options
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __apt_get_install_noinput() {
-    apt-get install -y -o DPkg::Options::=--force-confold $@; return $?
+    apt-get install -y -o DPkg::Options::=--force-confold "${@}"; return $?
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __apt_get_upgrade_noinput
 #   DESCRIPTION:  (DRY) apt-get upgrade with noinput options
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __apt_get_upgrade_noinput() {
-    apt-get upgrade -y -o DPkg::Options::=--force-confold $@; return $?
+    apt-get upgrade -y -o DPkg::Options::=--force-confold; return $?
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __check_end_of_life_versions
 #   DESCRIPTION:  Check for end of life distribution versions
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 __check_end_of_life_versions() {
 
     case "${DISTRO_NAME_L}" in
@@ -1083,10 +1187,10 @@ __check_end_of_life_versions() {
 __check_end_of_life_versions
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  copyfile
 #   DESCRIPTION:  Simple function to copy files. Overrides if asked.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 copyfile() {
     overwrite=$_FORCE_OVERWRITE
     if [ $# -eq 2 ]; then
@@ -1108,6 +1212,14 @@ copyfile() {
         return 1
     fi
 
+    # If the destination is a directory, let's make it a full path so the logic
+    # below works as expected
+    if [ -d "$dfile" ]; then
+        echodebug "The passed destination($dfile) is a directory"
+        dfile="${dfile}/$(basename $sfile)"
+        echodebug "Full destination path is now: $dfile"
+    fi
+
     if [ ! -f "$dfile" ]; then
         # The destination file does not exist, copy
         echodebug "Copying $sfile to $dfile"
@@ -1123,10 +1235,10 @@ copyfile() {
 }
 
 
-#---  FUNCTION  ----------------------------------------------------------------
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  movefile
 #   DESCRIPTION:  Simple function to move files. Overrides if asked.
-#-------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------
 movefile() {
     overwrite=$_FORCE_OVERWRITE
     if [ $# -eq 2 ]; then
@@ -1156,6 +1268,14 @@ movefile() {
         return 1
     fi
 
+    # If the destination is a directory, let's make it a full path so the logic
+    # below works as expected
+    if [ -d "$dfile" ]; then
+        echodebug "The passed destination($dfile) is a directory"
+        dfile="${dfile}/$(basename $sfile)"
+        echodebug "Full destination path is now: $dfile"
+    fi
+
     if [ ! -f "$dfile" ]; then
         # The destination file does not exist, copy
         echodebug "Moving $sfile to $dfile"
@@ -1171,7 +1291,116 @@ movefile() {
     return 0
 }
 
-##############################################################################
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_systemd
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_systemd() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    if [ "$(systemctl is-enabled ${servicename})" = "enabled" ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_systemd  ----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_upstart
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_upstart() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    # Check if service is enabled to start at boot
+    initctl list | grep ${servicename} > /dev/null 2>&1
+
+    if [ $? -eq 0 ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_upstart  ----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_sysvinit
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_sysvinit() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    if [ "$(chkconfig --list  | grep salt-$fname | grep '[2-5]:on')" != "" ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_sysvinit  ----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_services_debian
+#   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
+#    PARAMETERS:  servicename
+#----------------------------------------------------------------------------------------------------------------------
+__check_services_debian() {
+    if [ $# -eq 0 ]; then
+        echoerror "You need to pass a service name to check!"
+        exit 1
+    elif [ $# -ne 1 ]; then
+        echoerror "You need to pass a service name to check as the single argument to the function"
+    fi
+
+    servicename=$1
+    echodebug "Checking if service ${servicename} is enabled"
+
+    if [ -f /etc/rc$(runlevel | awk '{ print $2 }').d/S*${servicename} ]; then
+        echodebug "Service ${servicename} is enabled"
+        return 0
+    else
+        echodebug "Service ${servicename} is NOT enabled"
+        return 1
+    fi
+}   # ----------  end of function __check_services_debian  ----------
+
+
+#######################################################################################################################
 #
 #   Distribution install functions
 #
@@ -1229,10 +1458,27 @@ movefile() {
 #       NOTE: The start daemons function should be able to restart any daemons
 #             which are running, or start if they're not running.
 #
-##############################################################################
+#   Optionally, define a daemons running function, one of:
+#       1. daemons_running_<distro>_<major_version>_<install_type>
+#       2. daemons_running_<distro>_<major_version>_<minor_version>_<install_type>
+#       3. daemons_running_<distro>_<major_version>
+#       4  daemons_running_<distro>_<major_version>_<minor_version>
+#       5. daemons_running_<distro>_<install_type>
+#       6. daemons_running_<distro>
+#       7. daemons_running  [THIS ONE IS ALREADY DEFINED AS THE DEFAULT]
+#
+#   Optionally, check enabled Services:
+#       1. install_<distro>_<major_version>_<install_type>_check_services
+#       2. install_<distro>_<major_version>_<minor_version>_<install_type>_check_services
+#       3. install_<distro>_<major_version>_check_services
+#       4  install_<distro>_<major_version>_<minor_version>_check_services
+#       5. install_<distro>_<install_type>_check_services
+#       6. install_<distro>_check_services
+#
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   Ubuntu Install Functions
 #
@@ -1258,7 +1504,15 @@ __enable_universe_repository() {
 }
 
 install_ubuntu_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
+
     apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
     if [ $DISTRO_MAJOR_VERSION -gt 12 ] || ([ $DISTRO_MAJOR_VERSION -eq 12 ] && [ $DISTRO_MINOR_VERSION -eq 10 ]); then
         # Above Ubuntu 12.04 add-apt-repository is in a different package
         __apt_get_install_noinput software-properties-common || return 1
@@ -1277,8 +1531,41 @@ install_ubuntu_deps() {
 
     apt-get update
 
+    # Minimal systems might not have upstart installed, install it
+    __apt_get_install_noinput upstart
+
+    if [ $DISTRO_MAJOR_VERSION -gt 12 ] || ([ $DISTRO_MAJOR_VERSION -eq 12 ] && [ $DISTRO_MINOR_VERSION -gt 03 ]); then
+        __apt_get_install_noinput python-requests
+        __PIP_PACKAGES=""
+    else
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package 'requests'"
+        __apt_get_install_noinput python-pip
+        __PIP_PACKAGES="requests"
+        pip install requests
+    fi
+
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __apt_get_install_noinput procps pciutils
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install 'apache-libcloud'"
+        if [ "x${__PIP_PACKAGES}" = "x" ]; then
+            __apt_get_install_noinput python-pip
+        fi
+        __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
+    fi
+
+    if [ "x${__PIP_PACKAGES}" != "x" ]; then
+        pip install -U ${__PIP_PACKAGES}
+    fi
+
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
     fi
 
     return 0
@@ -1349,7 +1636,11 @@ install_ubuntu_daily() {
 }
 
 install_ubuntu_git() {
-    python setup.py install --install-layout=deb || return 1
+    if [ -f ${SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py ]; then
+        python setup.py install --install-layout=deb --salt-config-dir=$_SALT_ETC_DIR || return 1
+    else
+        python setup.py install --install-layout=deb || return 1
+    fi
     return 0
 }
 
@@ -1420,32 +1711,80 @@ install_ubuntu_restart_daemons() {
     done
     return 0
 }
+
+install_ubuntu_check_services() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
+            __check_services_upstart salt-$fname || return 1
+        elif [ -f /etc/init.d/salt-$fname ]; then
+            __check_services_debian salt-$fname || return 1
+        fi
+    done
+    return 0
+}
 #
 #   End of Ubuntu Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Debian Install Functions
 #
 install_debian_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
     apt-get update
 
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
+    # Both python-requests which is a hard dependency and apache-libcloud which is a soft dependency, under debian < 7
+    # need to be installed using pip
+    check_pip_allowed "You need to allow pip based installations (-P) in order to install the python 'requests' package"
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __apt_get_install_noinput python-pip procps pciutils
+
+    __PIP_PACKAGES="requests"
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
+    fi
+    pip install -U ${__PIP_PACKAGES}
+
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
     fi
 
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
+    fi
+
+    return 0
 }
 
 install_debian_6_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
-    wget -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
+    apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
+    wget $_WGET_ARGS -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
 
     if [ $_PIP_ALLOWED -eq $BS_TRUE ]; then
         echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
@@ -1489,6 +1828,10 @@ _eof
     if [ "x$(grep -R 'backports.debian.org' /etc/apt)" = "x" ]; then
         echo "deb http://backports.debian.org/debian-backports squeeze-backports main" >> \
             /etc/apt/sources.list.d/backports.list
+
+        # Add the backports key
+        gpg --keyserver pgpkeys.mit.edu --recv-key 8B48AD6246925553
+        gpg -a --export 8B48AD6246925553 | apt-key add -
     fi
 
     # Saltstack's Stable Debian repository
@@ -1498,17 +1841,40 @@ _eof
     fi
     apt-get update || return 1
 
+    # Python requests is available through Squeeze backports
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __apt_get_install_noinput python-requests python-pip procps pciutils
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        __apt_get_install_noinput python-pip
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+    fi
+
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
     fi
 
     __apt_get_install_noinput python-zmq || return 1
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
+    fi
+
     return 0
 }
 
 install_debian_7_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
 
     # Saltstack's Stable Debian repository
     if [ "x$(grep -R 'wheezy-saltstack' /etc/apt)" = "x" ]; then
@@ -1516,7 +1882,7 @@ install_debian_7_deps() {
             /etc/apt/sources.list.d/saltstack.list
     fi
 
-    wget -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
+    wget $_WGET_ARGS -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
 
     if [ $_PIP_ALLOWED -eq $BS_TRUE ]; then
         echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
@@ -1544,24 +1910,53 @@ _eof
 
         apt-get update
         __apt_get_install_noinput -t unstable libzmq3 libzmq3-dev || return 1
-        __apt_get_install_noinput build-essential python-dev python-pip || return 1
+        __PACKAGES="build-essential python-dev python-pip python-requests"
+        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+        __PACKAGES="${__PACKAGES} procps pciutils"
+        __apt_get_install_noinput ${__PACKAGES} || return 1
     else
         apt-get update || return 1
-        __apt_get_install_noinput python-zmq || return 1
+        __PACKAGES="python-zmq python-requests"
+        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+        __PACKAGES="${__PACKAGES} procps pciutils"
+        __apt_get_install_noinput ${__PACKAGES} || return 1
+
+    fi
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
     fi
 
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
+    fi
+
+    return 0
+}
+
+install_debian_8_deps__DISABLED() {
+    install_debian_7_deps || return 1
     return 0
 }
 
 install_debian_git_deps() {
+    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+    fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
     apt-get update
+
+    # Install Keys
+    __apt_get_install_noinput debian-archive-keyring && apt-get update
+
     __apt_get_install_noinput lsb-release python python-pkg-resources python-crypto \
         python-jinja2 python-m2crypto python-yaml msgpack-python python-pip \
         git || return 1
@@ -1574,8 +1969,18 @@ install_debian_git_deps() {
         CONFIG_SALT_FUNC="config_salt"
     fi
 
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+    fi
+
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
     fi
 
     return 0
@@ -1609,6 +2014,11 @@ install_debian_6_git_deps() {
 install_debian_7_git_deps() {
     install_debian_7_deps || return 1
     install_debian_git_deps || return 1  # Grab the actual deps
+    return 0
+}
+
+install_debian_8_git_deps() {
+    install_debian_7_git_deps || return 1
     return 0
 }
 
@@ -1647,6 +2057,11 @@ install_debian_7_stable() {
     return 0
 }
 
+install_debian_8_stable() {
+    __install_debian_stable || return 1
+    return 0
+}
+
 install_debian_git() {
     if [ $_PIP_ALLOWED -eq $BS_TRUE ]; then
         # Building pyzmq from source to build it against libzmq3.
@@ -1656,7 +2071,11 @@ install_debian_git() {
         easy_install -U pyzmq || return 1
     fi
 
-    python setup.py install --install-layout=deb || return 1
+    if [ -f ${SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py ]; then
+        python setup.py install --install-layout=deb --salt-config-dir=$_SALT_ETC_DIR || return 1
+    else
+        python setup.py install --install-layout=deb || return 1
+    fi
 }
 
 install_debian_6_git() {
@@ -1665,6 +2084,11 @@ install_debian_6_git() {
 }
 
 install_debian_7_git() {
+    install_debian_git || return 1
+    return 0
+}
+
+install_debian_8_git() {
     install_debian_git || return 1
     return 0
 }
@@ -1699,21 +2123,42 @@ install_debian_restart_daemons() {
         /etc/init.d/salt-$fname start
     done
 }
+
+install_debian_check_services() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_debian salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   Ended Debian Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Fedora Install Functions
 #
 install_fedora_deps() {
-    yum install -y PyYAML libyaml m2crypto python-crypto python-jinja2 \
-        python-msgpack python-zmq || return 1
+    packages="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        packages="${packages} python-libcloud"
+    fi
+
+    yum install -y ${packages} || return 1
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         yum -y update || return 1
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        yum install -y ${_EXTRA_PACKAGES} || return 1
     fi
 
     return 0
@@ -1731,8 +2176,22 @@ install_fedora_stable() {
     return 0
 }
 
+install_fedora_stable_post() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+
+        systemctl is-enabled salt-$fname.service || (systemctl preset salt-$fname.service && systemctl enable salt-$fname.service)
+        sleep 0.1
+        systemctl daemon-reload
+    done
+}
+
 install_fedora_git_deps() {
     install_fedora_deps || return 1
+
     yum install -y git || return 1
 
     __git_clone_and_checkout || return 1
@@ -1747,7 +2206,11 @@ install_fedora_git_deps() {
 }
 
 install_fedora_git() {
-    python setup.py install || return 1
+    if [ -f ${SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py ]; then
+        python setup.py install --salt-config-dir=$_SALT_ETC_DIR || return 1
+    else
+        python setup.py install || return 1
+    fi
     return 0
 }
 
@@ -1781,12 +2244,23 @@ install_fedora_restart_daemons() {
         systemctl start salt-$fname.service
     done
 }
+
+install_fedora_check_services() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   Ended Fedora Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   CentOS Install Functions
 #
@@ -1809,14 +2283,39 @@ install_centos_stable_deps() {
         yum -y update || return 1
     fi
 
+    packages="yum-utils chkconfig"
+
     if [ $DISTRO_MAJOR_VERSION -eq 5 ]; then
-        yum -y install python26-PyYAML python26-m2crypto m2crypto python26 \
-            python26-crypto python26-msgpack python26-zmq \
-            python26-jinja2 --enablerepo=${_EPEL_REPO} || return 1
+        packages="${packages} python26-PyYAML python26-m2crypto m2crypto python26 python26-requests"
+        packages="${packages} python26-crypto python26-msgpack python26-zmq python26-jinja2"
+        if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+            check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+            packages="${packages} python26-setuptools"
+        fi
     else
-        yum -y install PyYAML m2crypto python-crypto python-msgpack \
-            python-zmq python-jinja2 --enablerepo=${_EPEL_REPO} || return 1
+        packages="${packages} PyYAML m2crypto python-crypto python-msgpack python-zmq python-jinja2 python-requests"
+        if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+            check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+            packages="${packages} python-pip"
+        fi
     fi
+
+    yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        if [ $DISTRO_MAJOR_VERSION -eq 5 ]; then
+            easy_install-2.6 "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+        else
+            pip-python install "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+        fi
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        yum install -y ${_EXTRA_PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
+    fi
+
     return 0
 }
 
@@ -1839,7 +2338,7 @@ install_centos_stable_post() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
-        if [ ! -f /sbin/initctl ] && [ -f /etc/init.d/salt-$fname ]; then
+        if [ -f /etc/init.d/salt-$fname ]; then
             # Still in SysV init!?
             /sbin/chkconfig salt-$fname on
         fi
@@ -1863,9 +2362,14 @@ install_centos_git_deps() {
 
 install_centos_git() {
     if [ $DISTRO_MAJOR_VERSION -eq 5 ]; then
-        python2.6 setup.py install || return 1
+        _PYEXE=python2.6
     else
-        python2 setup.py install || return 1
+        _PYEXE=python2
+    fi
+    if [ -f ${SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py ]; then
+        $_PYEXE setup.py install --salt-config-dir=$_SALT_ETC_DIR || return 1
+    else
+        $_PYEXE setup.py install || return 1
     fi
     return 0
 }
@@ -1878,19 +2382,26 @@ install_centos_git_post() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
-        if [ -f /sbin/initctl ]; then
-            # We have upstart support
-            /sbin/initctl status salt-$fname > /dev/null 2>&1
-            if [ $? -eq 1 ]; then
-                # upstart does not know about our service, let's copy the proper file
-                copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/salt-$fname.upstart /etc/init/salt-$fname.conf
-            fi
-        # Still in SysV init?!
-        elif [ ! -f /etc/init.d/salt-$fname ]; then
+        # While the RPM's use init.d, so will we.
+        if [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
             copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname} /etc/init.d/
             chmod +x /etc/init.d/salt-${fname}
             /sbin/chkconfig salt-${fname} on
         fi
+
+        #if [ -f /sbin/initctl ]; then
+        #    # We have upstart support
+        #    /sbin/initctl status salt-$fname > /dev/null 2>&1
+        #    if [ $? -eq 1 ]; then
+        #        # upstart does not know about our service, let's copy the proper file
+        #        copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/salt-$fname.upstart /etc/init/salt-$fname.conf
+        #    fi
+        ## Still in SysV init?!
+        #elif [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
+        #    copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname} /etc/init.d/
+        #    chmod +x /etc/init.d/salt-${fname}
+        #    /sbin/chkconfig salt-${fname} on
+        #fi
     done
 }
 
@@ -1903,21 +2414,24 @@ install_centos_restart_daemons() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
-        if [ -f /sbin/initctl ]; then
-            # We have upstart support
+        if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
+            # We have upstart support and upstart knows about our service
             /sbin/initctl status salt-$fname > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                # upstart knows about this service.
-                # Let's try to stop it, and then start it
-                /sbin/initctl stop salt-$fname > /dev/null 2>&1
-                /sbin/initctl start salt-$fname > /dev/null 2>&1
-                # Restart service
-                [ $? -eq 0 ] && continue
-                # We failed to start the service, let's test the SysV code bellow
+            if [ $? -ne 0 ]; then
+                # Everything is in place and upstart gave us an error code? Fail!
+                return 1
             fi
-        fi
 
-        if [ -f /etc/init.d/salt-$fname ]; then
+            # upstart knows about this service.
+            # Let's try to stop it, and then start it
+            /sbin/initctl stop salt-$fname > /dev/null 2>&1
+            /sbin/initctl start salt-$fname > /dev/null 2>&1
+            # Restart service
+            if [ $? -ne 0 ]; then
+                # Failed the restart?!
+                return 1
+            fi
+        elif [ -f /etc/init.d/salt-$fname ]; then
             # Still in SysV init!?
             /etc/init.d/salt-$fname stop > /dev/null 2>&1
             /etc/init.d/salt-$fname start
@@ -1940,12 +2454,27 @@ install_centos_testing_post() {
     return 0
 }
 
+install_centos_check_services() {
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
+            __check_services_upstart salt-$fname || return 1
+        elif [ -f /etc/init.d/salt-$fname ]; then
+            __check_services_sysvinit salt-$fname || return 1
+        fi
+    done
+    return 0
+}
+
 #
 #   Ended CentOS Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   RedHat Install Functions
 #
@@ -1955,7 +2484,7 @@ install_red_hat_linux_stable_deps() {
     else
         OPTIONAL_ARCH=$CPU_ARCH_L
     fi
-    if [ $DISTRO_MAJOR_VERSION -eq 6 ] && [ $(rhn-channel -l | grep optional) != "rhel-${OPTIONAL_ARCH}-server-optional-${DISTRO_MAJOR_VERSION}" ]; then
+    if [ $DISTRO_MAJOR_VERSION -eq 6 ] && case "X$(rhn-channel -l | grep optional)" in Xrhel-${OPTIONAL_ARCH}-server-optional-${DISTRO_MAJOR_VERSION}* ) false ;; * ) true ;; esac ; then
       echoerror "Failed to find RHN optional repo, please enable it using the GUI or rhn-channel command."
       return 1
     fi
@@ -1984,6 +2513,16 @@ install_red_hat_enterprise_server_stable_deps() {
 }
 
 install_red_hat_enterprise_server_git_deps() {
+    install_red_hat_linux_git_deps || return 1
+    return 0
+}
+
+install_red_hat_enterprise_workstation_stable_deps() {
+    install_red_hat_linux_stable_deps || return 1
+    return 0
+}
+
+install_red_hat_enterprise_workstation_git_deps() {
     install_red_hat_linux_git_deps || return 1
     return 0
 }
@@ -2017,6 +2556,17 @@ install_red_hat_enterprise_server_git() {
     install_red_hat_linux_git || return 1
     return 0
 }
+
+install_red_hat_enterprise_workstation_stable() {
+    install_red_hat_linux_stable || return 1
+    return 0
+}
+
+install_red_hat_enterprise_workstation_git() {
+    install_red_hat_linux_git || return 1
+    return 0
+}
+
 
 install_red_hat_linux_stable_post() {
     install_centos_stable_post || return 1
@@ -2063,6 +2613,22 @@ install_red_hat_enterprise_server_git_post() {
     return 0
 }
 
+install_red_hat_enterprise_workstation_stable_post() {
+    install_red_hat_linux_stable_post || return 1
+    return 0
+}
+
+install_red_hat_enterprise_workstation_restart_daemons() {
+    install_red_hat_linux_restart_daemons || return 1
+    return 0
+}
+
+install_red_hat_enterprise_workstation_git_post() {
+    install_red_hat_linux_git_post || return 1
+    return 0
+}
+
+
 install_red_hat_linux_testing_deps() {
     install_centos_testing_deps || return 1
     return 0
@@ -2093,18 +2659,162 @@ install_red_hat_enterprise_server_testing_post() {
     return 0
 }
 
+install_red_hat_enterprise_workstation_testing_deps() {
+    install_centos_testing_deps || return 1
+    return 0
+}
 
+install_red_hat_enterprise_workstation_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_red_hat_enterprise_workstation_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
 #
 #   Ended RedHat Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+
+#######################################################################################################################
+#
+#   Oracle Linux Install Functions
+#
+install_oracle_linux_stable_deps() {
+    install_centos_stable_deps || return 1
+    return 0
+}
+
+install_oracle_linux_git_deps() {
+    install_centos_git_deps || return 1
+    return 0
+}
+
+install_oracle_linux_testing_deps() {
+    install_centos_testing_deps || return 1
+    return 0
+}
+
+install_oracle_linux_stable() {
+    install_centos_stable || return 1
+    return 0
+}
+
+install_oracle_linux_git() {
+    install_centos_git || return 1
+    return 0
+}
+
+install_oracle_linux_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_oracle_linux_stable_post() {
+    install_centos_stable_post || return 1
+    return 0
+}
+
+install_oracle_linux_git_post() {
+    install_centos_git_post || return 1
+    return 0
+}
+
+
+install_oracle_linux_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
+
+install_oracle_linux_restart_daemons() {
+    install_centos_restart_daemons || return 1
+    return 0
+}
+
+install_oracle_linux_check_services() {
+    install_centos_check_services || return 1
+    return 0
+}
+#
+#   Ended Oracle Linux Install Functions
+#
+#######################################################################################################################
+
+
+#######################################################################################################################
+#
+#   Scientific Linux Install Functions
+#
+install_scientific_linux_stable_deps() {
+    install_centos_stable_deps || return 1
+    return 0
+}
+
+install_scientific_linux_git_deps() {
+    install_centos_git_deps || return 1
+    return 0
+}
+
+install_scientific_linux_testing_deps() {
+    install_centos_testing_deps || return 1
+    return 0
+}
+
+install_scientific_linux_stable() {
+    install_centos_stable || return 1
+    return 0
+}
+
+install_scientific_linux_git() {
+    install_centos_git || return 1
+    return 0
+}
+
+install_scientific_linux_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_scientific_linux_stable_post() {
+    install_centos_stable_post || return 1
+    return 0
+}
+
+install_scientific_linux_git_post() {
+    install_centos_git_post || return 1
+    return 0
+}
+
+
+install_scientific_linux_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
+
+install_scientific_linux_restart_daemons() {
+    install_centos_restart_daemons || return 1
+    return 0
+}
+
+install_scientific_linux_check_services() {
+    install_centos_check_services || return 1
+    return 0
+}
+#
+#   Ended Scientific Linux Install Functions
+#
+#######################################################################################################################
+
+
+#######################################################################################################################
 #
 #   Amazon Linux AMI Install Functions
 #
 install_amazon_linux_ami_deps() {
-    # Acording to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
+    # According to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
     # enable the EPEL 6 repo
     if [ $CPU_ARCH_L = "i686" ]; then
         EPEL_ARCH="i386"
@@ -2117,8 +2827,25 @@ install_amazon_linux_ami_deps() {
         yum -y update || return 1
     fi
 
-    yum -y install PyYAML m2crypto python-crypto python-msgpack python-zmq \
-        python-ordereddict python-jinja2 --enablerepo=${_EPEL_REPO} || return 1
+    packages="PyYAML m2crypto python-crypto python-msgpack python-zmq python-ordereddict python-jinja2 python-requests"
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        packages="${packages} python-pip"
+    fi
+
+    yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        pip-python install "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        yum install -y ${_EXTRA_PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
+    fi
+
 }
 
 install_amazon_linux_ami_git_deps() {
@@ -2174,36 +2901,38 @@ install_amazon_linux_ami_testing_post() {
 #
 #   Ended Amazon Linux AMI Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   Arch Install Functions
 #
 install_arch_linux_stable_deps() {
-    grep '\[salt\]' /etc/pacman.conf >/dev/null 2>&1 || echo '[salt]
-Include = /etc/pacman.d/salt.conf
-' >> /etc/pacman.conf
 
-    # Create a pacman .d directory so we can just override salt's
-    # included configuration if needed
-    [ -d /etc/pacman.d ] || mkdir -p /etc/pacman.d
+    if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
+        pacman -Syyu --noconfirm --needed || return 1
+    fi
 
-    cat <<_eof > /etc/pacman.d/salt.conf
-Server = http://intothesaltmine.org/archlinux
-SigLevel = Optional TrustAll
-_eof
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        pacman -Sy --noconfirm --needed apache-libcloud || return 1
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        pacman -Sy --noconfirm --needed ${_EXTRA_PACKAGES} || return 1
+    fi
+
 }
 
 install_arch_linux_git_deps() {
     install_arch_linux_stable_deps
 
-    pacman -Sy --noconfirm pacman || return 1
+    pacman -Sy --noconfirm --needed pacman || return 1
     # Don't fail if un-installing python2-distribute threw an error
-    pacman -R --noconfirm python2-distribute
-    pacman -Sy --noconfirm git python2-crypto python2-setuptools \
-        python2-jinja python2-m2crypto python2-markupsafe python2-msgpack \
-        python2-psutil python2-yaml python2-pyzmq zeromq || return 1
+    pacman -R --noconfirm --needed python2-distribute
+    pacman -Sy --noconfirm --needed git python2-crypto python2-setuptools python2-jinja \
+        python2-m2crypto python2-markupsafe python2-msgpack python2-psutil python2-yaml \
+        python2-pyzmq zeromq python2-requests || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -2217,11 +2946,11 @@ install_arch_linux_git_deps() {
 }
 
 install_arch_linux_stable() {
-    pacman -Sy --noconfirm pacman || return 1
+    pacman -Sy --noconfirm --needed pacman || return 1
     # See https://mailman.archlinux.org/pipermail/arch-dev-public/2013-June/025043.html
     # to know why we're ignoring below.
     pacman -Syu --noconfirm --ignore filesystem,bash || return 1
-    pacman -S --noconfirm bash || return 1
+    pacman -S --noconfirm --needed bash || return 1
     pacman -Su --noconfirm || return 1
     # We can now resume regular salt update
     pacman -Syu --noconfirm salt || return 1
@@ -2229,7 +2958,11 @@ install_arch_linux_stable() {
 }
 
 install_arch_linux_git() {
-    python2 setup.py install || return 1
+    if [ -f ${SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py ]; then
+        python2 setup.py install --salt-config-dir=$_SALT_ETC_DIR || return 1
+    else
+        python2 setup.py install || return 1
+    fi
     return 0
 }
 
@@ -2310,12 +3043,28 @@ install_arch_linux_restart_daemons() {
         /etc/rc.d/salt-$fname start
     done
 }
+
+install_arch_check_services() {
+    if [ ! -f /usr/bin/systemctl ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   Ended Arch Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   FreeBSD Install Functions
 #
@@ -2330,40 +3079,80 @@ __freebsd_get_packagesite() {
         BSD_ARCH="x86:32"
     fi
 
-    # Since the variable might not be set, don't, momentarily treat it as a failure
+    # Since the variable might not be set, don't, momentarily treat it as a
+    # failure
     set +o nounset
 
-    _PACKAGESITE=${PACKAGESITE:-"http://pkg.cdn.pcbsd.org/9.1-RELEASE/amd64/"}
-    SALTREPO=${SALTREPO:-"http://freebsd.saltstack.com/freebsd:${DISTRO_MAJOR_VERSION}:${BSD_ARCH}/"}
+    # ABI is a std format for identifying release / architecture combos
+    ABI="freebsd:${DISTRO_MAJOR_VERSION}:${BSD_ARCH}"
+    _PACKAGESITE="http://pkg.freebsd.org/${ABI}/latest"
+    # Awkwardly, we want the `${ABI}` to be in conf file without escaping
+    PKGCONFURL="pkg+http://pkg.freebsd.org/\${ABI}/latest"
 
     # Treat unset variables as errors once more
     set -o nounset
 }
 
-install_freebsd_9_stable_deps() {
-    if [ ! -x /usr/local/sbin/pkg ]; then
-        __freebsd_get_packagesite
+# Using a separate conf step to head for idempotent install...
+__configure_freebsd_pkg_details() {
 
+    ## pkg.conf is deprecated.  
+    ## We use conf files in /usr/local or /etc instead
+    mkdir -p /usr/local/etc/pkg/repos/
+    mkdir -p /etc/pkg/
+
+    ## Use new JSON-like format for pkg repo configs
+    conf_file=/usr/local/etc/pkg/repos/freebsd.conf
+    echo "FreeBSD:{" > $conf_file
+    echo "    url: \"${PKGCONFURL}\"," >> $conf_file
+    echo "    mirror_type: \"SRV\"," >> $conf_file
+    echo "    enabled: true" >> $conf_file
+    echo "}" >> $conf_file
+    copyfile $conf_file /etc/pkg/FreeBSD.conf
+    SALT_PKG_FLAGS="-r FreeBSD"
+    ## ensure future ports builds use pkgng
+    echo "WITH_PKGNG=	yes" >> /etc/make.conf
+}
+
+install_freebsd_9_stable_deps() {
+
+    #make variables available even if pkg already installed
+    __freebsd_get_packagesite
+
+    if [ ! -x /usr/local/sbin/pkg ]; then
+
+        # install new `pkg` code from its own tarball.
         fetch "${_PACKAGESITE}/Latest/pkg.txz" || return 1
         tar xf ./pkg.txz -s ",/.*/,,g" "*/pkg-static" || return 1
         ./pkg-static add ./pkg.txz || return 1
         /usr/local/sbin/pkg2ng || return 1
-
-        echo "PACKAGESITE: ${_PACKAGESITE}" > /usr/local/etc/pkg.conf
-        echo "PKG_MULTIREPOS: YES" >> /usr/local/etc/pkg.conf
-
-        mkdir -p /usr/local/etc/pkg/repos/
-        echo "salt:" > /usr/local/etc/pkg/repos/salt.conf
-        echo "    URL: ${SALTREPO}" >> /usr/local/etc/pkg/repos/salt.conf
-        echo "    ENABLED: YES" >> /usr/local/etc/pkg/repos/salt.conf
     fi
 
-    /usr/local/sbin/pkg install -r salt -y swig || return 1
+    # Configure the pkg repository using new approach
+    __configure_freebsd_pkg_details || return 1
 
-    # Lets set _SALT_ETC_DIR to ports default
+    # Now install swig
+    /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y swig || return 1
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y ${_EXTRA_PACKAGES} || return 1
+    fi
+
+    return 0
+}
+
+install_freebsd_10_stable_deps() {
+    install_freebsd_9_stable_deps
+}
+
+config_freebsd_salt() {
+    # Set _SALT_ETC_DIR to ports default
     _SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/usr/local/etc/salt}
     # We also need to redefine the PKI directory
     _PKI_DIR=${_SALT_ETC_DIR}/pki
+
+    config_salt || return 1
 
     return 0
 }
@@ -2371,7 +3160,7 @@ install_freebsd_9_stable_deps() {
 install_freebsd_git_deps() {
     install_freebsd_9_stable_deps || return 1
 
-    /usr/local/sbin/pkg install -y git || return 1
+    /usr/local/sbin/pkg install -y git www/py-requests || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -2413,12 +3202,16 @@ install_freebsd_git_deps() {
 }
 
 install_freebsd_9_stable() {
-    /usr/local/sbin/pkg install -r salt -y sysutils/py-salt || return 1
+    /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y sysutils/py-salt || return 1
     return 0
 }
 
+install_freebsd_10_stable() {
+    install_freebsd_9_stable
+}
+
 install_freebsd_git() {
-    /usr/local/sbin/pkg install -r salt -y sysutils/py-salt || return 1
+    /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y sysutils/py-salt || return 1
 
     # Let's keep the rc.d files before deleting the package
     mkdir /tmp/rc-scripts || return 1
@@ -2434,7 +3227,7 @@ install_freebsd_git() {
     else
         /usr/local/bin/python setup.py install \
             --salt-root-dir=/usr/local \
-            --salt-config-dir=/usr/local/etc/salt \
+            --salt-config-dir=${_SALT_ETC_DIR} \
             --salt-cache-dir=/var/cache/salt \
             --salt-sock-dir=/var/run/salt \
             --salt-srv-root-dir=/srv \
@@ -2478,6 +3271,10 @@ install_freebsd_9_stable_post() {
     done
 }
 
+install_freebsd_10_stable_post() {
+    install_freebsd_9_stable_post
+}
+
 install_freebsd_git_post() {
     install_freebsd_9_stable_post || return 1
     return 0
@@ -2500,16 +3297,15 @@ install_freebsd_restart_daemons() {
 #
 #   Ended FreeBSD Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #   SmartOS Install Functions
 #
 install_smartos_deps() {
-    pkgin -y in \
-        zeromq py27-m2crypto py27-crypto py27-msgpack py27-yaml \
-        py27-jinja2 py27-zmq || return 1
+    pkgin -y install \
+        zeromq py27-m2crypto py27-crypto py27-msgpack py27-yaml py27-jinja2 py27-zmq py27-requests || return 1
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
@@ -2519,13 +3315,18 @@ install_smartos_deps() {
 
         # Let's download, since they were not provided, the default configuration files
         if [ ! -f $_SALT_ETC_DIR/minion ] && [ ! -f $_TEMP_CONFIG_DIR/minion ]; then
-            curl -sk -o $_TEMP_CONFIG_DIR/minion -L \
+            curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/minion -L \
                 https://raw.github.com/saltstack/salt/develop/conf/minion || return 1
         fi
         if [ ! -f $_SALT_ETC_DIR/master ] && [ ! -f $_TEMP_CONFIG_DIR/master ]; then
-            curl -sk -o $_TEMP_CONFIG_DIR/master -L \
+            curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/master -L \
                 https://raw.github.com/saltstack/salt/develop/conf/master || return 1
         fi
+    fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        pkgin -y install ${_EXTRA_PACKAGES} || return 1
     fi
 
     return 0
@@ -2534,7 +3335,7 @@ install_smartos_deps() {
 
 install_smartos_git_deps() {
     install_smartos_deps || return 1
-    pkgin -y in scmgit || return 1
+    pkgin -y install scmgit || return 1
 
     __git_clone_and_checkout || return 1
     # Let's trigger config_salt()
@@ -2547,7 +3348,7 @@ install_smartos_git_deps() {
 }
 
 install_smartos_stable() {
-    pkgin -y in salt || return 1
+    pkgin -y install salt || return 1
     return 0
 }
 
@@ -2570,7 +3371,8 @@ install_smartos_post() {
         svcs network/salt-$fname > /dev/null 2>&1
         if [ $? -eq 1 ]; then
             if [ ! -f $_TEMP_CONFIG_DIR/salt-$fname.xml ]; then
-                curl -sk -o $_TEMP_CONFIG_DIR/salt-$fname.xml -L https://raw.github.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml
+                curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/salt-$fname.xml -L \
+                    https://raw.github.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml
             fi
             svccfg import $_TEMP_CONFIG_DIR/salt-$fname.xml
             if [ "${VIRTUAL_TYPE}" = "global" ]; then
@@ -2628,9 +3430,9 @@ install_smartos_restart_daemons() {
 #
 #   Ended SmartOS Install Functions
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #    openSUSE Install Functions.
 #
@@ -2638,7 +3440,7 @@ install_opensuse_stable_deps() {
     DISTRO_REPO="openSUSE_${DISTRO_MAJOR_VERSION}.${DISTRO_MINOR_VERSION}"
 
     # Is the repository already known
-    $(zypper repos | grep devel_languages_python >/dev/null 2>&1)
+    zypper repos | grep devel_languages_python >/dev/null 2>&1
     if [ $? -eq 1 ]; then
         # zypper does not yet know nothing about devel_languages_python
         zypper --non-interactive addrepo --refresh \
@@ -2658,9 +3460,24 @@ install_opensuse_stable_deps() {
         zypper --non-interactive remove patterns-openSUSE-minimal_base-conflicts
     fi
 
-    zypper --non-interactive install --auto-agree-with-licenses libzmq3 python \
-        python-Jinja2 python-M2Crypto python-PyYAML python-msgpack-python \
-        python-pycrypto python-pyzmq python-xml || return 1
+    if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
+        zypper --gpg-auto-import-keys --non-interactive update || return 1
+    fi
+
+    packages="libzmq3 python python-Jinja2 python-M2Crypto python-PyYAML python-requests"
+    packages="${packages} python-msgpack-python python-pycrypto python-pyzmq python-xml"
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        packages="${packages} python-apache-libcloud"
+    fi
+
+    zypper --non-interactive install --auto-agree-with-licenses ${packages} || return 1
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        zypper --non-interactive install --auto-agree-with-licenses ${_EXTRA_PACKAGES} || return 1
+    fi
+
     return 0
 }
 
@@ -2762,12 +3579,29 @@ install_opensuse_restart_daemons() {
 
     done
 }
+
+install_opensuse_check_services() {
+    if [ ! -f /bin/systemctl ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
+
 #
 #   End of openSUSE Install Functions.
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #    SuSE Install Functions.
 #
@@ -2779,7 +3613,7 @@ install_suse_11_stable_deps() {
     DISTRO_REPO="SLE_${DISTRO_MAJOR_VERSION}${DISTRO_PATCHLEVEL}"
 
     # Is the repository already known
-    $(zypper repos | grep devel_languages_python >/dev/null 2>&1)
+    zypper repos | grep devel_languages_python >/dev/null 2>&1
     if [ $? -eq 1 ]; then
         # zypper does not yet know nothing about devel_languages_python
         zypper --non-interactive addrepo --refresh \
@@ -2787,18 +3621,30 @@ install_suse_11_stable_deps() {
     fi
 
     zypper --gpg-auto-import-keys --non-interactive refresh || return 1
+
+    if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
+        zypper --gpg-auto-import-keys --non-interactive update || return 1
+    fi
+
+    packages="libzmq3 python python-Jinja2 'python-M2Crypto>=0.21' python-msgpack-python"
+    packages="${packages} python-pycrypto python-pyzmq python-pip python-xml python-requests"
+
     if [ $SUSE_PATCHLEVEL -eq 1 ]; then
         check_pip_allowed
         echowarn "PyYaml will be installed using pip"
-        zypper --non-interactive install --auto-agree-with-licenses libzmq3 python \
-        python-Jinja2 'python-M2Crypto>=0.21' python-msgpack-python \
-        python-pycrypto python-pyzmq python-pip python-xml || return 1
+    else
+        packages="${packages} python-PyYAML"
+    fi
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        packages="${packages} python-apache-libcloud"
+    fi
+
+    zypper --non-interactive install --auto-agree-with-licenses ${packages} || return 1
+
+    if [ $SUSE_PATCHLEVEL -eq 1 ]; then
         # There's no python-PyYaml in SP1, let's install it using pip
         pip install PyYaml || return 1
-    else
-        zypper --non-interactive install --auto-agree-with-licenses libzmq3 python \
-        python-Jinja2 'python-M2Crypto>=0.21' python-PyYAML python-msgpack-python \
-        python-pycrypto python-pyzmq python-xml || return 1
     fi
 
     # PIP based installs need to copy configuration files "by hand".
@@ -2821,12 +3667,18 @@ install_suse_11_stable_deps() {
 
                 # Let's download, since they were not provided, the default configuration files
                 if [ ! -f $_SALT_ETC_DIR/$fname ] && [ ! -f $_TEMP_CONFIG_DIR/$fname ]; then
-                    curl -sk -o $_TEMP_CONFIG_DIR/$fname -L \
+                    curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/$fname -L \
                         https://raw.github.com/saltstack/salt/develop/conf/$fname || return 1
                 fi
             done
         fi
     fi
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        zypper --non-interactive install --auto-agree-with-licenses ${_EXTRA_PACKAGES} || return 1
+    fi
+
     return 0
 }
 
@@ -2873,12 +3725,12 @@ install_suse_11_stable_post() {
             [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
             if [ -f /bin/systemctl ]; then
-                curl -k -L https://github.com/saltstack/salt/raw/develop/pkg/salt-$fname.service \
+                curl $_CURL_ARGS -L https://github.com/saltstack/salt/raw/develop/pkg/salt-$fname.service \
                     -o /lib/systemd/system/salt-$fname.service || return 1
                 continue
             fi
 
-            curl -k -L https://github.com/saltstack/salt/raw/develop/pkg/rpm/salt-$fname \
+            curl $_CURL_ARGS -L https://github.com/saltstack/salt/raw/develop/pkg/rpm/salt-$fname \
                 -o /etc/init.d/salt-$fname || return 1
             chmod +x /etc/init.d/salt-$fname
 
@@ -2896,20 +3748,36 @@ install_suse_11_restart_daemons() {
     install_opensuse_restart_daemons || return 1
     return 0
 }
+
+install_suse_check_services() {
+    if [ ! -f /bin/systemctl ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   End of SuSE Install Functions.
 #
-##############################################################################
+#######################################################################################################################
 
-##############################################################################
+#######################################################################################################################
 #
 #    Gentoo Install Functions.
 #
 __emerge() {
     if [ $_GENTOO_USE_BINHOST -eq $BS_TRUE ]; then
-        emerge --autounmask-write --getbinpkg $@; return $?
+        emerge --autounmask-write --getbinpkg "${@}"; return $?
     fi
-    emerge --autounmask-write $@; return $?
+    emerge --autounmask-write "${@}"; return $?
 }
 
 __gentoo_config_protection() {
@@ -2944,7 +3812,21 @@ __gentoo_post_dep() {
     __emerge --oneshot 'sys-devel/libtool'
     # the -o option asks it to emerge the deps but not the package.
     __gentoo_config_protection
+
+    if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        __emerge -v 'dev-python/pip'
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+    fi
+
+    __emerge -vo 'dev-python/requests'
     __emerge -vo 'app-admin/salt'
+
+    if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        __emerge -v ${_EXTRA_PACKAGES} || return 1
+    fi
+
 }
 
 install_gentoo_deps() {
@@ -3005,13 +3887,28 @@ install_gentoo_restart_daemons() {
     done
 }
 
+install_gentoo_check_services() {
+    if [ ! -d "/run/systemd/system" ]; then
+        # Not running systemd!? Don't check!
+        return 0
+    fi
+
+    for fname in minion master syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ $_INSTALL_MINION -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
+        __check_services_systemd salt-$fname || return 1
+    done
+    return 0
+}
 #
 #   End of Gentoo Install Functions.
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   Default minion configuration function. Matches ANY distribution as long as
 #   the -c options is passed.
@@ -3089,10 +3986,10 @@ config_salt() {
 #
 #  Ended Default Configuration function
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   Default salt master minion keys pre-seed function. Matches ANY distribution
 #   as long as the -k option is passed.
@@ -3108,7 +4005,7 @@ preseed_master() {
     SEED_DEST="$_PKI_DIR/master/minions"
     [ -d $SEED_DEST ] || mkdir -p $SEED_DEST && chmod 700 $SEED_DEST || return 1
 
-    for keyfile in $(ls $_TEMP_KEYS_DIR); do
+    for keyfile in $_TEMP_KEYS_DIR/*; do
         src_keyfile="${_TEMP_KEYS_DIR}/${keyfile}"
         dst_keyfile="${SEED_DEST}/${keyfile}"
 
@@ -3124,10 +4021,10 @@ preseed_master() {
 #
 #  Ended Default Salt Master Pre-Seed minion keys function
 #
-##############################################################################
+#######################################################################################################################
 
 
-##############################################################################
+#######################################################################################################################
 #
 #   This function checks if all of the installed daemons are running or not.
 #
@@ -3145,11 +4042,11 @@ daemons_running() {
         if [ "${DISTRO_NAME}" = "SmartOS" ]; then
             if [ "$(svcs -Ho STA salt-$fname)" != "ON" ]; then
                 echoerror "salt-$fname was not found running"
-                FAILED_DAEMONS=$(expr $FAILED_DAEMONS + 1)
+                FAILED_DAEMONS=$((FAILED_DAEMONS + 1))
             fi
         elif [ "x$(ps wwwaux | grep -v grep | grep salt-$fname)" = "x" ]; then
             echoerror "salt-$fname was not found running"
-            FAILED_DAEMONS=$(expr $FAILED_DAEMONS + 1)
+            FAILED_DAEMONS=$((FAILED_DAEMONS + 1))
         fi
     done
     return $FAILED_DAEMONS
@@ -3157,12 +4054,12 @@ daemons_running() {
 #
 #  Ended daemons running check function
 #
-##############################################################################
+#######################################################################################################################
 
 
-#=============================================================================
+#======================================================================================================================
 # LET'S PROCEED WITH OUR INSTALLATION
-#=============================================================================
+#======================================================================================================================
 # Let's get the dependencies install function
 DEP_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_deps"
 DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_deps"
@@ -3244,7 +4141,6 @@ POST_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJO
 POST_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}_${ITYPE}_post"
 POST_FUNC_NAMES="$POST_FUNC_NAMES install_${DISTRO_NAME_L}_post"
 
-
 POST_INSTALL_FUNC="null"
 for FUNC_NAME in $(__strip_duplicates $POST_FUNC_NAMES); do
     if __function_defined $FUNC_NAME; then
@@ -3253,6 +4149,7 @@ for FUNC_NAME in $(__strip_duplicates $POST_FUNC_NAMES); do
     fi
 done
 echodebug "POST_INSTALL_FUNC=${POST_INSTALL_FUNC}"
+
 
 # Let's get the start daemons install function
 STARTDAEMONS_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_restart_daemons"
@@ -3265,11 +4162,14 @@ STARTDAEMONS_FUNC_NAMES="$STARTDAEMONS_FUNC_NAMES install_${DISTRO_NAME_L}_resta
 STARTDAEMONS_INSTALL_FUNC="null"
 for FUNC_NAME in $(__strip_duplicates $STARTDAEMONS_FUNC_NAMES); do
     if __function_defined $FUNC_NAME; then
+        echodebug "Waiting 3 seconds for processes to settle before checking for them"
+        sleep 3
         STARTDAEMONS_INSTALL_FUNC=$FUNC_NAME
         break
     fi
 done
 echodebug "STARTDAEMONS_INSTALL_FUNC=${STARTDAEMONS_INSTALL_FUNC}"
+
 
 # Let's get the daemons running check function.
 DAEMONS_RUNNING_FUNC="null"
@@ -3283,11 +4183,30 @@ DAEMONS_RUNNING_FUNC_NAMES="$DAEMONS_RUNNING_FUNC_NAMES daemons_running"
 
 for FUNC_NAME in $(__strip_duplicates $DAEMONS_RUNNING_FUNC_NAMES); do
     if __function_defined $FUNC_NAME; then
+        echodebug "Waiting 3 seconds for processes to settle before checking for them"
+        sleep 3
         DAEMONS_RUNNING_FUNC=$FUNC_NAME
         break
     fi
 done
 echodebug "DAEMONS_RUNNING_FUNC=${DAEMONS_RUNNING_FUNC}"
+
+# Let's get the check services function
+CHECK_SERVICES_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}_${ITYPE}_check_services"
+CHECK_SERVICES_FUNC_NAMES="$CHECK_SERVICES_FUNC_NAMES install_${DISTRO_NAME_L}_check_services"
+
+CHECK_SERVICES_FUNC="null"
+for FUNC_NAME in $(__strip_duplicates $CHECK_SERVICES_FUNC_NAMES); do
+    if __function_defined $FUNC_NAME; then
+        CHECK_SERVICES_FUNC=$FUNC_NAME
+        break
+    fi
+done
+echodebug "CHECK_SERVICES_FUNC=${CHECK_SERVICES_FUNC}"
 
 
 if [ $DEPS_INSTALL_FUNC = "null" ]; then
@@ -3355,12 +4274,36 @@ if [ $_INSTALL_MINION -eq $BS_TRUE ]; then
     fi
 fi
 
-# Run any post install function, Only execute function is not in config mode only
+# Drop the master address if passed
+if [ $_SALT_MASTER_ADDRESS != "null" ]; then
+    [ ! -d $_SALT_ETC_DIR/minion.d ] && mkdir -p $_SALT_ETC_DIR/minion.d
+    cat <<_eof > $_SALT_ETC_DIR/minion.d/99-master-address.conf
+master: $_SALT_MASTER_ADDRESS
+_eof
+fi
+
+# Drop the minion id if passed
+if [ $_SALT_MINION_ID != "null" ]; then
+    [ ! -d $_SALT_ETC_DIR ] && mkdir -p $_SALT_ETC_DIR
+    echo $_SALT_MINION_ID > $_SALT_ETC_DIR/minion_id
+fi
+
+# Run any post install function. Only execute function if not in config mode only
 if [ $_CONFIG_ONLY -eq $BS_FALSE ] && [ "$POST_INSTALL_FUNC" != "null" ]; then
     echoinfo "Running ${POST_INSTALL_FUNC}()"
     $POST_INSTALL_FUNC
     if [ $? -ne 0 ]; then
         echoerror "Failed to run ${POST_INSTALL_FUNC}()!!!"
+        exit 1
+    fi
+fi
+
+# Run any check services function, Only execute function if not in config mode only
+if [ $_CONFIG_ONLY -eq $BS_FALSE ] && [ "$CHECK_SERVICES_FUNC" != "null" ]; then
+    echoinfo "Running ${CHECK_SERVICES_FUNC}()"
+    $CHECK_SERVICES_FUNC
+    if [ $? -ne 0 ]; then
+        echoerror "Failed to run ${CHECK_SERVICES_FUNC}()!!!"
         exit 1
     fi
 fi
@@ -3391,7 +4334,7 @@ if [ "$DAEMONS_RUNNING_FUNC" != "null" ] && [ $_START_DAEMONS -eq $BS_TRUE ]; th
             [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
             if [ $_ECHO_DEBUG -eq $BS_FALSE ]; then
-                echoerror "salt-$fname was not found running. Pass '-D' for additional debugging information..."
+                echoerror "salt-$fname was not found running. Pass '-D' to $__ScriptName when bootstrapping for additional debugging information..."
                 continue
             fi
 

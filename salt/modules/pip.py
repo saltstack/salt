@@ -259,7 +259,7 @@ def install(pkgs=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            'Hydrogen',
+            'Lithium',
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in Salt {version}. Please use \'user\' instead.'
         )
@@ -581,7 +581,7 @@ def uninstall(pkgs=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            'Hydrogen',
+            'Lithium',
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in Salt {version}. Please use \'user\' instead.'
         )
@@ -705,7 +705,7 @@ def freeze(bin_env=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            'Hydrogen',
+            'Lithium',
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in Salt {version}. Please use \'user\' instead.'
         )
@@ -757,7 +757,7 @@ def list_(prefix=None,
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
-            'Hydrogen',
+            'Lithium',
             'The \'runas\' argument to pip.install is deprecated, and will be '
             'removed in Salt {version}. Please use \'user\' instead.'
         )

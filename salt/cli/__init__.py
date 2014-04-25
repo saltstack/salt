@@ -4,6 +4,7 @@ The management of salt command line utilities are stored in here
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 
@@ -23,7 +24,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
-    EauthAuthenticationError
+    EauthAuthenticationError,
 )
 
 
@@ -52,13 +53,33 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.setup_logfile_logger()
 
         try:
-            local = salt.client.LocalClient(self.get_config_file_path())
+            local = salt.client.get_local_client(self.get_config_file_path())
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
 
         if self.options.batch:
-            batch = salt.cli.batch.Batch(self.config)
+            eauth = {}
+            if 'token' in self.config:
+                eauth['token'] = self.config['token']
+
+            # If using eauth and a token hasn't already been loaded into
+            # kwargs, prompt the user to enter auth credentials
+            if not 'token' in eauth and self.options.eauth:
+                resolver = salt.auth.Resolver(self.config)
+                res = resolver.cli(self.options.eauth)
+                if self.options.mktoken and res:
+                    tok = resolver.token_cli(
+                            self.options.eauth,
+                            res
+                            )
+                    if tok:
+                        eauth['token'] = tok.get('token', '')
+                if not res:
+                    sys.exit(2)
+                eauth.update(res)
+                eauth['eauth'] = self.options.eauth
+            batch = salt.cli.batch.Batch(self.config, eauth)
             # Printing the output is already taken care of in run() itself
             for res in batch.run():
                 pass
@@ -71,10 +92,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 'fun': self.config['fun'],
                 'arg': self.config['arg'],
                 'timeout': self.options.timeout,
-                'show_timeout': self.options.show_timeout}
+                'show_timeout': self.options.show_timeout,
+                'show_jid': self.options.show_jid}
 
             if 'token' in self.config:
-                kwargs['token'] = self.config['token']
+                try:
+                    with salt.utils.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
+                        kwargs['key'] = fp_.readline()
+                except IOError:
+                    kwargs['token'] = self.config['token']
 
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
@@ -105,6 +131,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 jid = local.cmd_async(**kwargs)
                 print('Executed command with job ID: {0}'.format(jid))
                 return
+            retcodes = []
             try:
                 # local will be None when there was an error
                 if local:
@@ -118,21 +145,30 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         if self.options.verbose:
                             kwargs['verbose'] = True
                         full_ret = local.cmd_full_return(**kwargs)
-                        ret, out = self._format_ret(full_ret)
+                        ret, out, retcode = self._format_ret(full_ret)
                         self._output_ret(ret, out)
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
                         for full_ret in local.cmd_cli(**kwargs):
-                            ret_, out = self._format_ret(full_ret)
+                            ret_, out, retcode = self._format_ret(full_ret)
                             ret.update(ret_)
                         self._output_ret(ret, out)
                     else:
                         if self.options.verbose:
                             kwargs['verbose'] = True
                         for full_ret in cmd_func(**kwargs):
-                            ret, out = self._format_ret(full_ret)
+                            ret, out, retcode = self._format_ret(full_ret)
+                            retcodes.append(retcode)
                             self._output_ret(ret, out)
+
+                    # NOTE: Return code is set here based on if all minions
+                    # returned 'ok' with a retcode of 0.
+                    # This is the final point before the 'salt' cmd returns,
+                    # which is why we set the retcode here.
+                    if retcodes.count(0) < len(retcodes):
+                        sys.exit(11)
+
             except (SaltInvocationError, EauthAuthenticationError) as exc:
                 ret = str(exc)
                 out = ''
@@ -157,11 +193,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         ret = {}
         out = ''
+        retcode = 0
         for key, data in full_ret.items():
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-        return ret, out
+            if 'retcode' in data:
+                retcode = data['retcode']
+        return ret, out, retcode
 
     def _print_docs(self, ret):
         '''
@@ -170,7 +209,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         docs = {}
         if not ret:
             self.exit(2, 'No minions found to gather docs from\n')
-
+        if isinstance(ret, str):
+            self.exit(2, '{0}\n'.format(ret))
         for host in ret:
             for fun in ret[host]:
                 if fun not in docs:

@@ -3,10 +3,14 @@
 Control virtual machines via Salt
 '''
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt libs
 import salt.client
 import salt.output
 import salt.utils.virt
+import salt.key
 
 
 def _determine_hyper(data, omit=''):
@@ -51,10 +55,12 @@ def _find_vm(name, data, quiet=False):
 
 def query(hyper=None, quiet=False):
     '''
-    Query the virtual machines
+    Query the virtual machines. When called without options all hypervisors
+    are detected and a full query is returned. A single hypervisor can be
+    passed in to specify an individual hypervisor to query.
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
                                 'virt.full_info', expr_form='grain'):
         if not info:
@@ -82,10 +88,13 @@ def query(hyper=None, quiet=False):
 
 def list(hyper=None, quiet=False):
     '''
-    List the virtual machines on each hyper
+    List the virtual machines on each hyper, this is a simplified query,
+    showing only the virtual machine names belonging to each hypervisor.
+    A single hypervisor can be passed in to specify an individual hypervisor
+    to list.
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
                                 'virt.vm_info', expr_form='grain'):
         if not info:
@@ -119,7 +128,9 @@ def list(hyper=None, quiet=False):
 
 def next_hyper():
     '''
-    Return the hypervisor to use for the next autodeployed vm
+    Return the hypervisor to use for the next autodeployed vm. This querires
+    the available hypervisors and executes some math the determine the most
+    "available" next hypervisor.
     '''
     hyper = _determine_hyper(query(quiet=True))
     print(hyper)
@@ -148,7 +159,40 @@ def init(
         nic='default',
         install=True):
     '''
-    Initialize a new vm
+    This routine is used to create a new virtual machine. This routines takes
+    a number of options to determine what the newly created virtual machine
+    will look like.
+
+    name
+        The mandatory name of the new virtual machine. The name option is
+        also the minion id, all minions must have an id.
+
+    cpu
+        The number of cpus to allocate to this new virtual machine.
+
+    mem
+        The amount of memory to allocate tot his virtual machine. The number
+        is interpereted in megabytes.
+
+    image
+        The network location of the virtual machine image, commonly a location
+        on the salt fileserver, but http, https and ftp can also be used.
+
+    hyper
+        The hypervisor to use for the new virtual macine, if this is ommited
+        Salt will automatically detect what hypervisor to use.
+
+    seed
+        Set to False to prevent Salt from seeding the new virtual machine.
+
+    nic
+        The nic profile to use, defaults to the "default" nic profile which
+        assumes a single network interface per vm associated with the "br0"
+        bridge on the master.
+
+    install
+        Set to False to prevent Salt fom instaling a minion on the new vm
+        before it spins up.
     '''
     print('Searching for Hypervisors')
     data = query(hyper, quiet=True)
@@ -171,7 +215,7 @@ def init(
         kv = salt.utils.virt.VirtKey(hyper, name, __opts__)
         kv.authorize()
 
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
 
     print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
     cmd_ret = client.cmd_iter(
@@ -210,7 +254,7 @@ def reset(name):
     Force power down and restart an existing vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to reset'.format(name))
@@ -232,7 +276,7 @@ def start(name):
     Start a named virtual machine
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to start'.format(name))
@@ -257,7 +301,7 @@ def force_off(name):
     Force power down the named virtual machine
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
@@ -277,12 +321,12 @@ def force_off(name):
     return 'good'
 
 
-def purge(name):
+def purge(name, delete_key=True):
     '''
     Destroy the named vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to purge'.format(name))
@@ -295,6 +339,10 @@ def purge(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
+
+    if delete_key:
+        skey = salt.key.Key(__opts__)
+        skey.delete_key(name)
     print('Purged VM {0}'.format(name))
     return 'good'
 
@@ -304,7 +352,8 @@ def pause(name):
     Pause the named vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
+
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find VM {0} to pause'.format(name))
@@ -329,7 +378,7 @@ def resume(name):
     Resume a paused vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find VM {0} to pause'.format(name))
@@ -352,9 +401,9 @@ def resume(name):
 def migrate(name, target=''):
     '''
     Migrate a vm from one hypervisor to another. This routine will just start
-    the migration and display information on how to look up the progress
+    the migration and display information on how to look up the progress.
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
     try:
@@ -372,6 +421,12 @@ def migrate(name, target=''):
         print('Target hypervisor {0} not found'.format(origin_data))
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
-    print client.cmd_async(origin_hyper,
+    jid = client.cmd_async(origin_hyper,
                            'virt.migrate_non_shared',
                            [name, target])
+
+    msg = ('The migration of virtual machine {0} to hypervisor {1} has begun, '
+           'and can be tracked via jid {2}. The ``salt-run virt.query`` '
+           'runner can also be used, the target vm will be shown as paused '
+           'until the migration is complete.').format(name, target, jid)
+    print(msg)

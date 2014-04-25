@@ -1,0 +1,3 @@
+{% macro mymacro() -%}
+{{b.greetee}} <-- error is here
+{%- endmacro %}

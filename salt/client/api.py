@@ -54,11 +54,14 @@ class APIClient(object):
                 )
             )
         self.opts = opts
-        self.localClient = salt.client.LocalClient(self.opts['conf_file'])
+        self.localClient = salt.client.get_local_client(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)
         self.wheelClient = salt.wheel.Wheel(self.opts)
         self.resolver = salt.auth.Resolver(self.opts)
-        self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'])
 
     def run(self, cmd):
         '''
@@ -307,7 +310,7 @@ class APIClient(object):
 
         If wait is 0 then block forever or until next event becomes available.
         '''
-        return (self.event.get_event(wait=wait, tag=tag, full=full))
+        return self.event.get_event(wait=wait, tag=tag, full=full)
 
     def fire_event(self, data, tag):
         '''
@@ -316,4 +319,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
 
         '''
-        return (self.event.fire_event(data, tagify(tag, 'wui')))
+        return self.event.fire_event(data, tagify(tag, 'wui'))

@@ -7,8 +7,13 @@ The network module is used to create and manage network settings,
 interfaces can be set as either managed or ignored. By default
 all interfaces are ignored unless specified.
 
-Please note that only Redhat-style networking is currently
-supported. This module will therefore only work on RH/CentOS/Fedora.
+.. note::
+
+    Prior to version 2014.1.0 (Hydrogen), only RedHat-based systems (RHEL,
+    CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
+    new in 2014.1.0 and should be considered experimental.
+
+    Other platforms are not yet supported.
 
 .. code-block:: yaml
 
@@ -153,10 +158,8 @@ supported. This module will therefore only work on RH/CentOS/Fedora.
 # Import python libs
 import difflib
 import salt.utils
+import salt.utils.network
 from salt.loader import _create_loader
-
-# Define the module's virtual name
-__virtualname__ = 'network'
 
 # Set up logging
 import logging
@@ -169,7 +172,7 @@ def __virtual__():
     module available.
     '''
     if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
-        return __virtualname__
+        return True
     return False
 
 
@@ -275,10 +278,23 @@ def managed(name, type, enabled=True, **kwargs):
 
     # Bring up/shutdown interface
     try:
+        # Get Interface current status
+        interface_status = salt.utils.network.interfaces()[name].get('up')
         if enabled:
-            __salt__['ip.up'](name, type)
+            if interface_status:
+                if ret['changes']:
+                    # Interface should restart to validate if it's up
+                    __salt__['ip.down'](name, type)
+                    __salt__['ip.up'](name, type)
+                    ret['changes']['status'] = 'Interface {0} restart to validate'.format(name)
+                    return ret
+            else:
+                __salt__['ip.up'](name, type)
+                ret['changes']['status'] = 'Interface {0} is up'.format(name)
         else:
-            __salt__['ip.down'](name, type)
+            if interface_status:
+                __salt__['ip.down'](name, type)
+                ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
         ret['comment'] = error.message

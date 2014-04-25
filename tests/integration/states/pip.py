@@ -27,15 +27,11 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
+@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
-
-    def setUp(self):
-        super(PipStateTest, self).setUp()
-        ret = self.run_function('cmd.has_exec', ['virtualenv'])
-        if not ret:
-            self.skipTest('virtualenv not installed')
 
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(

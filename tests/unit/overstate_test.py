@@ -175,7 +175,6 @@ class OverstateTestCase(TestCase,
         ret = overstate._check_results('mysql', 'all', {}, {'all': {}})
         self.assertEqual(ret, ({}, {'all': {}}))
 
-
     # @patch('salt.overstate.OverState.call_stage')
     # def test_call_stage(self, call_stage_mock):
     #     overstate = salt.overstate.OverState(self.master_config)
@@ -183,3 +182,8 @@ class OverstateTestCase(TestCase,
     #     overstate.call_stage('all', {'require': {'webservers': 'mysql'}, 'match': '*'})
     #     overstate.call_stage('mysql', {'match': 'db*', 'sls': {'drbb': 'mysql.server'}})
     #     overstate.call_stage({'require': ['mysql'], 'match': 'web*'})
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(OverstateTestCase, needs_daemon=False)

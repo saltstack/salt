@@ -7,7 +7,7 @@ Digital Ocean is a public cloud provider that specializes in Linux instances.
 
 Dependencies
 ============
-The Digital Ocean driver requires no special dependencies outside of Salt.
+This driver requires the Python ``requests`` library to be installed.
 
 
 Configuration
@@ -43,6 +43,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
         image: Ubuntu 12.10 x64
         size: 512MB
         location: New York 1
+        private_networking: True
+        backups_enabled: True
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -97,6 +99,15 @@ command:
                 slug:
                     None
     ...SNIP...
+
+.. note::
+
+    DigitalOcean's concept of ``Applications`` is nothing more than a
+    pre-configured instance (same as a normal Droplet). You will find examples
+    such ``Docker 0.7 Ubuntu 13.04 x64`` and ``Wordpress on Ubuntu 12.10``
+    when using the ``--list-images`` option. These names can be used just like
+    the rest of the standard instances when specifying an image in the cloud
+    profile configuration.
 
 .. note::
 

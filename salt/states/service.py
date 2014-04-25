@@ -34,6 +34,12 @@ service, then set the reload value to True:
         - reload: True
         - watch:
           - pkg: redis
+
+.. note::
+
+    More details regarding ``watch`` can be found in the
+    :doc:`Requisites </ref/states/requisites>` documentation.
+
 '''
 
 
@@ -42,7 +48,7 @@ def __virtual__():
     Only make these states available if a service provider has been detected or
     assigned for this minion
     '''
-    return 'service' if 'service.start' in __salt__ else False
+    return 'service.start' in __salt__
 
 
 def _enabled_used_error(ret):
@@ -87,6 +93,7 @@ def _enable(name, started, result=True, **kwargs):
     if __salt__['service.enabled'](name):
         # Service is enabled
         if started is True:
+            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is running').format(name)
             return ret
@@ -404,12 +411,17 @@ def disabled(name, **kwargs):
     return _disable(name, None, **kwargs)
 
 
-def mod_watch(name, sig=None, reload=False, full_restart=False):
+def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
     '''
     The service watcher, called to invoke the watch command.
 
     name
         The name of the init or rc script used to manage the service
+
+    sfun
+        The original function which triggered the mod_watch call
+        (`service.running`, for example).  Currently not used, but must be
+        supported for the future.
 
     sig
         The string to search for when looking for the service process with ps

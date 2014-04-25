@@ -5,7 +5,6 @@ import os
 import tempfile
 import json
 import datetime
-import textwrap
 import pprint
 
 # Import Salt Testing libs
@@ -17,18 +16,19 @@ ensure_in_syspath('../../')
 import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils import get_context
-from salt.utils.jinja import SaltCacheLoader, SerializerExtension
-from salt.utils.templates import (
-    JINJA,
-    render_jinja_tmpl,
+from salt.utils.jinja import (
+    SaltCacheLoader,
+    SerializerExtension,
+    ensure_sequence_filter
 )
+from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
 
 # Import 3rd party libs
 import yaml
 from jinja2 import Environment, DictLoader, exceptions
 try:
-    import timelib
+    import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -173,6 +173,81 @@ class TestGetTemplate(TestCase):
                      a='Hi', b='Salt', saltenv='test'))
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
+        SaltCacheLoader.file_client = _fc
+
+    def test_macro_additional_log_for_generalexc(self):
+        '''
+        If we failed in a macro because of eg a typeerror, get
+        more output from trace.
+        '''
+        expected = r'''Jinja error:.*division.*
+.*/macrogeneral\(2\):
+---
+\{% macro mymacro\(\) -%\}
+\{\{ 1/0 \}\}    <======================
+\{%- endmacro %\}
+---.*'''
+        filename = os.path.join(TEMPLATES_DIR,
+                                'files', 'test', 'hello_import_generalerror')
+        fc = MockFileClient()
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            salt.utils.fopen(filename).read(),
+            dict(opts=self.local_opts, saltenv='other'))
+        SaltCacheLoader.file_client = _fc
+
+    def test_macro_additional_log_for_undefined(self):
+        '''
+        If we failed in a macro because of undefined variables, get
+        more output from trace.
+        '''
+        expected = r'''Jinja variable 'b' is undefined
+.*/macroundefined\(2\):
+---
+\{% macro mymacro\(\) -%\}
+\{\{b.greetee\}\} <-- error is here    <======================
+\{%- endmacro %\}
+---'''
+        filename = os.path.join(TEMPLATES_DIR,
+                                'files', 'test', 'hello_import_undefined')
+        fc = MockFileClient()
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            salt.utils.fopen(filename).read(),
+            dict(opts=self.local_opts, saltenv='other'))
+        SaltCacheLoader.file_client = _fc
+
+    def test_macro_additional_log_syntaxerror(self):
+        '''
+        If  we failed in a macro, get more output from trace.
+        '''
+        expected = r'''Jinja syntax error: expected token .*end.*got '-'.*
+.*/macroerror\(2\):
+---
+# macro
+\{% macro mymacro\(greeting, greetee='world'\) -\} <-- error is here    <======================
+\{\{ greeting ~ ' ' ~ greetee \}\} !
+\{%- endmacro %\}
+---.*'''
+        filename = os.path.join(TEMPLATES_DIR,
+                                'files', 'test', 'hello_import_error')
+        fc = MockFileClient()
+        _fc = SaltCacheLoader.file_client
+        SaltCacheLoader.file_client = lambda loader: fc
+        self.assertRaisesRegexp(
+            SaltRenderError,
+            expected,
+            render_jinja_tmpl,
+            salt.utils.fopen(filename).read(),
+            dict(opts=self.local_opts, saltenv='other'))
         SaltCacheLoader.file_client = _fc
 
     def test_non_ascii_encoding(self):
@@ -435,6 +510,16 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
 
+    def test_load_text_template(self):
+        loader = DictLoader({'foo': 'Foo!'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+
+        rendered = env.from_string('{% import_text "foo" as doc %}{{ doc }}').render()
+        self.assertEqual(rendered, u"Foo!")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_text "does not exists" as doc %}').render()
+
     def test_catalog(self):
         loader = DictLoader({
             'doc1': '{bar: "my god is blue"}',
@@ -509,6 +594,30 @@ class TestCustomExtensions(TestCase):
                                                             )
                                                         ])
         self.assertEqual(rendered, u"[{'foo': 'bar'}, {'baz': 42}]")
+
+    def test_sequence(self):
+        env = Environment()
+        env.filters['sequence'] = ensure_sequence_filter
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data='foo')
+        self.assertEqual(rendered, '1')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=['foo', 'bar'])
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=('foo', 'bar'))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data=set(['foo', 'bar']))
+        self.assertEqual(rendered, '2')
+
+        rendered = env.from_string('{{ data | sequence | length }}') \
+                      .render(data={'foo': 'bar'})
+        self.assertEqual(rendered, '1')
 
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])

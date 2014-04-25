@@ -7,6 +7,12 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
+Please note that the `rackspace` driver is only intended for 1st gen instances,
+aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
+will *not* work with OpenStack-based instances. Unless you explicitly have a
+reason to use it, it is highly recommended that you use the `openstack` driver
+instead.
+
 The rackspace cloud module interfaces with the Rackspace public cloud service
 and requires that two configuration parameters be set for use, ``user`` and
 ``apikey``.
@@ -33,7 +39,11 @@ import socket
 import pprint
 
 # Import libcloud
-from libcloud.compute.base import NodeState
+try:
+    from libcloud.compute.base import NodeState
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -76,14 +86,12 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for Rackspace configuration.
     '''
-    if get_configured_provider() is False:
-        log.debug(
-            'There is no Rackspace cloud provider configuration available. '
-            'Not loading module.'
-        )
+    if not HAS_LIBCLOUD:
         return False
 
-    log.debug('Loading Rackspace cloud module')
+    if get_configured_provider() is False:
+        return False
+
     return True
 
 
@@ -201,6 +209,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -218,6 +227,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -332,6 +342,7 @@ def create(vm_):
     if deploy is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
             'username': ssh_username,
             'password': data.extra['password'],
@@ -401,11 +412,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
@@ -413,6 +424,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -430,14 +442,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data.__dict__)
+
+    if 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -448,6 +463,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

@@ -250,6 +250,10 @@ This shell command can find wrong characters in your SLS files:
     find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
 
 
+Alternatively you can toggle the `yaml_utf8` setting in your master configuration
+ file. This is still an experimental setting but it should manage the right
+ encoding conversion in salt after yaml states compilations.
+
 Underscores stripped in Integer Definitions
 ===========================================
 
@@ -268,3 +272,21 @@ Here's an example:
     20130510
     >>> yaml.safe_load('"2013_05_10"')
     '2013_05_10'
+
+Automatic ``datetime`` conversion
+=================================
+
+If there is a value in a YAML file formatted ``2014-01-20 14:23:23`` or
+similar, YAML will automatically convert this to a Python ``datetime`` object.
+These objects are not msgpack serializable, and so may break core salt
+functionality.  If values such as these are needed in a salt YAML file
+(specifically a configuration file), they should be formatted with surrounding
+strings to force YAML to serialize them as strings:
+
+.. code-block:: python
+
+    >>> import yaml
+    >>> yaml.safe_load('2014-01-20 14:23:23')
+    datetime.datetime(2014, 1, 20, 14, 23, 23)
+    >>> yaml.safe_load('"2014-01-20 14:23:23"')
+    '2014-01-20 14:23:23'

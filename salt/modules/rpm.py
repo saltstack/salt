@@ -21,23 +21,15 @@ def __virtual__():
     '''
     if not salt.utils.which('rpm'):
         return False
-
-    # Work only on RHEL/Fedora based distros with python 2.6 or greater
-    # TODO: Someone decide if we can just test os_family and pythonversion
-    os_grain = __grains__['os']
-    os_family = __grains__['os_family']
     try:
-        os_major = int(__grains__['osrelease'].split('.')[0])
-    except (AttributeError, ValueError):
-        os_major = 0
+        os_grain = __grains__['os'].lower()
+        os_family = __grains__['os_family'].lower()
+    except Exception:
+        return False
 
-    if os_grain == 'Amazon':
-        return __virtualname__
-    elif os_grain == 'Fedora':
-        # Fedora <= 10 used Python 2.5 and below
-        if os_major >= 11:
-            return __virtualname__
-    elif os_family == 'RedHat' and os_major >= 6:
+    enabled = ('amazon', 'xcp', 'xenserver')
+
+    if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
     return False
 
@@ -62,7 +54,8 @@ def list_pkgs(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -92,7 +85,8 @@ def verify(*package):
         cmd = 'rpm -V {0}'.format(packages)
     else:
         cmd = 'rpm -Va'
-    for line in __salt__['cmd.run'](cmd).split('\n'):
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line
@@ -141,7 +135,7 @@ def file_list(*packages):
         cmd = 'rpm -qla'
     else:
         cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    ret = __salt__['cmd.run'](cmd).splitlines()
+    ret = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -168,7 +162,8 @@ def file_dict(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -177,7 +172,8 @@ def file_dict(*packages):
     for pkg in pkgs.keys():
         files = []
         cmd = 'rpm -ql {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        for line in out.splitlines():
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}

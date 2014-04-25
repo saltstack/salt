@@ -34,6 +34,7 @@ load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,sal
 # --disable=W"
 disable=R,
   I0011,
+  I0013,
   E1101,
   E1103,
   C0102,
@@ -51,7 +52,6 @@ disable=R,
   W0404,
   W0511,
   W0603,
-  W0611,
   W0612,
   W0613,
   W0621,
@@ -73,6 +73,7 @@ disable=R,
 # Disabled:
 # R* [refactoring suggestions & reports]
 # I0011 (locally-disabling)
+# I0013 (file-ignored)
 # E1101 (no-member) [pylint isn't smart enough]
 # E1103 (maybe-no-member)
 # C0102 (blacklisted-name) [because it activates C0103 too]
@@ -90,7 +91,6 @@ disable=R,
 # W0404 (reimported) [done intentionally for legit reasons]
 # W0511 (fixme) [several outstanding instances currently in the codebase]
 # W0603 (global-statement)
-# W0611 (unused-import) [used to check for module availability]
 # W0612 (unused-variable) [unused return values]
 # W0613 (unused-argument)
 # W0621 (redefined-outer-name)
@@ -132,6 +132,8 @@ bad-functions=apply,input
 
 
 [FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=120
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
@@ -142,7 +144,7 @@ indent-string='    '
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__lowstate__,__running__,__active_provider_name__
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__
 
 
 [IMPORTS]

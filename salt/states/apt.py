@@ -17,7 +17,7 @@ def __virtual__():
     '''
     Only work on apt-based platforms with pkg.get_selections
     '''
-    return 'apt' if 'pkg.get_selections' in __salt__ else False
+    return 'pkg.get_selections' in __salt__
 
 
 def held(name):

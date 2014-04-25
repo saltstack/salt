@@ -64,7 +64,7 @@ def _present_test(user, name, enc, comment, options, source, config):
                 user,
                 source,
                 config,
-                __env__)
+                saltenv=__env__)
         if keys:
             comment = ''
             for key, status in keys.items():
@@ -125,7 +125,8 @@ def present(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
+        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
+        or ssh-dss
 
     comment
         The comment to be placed with the SSH public key
@@ -175,7 +176,8 @@ def present(
         data = __salt__['ssh.set_auth_key_from_file'](
                 user,
                 source,
-                config)
+                config,
+                saltenv=__env__)
     else:
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
@@ -251,7 +253,8 @@ def absent(name,
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
+        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
+        or ssh-dss
 
     comment
         The comment to be placed with the SSH public key

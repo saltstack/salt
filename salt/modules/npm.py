@@ -43,7 +43,8 @@ def _valid_version():
 
 def install(pkg=None,
             dir=None,
-            runas=None):
+            runas=None,
+            registry=None):
     '''
     Install an NPM package.
 
@@ -52,7 +53,8 @@ def install(pkg=None,
     package in the given directory will be installed.
 
     pkg
-        A package name in any format accepted by NPM
+        A package name in any format accepted by NPM, including a version
+        identifier
 
     dir
         The target directory in which to install the package, or None for
@@ -61,11 +63,18 @@ def install(pkg=None,
     runas
         The user to run NPM with
 
+    registry
+        The NPM registry to install the package from.
+
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' npm.install coffee-script
+
+        salt '*' npm.install coffee-script@1.0.1
 
     '''
     if not _valid_version():
@@ -75,6 +84,9 @@ def install(pkg=None,
 
     if dir is None:
         cmd += ' --global'
+
+    if registry:
+        cmd += ' --registry="{0}"'.format(registry)
 
     if pkg:
         cmd += ' "{0}"'.format(pkg)
@@ -95,15 +107,18 @@ def install(pkg=None,
     lines = npm_output.splitlines()
     log.error(lines)
 
-    # Strip all lines until JSON output starts
-    while not lines[0].startswith('{') and not lines[0].startswith('['):
-        lines = lines[1:]
+    while lines:
+        # Strip all lines until JSON output starts
+        while not lines[0].startswith('{') and not lines[0].startswith('['):
+            lines = lines[1:]
 
-    try:
-        return json.loads(''.join(lines))
-    except ValueError:
-        # Still no JSON!! Return the stdout as a string
-        return npm_output
+        try:
+            return json.loads(''.join(lines))
+        except ValueError:
+            lines = lines[1:]
+
+    # Still no JSON!! Return the stdout as a string
+    return npm_output
 
 
 def uninstall(pkg,

@@ -230,7 +230,7 @@ def vgcreate(vgname, devices, **kwargs):
     return vgdata
 
 
-def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
+def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv='', **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
@@ -240,16 +240,46 @@ def lvcreate(lvname, vgname, size=None, extents=None, pv=''):
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
         salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
+        salt '*' lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
     '''
     if size and extents:
         return 'Error: Please specify only size or extents'
 
+    valid = ('activate', 'chunksize', 'contiguous', 'discards', 'stripes',
+             'stripesize', 'minor', 'persistent', 'mirrors', 'noudevsync',
+             'monitor', 'ignoremonitoring', 'permission', 'poolmetadatasize',
+             'readahead', 'regionsize', 'thin', 'thinpool', 'type', 'virtualsize',
+             'zero',)
+    no_parameter = ('noudevsync', 'ignoremonitoring', )
+    extra_arguments = ' '.join([
+        '--{0}'.format(k) if k in no_parameter else '--{0} {1}'.format(k, v)
+        for k, v in kwargs.iteritems() if k in valid
+    ])
+
+    if snapshot:
+        _snapshot = '-s ' + vgname + '/' + snapshot
+
     if size:
-        cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(lvname, vgname, size, pv)
+        if snapshot:
+            cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(
+                lvname, _snapshot, size, pv
+            )
+        else:
+            cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(
+                lvname, vgname, size, pv
+            )
     elif extents:
-        cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(lvname, vgname, extents, pv)
+        if snapshot:
+            cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(
+                lvname, _snapshot, extents, pv
+            )
+        else:
+            cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(
+                lvname, vgname, extents, pv
+            )
     else:
         return 'Error: Either size or extents must be specified'
+
     out = __salt__['cmd.run'](cmd).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
     lvdata = lvdisplay(lvdev)

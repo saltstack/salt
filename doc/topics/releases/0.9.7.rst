@@ -2,6 +2,8 @@
 Salt 0.9.7 Release Notes
 ========================
 
+:release: 2012-02-15
+
 Salt 0.9.7 is here! The latest iteration of Salt brings more features and many
 fixes. This release is a great refinement over 0.9.6, adding many conveniences
 under the hood, as well as some features that make working with Salt much
@@ -176,4 +178,3 @@ Previously the nodegroups defined in the master configuration file could not
 be used to match nodes for states. The nodegroups support has been expanded
 and the nodegroups defined in the master configuration can now be used to
 match minions in the top file.
-

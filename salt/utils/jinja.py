@@ -33,8 +33,10 @@ __all__ = [
 
 # To dump OrderedDict objects as regular dicts. Used by the yaml
 # template filter.
-class OrderedDictDumper(yaml.Dumper):
+class OrderedDictDumper(yaml.Dumper):  # pylint: disable=W0232
     pass
+
+
 yaml.add_representer(OrderedDict,
                      yaml.representer.SafeRepresenter.represent_dict,
                      Dumper=OrderedDictDumper)
@@ -127,6 +129,7 @@ class PrintableDict(OrderedDict):
     Ensures that dict str() and repr() are YAML friendly.
 
     .. code-block:: python
+
         mapping = OrderedDict([('a', 'b'), ('c', None)])
         print mapping
         # OrderedDict([('a', 'b'), ('c', None)])
@@ -134,7 +137,6 @@ class PrintableDict(OrderedDict):
         decorated = PrintableDict(mapping)
         print decorated
         # {'a': 'b', 'c': None}
-
     '''
     def __str__(self):
         output = []
@@ -154,12 +156,43 @@ class PrintableDict(OrderedDict):
         return '{' + ', '.join(output) + '}'
 
 
+def ensure_sequence_filter(data):
+    '''
+    Ensure sequenced data.
+
+    **sequence**
+
+        ensure that parsed data is a sequence
+
+    .. code-block:: yaml
+
+        {% set my_string = "foo" %}
+        {% set my_list = ["bar", ] %}
+        {% set my_dict = {"baz": "qux"} %}
+
+        {{ my_string|sequence|first }}
+        {{ my_list|sequence|first }}
+        {{ my_dict|sequence|first }}
+
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        foo
+        bar
+        baz
+    '''
+    if not isinstance(data, (list, tuple, set, dict)):
+        return [data]
+    return data
+
+
 class SerializerExtension(Extension, object):
     '''
     Yaml and Json manipulation.
 
-    Format filters
-    ~~~~~~~~~~~~~~
+    **Format filters**
 
     Allows to jsonify or yamlify any datastructure. For example, this dataset:
 
@@ -184,10 +217,11 @@ class SerializerExtension(Extension, object):
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
         python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
 
-    Load filters
-    ~~~~~~~~~~~~
+    **Load filters**
 
-    Parse strings variable with the selected serializer:
+    Strings and variables can be deserialized with **load_yaml** and
+    **load_json** tags and filters. It allows one to manipulate data directly
+    in templates, easily:
 
     .. code-block:: jinja
 
@@ -199,11 +233,10 @@ class SerializerExtension(Extension, object):
 
         Dude, it works for real!
 
-    Load tags
-    ~~~~~~~~~
+    **Load tags**
 
-    Like the load filters, it parses blocks with the selected serializer,
-    and assign it to the relevant variable
+    Salt implements **import_yaml** and **import_json** tags. They work like
+    the `import tag`_, except that the document is also deserialized.
 
     Syntaxe are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
     and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
@@ -226,21 +259,17 @@ class SerializerExtension(Extension, object):
 
         Dude, it works for real!
 
-    Import tags
-    ~~~~~~~~~~~
+    **Import tags**
 
-    You can also import template and decode them automatically.
-
-    Syntaxe are {% import_yaml [TEMPLATE_NAME] as [VARIABLE] %}
-    and {% import_json [TEMPLATE_NAME] as [VARIABLE] %}
+    External files can be imported and made available as a Jinja variable.
 
     .. code-block:: jinja
 
-        {% import_yaml "state2.sls" as state2 %}
-        {% import_json "state3.sls" as state3 %}
+        {% import_yaml "myfile.yml" as myfile %}
+        {% import_json "defaults.json" as defaults %}
+        {% import_text "completeworksofshakespeare.txt" as poems %}
 
-    Catalog
-    ~~~~~~~
+    **Catalog**
 
     ``import_*`` and ``load_*`` tags will automatically expose their
     target variable to import. This feature makes catalog of data to
@@ -249,6 +278,7 @@ class SerializerExtension(Extension, object):
     for example:
 
     .. code-block:: jinja
+
         # doc1.sls
         {% load_yaml as var1 %}
             foo: it works
@@ -258,13 +288,16 @@ class SerializerExtension(Extension, object):
         {% endload %}
 
     .. code-block:: jinja
+
         # doc2.sls
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
+    .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json'])
+    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
+        'load_text', 'import_text'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -273,7 +306,8 @@ class SerializerExtension(Extension, object):
             'json': self.format_json,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
-            'load_json': self.load_json
+            'load_json': self.load_json,
+            'load_text': self.load_text,
         })
 
         if self.environment.finalize is None:
@@ -326,17 +360,26 @@ class SerializerExtension(Extension, object):
             raise TemplateRuntimeError(
                     'Unable to load json from {0}'.format(value))
 
+    def load_text(self, value):
+        if isinstance(value, TemplateModule):
+            value = str(value)
+
+        return value
+
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':
             return self.parse_yaml(parser)
         elif parser.stream.current.value == 'import_json':
             return self.parse_json(parser)
-        elif parser.stream.current.value in ('load_yaml', 'load_json'):
+        elif parser.stream.current.value == 'import_text':
+            return self.parse_text(parser)
+        elif parser.stream.current.value in ('load_yaml', 'load_json', 'load_text'):
             return self.parse_load(parser)
 
         parser.fail('Unknown format ' + parser.stream.current.value,
                     parser.stream.current.lineno)
 
+    # pylint: disable=E1120,E1121
     def parse_load(self, parser):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
@@ -416,3 +459,25 @@ class SerializerExtension(Extension, object):
                 .set_lineno(lineno)
             ).set_lineno(lineno)
         ]
+
+    def parse_text(self, parser):
+        import_node = parser.parse_import()
+        target = import_node.target
+        lineno = import_node.lineno
+
+        return [
+            import_node,
+            nodes.Assign(
+                nodes.Name(target, 'store').set_lineno(lineno),
+                nodes.Filter(
+                    nodes.Name(target, 'load').set_lineno(lineno),
+                    'load_text',
+                    [],
+                    [],
+                    None,
+                    None
+                )
+                .set_lineno(lineno)
+            ).set_lineno(lineno)
+        ]
+    # pylint: enable=E1120,E1121

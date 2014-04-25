@@ -15,7 +15,10 @@ import os
 
 # Import third party libs
 import yaml
-import msgpack
+try:
+    import msgpack
+except ImportError:
+    import msgpack_pure as msgpack
 
 # Import salt libs
 import salt.output
@@ -76,7 +79,7 @@ def genrepo():
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(os.path.join(repo, winrepo), 'w') as repo:
+    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo:
         repo.write(msgpack.dumps(ret))
     salt.output.display_output(ret, 'pprint', __opts__)
     return ret
@@ -102,9 +105,14 @@ def update_git_repos():
         #else:
             #targetname = gitrepo
         targetname = gitrepo
+        rev = None
+        # If a revision is specified, use it.
+        if len(gitrepo.strip().split(' ')) > 1:
+            rev, gitrepo = gitrepo.strip().split(' ')
         gittarget = os.path.join(repo, targetname)
         #result = mminion.states['git.latest'](gitrepo,
         result = __salt__['git.latest'](gitrepo,
+                                        rev=rev,
                                         target=gittarget,
                                         force=True)
         ret[result['name']] = result['result']

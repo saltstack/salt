@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 Manage client ssh components
+
+.. note:: This module requires the use of MD5 hashing. Certain
+    secruity audits may not permit the use of MD5. For those cases,
+    this module should be disabled or removed.
 '''
 
 # Import python libs
@@ -39,6 +43,7 @@ def _refine_enc(enc):
     dss = ['d', 'dsa', 'dss', 'ssh-dss']
     ecdsa = ['e', 'ecdsa', 'ecdsa-sha2-nistp521', 'ecdsa-sha2-nistp384',
              'ecdsa-sha2-nistp256']
+    ed25519 = ['ed25519', 'ssh-ed25519']
 
     if enc in rsa:
         return 'ssh-rsa'
@@ -50,6 +55,8 @@ def _refine_enc(enc):
         if enc in ['e', 'ecdsa']:
             return 'ecdsa-sha2-nistp256'
         return enc
+    elif enc in ed25519:
+        return 'ssh-ed25519'
     else:
         raise CommandExecutionError(
             'Incorrect encryption key type {0!r}.'.format(enc)
@@ -286,7 +293,8 @@ def check_key_file(user,
         return ret
 
 
-def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
+def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
+              cache_keys=None):
     '''
     Check to see if a key needs updating, returns "update", "add" or "exists"
 
@@ -296,9 +304,25 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys'):
 
         salt '*' ssh.check_key <user> <key> <enc> <comment> <options>
     '''
+    if cache_keys is None:
+        cache_keys = []
     enc = _refine_enc(enc)
     current = auth_keys(user, config)
     nline = _format_auth_line(key, enc, comment, options)
+
+    # Removing existing keys from the auth_keys isn't really a good idea
+    # in fact
+    #
+    # as:
+    #   - We can have non-salt managed keys in that file
+    #   - We can have multiple states defining keys for an user
+    #     and with such code only one state will win
+    #     the remove all-other-keys war
+    #
+    # if cache_keys:
+    #     for pub_key in set(current).difference(set(cache_keys)):
+    #         rm_auth_key(user, pub_key)
+
     if key in current:
         cline = _format_auth_line(key,
                                   current[key]['enc'],
@@ -380,10 +404,10 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
 
 
 def set_auth_key_from_file(user,
-                          source,
-                          config='.ssh/authorized_keys',
-                          saltenv='base',
-                          env=None):
+                           source,
+                           config='.ssh/authorized_keys',
+                           saltenv='base',
+                           env=None):
     '''
     Add a key to the authorized_keys file, using a file as the source.
 
@@ -429,7 +453,8 @@ def set_auth_key_from_file(user,
                 s_keys[key]['enc'],
                 s_keys[key]['comment'],
                 s_keys[key]['options'],
-                config
+                config,
+                s_keys.keys()
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -451,7 +476,8 @@ def set_auth_key(
         enc='ssh-rsa',
         comment='',
         options=None,
-        config='.ssh/authorized_keys'):
+        config='.ssh/authorized_keys',
+        cache_keys=None):
     '''
     Add a key to the authorized_keys file. The "key" parameter must only be the
     string of text that is the encoded key. If the key begins with "ssh-rsa"
@@ -464,6 +490,8 @@ def set_auth_key(
 
         salt '*' ssh.set_auth_key <user> '<key>' enc='dsa'
     '''
+    if cache_keys is None:
+        cache_keys = []
     if len(key.split()) > 1:
         return 'invalid'
 
@@ -471,7 +499,7 @@ def set_auth_key(
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         return 'fail'
-    status = check_key(user, key, enc, comment, options, config)
+    status = check_key(user, key, enc, comment, options, config, cache_keys)
     if status == 'update':
         _replace_auth_key(user, key, enc, comment, options or [], config)
         return 'replace'

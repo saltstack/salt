@@ -6,123 +6,17 @@ Resources needed by pkg providers
 # Import python libs
 import fnmatch
 import logging
-import os
 import pprint
-import re
-import sys
 
 # Import third party libs
 import yaml
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
-
-
-def _parse_pkg_meta(path):
-    '''
-    Parse metadata from a binary package and return the package's name and
-    version number.
-    '''
-    def parse_rpm(path):
-        try:
-            from salt.modules.yumpkg5 import __QUERYFORMAT, _parse_pkginfo
-            from salt.utils import namespaced_function as _namespaced_function
-            _parse_pkginfo = _namespaced_function(_parse_pkginfo, globals())
-        except ImportError:
-            log.critical('Error importing helper functions. This is almost '
-                         'certainly a bug.')
-            return '', ''
-        pkginfo = __salt__['cmd.run_stdout'](
-            'rpm -qp --queryformat {0!r} {1!r}'.format(
-                # Binary packages have no REPOID, replace this so the rpm
-                # command does not fail with "invalid tag" error
-                __QUERYFORMAT.replace('%{REPOID}', 'binarypkg'),
-                path
-            )
-        ).strip()
-        pkginfo = _parse_pkginfo(pkginfo)
-        if pkginfo is None:
-            return '', ''
-        else:
-            return pkginfo.name, pkginfo.version
-
-    def parse_pacman(path):
-        name = ''
-        version = ''
-        result = __salt__['cmd.run_all']('pacman -Qpi "{0}"'.format(path))
-        if result['retcode'] == 0:
-            for line in result['stdout'].splitlines():
-                if not name:
-                    match = re.match(r'^Name\s*:\s*(\S+)', line)
-                    if match:
-                        name = match.group(1)
-                        continue
-                if not version:
-                    match = re.match(r'^Version\s*:\s*(\S+)', line)
-                    if match:
-                        version = match.group(1)
-                        continue
-        return name, version
-
-    def parse_deb(path):
-        name = ''
-        version = ''
-        arch = ''
-        # This is ugly, will have to try to find a better way of accessing the
-        # __grains__ global.
-        cpuarch = sys.modules[
-            __salt__['test.ping'].__module__
-        ].__grains__.get('cpuarch', '')
-        osarch = sys.modules[
-            __salt__['test.ping'].__module__
-        ].__grains__.get('osarch', '')
-
-        result = __salt__['cmd.run_all']('dpkg-deb -I "{0}"'.format(path))
-        if result['retcode'] == 0:
-            for line in result['stdout'].splitlines():
-                if not name:
-                    try:
-                        name = re.match(
-                            r'^\s*Package\s*:\s*(\S+)',
-                            line
-                        ).group(1)
-                    except AttributeError:
-                        continue
-                if not version:
-                    try:
-                        version = re.match(
-                            r'^\s*Version\s*:\s*(\S+)',
-                            line
-                        ).group(1)
-                    except AttributeError:
-                        continue
-                if cpuarch == 'x86_64' and not arch:
-                    try:
-                        arch = re.match(
-                            r'^\s*Architecture\s*:\s*(\S+)',
-                            line
-                        ).group(1)
-                    except AttributeError:
-                        continue
-        if arch and cpuarch == 'x86_64':
-            if arch != 'all' and osarch == 'amd64' and osarch != arch:
-                name += ':{0}'.format(arch)
-        return name, version
-
-    if __grains__['os_family'] in ('Suse', 'RedHat', 'Mandriva'):
-        metaparser = parse_rpm
-    elif __grains__['os_family'] in ('Arch',):
-        metaparser = parse_pacman
-    elif __grains__['os_family'] in ('Debian',):
-        metaparser = parse_deb
-    else:
-        log.error('No metadata parser found for {0}'.format(path))
-        return '', ''
-
-    return metaparser(path)
 
 
 def _repack_pkgs(pkgs):
@@ -130,9 +24,10 @@ def _repack_pkgs(pkgs):
     Repack packages specified using "pkgs" argument to pkg states into a single
     dictionary
     '''
+    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
     return dict(
         [
-            (str(x), str(y) if y is not None else y)
+            (_normalize_name(str(x)), str(y) if y is not None else y)
             for x, y in salt.utils.repack_dictlist(pkgs).iteritems()
         ]
     )
@@ -152,7 +47,8 @@ def pack_sources(sources):
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
-    if isinstance(sources, basestring):
+    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+    if isinstance(sources, string_types):
         try:
             sources = yaml.safe_load(sources)
         except yaml.parser.ParserError as err:
@@ -165,35 +61,9 @@ def pack_sources(sources):
             log.error('Input must be a list of 1-element dicts')
             return {}
         else:
-            ret.update(source)
+            key = next(iter(source))
+            ret[_normalize_name(key)] = source[key]
     return ret
-
-
-def _verify_binary_pkg(srcinfo):
-    '''
-    Compares package files (s) against the metadata to confirm that they match
-    what is expected.
-    '''
-    problems = []
-    for pkg_name, pkg_uri, pkg_path, pkg_type in srcinfo:
-        pkgmeta_name, pkgmeta_version = _parse_pkg_meta(pkg_path)
-        if not pkgmeta_name:
-            if pkg_type == 'remote':
-                problems.append('Failed to cache {0}. Are you sure this '
-                                'path is correct?'.format(pkg_uri))
-            elif pkg_type == 'local':
-                if not os.path.isfile(pkg_path):
-                    problems.append('Package file {0} not found. Are '
-                                    'you sure this path is '
-                                    'correct?'.format(pkg_path))
-                else:
-                    problems.append('Unable to parse package metadata for '
-                                    '{0}.'.format(pkg_path))
-        elif pkg_name != pkgmeta_name:
-            problems.append('Package file {0} (Name: {1}) does not '
-                            'match the specified package name '
-                            '({2}).'.format(pkg_uri, pkgmeta_name, pkg_name))
-    return problems
 
 
 def parse_targets(name=None,
@@ -253,24 +123,15 @@ def parse_targets(name=None,
                 # Package file local to the minion
                 srcinfo.append((pkg_name, pkg_src, pkg_src, 'local'))
 
-        # Check metadata to make sure the name passed matches the source
-        if __grains__['os_family'] not in ('Solaris',) \
-                and __grains__['os'] not in ('Gentoo', 'OpenBSD', 'FreeBSD'):
-            problems = _verify_binary_pkg(srcinfo)
-            # If any problems are found in the caching or metadata parsing done
-            # in the above for loop, log each problem and return None,None,
-            # which will keep package installation from proceeding.
-            if problems:
-                for problem in problems:
-                    log.error(problem)
-                return None, None
-
         # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
         # the package path (3rd element of tuple).
         return [x[2] for x in srcinfo], 'file'
 
     elif name:
-        return dict([(x, None) for x in name.split(',')]), 'repository'
+        _normalize_name = \
+            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        return packed, 'repository'
 
     else:
         log.error('No package sources passed to pkg.install.')

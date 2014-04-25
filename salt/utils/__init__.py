@@ -5,7 +5,9 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import contextlib
 import copy
+import collections
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
@@ -31,6 +33,13 @@ import types
 import warnings
 import yaml
 from calendar import month_abbr as months
+
+# Try to load pwd, fallback to getpass if unsuccessful
+try:
+    import pwd
+except ImportError:
+    import getpass
+    pwd = None
 
 try:
     import timelib
@@ -63,6 +72,20 @@ try:
 except ImportError:
     # Running as purely local
     pass
+
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    # grp is not available on windows
+    HAS_GRP = False
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
 
 # Import salt libs
 import salt._compat
@@ -98,9 +121,6 @@ WHITE = '\033[1;37m'
 DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
-
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -225,6 +245,16 @@ def get_context(template, line, num_lines=5, marker=None):
     return '---\n{0}\n---'.format('\n'.join(buf))
 
 
+def get_user():
+    '''
+    Get the current user
+    '''
+    if pwd is not None:
+        return pwd.getpwuid(os.geteuid()).pw_name
+    else:
+        return getpass.getuser()
+
+
 def daemonize(redirect_out=True):
     '''
     Daemonize a process
@@ -242,6 +272,7 @@ def daemonize(redirect_out=True):
 
     # decouple from parent environment
     os.chdir('/')
+    # noinspection PyArgumentList
     os.setsid()
     os.umask(18)
 
@@ -378,7 +409,7 @@ def which_bin(exes):
     '''
     Scan over some possible executables and return the first one that is found
     '''
-    if not isinstance(exes, (list, tuple)):
+    if not isinstance(exes, collections.Iterable):
         return None
     for exe in exes:
         path = which(exe)
@@ -480,6 +511,9 @@ def dns_check(addr, safe=False, ipv6=False):
                     break
             if not addr:
                 error = True
+    except TypeError:
+        err = ('Attempt to resolve address failed. Invalid or unresolveable address')
+        raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
@@ -539,6 +573,12 @@ def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'All job_cache management has been moved into the local_cache '
+                    'returner, this util function will be removed-- please use '
+                    'the returner'
+                )
     jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
@@ -562,6 +602,12 @@ def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'All job_cache management has been moved into the local_cache '
+                    'returner, this util function will be removed-- please use '
+                    'the returner'
+                )
     jid = str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
@@ -571,12 +617,17 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     '''
     Return the load data for a given job id
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'Getting the load has been moved into the returner interface '
+                    'please get the data from the master_job_cache '
+                )
     _dir = jid_dir(jid, cachedir, sum_type)
     load_fn = os.path.join(_dir, '.load.p')
     if not os.path.isfile(load_fn):
         return {}
     serial = salt.payload.Serial(serial)
-    with fopen(load_fn) as fp_:
+    with fopen(load_fn, 'rb') as fp_:
         return serial.load(fp_)
 
 
@@ -593,7 +644,6 @@ def is_jid(jid):
         return True
     except ValueError:
         return False
-    return False
 
 
 def check_or_die(command):
@@ -637,7 +687,18 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
+    # Get current file stats to they can be replicated after the new file is
+    # moved to the destination path.
+    fstat = None
+    if not salt.utils.is_windows():
+        try:
+            fstat = os.stat(dest)
+        except OSError:
+            pass
     shutil.move(tgt, dest)
+    if fstat is not None:
+        os.chown(dest, fstat.st_uid, fstat.st_gid)
+        os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
@@ -659,7 +720,7 @@ def backup_minion(path, bkroot):
     dname, bname = os.path.split(path)
     fstat = os.stat(path)
     msecs = str(int(time.time() * 1000000))[-6:]
-    stamp = time.asctime().replace(' ', '_')
+    stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')
     stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
     bkpath = os.path.join(bkroot,
                           dname[1:],
@@ -695,15 +756,21 @@ def path_join(*parts):
     ))
 
 
-def pem_finger(path, sum_type='md5'):
+def pem_finger(path=None, key=None, sum_type='md5'):
     '''
-    Pass in the location of a pem file and the type of cryptographic hash to
-    use. The default is md5.
+    Pass in either a raw pem string, or the path on disk to the location of a
+    pem file, and the type of cryptographic hash to use. The default is md5.
+    The fingerprint of the pem will be returned.
+
+    If neither a key nor a path are passed in, a blank string will be returned.
     '''
-    if not os.path.isfile(path):
-        return ''
-    with fopen(path, 'rb') as fp_:
-        key = ''.join(fp_.readlines()[1:-1])
+    if not key:
+        if not os.path.isfile(path):
+            return ''
+
+        with fopen(path, 'rb') as fp_:
+            key = ''.join(fp_.readlines()[1:-1])
+
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
     for ind in range(len(pre)):
@@ -1015,12 +1082,17 @@ def fopen(*args, **kwargs):
 
     This flag specifies that the file descriptor should be closed when an exec
     function is invoked;
-    When a file descriptor is allocated (as with open or dup ), this bit is
+    When a file descriptor is allocated (as with open or dup), this bit is
     initially cleared on the new file descriptor, meaning that descriptor will
     survive into the new program after exec.
+
+    NB! We still have small race condition between open and fcntl.
     '''
+    # Remove lock from kwargs if present
+    lock = kwargs.pop('lock', False)
+
     fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
+    if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
@@ -1028,25 +1100,86 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if 'lock' in kwargs:
+        if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
+@contextlib.contextmanager
 def flopen(*args, **kwargs):
-    fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
+    '''
+    Shortcut for fopen with lock and context manager
+    '''
+    with fopen(*args, lock=True, **kwargs) as fp_:
         try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-    return fhandle
+            yield fp_
+        finally:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+
+
+def expr_match(expr, line):
+    '''
+    Evaluate a line of text against an expression. First try a full-string
+    match, next try globbing, and then try to match assuming expr is a regular
+    expression. Originally designed to match minion IDs for
+    whitelists/blacklists.
+    '''
+    if line == expr:
+        return True
+    if fnmatch.fnmatch(line, expr):
+        return True
+    try:
+        if re.match(r'\A{0}\Z'.format(expr), line):
+            return True
+    except re.error:
+        pass
+    return False
+
+
+def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    if not any((whitelist, blacklist)):
+        return True
+    in_whitelist = False
+    in_blacklist = False
+    if whitelist:
+        try:
+            for expr in whitelist:
+                if expr_match(expr, value):
+                    in_whitelist = True
+                    break
+        except TypeError:
+            log.error('Non-iterable whitelist {0}'.format(whitelist))
+            whitelist = None
+    else:
+        whitelist = None
+
+    if blacklist:
+        try:
+            for expr in blacklist:
+                if expr_match(expr, value):
+                    in_blacklist = True
+                    break
+        except TypeError:
+            log.error('Non-iterable blacklist {0}'.format(whitelist))
+            blacklist = None
+    else:
+        blacklist = None
+
+    if whitelist and not blacklist:
+        ret = in_whitelist
+    elif blacklist and not whitelist:
+        ret = not in_blacklist
+    elif whitelist and blacklist:
+        ret = in_whitelist and not in_blacklist
+    else:
+        ret = True
+
+    return ret
 
 
 def subdict_match(data, expr, delim=':', regex_match=False):
@@ -1084,6 +1217,11 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         if isinstance(match, list):
             # We are matching a single component to a single list member
             for member in match:
+                if isinstance(member, dict):
+                    if matchstr.startswith('*:'):
+                        matchstr = matchstr[2:]
+                    if subdict_match(member, matchstr, regex_match=regex_match):
+                        return True
                 if _match(member, matchstr, regex_match=regex_match):
                     return True
             continue
@@ -1149,9 +1287,17 @@ def is_windows():
 @real_memoize
 def is_linux():
     '''
-    Simple function to return if a host is Linux or not
+    Simple function to return if a host is Linux or not.
+    Note for a proxy minion, we need to return something else
     '''
-    return sys.platform.startswith('linux')
+    import __main__ as main
+    # This is a hack.  If a proxy minion is started by other
+    # means, e.g. a custom script that creates the minion objects
+    # then this will fail.
+    if 'salt-proxy-minion' in main.__file__:
+        return False
+    else:
+        return sys.platform.startswith('linux')
 
 
 @real_memoize
@@ -1160,6 +1306,79 @@ def is_darwin():
     Simple function to return if a host is Darwin (OS X) or not
     '''
     return sys.platform.startswith('darwin')
+
+
+@real_memoize
+def is_sunos():
+    '''
+    Simple function to return if host is SunOS or not
+    '''
+    return sys.platform.startswith('sunos')
+
+
+def is_fcntl_available(check_sunos=False):
+    '''
+    Simple function to check if the `fcntl` module is available or not.
+
+    If `check_sunos` is passed as `True` an additional check to see if host is
+    SunOS is also made. For additional information check commit:
+        http://goo.gl/159FF8
+    '''
+    if HAS_FCNTL is False:
+        return False
+    if check_sunos is True:
+        return HAS_FCNTL and is_sunos()
+    return HAS_FCNTL
+
+
+def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
+    '''
+    Check for glob or regexp patterns for include_pat and exclude_pat in the
+    'path_str' string and return True/False conditions as follows.
+      - Default: return 'True' if no include_pat or exclude_pat patterns are
+        supplied
+      - If only include_pat or exclude_pat is supplied: return 'True' if string
+        passes the include_pat test or fails exclude_pat test respectively
+      - If both include_pat and exclude_pat are supplied: return 'True' if
+        include_pat matches AND exclude_pat does not match
+    '''
+    ret = True  # -- default true
+    # Before pattern match, check if it is regexp (E@'') or glob(default)
+    if include_pat:
+        if re.match('E@', include_pat):
+            retchk_include = True if re.search(
+                include_pat[2:],
+                path_str
+            ) else False
+        else:
+            retchk_include = True if fnmatch.fnmatch(
+                path_str,
+                include_pat
+            ) else False
+
+    if exclude_pat:
+        if re.match('E@', exclude_pat):
+            retchk_exclude = False if re.search(
+                exclude_pat[2:],
+                path_str
+            ) else True
+        else:
+            retchk_exclude = False if fnmatch.fnmatch(
+                path_str,
+                exclude_pat
+            ) else True
+
+    # Now apply include/exclude conditions
+    if include_pat and not exclude_pat:
+        ret = retchk_include
+    elif exclude_pat and not include_pat:
+        ret = retchk_exclude
+    elif include_pat and exclude_pat:
+        ret = retchk_include and retchk_exclude
+    else:
+        ret = True
+
+    return ret
 
 
 def check_ipc_path_max_len(uri):
@@ -1185,30 +1404,23 @@ def check_state_result(running):
     '''
     if not isinstance(running, dict):
         return False
+
     if not running:
         return False
-    for host in running:
-        if not isinstance(running[host], dict):
+
+    for state_result in running.itervalues():
+        if not isinstance(state_result, dict):
+            # return false when hosts return a list instead of a dict
             return False
 
-        if host.find('_|-') == 4:
-            # This is a single ret, no host associated
-            rets = running[host]
-        else:
-            rets = running[host].values()
-
-        if isinstance(rets, dict) and 'result' in rets:
-            if rets['result'] is False:
+        if 'result' in state_result:
+            if state_result.get('result', False) is False:
                 return False
             return True
 
-        for ret in rets:
-            if not isinstance(ret, dict):
-                return False
-            if 'result' not in ret:
-                return False
-            if ret['result'] is False:
-                return False
+        # Check nested state results
+        return check_state_result(state_result)
+
     return True
 
 
@@ -1289,12 +1501,15 @@ def option(value, default='', opts=None, pillar=None):
         opts = {}
     if pillar is None:
         pillar = {}
-    if value in opts:
-        return opts[value]
-    if value in pillar.get('master', {}):
-        return pillar['master'][value]
-    if value in pillar:
-        return pillar[value]
+    sources = (
+        (opts, value),
+        (pillar, 'master:{0}'.format(value)),
+        (pillar, value),
+    )
+    for source, val in sources:
+        out = traverse_dict(source, val, default)
+        if out is not default:
+            return out
     return default
 
 
@@ -1305,6 +1520,14 @@ def valid_url(url, protos):
     if salt._compat.urlparse(url).scheme in protos:
         return True
     return False
+
+
+def strip_proto(uri):
+    '''
+    Return a copy of the string with the protocol designation stripped, if one
+    was present.
+    '''
+    return re.sub('^[^:/]+://', '', uri)
 
 
 def parse_docstring(docstring):
@@ -1435,26 +1658,6 @@ def namespaced_function(function, global_dict, defaults=None):
     return new_namespaced_function
 
 
-def parse_kwarg(string_):
-    '''
-    Parses the string and looks for the kwarg format:
-    "{argument name}={argument value}"
-    For example:
-    "my_message=Hello world"
-    The argument name must have a valid python identifier format (it should
-    match the following regular expression: [^\\d\\W]\\w*).
-    If the string matches, then this function returns the following tuple:
-    ({argument name}, {value})
-    Or else it returns:
-    (None, None)
-    '''
-    match = KWARG_REGEX.match(string_)
-    if match:
-        return match.groups()
-    else:
-        return None, None
-
-
 def _win_console_event_handler(event):
     if event == 5:
         # Do nothing on CTRL_LOGOFF_EVENT
@@ -1516,16 +1719,16 @@ def date_format(date=None, format="%Y-%m-%d"):
     >>> import datetime
     >>> src = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     >>> src = '2002/12/25'
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     >>> src = 1040814000
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     >>> src = '1040814000'
     >>> date_format(src)
-    'Dec 25, 2002'
+    '2002-12-25'
     '''
     return date_cast(date).strftime(format)
 
@@ -1584,8 +1787,8 @@ def warn_until(version,
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
             '{lineno}, is supposed to be shown until version '
-            '{until_version!r} is released. Current version is now '
-            '{salt_version!r}. Please remove the warning.'.format(
+            '{until_version} is released. Current version is now '
+            '{salt_version}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
                 until_version=version.formatted_version,
@@ -1744,7 +1947,7 @@ def compare_dicts(old=None, new=None):
 def argspec_report(functions, module=''):
     '''
     Pass in a functions dict as it is returned from the loader and return the
-    argspec function sigs
+    argspec function signatures
     '''
     ret = {}
     # TODO: cp.get_file will also match cp.get_file_str. this is the
@@ -1853,7 +2056,7 @@ def is_bin_file(path):
         return None
     try:
         with open(path, 'r') as fp_:
-            return(is_bin_str(fp_.read(2048)))
+            return is_bin_str(fp_.read(2048))
     except os.error:
         return None
 
@@ -1909,3 +2112,90 @@ def repack_dictlist(data):
                 return {}
             ret.update(element)
     return ret
+
+
+def get_group_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group names of which the user
+    is a member.
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
+    group_names = None
+    ugroups = set()
+    if not isinstance(user, string_types):
+        raise Exception
+    if hasattr(os, 'getgrouplist'):
+        # Try os.getgrouplist, available in python >= 3.3
+        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        try:
+            group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+        except Exception:
+            pass
+    else:
+        # Try pysss.getgrouplist
+        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        try:
+            import pysss
+            group_names = list(pysss.getgrouplist(user))
+        except Exception:
+            pass
+    if group_names is None:
+        # Fall back to generic code
+        # Include the user's default group to behave like
+        # os.getgrouplist() and pysss.getgrouplist() do
+        log.trace('Trying generic group list for {0!r}'.format(user))
+        group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            if default_group not in group_names:
+                group_names.append(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+    ugroups.update(group_names)
+    if include_default is False:
+        # Historically, saltstack code for getting group lists did not
+        # include the default group. Some things may only want
+        # supplemental groups, so include_default=False omits the users
+        # default group.
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            ugroups.remove(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
+    return sorted(ugroups)
+
+
+def get_group_dict(user=None, include_default=True):
+    '''
+    Returns a dict of all of the system groups as keys, and group ids
+    as values, of which the user is a member.
+    E.g: {'staff': 501, 'sudo': 27}
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty dict
+        return {}
+    group_dict = {}
+    group_names = get_group_list(user, include_default=include_default)
+    for group in group_names:
+        group_dict.update({group: grp.getgrnam(group).gr_gid})
+    return group_dict
+
+
+def get_gid_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group IDs of which the user
+    is a member.
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
+    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    return sorted(set(gid_list))

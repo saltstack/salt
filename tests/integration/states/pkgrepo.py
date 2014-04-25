@@ -37,7 +37,7 @@ class PkgrepoTest(integration.ModuleCase,
                 self.skipTest(
                     'aptsources.sourceslist python module not found'
                 )
-        ret = self.run_function('state.sls', mods='pkgrepo.managed')
+        ret = self.run_function('state.sls', mods='pkgrepo.managed', timeout=120)
         # If the below assert fails then no states were run, and the SLS in
         # tests/integration/files/file/base/pkgrepo/managed.sls needs to be
         # corrected.
@@ -52,7 +52,7 @@ class PkgrepoTest(integration.ModuleCase,
         This is a destructive test as it removes the repository added in the
         above test.
         '''
-        ret = self.run_function('state.sls', mods='pkgrepo.absent')
+        ret = self.run_function('state.sls', mods='pkgrepo.absent', timeout=120)
         # If the below assert fails then no states were run, and the SLS in
         # tests/integration/files/file/base/pkgrepo/absent.sls needs to be
         # corrected.

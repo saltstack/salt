@@ -93,6 +93,7 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value('ssh_username', vm_, __opts__)
     deploy_script = script(vm_)
     deploy_kwargs = {
+        'opts': __opts__,
         'host': vm_['ssh_host'],
         'username': ssh_username,
         'script': deploy_script,
@@ -132,6 +133,10 @@ def create(vm_):
             'display_ssh_output', vm_, __opts__, default=True
         )
     }
+    # forward any info about possible ssh gateway to deploy script
+    # as some providers need also a 'gateway' configuration
+    if 'gateway' in vm_:
+        deploy_kwargs.update({'gateway': vm_['gateway']})
 
     # Deploy salt-master files, if necessary
     if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
@@ -162,11 +167,11 @@ def create(vm_):
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
-    del(event_kwargs['minion_pem'])
-    del(event_kwargs['minion_pub'])
-    del(event_kwargs['sudo_password'])
+    del event_kwargs['minion_pem']
+    del event_kwargs['minion_pub']
+    del event_kwargs['sudo_password']
     if 'password' in event_kwargs:
-        del(event_kwargs['password'])
+        del event_kwargs['password']
     ret['deploy_kwargs'] = event_kwargs
 
     salt.utils.cloud.fire_event(
@@ -174,6 +179,7 @@ def create(vm_):
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
         {'kwargs': event_kwargs},
+        transport=__opts__['transport']
     )
 
     deployed = False

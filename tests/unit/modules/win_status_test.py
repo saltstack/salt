@@ -16,7 +16,7 @@ sys.modules['wmi'] = wmi
 pythoncom = new.module('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call, ANY
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
 
 if NO_MOCK is False:
     WMI = Mock()

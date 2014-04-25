@@ -13,6 +13,10 @@ returner::
       and default_validation_class='UTF8Type';
 
 Required python modules: pycassa
+
+  To use the cassandra returner, append '--return cassandra' to the salt command. ex:
+
+    salt '*' test.ping --return cassandra
 '''
 
 # Import python libs

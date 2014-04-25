@@ -22,7 +22,18 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-key'
 
-    def test_list(self):
+    def test_list_accepted_args(self):
+        '''
+        test salt-key -l for accepted arguments
+        '''
+        for key in ('acc', 'pre', 'un', 'rej'):
+            # These should not trigger any error
+            data = self.run_key('-l {0}'.format(key), catch_stderr=True)
+            self.assertNotIn('error:', '\n'.join(data[1]))
+            data = self.run_key('-l foo-{0}'.format(key), catch_stderr=True)
+            self.assertIn('error:', '\n'.join(data[1]))
+
+    def test_list_all(self):
         '''
         test salt-key -L
         '''

@@ -9,6 +9,14 @@
     ~~~~~~~~~~~~~
 
     Salt's defaults system paths
+
+    This module allows defining Salt's default paths at build time by writing a
+    ``_syspath.py`` file to the filesystem. This is useful, for example, for
+    setting platform-specific defaults that differ from the standard Linux
+    paths.
+
+    These values are static values and must be considered as secondary to any
+    paths that are set in the master/minion config files.
 '''
 
 # Import python libs
@@ -18,7 +26,7 @@ import os.path
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
-    from salt._syspaths import (  # pylint: disable=E0611
+    from salt._syspaths import (  # pylint: disable=W0611,E0611
         ROOT_DIR,                 # because pylint thinks that _syspaths is an
         CONFIG_DIR,               # attribute of salt.__init__
         CACHE_DIR,
@@ -32,12 +40,18 @@ try:
     )
 except ImportError:
     # The installation time was not generated, let's define the default values
-    if sys.platform.startswith('win'):
+    __platform = sys.platform.lower()
+    if __platform.startswith('win'):
         ROOT_DIR = r'c:\salt' or '/'
         CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
     else:
         ROOT_DIR = '/'
-        CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
+        if 'freebsd' in __platform:
+            CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
+        elif 'netbsd' in __platform:
+            CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
+        else:
+            CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
     CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
     SOCK_DIR = os.path.join(ROOT_DIR, 'var', 'run', 'salt')
     SRV_ROOT_DIR = os.path.join(ROOT_DIR, 'srv')

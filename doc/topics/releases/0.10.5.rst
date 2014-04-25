@@ -2,6 +2,8 @@
 Salt 0.10.5 Release Notes
 =========================
 
+:release: 2012-11-15
+
 Salt 0.10.5 is ready, and comes with some great new features. A few more
 interfaces have been modularized, like the outputter system. The job cache
 system has been made more powerful and can now store and retrieve jobs archived
@@ -153,5 +155,3 @@ With the releases of Salt 0.10.5 and Salt Cloud 0.8.2, OpenStack becomes the
 first (non-OS) piece of software to include support both on the user level
 (with Salt Cloud) and the admin level (with Salt). We are excited to continue
 to extend support of other platforms at this level.
-
-

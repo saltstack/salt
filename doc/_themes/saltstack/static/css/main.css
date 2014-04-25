@@ -378,3 +378,64 @@ div.viewcode-block:target {
     border-top: 1px solid #ac9;
     border-bottom: 1px solid #ac9;
 }
+
+/* ==========================================================================
+   SaltStack custom styles
+   ========================================================================== */
+
+.lit-docs {
+    list-style-type: none;
+    margin: 0;
+}
+
+.lit-item {
+    padding-bottom: 2em;
+}
+
+.lit-annotation,
+.lit-content {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.lit-annotation {
+    width: 40.42553191489362%; /* span-5 */
+}
+
+.lit-content {
+    width: 57.44680851063829%; /* span-7 */
+}
+
+/* Override a few Bootstrap-isms */
+.lit-annotation pre,
+.lit-content pre {
+    word-break: normal;
+    word-wrap: normal;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.lit-content pre {
+    border: none;
+}
+
+.lit-container {
+    position: relative;
+}
+
+.lit-background {
+    position: absolute;
+    top: -1px;
+    bottom: 0;
+    right: 1.1em;
+    width: 57.44680851063829%; /* span-7 */
+
+    z-index: -1;
+    background-color: #f5f5f5;
+
+    border: 1px solid #e5e5ee;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}

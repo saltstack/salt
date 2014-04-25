@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-SSH" "1" "September 18, 2013" "0.17.0" "Salt"
+.TH "SALT-SSH" "1" "January 02, 2014" "2014.1.0" "Salt"
 .SH NAME
 salt-ssh \- salt-ssh Documentation
 .
@@ -40,8 +40,46 @@ salt\-ssh \-E \(aq.*\(aq [ options ] sys.doc cmd
 .UNINDENT
 .SH DESCRIPTION
 .sp
-Salt ssh allows for salt routines to be executed using only ssh for transport
+Salt SSH allows for salt routines to be executed using only SSH for transport
 .SH OPTIONS
+.INDENT 0.0
+.TP
+.B \-r, \-\-raw, \-\-raw\-shell
+Execute a raw shell command.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-roster\-file
+Define which roster system to use, this defines if a database backend,
+scanner, or custom roster system is used. Default is the flat file roster.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-refresh, \-\-refresh\-cache
+Force a refresh of the master side data cache of the target\(aqs data. This
+is needed if a target\(aqs grains have been changed and the auto refresh
+timeframe has not been reached.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-max\-procs
+Set the number of concurrent minions to communicate with. This value
+defines how many processes are opened up at a time to manage connections,
+the more running process the faster communication should be, default
+is 25.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-passwd
+Set te default password to attempt to use when authenticating.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-key\-deploy
+Set this flag to attempt to deploy the authorized ssh key with all
+minions. This combined with \-\-passwd can make initial deployment of keys
+very fast and easy.
+.UNINDENT
 .INDENT 0.0
 .TP
 .B \-\-version

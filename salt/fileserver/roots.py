@@ -10,13 +10,6 @@ option.
 import os
 import logging
 
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
-
 # Import salt libs
 import salt.fileserver
 import salt.utils
@@ -148,7 +141,11 @@ def update():
 
     if __opts__.get('fileserver_events', False):
         # if there is a change, fire an event
-        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
         event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 
@@ -192,19 +189,23 @@ def file_hash(load, fnd):
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     # Delete the file since its incomplete (either corrupted or incomplete)
-                    os.unlink(cache_path)
-                    file_hash(load, fnd)
-                    return(ret)
+                    try:
+                        os.unlink(cache_path)
+                    except OSError:
+                        pass
+                    return file_hash(load, fnd)
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
-        except os.error:  # Can't use Python select() because we need Windows support
+        except (os.error, IOError):  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
-            os.unlink(cache_path)
-            file_hash(load, fnd)
-            return(ret)
+            try:
+                os.unlink(cache_path)
+            except OSError:
+                pass
+            return file_hash(load, fnd)
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
@@ -213,15 +214,76 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    if HAS_FCNTL:
-        with salt.utils.flopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-            fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
-        return ret
-    else:
-        with salt.utils.fopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-        return ret
+    cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
+    with salt.utils.flopen(cache_path, 'w') as fp_:
+        fp_.write(cache_object)
+    return ret
+
+
+def _file_lists(load, form):
+    '''
+    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+    if load['saltenv'] not in __opts__['file_roots']:
+        return []
+
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/roots')
+    if not os.path.isdir(list_cachedir):
+        try:
+            os.makedirs(list_cachedir)
+        except os.error:
+            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            return []
+    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
+    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    cache_match, refresh_cache, save_cache = \
+        salt.fileserver.check_file_list_cache(
+            __opts__, form, list_cache, w_lock
+        )
+    if cache_match is not None:
+        return cache_match
+    if refresh_cache:
+        ret = {
+            'files': [],
+            'dirs': [],
+            'empty_dirs': [],
+            'links': []
+        }
+        for path in __opts__['file_roots'][load['saltenv']]:
+            for root, dirs, files in os.walk(
+                    path,
+                    followlinks=__opts__['fileserver_followsymlinks']):
+                dir_rel_fn = os.path.relpath(root, path)
+                ret['dirs'].append(dir_rel_fn)
+                if len(dirs) == 0 and len(files) == 0:
+                    if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
+                        ret['empty_dirs'].append(dir_rel_fn)
+                for fname in files:
+                    is_link = os.path.islink(os.path.join(root, fname))
+                    if is_link:
+                        ret['links'].append(fname)
+                    if __opts__['fileserver_ignoresymlinks'] and is_link:
+                        continue
+                    rel_fn = os.path.relpath(
+                                os.path.join(root, fname),
+                                path
+                            )
+                    if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                        ret['files'].append(rel_fn)
+        if save_cache:
+            salt.fileserver.write_file_list_cache(
+                __opts__, ret, list_cache, w_lock
+            )
+        return ret.get(form, [])
+    # Shouldn't get here, but if we do, this prevents a TypeError
+    return []
 
 
 def file_list(load):
@@ -229,90 +291,21 @@ def file_list(load):
     Return a list of all files on the file server in a specified
     environment
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    ret = []
-    if load['saltenv'] not in __opts__['file_roots']:
-        return ret
-
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
-            for fname in files:
-                if __opts__['fileserver_ignoresymlinks'] and os.path.islink(os.path.join(root, fname)):
-                    continue
-                rel_fn = os.path.relpath(
-                            os.path.join(root, fname),
-                            path
-                        )
-                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret.append(rel_fn)
-    return ret
+    return _file_lists(load, 'files')
 
 
 def file_list_emptydirs(load):
     '''
     Return a list of all empty directories on the master
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    ret = []
-    if load['saltenv'] not in __opts__['file_roots']:
-        return ret
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
-            if len(dirs) == 0 and len(files) == 0:
-                rel_fn = os.path.relpath(root, path)
-                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret.append(rel_fn)
-    return ret
+    return _file_lists(load, 'empty_dirs')
 
 
 def dir_list(load):
     '''
     Return a list of all directories on the master
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
-    ret = []
-    if load['saltenv'] not in __opts__['file_roots']:
-        return ret
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        for root, dirs, files in os.walk(os.path.join(path, prefix),
-                                         followlinks=__opts__['fileserver_followsymlinks']):
-            ret.append(os.path.relpath(root, path))
-    return ret
+    return _file_lists(load, 'dirs')
 
 
 def symlink_list(load):

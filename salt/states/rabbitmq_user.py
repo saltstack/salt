@@ -23,6 +23,9 @@ Example:
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -30,10 +33,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_user'
-    if not __salt__['cmd.has_exec']('rabbitmqctl'):
-        name = False
-    return name
+    return salt.utils.which('rabbitmqctl') is not None
 
 
 def present(name,
@@ -91,7 +91,7 @@ def present(name,
                 for vhost, perm in element.items():
                     result = __salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
-            changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
+                    changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:

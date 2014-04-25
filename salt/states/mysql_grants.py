@@ -49,7 +49,7 @@ def __virtual__():
     '''
     Only load if the mysql module is available
     '''
-    return 'mysql_grants' if 'mysql.grant_exists' in __salt__ else False
+    return 'mysql.grant_exists' in __salt__
 
 
 def _get_mysql_error():
@@ -70,6 +70,7 @@ def present(name,
             grant_option=False,
             escape=True,
             revoke_first=False,
+            ssl_option=False,
             **connection_args):
     '''
     Ensure that the grant is present with the specified properties
@@ -111,6 +112,25 @@ def present(name,
         Use with caution!
 
         default: False
+
+    ssl_option
+        Adds the specified ssl options for the connecting user as requirements for
+        this grant. Value is a list of single-element dicts corresponding to the
+        list of ssl options to use.
+
+        Possible key/value pairings for the dicts in the value:
+
+            - SSL: True
+            - X509: True
+            - SUBJECT: <subject>
+            - ISSUER: <issuer>
+            - CIPHER: <cipher>
+
+        The non-boolean ssl options take a string as their values, which should
+        be an appropriate value as specified by the MySQL documentation for these
+        options.
+
+        default: False (no ssl options will be used)
     '''
     comment = 'Grant {0} on {1} to {2}@{3} is already present'
     ret = {'name': name,
@@ -161,7 +181,7 @@ def present(name,
         ret['comment'] = ('MySQL grant {0} is set to be created').format(name)
         return ret
     if __salt__['mysql.grant_add'](
-        grant, database, user, host, grant_option, escape, **connection_args
+        grant, database, user, host, grant_option, escape, ssl_option, **connection_args
     ):
         ret['comment'] = 'Grant {0} on {1} to {2}@{3} has been added'
         ret['comment'] = ret['comment'].format(grant, database, user, host)

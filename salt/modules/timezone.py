@@ -20,7 +20,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'timezone'
+    return True
 
 
 def get_zone():
@@ -117,10 +117,7 @@ def set_zone(timezone):
     else:
         os.symlink(zonepath, '/etc/localtime')
 
-    if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/rc.conf', '^TIMEZONE=.*', 'TIMEZONE="{0}"'.format(timezone))
-    elif 'RedHat' in __grains__['os_family']:
+    if 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Suse' in __grains__['os_family']:
@@ -128,7 +125,8 @@ def set_zone(timezone):
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'w') as ofh:
-            ofh.write(timezone)
+            ofh.write(timezone.strip())
+            ofh.write('\n')
     elif 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'w') as ofh:
             ofh.write(timezone)
@@ -138,7 +136,7 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     '''
-    Checks the md5sum between the given timezone, and the one set in
+    Checks the hash sum between the given timezone, and the one set in
     /etc/localtime. Returns True if they match, and False if not. Mostly useful
     for running state checks.
 
@@ -157,11 +155,12 @@ def zone_compare(timezone):
     if not os.path.exists(tzfile):
         return 'Error: {0} does not exist.'.format(tzfile)
 
+    hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
     with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = hashlib.md5(fp_.read()).hexdigest()
+        usrzone = hash_type(fp_.read()).hexdigest()
 
     with salt.utils.fopen(tzfile, 'r') as fp_:
-        etczone = hashlib.md5(fp_.read()).hexdigest()
+        etczone = hash_type(fp_.read()).hexdigest()
 
     if usrzone == etczone:
         return True
@@ -180,9 +179,12 @@ def get_hwclock():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        cmd = 'grep HARDWARECLOCK /etc/rc.conf | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
-        return out[1].replace('"', '')
+        cmd = ('timedatectl | grep "RTC in local TZ" | '
+               'sed -e"s/^[ \t]*//" | cut -d" " -f5')
+        if __salt__['cmd.run'](cmd) == 'yes':
+            return 'localtime'
+        else:
+            return 'UTC'
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'tail -n 1 /etc/adjtime'
         return __salt__['cmd.run'](cmd)
@@ -192,7 +194,7 @@ def get_hwclock():
     elif 'Debian' in __grains__['os_family']:
         #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
+        out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=')
         if len(out) > 1:
             if out[1] == 'yes':
                 return 'UTC'
@@ -251,9 +253,12 @@ def set_hwclock(clock):
         os.symlink(zonepath, '/etc/localtime')
 
     if 'Arch' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/rc.conf', '^HARDWARECLOCK=.*', 'HARDWARECLOCK="{0}"'.format(
-                clock))
+        if clock == 'localtime':
+            cmd = 'timezonectl set-local-rtc true'
+            __salt__['cmd.run'](cmd)
+        else:
+            cmd = 'timezonectl set-local-rtc false'
+            __salt__['cmd.run'](cmd)
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))

@@ -4,7 +4,6 @@
 import os
 import yaml
 import shutil
-import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -220,6 +219,13 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = self.run_salt('\'*\' sys.doc user')
         self.assertIn('user.add:', data)
 
+    def test_salt_documentation_too_many_arguments(self):
+        '''
+        Test to see if passing additional arguments shows an error
+        '''
+        data = self.run_salt('-d minion salt ldap.search "filter=ou=People"', catch_stderr=True)
+        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
@@ -241,11 +247,19 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} minion test.ping'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=15,
+            catch_stderr=True,
+            with_retcode=True
         )
         try:
-            self.assertIn('minion', '\n'.join(ret))
+            self.assertIn('minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        except AssertionError:
+            # We now fail when we're unable to properly set the syslog logger
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):

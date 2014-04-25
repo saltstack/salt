@@ -13,8 +13,10 @@ Full list of builtin renderer modules
     jinja
     json
     mako
+    msgpack
     py
     pydsl
+    pyobjects
     stateconf
     wempy
     yaml

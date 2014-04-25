@@ -2,6 +2,8 @@
 Salt 0.13.0 Release Notes
 =========================
 
+:release: 2013-02-12
+
 The lucky number 13 has turned the corner! From CLI notifications when quitting
 a salt command, to substantial improvements on Windows, Salt 0.13.0 has
 arrived!
