@@ -3047,7 +3047,7 @@ def serialize(name,
     makedirs
         Create parent directories for destination file.
 
-        .. versionadded:: 2014.1.2
+        .. versionadded:: 2014.1.3
 
     show_diff
         If set to False, the diff will not be shown.
