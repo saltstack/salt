@@ -128,8 +128,6 @@ def suffix(name,
 
     suffix = str(suffix)
 
-    errors = []
-
     if not isinstance(updates, bool):
         ret['result'] = False
         ret['comment'] = '\'updates\' must be a boolean value'
