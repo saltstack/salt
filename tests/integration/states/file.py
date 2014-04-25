@@ -12,8 +12,14 @@ import pwd
 import grp
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, with_system_user_and_group
+from salttesting import skipIf
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    with_system_user
+)
 ensure_in_syspath('../../')
+
 
 # Import salt libs
 import integration
@@ -1200,6 +1206,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 os.unlink(test_file)
                 os.unlink(template_path)
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @with_system_user_and_group('user12209', 'group12209',
                                 on_existing='delete', delete=True)
     def test_issue_12209_follow_symlinks(self, user, group):
@@ -1221,23 +1229,31 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.makedirs(onedir)
         os.symlink(onedir, twodir)
 
-        # Run the state
-        ret = self.run_state(
-            'file.directory', name=tmp_dir, follow_symlinks=True,
-            user=user, group=group, recurse=['user', 'group']
-        )
-        self.assertSaltTrueReturn(ret)
+        try:
+            # Run the state
+            ret = self.run_state(
+                'file.directory', name=tmp_dir, follow_symlinks=True,
+                user=user, group=group, recurse=['user', 'group']
+            )
+            self.assertSaltTrueReturn(ret)
 
-        # Double-check, in case state mis-reported a True result. Since we are
-        # following symlinks, we expect twodir to still be owned by root, but
-        # onedir should be owned by the 'nobody' user.
-        onestats = os.stat(onedir)
-        twostats = os.lstat(twodir)
-        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
-        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
-        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-        self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+            # Double-check, in case state mis-reported a True result. Since we are
+            # following symlinks, we expect twodir to still be owned by root, but
+            # onedir should be owned by the 'issue12209' user.
+            onestats = os.stat(onedir)
+            twostats = os.lstat(twodir)
+            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
+            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+        except AssertionError:
+            raise
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @with_system_user_and_group('user12209', 'group12209',
                                 on_existing='delete', delete=True)
     def test_issue_12209_no_follow_symlinks(self, user, group):
@@ -1259,22 +1275,28 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.makedirs(onedir)
         os.symlink(onedir, twodir)
 
-        # Run the state
-        ret = self.run_state(
-            'file.directory', name=tmp_dir, follow_symlinks=False,
-            user=user, group=group, recurse=['user', 'group']
-        )
-        self.assertSaltTrueReturn(ret)
+        try:
+            # Run the state
+            ret = self.run_state(
+                'file.directory', name=tmp_dir, follow_symlinks=False,
+                user=user, group=group, recurse=['user', 'group']
+            )
+            self.assertSaltTrueReturn(ret)
 
-        # Double-check, in case state mis-reported a True result. Since we are
-        # following symlinks, we expect twodir to still be owned by root, but
-        # onedir should be owned by the 'nobody' user.
-        onestats = os.stat(onedir)
-        twostats = os.lstat(twodir)
-        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
-        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
-        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-        self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
+            # Double-check, in case state mis-reported a True result. Since we
+            # are not following symlinks, we expect twodir to now be owned by
+            # the 'issue12209' user, just link onedir.
+            onestats = os.stat(onedir)
+            twostats = os.lstat(twodir)
+            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
+            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
+        except AssertionError:
+            raise
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
 
 if __name__ == '__main__':
     from integration import run_tests
