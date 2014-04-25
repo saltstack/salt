@@ -1260,26 +1260,24 @@ def bootstrap(name, config=None, approve_key=True, install=True):
         if install:
             rstr = __salt__['test.rand_str']()
             configdir = '/tmp/.c_{0}'.format(rstr)
-            keydir = '/tmp/.k_{0}'.format(rstr)
             run_cmd(name, 'install -m 0700 -d {0}'.format(configdir))
-            run_cmd(name, 'install -m 0700 -d {0}'.format(keydir))
             bs_ = __salt__['config.gather_bootstrap_script']()
             cp(name, bs_, '/tmp/bootstrap.sh')
-            cp(name, cfg_files['config'], configdir)
-            cp(name, cfg_files['privkey'], keydir)
-            cp(name, cfg_files['pubkey'], keydir)
+            cp(name, cfg_files['config'], os.path.join(configdir, 'minion'))
+            cp(name, cfg_files['privkey'], os.path.join(configdir, 'minion.pem'))
+            cp(name, cfg_files['pubkey'], os.path.join(configdir, 'minon.pub'))
 
-            cmd = 'sh /tmp/bootstrap.sh -c {0} -k {1}'.format(configdir, keydir)
+            cmd = 'sh /tmp/bootstrap.sh -c {0}'.format(configdir)
             res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
         else:
             res = False
     else:
         minion_config = salt.config.minion_config(cfg_files['config'])
-        pki_dir = os.path.join(minion_config['pki_dir'], 'minion')
+        pki_dir = minion_config['pki_dir']
         cp(name, cfg_files['config'], '/etc/salt/minion')
-        cp(name, cfg_files['privkey'], pki_dir)
-        cp(name, cfg_files['pubkey'], pki_dir)
-        run_cmd(name, 'salt-call --local service.start salt-minion',
+        cp(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
+        cp(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
+        run_cmd(name, 'salt-call --local service.enable salt-minion',
                 stdout=False)
         res = True
 
@@ -1359,7 +1357,7 @@ def cp(name, src, dest):
 
     .. code-block:: bash
 
-        salt 'minion' lxc.cp /tmp/foo /root/
+        salt 'minion' lxc.cp /tmp/foo /root/foo
     '''
 
     if state(name) != 'running':
