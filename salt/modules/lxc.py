@@ -1258,13 +1258,18 @@ def bootstrap(name, config=None, approve_key=True, install=True):
 
     if needs_install:
         if install:
+            rstr = __salt__['test.rand_str']()
+            configdir = '/tmp/.c_{0}'.format(rstr)
+            keydir = '/tmp/.k_{0}'.format(rstr)
+            run_cmd(name, 'install -m 0700 -d {0}'.format(configdir))
+            run_cmd(name, 'install -m 0700 -d {0}'.format(keydir))
             bs_ = __salt__['config.gather_bootstrap_script']()
             cp(name, bs_, '/tmp/bootstrap.sh')
-            cp(name, cfg_files['config'], '/tmp/')
-            cp(name, cfg_files['privkey'], '/tmp/')
-            cp(name, cfg_files['pubkey'], '/tmp/')
+            cp(name, cfg_files['config'], configdir)
+            cp(name, cfg_files['privkey'], keydir)
+            cp(name, cfg_files['pubkey'], keydir)
 
-            cmd = 'sh /tmp/bootstrap.sh -c /tmp'
+            cmd = 'sh /tmp/bootstrap.sh -c {0} -k {1}'.format(configdir, keydir)
             res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
         else:
             res = False
