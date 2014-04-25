@@ -18,6 +18,7 @@ authentication, it is also possible to pass private keys to use explicitly.
 # Import python libs
 import logging
 import os
+import os.path
 import shutil
 
 # Import salt libs
@@ -156,9 +157,8 @@ def latest(name,
 
     bare = bare or mirror
     check = 'refs' if bare else '.git'
-
-    if os.path.isdir(target) and os.path.isdir('{0}/{1}'.format(target,
-                                                                check)):
+    checkdir = os.path.join(target, check)
+    if os.path.isdir(target) and os.path.isdir(checkdir):
         # git pull is probably required
         log.debug(('target {0} is found, "git pull" '
                    'is probably required'.format(target)))
