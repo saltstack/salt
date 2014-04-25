@@ -20,6 +20,7 @@ import traceback
 import copy
 import re
 import keyring
+import getpass
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows
@@ -2044,3 +2045,27 @@ def retrieve_password_from_keyring(credential_id, username):
     Retrieve particular user's password for a specified credential set from system keyring.
     '''
     return keyring.get_password(credential_id, username)
+
+def _save_password_in_keyring(credential_id, username, password):
+    '''
+    Saves provider password in system keyring
+    '''
+    return keyring.set_password(credential_id, username, password)
+
+def store_password_in_keyring(credential_id, username):
+    '''
+    Interactively prompts user for a password and stores it in system keyring
+    '''
+    prompt = "Please enter password for %s:" % credential_id
+    try:
+        password = getpass.getpass(prompt)
+    except EOFError:
+        password = None
+
+    if not password or len(password) < 1:
+        raise RuntimeError("Invalid password provided.")
+
+    try:
+        _save_password_in_keyring(credential_id, username, password)
+    except Exception, e:
+        log.debug("Problem saving password in the keyring: %s" % str(e))

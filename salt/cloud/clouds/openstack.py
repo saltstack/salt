@@ -258,14 +258,22 @@ def get_conn():
             logging.debug("Retrieving keyring password for %s (%s)" %
                 (credential_id, user)
             )
-            actual_password = salt.utils.cloud.retrieve_password_from_keyring(
+            # attempt to retrieve driver specific password first
+            driver_password = salt.utils.cloud.retrieve_password_from_keyring(
                 credential_id,
-                user)
-            if actual_password is None:
-                raise RuntimeError(
-                    "Unable to retrieve password from keyring for provider %s" %
-                    __active_provider_name__
-                )
+                user
+            )
+            if driver_password is None:
+                provider_password = salt.utils.cloud.retrieve_password_from_keyring(
+                    credential_id.split(':')[0], #fallback to provider level
+                    user)
+                if provider_password is None:
+                    raise SaltCloudSystemExit(
+                        "Unable to retrieve password from keyring for provider %s" %
+                        __active_provider_name__
+                    )
+                else:
+                    actual_password = provider_password
         else:
             actual_password = password
         return driver(
