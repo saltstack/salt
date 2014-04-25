@@ -358,7 +358,7 @@ def destroy(vm_, call=None):
 
 def create(vm_, call=None):
     '''Create an lxc Container.
-    This function is indopotent and will try to either provision
+    This function is idempotent and will try to either provision
     or finish the provision of an lxc container.
     '''
     mopts = _master_opts()

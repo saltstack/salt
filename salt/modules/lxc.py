@@ -1039,7 +1039,8 @@ def set_pass(name, users, password):
 
     .. code-block:: bash
 
-        salt '*' lxc.set_pass root foo
+        salt '*' lxc.set_pass container-name root foo
+
     '''
     ret = {'result': True, 'comment': ''}
     if not isinstance(users, list):
@@ -1171,7 +1172,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
 def set_dns(name, dnsservers=None, searchdomains=None):
     '''Update container DNS configuration
-    and possibly also resolvonf one.
+    and possibly also resolv.conf one.
 
     CLI Example:
 
