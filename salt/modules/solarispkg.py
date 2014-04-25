@@ -78,8 +78,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -281,9 +282,11 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         log.warning('\'refresh\' argument not implemented for solarispkg '
                     'module')
 
+    # pkgs is not supported, but must be passed here for API compatibility
+    pkgs = kwargs.pop('pkgs', None)
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, kwargs.get('pkgs'), sources, **kwargs
+            name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)

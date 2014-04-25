@@ -28,10 +28,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_vhost'
-    if not __salt__['cmd.has_exec']('rabbitmqctl'):
-        name = False
-    return name
+    return salt.utils.which('rabbitmqctl') is not None
 
 
 def present(name,
@@ -65,7 +62,7 @@ def present(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Helium',
         'Please start deprecating \'runas\' at this stage. Ping s0undt3ch for '
         'additional information or see #6961.',
         _dont_call_warnings=True

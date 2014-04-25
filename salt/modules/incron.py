@@ -60,7 +60,7 @@ def _get_incron_cmdstr(user, path):
     Returns a platform-specific format string, to be used to build a incrontab
     command.
     '''
-    if __grains__['os'] == 'Solaris':
+    if __grains__['os_family'] == 'Solaris':
         return 'su - {0} -c "incrontab {1}"'.format(user, path)
     else:
         return 'incrontab -u {0} {1}'.format(user, path)
@@ -104,11 +104,12 @@ def _write_incron_lines(user, lines):
         path = salt.utils.mkstemp()
         with salt.utils.fopen(path, 'w+') as fp_:
             fp_.writelines(lines)
-        if __grains__['os'] == 'Solaris' and user != "root":
+        if __grains__['os_family'] == 'Solaris' and user != "root":
             __salt__['cmd.run']('chown {0} {1}'.format(user, path))
         ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path))
         os.remove(path)
         return ret
+
 
 def _write_file(folder, filename, data):
     '''
@@ -126,6 +127,7 @@ def _write_file(folder, filename, data):
 
     return 0
 
+
 def _read_file(folder, filename):
     '''
     Reads and returns the contents of a file
@@ -137,6 +139,7 @@ def _read_file(folder, filename):
     except (OSError, IOError):
         return ''
 
+
 def raw_system_incron():
     '''
     Return the contents of the system wide incrontab
@@ -147,9 +150,9 @@ def raw_system_incron():
 
         salt '*' incron.raw_system_cron
     '''
- 
     log.debug("read_file {0}" . format(_read_file(_INCRON_SYSTEM_TAB, 'salt')))
     return ''.join(_read_file(_INCRON_SYSTEM_TAB, 'salt'))
+
 
 def raw_incron(user):
     '''
@@ -161,7 +164,7 @@ def raw_incron(user):
 
         salt '*' incron.raw_cron root
     '''
-    if __grains__['os'] == 'Solaris':
+    if __grains__['os_family'] == 'Solaris':
         cmd = 'incrontab -l {0}'.format(user)
     else:
         cmd = 'incrontab -l -u {0}'.format(user)
@@ -180,7 +183,7 @@ def list_tab(user):
     '''
     if user == 'system':
         data = raw_system_incron()
-    else: 
+    else:
         data = raw_incron(user)
         log.debug("user data {0}" . format(data))
     ret = {'crons': [],

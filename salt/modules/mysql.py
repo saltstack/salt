@@ -25,7 +25,7 @@ Module to provide MySQL compatibility to salt.
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-.. versionchanged:: Hydrogen
+.. versionchanged:: 2014.1.0 (Hydrogen)
     charset connection argument added. This is a MySQL charset, not a python one
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
@@ -60,6 +60,7 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 __grants__ = [
+    'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
     'CREATE',
@@ -90,6 +91,16 @@ __grants__ = [
     'TRIGGER',
     'UPDATE',
     'USAGE'
+]
+
+__ssl_options_parameterized__ = [
+    'CIPHER',
+    'ISSUER',
+    'SUBJECT'
+]
+__ssl_options__ = __ssl_options_parameterized__ + [
+    'SSL',
+    'X509'
 ]
 
 ################################################################################
@@ -152,7 +163,7 @@ def __virtual__():
     Only load this module if the mysql libraries exist
     '''
     if HAS_MYSQLDB:
-        return 'mysql'
+        return True
     return False
 
 
@@ -207,19 +218,22 @@ def _connect(**kwargs):
     '''
     connargs = dict()
 
-    def _connarg(name, key=None):
+    def _connarg(name, key=None, get_opts=True):
         '''
-        Add key to connargs, only if name exists in our kwargs or as
-        mysql.<name> in __opts__ or __pillar__ Evaluate in said order - kwargs,
-        opts then pillar. To avoid collision with other functions, kwargs-based
-        connection arguments are prefixed with 'connection_' (i.e.
-        'connection_host', 'connection_user', etc.).
+        Add key to connargs, only if name exists in our kwargs or,
+        if get_opts is true, as mysql.<name> in __opts__ or __pillar__
+
+        If get_opts is true, evaluate in said order - kwargs, opts
+        then pillar. To avoid collision with other functions,
+        kwargs-based connection arguments are prefixed with 'connection_'
+        (i.e. 'connection_host', 'connection_user', etc.).
         '''
         if key is None:
             key = name
+
         if name in kwargs:
             connargs[key] = kwargs[name]
-        else:
+        elif get_opts:
             prefix = 'connection_'
             if name.startswith(prefix):
                 try:
@@ -230,15 +244,22 @@ def _connect(**kwargs):
             if val is not None:
                 connargs[key] = val
 
-    _connarg('connection_host', 'host')
-    _connarg('connection_user', 'user')
-    _connarg('connection_pass', 'passwd')
-    _connarg('connection_port', 'port')
-    _connarg('connection_db', 'db')
-    _connarg('connection_conv', 'conv')
-    _connarg('connection_unix_socket', 'unix_socket')
-    _connarg('connection_default_file', 'read_default_file')
-    _connarg('connection_default_group', 'read_default_group')
+    # If a default file is explicitly passed to kwargs, don't grab the
+    # opts/pillar settings, as it can override info in the defaults file
+    if 'connection_default_file' in kwargs:
+        get_opts = False
+    else:
+        get_opts = True
+
+    _connarg('connection_host', 'host', get_opts)
+    _connarg('connection_user', 'user', get_opts)
+    _connarg('connection_pass', 'passwd', get_opts)
+    _connarg('connection_port', 'port', get_opts)
+    _connarg('connection_db', 'db', get_opts)
+    _connarg('connection_conv', 'conv', get_opts)
+    _connarg('connection_unix_socket', 'unix_socket', get_opts)
+    _connarg('connection_default_file', 'read_default_file', get_opts)
+    _connarg('connection_default_group', 'read_default_group', get_opts)
     # MySQLdb states that this is required for charset usage
     # but in fact it's more than it's internally activated
     # when charset is used, activating use_unicode here would
@@ -378,8 +399,11 @@ def _grant_to_tokens(grant):
             # the shlex splitter may have split on special database characters `
             database += token
             # Read-ahead
-            if exploded_grant[position_tracker + 1] == '.':
-                phrase = 'tables'
+            try:
+                if exploded_grant[position_tracker + 1] == '.':
+                    phrase = 'tables'
+            except IndexError:
+                break
 
         elif phrase == 'user':
             if dict_mode:
@@ -396,15 +420,19 @@ def _grant_to_tokens(grant):
 
         position_tracker += 1
 
-    if not dict_mode:
-        user = user.strip("'")
-        host = host.strip("'")
-    log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
-        user,
-        host,
-        grant_tokens,
-        database
-    ))
+    try:
+        if not dict_mode:
+            user = user.strip("'")
+            host = host.strip("'")
+        log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
+            user,
+            host,
+            grant_tokens,
+            database
+        ))
+    except UnboundLocalError:
+        host = ''
+
     return dict(user=user,
                 host=host,
                 grant=grant_tokens,
@@ -981,6 +1009,17 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' passwordless=True
     '''
     dbc = _connect(**connection_args)
+    # Did we fail to connect with the user we are checking
+    # Its password might have previousely change with the same command/state
+    if dbc is None \
+            and __context__['mysql.error'] \
+                .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \
+            and password:
+        # Clear the previous error
+        __context__['mysql.error'] = None
+        log.info('Retrying with "{0}" as connection password for {1} ...'.format(password, user))
+        connection_args['connection_pass'] = password
+        dbc = _connect(**connection_args)
     if dbc is None:
         return False
 
@@ -1388,12 +1427,56 @@ def db_optimize(name,
 
 
 # Grants
+def __grant_normalize(grant):
+    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
+    # grant_exists and grant_add ALL work correctly
+    if grant == 'ALL':
+        grant = 'ALL PRIVILEGES'
+
+    # Grants are paste directly in SQL, must filter it
+    exploded_grants = grant.split(",")
+    for chkgrant in exploded_grants:
+        if not chkgrant.strip().upper() in __grants__:
+            raise Exception('Invalid grant : {0!r}'.format(
+                chkgrant
+            ))
+
+    return grant
+
+
+def __ssl_option_sanitize(ssl_option):
+    new_ssl_option = []
+
+    # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
+    for opt in ssl_option:
+        key = opt.keys()[0]
+        value = opt[key]
+
+        normal_key = key.strip().upper()
+
+        if not normal_key in __ssl_options__:
+            raise Exception('Invalid SSL option : {0!r}'.format(
+                key
+            ))
+
+        if normal_key in __ssl_options_parameterized__:
+            # SSL option parameters (cipher, issuer, subject) are pasted directly to SQL so
+            # we need to sanitize for single quotes...
+            new_ssl_option.append("%s '%s'" % (normal_key, opt[key].replace("'", '')))
+        # omit if falsey
+        elif opt[key]:
+            new_ssl_option.append(normal_key)
+
+    return ' REQUIRE ' + ' AND '.join(new_ssl_option)
+
+
 def __grant_generate(grant,
                     database,
                     user,
                     host='localhost',
                     grant_option=False,
-                    escape=True):
+                    escape=True,
+                    ssl_option=False):
     '''
     Validate grants and build the query that could set the given grants
 
@@ -1404,20 +1487,7 @@ def __grant_generate(grant,
     #       SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = re.sub(r'\s*,\s*', ', ', grant).upper()
 
-    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
-    # grant_exists and grant_add ALL work correctly
-    if grant == 'ALL':
-        grant = 'ALL PRIVILEGES'
-    else:
-        # Grants won't be used as query arguments, so we need
-        # some SQL barriers.
-        # White-list security check
-        grants = grant.split(', ')
-        for chkgrant in grants:
-            if not chkgrant.strip() in __grants__:
-                raise Exception('Invalid grant requested: {0!r}'.format(
-                    chkgrant
-                ))
+    grant = __grant_normalize(grant)
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1435,6 +1505,8 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
+    if isinstance(ssl_option, type([])) and len(ssl_option):
+        qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
     log.debug('Grant Query generated: {0} args {1}'.format(qry, repr(args)))
@@ -1543,6 +1615,7 @@ def grant_add(grant,
               host='localhost',
               grant_option=False,
               escape=True,
+              ssl_option=False,
               **connection_args):
     '''
     Adds a grant to the MySQL server.
@@ -1563,10 +1636,10 @@ def grant_add(grant,
 
     # Avoid spaces problems
     grant = grant.strip()
-    qry = __grant_generate(grant, database, user, host, grant_option, escape)
+    qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
     try:
         _execute(cur, qry['qry'], qry['args'])
-    except MySQLdb.OperationalError as exc:
+    except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -1611,13 +1684,7 @@ def grant_revoke(grant,
         return False
     cur = dbc.cursor()
 
-    # Grants are paste directly in SQL, must filter it
-    exploded_grants = grant.split(",")
-    for chkgrant in exploded_grants:
-        if not chkgrant.strip().upper() in __grants__:
-            raise Exception('Invalid grant : {0!r}'.format(
-                chkgrant
-            ))
+    grant = __grant_normalize(grant)
 
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
@@ -1780,7 +1847,7 @@ def get_master_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a master
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
@@ -1848,8 +1915,60 @@ def get_slave_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a slave
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv[0]
+
+
+def showvariables(**connection_args):
+    '''
+    Retrieves the show variables from the minion.
+
+    Returns::
+        show variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showvariables
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug('{0}<--'.format(mod))
+    conn = _connect(**connection_args)
+    rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
+    conn.close()
+    if len(rtnv) == 0:
+        rtnv.append([])
+
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
+    return rtnv
+
+
+def showglobal(**connection_args):
+    '''
+    Retrieves the show global variables from the minion.
+
+    Returns::
+        show global variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showglobal
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug('{0}<--'.format(mod))
+    conn = _connect(**connection_args)
+    rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
+    conn.close()
+    if len(rtnv) == 0:
+        rtnv.append([])
+
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
+    return rtnv
