@@ -32,7 +32,7 @@ Connection module for Amazon S3
 
     s3.verify_ssl: False
 
-    This is required if using S3 bucketnames that have a period in them due, as
+    This is required if using S3 bucket names that contain a period, as
     these will not match Amazon's S3 wildcard certificates. Certificate
     verification is enabled by default.
 
