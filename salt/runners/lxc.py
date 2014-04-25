@@ -106,7 +106,7 @@ def find_guests(names, quiet=False):
     return ret
 
 
-def init(name,
+def init(names,
          host=None,
          **kwargs):
     '''
@@ -122,8 +122,9 @@ def init(name,
                 [config=minion_config] [clone=original] \\
                 [snapshot=(true|false)]
 
-    name
-        Name of the container.
+    names
+        Name of the containers, supports a single name or a comma delimited
+        list of names.
 
     host
         Minion to start the container on. Required.
@@ -160,18 +161,19 @@ def init(name,
         Optional config paramers. By default, the id is set to the name of the
         container.
     '''
-    print('Searching for LXC Hosts')
-    data = __salt__['lxc.list'](host, quiet=True)
-    for host, containers in data.items():
-        if name in sum(containers.values(), []):
-            print('Container \'{0}\' already exists on host \'{1}\''.format(
-                  name, host))
-            return False
-
     if host is None:
         #TODO: Support selection of host based on available memory/cpu/etc.
         print('A host must be provided')
         return False
+    names = names.split(',')
+    print('Searching for LXC Hosts')
+    data = __salt__['lxc.list'](host, quiet=True)
+    for host, containers in data.items():
+        for name in names:
+            if name in sum(containers.values(), []):
+                print('Container \'{0}\' already exists on host \'{1}\''.format(
+                      name, host))
+                return False
 
     if host not in data:
         print('Host \'{0}\' was not found'.format(host))
@@ -180,28 +182,37 @@ def init(name,
     kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
     approve_key = kw.get('approve_key', True)
     if approve_key:
-        kv = salt.utils.virt.VirtKey(host, name, __opts__)
-        if kv.authorize():
-            print('Container key will be preauthorized')
-        else:
-            print('Container key preauthorization failed')
-            return False
+        for name in names:
+            kv = salt.utils.virt.VirtKey(host, name, __opts__)
+            if kv.authorize():
+                print('Container key will be preauthorized')
+            else:
+                print('Container key preauthorization failed')
+                return False
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
-    print('Creating container \'{0}\' on host \'{1}\''.format(name, host))
+    print('Creating container(s) \'{0}\' on host \'{1}\''.format(names, host))
 
-    args = [name]
-    cmd_ret = client.cmd_iter(host,
-                              'lxc.init',
-                              args,
-                              kwarg=kwargs,
-                              timeout=600)
-    ret = next(cmd_ret)
-    if ret and host in ret:
-        ret = ret[host]['ret']
-    else:
-        ret = {}
+    cmds = []
+    ret = {}
+    for name in names:
+        args = [name]
+        cmds.append(client.cmd_iter(host,
+                                  'lxc.init',
+                                  args,
+                                  kwarg=kwargs,
+                                  timeout=600))
+    ret = {}
+    for cmd in cmds:
+        sub_ret = next(cmd)
+        if sub_ret and host in sub_ret:
+            if sub_ret['host'] in ret:
+                ret[sub_ret['host']].append(ret[host]['ret'])
+            else:
+                ret[sub_ret['host']] = [ret[host]['ret']]
+        else:
+            ret = {}
 
     if ret.get('created', False) or ret.get('cloned', False):
         print('Container \'{0}\' initialized on host \'{1}\''.format(
