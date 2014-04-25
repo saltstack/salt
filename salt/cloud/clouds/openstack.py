@@ -78,6 +78,8 @@ Optionally, if you don't want to save plain-text password in your configuration 
 
     my-openstack-keyring-config:
       # The OpenStack password is stored in keyring
+      # don't forget to set the password by running something like:
+      # salt-cloud --set-password=myuser my-openstack-keyring-config
       password: USE_KEYRING
 
 For local installations that only use private IP address ranges, the
