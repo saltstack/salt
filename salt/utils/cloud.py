@@ -19,6 +19,7 @@ import json
 import traceback
 import copy
 import re
+import keyring
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows
@@ -2037,3 +2038,9 @@ def _salt_cloud_force_ascii(exc):
     raise exc
 
 codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)
+
+def retrieve_password_from_keyring(credential_id, username):
+    '''
+    Retrieve particular user's password for a specified credential set from system keyring.
+    '''
+    return keyring.get_password(credential_id, username)
