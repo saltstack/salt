@@ -31,6 +31,7 @@ from datetime import datetime
 import salt.config
 import salt.payload
 import salt.transport
+import salt.loader
 import salt.utils
 import salt.utils.args
 import salt.utils.event
@@ -73,6 +74,8 @@ def get_local_client(
     elif opts['transport'] == 'zeromq':
         return LocalClient(mopts=opts)
 
+class Foo(object):
+    pass
 
 class LocalClient(object):
     '''
@@ -117,7 +120,9 @@ class LocalClient(object):
                 self.opts['transport'],
                 listen=not self.opts.get('__worker', False))
 
-        self.mminion = salt.minion.MasterMinion(self.opts)
+        self.returners = salt.loader.returner(self.opts['master_job_cache'],
+                                                      self.opts,
+                                                      {})
 
     def __read_master_key(self):
         '''
@@ -792,7 +797,7 @@ class LocalClient(object):
         timeout_at = start + timeout
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
@@ -895,7 +900,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             return ret
 
@@ -936,7 +941,7 @@ class LocalClient(object):
         # create the iterator-- since we want to get anyone in the middle
         event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
 
-        data = self.mminion.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -979,7 +984,7 @@ class LocalClient(object):
         '''
         ret = {}
 
-        data = self.mminion.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -1024,7 +1029,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             return ret
         # Wait for the hosts to check in
@@ -1101,7 +1106,7 @@ class LocalClient(object):
         timeout_at = start + timeout
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
@@ -1199,7 +1204,7 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.mminion.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid

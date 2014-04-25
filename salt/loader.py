@@ -176,6 +176,15 @@ def returners(opts, functions, whitelist=None):
             'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
 
+def returner(name, opts, functions):
+    '''
+    Returns a single returner module
+    '''
+    load = _create_loader(opts, 'returners', 'returner')
+    pack = {'name': '__salt__',
+            'value': functions}
+    return load.gen_module(name, functions, pack)
+
 
 def pillars(opts, functions):
     '''
@@ -546,11 +555,15 @@ class Loader(object):
             fn_ = os.path.join(mod_dir, name)
             if os.path.isdir(fn_):
                 full = fn_
+                break
             else:
                 for ext in ('.py', '.pyo', '.pyc', '.so'):
                     full_test = '{0}{1}'.format(fn_, ext)
                     if os.path.isfile(full_test):
                         full = full_test
+                        break
+                if full:
+                    break
         if not full:
             return None
 
@@ -655,7 +668,7 @@ class Loader(object):
             context = sys.modules[
                 functions[functions.keys()[0]].__module__
             ].__context__
-        except AttributeError:
+        except (AttributeError, IndexError):
             context = {}
         mod.__context__ = context
         return funcs

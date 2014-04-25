@@ -398,7 +398,6 @@ class MinionBase(object):
             )
         return loop_interval
 
-
 class MasterMinion(object):
     '''
     Create a fully loaded minion function object for generic use on the
