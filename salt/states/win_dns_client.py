@@ -112,7 +112,7 @@ def primary_suffix(name,
     .. code-block:: yaml
 
         primary_dns_suffix:
-            win_dns_client.suffix:
+            win_dns_client.primary_suffix:
                 - suffix: sub.domain.tld
                 - updates: True
     '''
