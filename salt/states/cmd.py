@@ -34,8 +34,8 @@ touch /tmp/foo if it does not exist.
 
 .. note::
 
-    The ``creates`` option is only supported in releases greater than or
-    equal to 2014.1.0.
+    The ``creates`` option will be supported starting with the feature release
+    codenamed Helium
 
 Note that when executing a command or script, the state (i.e., changed or not)
 of the command is unknown to Salt's state system. Therefore, by default, the
