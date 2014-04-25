@@ -1626,7 +1626,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.args.insert(1, 'sys.doc')
             if self.args[1] != 'sys.doc':
                 self.args.insert(1, 'sys.doc')
-                self.args[2] = self.args[2]
+            if len(self.args) > 3:
+                self.error('You can only get documentation for one method at one time.')
 
         if self.options.list:
             try:
@@ -2043,14 +2044,16 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     )
 
     def _mixin_after_parsed(self):
-        if not self.args and not self.options.grains_run \
-                and not self.options.doc:
+        if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
             self.exit(1)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
                 self.error('-g/--grains does not accept any arguments')
+
+            if self.options.doc and len(self.args) > 1:
+                self.error('You can only get documentation for one method at one time')
 
             self.config['fun'] = self.args[0]
             self.config['arg'] = self.args[1:]
@@ -2116,6 +2119,9 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def _mixin_after_parsed(self):
+        if self.options.doc and len(self.args) > 1:
+            self.error('You can only get documentation for one method at one time')
+
         if len(self.args) > 0:
             self.config['fun'] = self.args[0]
         else:
