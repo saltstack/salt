@@ -41,6 +41,31 @@ def _do(name, fun):
     return data
 
 
+def _do_names(names, fun):
+    '''
+    Invoke a function in the lxc module with no args
+    '''
+    ret = {}
+    hosts = find_guests(names, quiet=True)
+    if not hosts:
+        return False
+
+    client = salt.client.get_local_client(__opts__['conf_file'])
+    cmds = []
+    for host, name in hosts.items():
+        cmds.append(client.cmd_iter(
+                host,
+                'lxc.{0}'.format(fun),
+                [name],
+                timeout=60))
+    for cmd in cmds:
+        data = next(cmd)
+        data = data.get(host, {}).get('ret', None)
+        if data:
+            ret.update({host: data})
+    return ret
+
+
 def find_guest(name, quiet=False):
     '''
     Returns the host for a container.
@@ -60,6 +85,22 @@ def find_guest(name, quiet=False):
                             __opts__)
                 return host
     return None
+
+
+def find_guests(names, quiet=False):
+    '''
+    Return a dict of hosts and named guests
+    '''
+    ret = {}
+    names = names.split(',')
+    for data in _list_iter():
+        host, stat = data.items()[0]
+        for state in stat:
+            for name in stat[state]:
+                if name in names:
+                    ret[host] = name
+    return ret
+
 
 
 def init(name,
@@ -169,6 +210,9 @@ def init(name,
 
 
 def _list_iter(host=None):
+    '''
+    Return a generator iterating over hosts
+    '''
     tgt = host or '*'
     client = salt.client.get_local_client(__opts__['conf_file'])
     for container_info in client.cmd_iter(tgt, 'lxc.list'):
@@ -217,7 +261,6 @@ def purge(name, delete_key=True, quiet=False):
 
         salt-run lxc.purge name
     '''
-
     data = _do(name, 'destroy')
     if data is False:
         return data
