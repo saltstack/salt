@@ -231,7 +231,7 @@ def latest(name,
                                              user=user)
 
                 # check if we are on a branch to merge changes
-                cmd = "git symbolic-ref -q HEAD > /dev/null"
+                cmd = "git symbolic-ref -q HEAD"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=user)
                 if 0 == retcode:
                     __salt__['git.fetch' if bare else 'git.pull'](target,
@@ -374,9 +374,9 @@ def present(name, bare=True, runas=None, user=None, force=False):
 
     # If the named directory is a git repo return True
     if os.path.isdir(name):
-        if bare and os.path.isfile('{0}/HEAD'.format(name)):
+        if bare and os.path.isfile(os.path.join(name, 'HEAD')):
             return ret
-        elif not bare and os.path.isdir('{0}/.git'.format(name)):
+        elif not bare and os.path.isdir(os.path.join(name, '.git')):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
