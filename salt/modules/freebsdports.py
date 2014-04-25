@@ -359,7 +359,7 @@ def update(extract=False):
 
         salt '*' ports.update
     '''
-    result = __salt__['cmd.run_all']('portsnap fetch')
+    result = __salt__['cmd.run_all']('portsnap --interactive fetch')
     if not result['retcode'] == 0:
         raise CommandExecutionError(
             'Unable to fetch ports snapshot: {0}'.format(result['stderr'])
@@ -384,13 +384,13 @@ def update(extract=False):
     ret.append('Fetched {0} new ports or files'.format(new_port_count))
 
     if extract:
-        result = __salt__['cmd.run_all']('portsnap extract')
+        result = __salt__['cmd.run_all']('portsnap --interactive extract')
         if not result['retcode'] == 0:
             raise CommandExecutionError(
                 'Unable to extract ports snapshot {0}'.format(result['stderr'])
             )
 
-    result = __salt__['cmd.run_all']('portsnap update')
+    result = __salt__['cmd.run_all']('portsnap --interactive update')
     if not result['retcode'] == 0:
         raise CommandExecutionError(
             'Unable to apply ports snapshot: {0}'.format(result['stderr'])
