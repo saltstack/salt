@@ -207,7 +207,7 @@ def installed(name,
         Extra global options to be supplied to the setup.py call before the
         install command.
 
-        .. versionadded:: 2014.1.2
+        .. versionadded:: 2014.1.3
 
     .. admonition:: Attention
 
