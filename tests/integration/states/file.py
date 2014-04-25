@@ -1087,12 +1087,20 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         symlinks)
         '''
         tmp_dir = os.path.join(integration.TMP, 'test.12209')
+        user = 'test12209'
+        group = 'test12209'
 
         # Cleanup the path if it already exists
         if os.path.isdir(tmp_dir):
             shutil.rmtree(tmp_dir)
         elif os.path.isfile(tmp_dir):
             os.remove(tmp_dir)
+
+        # Make the user and group
+        ret = self.run_state('group.present', name=group)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.present', name=user, groups=[group])
+        self.assertSaltTrueReturn(ret)
 
         # Make the directories for this test
         onedir = os.path.join(tmp_dir, 'one')
@@ -1101,8 +1109,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.symlink(onedir, twodir)
 
         # Run the state
-        user = 'nobody'
-        group = 'nobody'
         ret = self.run_state(
             'file.directory', name=tmp_dir, follow_symlinks=True,
             user=user, group=group, recurse=['user', 'group']
@@ -1125,12 +1131,20 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         symlinks)
         '''
         tmp_dir = os.path.join(integration.TMP, 'test.12209')
+        user = 'test12209'
+        group = 'test12209'
 
         # Cleanup the path if it already exists
         if os.path.isdir(tmp_dir):
             shutil.rmtree(tmp_dir)
         elif os.path.isfile(tmp_dir):
             os.remove(tmp_dir)
+
+        # Make the user and group
+        ret = self.run_state('group.present', name=group)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.present', name=user, groups=[group])
+        self.assertSaltTrueReturn(ret)
 
         # Make the directories for this test
         onedir = os.path.join(tmp_dir, 'one')
@@ -1139,8 +1153,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.symlink(onedir, twodir)
 
         # Run the state
-        user = 'nobody'
-        group = 'nobody'
         ret = self.run_state(
             'file.directory', name=tmp_dir, follow_symlinks=False,
             user=user, group=group, recurse=['user', 'group']
