@@ -429,7 +429,7 @@ def rand_str(size=9999999999):
     Return a random string
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt '*' test.rand_str
