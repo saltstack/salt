@@ -20,7 +20,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_account
+    with_system_user
 )
 ensure_in_syspath('../../')
 
@@ -177,7 +177,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue-6912', on_existing='delete', delete=True)
+    @with_system_user('issue-6912', on_existing='delete', delete=True)
     def test_issue_6912_wrong_owner(self, username):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, '6912-wrong-owner'
