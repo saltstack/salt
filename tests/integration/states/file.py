@@ -16,7 +16,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_user
+    with_system_user_and_group
 )
 ensure_in_syspath('../../')
 
