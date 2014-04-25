@@ -39,7 +39,7 @@ import time
 import logging
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
