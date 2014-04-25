@@ -9,6 +9,7 @@ import os
 import glob
 import shutil
 import pwd
+import grp
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -1198,6 +1199,82 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(test_file):
                 os.unlink(test_file)
                 os.unlink(template_path)
+
+    def test_issue_12209_follow_symlinks(self):
+        '''
+        Ensure that symlinks are properly chowned when recursing (following
+        symlinks)
+        '''
+        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+
+        # Cleanup the path if it already exists
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        elif os.path.isfile(tmp_dir):
+            os.remove(tmp_dir)
+
+        # Make the directories for this test
+        onedir = os.path.join(tmp_dir, 'one')
+        twodir = os.path.join(tmp_dir, 'two')
+        os.makedirs(onedir)
+        os.symlink(onedir, twodir)
+
+        # Run the state
+        user = 'nobody'
+        group = 'nobody'
+        ret = self.run_state(
+            'file.directory', name=tmp_dir, follow_symlinks=True,
+            user=user, group=group, recurse=['user', 'group']
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Double-check, in case state mis-reported a True result. Since we are
+        # following symlinks, we expect twodir to still be owned by root, but
+        # onedir should be owned by the 'nobody' user.
+        onestats = os.stat(onedir)
+        twostats = os.lstat(twodir)
+        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
+        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+        self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+
+    def test_issue_12209_no_follow_symlinks(self):
+        '''
+        Ensure that symlinks are properly chowned when recursing (not following
+        symlinks)
+        '''
+        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+
+        # Cleanup the path if it already exists
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        elif os.path.isfile(tmp_dir):
+            os.remove(tmp_dir)
+
+        # Make the directories for this test
+        onedir = os.path.join(tmp_dir, 'one')
+        twodir = os.path.join(tmp_dir, 'two')
+        os.makedirs(onedir)
+        os.symlink(onedir, twodir)
+
+        # Run the state
+        user = 'nobody'
+        group = 'nobody'
+        ret = self.run_state(
+            'file.directory', name=tmp_dir, follow_symlinks=False,
+            user=user, group=group, recurse=['user', 'group']
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Double-check, in case state mis-reported a True result. Since we are
+        # following symlinks, we expect twodir to still be owned by root, but
+        # onedir should be owned by the 'nobody' user.
+        onestats = os.stat(onedir)
+        twostats = os.lstat(twodir)
+        self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+        self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
+        self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+        self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
 
 if __name__ == '__main__':
     from integration import run_tests
