@@ -40,8 +40,7 @@ def __virtual__():
     '''
     Always load
     '''
-
-    return 'modjk'
+    return True
 
 
 def _auth(url, user, passwd, realm):

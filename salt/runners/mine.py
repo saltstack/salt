@@ -9,6 +9,7 @@ import os
 import salt.payload
 import salt.utils.minions
 import salt.utils
+import salt.output
 
 
 def get(tgt, fun, tgt_type='glob'):
@@ -33,10 +34,11 @@ def get(tgt, fun, tgt_type='glob'):
                 minion,
                 'mine.p')
         try:
-            with salt.utils.fopen(mine) as fp_:
+            with salt.utils.fopen(mine, 'rb') as fp_:
                 fdata = serial.load(fp_).get(fun)
                 if fdata:
                     ret[minion] = fdata
         except Exception:
             continue
+    salt.output.display_output(ret, 'yaml', __opts__)
     return ret

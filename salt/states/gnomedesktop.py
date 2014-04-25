@@ -35,8 +35,8 @@ def _check_current_value(gnome_kwargs, value):
     '''
     Check the current value with the passed value
     '''
-    currentValue = __salt__['gnome.get'](**gnome_kwargs)
-    return ((str(currentValue) == str(value)))
+    current_value = __salt__['gnome.get'](**gnome_kwargs)
+    return str(current_value) == str(value)
 
 
 def _do(name, gnome_kwargs, preferences):

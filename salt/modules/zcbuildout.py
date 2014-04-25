@@ -3,11 +3,11 @@
 Management of zc.buildout
 =========================
 
-This module is inspired from `minitage's buildout maker`__
+.. versionadded:: 2014.1.0 (Hydrogen)
 
-.. __: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
+.. _`minitage's buildout maker`: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
 
-.. versionadded:: Boron
+This module is inspired by `minitage's buildout maker`_
 
 .. note::
 
@@ -51,7 +51,7 @@ from salt._compat import string_types
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
 VALID_RESPONSE = ''
 NOTSET = object()
-HR = u'{0}\n'.format('-' * 80)
+HR = '{0}\n'.format('-' * 80)
 RE_F = re.S | re.M | re.U
 BASE_STATUS = {
     'status': None,
@@ -79,6 +79,7 @@ def _salt_callback(func):
         unless = kw.get('unless', None)
         runas = kw.get('runas', None)
         env = kw.get('env', ())
+        status = BASE_STATUS.copy()
         try:
             # may rise _ResultTransmission
             status = _check_onlyif_unless(onlyif,
@@ -108,6 +109,13 @@ def _salt_callback(func):
             LOG.error(trace)
             _invalid(status)
         LOG.clear()
+        # before returning, trying to compact the log output
+        for k in ['comment', 'out', 'outlog']:
+            if status[k] and isinstance(status[k], string_types):
+                status[k] = '\n'.join([
+                    log
+                    for log in status[k].split('\n')
+                    if log.strip()])
         return status
     _call_callback.__doc__ = func.__doc__
     return _call_callback
@@ -121,6 +129,8 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
+        if not isinstance(msg, unicode):
+            msg = msg.decode('utf-8')
         if not level in self._by_level:
             self._by_level[level] = []
         self._msgs.append((level, msg))
@@ -161,6 +171,26 @@ class _Logger(object):
 LOG = _Logger()
 
 
+def _encode_string(string):
+    if isinstance(string, unicode):
+        string = string.encode('utf-8')
+    return string
+
+
+def _encode_status(status):
+    status['out'] = _encode_string(status['out'])
+    status['outlog_by_level'] = _encode_string(status['outlog_by_level'])
+    if status['logs']:
+        for i, data in enumerate(status['logs'][:]):
+            status['logs'][i] = (data[0], _encode_string(data[1]))
+        for logger in 'error', 'warn', 'info', 'debug':
+            logs = status['logs_by_level'].get(logger, [])[:]
+            if logs:
+                for i, log in enumerate(logs):
+                    status['logs_by_level'][logger][i] = _encode_string(log)
+    return status
+
+
 def _set_status(m,
                 comment=INVALID_RESPONSE,
                 status=False,
@@ -172,32 +202,35 @@ def _set_status(m,
     m['status'] = status
     m['logs'] = LOG.messages[:]
     m['logs_by_level'] = LOG.by_level.copy()
-    outlog, outlog_by_level = u'', u''
+    outlog, outlog_by_level = '', ''
     m['comment'] = comment
     if out and isinstance(out, string_types):
         outlog += HR
-        outlog += u'OUTPUT:\n'
-        outlog += u'{0}\n'.format(out)
+        outlog += 'OUTPUT:\n'
+        outlog += '{0}\n'.format(_encode_string(out))
         outlog += HR
     if m['logs']:
         outlog += HR
-        outlog += u'Log summary:\n'
+        outlog += 'Log summary:\n'
         outlog += HR
         outlog_by_level += HR
-        outlog_by_level += u'Log summary by level:\n'
+        outlog_by_level += 'Log summary by level:\n'
         outlog_by_level += HR
         for level, msg in m['logs']:
-            outlog += '\n{0}: {1}\n'.format(level.upper(), msg)
+            outlog += '\n{0}: {1}\n'.format(level.upper(),
+                                            _encode_string(msg))
         for logger in 'error', 'warn', 'info', 'debug':
             logs = m['logs_by_level'].get(logger, [])
             if logs:
                 outlog_by_level += '\n{0}:\n'.format(logger.upper())
+                for idx, log in enumerate(logs[:]):
+                    logs[idx] = _encode_string(log)
                 outlog_by_level += '\n'.join(logs)
                 outlog_by_level += '\n'
         outlog += HR
     m['outlog'] = outlog
     m['outlog_by_level'] = outlog_by_level
-    return m
+    return _encode_status(m)
 
 
 def _invalid(m, comment=INVALID_RESPONSE, out=None):
@@ -295,8 +328,8 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
 
 def _find_cfgs(path, cfgs=None):
     '''
-    Find all buildout configs in a sudirectory.
-    only builout.cfg and etc/buildout.cfg are valid in::
+    Find all buildout configs in a subdirectory.
+    only buildout.cfg and etc/buildout.cfg are valid in::
 
     path
         directory where to start to search
@@ -386,7 +419,7 @@ def _get_buildout_ver(directory='.'):
 
 def _get_bootstrap_url(directory):
     '''
-    Get the most appropriate download url for the bootstrap script.
+    Get the most appropriate download URL for the bootstrap script.
 
     directory
         directory to execute in
@@ -419,7 +452,7 @@ def upgrade_bootstrap(directory='.',
     Upgrade current bootstrap.py with the last released one.
 
     Indeed, when we first run a buildout, a common source of problem
-    is to have an locally stale boostrap, we just try rab a new copy
+    is to have a locally stale bootstrap, we just try to grab a new copy
 
     directory
         directory to execute in
@@ -448,7 +481,7 @@ def upgrade_bootstrap(directory='.',
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
     LOG.debug('Using %s' % booturl)
-    # try to donwload an uptodate bootstrap
+    # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
     directory = os.path.abspath(directory)
@@ -735,7 +768,7 @@ def run_buildout(directory='.',
         run buildout in newest mode
 
     force
-        run buildout unconditionnaly
+        run buildout unconditionally
 
     verbose
         run buildout in verbose mode (-vvvvv)
@@ -801,7 +834,7 @@ def _merge_statuses(statuses):
         if status['status'] is not False:
             status['status'] = st['status']
         out = st['out']
-        comment = st['comment']
+        comment = _encode_string(st['comment'])
         logs = st['logs']
         logs_by_level = st['logs_by_level']
         outlog_by_level = st['outlog_by_level']
@@ -811,28 +844,33 @@ def _merge_statuses(statuses):
                 status['out'] = ''
             status['out'] += '\n'
             status['out'] += HR
+            out = _encode_string(out)
             status['out'] += '{0}\n'.format(out)
             status['out'] += HR
         if comment:
             if not status['comment']:
                 status['comment'] = ''
-            status['comment'] += '\n{0}\n'.format(comment)
+            status['comment'] += '\n{0}\n'.format(
+                _encode_string(comment))
         if outlog:
             if not status['outlog']:
                 status['outlog'] = ''
+            outlog = _encode_string(outlog)
             status['outlog'] += '\n{0}'.format(HR)
             status['outlog'] += outlog
         if outlog_by_level:
             if not status['outlog_by_level']:
                 status['outlog_by_level'] = ''
             status['outlog_by_level'] += '\n{0}'.format(HR)
-            status['outlog_by_level'] += outlog_by_level
-        status['logs'].extend(logs)
+            status['outlog_by_level'] += _encode_string(outlog_by_level)
+        status['logs'].extend([
+            (a[0], _encode_string(a[1])) for a in logs])
         for log in logs_by_level:
             if not log in status['logs_by_level']:
                 status['logs_by_level'][log] = []
-            status['logs_by_level'][log].extend(logs_by_level[log])
-    return status
+            status['logs_by_level'][log].extend(
+                [_encode_string(a) for a in logs_by_level[log]])
+    return _encode_status(status)
 
 
 @_salt_callback

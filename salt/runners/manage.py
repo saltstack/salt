@@ -5,6 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import operator
 import re
@@ -32,7 +33,7 @@ def status(output=True):
 
         salt-run manage.status
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
 
     key = salt.key.Key(__opts__)
@@ -71,7 +72,7 @@ def key_regen():
 
         salt-run manage.key_regen
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'saltutil.regen_keys')
 
     for root, dirs, files in os.walk(__opts__['pki_dir']):
@@ -131,10 +132,16 @@ def up():  # pylint: disable=C0103
     return ret
 
 
-def present():
+def present(subset=None, show_ipv4=False):
     '''
     Print a list of all minions that are up according to Salt's presence
     detection, no commands will be sent
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
 
     CLI Example:
 
@@ -143,7 +150,10 @@ def present():
         salt-run manage.present
     '''
     ckminions = salt.utils.minions.CkMinions(__opts__)
-    connected = sorted(ckminions.connected_ids())
+
+    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+    connected = dict(minions) if show_ipv4 else sorted(minions)
+
     salt.output.display_output(connected, '', __opts__)
     return connected
 
@@ -189,14 +199,14 @@ def safe_accept(target, expr_form='glob'):
             del ret[minion]
 
     if failures:
-        print "safe_accept failed on the following minions:"
+        print('safe_accept failed on the following minions:')
         for minion, message in failures.iteritems():
-            print minion
-            print '-' * len(minion)
-            print message
-            print
+            print(minion)
+            print('-' * len(minion))
+            print(message)
+            print('')
 
-    print "Accepted {0:d} keys".format(len(ret))
+    print('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
@@ -210,7 +220,7 @@ def versions():
 
         salt-run manage.versions
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
 
     labels = {
@@ -381,7 +391,7 @@ objShell.Exec("{1}{2}")'''
 
     # First off, change to the local temp directory, stop salt-minion (if
     # running), and remove the master's public key.
-    # This is to accomodate for reinstalling Salt over an old or broken build,
+    # This is to accommodate for reinstalling Salt over an old or broken build,
     # e.g. if the master address is changed, the salt-minion process will fail
     # to authenticate and quit; which means infinite restarts under Windows.
     batch = 'cd /d %TEMP%\nnet stop salt-minion\ndel c:\\salt\\conf\\pki\\minion\\minion_master.pub\n'

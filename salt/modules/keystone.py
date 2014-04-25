@@ -240,10 +240,18 @@ def endpoint_get(service, profile=None, **connection_args):
 
     .. code-block:: bash
 
-        salt '*' keystone.endpoint_get ec2
+        salt '*' keystone.endpoint_get nova
     '''
     kstone = auth(profile, **connection_args)
-    return kstone.service_catalog.url_for(service_type=service)
+    services = service_list(profile, **connection_args)
+    if service not in services:
+        return {'Error': 'Could not find the specified service'}
+    service_id = services[service]['id']
+    endpoints = endpoint_list(profile, **connection_args)
+    for endpoint in endpoints:
+        if endpoints[endpoint]['service_id'] == service_id:
+            return endpoints[endpoint]
+    return {'Error': 'Could not find endpoint for the specified service'}
 
 
 def endpoint_list(profile=None, **connection_args):
@@ -266,6 +274,50 @@ def endpoint_list(profile=None, **connection_args):
                             'publicurl': endpoint.publicurl,
                             'service_id': endpoint.service_id}
     return ret
+
+
+def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
+                    region=None, profile=None, **connection_args):
+    '''
+    Create an endpoint for an Openstack service
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.endpoint_create nova 'http://public/url'
+            'http://internal/url' 'http://adminurl/url' region
+    '''
+    kstone = auth(profile)
+    keystone_service = service_get(name=service, **connection_args)
+    if not keystone_service or 'Error' in keystone_service:
+        return {'Error': 'Could not find the specified service'}
+    kstone.endpoints.create(region=region,
+                            service_id=keystone_service[service]['id'],
+                            publicurl=publicurl,
+                            adminurl=adminurl,
+                            internalurl=internalurl)
+    return endpoint_get(service, **connection_args)
+
+
+def endpoint_delete(service, profile=None, **connection_args):
+    '''
+    Delete endpoints of an Openstack service
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' keystone.endpoint_delete nova
+    '''
+    kstone = auth(profile)
+    endpoint = endpoint_get(service, profile, **connection_args)
+    if not endpoint or 'Error' in endpoint:
+        return {'Error': 'Could not find any endpoints for the service'}
+    kstone.endpoints.delete(endpoint['id'])
+    endpoint = endpoint_get(service, profile, **connection_args)
+    if not endpoint or 'Error' in endpoint:
+        return True
 
 
 def role_create(name, profile=None, **connection_args):
@@ -607,8 +659,9 @@ def user_list(profile=None, **connection_args):
                           'name': user.name,
                           'email': user.email,
                           'enabled': user.enabled}
-        if hasattr(user.__dict__, 'tenantId'):
-            ret[user.name]['tenant_id'] = user.__dict__['tenantId']
+        tenant_id = getattr(user, 'tenantId', None)
+        if tenant_id:
+            ret[user.name]['tenant_id'] = tenant_id
     return ret
 
 
@@ -638,8 +691,9 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
                       'name': user.name,
                       'email': user.email,
                       'enabled': user.enabled}
-    if hasattr(user.__dict__, 'tenantId'):
-        ret[user.name]['tenant_id'] = user.__dict__['tenantId']
+    tenant_id = getattr(user, 'tenantId', None)
+    if tenant_id:
+        ret[user.name]['tenant_id'] = tenant_id
     return ret
 
 
@@ -949,7 +1003,6 @@ def _item_list(profile=None, **connection_args):
         #        'name': item.name,
         #        }
     return ret
-
 
     #The following is a list of functions that need to be incorporated in the
     #keystone module. This list should be updated as functions are added.

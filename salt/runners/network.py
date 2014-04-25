@@ -4,6 +4,7 @@ Network tools to run from the Master
 '''
 
 # Import python libs
+from __future__ import print_function
 import socket
 
 # Import salt libs

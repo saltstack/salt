@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 Management of zc.buildout
-===========================
+=========================
 
 This module is inspired from minitage's buildout maker
 (https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py)
@@ -41,6 +40,7 @@ Available Functions
 import sys
 
 # Import salt libs
+import salt.utils
 from salt._compat import string_types
 
 # Define the module's virtual name
@@ -51,9 +51,7 @@ def __virtual__():
     '''
     Only load if zc.buildout libs available
     '''
-    if True:
-        return __virtualname__
-    return False
+    return __virtualname__
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from docker'
@@ -64,7 +62,7 @@ FN_CACHE = {}
 
 
 def __salt(fn):
-    if not fn in FN_CACHE:
+    if fn not in FN_CACHE:
         FN_CACHE[fn] = __salt__[fn]
     return FN_CACHE[fn]
 
@@ -123,6 +121,7 @@ def installed(name,
               quiet=False,
               parts=None,
               runas=None,
+              user=None,
               env=(),
               buildout_ver=None,
               test_release=False,
@@ -155,6 +154,13 @@ def installed(name,
 
     runas
         user used to run buildout as
+
+        .. deprecated:: 2014.1.4 (Hydrogen)
+
+    user
+        user used to run buildout as
+
+        .. versionadded:: 2014.1.4 (Hydrogen)
 
     env
         environment variables to set when running
@@ -193,16 +199,43 @@ def installed(name,
         run buildout in verbose mode (-vvvvv)
 
     '''
+    ret = {}
+
+    salt.utils.warn_until(
+        'Lithium',
+        'Please remove \'runas\' support at this stage. \'user\' support was '
+        'added in 2014.1.4 (Hydrogen).',
+        _dont_call_warnings=True
+    )
+    if runas:
+        # Warn users about the deprecation
+        ret.setdefault('warnings', []).append(
+            'The \'runas\' argument is being deprecated in favor of \'user\', '
+            'please update your state files.'
+        )
+    if user is not None and runas is not None:
+        # user wins over runas but let warn about the deprecation.
+        ret.setdefault('warnings', []).append(
+            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
+            '\'runas\' is being ignored in favor of \'user\'.'
+        )
+        runas = None
+    elif runas is not None:
+        # Support old runas usage
+        user = runas
+        runas = None
+
     try:
         test_release = int(test_release)
     except ValueError:
         test_release = None
+
     func = __salt('buildout.buildout')
-    a, kw = [], dict(
+    kwargs = dict(
         directory=name,
         config=config,
         parts=parts,
-        runas=runas,
+        runas=user,
         env=env,
         buildout_ver=buildout_ver,
         test_release=test_release,
@@ -216,7 +249,5 @@ def installed(name,
         onlyif=onlyif,
         unless=unless,
     )
-    status = _ret_status(func(*a, **kw), name, quiet=quiet)
-    return status
-
-# vim:set et sts=4 ts=4 tw=80:
+    ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
+    return ret

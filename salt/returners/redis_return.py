@@ -9,6 +9,10 @@ config, these are the defaults:
     redis.db: '0'
     redis.host: 'salt'
     redis.port: 6379
+
+  To use the redis returner, append '--return redis' to the salt command. ex:
+
+    salt '*' test.ping --return redis
 '''
 
 # Import python libs

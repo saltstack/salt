@@ -62,13 +62,8 @@ def __virtual__():
     Set up the libcloud functions and check for GOGRID configs
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no GoGrid cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading GoGrid cloud module')
     return True
 
 
@@ -119,6 +114,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -136,6 +132,7 @@ def create(vm_):
         {'kwargs': {'name': kwargs['name'],
                     'image': kwargs['image'].name,
                     'size': kwargs['size'].name}},
+        transport=__opts__['transport']
     )
 
     try:
@@ -160,6 +157,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': data.public_ips[0],
             'username': ssh_username,
             'password': data.extra['password'],
@@ -229,11 +227,11 @@ def create(vm_):
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
-        del(event_kwargs['minion_pem'])
-        del(event_kwargs['minion_pub'])
-        del(event_kwargs['sudo_password'])
+        del event_kwargs['minion_pem']
+        del event_kwargs['minion_pub']
+        del event_kwargs['sudo_password']
         if 'password' in event_kwargs:
-            del(event_kwargs['password'])
+            del event_kwargs['password']
         ret['deploy_kwargs'] = event_kwargs
 
         salt.utils.cloud.fire_event(
@@ -241,6 +239,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -258,13 +257,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
+    if 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -275,6 +278,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret

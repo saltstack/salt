@@ -55,6 +55,10 @@ Use the following mysql database schema::
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 Required python modules: MySQLdb
+
+  To use the mysql returner, append '--return mysql' to the salt command. ex:
+
+    salt '*' test.ping --return mysql
 '''
 
 # Import python libs
@@ -76,7 +80,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not HAS_MYSQL:
         return False
-    return 'mysql'
+    return True
 
 
 def _get_options():
@@ -95,7 +99,10 @@ def _get_options():
             log.debug('Using default for MySQL {0}'.format(attr))
             _options[attr] = defaults[attr]
             continue
-        _options[attr] = _attr
+        if attr == 'port':
+            _options[attr] = int(_attr)
+        else:
+            _options[attr] = _attr
 
     return _options
 
@@ -134,7 +141,7 @@ def returner(ret):
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            str(ret['return']), ret['id'],
+                            json.dumps(ret['return']), ret['id'],
                             ret['success'], json.dumps(ret)))
 
 

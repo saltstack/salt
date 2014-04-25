@@ -63,6 +63,7 @@ verbose : True
 # Import python Libs
 import json
 import os
+import urllib2
 
 # Import salt libs
 import salt.utils
@@ -222,6 +223,28 @@ def _format_url(handler, host=None, core_name=None, extra=None):
                     host, port, baseurl, core_name, handler, "&".join(extra))
 
 
+def _auth(url):
+    '''
+    Install an auth handler for urllib2
+    '''
+    user = __salt__['config.get']('solr.user', False)
+    password = __salt__['config.get']('solr.passwd', False)
+    realm = __salt__['config.get']('solr.auth_realm', 'Solr')
+
+    if user and password:
+        basic = urllib2.HTTPBasicAuthHandler()
+        basic.add_password(
+            realm=realm, uri=url, user=user, passwd=password
+        )
+        digest = urllib2.HTTPDigestAuthHandler()
+        digest.add_password(
+            realm=realm, uri=url, user=user, passwd=password
+        )
+        urllib2.install_opener(
+            urllib2.build_opener(basic, digest)
+        )
+
+
 def _http_request(url, request_timeout=None):
     '''
     PRIVATE METHOD
@@ -237,6 +260,7 @@ def _http_request(url, request_timeout=None):
 
          {'success':boolean, 'data':dict, 'errors':list, 'warnings':list}
     '''
+    _auth(url)
     try:
 
         request_timeout = __salt__['config.option']('solr.request_timeout')
@@ -1260,7 +1284,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
     if not resp['success']:
         return resp
     options = _merge_options(options)
-    #if we're nuking data, and we're multi-core disable replication for safty
+    #if we're nuking data, and we're multi-core disable replication for safety
     if options['clean'] and _check_for_cores():
         resp = set_replication_enabled(False, host=host, core_name=core_name)
         if not resp['success']:
