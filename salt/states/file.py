@@ -1292,9 +1292,7 @@ def managed(name,
                 template,
                 show_diff,
                 contents,
-                dir_mode,
-                makedirs
-            )
+                dir_mode)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())

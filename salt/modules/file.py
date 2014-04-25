@@ -2487,8 +2487,7 @@ def manage_file(name,
                 template=None,   # pylint: disable=W0613
                 show_diff=True,
                 contents=None,
-                dir_mode=None,
-                mkdirs=False):
+                dir_mode=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2633,7 +2632,7 @@ def manage_file(name,
                     ret['result'] = False
                     return ret
             if not os.path.isdir(os.path.dirname(name)):
-                if makedirs and mkdirs:
+                if makedirs:
                     if dir_mode is None and mode is not None:
                         # Add execute bit to each nonzero digit in the mode, if
                         # dir_mode was not specified. Otherwise, any
