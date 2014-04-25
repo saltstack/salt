@@ -74,8 +74,6 @@ def get_local_client(
     elif opts['transport'] == 'zeromq':
         return LocalClient(mopts=opts)
 
-class Foo(object):
-    pass
 
 class LocalClient(object):
     '''
