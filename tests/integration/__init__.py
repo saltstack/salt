@@ -892,14 +892,14 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_run_plus(self, fun, options='', catch_stderr=False, *arg):
+    def run_run_plus(self, fun, options='', *arg, **kwargs):
         '''
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
         ret = {}
         ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=catch_stderr
+            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
         )
         opts = salt.config.master_config(
             self.get_config_file_path('master')
