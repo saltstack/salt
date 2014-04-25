@@ -106,7 +106,6 @@ def find_guests(names, quiet=False):
     return ret
 
 
-
 def init(name,
          host=None,
          **kwargs):
