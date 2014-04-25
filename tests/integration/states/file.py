@@ -1127,8 +1127,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
             self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
             self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
-        except AssertionError:
-            raise
         finally:
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
@@ -1173,8 +1171,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
             self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
             self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
-        except AssertionError:
-            raise
         finally:
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
