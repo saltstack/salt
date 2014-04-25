@@ -72,11 +72,11 @@ def init(name,
 
         salt-run lxc.init name host=minion_id [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
+                [template=lxc template name] [clone=original name] \\
                 [nic=nic_profile] [profile=lxc_profile] \\
                 [nic_opts=nic_opts] [start=(true|false)] \\
                 [seed=(true|false)] [install=(true|false)] \\
-                [config=minion_config] [clone=original] \\
-                [snapshot=(true|false)]
+                [config=minion_config] [snapshot=(true|false)]
 
     name
         Name of the container.
@@ -92,6 +92,12 @@ def init(name,
 
     memory
         cgroups memory limit, in MB.
+
+    template
+        Name of LXC template on which to base this container
+
+    clone
+        Clone this container from an existing container
 
     nic
         Network interfaces profile (defined in config or pillar).
