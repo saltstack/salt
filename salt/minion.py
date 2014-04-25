@@ -679,6 +679,11 @@ class Minion(MinionBase):
                 # We can't decode the master's response to our event,
                 # so we will need to re-authenticate.
                 self.authenticate()
+        except SaltSystemExit:
+            raise
+        except SaltReqTimeoutError:
+            log.info("Master failed to respond, try re-authenticating")
+            self.authenticate()
         except Exception:
             log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
@@ -1181,11 +1186,19 @@ class Minion(MinionBase):
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        while True:
+        
+        auth_timeout_count_max = self.opts.get('auth_timeout_count_max', None)
+        auth_timeout_count = 0
+        creds = 'retry'
+        while creds == 'retry' or creds == 'timeout':
             creds = auth.sign_in(timeout, safe)
-            if creds != 'retry':
-                log.info('Authentication with master successful!')
-                break
+            if creds == 'timeout' and auth_timeout_count_max > 0:
+                auth_timeout_count += 1
+                if auth_timeout_count > auth_timeout_count_max:
+                    raise SaltSystemExit('Remote system not responding')
+            else:
+                auth_timeout_count = 0
+            
             log.info('Waiting for minion key to be accepted by the master.')
             if acceptance_wait_time:
                 log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
@@ -1193,6 +1206,8 @@ class Minion(MinionBase):
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+                    
+        log.info('Authentication with master successful!')  
         self.aes = creds['aes']
         if self.opts.get('syndic_master_publish_port'):
             self.publish_port = self.opts.get('syndic_master_publish_port')
@@ -1339,11 +1354,22 @@ class Minion(MinionBase):
                 'Exception occurred in attempt to initialize grain refresh routine during minion tune-in: {0}'.format(
                     exc)
             )
-
+        
+        hartbeat_wait_time = self.opts.get('hartbeat_wait_time', None)
+        hartbeat_at = None
         while self._running is True:
             loop_interval = self.process_schedule(self, loop_interval)
             try:
                 socks = self._do_poll(loop_interval)
+              
+                if hartbeat_wait_time:
+                    if socks or not hartbeat_at:
+                        hartbeat_at = time.time() + hartbeat_wait_time
+                    if hartbeat_at < time.time():
+                        log.debug('Hartbeat ping master')
+                        self._fire_master('hartbeat ping', 'minion_ping')
+                        hartbeat_at = time.time() + hartbeat_wait_time
+
                 self._do_socket_recv(socks)
 
                 # Check the event system
@@ -1371,7 +1397,6 @@ class Minion(MinionBase):
                         log.debug('Exception while handling events', exc_info=True)
                     # Add an extra fallback in case a forked process leeks through
                     multiprocessing.active_children()
-
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
                 # SIGCHLD. Throws this error with errno == EINTR.

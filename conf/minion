@@ -127,7 +127,22 @@
 # in seconds, for each individual attempt. After this timeout expires, the minion
 # will wait for acceptance_wait_time seconds before trying again.
 # Unless your master is under unusually heavy load, this should be left at the default.
-#auth_timeout: 3
+#auth_timeout: 60
+
+# Fail after consecutive SaltReqTimeoutError when trying to authenticate with the master.
+# Using this setting with restart_on_error will help recover if the Master
+# changed ip address (DDNS).  A value of 10 is reasonable.
+#auth_timeout_count_max: None
+
+# If the minion hits an issue that causes SaltSystemExit then reconnect the minion
+# When using auth_timeout_count_max and hartbeat_wait_time you will want to enable this,
+#restart_on_error: False
+
+# Number of seconds the minion should wait after not receving anything from the master
+# before sending a ping to the Master to ensure there is an active connection.
+# This is required if you want your minion to recover if the Master changes IP addresses.
+# In production 21600 (6 hours) is reasonable.
+#hartbeat_wait_time: None
 
 
 # If you don't have any problems with syn-floods, dont bother with the
