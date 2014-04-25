@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 #
 # template script for installing lxc containers via a single tarball
