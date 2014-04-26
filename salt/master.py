@@ -796,14 +796,13 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        good = self.ckminions.auth_check(
+
+        # finally, check the auth of the load
+        return self.ckminions.auth_check(
                 perms,
                 clear_load['fun'],
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
-        if not good:
-            return False
-        return True
 
     def _ext_nodes(self, load):
         '''
