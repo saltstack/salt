@@ -79,7 +79,7 @@ def install(runas=None):
     ret = __salt__['cmd.run_all'](
         # the RVM installer automatically does a multi-user install when it is
         # invoked with root privileges
-        'curl -s {installer} | bash -s stable'.format(installer=installer),
+        'curl -Ls {installer} | bash -s stable'.format(installer=installer),
         runas=runas
     )
     if ret['retcode'] > 0:
