@@ -5,7 +5,7 @@ General management of queues
 This runner facilitates interacting with various queue backends such as the
 included sqlite3 queue or the planned AWS SQS and Redis queues
 
-This runner as well as the Queues system is not api stable at this time.
+This runner, as well as the Queues system, is not api stable at this time.
 '''
 
 # Import python libs
