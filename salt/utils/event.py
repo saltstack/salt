@@ -98,6 +98,7 @@ TAGS = {
     'wheel': 'wheel',  # prefix for all salt/wheel events
     'cloud': 'cloud',  # prefix for all salt/cloud events
     'fileserver': 'fileserver',  # prefix for all salt/fileserver events
+    'queue': 'queue',  # prefix for all salt/queue events
 }
 
 
