@@ -353,11 +353,6 @@ def init(name,
     salt_config = select('config')
     approve_key = select('approve_key', True)
     clone_from = select('clone')
-    nic = select('nic')
-    nic_opts = select('nic_opts')
-    cpushare = select('cpushare')
-    cpuset = select('cpuset')
-    memory = select('memory')
 
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
