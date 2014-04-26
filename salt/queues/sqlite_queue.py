@@ -22,6 +22,7 @@ import glob
 import logging
 import os
 import sqlite3 as lite
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -218,7 +219,12 @@ def pop(queue, quantity=1):
     '''
     cmd = 'SELECT name FROM {0}'.format(queue)
     if quantity != 'all':
-        quantity = int(quantity)
+        try:
+            quantity = int(quantity)
+        except ValueError as exc:
+            error_txt = ('Quantity must be an integer or "all".\n'
+                         'Error: "{0}".'.format(exc))
+            raise SaltInvocationError(error_txt)
         cmd = ''.join([cmd, ' LIMIT {0}'.format(quantity)])
     log.debug('SQL Query: {0}'.format(cmd))
     con = _conn(queue)
