@@ -94,6 +94,7 @@ def dns_dhcp(name, interface='Local Area Connection'):
 
     return ret
 
+
 def primary_suffix(name,
         suffix=None,
         updates=False):
