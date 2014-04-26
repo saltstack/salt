@@ -138,7 +138,6 @@ try:
 except Exception:
     pass
 
-# Import keyring
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
