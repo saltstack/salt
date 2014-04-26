@@ -151,19 +151,18 @@ class LocalClient(object):
         user = salt.utils.get_user()
         # if our user is root, look for other ways to figure out
         # who we are
-        if (user == 'root' or user == self.opts['user']) and 'SUDO_USER' in os.environ:
-            env_vars = ['SUDO_USER']
+        env_vars = ('SUDO_USER',)
+        if (user == 'root' or user == self.opts['user']):
             for evar in env_vars:
                 if evar in os.environ:
                     return 'sudo_{0}'.format(os.environ[evar])
-            return user
-        # If the running user is just the specified user in the
-        # conf file, don't pass the user as it's implied.
-        elif user == self.opts['user']:
-            return user
         return user
 
+
     def _convert_range_to_list(self, tgt):
+        '''
+        convert a seco.range range into a list target
+        '''
         range_ = seco.range.Range(self.opts['range_server'])
         try:
             return range_.expand(tgt)
@@ -194,10 +193,9 @@ class LocalClient(object):
         log.debug('Checking whether jid %s is still running', jid)
         timeout = self.opts['gather_job_timeout']
 
-        arg = [jid]
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
-                                arg=arg,
+                                arg=[jid],
                                 expr_form=tgt_type,
                                 timeout=timeout,
                                )
