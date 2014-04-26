@@ -769,7 +769,7 @@ class AESFuncs(object):
         if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
             return False
         # If the command will make a recursive publish don't run
-        if re.match('publish.*', clear_load['fun']):
+        if clear_load['fun'].startswith('publish.'):
             return False
         # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
