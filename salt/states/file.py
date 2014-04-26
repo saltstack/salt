@@ -2021,11 +2021,12 @@ def replace(name,
 
     if changes:
         ret['changes'] = {'diff': changes}
-        ret['comment'] = 'Changes were made'
+        ret['comment'] = ('Changes were made'
+                if not __opts__['test'] else 'Changes would have been made')
     else:
         ret['comment'] = 'No changes were made'
 
-    ret['result'] = True
+    ret['result'] = True if not __opts__['test'] else None
     return ret
 
 
