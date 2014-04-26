@@ -5,6 +5,11 @@ General management of queues
 This runner facilitates interacting with various queue backends such as the
 included sqlite3 queue or the planned AWS SQS and Redis queues
 
+The queue functions such as `insert`, `delete`, and `pop` can be used for
+typical management of the queue. The `process_queue` function pops the
+requested number of items from the queue and creates a Salt Event that can then
+be processed by a Reactor.
+
 This runner, as well as the Queues system, is not api stable at this time.
 '''
 
@@ -14,6 +19,8 @@ from __future__ import print_function
 # Import salt libs
 import salt.loader
 import salt.output
+import salt.utils.event
+from salt.utils.event import tagify
 
 
 def insert(backend, queue, items):
@@ -118,3 +125,25 @@ def pop(backend, queue, quantity=1):
     ret = queue_funcs[cmd](queue=queue, quantity=quantity)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
+
+
+def process_queue(backend, queue, quantity=1):
+    '''
+    Pop items off a queue and create an event on the Salt event bus to be
+    processed by a Reactor.
+    '''
+    # get ready to send an event
+    event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
+
+    txt = 'Processing the following items:'
+    salt.output.display_output(txt, 'nested', __opts__)
+    items = pop(backend=backend, queue=queue, quantity=quantity)
+
+    data = {'items': items,
+             'backend': backend,
+             'queue': queue,}
+    event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
