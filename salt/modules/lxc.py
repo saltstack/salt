@@ -1177,7 +1177,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
 
 def set_dns(name, dnsservers=None, searchdomains=None):
-    '''Update container DNS configuration
+    '''
+    Update container DNS configuration
     and possibly also resolv.conf one.
 
     CLI Example:
