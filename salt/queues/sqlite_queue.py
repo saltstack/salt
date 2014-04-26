@@ -2,17 +2,15 @@
 '''
 .. versionadded:: Helium
 
-This is the default local master event queue built on sqlite.  By default,
-an sqlite3 database file is created in the `sqlite_queue_dir` which is found at::
+This is the default local master event queue built on sqlite.  By default, an
+sqlite3 database file is created in the `sqlite_queue_dir` which is found at::
 
     /var/cache/salt/master/queues
 
-It's possible to store the sqlite3 database files by setting `sqlite_queue_dir` to another location::
+It's possible to store the sqlite3 database files by setting `sqlite_queue_dir`
+to another location::
 
-    sqlite_queue_dir: /var/cache/salt/master/queues
-
-This queue runner can be executed with salt-run, but also will tie into the
-Salt scheduler to periodically process the queues.
+    sqlite_queue_dir: /home/myuser/salt/master/queues
 '''
 
 # Import python libs
@@ -100,10 +98,6 @@ def _list_queues():
 def list_queues():
     '''
     Return a list of Salt Queues on the Salt Master
-
-    CLI Example:
-
-        salt-run queue.list_queues
     '''
     queues = _list_queues()
     return queues
@@ -112,12 +106,6 @@ def list_queues():
 def list_items(queue):
     '''
     List contents of a queue
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run queue.list_items myqueue
     '''
     itemstuple = _list_items(queue)
     items = [item[0] for item in itemstuple]
@@ -127,12 +115,6 @@ def list_items(queue):
 def list_length(queue):
     '''
     Provide the number of items in a queue
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run queue.list_length myqueue
     '''
     items = _list_items(queue)
     return len(items)
@@ -141,13 +123,6 @@ def list_length(queue):
 def insert(queue, items):
     '''
     Add an item or items to a queue
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run queue.insert myqueue myitem
-        salt-run queue.insert myqueue "['item1', 'item2', 'item3']"
     '''
     con = _conn(queue)
     with con:
@@ -178,13 +153,6 @@ def insert(queue, items):
 def delete(queue, items):
     '''
     Delete an item or items from a queue
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run queue.delete myqueue myitem
-        salt-run queue.delete myqueue "['item1', 'item2', 'item3']"
     '''
     con = _conn(queue)
     with con:
@@ -208,14 +176,6 @@ def delete(queue, items):
 def pop(queue, quantity=1):
     '''
     Pop one or more or all items from the queue return them.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run queue.pop myqueue
-        salt-run queue.pop myqueue 6
-        salt-run queue.pop myqueue all
     '''
     cmd = 'SELECT name FROM {0}'.format(queue)
     if quantity != 'all':
