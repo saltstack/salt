@@ -230,6 +230,12 @@ class SaltCloud(parsers.SaltCloudParser):
                 msg = 'There was a profile error: {0}'
                 self.handle_exception(msg, exc)
 
+        elif self.options.set_password:
+            username = self.credential_username
+            provider_name = "salt.cloud.provider.{0}".format(self.credential_provider)
+            # TODO: check if provider is configured
+            # set the password
+            salt.utils.cloud.store_password_in_keyring(provider_name, username)
         elif self.config.get('map', None) and \
                 self.selected_query_option is None:
             if len(mapper.rendered_map) == 0:

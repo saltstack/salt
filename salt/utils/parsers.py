@@ -1431,6 +1431,40 @@ class CloudProvidersListsMixIn(object):
             )
 
 
+class CloudCredentialsMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        group = self.cloud_credentials_group = optparse.OptionGroup(
+            self,
+            'Cloud Credentials',
+            # Include description here as a string
+        )
+        group.add_option(
+            '--set-password',
+            default=None,
+            nargs=2,
+            metavar='<USERNAME> <PROVIDER>',
+            help=('Configure password for a cloud provider and save it to the keyring.'
+                  ' PROVIDER can be specified with or without a driver, for example:'
+                  ' "--set-password bob rackspace"'
+                  ' or more specific'
+                  ' "--set-password bob rackspace:openstack"')
+        )
+        self.add_option_group(group)
+
+    def process_set_password(self):
+        if self.options.set_password:
+            self.credential_username, self.credential_provider = self.options.set_password
+            if self.credential_provider.startswith('-') or \
+                    '=' in self.credential_provider:
+                self.error(
+                    '--set-password expects two arguments: <username> '
+                    '<provider>'
+                )
+
+
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
                          PidfileMixin):
@@ -2266,7 +2300,8 @@ class SaltCloudParser(OptionParser,
                       CloudConfigMixIn,
                       CloudQueriesMixIn,
                       ExecutionOptionsMixIn,
-                      CloudProvidersListsMixIn):
+                      CloudProvidersListsMixIn,
+                  CloudCredentialsMixIn):
 
     __metaclass__ = OptionParserMeta
 
