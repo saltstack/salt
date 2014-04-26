@@ -1222,14 +1222,17 @@ class LazyLoader(MutableMapping):
     '''
     def __init__(self,
                  loader,
-                 functions={},
+                 functions=None,
                  pack=None,
                  whitelist=None):
         # create a dict to store module functions in
         self._dict = {}
 
         self.loader = loader
-        self.functions = functions
+        if functions:
+            self.functions = functions
+        else:
+            self.functions = {}
         self.pack = pack
         self.whitelist = whitelist
 
@@ -1300,7 +1303,7 @@ class LazyFilterLoader(LazyLoader):
     def __init__(self,
                  loader,
                  name,
-                 functions={},
+                 functions=None,
                  pack=None,
                  whitelist=None):
         self.name = name
