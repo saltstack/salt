@@ -380,7 +380,7 @@ def init(name,
             edit_conf(path, **comp)
     lxc_info = info(name)
     rootfs = lxc_info['rootfs']
-    #lxc_config = lxc_info['config']
+    ret['name'] = name
     if seed:
         ret['seeded'] = __salt__['lxc.bootstrap'](
             name, config=salt_config, approve_key=approve_key, install=install)
