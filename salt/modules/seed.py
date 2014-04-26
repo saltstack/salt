@@ -139,7 +139,7 @@ def _prep_bootstrap(mpt):
     bs_ = __salt__['config.gather_bootstrap_script']()
 
     # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
+    shutil.copy(bs_, os.path.join(mpt, 'tmp', 'bootstrap-salt.sh'))
 
 
 def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
@@ -191,7 +191,7 @@ def _install(mpt):
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh /tmp/bootstrap.sh -c /tmp; fi'
+    cmd += 'else sh /tmp/bootstrap-salt.sh -c /tmp; fi'
     return not _chroot_exec(mpt, cmd)
 
 
