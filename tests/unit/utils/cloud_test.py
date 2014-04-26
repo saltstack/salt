@@ -26,6 +26,7 @@ try:
 except ImportError:
     HAS_KEYRING = False
 
+
 class CloudUtilsTestCase(TestCase):
 
     def test_ssh_password_regex(self):

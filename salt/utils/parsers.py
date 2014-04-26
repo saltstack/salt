@@ -1430,6 +1430,7 @@ class CloudProvidersListsMixIn(object):
                 )
             )
 
+
 class CloudCredentialsMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 30
@@ -1462,6 +1463,7 @@ class CloudCredentialsMixIn(object):
                     '--set-password expects two arguments: <username> '
                     '<provider>'
                 )
+
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
@@ -2293,7 +2295,7 @@ class SaltCloudParser(OptionParser,
                       CloudQueriesMixIn,
                       ExecutionOptionsMixIn,
                       CloudProvidersListsMixIn,
-                      CloudCredentialsMixIn):
+                  CloudCredentialsMixIn):
 
     __metaclass__ = OptionParserMeta
 

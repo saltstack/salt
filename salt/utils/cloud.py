@@ -2051,6 +2051,7 @@ def _salt_cloud_force_ascii(exc):
 
 codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)
 
+
 def retrieve_password_from_keyring(credential_id, username):
     '''
     Retrieve particular user's password for a specified credential set from system keyring.
@@ -2060,6 +2061,7 @@ def retrieve_password_from_keyring(credential_id, username):
         return False
     return keyring.get_password(credential_id, username)
 
+
 def _save_password_in_keyring(credential_id, username, password):
     '''
     Saves provider password in system keyring
@@ -2068,6 +2070,7 @@ def _save_password_in_keyring(credential_id, username, password):
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
     return keyring.set_password(credential_id, username, password)
+
 
 def store_password_in_keyring(credential_id, username):
     '''
@@ -2089,4 +2092,4 @@ def store_password_in_keyring(credential_id, username):
     try:
         _save_password_in_keyring(credential_id, username, password)
     except Exception, e:
-        log.debug("Problem saving password in the keyring: %s" % str(e))
+        log.debug("Problem saving password in the keyring: {0}".format(str(e)))

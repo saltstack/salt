@@ -138,6 +138,7 @@ try:
 except Exception:
     pass
 
+# Import keyring
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
@@ -256,9 +257,10 @@ def get_conn():
         log.debug('OpenStack authenticating using password')
         if password == 'USE_KEYRING':
             # retrieve password from system keyring
-            credential_id = "salt.cloud.provider.%s" % __active_provider_name__
-            logging.debug("Retrieving keyring password for %s (%s)" %
-                (credential_id, user)
+            credential_id = "salt.cloud.provider.{0}".format(__active_provider_name__)
+            logging.debug("Retrieving keyring password for {0} ({1})".format(
+                credential_id,
+                user)
             )
             # attempt to retrieve driver specific password first
             driver_password = salt.utils.cloud.retrieve_password_from_keyring(
@@ -267,12 +269,13 @@ def get_conn():
             )
             if driver_password is None:
                 provider_password = salt.utils.cloud.retrieve_password_from_keyring(
-                    credential_id.split(':')[0], #fallback to provider level
+                    credential_id.split(':')[0],  # fallback to provider level
                     user)
                 if provider_password is None:
                     raise SaltCloudSystemExit(
-                        "Unable to retrieve password from keyring for provider %s" %
-                        __active_provider_name__
+                        "Unable to retrieve password from keyring for provider {0}".format(
+                            __active_provider_name__
+                        )
                     )
                 else:
                     actual_password = provider_password

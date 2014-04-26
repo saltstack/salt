@@ -232,7 +232,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.set_password:
             username = self.credential_username
-            provider_name = "salt.cloud.provider.%s" % self.credential_provider
+            provider_name = "salt.cloud.provider.{0}".format(self.credential_provider)
             # TODO: check if provider is configured
             # set the password
             salt.utils.cloud.store_password_in_keyring(provider_name, username)
