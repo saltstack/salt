@@ -176,6 +176,7 @@ def returners(opts, functions, whitelist=None):
             'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
 
+
 def returner(name, opts, functions):
     '''
     Returns a single returner module
