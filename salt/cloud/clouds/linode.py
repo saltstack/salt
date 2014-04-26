@@ -264,7 +264,7 @@ def create(vm_):
                 )
             )
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
