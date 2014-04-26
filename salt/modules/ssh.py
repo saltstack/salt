@@ -3,7 +3,7 @@
 Manage client ssh components
 
 .. note:: This module requires the use of MD5 hashing. Certain
-    secruity audits may not permit the use of MD5. For those cases,
+    security audits may not permit the use of MD5. For those cases,
     this module should be disabled or removed.
 '''
 
