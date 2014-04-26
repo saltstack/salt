@@ -166,7 +166,7 @@ def proxy(opts, functions, whitelist=None):
     load = _create_loader(opts, 'proxy', 'proxy')
     pack = {'name': '__proxy__',
             'value': functions}
-    return  LazyLoader(load,
+    return LazyLoader(load,
                       functions,
                       pack,
                       whitelist=whitelist,
@@ -201,7 +201,7 @@ def tops(opts):
     '''
     Returns the tops modules
     '''
-    if not 'master_tops' in opts:
+    if 'master_tops' not in opts:
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
@@ -242,6 +242,7 @@ def fileserver(opts, backends):
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
     return LazyLoader(load, whitelist=backends)
+
 
 def roster(opts, whitelist=None):
     '''
@@ -323,7 +324,7 @@ def render(opts, functions, states=None):
             'value': functions}]
     if states:
         pack.append({'name': '__states__', 'value': states})
-    rend =  LazyFilterLoader(load, 'render', pack=pack)
+    rend = LazyFilterLoader(load, 'render', pack=pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
@@ -1274,7 +1275,7 @@ class LazyLoader(MutableMapping):
         '''
         Check if the key is ttld out, then do the get
         '''
-        if not key in self._dict and not self.loaded:
+        if key not in self._dict and not self.loaded:
             # load the item
             self._load(key)
         return self._dict[key]
