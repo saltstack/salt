@@ -1229,10 +1229,10 @@ class LazyLoader(MutableMapping):
         self._dict = {}
 
         self.loader = loader
-        if functions:
-            self.functions = functions
-        else:
+        if not functions:
             self.functions = {}
+        else:
+            self.functions = functions
         self.pack = pack
         self.whitelist = whitelist
 
