@@ -21,6 +21,7 @@ import salt.loader
 import salt.output
 import salt.utils.event
 from salt.utils.event import tagify
+from salt.exceptions import SaltInvocationError
 
 
 def insert(backend, queue, items):
@@ -139,11 +140,14 @@ def process_queue(backend, queue, quantity=1):
                 __opts__['transport'],
                 listen=False)
 
-    txt = 'Processing the following items:'
-    salt.output.display_output(txt, 'nested', __opts__)
-    items = pop(backend=backend, queue=queue, quantity=quantity)
+    try:
+        items = pop(backend=backend, queue=queue, quantity=quantity)
+    except SaltInvocationError as exc:
+        error_txt = '{0}'.format(exc)
+        salt.output.display_output(error_txt, 'nested', __opts__)
+        return False
 
     data = {'items': items,
-             'backend': backend,
-             'queue': queue,}
+            'backend': backend,
+            'queue': queue,}
     event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
