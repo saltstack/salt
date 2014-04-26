@@ -207,19 +207,21 @@ def init(names,
     for cmd in cmds:
         sub_ret = next(cmd)
         if sub_ret and host in sub_ret:
-            if sub_ret['host'] in ret:
-                ret[sub_ret['host']].append(ret[host]['ret'])
+            if host in ret:
+                ret[host].append(sub_ret[host]['ret'])
             else:
-                ret[sub_ret['host']] = [ret[host]['ret']]
+                ret[host] = [sub_ret[host]['ret']]
         else:
             ret = {}
 
-    if ret.get('created', False) or ret.get('cloned', False):
-        print('Container \'{0}\' initialized on host \'{1}\''.format(
-            name, host))
-    else:
-        error = ret.get('error', 'unknown error')
-        print('Container \'{0}\' was not initialized: {1}'.format(name, error))
+    for host, returns in ret.items():
+        for j_ret in returns:
+            if j_ret.get('created', False) or j_ret.get('cloned', False):
+                print('Container \'{0}\' initialized on host \'{1}\''.format(
+                    j_ret.get('name'), host))
+            else:
+                error = j_ret.get('error', 'unknown error')
+                print('Container \'{0}\' was not initialized: {1}'.format(j_ret.get(name), error))
     return ret or None
 
 
