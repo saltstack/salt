@@ -1331,11 +1331,6 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        # sreq = salt.payload.SREQ(
-        #     #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-        #     'tcp://' + salt.utils.ip_bracket(self.opts['interface']) +
-        #     ':' + str(self.opts['ret_port']),
-        # )
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
         sreq = salt.transport.Channel.factory(self.opts, crypt='clear', master_uri=master_uri)
