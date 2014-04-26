@@ -15,7 +15,6 @@ to another location::
 
 # Import python libs
 from __future__ import print_function
-from pprint import pprint
 import glob
 import logging
 import os
