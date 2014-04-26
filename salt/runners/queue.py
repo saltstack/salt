@@ -15,6 +15,16 @@ a schedule with the Salt Scheduler or regular system cron. It is also possible
 to use the peer system to allow a minion to call the runner.
 
 This runner, as well as the Queues system, is not api stable at this time.
+
+There are many things that could potentially be done with queues within Salt.
+For the time being the focus will be on queueing infrastructure actions on
+specific minions. The queues generally will be populated with minion IDs.  When
+the `process_queue` runner function is called events are created on the Salt
+Event bus that indicate the queue and a list of one or more minion IDs. The
+reactor is set up to match on event tags for a specific queue and then take
+infrastructure actions on those minion IDs. These actions might be to delete
+the mnion's key from the master, use salt-cloud to destroy the vm, or some
+other custom action.
 '''
 
 # Import python libs
