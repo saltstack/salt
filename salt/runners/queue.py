@@ -170,5 +170,6 @@ def process_queue(backend, queue, quantity=1):
 
     data = {'items': items,
             'backend': backend,
-            'queue': queue,}
+            'queue': queue,
+            }
     event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
