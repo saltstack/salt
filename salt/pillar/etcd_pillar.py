@@ -40,7 +40,7 @@ import logging
 
 # Import third party libs
 try:
-    import salt.utils.etcd_util
+    from salt.utils import etcd_util
     HAS_LIBS = True
 except Exception:
     HAS_LIBS = False
@@ -67,10 +67,21 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     profile = None
     if comps[0]:
         profile = comps[0]
-    client = salt.utils.etcd_util.get_conn(__opts__, profile)
+    client = etcd_util.get_conn(__opts__, profile)
 
     path = '/'
     if len(comps) > 1 and comps[1].startswith('root='):
         path = comps[1].replace('root=', '')
 
-    return salt.utils.etcd_util.tree(client, path)
+    # put the minion's ID in the path if necessary
+    path %= {
+        'minion_id': minion_id
+    }
+
+    try:
+        pillar = etcd_util.tree(client, path)
+    except KeyError:
+        log.error('No such key in etcd profile %s: %s' % (profile, path))
+        pillar = {}
+
+    return pillar
