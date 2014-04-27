@@ -49,42 +49,42 @@ For example, using ``curl`` to install your distribution's stable packages:
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.org | sudo sh
+    curl -L http://bootstrap.saltstack.org | sudo sh
 
 
 Using ``wget`` to install your distribution's stable packages:
 
 .. code-block:: bash
 
-    wget -O - https://bootstrap.saltstack.org | sudo sh
+    wget -O - http://bootstrap.saltstack.org | sudo sh
 
 
 Installing the latest version available from git with ``curl``:
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.org | sudo sh -s -- git develop
+    curl -L http://bootstrap.saltstack.org | sudo sh -s -- git develop
 
 
 If you have certificate issues using ``curl``, try the following:
 
 .. code-block:: bash 
 
-    curl --insecure -L https://bootstrap.saltstack.org | sudo sh -s -- git develop
+    curl --insecure -L http://bootstrap.saltstack.org | sudo sh -s -- git develop
 
 
 If you have certificate issues using ``wget`` try the following:
 
 .. code-block:: bash
 
-    wget --no-check-certificate -O - https://bootstrap.saltstack.org | sudo sh
+    wget --no-check-certificate -O - http://bootstrap.saltstack.org | sudo sh
 
 
 Install a specific version from git using ``wget``:
 
 .. code-block:: bash
 
-    wget -O - https://bootstrap.saltstack.org | sh -s -- -P git v0.16.4
+    wget -O - http://bootstrap.saltstack.org | sh -s -- -P git v0.16.4
 
 
 If you already have python installed, ``python 2.6``, then it's as easy as:
@@ -107,21 +107,21 @@ available. You **do** have ``fetch`` available though:
 
 .. code-block:: bash
 
-    fetch -o - https://bootstrap.saltstack.org | sudo sh
+    fetch -o - http://bootstrap.saltstack.org | sudo sh
 
 
 If all you want is to install a ``salt-master`` using latest git:
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.org | sudo sh -s -- -M -N git develop
+    curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M -N git develop
 
 
 If you want to install a specific release version (based on the git tags):
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.org | sudo sh -s -- git v0.16.4
+    curl -L http://bootstrap.saltstack.org | sudo sh -s -- git v0.16.4
 
 
 Downloading the develop branch (from here standard command line options may be
@@ -135,7 +135,7 @@ Command Line Options
 --------------------
 
 Here's a summary of the command line options (and how check them against
-``https://bootstrap.saltstack.org``)::
+``http://bootstrap.saltstack.org``)::
 
     $ sh bootstrap-salt.sh -h
     
