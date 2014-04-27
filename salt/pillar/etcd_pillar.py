@@ -34,8 +34,8 @@ Using these configuration profiles, multiple etcd sources may also be used:
       - etcd: my_etcd_config
       - etcd: my_other_etcd_config
 
-If you would like to have minion-specific information in etcd, you may use the
-``minion_id`` in the ``root`` value:
+The ``minion_id`` may be used in the ``root`` path to expose minion-specific
+information stored in etcd.
 
 .. code-block:: yaml
 
@@ -51,8 +51,8 @@ appears after the shared root:
       - etcd: my_etcd_config root=/salt-shared
       - etcd: my_other_etcd_config root=/salt-private/%(minion_id)s
 
-For example, if you wanted to share a key with all minions but override its
-value for a specific minion, you could do something like this with etcd::
+Using the configuration above, the following commands could be used to share a
+key with all minions but override its value for a specific minion::
 
     etcdctl set /salt-shared/mykey my_value
     etcdctl set /salt-private/special_minion_id/mykey my_other_value
