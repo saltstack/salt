@@ -304,7 +304,7 @@ the bootstrap script:
 .sp
 .nf
 .ft C
-wget \-O \- http://bootstrap.saltstack.org | sudo sh
+wget \-O \- https://bootstrap.saltstack.org | sudo sh
 .ft P
 .fi
 .UNINDENT
@@ -316,7 +316,7 @@ Run the following script to install just the Salt Master:
 .sp
 .nf
 .ft C
-curl \-L http://bootstrap.saltstack.org | sudo sh \-s \-\- \-M \-N
+curl \-L https://bootstrap.saltstack.org | sudo sh \-s \-\- \-M \-N
 .ft P
 .fi
 .UNINDENT
@@ -5931,7 +5931,7 @@ this incredibly easy for any OS with a Bourne shell. You can use it like this:
 .sp
 .nf
 .ft C
-wget \-O \- http://bootstrap.saltstack.org | sudo sh
+wget \-O \- https://bootstrap.saltstack.org | sudo sh
 .ft P
 .fi
 .UNINDENT
@@ -6066,7 +6066,7 @@ For example, using \fBcurl\fP to install latest git:
 .sp
 .nf
 .ft C
-curl \-L http://bootstrap.saltstack.org | sudo sh \-s \-\- git develop
+curl \-L https://bootstrap.saltstack.org | sudo sh \-s \-\- git develop
 .ft P
 .fi
 .UNINDENT
@@ -6078,7 +6078,7 @@ If you have certificate issues using \fBcurl\fP, try the following:
 .sp
 .nf
 .ft C
-curl \-\-insecure \-L http://bootstrap.saltstack.org | sudo sh \-s \-\- git develop
+curl \-\-insecure \-L https://bootstrap.saltstack.org | sudo sh \-s \-\- git develop
 .ft P
 .fi
 .UNINDENT
@@ -6090,7 +6090,7 @@ Using \fBwget\fP to install your distribution\(aqs stable packages:
 .sp
 .nf
 .ft C
-wget \-O \- http://bootstrap.saltstack.org | sudo sh
+wget \-O \- https://bootstrap.saltstack.org | sudo sh
 .ft P
 .fi
 .UNINDENT
@@ -6102,7 +6102,7 @@ If you have certificate issues using \fBwget\fP try the following:
 .sp
 .nf
 .ft C
-wget \-\-no\-check\-certificate \-O \- http://bootstrap.saltstack.org | sudo sh
+wget \-\-no\-check\-certificate \-O \- https://bootstrap.saltstack.org | sudo sh
 .ft P
 .fi
 .UNINDENT
@@ -6114,7 +6114,7 @@ Install a specific version from git using \fBwget\fP:
 .sp
 .nf
 .ft C
-wget \-O \- http://bootstrap.saltstack.org | sh \-s \-\- \-P git v0.16.4
+wget \-O \- https://bootstrap.saltstack.org | sh \-s \-\- \-P git v0.16.4
 .ft P
 .fi
 .UNINDENT
@@ -6152,7 +6152,7 @@ have \fBfetch\fP available though:
 .sp
 .nf
 .ft C
-fetch \-o \- http://bootstrap.saltstack.org | sudo sh
+fetch \-o \- https://bootstrap.saltstack.org | sudo sh
 .ft P
 .fi
 .UNINDENT
@@ -6164,7 +6164,7 @@ If all you want is to install a \fBsalt\-master\fP using latest git:
 .sp
 .nf
 .ft C
-curl \-L http://bootstrap.saltstack.org | sudo sh \-s \-\- \-M \-N git develop
+curl \-L https://bootstrap.saltstack.org | sudo sh \-s \-\- \-M \-N git develop
 .ft P
 .fi
 .UNINDENT
@@ -6176,7 +6176,7 @@ If you want to install a specific release version (based on the git tags):
 .sp
 .nf
 .ft C
-curl \-L http://bootstrap.saltstack.org | sudo sh \-s \-\- git v0.16.4
+curl \-L https://bootstrap.saltstack.org | sudo sh \-s \-\- git v0.16.4
 .ft P
 .fi
 .UNINDENT
