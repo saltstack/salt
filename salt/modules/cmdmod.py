@@ -9,6 +9,7 @@ access to the master root execution access to all salt minions
 # Import python libs
 import functools
 import json
+import glob
 import logging
 import os
 import shutil
@@ -45,6 +46,20 @@ def __virtual__():
     with pdb a bit harder so lets do it this way instead.
     '''
     return __virtualname__
+
+
+def _chroot_pids(chroot):
+    pids = []
+    for root in glob.glob('/proc/[0-9]*/root'):
+        try:
+            link = os.path.realpath(root)
+            if link.startswith(chroot):
+                pids.append(int(os.path.basename(
+                    os.path.dirname(root)
+                )))
+        except OSError:
+            pass
+    return pids
 
 
 def _chugid(runas):
@@ -1189,3 +1204,54 @@ def exec_code(lang, code, cwd=None):
     ret = run(cmd, cwd=cwd)
     os.remove(codefile)
     return ret
+
+
+def run_chroot(root, cmd):
+    '''
+    Chroot into a directory and run a cmd, this routines calls cmd.run_all
+    wrapped in `chroot` with dev and proc mounted in the chroot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.chroot_run /var/lib/lxc/container_name/rootfs 'sh /tmp/bootstrap.sh'
+    '''
+    __salt__['mount.mount'](
+        os.path.join(root, 'dev'),
+        'udev',
+        fstype='devtmpfs')
+    __salt__['mount.mount'](
+        os.path.join(root, 'proc'),
+        'proc',
+        fstype='proc')
+
+    # Execute chroot routine
+    sh_ = '/bin/sh'
+    if os.path.isfile(os.path.join(root, 'bin/bash')):
+        sh_ = '/bin/bash'
+
+    cmd = 'chroot {0} {1} -c {2!r}'.format(
+        root,
+        sh_,
+        cmd)
+    res = run_all(cmd, output_loglevel='quiet')
+
+    # Kill processes running in the chroot
+    for i in range(6):
+        pids = _chroot_pids(root)
+        if not pids:
+            break
+        for pid in pids:
+            # use sig 15 (TERM) for first 3 attempts, then 9 (KILL)
+            sig = 15 if i < 3 else 9
+            os.kill(pid, sig)
+
+    if _chroot_pids(root):
+        log.error('Processes running in chroot could not be killed, '
+                  'filesystem will remain mounted')
+
+    __salt__['mount.umount'](os.path.join(root, 'proc'))
+    __salt__['mount.umount'](os.path.join(root, 'dev'))
+    log.info(res)
+    return res['retcode']
