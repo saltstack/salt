@@ -105,7 +105,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     try:
         pillar = etcd_util.tree(client, path)
     except KeyError:
-        log.error('No such key in etcd profile %s: %s' % (profile, path))
+        log.error('No such key in etcd profile {0}: {1}'.format(profile, path))
         pillar = {}
 
     return pillar
