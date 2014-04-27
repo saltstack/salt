@@ -26,7 +26,7 @@ for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    wget -O - https://bootstrap.saltstack.org | sudo sh
+    wget -O - http://bootstrap.saltstack.org | sudo sh
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
 to test out salt, the `salty-vagrant`_ tool will  provision the VM for you.
