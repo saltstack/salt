@@ -281,7 +281,7 @@ def download_remote_logs(options):
                 remote_log,
                 '{0}{1}'.format(
                     os.path.basename(remote_log),
-                    remote_log.endswith('.log') and '' or '.log'
+                    '' if remote_log.endswith('.log') else '.log'
                 )
             )
         ])
