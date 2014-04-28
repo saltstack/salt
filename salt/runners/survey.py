@@ -3,6 +3,8 @@
 A general map/reduce style salt runner for aggregating results
 returned by several different minions.
 
+.. versionadded:: Helium
+
 Aggregated results are sorted by the size of the minion pools which returned
 matching results.
 
@@ -16,7 +18,11 @@ import salt.client
 def hash(*args, **kwargs):
     '''
     Return the MATCHING minion pools from the aggregated and sorted results of
-    a salt command.  This command is submitted via a salt runner using the
+    a salt command
+
+    .. versionadded:: Helium
+
+    This command is submitted via a salt runner using the
     general form:
 
         salt-run survey.hash [survey_sort=up/down] <target>
@@ -56,7 +62,11 @@ def hash(*args, **kwargs):
 def diff(*args, **kwargs):
     '''
     Return the DIFFERENCE of the result sets returned by each matching minion
-    pool.  These pools are determined from the aggregated and sorted results of
+    pool
+
+    .. versionadded:: Helium
+
+    These pools are determined from the aggregated and sorted results of
     a salt command.
     This command displays the "diffs" as a series of 2-way differences-- namely
     the diffence between the FIRST displayed minion pool
