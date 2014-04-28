@@ -37,7 +37,7 @@ import salt.utils.verify
 from salt._compat import string_types
 
 # The directory where salt thin is deployed
-SALT_DEPLOY_DIR = '/tmp/.salt'
+DEFAULT_SALT_DEPLOY_DIR = '/tmp/.salt'
 
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
@@ -67,7 +67,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
     # Template Level 1 expansion (same values for all targets)
     SALT_VER='{SALT_VER}'
     DELIMETER='{DELIMETER}'
-    SALT_DIR='{SALT_DEPLOY_DIR}'
+    SALT_DIR_DEFAULT='{SALT_DEPLOY_DIR}'
 
     # Template Level 2 expansion (target-specific values)
     SUDO='{{0}}'          # Use unquoted so that it can be a no-op when not set
@@ -75,6 +75,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
     CHECKSUM_PGM='{{2}}'
     THIN_CHECKSUM='{{3}}'
     MINION_CONFIG='{{4}}'
+    SALT_DIR="{{5}}"
 
     # The XXX_CMDS are lists of required commands.  The first entry is the
     # generic name of the command list and the following entries are the
@@ -92,6 +93,13 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
     GUNZIP_CMDS="
         gunzip
         gunzip
+    "
+
+    # While mktemp is not POSIX it appears that GNU, BSD, AIX, OSX,
+    # and Solaris have mktemp with the "-d" and "-t" options.
+    MKTEMP_CMDS="
+        mktemp
+        mktemp
     "
 
     PYTHON_CMDS="
@@ -137,6 +145,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
     {{{{
         TAR="$(which_command $TAR_CMDS)"
         GUNZIP="$(which_command $GUNZIP_CMDS)"
+        MKTEMP="$(which_command $MKTEMP_CMDS)"
 
         PYTHON="$(which_command $PYTHON_CMDS)"
         PY_TOO_OLD="$($PYTHON -c "import sys; print sys.hexversion < 0x02060000")"
@@ -168,27 +177,39 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
 
     check_salt_thin()
     {{{{
-        if [ -f "$SALT_DIR/salt-call" ]; then
-            if [ "$(cat "$SALT_DIR/version")" != "$SALT_VER" ]; then
-                $SUDO rm -rf "$SALT_DIR" && mkdir -m 0700 -p "$SALT_DIR"
-                /usr/bin/printf '%s\ndeploy\n' "$DELIMETER"
-                exit $EX_DEPLOY_THIN
-            fi
-        else
-
-            if [ -f "$SALT_DIR/salt-thin.tgz" ]; then
-                if [ "x$("$SUMCHECK" "$SALT_DIR/salt-thin.tgz" | cut -f1 -d\ )" = "x$THIN_CHECKSUM" ]; then
-                    cd "$SALT_DIR" && "$GUNZIP" -c salt-thin.tgz | $SUDO "$TAR" opxvf -
-                else
+        if [ -n "$SALT_DIR" -a -d "$SALT_DIR" ]; then
+            if [ "$SALT_DIR/salt-call" ]; then
+                if [ "x$(cat "$SALT_DIR/version")" = "x$SALT_VER" ]; then
+                    return
+                fi
+            elif [ -f "$SALT_DIR/salt-thin.tgz" ]; then
+                if [ "x$("$SUMCHECK" "$SALT_DIR/salt-thin.tgz" | cut -f1 -d\ )" != "x$THIN_CHECKSUM" ]; then
                     /usr/bin/printf "ERROR: Mismatched checksum for $SALT_DIR/salt-thin.tgz" >&2
                     exit $EX_CHECKSUM
                 fi
-            else
-                mkdir -m 0700 -p "$SALT_DIR"
-                /usr/bin/printf '%s\ndeploy\n' "$DELIMETER"
-                exit $EX_DEPLOY_THIN
+
+                cd "$SALT_DIR" && "$GUNZIP" -c salt-thin.tgz | $SUDO "$TAR" opxvf -
+                $SUDO rm -f "$SALT_DIR/salt-thin.tgz"
+                return
             fi
+
+            # Current salt thin is not available - clean out the directory and start over.
+            $SUDO rm -rf "$SALT_DIR"
         fi
+
+        SALT_DIR="$($SUDO mktemp -d -t .salt.XXXXXX)"
+        if [ -z "$SALT_DIR" ]; then
+            # One last try to make the salt thin directory
+            SALT_DIR="$SALT_DIR_DEFAULT"
+            $SUDO mkdir -p "$SALT_DIR"
+        fi
+        if [ -d "$SALT_DIR" ];
+            /usr/bin/printf '%s\ndeploy %s\n' "$DELIMETER" "$SALT_DIR"
+            exit $EX_DEPLOY_THIN
+        fi
+
+        /usr/bin/printf "ERROR: unable to create salt thin directory" >&2
+        exit $EX_SOFTWARE
     }}}}
 
     write_config()
@@ -384,7 +405,9 @@ class SSH(object):
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
         if retcode == salt.exitcodes.EX_DEPLOY_THIN and stdout.startswith('deploy'):
-            single.deploy()
+            stdwords = stdout.split()
+            deploy_dir = stdwords if len(stdwords) > 1 else DEFAULT_SALT_DEPLOY_DIR
+            single.deploy(deploy_dir)
             stdout, stderr, retcode = single.run()
         # This job is done, yield
         try:
@@ -573,7 +596,6 @@ class Single(object):
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
         self.minion_config = yaml.dump(
                 {
-                    'root_dir': SALT_DEPLOY_DIR + '/running_data',
                     'id': self.id,
                 }).strip()
         self.target = kwargs
@@ -599,14 +621,14 @@ class Single(object):
     def _escape_arg(self, arg):
         return ''.join(['\\' + char if re.match('\W', char) else char for char in arg])
 
-    def deploy(self):
+    def deploy(self, deploy_dir):
         '''
         Deploy salt-thin
         '''
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
                 thin,
-                SALT_DEPLOY_DIR + '/salt-thin.tgz')
+                deploy_dir + '/salt-thin.tgz')
         return True
 
     def run(self, deploy_attempted=False):
@@ -644,7 +666,9 @@ class Single(object):
         if retcode == salt.exitcodes.EX_DEPLOY_THIN \
            and stdout.startswith('deploy') \
            and not deploy_attempted:
-            self.deploy()
+            stdwords = stdout.split()
+            deploy_dir = stdwords if len(stdwords) > 1 else DEFAULT_SALT_DEPLOY_DIR
+            self.deploy(deploy_dir)
             return self.run(deploy_attempted=True)
 
         return stdout, stderr, retcode
@@ -776,7 +800,9 @@ class Single(object):
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
         if retcode == salt.exitcodes.EX_DEPLOY_THIN and stdout.startswith('deploy'):
-            self.deploy()
+            stdwords = stdout.split()
+            deploy_dir = stdwords if len(stdwords) > 1 else DEFAULT_SALT_DEPLOY_DIR
+            self.deploy(deploy_dir)
             stdout, stderr, retcode = self.shell.exec_cmd(cmd)
             if RSTR in stdout:
                 stdout = stdout.split(RSTR)[1].strip()
