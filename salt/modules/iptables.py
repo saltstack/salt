@@ -479,20 +479,8 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    if __grains__['os_family'] == 'RedHat':
-        cmd = '{0}-save' . format(_iptables_cmd(family))
-        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
-            table,
-            chain,
-            rule,
-        ))
-        if out != -1:
-            out = ''
-        else:
-            return False
-    else:
-        cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
-        out = __salt__['cmd.run'](cmd)
+    cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
+    out = __salt__['cmd.run'](cmd)
 
     if not out:
         return True
