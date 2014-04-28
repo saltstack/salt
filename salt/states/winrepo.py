@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage Windows Package Repository
 '''
@@ -80,6 +81,4 @@ def genrepo(name, force=False, allow_empty=False):
         os.remove(win_repo_mastercachefile)
         ret['result'] = False
         ret['comment'] = 'winrepo.genrepo returned empty'
-
     return ret
-
