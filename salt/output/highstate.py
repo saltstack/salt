@@ -82,6 +82,8 @@ def _format_host(host, data):
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
+            start_time = ret['start_time']
+            duration = ret['duration']
             if schanged:
                 tcolor = colors['CYAN']
             if ret['result'] is False:
@@ -115,7 +117,9 @@ def _format_host(host, data):
                 '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
                 '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
                 '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
-                '    {tcolor} Comment: {comment}{colors[ENDC]}'
+                '    {tcolor} Comment: {comment}{colors[ENDC]}',
+                '    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                '    {tcolor} Duration: {ret[duration]!s} ms{colors[ENDC]}'
             ]
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
