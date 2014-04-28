@@ -23,6 +23,7 @@ import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
 import salt.exceptions
+import salt.exitcodes
 import salt.loader
 import salt.minion
 import salt.roster
@@ -41,12 +42,6 @@ SALT_DEPLOY_DIR = '/tmp/.salt'
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
-
-# Exit codes for SSH_SHIM
-# Skip initial value of 1 because it is often used as a generic error.
-EX_DEPLOY_THIN = 3
-EX_PYTHON_OLD  = 4
-EX_CHECKSUM    = 5
 
 # NOTE: there are two levels of formatting - see the in-line comments
 SSH_SHIM = r'''/bin/sh << 'EOF'
@@ -215,9 +210,9 @@ EOF'''.format(
     SALT_VER=salt.__version__,
     DELIMETER=RSTR,
     SALT_DEPLOY_DIR=SALT_DEPLOY_DIR,
-    EX_DEPLOY_THIN=EX_DEPLOY_THIN,
-    EX_PYTHON_OLD=EX_PYTHON_OLD,
-    EX_CHECKSUM=EX_CHECKSUM,
+    EX_DEPLOY_THIN=salt.exitcodes.EX_DEPLOY_THIN,
+    EX_PYTHON_OLD=salt.exitcodes.EX_PYTHON_OLD,
+    EX_CHECKSUM=salt.exitcodes.EX_CHECKSUM,
     EX_UNAVAILABLE=os.EX_UNAVAILABLE,
     EX_SOFTWARE=os.EX_SOFTWARE,
 )
@@ -808,12 +803,12 @@ class Single(object):
                 'sudo expected a password, NOPASSWD required'
             ),
             (
-                (EX_PYTHON_OLD,),
+                (salt.exitcodes.EX_PYTHON_OLD,),
                 'Python too old',
                 'salt requires python 2.6 or better on target hosts'
             ),
             (
-                (EX_CHECKSUM,),
+                (salt.exitcodes.EX_CHECKSUM,),
                 'Mismatched checksum',
                 'The salt thin transfer was corrupted'
             ),
