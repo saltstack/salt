@@ -2109,7 +2109,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, LogLevelMixIn):
+                          OutputOptionsMixIn, TimeoutMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
     default_timeout = 1
@@ -2133,23 +2133,6 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Display documentation for runners, pass a runner or '
                   'runner.function to see documentation on only that runner '
                   'or function.')
-        )
-        group = self.output_options_group = optparse.OptionGroup(
-            self, 'Output Options', 'Configure your preferred output format'
-        )
-        self.add_option_group(group)
-
-        group.add_option(
-            '--no-color', '--no-colour',
-            default=False,
-            action='store_true',
-            help='Disable all colored output'
-        )
-        group.add_option(
-            '--force-color', '--force-colour',
-            default=False,
-            action='store_true',
-            help='Force colored output'
         )
 
     def _mixin_after_parsed(self):
