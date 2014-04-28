@@ -12,6 +12,7 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.utils.nb_popen
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,8 @@ class Shell(object):
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            conn_timeout=None,
+            proc_timeout=None,
             sudo=False,
             tty=False):
         self.opts = opts
@@ -47,9 +49,12 @@ class Shell(object):
         self.port = port
         self.passwd = passwd
         self.priv = priv
-        self.timeout = timeout
+        self.conn_timeout = conn_timeout
+        self.proc_timeout = proc_timeout
         self.sudo = sudo
         self.tty = tty
+        self.begin_time = 0
+        self.end_time = 0
 
     def get_error(self, errstr):
         '''
@@ -74,7 +79,7 @@ class Shell(object):
                    'GSSAPIAuthentication=no',
                    'PasswordAuthentication=no',
                    ]
-        options.append('ConnectTimeout={0}'.format(self.timeout))
+        options.append('ConnectTimeout={0}'.format(self.conn_timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
         known_hosts = self.opts.get('known_hosts_file')
@@ -103,7 +108,7 @@ class Shell(object):
                    'StrictHostKeyChecking=no',
                    'GSSAPIAuthentication=no',
                    ]
-        options.append('ConnectTimeout={0}'.format(self.timeout))
+        options.append('ConnectTimeout={0}'.format(self.conn_timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
 
@@ -201,9 +206,14 @@ class Shell(object):
 
     def _run_cmd(self, cmd):
         '''
-        Cleanly execute the command string
+        Cleanly execute the command string.
+
+        This will block until it completes - possibly forever.  If you
+        want a timeout then the "nb" (non-blocking) version of this
+        command must be used.
         '''
         try:
+            self.begin_time = time.time()
             proc = subprocess.Popen(
                 cmd,
                 shell=True,
@@ -212,6 +222,7 @@ class Shell(object):
             )
 
             data = proc.communicate()
+            self.end_time = time.time()
             return data[0], data[1], proc.returncode
         except Exception:
             return ('local', 'Unknown Error', None)
@@ -221,11 +232,13 @@ class Shell(object):
         cmd iterator
         '''
         try:
+            self.begin_time = time.time()
             proc = salt.utils.nb_popen.NonBlockingPopen(
                 cmd,
                 shell=True,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
+                timeout=self.conn_timeout + self.proc_timeout,
             )
             while True:
                 time.sleep(0.1)
@@ -237,8 +250,12 @@ class Shell(object):
                 if err:
                     err = self.get_error(err)
                 yield out, err, rcode
+            self.end_time = time.time()
+        except salt.exceptions.TimedProcTimeoutError:
+            yield ('', 'Timeout of {0} Reached'.format(self.conn_timeout + self.proc_timeout), None)
         except Exception:
             yield ('', 'Unknown Error', None)
+        yield('', '', proc.wait())
 
     def exec_nb_cmd(self, cmd):
         '''
@@ -266,6 +283,7 @@ class Shell(object):
         '''
         Execute a remote command
         '''
+
         cmd = self._cmd_str(cmd)
 
         logmsg = 'Executing command: {0}'.format(cmd)

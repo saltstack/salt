@@ -1528,7 +1528,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    default_timeout = 5
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -1732,7 +1732,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         'files.'
     )
 
-    default_timeout = 5
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options] \'<target>\' SOURCE DEST'
 
@@ -2112,7 +2112,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           OutputOptionsMixIn, TimeoutMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
-    default_timeout = 1
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options]'
 
@@ -2156,6 +2156,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, TargetOptionsMixIn,
                           OutputOptionsMixIn, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
+
+    default_conn_timeout = config.DEFAULT_MASTER_OPTS['ssh_conn_timeout']
+    default_proc_timeout = config.DEFAULT_MASTER_OPTS['ssh_proc_timeout']
 
     usage = '%prog [options]'
 
@@ -2253,6 +2256,20 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set this flag to atempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy'
+        )
+        auth_group.add_option(
+            '--ct', '--conn-timeout',
+            dest='ssh_conn_timeout',
+            type=int,
+            default=self.default_conn_timeout,
+            help=('Change the connection timeout for SSH; default=%default')
+        )
+        auth_group.add_option(
+            '--pt', '--proc-timeout',
+            dest='ssh_proc_timeout',
+            type=int,
+            default=self.default_proc_timeout,
+            help=('Change the connection timeout for SSH; default=%default')
         )
         self.add_option_group(auth_group)
 
