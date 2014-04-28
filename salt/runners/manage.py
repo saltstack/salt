@@ -19,6 +19,7 @@ import salt.key
 import salt.client
 import salt.output
 import salt.utils.minions
+import salt.wheel
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -110,10 +111,8 @@ def down(removekeys=False):
     ret = status(output=False).get('down', [])
     for minion in ret:
         if removekeys:
-            salt_key_options = '-qyd'
-            if 'config_dir' in  __opts__:
-                salt_key_options = '-qyd --config-dir={0}'.format(__opts__['config_dir'])
-            subprocess.call(["salt-key", salt_key_options, minion])
+            wheel = salt.wheel.Wheel(__opts__)
+            wheel.call_func('key.delete', match=minion)
         else:
             salt.output.display_output(minion, '', __opts__)
     return ret
