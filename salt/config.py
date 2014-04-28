@@ -452,7 +452,7 @@ DEFAULT_MASTER_OPTS = {
     'win_repo_mastercachefile': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR,
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
-    'syndic_wait': 1,
+    'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
