@@ -120,6 +120,7 @@ class Schedule(object):
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
+               'schedule': data['name'],
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
 
         proc_fn = os.path.join(
@@ -139,20 +140,21 @@ class Schedule(object):
                 fn = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
-                    log.debug('schedule.handle_func: Checking job against '
-                              'fun {0}: {1}'.format(ret['fun'], job))
-                    if ret['fun'] == job['fun'] and os_is_running(job['pid']):
-                        jobcount += 1
-                        log.debug(
-                            'schedule.handle_func: Incrementing jobcount, now '
-                            '{0}, maxrunning is {1}'.format(
-                                      jobcount, data['maxrunning']))
-                        if jobcount >= data['maxrunning']:
+                    if 'schedule' in job:
+                        log.debug('schedule.handle_func: Checking job against '
+                                  'fun {0}: {1}'.format(ret['fun'], job))
+                        if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
+                            jobcount += 1
                             log.debug(
-                                'schedule.handle_func: The scheduled job {0} '
-                                'was not started, {1} already running'.format(
-                                    func, data['maxrunning']))
-                            return False
+                                'schedule.handle_func: Incrementing jobcount, now '
+                                '{0}, maxrunning is {1}'.format(
+                                          jobcount, data['maxrunning']))
+                            if jobcount >= data['maxrunning']:
+                                log.debug(
+                                    'schedule.handle_func: The scheduled job {0} '
+                                    'was not started, {1} already running'.format(
+                                        ret['schedule'], data['maxrunning']))
+                                return False
 
         salt.utils.daemonize_if(self.opts)
 
@@ -249,6 +251,8 @@ class Schedule(object):
                     )
                 )
                 continue
+            if 'name' not in data:
+                data['name'] = job
             # Add up how many seconds between now and then
             seconds = 0
             seconds += int(data.get('seconds', 0))
