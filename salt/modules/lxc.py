@@ -1333,8 +1333,12 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     prior_state = _ensure_running(name, no_start=no_start)
     if not prior_state:
         return prior_state
-    res = __salt__['cmd.run_all'](
-            'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
+    if attachable(name):
+        res = __salt__['cmd.run_all'](
+                'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
+    else:
+        rootfs = info(name).get('rootfs')
+        res = __salt__['cmd.run_chroot'](rootfs, cmd)
 
     if preserve_state:
         if prior_state == 'stopped':
