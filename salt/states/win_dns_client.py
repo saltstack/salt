@@ -99,7 +99,7 @@ def primary_suffix(name,
         suffix=None,
         updates=False):
     '''
-    .. versionadded:: TODO
+    .. versionadded:: Helium
 
     Configure the global primary DNS suffix of a DHCP client.
 
