@@ -213,6 +213,8 @@ VALID_OPTS = {
     'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
     'auth_timeout': int,
+    'auth_tries': int,
+    'auth_safemode': bool,
     'random_master': bool,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
@@ -222,6 +224,8 @@ VALID_OPTS = {
     'ssh_timeout': float,
     'ssh_user': str,
     'raet_port': int,
+    'restart_on_error': bool,
+    'ping_interval': int,
 }
 
 # default configurations
@@ -323,12 +327,16 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'auth_timeout': 60,
+    'auth_tries': 1,
+    'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4510,
+    'restart_on_error': False,
+    'ping_interval': 0,
 }
 
 DEFAULT_MASTER_OPTS = {
