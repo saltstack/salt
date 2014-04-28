@@ -4,6 +4,7 @@ Recursively display nested data, this is the default outputter.
 '''
 # Import python libs
 from numbers import Number
+import re
 
 # Import salt libs
 import salt.utils
@@ -37,7 +38,7 @@ class NestDisplay(object):
                     ret,
                     self.colors['ENDC'])
         elif isinstance(ret, string_types):
-            lines = ret.split('\n')
+            lines = re.split(r'\r?\n', ret)
             for line in lines:
                 out += '{0}{1}{2}{3}{4}\n'.format(
                         ' ' * indent,
