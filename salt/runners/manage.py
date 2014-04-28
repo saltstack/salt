@@ -110,7 +110,10 @@ def down(removekeys=False):
     ret = status(output=False).get('down', [])
     for minion in ret:
         if removekeys:
-            subprocess.call(["salt-key", "-qyd", minion])
+            salt_key_options = '-qyd'
+            if 'config_dir' in  __opts__:
+                salt_key_options = '-qyd --config-dir={0}'.format(__opts__['config_dir'])
+            subprocess.call(["salt-key", salt_key_options, minion])
         else:
             salt.output.display_output(minion, '', __opts__)
     return ret
