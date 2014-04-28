@@ -21,7 +21,6 @@ The data structure needs to be:
 # Import python libs
 from __future__ import print_function
 import os
-import glob
 import time
 import copy
 import logging
@@ -152,12 +151,11 @@ class LocalClient(object):
         # if our user is root, look for other ways to figure out
         # who we are
         env_vars = ('SUDO_USER',)
-        if (user == 'root' or user == self.opts['user']):
+        if user == 'root' or user == self.opts['user']:
             for evar in env_vars:
                 if evar in os.environ:
                     return 'sudo_{0}'.format(os.environ[evar])
         return user
-
 
     def _convert_range_to_list(self, tgt):
         '''
