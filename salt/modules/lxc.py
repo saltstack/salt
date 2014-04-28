@@ -1384,6 +1384,26 @@ def cp(name, src, dest):
     return ret
 
 
+def attachable(name):
+    '''
+    Return True if the named container can be attached to via the lxc-attach
+    command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.attachable ubuntu
+    '''
+    cmd = 'lxc-attach -n {0} -- /usr/bin/env'
+    data = __salt__['cmd.run_all'](cmd)
+    if not data['retcode']:
+        return True
+    if data['stderr'].startwith('lxc-attach: failed to get the init pid'):
+        return False
+    return False
+
+
 def read_conf(conf_file, out_format='simple'):
     '''
     Read in an LXC configuration file. By default returns a simple, unsorted
