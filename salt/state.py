@@ -1323,7 +1323,8 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        log.info('Running state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
+        start_time = datetime.datetime.now()
+        log.info('Running state [{0}] at time {1}'.format(low['name'], start_time.time().isoformat()))
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1441,7 +1442,10 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        log.info('Completed state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
+        finish_time = datetime.datetime.now()
+        ret['start_time'] = start_time.time().isoformat()
+        ret['duration'] = (finish_time - start_time).microseconds / 1000
+        log.info('Completed state [{0}] at time {1}'.format(low['name'], finish_time.time().isoformat()))
         return ret
 
     def call_chunks(self, chunks):
