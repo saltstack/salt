@@ -3,7 +3,7 @@
 Management of the windows update agent.
 =======================================
 
-.. versionadded: Helium
+.. versionadded:: Helium
 
 Set windows updates to run by category. Default behavior is to install
 all updates that do not require user interaction to complete.
