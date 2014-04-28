@@ -33,6 +33,8 @@ if subprocess.mswindows:
 else:
     import fcntl
 
+import salt.exceptions
+
 log = logging.getLogger(__name__)
 
 
@@ -59,6 +61,9 @@ class NonBlockingPopen(subprocess.Popen):
         self._stderr_logger_name_ = kwargs.pop(
             'stderr_logger_name', self._stderr_logger_name_
         )
+        self._begin_time_ = time.time()
+        self._timeout_ = kwargs.pop('timeout', 0)
+        self._command_ = args[0]
 
         stderr = kwargs.get('stderr', None)
 
@@ -92,6 +97,21 @@ class NonBlockingPopen(subprocess.Popen):
             'Running command under pid {0}: {1!r}'.format(self.pid, *args)
         )
 
+    def _check_timeout(self):
+        '''
+        Test if the timout has been reached and raise TimedProcTimeoutError() if it has.
+        '''
+        if not self._timeout_:
+            return
+
+        now = time.time()
+        if now > (self._timeout_ + self._begin_time_):
+            self.kill()
+            raise salt.exceptions.TimedProcTimeoutError('%s : Timed out after %s seconds' % (
+                self._command_,
+                str(self._timeout_),
+            ))
+
     def recv(self, maxsize=None):
         return self._recv('stdout', maxsize)
 
@@ -114,6 +134,7 @@ class NonBlockingPopen(subprocess.Popen):
 
     if subprocess.mswindows:
         def send(self, input):
+            self._check_timeout()
             if not self.stdin:
                 return None
 
@@ -131,6 +152,7 @@ class NonBlockingPopen(subprocess.Popen):
             return written
 
         def _recv(self, which, maxsize):
+            self._check_timeout()
             conn, maxsize = self.get_conn_maxsize(which, maxsize)
             if conn is None:
                 return None
@@ -161,6 +183,7 @@ class NonBlockingPopen(subprocess.Popen):
     else:
 
         def send(self, input):
+            self._check_timeout()
             if not self.stdin:
                 return None
 
@@ -178,6 +201,7 @@ class NonBlockingPopen(subprocess.Popen):
             return written
 
         def _recv(self, which, maxsize):
+            self._check_timeout()
             conn, maxsize = self.get_conn_maxsize(which, maxsize)
             if conn is None:
                 return None
@@ -230,6 +254,7 @@ class NonBlockingPopen(subprocess.Popen):
             time.sleep(0.01)
 
     def communicate(self, input=None):
+        self._check_timeout()
         super(NonBlockingPopen, self).communicate(input)
         self.stdout_buff.flush()
         self.stdout_buff.seek(0)

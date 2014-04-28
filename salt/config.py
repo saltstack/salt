@@ -219,9 +219,11 @@ VALID_OPTS = {
     'ssh_passwd': str,
     'ssh_port': str,
     'ssh_sudo': bool,
-    'ssh_timeout': float,
+    'ssh_conn_timeout': float,
+    'ssh_proc_timeout': float,
     'ssh_user': str,
     'raet_port': int,
+    'timeout': float,
 }
 
 # default configurations
@@ -465,7 +467,8 @@ DEFAULT_MASTER_OPTS = {
     'ssh_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
-    'ssh_timeout': 60,
+    'ssh_conn_timeout': 5,
+    'ssh_proc_timeout': 30,
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),

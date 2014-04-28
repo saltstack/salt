@@ -9,6 +9,7 @@ import getpass
 import json
 import logging
 import multiprocessing
+import subprocess
 import os
 import re
 import shutil
@@ -223,12 +224,13 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
             ),
             'priv': priv,
-            'timeout': self.opts.get(
-                'ssh_timeout',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
-            ) + self.opts.get(
-                'timeout',
-                salt.config.DEFAULT_MASTER_OPTS['timeout']
+            'conn_timeout': self.opts.get(
+                'ssh_conn_timeout',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_conn_timeout']
+            ),
+            'proc_timeout': self.opts.get(
+                'ssh_proc_timeout',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_proc_timeout']
             ),
             'sudo': self.opts.get(
                 'ssh_sudo',
@@ -479,6 +481,9 @@ class SSH(object):
                             [jid, 'ret', host],
                             'job'))
 
+        # Just in case any SSH password attempts changed the TTY settings
+        _ = subprocess.call(['stty', 'sane'])
+
 
 class Single(object):
     '''
@@ -498,7 +503,8 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            conn_timeout=None,
+            proc_timeout=None,
             sudo=False,
             tty=False,
             **kwargs):
@@ -512,7 +518,8 @@ class Single(object):
                 'port': port,
                 'passwd': passwd,
                 'priv': priv,
-                'timeout': timeout,
+                'conn_timeout': conn_timeout,
+                'proc_timeout': proc_timeout,
                 'sudo': sudo,
                 'tty': tty}
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
@@ -571,7 +578,15 @@ class Single(object):
         if self.opts.get('raw_shell'):
             if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
                 arg_str = "'{0}'".format(arg_str)
-            stdout, stderr, retcode = self.shell.exec_cmd(arg_str)
+            r_out = []
+            r_err = []
+            for out, err, retcode in self.shell.exec_nb_cmd(arg_str):
+                if out is not None:
+                    r_out.append(out)
+                if err is not None:
+                    r_err.append(err)
+            stdout = ''.join(r_out)
+            stderr = ''.join(r_err)
 
         elif self.fun in self.wfuncs:
             stdout, stderr, retcode = self.run_wfunc()
@@ -654,7 +669,7 @@ class Single(object):
         Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
-        # 2. check is salt-call is on the target
+        # 2. check if salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
         if self.arg_str.startswith('state.highstate'):
@@ -683,7 +698,7 @@ class Single(object):
         Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
-        # 2. check is salt-call is on the target
+        # 2. check if salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
         if self.arg_str.startswith('cmd.run'):
