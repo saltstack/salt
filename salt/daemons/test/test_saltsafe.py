@@ -140,8 +140,8 @@ def test():
     m3PriKeyHex = privateer.keyhex
     m3PubKeyHex = privateer.pubhex
 
-    keeping.clearAllRoadSafe(masterDirpath)
-    keeping.clearAllRoadSafe(m1Dirpath)
+    keeping.clearAllKeepSafe(masterDirpath)
+    keeping.clearAllKeepSafe(m1Dirpath)
 
     #saltsafe = salting.SaltSafe(opts=opts)
     #print saltsafe.loadLocalData()

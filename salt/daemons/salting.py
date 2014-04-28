@@ -173,7 +173,8 @@ class SaltSafe(object):
                 remote.verfer = nacling.Verifier(verhex)
             if (pubhex and pubhex != remote.pubber.keyhex):
                 remote.pubber = nacling.Publican(pubhex)
-        remote.acceptance = status
+            remote.acceptance = status
+
         return status
 
     def rejectRemote(self, remote):
@@ -199,7 +200,7 @@ class SaltSafe(object):
         self.saltRaetKey.accept(match=mid, include_rejected=True)
 
 
-def clearAllRoadSafe(dirpath, opts):
+def clearAllKeepSafe(dirpath, opts):
     '''
     Convenience function to clear all road and safe keep data in dirpath
     '''

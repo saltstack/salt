@@ -100,7 +100,7 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         self.uxd_stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
                 yid=0,
-                prefix=self.opts.value['id'],
+                lanename=self.opts.value['id'],
                 dirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.addRemote(manor_yard)
         self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
