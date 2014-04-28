@@ -191,7 +191,7 @@ def _install(mpt):
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
     cmd += 'else sh /tmp/bootstrap-salt.sh -c /tmp; fi'
-    return not __salt__['cmd.run_chroot'](mpt, cmd)
+    return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
 
 
 def _check_resolv(mpt):
