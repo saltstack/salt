@@ -1400,6 +1400,13 @@ class Minion(MinionBase):
                     log.critical('Unexpected ZMQError while polling minion',
                                  exc_info=True)
                 continue
+            except SaltClientError:
+                if self.opts.get('restart_on_error'):
+                    raise
+                else:
+                    log.critical('An exception occurred while polling the minion',
+                                 exc_info=True
+                    )
             except Exception:
                 log.critical(
                     'An exception occurred while polling the minion',
