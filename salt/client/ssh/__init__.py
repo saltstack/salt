@@ -35,143 +35,192 @@ import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
 
+# The directory where salt thin is deployed
+SALT_DEPLOY_DIR = '/tmp/.salt'
+
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
+# Exit codes for SSH_SHIM
+# Skip initial value of 1 because it is often used as a generic error.
+EX_DEPLOY_THIN = 3
+EX_PYTHON_OLD  = 4
+EX_CHECKSUM    = 5
 
-# This shim facilitates remote salt-call operations
-# - Uses /bin/sh for maximum compatibility
-#
-# 1. Identify a suitable python
-# 2. Test for remote salt-call and version if present
-# 3. Signal to (re)deploy if missing or out of date
-#    - If this is a a first deploy, then test python version
-# 4. Perform salt-call
-
-# Note there are two levels of formatting.
-# - First format pass inserts salt version and delimiter
-# - Second pass at run-time and inserts optional "sudo" and command
+# NOTE: there are two levels of formatting - see the in-line comments
 SSH_SHIM = r'''/bin/sh << 'EOF'
-      #!/bin/sh
+    # This shim facilitates remote salt-call operations
+    # - Uses /bin/sh for maximum compatibility
+    #
+    # 1. Identify a suitable python
+    # 2. Test for remote salt-call and version if present
+    # 3. Signal to (re)deploy if missing or out of date
+    #    - If this is a a first deploy, then test python version
+    # 4. Perform salt-call
 
-      MISS_PKG=""
+    set -e
+    set -u
 
-      command -v tar >/dev/null
-      if [ $? -ne 0 ]
-      then
-         MISS_PKG="$MISS_PKG tar"
-      fi
+    # EXIT CODES:
+    EX_DEPLOY_THIN={EX_DEPLOY_THIN}  # Deploy of salt-thin.tgz necessary
+    EX_PYTHON_OLD={EX_PYTHON_OLD}    # Python interpreter is too old and incompatible
+    EX_CHECKSUM={EX_CHECKSUM}        # Checksum mismatch of deployed files
+    EX_UNAVAILABLE={EX_UNAVAILABLE}  # Necessary commands are missing
+    EX_SOFTWARE={EX_SOFTWARE}        # An internal error occurred
 
-      for py_candidate in \
-            python27      \
-            python2.7     \
-            python26      \
-            python2.6     \
-            python2       \
-            python        ;
-      do
-         command -v $py_candidate >/dev/null
-         if [ $? -eq 0 ]
-         then
-               PYTHON="$py_candidate"
-               break
-         fi
-      done
+    # Template Level 1 expansion (same values for all targets)
+    SALT_VER='{SALT_VER}'
+    DELIMETER='{DELIMETER}'
+    SALT_DIR='{SALT_DEPLOY_DIR}'
 
-      if [ -z "$PYTHON" ]
-      then
-         MISS_PKG="$MISS_PKG python"
-      fi
+    # Template Level 2 expansion (target-specific values)
+    SUDO='{{0}}'          # Use unquoted so that it can be a no-op when not set
+    COMMAND_STR='{{1}}'   # Use unquoted so that it can be parsed into words
+    CHECKSUM_PGM='{{2}}'
+    THIN_CHECKSUM='{{3}}'
+    MINION_CONFIG='{{4}}'
 
-      SALT="/tmp/.salt/salt-call"
-      if [ "{{2}}" = "md5" ]
-      then
-         for md5_candidate in \
-            md5sum            \
-            md5               \
-            csum              \
-            digest            ;
-         do
-            command -v $md5_candidate >/dev/null
-            if [ $? -eq 0 ]
-            then
-                SUMCHECK="$md5_candidate"
-                break
+    # The XXX_CMDS are lists of required commands.  The first entry is the
+    # generic name of the command list and the following entries are the
+    # equivalent programs to be located in order of preference of use.
+
+    # NOTE: /usr/bin/printf is POSIX defined and has predictable
+    # behavior - unlike printf (which might be a shell built-in) or
+    # echo.
+
+    TAR_CMDS="
+        tar
+        tar
+    "
+
+    GUNZIP_CMDS="
+        gunzip
+        gunzip
+    "
+
+    PYTHON_CMDS="
+        python
+        python27
+        python2.7
+        python26
+        python2.6
+        python2
+        python
+    "
+
+    MD5_CMDS="
+        md5sum/md5/csum
+        md5sum
+        md5
+        csum
+        digest
+    "
+
+    MISS_PKG=""
+    TAR=""
+    PYTHON=""
+    SUMCHECK=""
+    GUNZIP=""
+
+    which_command()
+    {{{{
+        local miss_msg="$1"
+        shift
+        local cmd
+        for cmd in "$@"; do
+            if command -v "$cmd" >/dev/null; then
+                /usr/bin/printf '%s\n' "$cmd"
+                return
             fi
-         done
-      else
-         command -v "{{2}}" >/dev/null
-         if [ $? -eq 0 ]
-         then
-            SUMCHECK="{{2}}"
-         fi
-      fi
+        done
 
-      if [ -z "$SUMCHECK" ]
-      then
-         MISS_PKG="$MISS_PKG md5sum/md5/csum"
-      fi
+        MISS_PKG="$MISS_PKG $miss_msg"
+    }}}}
 
-      if [ -n "$MISS_PKG" ]
-      then
-            echo "The following required Packages are missing: $MISS_PKG" >&2
-            exit 127
-      fi
+    detect_commands()
+    {{{{
+        TAR="$(which_command $TAR_CMDS)"
+        GUNZIP="$(which_command $GUNZIP_CMDS)"
 
-      # MD5 check for systems with a BSD userland (includes OSX).
-      if [ "$SUMCHECK" = "md5" ]
-      then
-         SUMCHECK="md5 -q"
-      # MD5 check for AIX systems.
-      elif [ "$SUMCHECK" = "csum" ]
-      then
-         SUMCHECK="csum -h MD5"
-      # MD5 check for Solaris systems.
-      elif [ "$SUMCHECK" = "digest" ]
-      then
-         SUMCHECK="digest -a md5"
-      fi
+        PYTHON="$(which_command $PYTHON_CMDS)"
+        PY_TOO_OLD="$($PYTHON -c "import sys; print sys.hexversion < 0x02060000")"
+        if [ "True" = "$PY_TOO_OLD" ]; then
+            /usr/bin/printf "ERROR: Python too old\n" >&2
+            exit $EX_PYTHON_OLD
+        fi
 
-      if [ -f "$SALT" ]
-      then
-         if [ "`cat /tmp/.salt/version`" != "{0}" ]
-         then
-            {{0}} rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
-            if [ $? -ne 0 ]; then
-                exit 1
+        if [ 'md5' = "$CHECKSUM_PGM" ]; then
+            SUMCHECK="$(which_command $MD5_CMDS)"
+        else
+            SUMCHECK="$(which_command "$CHECKSUM_PGM" "$CHECKSUM_PGM")"
+        fi
+
+        if [ -n "$MISS_PKG" ]; then
+            /usr/bin/printf "ERROR: The following required commands are missing: $MISS_PKG\n" >&2
+            exit $EX_UNAVAILABLE
+        fi
+
+        case "$SUMCHECK" in
+            # MD5 check for systems with a BSD userland (includes OSX).
+            (md5) SUMCHECK="md5 -q" ;;
+            # MD5 check for AIX systems.
+            (csum) SUMCHECK="csum -h MD5" ;;
+            # MD5 check for Solaris systems.
+            (digest) SUMCHECK="digest -a md5" ;;
+        esac
+    }}}}
+
+    check_salt_thin()
+    {{{{
+        if [ -f "$SALT_DIR/salt-call" ]; then
+            if [ "$(cat "$SALT_DIR/version")" != "$SALT_VER" ]; then
+                $SUDO rm -rf "$SALT_DIR" && mkdir -m 0700 -p "$SALT_DIR"
+                /usr/bin/printf '%s\ndeploy\n' "$DELIMETER"
+                exit $EX_DEPLOY_THIN
             fi
-            echo "{1}"
-            echo "deploy"
-            exit 1
-         fi
-      else
-         PY_TOO_OLD=`$PYTHON -c "import sys; print sys.hexversion < 0x02060000"`
-         if [ "$PY_TOO_OLD" = "True" ];
-         then
-            echo "Python too old" >&2
-            exit 1
-         fi
-         if [ -f /tmp/.salt/salt-thin.tgz ]
-         then
-             if [ "`$SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ `" = "{{3}}" ]
-             then
-                 cd /tmp/.salt/ && gunzip -c salt-thin.tgz | {{0}} tar opxvf -
-             else
-                 echo "Mismatched checksum for /tmp/.salt/salt-thin.tgz" >&2
-                 exit 1
-             fi
-         else
-             mkdir -m 0700 -p /tmp/.salt
-             echo "{1}"
-             echo "deploy"
-             exit 1
-         fi
-      fi
-      echo "{{4}}" > /tmp/.salt/minion
-      echo "{1}"
-      eval {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
-EOF'''.format(salt.__version__, RSTR)
+        else
+
+            if [ -f "$SALT_DIR/salt-thin.tgz" ]; then
+                if [ "x$("$SUMCHECK" "$SALT_DIR/salt-thin.tgz" | cut -f1 -d\ )" = "x$THIN_CHECKSUM" ]; then
+                    cd "$SALT_DIR" && "$GUNZIP" -c salt-thin.tgz | $SUDO "$TAR" opxvf -
+                else
+                    /usr/bin/printf "ERROR: Mismatched checksum for $SALT_DIR/salt-thin.tgz" >&2
+                    exit $EX_CHECKSUM
+                fi
+            else
+                mkdir -m 0700 -p "$SALT_DIR"
+                /usr/bin/printf '%s\ndeploy\n' "$DELIMETER"
+                exit $EX_DEPLOY_THIN
+            fi
+        fi
+    }}}}
+
+    write_config()
+    {{{{
+        /usr/bin/printf '%s\n' "$MINION_CONFIG" >"$SALT_DIR/minion"
+        /usr/bin/printf '%s\n' "$DELIMETER"
+    }}}}
+
+    main()
+    {{{{
+        detect_commands
+        check_salt_thin
+        write_config
+        eval $SUDO \"$PYTHON\" \"$SALT_DIR/salt-call\" --local --out json -l quiet $COMMAND_STR -c \"$SALT_DIR\"
+    }}}}
+
+    main
+EOF'''.format(
+    SALT_VER=salt.__version__,
+    DELIMETER=RSTR,
+    SALT_DEPLOY_DIR=SALT_DEPLOY_DIR,
+    EX_DEPLOY_THIN=EX_DEPLOY_THIN,
+    EX_PYTHON_OLD=EX_PYTHON_OLD,
+    EX_CHECKSUM=EX_CHECKSUM,
+    EX_UNAVAILABLE=os.EX_UNAVAILABLE,
+    EX_SOFTWARE=os.EX_SOFTWARE,
+)
 
 log = logging.getLogger(__name__)
 
@@ -339,7 +388,7 @@ class SSH(object):
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
-        if stdout.startswith('deploy'):
+        if retcode == salt.exitcodes.EX_DEPLOY_THIN and stdout.startswith('deploy'):
             single.deploy()
             stdout, stderr, retcode = single.run()
         # This job is done, yield
@@ -529,7 +578,7 @@ class Single(object):
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
         self.minion_config = yaml.dump(
                 {
-                    'root_dir': '/tmp/.salt/running_data',
+                    'root_dir': SALT_DEPLOY_DIR + '/running_data',
                     'id': self.id,
                 }).strip()
         self.target = kwargs
@@ -562,7 +611,7 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
                 thin,
-                '/tmp/.salt/salt-thin.tgz')
+                SALT_DEPLOY_DIR + '/salt-thin.tgz')
         return True
 
     def run(self, deploy_attempted=False):
@@ -597,7 +646,9 @@ class Single(object):
         else:
             stdout, stderr, retcode = self.cmd_block()
 
-        if stdout.startswith('deploy') and not deploy_attempted:
+        if retcode == salt.exitcodes.EX_DEPLOY_THIN \
+           and stdout.startswith('deploy') \
+           and not deploy_attempted:
             self.deploy()
             return self.run(deploy_attempted=True)
 
@@ -729,7 +780,7 @@ class Single(object):
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
-        if stdout.startswith('deploy'):
+        if retcode == salt.exitcodes.EX_DEPLOY_THIN and stdout.startswith('deploy'):
             self.deploy()
             stdout, stderr, retcode = self.shell.exec_cmd(cmd)
             if RSTR in stdout:
@@ -743,28 +794,59 @@ class Single(object):
         _ = stdout
         _ = retcode
 
-        perm_error_fmt = 'Permissions problem, target user may need '\
-                         'to be root or use sudo:\n {0}'
+        perm_error_fmt = (
+            'Permissions problem, target user may need'
+            ' to be root or use sudo:\n {0}'
+        )
+
         if stderr.startswith('Permission denied'):
             return None
         errors = [
-            ('sudo: no tty present and no askpass program specified',
-                'sudo expected a password, NOPASSWD required'),
-            ('Python too old',
-                'salt requires python 2.6 or better on target hosts'),
-            ('sudo: sorry, you must have a tty to run sudo',
-                'sudo is configured with requiretty'),
-            ('Failed to open log file',
-                perm_error_fmt.format(stderr)),
-            ('Permission denied:.*/salt',
-                perm_error_fmt.format(stderr)),
-            ('Failed to create directory path.*/salt',
-                perm_error_fmt.format(stderr)),
-            ]
+            (
+                (),
+                'sudo: no tty present and no askpass program specified',
+                'sudo expected a password, NOPASSWD required'
+            ),
+            (
+                (EX_PYTHON_OLD,),
+                'Python too old',
+                'salt requires python 2.6 or better on target hosts'
+            ),
+            (
+                (EX_CHECKSUM,),
+                'Mismatched checksum',
+                'The salt thin transfer was corrupted'
+            ),
+            (
+                (os.EX_UNAVAILABLE,),
+                'required commands are missing',
+                'Required commands for the SSH_SHIM are missing: {0}'.format(stderr)
+            ),
+            (
+                (),
+                'sudo: sorry, you must have a tty to run sudo',
+                'sudo is configured with requiretty'
+            ),
+            (
+                (),
+                'Failed to open log file',
+                perm_error_fmt.format(stderr)
+            ),
+            (
+                (),
+                'Permission denied:.*/salt',
+                perm_error_fmt.format(stderr)
+            ),
+            (
+                (),
+                'Failed to create directory path.*/salt',
+                perm_error_fmt.format(stderr)
+            ),
+        ]
 
         for error in errors:
-            if re.search(error[0], stderr):
-                return error[1]
+            if retcode in error[0] or re.search(error[1], stderr):
+                return error[2]
         return None
 
     def sls_seed(self,
