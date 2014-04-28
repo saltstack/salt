@@ -72,7 +72,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
     makes this too much code to be repeated in each function below
     '''
     kwargs = {
-        'reset_system_locale': False
+        'reset_system_locale': False,
+        'clean_env': True,
     }
     if runas is None:
         if not host:

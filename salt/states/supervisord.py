@@ -79,7 +79,7 @@ def running(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -101,6 +101,11 @@ def running(name,
         # Support old runas usage
         user = runas
         runas = None
+
+    if 'supervisord.status' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'Supervisord module not activated. Do you need to install supervisord?'
+        return ret
 
     all_processes = __salt__['supervisord.status'](
         user=user,
@@ -194,7 +199,6 @@ def running(name,
             bin_env=bin_env
         )
         ret.update(_check_error(result, comment))
-        changes.append(comment)
         log.debug(comment)
 
         if '{0}: updated'.format(name) in result:
@@ -306,7 +310,7 @@ def dead(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

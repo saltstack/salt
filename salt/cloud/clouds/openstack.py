@@ -36,6 +36,8 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser
       # The OpenStack keypair name
       ssh_key_name: mykey
+      # Skip SSL certificate validation
+      insecure: false
       # The ssh key file
       ssh_key_file: /path/to/keyfile/test.pem
       # The OpenStack network UUIDs
@@ -71,6 +73,14 @@ Either a password or an API key must also be specified:
       # The OpenStack API key
       apikey: 901d3f579h23c8v73q9
 
+Optionally, if you don't want to save plain-text password in your configuration file, you can use keyring:
+.. code-block:: yaml
+
+    my-openstack-keyring-config:
+      # The OpenStack password is stored in keyring
+      # don't forget to set the password by running something like:
+      # salt-cloud --set-password=myuser my-openstack-keyring-config
+      password: USE_KEYRING
 
 For local installations that only use private IP address ranges, the
 following option may be useful. Using the old syntax:
@@ -234,27 +244,52 @@ def get_conn():
         import libcloud.security
         libcloud.security.VERIFY_SSL_CERT = False
 
+    user = config.get_cloud_config_value(
+        'user', vm_, __opts__, search_global=False
+    )
     password = config.get_cloud_config_value(
         'password', vm_, __opts__, search_global=False
     )
+
     if password is not None:
         authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
+        if password == 'USE_KEYRING':
+            # retrieve password from system keyring
+            credential_id = "salt.cloud.provider.{0}".format(__active_provider_name__)
+            logging.debug("Retrieving keyring password for {0} ({1})".format(
+                credential_id,
+                user)
+            )
+            # attempt to retrieve driver specific password first
+            driver_password = salt.utils.cloud.retrieve_password_from_keyring(
+                credential_id,
+                user
+            )
+            if driver_password is None:
+                provider_password = salt.utils.cloud.retrieve_password_from_keyring(
+                    credential_id.split(':')[0],  # fallback to provider level
+                    user)
+                if provider_password is None:
+                    raise SaltCloudSystemExit(
+                        "Unable to retrieve password from keyring for provider {0}".format(
+                            __active_provider_name__
+                        )
+                    )
+                else:
+                    actual_password = provider_password
+        else:
+            actual_password = password
         return driver(
-            config.get_cloud_config_value(
-                'user', vm_, __opts__, search_global=False
-            ),
-            password,
+            user,
+            actual_password,
             **authinfo
         )
 
     authinfo['ex_force_auth_version'] = '2.0_apikey'
     log.debug('OpenStack authenticating using apikey')
     return driver(
-        config.get_cloud_config_value('user',
-                                      vm_,
-                                      __opts__,
-                                      search_global=False),
+        user,
         config.get_cloud_config_value('apikey', vm_, __opts__,
                                       search_global=False), **authinfo)
 
@@ -462,22 +497,32 @@ def create(vm_):
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
-            pool = OpenStack_1_1_FloatingIpPool(
-                '', conn.connection
-            )
-            for idx in pool.list_floating_ips():
-                if idx.node_id is None:
-                    floating.append(idx)
-            if not floating:
-                # Note(pabelanger): We have no available floating IPs.
-                # For now, we raise an exception and exit.
-                # A future enhancement might be to allow salt-cloud to
-                # dynamically allocate new address but that might be
-                # tricky to manage.
-                raise SaltCloudSystemExit(
-                    'There are no more floating IP addresses '
-                    'available, please create some more'
+            try:
+                # This try/except is here because it appears some
+                # *cough* Rackspace *cough*
+                # OpenStack providers return a 404 Not Found for the
+                # floating ip pool URL if there are no pools setup
+                pool = OpenStack_1_1_FloatingIpPool(
+                    '', conn.connection
                 )
+                for idx in pool.list_floating_ips():
+                    if idx.node_id is None:
+                        floating.append(idx)
+                if not floating:
+                    # Note(pabelanger): We have no available floating IPs.
+                    # For now, we raise an exception and exit.
+                    # A future enhancement might be to allow salt-cloud to
+                    # dynamically allocate new address but that might be
+                    # tricky to manage.
+                    raise SaltCloudSystemExit(
+                        'There are no more floating IP addresses '
+                        'available, please create some more'
+                    )
+            except Exception as e:
+                if str(e).startswith('404'):
+                    pass
+                else:
+                    raise
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False

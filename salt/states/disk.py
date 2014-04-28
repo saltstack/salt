@@ -15,7 +15,7 @@ __monitor__ = [
 
 def status(name, maximum=None, minimum=None):
     '''
-    Return the current disk usage stats for the named device
+    Return the current disk usage stats for the named mount point
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,

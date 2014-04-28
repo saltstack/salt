@@ -41,6 +41,32 @@ def _do(name, fun):
     return data
 
 
+def _do_names(names, fun):
+    '''
+    Invoke a function in the lxc module with no args
+    '''
+    ret = {}
+    hosts = find_guests(names, quiet=True)
+    if not hosts:
+        return False
+
+    client = salt.client.get_local_client(__opts__['conf_file'])
+    cmds = []
+    for host, sub_names in hosts.items():
+        for name in sub_names:
+            cmds.append(client.cmd_iter(
+                    host,
+                    'lxc.{0}'.format(fun),
+                    [name],
+                    timeout=60))
+    for cmd in cmds:
+        data = next(cmd)
+        data = data.get(host, {}).get('ret', None)
+        if data:
+            ret.update({host: data})
+    return ret
+
+
 def find_guest(name, quiet=False):
     '''
     Returns the host for a container.
@@ -62,7 +88,25 @@ def find_guest(name, quiet=False):
     return None
 
 
-def init(name,
+def find_guests(names, quiet=False):
+    '''
+    Return a dict of hosts and named guests
+    '''
+    ret = {}
+    names = names.split(',')
+    for data in _list_iter():
+        host, stat = data.items()[0]
+        for state in stat:
+            for name in stat[state]:
+                if name in names:
+                    if host in ret:
+                        ret[host].append(name)
+                    else:
+                        ret[host] = [name]
+    return ret
+
+
+def init(names,
          host=None,
          **kwargs):
     '''
@@ -72,14 +116,15 @@ def init(name,
 
         salt-run lxc.init name host=minion_id [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
+                [template=lxc template name] [clone=original name] \\
                 [nic=nic_profile] [profile=lxc_profile] \\
                 [nic_opts=nic_opts] [start=(true|false)] \\
                 [seed=(true|false)] [install=(true|false)] \\
-                [config=minion_config] [clone=original] \\
-                [snapshot=(true|false)]
+                [config=minion_config] [snapshot=(true|false)]
 
-    name
-        Name of the container.
+    names
+        Name of the containers, supports a single name or a comma delimited
+        list of names.
 
     host
         Minion to start the container on. Required.
@@ -92,6 +137,12 @@ def init(name,
 
     memory
         cgroups memory limit, in MB.
+
+    template
+        Name of LXC template on which to base this container
+
+    clone
+        Clone this container from an existing container
 
     nic
         Network interfaces profile (defined in config or pillar).
@@ -116,18 +167,19 @@ def init(name,
         Optional config paramers. By default, the id is set to the name of the
         container.
     '''
-    print('Searching for LXC Hosts')
-    data = __salt__['lxc.list'](host, quiet=True)
-    for host, containers in data.items():
-        if name in sum(containers.values(), []):
-            print('Container \'{0}\' already exists on host \'{1}\''.format(
-                  name, host))
-            return False
-
     if host is None:
         #TODO: Support selection of host based on available memory/cpu/etc.
         print('A host must be provided')
         return False
+    names = names.split(',')
+    print('Searching for LXC Hosts')
+    data = __salt__['lxc.list'](host, quiet=True)
+    for host, containers in data.items():
+        for name in names:
+            if name in sum(containers.values(), []):
+                print('Container \'{0}\' already exists on host \'{1}\''.format(
+                      name, host))
+                return False
 
     if host not in data:
         print('Host \'{0}\' was not found'.format(host))
@@ -136,39 +188,53 @@ def init(name,
     kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
     approve_key = kw.get('approve_key', True)
     if approve_key:
-        kv = salt.utils.virt.VirtKey(host, name, __opts__)
-        if kv.authorize():
-            print('Container key will be preauthorized')
-        else:
-            print('Container key preauthorization failed')
-            return False
+        for name in names:
+            kv = salt.utils.virt.VirtKey(host, name, __opts__)
+            if kv.authorize():
+                print('Container key will be preauthorized')
+            else:
+                print('Container key preauthorization failed')
+                return False
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
-    print('Creating container \'{0}\' on host \'{1}\''.format(name, host))
+    print('Creating container(s) \'{0}\' on host \'{1}\''.format(names, host))
 
-    args = [name]
-    cmd_ret = client.cmd_iter(host,
-                              'lxc.init',
-                              args,
-                              kwarg=kwargs,
-                              timeout=600)
-    ret = next(cmd_ret)
-    if ret and host in ret:
-        ret = ret[host]['ret']
-    else:
-        ret = {}
+    cmds = []
+    ret = {}
+    for name in names:
+        args = [name]
+        cmds.append(client.cmd_iter(host,
+                                  'lxc.init',
+                                  args,
+                                  kwarg=kwargs,
+                                  timeout=600))
+    ret = {}
+    for cmd in cmds:
+        sub_ret = next(cmd)
+        if sub_ret and host in sub_ret:
+            if host in ret:
+                ret[host].append(sub_ret[host]['ret'])
+            else:
+                ret[host] = [sub_ret[host]['ret']]
+        else:
+            ret = {}
 
-    if ret.get('created', False) or ret.get('cloned', False):
-        print('Container \'{0}\' initialized on host \'{1}\''.format(
-            name, host))
-    else:
-        error = ret.get('error', 'unknown error')
-        print('Container \'{0}\' was not initialized: {1}'.format(name, error))
+    for host, returns in ret.items():
+        for j_ret in returns:
+            if j_ret.get('created', False) or j_ret.get('cloned', False):
+                print('Container \'{0}\' initialized on host \'{1}\''.format(
+                    j_ret.get('name'), host))
+            else:
+                error = j_ret.get('error', 'unknown error')
+                print('Container \'{0}\' was not initialized: {1}'.format(j_ret.get(name), error))
     return ret or None
 
 
 def _list_iter(host=None):
+    '''
+    Return a generator iterating over hosts
+    '''
     tgt = host or '*'
     client = salt.client.get_local_client(__opts__['conf_file'])
     for container_info in client.cmd_iter(tgt, 'lxc.list'):
@@ -217,8 +283,7 @@ def purge(name, delete_key=True, quiet=False):
 
         salt-run lxc.purge name
     '''
-
-    data = _do(name, 'destroy')
+    data = _do_names(name, 'destroy')
     if data is False:
         return data
 
@@ -242,7 +307,7 @@ def start(name, quiet=False):
 
         salt-run lxc.start name
     '''
-    data = _do(name, 'start')
+    data = _do_names(name, 'start')
     if data and not quiet:
         salt.output.display_output(data, 'lxc_start', __opts__)
     return data
@@ -256,7 +321,7 @@ def stop(name, quiet=False):
 
         salt-run lxc.stop name
     '''
-    data = _do(name, 'stop')
+    data = _do_names(name, 'stop')
     if data and not quiet:
         salt.output.display_output(data, 'lxc_force_off', __opts__)
     return data
@@ -270,7 +335,7 @@ def freeze(name, quiet=False):
 
         salt-run lxc.freeze name
     '''
-    data = _do(name, 'freeze')
+    data = _do_names(name, 'freeze')
     if data and not quiet:
         salt.output.display_output(data, 'lxc_pause', __opts__)
     return data
@@ -284,7 +349,7 @@ def unfreeze(name, quiet=False):
 
         salt-run lxc.unfreeze name
     '''
-    data = _do(name, 'unfreeze')
+    data = _do_names(name, 'unfreeze')
     if data and not quiet:
         salt.output.display_output(data, 'lxc_resume', __opts__)
     return data
@@ -298,7 +363,7 @@ def info(name, quiet=False):
 
         salt-run lxc.info name
     '''
-    data = _do(name, 'info')
+    data = _do_names(name, 'info')
     if data and not quiet:
         salt.output.display_output(data, 'lxc_info', __opts__)
     return data

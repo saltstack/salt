@@ -25,7 +25,8 @@ log = logging.getLogger(__name__)
 
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
-          path=None, return_bin=False, action=None, local_file=None):
+          path=None, return_bin=False, action=None, local_file=None,
+          verify_ssl=True):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -45,6 +46,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     The service_url will form the basis for the final endpoint that is used to
     query the service.
+
+    SSL verification may also be turned off in the configuration:
+
+    s3.verify_ssl: False
+
+    This is required if using S3 bucket names that contain a period, as
+    these will not match Amazon's S3 wildcard certificates. Certificate
+    verification is enabled by default.
     '''
     if not headers:
         headers = {}
@@ -140,8 +149,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
     log.debug('    Authorization: {0}'.format(headers['Authorization']))
 
     try:
-        result = requests.request(method, requesturl, headers=headers)
-        response = result.text
+        result = requests.request(method, requesturl, headers=headers,
+                                  verify=verify_ssl)
+        response = result.content
     except requests.exceptions.HTTPError as exc:
         log.error('There was an error::')
         if hasattr(exc, 'code') and hasattr(exc, 'msg'):

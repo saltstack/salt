@@ -769,7 +769,7 @@ class AESFuncs(object):
         if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
             return False
         # If the command will make a recursive publish don't run
-        if re.match('publish.*', clear_load['fun']):
+        if clear_load['fun'].startswith('publish.'):
             return False
         # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
@@ -796,14 +796,13 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        good = self.ckminions.auth_check(
+
+        # finally, check the auth of the load
+        return self.ckminions.auth_check(
                 perms,
                 clear_load['fun'],
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
-        if not good:
-            return False
-        return True
 
     def _ext_nodes(self, load):
         '''
@@ -1165,6 +1164,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        load['grains']['id'] = load['id']
         mods = set()
         for func in self.mminion.functions.values():
             mods.add(func.__module__)
@@ -1243,78 +1243,30 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        new_loadp = False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
             load['arg'] = load.get('arg', load.get('fun_args', []))
             load['tgt_type'] = 'glob'
             load['tgt'] = load['id']
-            load['jid'] = salt.utils.prep_jid(
-                self.opts['cachedir'],
-                self.opts['hash_type'],
-                load.get('nocache', False))
-            new_loadp = load.get('nocache', True) and True
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[prep_fstr](nocache=load.get('nocache', False))
+
+            # save the load, since we don't have it
+            saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(
             load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
-        if self.opts['master_ext_job_cache']:
-            fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
-            self.mminion.returners[fstr](load)
-            return
+
+        # if you have a job_cache, or an ext_job_cache, don't write to the regular master cache
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
-        jid_dir = salt.utils.jid_dir(
-            load['jid'],
-            self.opts['cachedir'],
-            self.opts['hash_type']
-        )
-        if os.path.exists(os.path.join(jid_dir, 'nocache')):
-            return
-        if new_loadp:
-            with salt.utils.fopen(
-                os.path.join(jid_dir, '.load.p'), 'w+b'
-            ) as fp_:
-                self.serial.dump(load, fp_)
-        hn_dir = os.path.join(jid_dir, load['id'])
-        try:
-            os.mkdir(hn_dir)
-        except OSError as e:
-            if e.errno == errno.EEXIST:
-                # Minion has already returned this jid and it should be dropped
-                log.error(
-                    'An extra return was detected from minion {0}, please verify '
-                    'the minion, this could be a replay attack'.format(
-                        load['id']
-                    )
-                )
-                return False
-            elif e.errno == errno.ENOENT:
-                log.error(
-                    'An inconsistency occurred, a job was received with a job id '
-                    'that is not present on the master: {jid}'.format(**load)
-                )
-                return False
-            raise
 
-        self.serial.dump(
-            load['return'],
-            # Use atomic open here to avoid the file being read before it's
-            # completely written to. Refs #1935
-            salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+b'
-            )
-        )
-        if 'out' in load:
-            self.serial.dump(
-                load['out'],
-                # Use atomic open here to avoid the file being read before
-                # it's completely written to. Refs #1935
-                salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+b'
-                )
-            )
+        # otherwise, write to the master cache
+        fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
         '''
@@ -1324,31 +1276,10 @@ class AESFuncs(object):
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
             return None
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return False
-        # set the write flag
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
-            if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
-                    self.serial.dump(load['load'], fp_)
-        wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
-        try:
-            with salt.utils.fopen(wtag, 'w+b') as fp_:
-                fp_.write('')
-        except (IOError, OSError):
-            log.error(
-                'Failed to commit the write tag for the syndic return, are '
-                'permissions correct in the cache dir: {0}?'.format(
-                    self.opts['cachedir']
-                )
-            )
-            return False
+        # if we have a load, save it
+        if 'load' in load:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load)
 
         # Format individual return loads
         for key, item in load['return'].items():
@@ -1358,8 +1289,6 @@ class AESFuncs(object):
             if 'out' in load:
                 ret['out'] = load['out']
             self._return(ret)
-        if os.path.isfile(wtag):
-            os.remove(wtag)
 
     def minion_runner(self, clear_load):
         '''
@@ -2536,17 +2465,9 @@ class ClearFuncs(object):
                 }
         # Retrieve the jid
         if not clear_load['jid']:
-            clear_load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    extra.get('nocache', False)
-                    )
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
         self.event.fire_event({'minions': minions}, clear_load['jid'])
-        jid_dir = salt.utils.jid_dir(
-                clear_load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
 
         new_job_load = {
                 'jid': clear_load['jid'],
@@ -2562,19 +2483,6 @@ class ClearFuncs(object):
         self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
-        # Verify the jid dir
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
-        # Save the invocation information
-        self.serial.dump(
-                clear_load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
-                )
-        # save the minions to a cache so we can see in the UI
-        self.serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
-                )
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
@@ -2591,6 +2499,24 @@ class ClearFuncs(object):
                     'The specified returner threw a stack trace:\n',
                     exc_info=True
                 )
+
+        # always write out to the master job caches
+        try:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](clear_load['jid'], clear_load)
+        except KeyError:
+            log.critical(
+                'The specified returner used for the master job cache '
+                '"{0}" does not have a save_load function!'.format(
+                    self.opts['master_job_cache']
+                )
+            )
+        except Exception:
+            log.critical(
+                'The specified returner threw a stack trace:\n',
+                exc_info=True
+            )
+
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here

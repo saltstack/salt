@@ -281,10 +281,10 @@ class Compiler(object):
             if name.startswith('__'):
                 continue
             if not isinstance(name, string_types):
-                err = ('The name {0} in sls {1} is not formed as a '
-                       'string but is a {2}').format(
-                               name, body['__sls__'], type(name))
-                errors.append(err)
+                errors.append(
+                    'ID {0!r} in SLS {1!r} is not formed as a string, but is '
+                    'a {2}'.format(name, body['__sls__'], type(name).__name__)
+                )
             if not isinstance(body, dict):
                 err = ('The type {0} in {1} is not formatted as a dictionary'
                        .format(name, body))
@@ -294,9 +294,10 @@ class Compiler(object):
                 if state.startswith('__'):
                     continue
                 if not isinstance(body[state], list):
-                    err = ('The state "{0}" in sls {1} is not formed as a list'
-                           .format(name, body['__sls__']))
-                    errors.append(err)
+                    errors.append(
+                        'State {0!r} in SLS {1!r} is not formed as a list'
+                        .format(name, body['__sls__'])
+                    )
                 else:
                     fun = 0
                     if '.' in state:
@@ -323,7 +324,7 @@ class Compiler(object):
                             if argfirst in ('require', 'watch', 'prereq'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
-                                    ' statement in state "{1}" in sls "{2}" '
+                                    ' statement in state {1!r} in SLS {2!r} '
                                     'needs to be formed as a list').format(
                                         argfirst,
                                         name,
@@ -388,19 +389,20 @@ class Compiler(object):
                                 # dict
                                 if len(list(arg)) != 1:
                                     errors.append(('Multiple dictionaries '
-                                    'defined in argument of state "{0}" in sls'
-                                    ' {1}').format(
+                                    'defined in argument of state {0!r} in SLS'
+                                    ' {1!r}').format(
                                         name,
                                         body['__sls__']))
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
-                        errors.append(('No function declared in state "{0}" in'
-                            ' sls {1}').format(state, body['__sls__']))
+                        errors.append(('No function declared in state {0!r} in'
+                            ' SLS {1!r}').format(state, body['__sls__']))
                     elif fun > 1:
-                        errors.append(('Too many functions declared in state'
-                            ' "{0}" in sls {1}').format(
-                                state, body['__sls__']))
+                        errors.append(
+                            'Too many functions declared in state {0!r} in '
+                            'SLS {1!r}'.format(state, body['__sls__'])
+                        )
         return errors
 
     def order_chunks(self, chunks):
@@ -610,7 +612,8 @@ class State(object):
             # order for the newly installed package to be importable.
             reload(site)
         self.load_modules()
-        self.functions['saltutil.refresh_modules']()
+        if not self.opts.get('local', False):
+            self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):
         '''
@@ -671,24 +674,25 @@ class State(object):
         if 'name' not in data:
             errors.append('Missing "name" data')
         if data['name'] and not isinstance(data['name'], string_types):
-            err = ('The name {0} in sls {1} is not formed as a '
-                   'string but is a {2}').format(
-                           data['name'], data['__sls__'], type(data['name']))
-            errors.append(err)
+            errors.append(
+                'ID {0!r} in SLS {1!r} is not formed as a string, but is '
+                'a {2}'.format(
+                    data['name'], data['__sls__'], type(data['name']).__name__)
+            )
         if errors:
             return errors
         full = data['state'] + '.' + data['fun']
         if full not in self.states:
             if '__sls__' in data:
                 errors.append(
-                    'State {0} found in sls {1} is unavailable'.format(
+                    'State {0!r} found in SLS {1!r} is unavailable'.format(
                         full,
                         data['__sls__']
                         )
                     )
             else:
                 errors.append(
-                        'Specified state {0} is unavailable.'.format(
+                        'Specified state {0!r} is unavailable.'.format(
                             full
                             )
                         )
@@ -754,10 +758,11 @@ class State(object):
             if name.startswith('__'):
                 continue
             if not isinstance(name, string_types):
-                err = ('The name {0} in sls {1} is not formed as a '
-                       'string but is a {2}').format(
-                               name, body['__sls__'], type(name))
-                errors.append(err)
+                errors.append(
+                    'ID {0!r} in SLS {1!r} is not formed as a string, but '
+                    'is a {2}'.format(
+                        name, body['__sls__'], type(name).__name__)
+                )
             if not isinstance(body, dict):
                 err = ('The type {0} in {1} is not formatted as a dictionary'
                        .format(name, body))
@@ -766,10 +771,19 @@ class State(object):
             for state in body:
                 if state.startswith('__'):
                     continue
+                if body[state] is None:
+                    errors.append(
+                        'ID {0!r} in SLS {1!r} contains a short declaration '
+                        '({2}) with a trailing colon. When not passing any '
+                        'arguments to a state, the colon must be omitted.'
+                        .format(name, body['__sls__'], state)
+                    )
+                    continue
                 if not isinstance(body[state], list):
-                    err = ('The state "{0}" in sls {1} is not formed as a list'
-                           .format(name, body['__sls__']))
-                    errors.append(err)
+                    errors.append(
+                        'State {0!r} in SLS {1!r} is not formed as a list'
+                        .format(name, body['__sls__'])
+                    )
                 else:
                     fun = 0
                     if '.' in state:
@@ -795,20 +809,21 @@ class State(object):
                             argfirst = next(iter(arg))
                             if argfirst == 'names':
                                 if not isinstance(arg[argfirst], list):
-                                    errors.append(('Names statement in state '
-                                    '"{0}" in sls "{1}" needs to be formed as'
-                                    'a list').format(
-                                        name,
-                                        body['__sls__']))
+                                    errors.append(
+                                        'The \'names\' argument in state '
+                                        '{0!r} in SLS {1!r} needs to be '
+                                        'formed as a list'
+                                        .format(name, body['__sls__'])
+                                    )
                             if argfirst in ('require', 'watch', 'prereq'):
                                 if not isinstance(arg[argfirst], list):
-                                    errors.append(('The {0}'
-                                    ' statement in state "{1}" in sls "{2}" '
-                                    'needs to be formed as a list').format(
-                                        argfirst,
-                                        name,
-                                        body['__sls__']
-                                        ))
+                                    errors.append(
+                                        'The {0} statement in state {1!r} in '
+                                        'SLS {2!r} needs to be formed as a '
+                                        'list'.format(argfirst,
+                                                      name,
+                                                      body['__sls__'])
+                                    )
                                 # It is a list, verify that the members of the
                                 # list are all single key dicts.
                                 else:
@@ -865,20 +880,23 @@ class State(object):
                                 # Make sure that there is only one key in the
                                 # dict
                                 if len(list(arg)) != 1:
-                                    errors.append(('Multiple dictionaries '
-                                    'defined in argument of state "{0}" in sls'
-                                    ' {1}').format(
-                                        name,
-                                        body['__sls__']))
+                                    errors.append(
+                                        'Multiple dictionaries defined in '
+                                        'argument of state {0!r} in SLS {1!r}'
+                                        .format(name, body['__sls__'])
+                                    )
                     if not fun:
                         if state == 'require' or state == 'watch':
                             continue
-                        errors.append(('No function declared in state "{0}" in'
-                            ' sls {1}').format(state, body['__sls__']))
+                        errors.append(
+                            'No function declared in state {0!r} in SLS {1!r}'
+                            .format(state, body['__sls__'])
+                        )
                     elif fun > 1:
-                        errors.append(('Too many functions declared in state'
-                            ' "{0}" in sls {1}').format(
-                                state, body['__sls__']))
+                        errors.append(
+                            'Too many functions declared in state {0!r} in '
+                            'SLS {1!r}'.format(state, body['__sls__'])
+                        )
         return errors
 
     def verify_chunks(self, chunks):
@@ -1097,12 +1115,20 @@ class State(object):
         req_in = set([
             'require_in',
             'watch_in',
+            'onfail_in',
+            'onchanges_in',
             'use',
             'use_in',
             'prereq',
             'prereq_in',
             ])
-        req_in_all = req_in.union(set(['require', 'watch']))
+        req_in_all = req_in.union(
+                set([
+                    'require',
+                    'watch',
+                    'onfail',
+                    'onchanges',
+                    ]))
         extend = {}
         errors = []
         for id_, body in high.items():
@@ -1468,9 +1494,16 @@ class State(object):
             present = True
         if 'onfail' in low:
             present = True
+        if 'onchanges' in low:
+            present = True
         if not present:
             return 'met'
-        reqs = {'require': [], 'watch': [], 'prereq': [], 'onfail': []}
+        reqs = {
+                'require': [],
+                'watch': [],
+                'prereq': [],
+                'onfail': [],
+                'onchanges': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
@@ -1512,6 +1545,10 @@ class State(object):
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
+                        fun_stats.add('fail')
+                        continue
+                if r_state == 'onchanges':
+                    if not run_dict[tag]['changes']:
                         fun_stats.add('fail')
                         continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
@@ -1558,7 +1595,7 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get('prerequired'):
             self.active.add(tag)
-        requisites = ['require', 'watch', 'prereq', 'onfail']
+        requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
             status = self.check_requisite(low, running, chunks, True)
@@ -1597,7 +1634,7 @@ class State(object):
                                 found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost.get('prerequired'):
+            if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost['onchanges'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in lost.items():
                     if not lreqs:
@@ -1755,7 +1792,7 @@ class State(object):
                         continue
 
                     errors.append(
-                        'Name {0} in template {1} is not a dictionary'.format(
+                        'ID {0} in template {1} is not a dictionary'.format(
                             name, template
                         )
                     )
@@ -1763,6 +1800,14 @@ class State(object):
             skeys = set()
             for key in sorted(high[name]):
                 if key.startswith('_'):
+                    continue
+                if high[name][key] is None:
+                    errors.append(
+                        'ID {0!r} in template {1} contains a short '
+                        'declaration ({2}) with a trailing colon. When not '
+                        'passing any arguments to a state, the colon must be '
+                        'omitted.'.format(name, template, key)
+                    )
                     continue
                 if not isinstance(high[name][key], list):
                     continue
@@ -1779,10 +1824,9 @@ class State(object):
                     #     - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
-                            'Name \'{0}\' in template \'{1}\' contains '
-                            'multiple state decs of the same type'.format(
-                                name, template
-                            )
+                            'ID {0!r} in template {1!r} contains multiple '
+                            'state declarations of the same type'
+                            .format(name, template)
                         )
                         continue
                     high[name][comps[0]] = high[name].pop(key)
@@ -2096,7 +2140,10 @@ class BaseHighState(object):
         '''
         if not self.opts['autoload_dynamic_modules']:
             return
-        syncd = self.state.functions['saltutil.sync_all'](list(matches))
+        if self.opts.get('local', False):
+            syncd = self.state.functions['saltutil.sync_all'](list(matches), refresh=False)
+        else:
+            syncd = self.state.functions['saltutil.sync_all'](list(matches))
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()
@@ -2303,7 +2350,7 @@ class BaseHighState(object):
                                        comps[0]: [comps[1]]}
                         continue
                 errors.append(
-                    'Name {0} in sls {1} is not a dictionary'.format(name, sls)
+                    'ID {0} in SLS {1} is not a dictionary'.format(name, sls)
                 )
                 continue
             skeys = set()
@@ -2325,10 +2372,10 @@ class BaseHighState(object):
                     #       file.comment:
                     #           - regex: ^requirepass
                     if comps[0] in skeys:
-                        err = ('Name "{0}" in sls "{1}" contains '
-                               'multiple state decs of the same type'
-                              ).format(name, sls)
-                        errors.append(err)
+                        errors.append(
+                            'ID {0!r} in SLS {1!r} contains multiple state '
+                            'declarations of the same type'.format(name, sls)
+                        )
                         continue
                     state[name][comps[0]] = state[name].pop(key)
                     state[name][comps[0]].append(comps[1])
@@ -2348,12 +2395,12 @@ class BaseHighState(object):
         if 'extend' in state:
             ext = state.pop('extend')
             if not isinstance(ext, dict):
-                errors.append(('Extension value in sls {0} is not a '
+                errors.append(('Extension value in SLS {0!r} is not a '
                                'dictionary').format(sls))
                 return
             for name in ext:
                 if not isinstance(ext[name], dict):
-                    errors.append(('Extension name {0} in sls {1} is '
+                    errors.append(('Extension name {0!r} in SLS {1!r} is '
                                    'not a dictionary'
                                    .format(name, sls)))
                     continue

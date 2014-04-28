@@ -207,7 +207,7 @@ def installed(name,
         Extra global options to be supplied to the setup.py call before the
         install command.
 
-        .. versionadded:: 2014.1.2
+        .. versionadded:: 2014.1.3
 
     .. admonition:: Attention
 
@@ -248,10 +248,9 @@ def installed(name,
                'value of repo, {1!r}'.format(
                    name,
                    repo,
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
+                   version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Hydrogen', msg)
+        salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
@@ -313,10 +312,9 @@ def installed(name,
         msg = ('The \'runas\' argument to pip.installed is deprecated, and '
                'will be removed in Salt {version}. Please use \'user\' '
                'instead.'.format(
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
+                   version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Hydrogen', msg)
+        salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
 
         # "There can only be one"
@@ -507,10 +505,9 @@ def removed(name,
         msg = ('The \'runas\' argument to pip.installed is deprecated, and '
                'will be removed in Salt {version}. Please use \'user\' '
                'instead.'.format(
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
+                   version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Hydrogen', msg)
+        salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
 
     # "There can only be one"

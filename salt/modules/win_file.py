@@ -176,9 +176,10 @@ def _change_privilege_state(privilege_name, enable):
     True.
     '''
     log.debug(
-        '%s the privilege %s for this process.',
-        'Enabling' if enable else 'Disabling',
-        privilege_name
+        '{0} the privilege {1} for this process.'.format(
+            'Enabling' if enable else 'Disabling',
+            privilege_name
+        )
     )
     # this is a pseudo-handle that doesn't need to be closed
     hProc = win32api.GetCurrentProcess()
@@ -204,14 +205,18 @@ def _change_privilege_state(privilege_name, enable):
                     'The requested privilege {0} is not available for this '
                     'process (check Salt user privileges).'.format(privilege_name))
             else:  # disable a privilege this process does not have
-                log.debug('Cannot disable privilege %s because this process '
-                          'does not have that privilege.', privilege_name)
+                log.debug(
+                    'Cannot disable privilege {0} because this process '
+                    'does not have that privilege.'.format(privilege_name)
+                )
                 return True
         else:
             # check if the privilege is already in the requested state
             if token_privileges[privilege] == privilege_attrs:
-                log.debug('The requested privilege %s is already in the '
-                          'requested state.', privilege_name)
+                log.debug(
+                    'The requested privilege {0} is already in the '
+                    'requested state.'.format(privilege_name)
+                )
                 return True
 
         changes = win32security.AdjustTokenPrivileges(
@@ -256,7 +261,7 @@ def gid_to_group(gid):
     behaves the same as uid_to_user.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with *nix. Use the uid_to_user function
+    exists for API compatibility with Unix. Use the uid_to_user function
     instead; an info level log entry will be generated if this function is used
     directly.
 
@@ -268,8 +273,8 @@ def gid_to_group(gid):
     '''
     func_name = '{0}.gid_to_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details.'.format(func_name))
 
     return uid_to_user(gid)
 
@@ -282,7 +287,7 @@ def group_to_gid(group):
     behaves the same as user_to_uid, except if None is given, '' is returned.
 
     For maintaining Windows systems, this function is superfluous and only
-    exists for API compatibility with *nix. Use the user_to_uid function
+    exists for API compatibility with Unix. Use the user_to_uid function
     instead; an info level log entry will be generated if this function is used
     directly.
 
@@ -294,8 +299,8 @@ def group_to_gid(group):
     '''
     func_name = '{0}.group_to_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details.'.format(func_name))
 
     return _user_to_uid(group)
 
@@ -372,7 +377,7 @@ def get_gid(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles *nix behaviour for API compatibility reasons. When
+    somewhat resembles Unix behaviour for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -387,9 +392,9 @@ def get_gid(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_gid'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is the uid.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is the '
+                 'uid.'.format(func_name))
 
     return get_uid(path, follow_symlinks)
 
@@ -406,7 +411,7 @@ def get_group(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles *nix behaviour for API compatibility reasons. When
+    somewhat resembles Unix behaviour for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -421,9 +426,9 @@ def get_group(path, follow_symlinks=True):
     '''
     func_name = '{0}.get_group'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is the user (owner).', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is the '
+                 'user (owner).'.format(func_name))
 
     return get_user(path, follow_symlinks)
 
@@ -445,11 +450,11 @@ def uid_to_user(uid):
     try:
         name, domain, account_type = win32security.LookupAccountSid(None, sid)
         return name
-    except pywinerror as e:
+    except pywinerror as exc:
         # if user does not exist...
         # 1332 = No mapping between account names and security IDs was carried
         # out.
-        if e.winerror == 1332:
+        if exc.winerror == 1332:
             return ''
         else:
             raise
@@ -479,11 +484,11 @@ def _user_to_uid(user):
 
     try:
         sid, domain, account_type = win32security.LookupAccountName(None, user)
-    except pywinerror as e:
+    except pywinerror as exc:
         # if user does not exist...
         # 1332 = No mapping between account names and security IDs was carried
         # out.
-        if e.winerror == 1332:
+        if exc.winerror == 1332:
             return ''
         else:
             raise
@@ -495,7 +500,7 @@ def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
-    Symlinks are followed by default to mimic *nix behaviour. Specify
+    Symlinks are followed by default to mimic Unix behaviour. Specify
     `follow_symlinks=False` to turn off this behaviour.
 
     CLI Example:
@@ -527,7 +532,7 @@ def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
-    Symlinks are followed by default to mimic *nix behaviour. Specify
+    Symlinks are followed by default to mimic Unix behaviour. Specify
     `follow_symlinks=False` to turn off this behaviour.
 
     CLI Example:
@@ -558,9 +563,9 @@ def get_mode(path):
 
     func_name = '{0}.get_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is always None.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is '
+                 'always None.'.format(func_name))
 
     return None
 
@@ -595,8 +600,13 @@ def lchown(path, user, group=None, pgroup=None):
     if group:
         func_name = '{0}.lchown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using %s on Windows systems; see function docs for details.', func_name)
-        log.debug('win_file.py %s Ignoring the group parameter for %s', func_name, path)
+            log.info('The group parameter has no effect when using {0} on Windows '
+                     'systems; see function docs for details.'.format(func_name))
+        log.debug(
+            'win_file.py {0} Ignoring the group parameter for {1}'.format(
+                func_name, path
+            )
+        )
         group = None
 
     return chown(path, user, group, pgroup, follow_symlinks=False)
@@ -632,8 +642,13 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     if group:
         func_name = '{0}.chown'.format(__virtualname__)
         if __opts__.get('fun', '') == func_name:
-            log.info('The group parameter has no effect when using %s on Windows systems; see function docs for details.', func_name)
-        log.debug('win_file.py %s Ignoring the group parameter for %s', func_name, path)
+            log.info('The group parameter has no effect when using {0} on Windows '
+                     'systems; see function docs for details.'.format(func_name))
+        log.debug(
+            'win_file.py {0} Ignoring the group parameter for {1}'.format(
+                func_name, path
+            )
+        )
         group = None
 
     err = ''
@@ -764,7 +779,7 @@ def chgrp(path, group):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to do nothing while still being
-    compatible with *nix behaviour. When managing Windows systems,
+    compatible with Unix behaviour. When managing Windows systems,
     this function is superfluous and will generate an info level log entry if
     used directly.
 
@@ -779,8 +794,9 @@ def chgrp(path, group):
     '''
     func_name = '{0}.chgrp'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; see function docs for details.', func_name)
-    log.debug('win_file.py %s Doing nothing for %s', func_name, path)
+        log.info('The function {0} should not be used on Windows systems; see '
+                 'function docs for details.'.format(func_name))
+    log.debug('win_file.py {0} Doing nothing for {1}'.format(func_name, path))
 
     return None
 
@@ -797,7 +813,7 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps these properties to keep some kind of
-    compatibility with *nix behaviour. If the 'primary group' is required, it
+    compatibility with Unix behaviour. If the 'primary group' is required, it
     can be accessed in the `pgroup` and `pgid` properties.
 
     CLI Example:
@@ -980,9 +996,9 @@ def set_mode(path, mode):
     '''
     func_name = '{0}.set_mode'.format(__virtualname__)
     if __opts__.get('fun', '') == func_name:
-        log.info('The function %s should not be used on Windows systems; '
-                 'see function docs for details. '
-                 'The value returned is always None.', func_name)
+        log.info('The function {0} should not be used on Windows systems; '
+                 'see function docs for details. The value returned is '
+                 'always None.'.format(func_name))
 
     return get_mode(path)
 
@@ -994,7 +1010,7 @@ def symlink(src, link):
     This is only supported with Windows Vista or later and must be executed by
     a user with the SeCreateSymbolicLink privilege.
 
-    The behaviour of this function matches the *nix equivalent, with one
+    The behaviour of this function matches the Unix equivalent, with one
     exception - invalid symlinks cannot be created. The source path must exist.
     If it doesn't, an error will be raised.
 
@@ -1024,8 +1040,10 @@ def symlink(src, link):
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
-    except pywinerror as e:
-        raise CommandExecutionError('Could not create {0!r} - [{1}] {2}'.format(link, e.winerror, e.strerror))
+    except pywinerror as exc:
+        raise CommandExecutionError(
+            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+        )
 
 
 def _is_reparse_point(path):
@@ -1052,7 +1070,7 @@ def is_link(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with *nix behaviour, this function will raise an error if the path
+    Inline with Unix behaviour, this function will raise an error if the path
     is not a symlink, however, the error raised will be a SaltInvocationError,
     not an OSError.
 
@@ -1142,7 +1160,7 @@ def readlink(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with *nix behaviour, this function will raise an error if the path is
+    Inline with Unix behaviour, this function will raise an error if the path is
     not a symlink, however, the error raised will be a SaltInvocationError, not
     an OSError.
 
@@ -1191,9 +1209,9 @@ def readlink(path):
     try:
         # comes out in 8.3 form; convert it to LFN to make it look nicer
         target = win32file.GetLongPathName(target)
-    except pywinerror as e:
+    except pywinerror as exc:
         # if file is not found (i.e. bad symlink), return it anyway like on *nix
-        if e.winerror == 2:
+        if exc.winerror == 2:
             return target
         raise
 

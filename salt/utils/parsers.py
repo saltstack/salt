@@ -1431,6 +1431,40 @@ class CloudProvidersListsMixIn(object):
             )
 
 
+class CloudCredentialsMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        group = self.cloud_credentials_group = optparse.OptionGroup(
+            self,
+            'Cloud Credentials',
+            # Include description here as a string
+        )
+        group.add_option(
+            '--set-password',
+            default=None,
+            nargs=2,
+            metavar='<USERNAME> <PROVIDER>',
+            help=('Configure password for a cloud provider and save it to the keyring.'
+                  ' PROVIDER can be specified with or without a driver, for example:'
+                  ' "--set-password bob rackspace"'
+                  ' or more specific'
+                  ' "--set-password bob rackspace:openstack"')
+        )
+        self.add_option_group(group)
+
+    def process_set_password(self):
+        if self.options.set_password:
+            self.credential_username, self.credential_provider = self.options.set_password
+            if self.credential_provider.startswith('-') or \
+                    '=' in self.credential_provider:
+                self.error(
+                    '--set-password expects two arguments: <username> '
+                    '<provider>'
+                )
+
+
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
                          PidfileMixin):
@@ -1626,7 +1660,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.args.insert(1, 'sys.doc')
             if self.args[1] != 'sys.doc':
                 self.args.insert(1, 'sys.doc')
-                self.args[2] = self.args[2]
+            if len(self.args) > 3:
+                self.error('You can only get documentation for one method at one time.')
 
         if self.options.list:
             try:
@@ -1747,20 +1782,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
 
     def _mixin_setup(self):
-        # XXX: Remove '--key-logfile' support in 2014.1.0
-        utils.warn_until(
-            'Hydrogen',
-            'Remove \'--key-logfile\' support',
-            _dont_call_warnings=True
-        )
-        self.logging_options_group.add_option(
-            '--key-logfile',
-            default=None,
-            help='Send all output to a file. Default is {0!r}'.format(
-                self._default_logging_logfile_
-            )
-        )
-
         actions_group = optparse.OptionGroup(self, 'Actions')
         actions_group.add_option(
             '-l', '--list',
@@ -1946,20 +1967,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # --create-keys-dir
         self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
 
-    def process_key_logfile(self):
-        if self.options.key_logfile:
-            # XXX: Remove '--key-logfile' support in 2014.1.0
-            # In < 2014.1.0 error out
-            utils.warn_until(
-                'Hydrogen',
-                'Remove \'--key-logfile\' support',
-                _dont_call_warnings=True
-            )
-            self.error(
-                'The \'--key-logfile\' option has been deprecated in favour '
-                'of \'--log-file\''
-            )
-
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is
         # info or error.
@@ -2071,14 +2078,16 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     )
 
     def _mixin_after_parsed(self):
-        if not self.args and not self.options.grains_run \
-                and not self.options.doc:
+        if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
             self.exit(1)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
                 self.error('-g/--grains does not accept any arguments')
+
+            if self.options.doc and len(self.args) > 1:
+                self.error('You can only get documentation for one method at one time')
 
             self.config['fun'] = self.args[0]
             self.config['arg'] = self.args[1:]
@@ -2144,6 +2153,9 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
     def _mixin_after_parsed(self):
+        if self.options.doc and len(self.args) > 1:
+            self.error('You can only get documentation for one method at one time')
+
         if len(self.args) > 0:
             self.config['fun'] = self.args[0]
         else:
@@ -2288,7 +2300,8 @@ class SaltCloudParser(OptionParser,
                       CloudConfigMixIn,
                       CloudQueriesMixIn,
                       ExecutionOptionsMixIn,
-                      CloudProvidersListsMixIn):
+                      CloudProvidersListsMixIn,
+                  CloudCredentialsMixIn):
 
     __metaclass__ = OptionParserMeta
 

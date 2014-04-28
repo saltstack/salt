@@ -109,7 +109,19 @@ def _create_loader(
 
 def minion_mods(opts, context=None, whitelist=None):
     '''
-    Returns the minion modules
+    Load execution modules
+
+    Returns a dictionary of execution modules appropriate for the current
+    system by evaluating the __virtual__() function in each module.
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __salt__ = salt.loader.minion_mods(__opts__)
+        __salt__['test.ping']()
     '''
     load = _create_loader(opts, 'modules', 'module')
     if context is None:
@@ -131,6 +143,15 @@ def minion_mods(opts, context=None, whitelist=None):
 def raw_mod(opts, name, functions):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        testmod = salt.loader.raw_mod(__opts__, 'test', None)
+        testmod['test.ping']()
     '''
     load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
@@ -154,6 +175,24 @@ def returners(opts, functions, whitelist=None):
     pack = {'name': '__salt__',
             'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
+
+
+def returner(name, opts, functions):
+    '''
+    Returns a single returner module
+    '''
+    load = _create_loader(opts, 'returners', 'returner')
+    pack = {'name': '__salt__',
+            'value': functions}
+
+    tmp = load.gen_module(name, functions, pack)
+    # TODO: maybe don't do this in the gen_module?
+    for key, val in tmp.items():
+        new_key = key.replace('{0}.'.format(name), '')
+        tmp[new_key] = val
+        del tmp[key]
+
+    return tmp
 
 
 def pillars(opts, functions):
@@ -226,6 +265,14 @@ def roster(opts, whitelist=None):
 def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        statemods = salt.loader.states(__opts__, None)
     '''
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
@@ -300,6 +347,15 @@ def grains(opts):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __grains__ = salt.loader.grains(__opts__)
+        print __grains__['id']
     '''
     if opts.get('skip_grains', False):
         return {}
@@ -508,11 +564,15 @@ class Loader(object):
             fn_ = os.path.join(mod_dir, name)
             if os.path.isdir(fn_):
                 full = fn_
+                break
             else:
                 for ext in ('.py', '.pyo', '.pyc', '.so'):
                     full_test = '{0}{1}'.format(fn_, ext)
                     if os.path.isfile(full_test):
                         full = full_test
+                        break
+                if full:
+                    break
         if not full:
             return None
 
@@ -617,7 +677,7 @@ class Loader(object):
             context = sys.modules[
                 functions[functions.keys()[0]].__module__
             ].__context__
-        except AttributeError:
+        except (AttributeError, IndexError):
             context = {}
         mod.__context__ = context
         return funcs

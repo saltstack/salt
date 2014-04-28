@@ -219,6 +219,13 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = self.run_salt('\'*\' sys.doc user')
         self.assertIn('user.add:', data)
 
+    def test_salt_documentation_too_many_arguments(self):
+        '''
+        Test to see if passing additional arguments shows an error
+        '''
+        data = self.run_salt('-d minion salt ldap.search "filter=ou=People"', catch_stderr=True)
+        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')

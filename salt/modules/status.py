@@ -102,7 +102,7 @@ def custom():
     conf = __salt__['config.dot_vals']('status')
     for key, val in conf.items():
         func = '{0}()'.format(key.split('.')[1])
-        vals = eval(func)
+        vals = eval(func)  # pylint: disable=W0123
 
         for item in val:
             ret[item] = vals[item]

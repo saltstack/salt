@@ -276,6 +276,18 @@ class CloudClient(object):
             mapper.run_profile(profile, names, vm_overrides=vm_overrides)
         )
 
+    def map_run(self, path, **kwargs):
+        '''
+        Pass in a location for a map to execute
+        '''
+        kwarg = {'map': path}
+        kwarg.update(kwargs)
+        mapper = salt.cloud.Map(self._opts_defaults(**kwarg))
+        dmap = mapper.map_data()
+        return salt.utils.cloud.simple_types_filter(
+            mapper.run_map(dmap)
+        )
+
     def destroy(self, names):
         '''
         Destroy the named VMs
@@ -889,7 +901,7 @@ class Cloud(object):
 
             vm_ = {
                 'name': name,
-                'profile': name,
+                'profile': None,
                 'provider': ':'.join([alias, driver])
             }
             minion_dict = salt.config.get_cloud_config_value(
@@ -1114,7 +1126,7 @@ class Cloud(object):
 
                 # a small pause makes the sync work reliably
                 time.sleep(3)
-                client = salt.client.get_local_client()
+                client = salt.client.get_local_client(mopts=self.opts)
                 ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
                     self.opts['sync_after_install']
                 ))
@@ -1139,7 +1151,7 @@ class Cloud(object):
                     self.opts['start_action'], vm_['name']
                 )
             )
-            client = salt.client.get_local_client()
+            client = salt.client.get_local_client(mopts=self.opts)
             action_out = client.cmd(
                 vm_['name'],
                 self.opts['start_action'],
@@ -1202,7 +1214,14 @@ class Cloud(object):
         vms = alias_data.setdefault(driver, {})
 
         for name in names:
-            if name in vms and vms[name]['state'].lower() != 'terminated':
+            name_exists = False
+            if name in vms:
+                if 'state' in vms[name]:
+                    if vms[name]['state'].lower() != 'terminated':
+                        name_exists = True
+                else:
+                    name_exists = True
+            if name_exists:
                 msg = '{0} already exists under {0}:{1}'.format(
                     name, alias, driver
                 )
@@ -1917,7 +1936,7 @@ class Map(Cloud):
                 # Already deployed, it's the master's minion
                 continue
 
-            if profile['minion'].get('local_master', False) and \
+            if 'minion' in profile and profile['minion'].get('local_master', False) and \
                     profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
                 # explicitely saying it's the local one

@@ -5,11 +5,7 @@ Support for the Git SCM
 
 # Import python libs
 import os
-try:
-    import pipes
-    HAS_PIPES = True
-except ImportError:
-    HAS_PIPES = False
+import subprocess
 
 # Import salt libs
 from salt import utils, exceptions
@@ -19,9 +15,7 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    if not all((utils.which('git'), HAS_PIPES)):
-        return False
-    return True
+    return True if utils.which('git') else False
 
 
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
@@ -597,9 +591,10 @@ def commit(cwd, message, user=None, opts=None):
         salt '*' git.commit /path/to/git/repo 'The commit message'
     '''
 
-    if not opts:
-        opts = ''
-    cmd = 'git commit -m {0} {1}'.format(pipes.quote(message), opts)
+    cmd = subprocess.list2cmdline(['git', 'commit', '-m', message])
+    # add opts separately; they don't need to be quoted
+    if opts:
+        cmd = cmd + ' ' + opts
     return _git_run(cmd, cwd=cwd, runas=user)
 
 

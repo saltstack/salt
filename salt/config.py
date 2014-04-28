@@ -187,7 +187,7 @@ VALID_OPTS = {
     'order_masters': bool,
     'job_cache': bool,
     'ext_job_cache': str,
-    'master_ext_job_cache': str,
+    'master_job_cache': str,
     'minion_data_cache': bool,
     'publish_session': int,
     'reactor': list,
@@ -413,7 +413,7 @@ DEFAULT_MASTER_OPTS = {
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
-    'master_ext_job_cache': '',
+    'master_job_cache': 'local_cache',
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipv6': False,
@@ -2058,9 +2058,9 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Update with the users salt dot file or with the environment variable
     opts.update(
         load_config(
-            os.path.expanduser('~/.salt'),
+            os.path.expanduser('~/.saltrc'),
             env_var,
-            os.path.expanduser('~/.salt')
+            os.path.expanduser('~/.saltrc')
         )
     )
     # Make sure we have a proper and absolute path to the token file

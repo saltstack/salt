@@ -11,20 +11,17 @@ Getting Started
     :maxdepth: 3
 
     Installing salt cloud <install/index>
-    Getting Started With Azure <azure>
-    Getting Started With Digital Ocean <digitalocean>
-    Getting Started With EC2 <aws>
-    Getting Started With GoGrid <gogrid>
-    Getting Started With Google Compute Engine <gce>
-    Getting Started With Joyent <joyent>
-    Getting Started With LXC <lxc>
-    Getting Started With Linode <linode>
-    Getting Started With OpenStack <openstack>
-    Getting Started With Parallels <parallels>
-    Getting Started With Proxmox <proxmox>
-    Getting Started With Rackspace <rackspace>
-    Getting Started With HP Cloud <hpcloud>
-    Getting Started With SoftLayer <softlayer>
+    Configuration overview <overview>
+
+Using Salt Cloud
+================
+.. toctree::
+    :maxdepth: 3
+
+    Profiles <profiles>
+    Maps <map>
+    Actions <action>
+    Functions <function>
 
 Core Configuration
 ==================
@@ -40,15 +37,25 @@ Windows Configuration
 
         Windows Configuration <windows>
 
-Using Salt Cloud
-================
+Cloud Provider Specifics
+========================
 .. toctree::
     :maxdepth: 3
 
-    Profiles <profiles>
-    Maps <map>
-    Actions <action>
-    Functions <function>
+        Getting Started With Azure <azure>
+        Getting Started With Digital Ocean <digitalocean>
+        Getting Started With EC2 <aws>
+        Getting Started With GoGrid <gogrid>
+        Getting Started With Google Compute Engine <gce>
+        Getting Started With Joyent <joyent>
+        Getting Started With LXC <lxc>
+        Getting Started With Linode <linode>
+        Getting Started With OpenStack <openstack>
+        Getting Started With Parallels <parallels>
+        Getting Started With Proxmox <proxmox>
+        Getting Started With Rackspace <rackspace>
+        Getting Started With HP Cloud <hpcloud>
+        Getting Started With SoftLayer <softlayer>
 
 Miscellaneous Options
 =====================

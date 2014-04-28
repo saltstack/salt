@@ -293,6 +293,7 @@ class SerializerExtension(Extension, object):
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
+    .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
@@ -378,6 +379,7 @@ class SerializerExtension(Extension, object):
         parser.fail('Unknown format ' + parser.stream.current.value,
                     parser.stream.current.lineno)
 
+    # pylint: disable=E1120,E1121
     def parse_load(self, parser):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
@@ -478,3 +480,4 @@ class SerializerExtension(Extension, object):
                 .set_lineno(lineno)
             ).set_lineno(lineno)
         ]
+    # pylint: enable=E1120,E1121

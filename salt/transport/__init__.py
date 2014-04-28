@@ -101,7 +101,7 @@ class ZeroMQChannel(Channel):
         self.ttype = 'zeromq'
 
         # crypt defaults to 'aes'
-        self.crypt = kwargs['crypt'] if 'crypt' in kwargs else 'aes'
+        self.crypt = kwargs.get('crypt', 'aes')
 
         self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':

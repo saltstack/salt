@@ -13,7 +13,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_account
+    with_system_user
 )
 ensure_in_syspath('../../')
 
@@ -158,7 +158,7 @@ class SSHAuthStateTests(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue_7409', on_existing='delete', delete=True)
+    @with_system_user('issue_7409', on_existing='delete', delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
         userdetails = self.run_function('user.info', [username])
@@ -193,7 +193,7 @@ class SSHAuthStateTests(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue_10198', on_existing='delete', delete=True)
+    @with_system_user('issue_10198', on_existing='delete', delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function('user.info', [username])
         user_ssh_dir = os.path.join(userdetails['home'], '.ssh')

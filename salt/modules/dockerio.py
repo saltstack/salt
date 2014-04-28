@@ -884,7 +884,7 @@ def restart(container, timeout=10, *args, **kwargs):
     return status
 
 
-def start(container, binds=None, ports=None, port_bindings=None,
+def start(container, binds=None, port_bindings=None,
           lxc_conf=None, publish_all_ports=None, links=None,
           privileged=False,
           *args, **kwargs):
@@ -905,8 +905,6 @@ def start(container, binds=None, ports=None, port_bindings=None,
     '''
     if not binds:
         binds = {}
-    if not ports:
-        ports = {}
 
     if not isinstance(binds, dict):
         raise SaltInvocationError('binds must be formatted as a dictionary')

@@ -122,7 +122,7 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.1'
+release = '2014.1.3'
 
 language = 'en'
 locale_dirs = [
@@ -254,6 +254,7 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'dash-feed://',
                     r'https://github.com/saltstack/salt/',
                     r'http://bootstrap.saltstack.org',
+                    r'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh',
                     r'media.readthedocs.org/dash/salt/latest/salt.xml',
                     r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
                     r'https://help.github.com/articles/fork-a-repo',

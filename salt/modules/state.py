@@ -29,6 +29,8 @@ __outputter__ = {
     'top': 'highstate',
     'single': 'highstate',
     'highstate': 'highstate',
+    'template': 'highstate',
+    'template_str': 'highstate',
 }
 
 log = logging.getLogger(__name__)
@@ -563,6 +565,8 @@ def sls_id(
         **kwargs):
     '''
     Call a single ID from the named module(s) and handle all requisites
+
+    .. versionaddded:: Helium
 
     CLI Example:
 

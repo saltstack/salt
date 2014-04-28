@@ -18,6 +18,34 @@ code-block:: yaml
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
 
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        splay: 15
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour) splaying the time between 0 and 15 seconds
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        splay:
+          start: 10
+          end: 15
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour) splaying the time between 10 and 15 seconds
+
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.
@@ -43,6 +71,7 @@ import threading
 import sys
 import logging
 import errno
+import random
 
 # Import Salt libs
 import salt.utils
@@ -239,9 +268,28 @@ class Schedule(object):
                     run = True
             else:
                 run = True
+                if 'splay' in data:
+                    data['_seconds'] = data['seconds']
+
             if not run:
                 continue
             else:
+                if 'splay' in data:
+                    if isinstance(data['splay'], dict):
+                        if data['splay']['end'] > data['splay']['start']:
+                            splay = random.randint(data['splay']['start'], data['splay']['end'])
+                        else:
+                            log.info('schedule.handle_func: Invalid Splay, end must be larger than start. Ignoring splay.')
+                            splay = None
+                    else:
+                        splay = random.randint(0, data['splay'])
+
+                    if splay:
+                        log.debug('schedule.handle_func: Adding splay of '
+                                  '{0} seconds to next run.'.format(splay))
+
+                        data['seconds'] = data['_seconds'] + splay
+
                 log.debug('Running scheduled job: {0}'.format(job))
 
             if 'jid_include' not in data or data['jid_include']:

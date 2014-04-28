@@ -21,7 +21,6 @@ The data structure needs to be:
 # Import python libs
 from __future__ import print_function
 import os
-import glob
 import time
 import copy
 import logging
@@ -31,6 +30,7 @@ from datetime import datetime
 import salt.config
 import salt.payload
 import salt.transport
+import salt.loader
 import salt.utils
 import salt.utils.args
 import salt.utils.event
@@ -117,6 +117,10 @@ class LocalClient(object):
                 self.opts['transport'],
                 listen=not self.opts.get('__worker', False))
 
+        self.returner = salt.loader.returner(self.opts['master_job_cache'],
+                                             self.opts,
+                                             {})
+
     def __read_master_key(self):
         '''
         Read in the rotating master authentication key
@@ -146,19 +150,17 @@ class LocalClient(object):
         user = salt.utils.get_user()
         # if our user is root, look for other ways to figure out
         # who we are
-        if (user == 'root' or user == self.opts['user']) and 'SUDO_USER' in os.environ:
-            env_vars = ['SUDO_USER']
+        env_vars = ('SUDO_USER',)
+        if user == 'root' or user == self.opts['user']:
             for evar in env_vars:
                 if evar in os.environ:
                     return 'sudo_{0}'.format(os.environ[evar])
-            return user
-        # If the running user is just the specified user in the
-        # conf file, don't pass the user as it's implied.
-        elif user == self.opts['user']:
-            return user
         return user
 
     def _convert_range_to_list(self, tgt):
+        '''
+        convert a seco.range range into a list target
+        '''
         range_ = seco.range.Range(self.opts['range_server'])
         try:
             return range_.expand(tgt)
@@ -189,10 +191,9 @@ class LocalClient(object):
         log.debug('Checking whether jid %s is still running', jid)
         timeout = self.opts['gather_job_timeout']
 
-        arg = [jid]
         pub_data = self.run_job(tgt,
                                 'saltutil.find_job',
-                                arg=arg,
+                                arg=[jid],
                                 expr_form=tgt_type,
                                 timeout=timeout,
                                )
@@ -740,89 +741,30 @@ class LocalClient(object):
         if timeout is None:
             timeout = self.opts['timeout']
         fret = {}
-        inc_timeout = timeout
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
-        start = int(time.time())
+        # make sure the minions is a set (since we do set operations on it)
+        minions = set(minions)
+
         found = set()
-        wtag = os.path.join(jid_dir, 'wtag*')
-        # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
-            yield {}
-        last_time = False
-        # Wait for the hosts to check in
-        while True:
-            for fn_ in os.listdir(jid_dir):
-                ret = {}
-                if fn_.startswith('.'):
-                    continue
-                if fn_ not in found:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    outp = os.path.join(jid_dir, fn_, 'out.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            check = True
-                            ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'rb')
-                            )
-                            if ret_data is None:
-                                # Sometimes the ret data is read at the wrong
-                                # time and returns None, do a quick re-read
-                                if check:
-                                    continue
-                            ret[fn_] = {'ret': ret_data}
-                            if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'rb')
-                                )
-                        except Exception:
-                            pass
-                    found.add(fn_)
-                    fret.update(ret)
-                    yield ret
-            if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
+        # start this before the cache lookup-- in case new stuff comes in
+        event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
+
+        # get the info from the cache
+        ret = self.get_cache_returns(jid)
+        if ret != {}:
+            found.update(set(ret.keys()))
+            yield ret
+
+        # if you have all the returns, stop
+        if len(found.intersection(minions)) >= len(minions):
+            raise StopIteration()
+
+        # otherwise, get them from the event system
+        for event in event_iter:
+            if event != {}:
+                found.update(set(event.keys()))
+                yield event
             if len(found.intersection(minions)) >= len(minions):
-                # All minions have returned, break out of the loop
-                break
-            if last_time:
-                if verbose:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found.intersection(minions)) >= len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                yield({
-                                    minion: {
-                                        'out': 'no_return',
-                                        'ret': 'Minion did not return'
-                                    }
-                                })
-                break
-            if int(time.time()) > start + timeout:
-                # The timeout has been reached, check the jid to see if the
-                # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
-                more_time = False
-                for id_ in jinfo:
-                    if jinfo[id_]:
-                        if verbose:
-                            print(
-                                'Execution is still running on {0}'.format(id_)
-                            )
-                        more_time = True
-                if more_time:
-                    timeout += inc_timeout
-                    continue
-                else:
-                    last_time = True
-                    continue
-            time.sleep(0.01)
+                raise StopIteration()
 
     def get_iter_returns(
             self,
@@ -845,16 +787,15 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
         start = int(time.time())
         timeout_at = start + timeout
         found = set()
-        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
+        if not self.returner['get_load'](jid) != {}:
+            log.warning("jid does not exist")
             yield {}
+            # stop the iteration, since the jid is invalid
+            raise StopIteration()
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
@@ -911,10 +852,6 @@ class LocalClient(object):
                                   jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
                         continue
                 break
-            if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
             if last_time:
                 if len(found) < len(minions):
                     log.info('jid %s minions %s did not return in time',
@@ -949,9 +886,6 @@ class LocalClient(object):
         minions = set(minions)
         if timeout is None:
             timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
         start = int(time.time())
         timeout_at = start + timeout
         log.debug("get_returns for jid %s sent to %s will timeout at %s",
@@ -959,11 +893,11 @@ class LocalClient(object):
 
         found = set()
         ret = {}
-        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
-            log.warning("jid_dir (%s) does not exist", jid_dir)
+        if not self.returner['get_load'](jid) != {}:
+            log.warning("jid does not exist")
             return ret
+
         # Wait for the hosts to check in
         while True:
             time_left = timeout_at - int(time.time())
@@ -982,10 +916,6 @@ class LocalClient(object):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions", jid)
                 break
-            if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
             if int(time.time()) > timeout_at:
                 log.info('jid %s minions %s did not return in time',
                          jid, (minions - found))
@@ -998,85 +928,69 @@ class LocalClient(object):
         This method starts off a watcher looking at the return data for
         a specified jid, it returns all of the information for the jid
         '''
-        if timeout is None:
-            timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
-        start = 999999999999
-        gstart = int(time.time())
+        # TODO: change this from ret to return... or the other way.
+        #       Its inconsistent, we should pick one
+
         ret = {}
-        wtag = os.path.join(jid_dir, 'wtag*')
-        # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
+        # create the iterator-- since we want to get anyone in the middle
+        event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
+
+        data = self.returner['get_jid'](jid)
+        for minion in data:
+            m_data = {}
+            if u'return' in data[minion]:
+                m_data['ret'] = data[minion].get(u'return')
+            else:
+                m_data['ret'] = data[minion].get('return')
+            if 'out' in data[minion]:
+                m_data['out'] = data[minion]['out']
+            if minion in ret:
+                ret[minion].update(m_data)
+            else:
+                ret[minion] = m_data
+
+        # if we have all the minion returns, lets just return
+        if len(set(ret.keys()).intersection(minions)) >= len(minions):
             return ret
-        # Wait for the hosts to check in
-        while True:
-            for fn_ in os.listdir(jid_dir):
-                if fn_.startswith('.'):
-                    continue
-                if fn_ not in ret:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    outp = os.path.join(jid_dir, fn_, 'out.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'rb'))
-                            ret[fn_] = {'ret': ret_data}
-                            if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'rb'))
-                        except Exception:
-                            pass
-            if ret and start == 999999999999:
-                start = int(time.time())
-            if glob.glob(wtag) and int(time.time()) <= start + timeout + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
+
+        # otherwise lets use the listener we created above to get the rest
+        for event_ret in event_iter:
+            # if nothing in the event_ret, skip
+            if event_ret == {}:
+                time.sleep(0.02)
                 continue
+            for minion, m_data in event_ret.iteritems():
+                if minion in ret:
+                    ret[minion].update(m_data)
+                else:
+                    ret[minion] = m_data
+
+            # are we done yet?
             if len(set(ret.keys()).intersection(minions)) >= len(minions):
                 return ret
-            if int(time.time()) > start + timeout:
-                return ret
-            if int(time.time()) > gstart + timeout and not ret:
-                # No minions have replied within the specified global timeout,
-                # return an empty dict
-                return ret
-            time.sleep(0.02)
+
+        # otherwise we hit the timeout, return what we have
+        return ret
 
     def get_cache_returns(self, jid):
         '''
         Execute a single pass to gather the contents of the job cache
         '''
         ret = {}
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
-        # If someone asks for the cache returns before we created them, we don't
-        # want to explode
-        try:
-            for fn_ in os.listdir(jid_dir):
-                if fn_.startswith('.'):
-                    continue
-                if fn_ not in ret:
-                    retp = os.path.join(jid_dir, fn_, 'return.p')
-                    outp = os.path.join(jid_dir, fn_, 'out.p')
-                    if not os.path.isfile(retp):
-                        continue
-                    while fn_ not in ret:
-                        try:
-                            ret_data = self.serial.load(
-                                salt.utils.fopen(retp, 'rb'))
-                            ret[fn_] = {'ret': ret_data}
-                            if os.path.isfile(outp):
-                                ret[fn_]['out'] = self.serial.load(
-                                    salt.utils.fopen(outp, 'rb'))
-                        except Exception:
-                            pass
-        except IOError:
-            pass
+
+        data = self.returner['get_jid'](jid)
+        for minion in data:
+            m_data = {}
+            if u'return' in data[minion]:
+                m_data['ret'] = data[minion].get(u'return')
+            else:
+                m_data['ret'] = data[minion].get('return')
+            if 'out' in data[minion]:
+                m_data['out'] = data[minion]['out']
+            if minion in ret:
+                ret[minion].update(m_data)
+            else:
+                ret[minion] = m_data
 
         return ret
 
@@ -1103,16 +1017,14 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
+
         start = int(time.time())
         timeout_at = start + timeout
         found = set()
         ret = {}
-        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
+        if not self.returner['get_load'](jid) != {}:
+            log.warning("jid does not exist")
             return ret
         # Wait for the hosts to check in
         while True:
@@ -1138,10 +1050,6 @@ class LocalClient(object):
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 break
-            if glob.glob(wtag) and int(time.time()) <= timeout_at + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
             if int(time.time()) > timeout_at:
                 if verbose:
                     if self.opts.get('minion_data_cache', False) \
@@ -1187,16 +1095,17 @@ class LocalClient(object):
 
         if timeout is None:
             timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
+
         start = time.time()
         timeout_at = start + timeout
         found = set()
-        wtag = os.path.join(jid_dir, 'wtag*')
         # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
+        if not self.returner['get_load'](jid) != {}:
+            log.warning("jid does not exist")
             yield {}
+            # stop the iteration, since the jid is invalid
+            raise StopIteration()
+
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
@@ -1245,10 +1154,6 @@ class LocalClient(object):
                         timeout_at = time.time() + 1
                         continue
                 break
-            if glob.glob(wtag) and time.time() <= timeout_at + 1:
-                # The timeout +1 has not been reached and there is still a
-                # write tag for the syndic
-                continue
             if last_time:
                 if verbose or show_timeout:
                     if self.opts.get('minion_data_cache', False) \
@@ -1290,13 +1195,14 @@ class LocalClient(object):
         log.trace('entered - function get_event_iter_returns()')
         if timeout is None:
             timeout = self.opts['timeout']
-        jid_dir = salt.utils.jid_dir(jid,
-                                     self.opts['cachedir'],
-                                     self.opts['hash_type'])
+
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not os.path.isdir(jid_dir):
+        if not self.returner['get_load'](jid) != {}:
+            log.warning("jid does not exist")
             yield {}
+            # stop the iteration, since the jid is invalid
+            raise StopIteration()
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout)
@@ -1423,11 +1329,6 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        # sreq = salt.payload.SREQ(
-        #     #'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-        #     'tcp://' + salt.utils.ip_bracket(self.opts['interface']) +
-        #     ':' + str(self.opts['ret_port']),
-        # )
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
         sreq = salt.transport.Channel.factory(self.opts, crypt='clear', master_uri=master_uri)
