@@ -173,7 +173,8 @@ class SaltSafe(object):
                 remote.verfer = nacling.Verifier(verhex)
             if (pubhex and pubhex != remote.pubber.keyhex):
                 remote.pubber = nacling.Publican(pubhex)
-        remote.acceptance = status
+            remote.acceptance = status
+
         return status
 
     def rejectRemote(self, remote):
