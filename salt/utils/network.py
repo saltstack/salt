@@ -101,15 +101,14 @@ def _get_fqhostname():
         return h_fqdn
     except socket.gaierror:
         return h_fqdn
-    else:
-        # Struct contanis the following elements:
-        #     family, socktype, proto, canonname, sockaddr
-        try:
-            # Prevent returning an empty string by falling back to
-            # socket.getfqdn()
-            return addrinfo[3] or h_fqdn
-        except IndexError:
-            return h_fqdn
+    # Struct contanis the following elements:
+    #     family, socktype, proto, canonname, sockaddr
+    try:
+        # Prevent returning an empty string by falling back to
+        # socket.getfqdn()
+        return addrinfo[3] or h_fqdn
+    except IndexError:
+        return h_fqdn
 
 
 def get_fqhostname():
