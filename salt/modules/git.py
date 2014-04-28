@@ -15,7 +15,7 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    return utils.which('git')
+    return True if utils.which('git') else False
 
 
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
