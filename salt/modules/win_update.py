@@ -7,7 +7,7 @@ Module for running windows updates.
         - win32api
         - pywintypes
 
-.. versionadded: (Helium)
+.. versionadded:: (Helium)
 
 '''
 
