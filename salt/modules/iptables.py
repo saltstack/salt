@@ -466,15 +466,15 @@ def _has_check():
         else:
             return False
     elif __grains__['os'] == 'Ubuntu':
-        if __grains__['osrelease'] > 10.04:
-            return False
-        else:
+        if __grains__['osrelease'] == '10.04':
             return True
+        else:
+            return False
     elif __grains__['os'] == 'Debian':
-        if __grains__['osrelease'] > 6:
-            return False
-        else:
+        if __grains__['osrelease'].split('.')[0] == '6':
             return True
+        else:
+            return False
     elif __salt__['cmd.run']('iptables -h').find('--check') == -1:
         return True
     else:
