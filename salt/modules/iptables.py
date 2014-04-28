@@ -453,6 +453,34 @@ def save(filename=None, family='ipv4'):
     return out
 
 
+def _has_check():
+    '''
+    Check if the iptables on has --check function
+    '''
+
+    if __grains__['os_family'] == 'RedHat':
+        if __grains__['osfullname'] == 'Fedora':
+            return False
+        elif __grains__['osrelease'] <= 6:
+            return True
+        else:
+            return False
+    elif __grains__['os'] == 'Ubuntu':
+        if __grains__['osrelease'] > 10.04:
+            return False
+        else:
+            return True
+    elif __grains__['os'] == 'Debian':
+        if __grains__['osrelease'] > 6:
+            return False
+        else:
+            return True
+    elif __salt__['cmd.run']('iptables -h').find('--check') == -1:
+        return True
+    else:
+        return False
+
+
 def check(table='filter', chain=None, rule=None, family='ipv4'):
     '''
     Check for the existence of a rule in the table and chain
@@ -479,7 +507,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    if __grains__['os_family'] == 'RedHat':
+    if _has_check():
         cmd = '{0}-save' . format(_iptables_cmd(family))
         out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
             table,
