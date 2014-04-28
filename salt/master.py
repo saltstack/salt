@@ -769,7 +769,7 @@ class AESFuncs(object):
         if any(key not in clear_load for key in ('fun', 'arg', 'tgt', 'ret', 'tok', 'id')):
             return False
         # If the command will make a recursive publish don't run
-        if re.match('publish.*', clear_load['fun']):
+        if clear_load['fun'].startswith('publish.'):
             return False
         # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
@@ -796,14 +796,13 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        good = self.ckminions.auth_check(
+
+        # finally, check the auth of the load
+        return self.ckminions.auth_check(
                 perms,
                 clear_load['fun'],
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
-        if not good:
-            return False
-        return True
 
     def _ext_nodes(self, load):
         '''
