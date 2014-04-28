@@ -170,7 +170,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
       fi
       echo "{{4}}" > /tmp/.salt/minion
       echo "{1}"
-      {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
+      eval {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
 EOF'''.format(salt.__version__, RSTR)
 
 log = logging.getLogger(__name__)
@@ -292,13 +292,15 @@ class SSH(object):
         '''
         The ssh-copy-id routine
         '''
-        arg_str = 'ssh.set_auth_key {0} {1}'.format(
-                target.get('user', 'root'),
-                self.get_pubkey())
+        argv = [
+            'ssh.set_auth_key',
+            target.get('user', 'root'),
+            self.get_pubkey(),
+        ]
 
         single = Single(
                 self.opts,
-                arg_str,
+                argv,
                 host,
                 **target)
         if salt.utils.which('ssh-copy-id'):
@@ -310,7 +312,7 @@ class SSH(object):
             target.pop('passwd')
             single = Single(
                     self.opts,
-                    self.opts['arg_str'],
+                    self.opts['argv'],
                     host,
                     **target)
             stdout, stderr, retcode = single.cmd_block()
@@ -332,7 +334,7 @@ class SSH(object):
         opts = copy.deepcopy(opts)
         single = Single(
                 opts,
-                opts['arg_str'],
+                opts['argv'],
                 host,
                 **target)
         ret = {'id': single.id}
@@ -437,17 +439,14 @@ class SSH(object):
         jid = self.mminion.returners[fstr]()
 
         # Save the invocation information
-        arg_str = self.opts['arg_str']
+        argv = self.opts['argv']
 
         if self.opts['raw_shell']:
             fun = 'ssh._raw'
-            args = [arg_str]
+            args = argv
         else:
-            cmd_args = arg_str.split(None, 1)
-            fun = cmd_args.pop()
-            args = []
-            if cmd_args:
-                args = [cmd_args]
+            fun = argv[0] if argv else ''
+            args = argv[1:]
 
         job_load = {
             'jid': jid,
@@ -496,7 +495,7 @@ class Single(object):
     def __init__(
             self,
             opts,
-            arg_str,
+            argv,
             id_,
             host,
             user=None,
@@ -509,8 +508,13 @@ class Single(object):
             tty=False,
             **kwargs):
         self.opts = opts
-        self.arg_str = arg_str
-        self.fun, self.arg, self.kwargs = self.__arg_comps()
+
+        if isinstance(argv, str):
+            self.argv = [argv]
+        else:
+            self.argv = argv
+
+        self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
         args = {'host': host,
@@ -537,18 +541,19 @@ class Single(object):
         '''
         Return the function name and the arg list
         '''
-        comps = self.arg_str.split()
-        fun = comps[0] if comps else ''
-        args = comps[1:]
-        s_args = []
+        fun = self.argv[0] if self.argv else ''
+        args = []
         kws = {}
-        for arg in args:
-            if '=' in arg:
-                (key, val) = arg.split('=')
+        for arg in self.argv[1:]:
+            if re.match(r'\w+=', arg):
+                (key, val) = arg.split('=', 1)
                 kws[key] = val
             else:
-                s_args.append(arg)
-        return fun, s_args, kws
+                args.append(arg)
+        return fun, args, kws
+
+    def _escape_arg(self, arg):
+        return ''.join(['\\' + char if re.match(r'\W', char) else char for char in arg])
 
     def deploy(self):
         '''
@@ -573,14 +578,12 @@ class Single(object):
         Returns tuple of (stdout, stderr, retcode)
         '''
         stdout = stderr = retcode = None
-        arg_str = self.arg_str
 
         if self.opts.get('raw_shell'):
-            if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
-                arg_str = "'{0}'".format(arg_str)
             r_out = []
             r_err = []
-            for out, err, retcode in self.shell.exec_nb_cmd(arg_str):
+            cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
+            for out, err, retcode in self.shell.exec_nb_cmd(cmd_str):
                 if out is not None:
                     r_out.append(out)
                 if err is not None:
@@ -661,7 +664,7 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
-        ret = json.dumps(self.wfuncs[self.fun](*self.arg, **self.kwargs))
+        ret = json.dumps(self.wfuncs[self.fun](*self.args, **self.kwargs))
         return ret, '', None
 
     def cmd(self):
@@ -672,21 +675,22 @@ class Single(object):
         # 2. check if salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        if self.arg_str.startswith('state.highstate'):
+        if self.fun.startswith('state.highstate'):
             self.highstate_seed()
-        if self.arg_str.startswith('state.sls'):
+        elif self.fun.startswith('state.sls'):
             args, kwargs = salt.minion.load_args_and_kwargs(
                 self.sls_seed,
-                salt.utils.args.parse_input(self.arg)
+                salt.utils.args.parse_input(self.args)
             )
             self.sls_seed(*args, **kwargs)
+        arg_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],
                 self.opts['hash_type'])
         cmd = SSH_SHIM.format(
                 sudo,
-                self.arg_str,
+                arg_str,
                 self.opts['hash_type'],
                 thin_sum,
                 self.minion_config)
@@ -701,19 +705,14 @@ class Single(object):
         # 2. check if salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        if self.arg_str.startswith('cmd.run'):
-            arg_split = self.arg_str.split()
-            cmd = arg_split[0]
-            cmd_args = ' '.join(arg_split[1:])
-            if not cmd_args.startswith("'") and not cmd_args.endswith("'"):
-                self.arg_str = "{0} '{1}'".format(cmd, cmd_args)
+        arg_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],
                 self.opts['hash_type'])
         cmd = SSH_SHIM.format(
                 sudo,
-                self.arg_str,
+                arg_str,
                 self.opts['hash_type'],
                 thin_sum,
                 self.minion_config)
@@ -824,7 +823,7 @@ class Single(object):
         self.shell.send(
                 trans_tar,
                 '/tmp/salt_state.tgz')
-        self.arg_str = 'state.pkg /tmp/salt_state.tgz test={0}'.format(test)
+        self.argv = ['state.pkg', '/tmp/salt_state.tgz', 'test={0}'.format(test)]
 
 
 class SSHState(salt.state.State):
