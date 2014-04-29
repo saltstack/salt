@@ -180,10 +180,10 @@ html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
 # Set a var if we're building docs for the live site or not
-html_docs_saltstack_org = 'SALT_GOOGLE_SEARCH' in os.environ
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 # Use Google customized search or use Sphinx built-in JavaScript search
-if html_docs_saltstack_org:
+if on_saltstack:
     html_search_template = 'googlesearch.html'
 else:
     html_search_template = 'searchbox.html'
@@ -211,7 +211,7 @@ html_sidebars = {
 }
 
 html_context = {
-    'docs_saltstack_org': html_docs_saltstack_org,
+    'on_saltstack': on_saltstack,
     'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
