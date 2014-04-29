@@ -41,7 +41,9 @@ if HAS_PIP is True:
         HAS_PIP = False
         # Remove references to the loaded pip module above so reloading works
         import sys
-        del pip, sys.modules['pip']
+        del pip
+        if 'pip' in sys.modules:
+            del sys.modules['pip']
 
 logger = logging.getLogger(__name__)
 
