@@ -198,6 +198,7 @@ html_default_sidebars = [
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
+    'saltstack.html',
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
@@ -207,6 +208,7 @@ html_sidebars = {
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
+        'saltstack.html',
     ],
     'ref/formula/all/*': [
     ],
