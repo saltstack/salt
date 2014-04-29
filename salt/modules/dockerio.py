@@ -22,7 +22,8 @@ Installation prerequisites
 
 - You will need the 'docker-py' python package in your python installation
   running salt. The version of docker-py should support `version 1.6 of docker
-  remote API. <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
+  remote API.
+  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 - For now, you need docker-py from sources:
 
     https://github.com/dotcloud/docker-py
@@ -300,7 +301,7 @@ def _merge_auth_bits():
             fic.close()
     except Exception:
         config = {'rootPath': '/dev/null'}
-    if not 'Configs' in config:
+    if 'Configs' not in config:
         config['Configs'] = {}
     config['Configs'].update(
         __pillar__.get('docker-registries', {})
@@ -371,10 +372,7 @@ def _get_container_infos(container):
             'an existing container'.format(
                 container)
         )
-    if (
-        (not 'id' in status['out'])
-        and ('ID' in status['out'])
-    ):
+    if 'id' not in status['out'] and 'ID' in status['out']:
         status['out']['id'] = status['out']['ID']
     return status['out']
 
@@ -1162,9 +1160,7 @@ def inspect_container(container, *args, **kwargs):
         valid(status, id=container, out=infos)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc(),
-                comment=(
-                    'Container does not exit: {0}'
-                ).format(container))
+                comment='Container does not exit: {0}'.format(container))
     return status
 
 
@@ -1811,7 +1807,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                 (ret['retcode'] != 0))
                 or (func == 'cmd.retcode' and ret != 0)):
             return invalid(status, id=container, out=ret,
-                            comment=comment)
+                           comment=comment)
         valid(status, id=container, out=ret, comment=comment,)
     except Exception:
         invalid(status, id=container,
@@ -2062,7 +2058,8 @@ def _script(status,
                            command,
                            cwd=cwd,
                            stdin=stdin,
-                           output_loglevel=kwargs.get('output_loglevel', 'info'),
+                           output_loglevel=kwargs.get('output_loglevel',
+                                                      'info'),
                            quiet=kwargs.get('quiet', False),
                            runas=runas,
                            shell=shell,
