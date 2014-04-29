@@ -1399,7 +1399,7 @@ def attachable(name):
 
         salt 'minion' lxc.attachable ubuntu
     '''
-    cmd = 'lxc-attach -n {0} -- /usr/bin/env'
+    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(name)
     data = __salt__['cmd.run_all'](cmd)
     if not data['retcode']:
         return True
