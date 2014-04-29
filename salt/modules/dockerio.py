@@ -273,10 +273,9 @@ def _get_client(version=None, timeout=None):
         # only if defined by user.
         kwargs['timeout'] = timeout
     client = docker.Client(**kwargs)
-    # force 1..5 API for registry login
     if not version:
-        if client._version == '1.4':
-            client._version = '1.5'
+        # set version that match docker deamon
+        client._version = client.version()['ApiVersion']
     if getattr(client, '_cfg', None) is None:
         client._cfg = {
             'Configs': {},
