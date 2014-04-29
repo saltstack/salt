@@ -386,7 +386,7 @@ def run(opts):
                 delete_vm(opts)
             sys.exit(retcode)
 
-        if not stdout:
+        if not stdout.strip():
             print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
