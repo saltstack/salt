@@ -585,6 +585,19 @@ def running(name, container=None, port_bindings=None, binds=None,
                 "5000/tcp":
                     HostIp: ""
                     HostPort: "5000"
+    binds
+        List of volumes to mount
+
+        .. code-block:: yaml
+
+            - binds:
+                /home/user1:
+                    bind: /mnt/vol2
+                    ro: true
+                /var/www:
+                    bind: /mnt/vol1
+                    ro: false
+
     dns
         List of DNS servers.
 
