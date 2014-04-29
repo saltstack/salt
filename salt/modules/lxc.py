@@ -1403,7 +1403,7 @@ def attachable(name):
     data = __salt__['cmd.run_all'](cmd)
     if not data['retcode']:
         return True
-    if data['stderr'].startwith('lxc-attach: failed to get the init pid'):
+    if data['stderr'].startswith('lxc-attach: failed to get the init pid'):
         return False
     return False
 
