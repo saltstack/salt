@@ -344,10 +344,6 @@ def function(
                         ).splitlines()
                     )
             ret['comment'] += '\n'
-    return ret        
-    ret['changes'] = cmd_ret
-    ret['comment'] = 'Function {0} ran successfully on {0}'.format(
-            ', '.join(cmd_ret))
     return ret
 
 def _check_func_result(running):
