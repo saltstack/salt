@@ -49,6 +49,7 @@ Namespaced tag
 
 # Import python libs
 import os
+import sys
 import fnmatch
 import glob
 import hashlib
@@ -341,6 +342,9 @@ class SaltEvent(object):
 
         if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+
+        if sys.getsizeof(data) > self.opts.get('max_event_size', 10000):
+            raise ValueError('Maximum event size for event tag {0}'.format(tag))
 
         if not self.cpush:
             self.connect_pull(timeout=timeout)
