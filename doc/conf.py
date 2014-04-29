@@ -193,20 +193,20 @@ html_additional_pages = {
 }
 
 html_default_sidebars = [
+    html_search_template,
     'version.html',
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
-    html_search_template,
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
+        html_search_template,
         'version.html',
         'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
-        html_search_template,
     ],
     'ref/formula/all/*': [
     ],
