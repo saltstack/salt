@@ -216,7 +216,8 @@ def _get_minion_ids():
                         entry = line.split()
                         if entry[0].startswith('127.'):
                             for name in entry[1:]:  # try each name in the row
-                                l.append(name)
+                                if name != 'localhost':
+                                    l.append(name.replace(' ',''))
                     except IndexError:
                         pass  # could not split line (malformed entry?)
         except (IOError, OSError):
