@@ -379,7 +379,7 @@ indentation level as the other properties):
     # salt-vagrant config
     config.vm.provision :salt do |salt|
         salt.run_highstate = true
-        salt.minion_config = "./minion.conf"
+        salt.minion_config = "/etc/salt/minion"
         salt.minion_key = "./minion1.pem"
         salt.minion_pub = "./minion1.pub"
     end
