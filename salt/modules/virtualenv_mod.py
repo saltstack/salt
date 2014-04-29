@@ -304,7 +304,7 @@ def create(path,
     # Install pip
     if pip and not os.path.exists(venv_pip):
         _ret = _install_script(
-            'https://raw.github.com/pypa/pip/master/contrib/get-pip.py',
+            'https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py',
             path, venv_python, user, saltenv=saltenv
         )
         # Let's update the return dictionary with the details from the pip
