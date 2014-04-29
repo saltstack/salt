@@ -393,18 +393,21 @@ def run(opts):
                 delete_vm(opts)
             sys.exit(retcode)
 
-        version_info = json.loads(stdout.strip())
-        if opts.bootstrap_salt_commit[:7] not in version_info[vm_name]:
-            print('\n\nATTENTION!!!!\n')
-            print('The boostrapped minion version commit does not contain the desired commit:')
-            print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], opts.bootstrap_salt_commit[:7]))
-            print('\n\n')
-            sys.stdout.flush()
-            #if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            #    delete_vm(opts)
-            #sys.exit(retcode)
-        else:
-            print('matches!')
+        try:
+            version_info = json.loads(stdout.strip())
+            if opts.bootstrap_salt_commit[:7] not in version_info[vm_name]:
+                print('\n\nATTENTION!!!!\n')
+                print('The boostrapped minion version commit does not contain the desired commit:')
+                print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], opts.bootstrap_salt_commit[:7]))
+                print('\n\n')
+                sys.stdout.flush()
+                #if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                #    delete_vm(opts)
+                #sys.exit(retcode)
+            else:
+                print('matches!')
+        except ValueError:
+            print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
     # Run preparation SLS
     time.sleep(3)
