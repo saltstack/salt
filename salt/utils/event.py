@@ -355,7 +355,7 @@ class SaltEvent(object):
             tagend = TAGEND
         serialized_data = salt.utils.trim_dict(self.serial.dumps(data), 
                 self.opts.get('max_event_size', 10000),
-                is_msgpack=True
+                is_msgpacked=True
                 )
         log.debug('Sending event - data = {0}'.format(data))
         event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(serialized_data))

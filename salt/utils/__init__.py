@@ -2257,7 +2257,6 @@ def trim_dict(data, max_dict_bytes, percent=50.0, stepper_size=10, replace_with=
                         return serializer.dumps(data)
                     else:
                         return data
-
             except ValueError:
                 pass
         if is_msgpacked:
