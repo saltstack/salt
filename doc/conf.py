@@ -193,6 +193,7 @@ html_additional_pages = {
 }
 
 html_default_sidebars = [
+    'version.html',
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
@@ -200,6 +201,7 @@ html_default_sidebars = [
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
+        'version.html',
         'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
