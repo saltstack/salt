@@ -137,7 +137,7 @@ def _sort_hostnames(hostname_list):
         # favor longest fqdn
         return len(b) - len(a)
     
-    sorted(hostname_list, cmp=_cmp_hostname)
+    return sorted(hostname_list, cmp=_cmp_hostname)
 
 def get_hostnames():
     '''
