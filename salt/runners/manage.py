@@ -267,7 +267,7 @@ def bootstrap(version="develop",
 
     Options:
         version: git tag of version to install [default: develop]
-        script: Script to execute [default: http://bootstrap.saltstack.org]
+        script: Script to execute [default: https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh]
         hosts: Comma separated hosts [example: hosts="host1.local,host2.local"]
 
     CLI Example:
