@@ -38,7 +38,7 @@ from salt.utils.event import tagify
 from salt.exceptions import SaltInvocationError
 
 
-def insert(backend, queue, items):
+def insert(queue, items, backend='sqlite'):
     '''
     Add an item or items to a queue
 
@@ -56,7 +56,7 @@ def insert(backend, queue, items):
     return ret
 
 
-def delete(backend, queue, items):
+def delete(queue, items, backend='sqlite'):
     '''
     Delete an item or items from a queue
 
@@ -74,7 +74,7 @@ def delete(backend, queue, items):
     return ret
 
 
-def list_queues(backend):
+def list_queues(backend='sqlite'):
     '''
     Return a list of Salt Queues on the backend
 
@@ -89,7 +89,7 @@ def list_queues(backend):
     return ret
 
 
-def list_length(backend, queue):
+def list_length(queue, backend='sqlite'):
     '''
     Provide the number of items in a queue
 
@@ -106,7 +106,7 @@ def list_length(backend, queue):
     return ret
 
 
-def list_items(backend, queue):
+def list_items(queue, backend='sqlite'):
     '''
     List contents of a queue
 
@@ -123,7 +123,7 @@ def list_items(backend, queue):
     return ret
 
 
-def pop(backend, queue, quantity=1):
+def pop(queue, quantity=1, backend='sqlite'):
     '''
     Pop one or more or all items from a queue
 
@@ -142,7 +142,7 @@ def pop(backend, queue, quantity=1):
     return ret
 
 
-def process_queue(backend, queue, quantity=1):
+def process_queue(queue, quantity=1, backend='sqlite'):
     '''
     Pop items off a queue and create an event on the Salt event bus to be
     processed by a Reactor.
