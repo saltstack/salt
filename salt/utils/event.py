@@ -49,7 +49,6 @@ Namespaced tag
 
 # Import python libs
 import os
-import sys
 import fnmatch
 import glob
 import hashlib
@@ -353,7 +352,7 @@ class SaltEvent(object):
             tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
         else:  # new style longer than 20 chars
             tagend = TAGEND
-        serialized_data = salt.utils.trim_dict(self.serial.dumps(data), 
+        serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
                 self.opts.get('max_event_size', 1048576),
                 is_msgpacked=True
                 )

@@ -2205,7 +2205,7 @@ def trim_dict(data, max_dict_bytes, percent=50.0, stepper_size=10, replace_with=
     '''
     Takes a dictionary and iterates over its keys, looking for
     large values and replacing them with a trimmed string.
-    
+ 
     If after the first pass over dictionary keys, the dictionary
     is not sufficiently small, the stepper_size will be increased
     and the dictionary will be rescanned. This allows for progressive
@@ -2217,7 +2217,7 @@ def trim_dict(data, max_dict_bytes, percent=50.0, stepper_size=10, replace_with=
     data structure in python must be serialized in order for sys.getsizeof()
     to accurately return the items referenced in the structure.
 
-    Ex: 
+    Ex:
     >>> salt.utils.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
     {'a': 'b', 'c': 'VALUE_TRIMMED'}
 
@@ -2237,7 +2237,7 @@ def trim_dict(data, max_dict_bytes, percent=50.0, stepper_size=10, replace_with=
     if dict_size > max_dict_bytes:
         if is_msgpacked:
             data = serializer.loads(data)
-        while True: 
+        while True:
             percent = float(percent)
             max_val_size = float(max_dict_bytes * (percent / 100))
             try:
@@ -2248,7 +2248,7 @@ def trim_dict(data, max_dict_bytes, percent=50.0, stepper_size=10, replace_with=
                 max_val_size = float(max_dict_bytes * (percent / 100))
                 cur_dict_size = sys.getsizeof(serializer.dumps(data))
                 if cur_dict_size < max_dict_bytes:
-                    if is_msgpacked: # Repack it
+                    if is_msgpacked:  # Repack it
                         return serializer.dumps(data)
                     else:
                         return data
