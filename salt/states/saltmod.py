@@ -232,6 +232,7 @@ def function(
         tgt_type=None,
         expr_form=None,
         ret='',
+        fail_minions=None,
         arg=None,
         kwarg=None,
         timeout=None):
@@ -255,6 +256,9 @@ def function(
 
     ret
         Optionally set a single or a list of returners to use
+
+    fail_minions
+        An optional list of targeted minions where failure is an option
 
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
@@ -284,7 +288,87 @@ def function(
     cmd_kw['ssh'] = ssh
     fun = name
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    
+    changes = {}
+    fail = set()
+    failures = {}
+    no_change = set()
+
+    if fail_minions is None:
+        fail_minions = ()
+    elif isinstance(fail_minions, salt._compat.string_types):
+        fail_minions = [minion.strip() for minion in fail_minions.split(',')]
+    elif not isinstance(fail_minions, list):
+        ret.setdefault('warnings', []).append(
+            '\'fail_minions\' needs to be a list or a comma separated '
+            'string. Ignored.'
+        )
+        fail_minions = ()
+
+    for minion, mdata in cmd_ret.iteritems():
+        m_ret = mdata['ret']
+        m_state = _check_func_result(m_ret)
+
+        if not m_state:
+            if minion not in fail_minions:
+                fail.add(minion)
+            failures[minion] = m_ret
+            continue
+        for state_item in m_ret.itervalues():
+            if state_item['changes']:
+                changes[minion] = m_ret
+                break
+        else:
+            no_change.add(minion)
+    
+    if changes:
+        ret['changes'] = {'out': 'highstate', 'ret': changes}
+    if fail:
+        ret['result'] = False
+        ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
+    else:
+        ret['comment'] = 'Functions ran successfully.'
+        if changes:
+            ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
+        if no_change:
+            ret['comment'] += ' No Functions run on {0}.'.format(', '.join(no_change))
+    if failures:
+        ret['comment'] += '\nFailures:\n'
+        for minion, failure in failures.iteritems():
+            ret['comment'] += '\n'.join(
+                    (' ' * 4 + l)
+                    for l in salt.output.out_format(
+                        {minion: failure},
+                        'highstate',
+                        __opts__,
+                        ).splitlines()
+                    )
+            ret['comment'] += '\n'
+    return ret        
     ret['changes'] = cmd_ret
     ret['comment'] = 'Function {0} ran successfully on {0}'.format(
             ', '.join(cmd_ret))
     return ret
+
+def _check_func_result(running):
+    '''
+    Check the total return value of the run and determine if the running
+    dict has any issues
+    '''
+    if not isinstance(running, dict):
+        return False
+
+    if not running:
+        return False
+
+    for state_result in running.itervalues():
+        if not isinstance(state_result, dict):
+            # return false when hosts return a list instead of a dict
+            return False
+
+        if 'result' in state_result:
+            if state_result.get('result', False) is False:
+                return False
+        return True
+
+    return True
