@@ -1270,7 +1270,7 @@ def bootstrap(name, config=None, approve_key=True, install=True):
             cp(name, cfg_files['privkey'], os.path.join(configdir, 'minion.pem'))
             cp(name, cfg_files['pubkey'], os.path.join(configdir, 'minon.pub'))
 
-            cmd = 'sh /tmp/bootstrap.sh -c {0}'.format(configdir)
+            cmd = 'PATH=$PATH:/bin:/sbin:/usr/sbin sh /tmp/bootstrap.sh -c {0}'.format(configdir)
             res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
         else:
             res = False
