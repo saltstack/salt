@@ -114,7 +114,7 @@ Example usage:
 
 .. code-block:: bash
 
-    wget https://raw.github.com/saltstack/salt/develop/tests/eventlisten.py
+    wget https://raw.githubusercontent.com/saltstack/salt/develop/tests/eventlisten.py
     python eventlisten.py
 
     # OR

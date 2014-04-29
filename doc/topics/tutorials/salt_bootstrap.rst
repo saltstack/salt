@@ -122,7 +122,7 @@ passed):
 
 .. code-block:: bash
 
-    wget https://raw.github.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh
+    wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh
 
 Command Line Options
 --------------------
