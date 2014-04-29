@@ -46,8 +46,10 @@ def insert(queue, items, backend='sqlite'):
 
     .. code-block:: bash
 
-        salt-run queue.insert myqueue sqlite myitem
-        salt-run queue.insert myqueue sqlite "['item1', 'item2', 'item3']"
+        salt-run queue.insert myqueue myitem
+        salt-run queue.insert myqueue "['item1', 'item2', 'item3']"
+        salt-run queue.insert myqueue myitem backend=sqlite
+        salt-run queue.insert myqueue "['item1', 'item2', 'item3']" backend=sqlite
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.insert'.format(backend)
@@ -64,8 +66,9 @@ def delete(queue, items, backend='sqlite'):
 
     .. code-block:: bash
 
-        salt-run queue.delete myqueue sqlite myitem
-        salt-run queue.delete myqueue sqlite "['item1', 'item2', 'item3']"
+        salt-run queue.delete myqueue myitem
+        salt-run queue.delete myqueue myitem backend=sqlite
+        salt-run queue.delete myqueue "['item1', 'item2', 'item3']"
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.delete'.format(backend)
@@ -80,7 +83,8 @@ def list_queues(backend='sqlite'):
 
     CLI Example:
 
-        salt-run queue.list_queues sqlite
+        salt-run queue.list_queues
+        salt-run queue.list_queues backend=sqlite
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_queues'.format(backend)
@@ -97,7 +101,8 @@ def list_length(queue, backend='sqlite'):
 
     .. code-block:: bash
 
-        salt-run queue.list_length sqlite myqueue
+        salt-run queue.list_length myqueue
+        salt-run queue.list_length myqueue backend=sqlite
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_length'.format(backend)
@@ -114,7 +119,8 @@ def list_items(queue, backend='sqlite'):
 
     .. code-block:: bash
 
-        salt-run queue.list_items sqlite myqueue
+        salt-run queue.list_items myqueue
+        salt-run queue.list_items myqueue backend=sqlite
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_items'.format(backend)
@@ -131,13 +137,15 @@ def pop(queue, quantity=1, backend='sqlite'):
 
     .. code-block:: bash
 
-        salt-run queue.pop sqlite myqueue
-        salt-run queue.pop sqlite myqueue 6
-        salt-run queue.pop sqlite myqueue all
+        salt-run queue.pop myqueue
+        salt-run queue.pop myqueue 6
+        salt-run queue.pop myqueue all
+        salt-run queue.pop myqueue 6 backend=sqlite
+        salt-run queue.pop myqueue all backend=sqlite
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.pop'.format(backend)
-    ret = queue_funcs[cmd](queue=queue, quantity=quantity)
+    ret = queue_funcs[cmd](quantity=quantity, queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
@@ -151,9 +159,9 @@ def process_queue(queue, quantity=1, backend='sqlite'):
 
     .. code-block:: bash
 
-        salt-run queue.process_queue sqlite myqueue
-        salt-run queue.process_queue sqlite myqueue 6
-        salt-run queue.process_queue sqlite myqueue all
+        salt-run queue.process_queue myqueue
+        salt-run queue.process_queue myqueue 6
+        salt-run queue.process_queue myqueue all backend=sqlite
     '''
     # get ready to send an event
     event = salt.utils.event.get_event(
@@ -162,7 +170,7 @@ def process_queue(queue, quantity=1, backend='sqlite'):
                 __opts__['transport'],
                 listen=False)
     try:
-        items = pop(backend=backend, queue=queue, quantity=quantity)
+        items = pop(queue=queue, quantity=quantity, backend=backend)
     except SaltInvocationError as exc:
         error_txt = '{0}'.format(exc)
         salt.output.display_output(error_txt, 'nested', __opts__)
