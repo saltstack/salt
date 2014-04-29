@@ -996,10 +996,10 @@ def info(name):
         ret['memory_limit'] = limit
         ret['memory_free'] = free
         ret['size'] = __salt__['cmd.run'](
-            ('lxc-attach -n \'{0}\' -- '
+            ('lxc-attach -n \'{0}\' -- env -i '
              'df /|tail -n1|awk \'{{print $2}}\'').format(name))
         ipaddr = __salt__['cmd.run'](
-            'lxc-attach -n \'{0}\' -- ip addr show'.format(name))
+            'lxc-attach -n \'{0}\' -- env -i ip addr show'.format(name))
         for line in ipaddr.splitlines():
             if 'inet' in line:
                 line = line.split()
@@ -1335,7 +1335,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         return prior_state
     if attachable(name):
         res = __salt__['cmd.run_all'](
-                'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
+                'lxc-attach -n \'{0}\' -- env -i {1}'.format(name, cmd))
     else:
         rootfs = info(name).get('rootfs')
         res = __salt__['cmd.run_chroot'](rootfs, cmd)
@@ -1381,7 +1381,7 @@ def cp(name, src, dest):
     if not dest_name:
         dest_name = src_name
 
-    cmd = 'cat {0} | lxc-attach -n {1} -- tee {2} > /dev/null'.format(
+    cmd = 'cat {0} | lxc-attach -n {1} -- env -i tee {2} > /dev/null'.format(
             src, name, os.path.join(dest_dir, dest_name))
     log.info(cmd)
     ret = __salt__['cmd.run_all'](cmd)
