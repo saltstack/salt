@@ -9,6 +9,7 @@ import getpass
 import json
 import logging
 import multiprocessing
+import subprocess
 import os
 import re
 import shutil
@@ -22,6 +23,7 @@ import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
 import salt.exceptions
+import salt.exitcodes
 import salt.loader
 import salt.minion
 import salt.roster
@@ -34,143 +36,207 @@ import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
 
+# The directory where salt thin is deployed
+DEFAULT_SALT_DEPLOY_DIR = '/tmp/.salt'
+
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
-
-# This shim facilitates remote salt-call operations
-# - Uses /bin/sh for maximum compatibility
-#
-# 1. Identify a suitable python
-# 2. Test for remote salt-call and version if present
-# 3. Signal to (re)deploy if missing or out of date
-#    - If this is a a first deploy, then test python version
-# 4. Perform salt-call
-
-# Note there are two levels of formatting.
-# - First format pass inserts salt version and delimiter
-# - Second pass at run-time and inserts optional "sudo" and command
+# NOTE: there are two levels of formatting - see the in-line comments
 SSH_SHIM = r'''/bin/sh << 'EOF'
-      #!/bin/sh
+    # This shim facilitates remote salt-call operations
+    # - Uses /bin/sh for maximum compatibility
+    #
+    # 1. Identify a suitable python
+    # 2. Test for remote salt-call and version if present
+    # 3. Signal to (re)deploy if missing or out of date
+    #    - If this is a a first deploy, then test python version
+    # 4. Perform salt-call
 
-      MISS_PKG=""
+    set -e
+    set -u
 
-      command -v tar >/dev/null
-      if [ $? -ne 0 ]
-      then
-         MISS_PKG="$MISS_PKG tar"
-      fi
+    # EXIT CODES:
+    EX_DEPLOY_THIN={EX_DEPLOY_THIN}  # Deploy of salt-thin.tgz necessary
+    EX_PYTHON_OLD={EX_PYTHON_OLD}    # Python interpreter is too old and incompatible
+    EX_CHECKSUM={EX_CHECKSUM}        # Checksum mismatch of deployed files
+    EX_UNAVAILABLE={EX_UNAVAILABLE}  # Necessary commands are missing
+    EX_SOFTWARE={EX_SOFTWARE}        # An internal error occurred
 
-      for py_candidate in \
-            python27      \
-            python2.7     \
-            python26      \
-            python2.6     \
-            python2       \
-            python        ;
-      do
-         command -v $py_candidate >/dev/null
-         if [ $? -eq 0 ]
-         then
-               PYTHON="$py_candidate"
-               break
-         fi
-      done
+    # Template Level 1 expansion (same values for all targets)
+    SALT_VER='{SALT_VER}'
+    DELIMETER='{DELIMETER}'
+    SALT_DIR_DEFAULT='{SALT_DEPLOY_DIR}'
 
-      if [ -z "$PYTHON" ]
-      then
-         MISS_PKG="$MISS_PKG python"
-      fi
+    # Template Level 2 expansion (target-specific values)
+    SUDO='{{0}}'          # Use unquoted so that it can be a no-op when not set
+    COMMAND_STR='{{1}}'   # Use unquoted so that it can be parsed into words
+    CHECKSUM_PGM='{{2}}'
+    THIN_CHECKSUM='{{3}}'
+    MINION_CONFIG='{{4}}'
+    SALT_DIR="{{5}}"
 
-      SALT="/tmp/.salt/salt-call"
-      if [ "{{2}}" = "md5" ]
-      then
-         for md5_candidate in \
-            md5sum            \
-            md5               \
-            csum              \
-            digest            ;
-         do
-            command -v $md5_candidate >/dev/null
-            if [ $? -eq 0 ]
-            then
-                SUMCHECK="$md5_candidate"
-                break
+    # The XXX_CMDS are lists of required commands.  The first entry is the
+    # generic name of the command list and the following entries are the
+    # equivalent programs to be located in order of preference of use.
+
+    # NOTE: /usr/bin/printf is POSIX defined and has predictable
+    # behavior - unlike printf (which might be a shell built-in) or
+    # echo.
+
+    TAR_CMDS="
+        tar
+        tar
+    "
+
+    GUNZIP_CMDS="
+        gunzip
+        gunzip
+    "
+
+    # While mktemp is not POSIX it appears that GNU, BSD, AIX, OSX,
+    # and Solaris have mktemp with the "-d" and "-t" options.
+    MKTEMP_CMDS="
+        mktemp
+        mktemp
+    "
+
+    PYTHON_CMDS="
+        python
+        python27
+        python2.7
+        python26
+        python2.6
+        python2
+        python
+    "
+
+    MD5_CMDS="
+        md5sum/md5/csum
+        md5sum
+        md5
+        csum
+        digest
+    "
+
+    MISS_PKG=""
+    TAR=""
+    PYTHON=""
+    SUMCHECK=""
+    GUNZIP=""
+
+    which_command()
+    {{{{
+        local miss_msg="$1"
+        shift
+        local cmd
+        for cmd in "$@"; do
+            if command -v "$cmd" >/dev/null; then
+                /usr/bin/printf '%s\n' "$cmd"
+                return
             fi
-         done
-      else
-         command -v "{{2}}" >/dev/null
-         if [ $? -eq 0 ]
-         then
-            SUMCHECK="{{2}}"
-         fi
-      fi
+        done
 
-      if [ -z "$SUMCHECK" ]
-      then
-         MISS_PKG="$MISS_PKG md5sum/md5/csum"
-      fi
+        MISS_PKG="$MISS_PKG $miss_msg"
+    }}}}
 
-      if [ -n "$MISS_PKG" ]
-      then
-            echo "The following required Packages are missing: $MISS_PKG" >&2
-            exit 127
-      fi
+    detect_commands()
+    {{{{
+        TAR="$(which_command $TAR_CMDS)"
+        GUNZIP="$(which_command $GUNZIP_CMDS)"
+        MKTEMP="$(which_command $MKTEMP_CMDS)"
 
-      # MD5 check for systems with a BSD userland (includes OSX).
-      if [ "$SUMCHECK" = "md5" ]
-      then
-         SUMCHECK="md5 -q"
-      # MD5 check for AIX systems.
-      elif [ "$SUMCHECK" = "csum" ]
-      then
-         SUMCHECK="csum -h MD5"
-      # MD5 check for Solaris systems.
-      elif [ "$SUMCHECK" = "digest" ]
-      then
-         SUMCHECK="digest -a md5"
-      fi
+        PYTHON="$(which_command $PYTHON_CMDS)"
+        PY_TOO_OLD="$($PYTHON -c "import sys; print sys.hexversion < 0x02060000")"
+        if [ "True" = "$PY_TOO_OLD" ]; then
+            /usr/bin/printf "ERROR: Python too old\n" >&2
+            exit $EX_PYTHON_OLD
+        fi
 
-      if [ -f "$SALT" ]
-      then
-         if [ "`cat /tmp/.salt/version`" != "{0}" ]
-         then
-            {{0}} rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
-            if [ $? -ne 0 ]; then
-                exit 1
+        if [ 'md5' = "$CHECKSUM_PGM" ]; then
+            SUMCHECK="$(which_command $MD5_CMDS)"
+        else
+            SUMCHECK="$(which_command "$CHECKSUM_PGM" "$CHECKSUM_PGM")"
+        fi
+
+        if [ -n "$MISS_PKG" ]; then
+            /usr/bin/printf "ERROR: The following required commands are missing: $MISS_PKG\n" >&2
+            exit $EX_UNAVAILABLE
+        fi
+
+        case "$SUMCHECK" in
+            # MD5 check for systems with a BSD userland (includes OSX).
+            (md5) SUMCHECK="md5 -q" ;;
+            # MD5 check for AIX systems.
+            (csum) SUMCHECK="csum -h MD5" ;;
+            # MD5 check for Solaris systems.
+            (digest) SUMCHECK="digest -a md5" ;;
+        esac
+    }}}}
+
+    check_salt_thin()
+    {{{{
+        if [ -n "$SALT_DIR" -a -d "$SALT_DIR" ]; then
+            if [ "$SALT_DIR/salt-call" ]; then
+                if [ "x$(cat "$SALT_DIR/version")" = "x$SALT_VER" ]; then
+                    return
+                fi
+            elif [ -f "$SALT_DIR/salt-thin.tgz" ]; then
+                if [ "x$("$SUMCHECK" "$SALT_DIR/salt-thin.tgz" | cut -f1 -d\ )" != "x$THIN_CHECKSUM" ]; then
+                    /usr/bin/printf "ERROR: Mismatched checksum for $SALT_DIR/salt-thin.tgz" >&2
+                    exit $EX_CHECKSUM
+                fi
+
+                cd "$SALT_DIR" && "$GUNZIP" -c salt-thin.tgz | $SUDO "$TAR" opxvf -
+                $SUDO rm -f "$SALT_DIR/salt-thin.tgz"
+                return
             fi
-            echo "{1}"
-            echo "deploy"
-            exit 1
-         fi
-      else
-         PY_TOO_OLD=`$PYTHON -c "import sys; print sys.hexversion < 0x02060000"`
-         if [ "$PY_TOO_OLD" = "True" ];
-         then
-            echo "Python too old" >&2
-            exit 1
-         fi
-         if [ -f /tmp/.salt/salt-thin.tgz ]
-         then
-             if [ "`$SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ `" = "{{3}}" ]
-             then
-                 cd /tmp/.salt/ && gunzip -c salt-thin.tgz | {{0}} tar opxvf -
-             else
-                 echo "Mismatched checksum for /tmp/.salt/salt-thin.tgz" >&2
-                 exit 1
-             fi
-         else
-             mkdir -m 0700 -p /tmp/.salt
-             echo "{1}"
-             echo "deploy"
-             exit 1
-         fi
-      fi
-      echo "{{4}}" > /tmp/.salt/minion
-      echo "{1}"
-      {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
-EOF'''.format(salt.__version__, RSTR)
+
+            # Current salt thin is not available - clean out the directory and start over.
+            $SUDO rm -rf "$SALT_DIR"
+        fi
+
+        SALT_DIR="$($SUDO mktemp -d -t .salt.XXXXXX)"
+        if [ -z "$SALT_DIR" ]; then
+            # One last try to make the salt thin directory
+            SALT_DIR="$SALT_DIR_DEFAULT"
+            $SUDO mkdir -p "$SALT_DIR"
+        fi
+        if [ -d "$SALT_DIR" ];
+            /usr/bin/printf '%s\ndeploy %s\n' "$DELIMETER" "$SALT_DIR"
+            exit $EX_DEPLOY_THIN
+        fi
+
+        /usr/bin/printf "ERROR: unable to create salt thin directory" >&2
+        exit $EX_SOFTWARE
+    }}}}
+
+    write_config()
+    {{{{
+        /usr/bin/printf '%s\n' "$MINION_CONFIG" >"$SALT_DIR/minion"
+        /usr/bin/printf '%s\n' "$DELIMETER"
+    }}}}
+
+    main()
+    {{{{
+        detect_commands
+        check_salt_thin
+        write_config
+        eval $SUDO \"$PYTHON\" \"$SALT_DIR/salt-call\" --local --out json -l quiet $COMMAND_STR -c \"$SALT_DIR\"
+    }}}}
+
+    main
+EOF'''.format(
+    SALT_VER=salt.__version__,
+    DELIMETER=RSTR,
+    SALT_DEPLOY_DIR=SALT_DEPLOY_DIR,
+    EX_DEPLOY_THIN=salt.exitcodes.EX_DEPLOY_THIN,
+    EX_PYTHON_OLD=salt.exitcodes.EX_PYTHON_OLD,
+    EX_CHECKSUM=salt.exitcodes.EX_CHECKSUM,
+    EX_UNAVAILABLE=os.EX_UNAVAILABLE,
+    EX_SOFTWARE=os.EX_SOFTWARE,
+)
 
 log = logging.getLogger(__name__)
 
@@ -223,12 +289,13 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
             ),
             'priv': priv,
-            'timeout': self.opts.get(
-                'ssh_timeout',
-                salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
-            ) + self.opts.get(
-                'timeout',
-                salt.config.DEFAULT_MASTER_OPTS['timeout']
+            'conn_timeout': self.opts.get(
+                'ssh_conn_timeout',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_conn_timeout']
+            ),
+            'proc_timeout': self.opts.get(
+                'ssh_proc_timeout',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_proc_timeout']
             ),
             'sudo': self.opts.get(
                 'ssh_sudo',
@@ -266,22 +333,22 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], string_types):
+        if not isinstance(ret[host], dict):
             if self.opts.get('ssh_key_deploy'):
                 target = self.targets[host]
                 if 'passwd' in target:
                     self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].startswith('Permission denied'):
+        if ret[host].get('stderr', '').startswith('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
                    'the salt-ssh key? (password required):').format(host))
-            deploy = raw_input('[Y/n]')
+            deploy = raw_input('[Y/n] ')
             if deploy.startswith(('n', 'N')):
                 return ret
             target['passwd'] = getpass.getpass(
-                    'Password for {0}@{1}:'.format(target['user'], host)
+                    'Password for {0}@{1}: '.format(target['user'], host)
                 )
             return self._key_deploy_run(host, target, True)
         return ret
@@ -290,13 +357,15 @@ class SSH(object):
         '''
         The ssh-copy-id routine
         '''
-        arg_str = 'ssh.set_auth_key {0} {1}'.format(
-                target.get('user', 'root'),
-                self.get_pubkey())
+        argv = [
+            'ssh.set_auth_key',
+            target.get('user', 'root'),
+            self.get_pubkey(),
+        ]
 
         single = Single(
                 self.opts,
-                arg_str,
+                argv,
                 host,
                 **target)
         if salt.utils.which('ssh-copy-id'):
@@ -308,7 +377,7 @@ class SSH(object):
             target.pop('passwd')
             single = Single(
                     self.opts,
-                    self.opts['arg_str'],
+                    self.opts['argv'],
                     host,
                     **target)
             stdout, stderr, retcode = single.cmd_block()
@@ -330,13 +399,15 @@ class SSH(object):
         opts = copy.deepcopy(opts)
         single = Single(
                 opts,
-                opts['arg_str'],
+                opts['argv'],
                 host,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
-        if stdout.startswith('deploy'):
-            single.deploy()
+        if retcode == salt.exitcodes.EX_DEPLOY_THIN and stdout.startswith('deploy'):
+            stdwords = stdout.split()
+            deploy_dir = stdwords if len(stdwords) > 1 else DEFAULT_SALT_DEPLOY_DIR
+            single.deploy(deploy_dir)
             stdout, stderr, retcode = single.run()
         # This job is done, yield
         try:
@@ -435,17 +506,14 @@ class SSH(object):
         jid = self.mminion.returners[fstr]()
 
         # Save the invocation information
-        arg_str = self.opts['arg_str']
+        argv = self.opts['argv']
 
         if self.opts['raw_shell']:
             fun = 'ssh._raw'
-            args = [arg_str]
+            args = argv
         else:
-            cmd_args = arg_str.split(None, 1)
-            fun = cmd_args.pop()
-            args = []
-            if cmd_args:
-                args = [cmd_args]
+            fun = argv[0] if argv else ''
+            args = argv[1:]
 
         job_load = {
             'jid': jid,
@@ -466,7 +534,7 @@ class SSH(object):
             print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
-            self.cache_job(jid, host, ret)
+            self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
@@ -478,6 +546,9 @@ class SSH(object):
                         salt.utils.event.tagify(
                             [jid, 'ret', host],
                             'job'))
+
+        # Just in case any SSH password attempts changed the TTY settings
+        _ = subprocess.call(['stty', 'sane'])
 
 
 class Single(object):
@@ -491,20 +562,26 @@ class Single(object):
     def __init__(
             self,
             opts,
-            arg_str,
+            argv,
             id_,
             host,
             user=None,
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            conn_timeout=None,
+            proc_timeout=None,
             sudo=False,
             tty=False,
             **kwargs):
         self.opts = opts
-        self.arg_str = arg_str
-        self.fun, self.arg, self.kwargs = self.__arg_comps()
+
+        if isinstance(argv, str):
+            self.argv = [argv]
+        else:
+            self.argv = argv
+
+        self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
         args = {'host': host,
@@ -512,13 +589,13 @@ class Single(object):
                 'port': port,
                 'passwd': passwd,
                 'priv': priv,
-                'timeout': timeout,
+                'conn_timeout': conn_timeout,
+                'proc_timeout': proc_timeout,
                 'sudo': sudo,
                 'tty': tty}
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
         self.minion_config = yaml.dump(
                 {
-                    'root_dir': '/tmp/.salt/running_data',
                     'id': self.id,
                 }).strip()
         self.target = kwargs
@@ -530,27 +607,28 @@ class Single(object):
         '''
         Return the function name and the arg list
         '''
-        comps = self.arg_str.split()
-        fun = comps[0] if comps else ''
-        args = comps[1:]
-        s_args = []
-        kws = {}
-        for arg in args:
-            if '=' in arg:
-                (key, val) = arg.split('=')
+        fun = self.argv[0] if self.argv else ''
+        args = []
+        kwargs = {}
+        for arg in self.argv[1:]:
+            if re.match(r'\w+=', arg):
+                (key, val) = arg.split('=', 1)
                 kws[key] = val
             else:
-                s_args.append(arg)
-        return fun, s_args, kws
+                args.append(arg)
+        return fun, args, kwargs
 
-    def deploy(self):
+    def _escape_arg(self, arg):
+        return ''.join(['\\' + char if re.match('\W', char) else char for char in arg])
+
+    def deploy(self, deploy_dir):
         '''
         Deploy salt-thin
         '''
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
                 thin,
-                '/tmp/.salt/salt-thin.tgz')
+                deploy_dir + '/salt-thin.tgz')
         return True
 
     def run(self, deploy_attempted=False):
@@ -566,12 +644,18 @@ class Single(object):
         Returns tuple of (stdout, stderr, retcode)
         '''
         stdout = stderr = retcode = None
-        arg_str = self.arg_str
 
         if self.opts.get('raw_shell'):
-            if not arg_str.startswith(('"', "'")) and not arg_str.endswith(('"', "'")):
-                arg_str = "'{0}'".format(arg_str)
-            stdout, stderr, retcode = self.shell.exec_cmd(arg_str)
+            r_out = []
+            r_err = []
+            cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
+            for out, err, retcode in self.shell.exec_nb_cmd(cmd_str):
+                if out is not None:
+                    r_out.append(out)
+                if err is not None:
+                    r_err.append(err)
+            stdout = ''.join(r_out)
+            stderr = ''.join(r_err)
 
         elif self.fun in self.wfuncs:
             stdout, stderr, retcode = self.run_wfunc()
@@ -579,8 +663,12 @@ class Single(object):
         else:
             stdout, stderr, retcode = self.cmd_block()
 
-        if stdout.startswith('deploy') and not deploy_attempted:
-            self.deploy()
+        if retcode == salt.exitcodes.EX_DEPLOY_THIN \
+           and stdout.startswith('deploy') \
+           and not deploy_attempted:
+            stdwords = stdout.split()
+            deploy_dir = stdwords if len(stdwords) > 1 else DEFAULT_SALT_DEPLOY_DIR
+            self.deploy(deploy_dir)
             return self.run(deploy_attempted=True)
 
         return stdout, stderr, retcode
@@ -646,7 +734,7 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
-        ret = json.dumps(self.wfuncs[self.fun](*self.arg, **self.kwargs))
+        ret = json.dumps(self.wfuncs[self.fun](*self.args, **self.kwargs))
         return ret, '', None
 
     def cmd(self):
@@ -654,24 +742,25 @@ class Single(object):
         Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
-        # 2. check is salt-call is on the target
+        # 2. check if salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        if self.arg_str.startswith('state.highstate'):
+        if self.fun.startswith('state.highstate'):
             self.highstate_seed()
-        if self.arg_str.startswith('state.sls'):
+        elif self.fun.startswith('state.sls'):
             args, kwargs = salt.minion.load_args_and_kwargs(
                 self.sls_seed,
-                salt.utils.args.parse_input(self.arg)
+                salt.utils.args.parse_input(self.args)
             )
             self.sls_seed(*args, **kwargs)
+        arg_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],
                 self.opts['hash_type'])
         cmd = SSH_SHIM.format(
                 sudo,
-                self.arg_str,
+                arg_str,
                 self.opts['hash_type'],
                 thin_sum,
                 self.minion_config)
@@ -683,22 +772,17 @@ class Single(object):
         Prepare the pre-check command to send to the subsystem
         '''
         # 1. check if python is on the target
-        # 2. check is salt-call is on the target
+        # 2. check if salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        if self.arg_str.startswith('cmd.run'):
-            arg_split = self.arg_str.split()
-            cmd = arg_split[0]
-            cmd_args = ' '.join(arg_split[1:])
-            if not cmd_args.startswith("'") and not cmd_args.endswith("'"):
-                self.arg_str = "{0} '{1}'".format(cmd, cmd_args)
+        arg_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(
                 self.opts['cachedir'],
                 self.opts['hash_type'])
         cmd = SSH_SHIM.format(
                 sudo,
-                self.arg_str,
+                arg_str,
                 self.opts['hash_type'],
                 thin_sum,
                 self.minion_config)
@@ -715,8 +799,10 @@ class Single(object):
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
-        if stdout.startswith('deploy'):
-            self.deploy()
+        if retcode == salt.exitcodes.EX_DEPLOY_THIN and stdout.startswith('deploy'):
+            stdwords = stdout.split()
+            deploy_dir = stdwords if len(stdwords) > 1 else DEFAULT_SALT_DEPLOY_DIR
+            self.deploy(deploy_dir)
             stdout, stderr, retcode = self.shell.exec_cmd(cmd)
             if RSTR in stdout:
                 stdout = stdout.split(RSTR)[1].strip()
@@ -729,28 +815,59 @@ class Single(object):
         _ = stdout
         _ = retcode
 
-        perm_error_fmt = 'Permissions problem, target user may need '\
-                         'to be root or use sudo:\n {0}'
+        perm_error_fmt = (
+            'Permissions problem, target user may need'
+            ' to be root or use sudo:\n {0}'
+        )
+
         if stderr.startswith('Permission denied'):
             return None
         errors = [
-            ('sudo: no tty present and no askpass program specified',
-                'sudo expected a password, NOPASSWD required'),
-            ('Python too old',
-                'salt requires python 2.6 or better on target hosts'),
-            ('sudo: sorry, you must have a tty to run sudo',
-                'sudo is configured with requiretty'),
-            ('Failed to open log file',
-                perm_error_fmt.format(stderr)),
-            ('Permission denied:.*/salt',
-                perm_error_fmt.format(stderr)),
-            ('Failed to create directory path.*/salt',
-                perm_error_fmt.format(stderr)),
-            ]
+            (
+                (),
+                'sudo: no tty present and no askpass program specified',
+                'sudo expected a password, NOPASSWD required'
+            ),
+            (
+                (salt.exitcodes.EX_PYTHON_OLD,),
+                'Python too old',
+                'salt requires python 2.6 or better on target hosts'
+            ),
+            (
+                (salt.exitcodes.EX_CHECKSUM,),
+                'Mismatched checksum',
+                'The salt thin transfer was corrupted'
+            ),
+            (
+                (os.EX_UNAVAILABLE,),
+                'required commands are missing',
+                'Required commands for the SSH_SHIM are missing: {0}'.format(stderr)
+            ),
+            (
+                (),
+                'sudo: sorry, you must have a tty to run sudo',
+                'sudo is configured with requiretty'
+            ),
+            (
+                (),
+                'Failed to open log file',
+                perm_error_fmt.format(stderr)
+            ),
+            (
+                (),
+                'Permission denied:.*/salt',
+                perm_error_fmt.format(stderr)
+            ),
+            (
+                (),
+                'Failed to create directory path.*/salt',
+                perm_error_fmt.format(stderr)
+            ),
+        ]
 
         for error in errors:
-            if re.search(error[0], stderr):
-                return error[1]
+            if retcode in error[0] or re.search(error[1], stderr):
+                return error[2]
         return None
 
     def sls_seed(self,
@@ -809,7 +926,7 @@ class Single(object):
         self.shell.send(
                 trans_tar,
                 '/tmp/salt_state.tgz')
-        self.arg_str = 'state.pkg /tmp/salt_state.tgz test={0}'.format(test)
+        self.argv = ['state.pkg', '/tmp/salt_state.tgz', 'test={0}'.format(test)]
 
 
 class SSHState(salt.state.State):

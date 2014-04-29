@@ -219,9 +219,11 @@ VALID_OPTS = {
     'ssh_passwd': str,
     'ssh_port': str,
     'ssh_sudo': bool,
-    'ssh_timeout': float,
+    'ssh_conn_timeout': float,
+    'ssh_proc_timeout': float,
     'ssh_user': str,
     'raet_port': int,
+    'timeout': float,
 }
 
 # default configurations
@@ -341,6 +343,7 @@ DEFAULT_MASTER_OPTS = {
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
     'ret_port': '4506',
     'timeout': 5,
+    'ssh_proc_timeout': 30,
     'keep_jobs': 24,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
@@ -465,7 +468,8 @@ DEFAULT_MASTER_OPTS = {
     'ssh_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
-    'ssh_timeout': 60,
+    'ssh_conn_timeout': 5,
+    'ssh_proc_timeout': 55,
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
