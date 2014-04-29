@@ -1746,6 +1746,16 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
+    ## TODO: config option
+    #if opts['use_generate_minion_id']:
+    newid = salt.utils.network.generate_minion_id()
+    log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
+    if minion_id and cache:
+        _cache_id(newid, id_cache)
+    is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
+    return newid, is_ipv4
+    
+
     # Check salt.utils.network.get_fqhostname()
     fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
