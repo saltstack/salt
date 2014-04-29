@@ -249,7 +249,7 @@ def versions():
 
 
 def bootstrap(version="develop",
-              script="http://bootstrap.saltstack.org",
+              script=None,
               hosts=""):
     '''
     Bootstrap minions with salt-bootstrap
@@ -265,9 +265,11 @@ def bootstrap(version="develop",
 
         salt-run manage.bootstrap hosts="host1,host2"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.github.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
 
     '''
+    if script is None:
+        script = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
     for host in hosts.split(","):
         # Could potentially lean on salt-ssh utils to make
         # deployment easier on existing hosts (i.e. use sshpass,
