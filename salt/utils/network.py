@@ -84,6 +84,7 @@ def _sort_hostnames(hostname_list):
     # punish matches in order of preference
     punish = [
         'localhost.localdomain',
+        'localhost.my.domain',
         'localhost',
         'ip6-localhost',
         'ip6-loopback',
