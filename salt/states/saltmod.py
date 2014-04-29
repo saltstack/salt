@@ -345,6 +345,9 @@ def _check_func_result(running):
     Check the total return value of the run and determine if the running
     dict has any issues
     '''
+    if not isinstance(running, bool):
+        return running
+        
     if not isinstance(running, dict):
         return False
 
