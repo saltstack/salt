@@ -315,12 +315,8 @@ def function(
             failures[minion] = m_ret
             continue
         for state_item in m_ret.itervalues():
-            if state_item['changes']:
-                changes[minion] = m_ret
-                break
-        else:
-            no_change.add(minion)
-    
+            changes[minion] = m_ret
+            
     if changes:
         ret['changes'] = {'out': 'highstate', 'ret': changes}
     if fail:
@@ -329,9 +325,7 @@ def function(
     else:
         ret['comment'] = 'Functions ran successfully.'
         if changes:
-            ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
-        if no_change:
-            ret['comment'] += ' No Functions run on {0}.'.format(', '.join(no_change))
+            ret['comment'] += ' Functions ran on {0}.'.format(', '.join(changes))
     if failures:
         ret['comment'] += '\nFailures:\n'
         for minion, failure in failures.iteritems():
