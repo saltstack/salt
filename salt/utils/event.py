@@ -358,7 +358,7 @@ class SaltEvent(object):
                 is_msgpacked=True
                 )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(serialized_data))
+        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
             self.push.send(event)
         except Exception as ex:
