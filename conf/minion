@@ -238,7 +238,7 @@
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
 # minion event bus. The value is expressed in bytes.
-#max_event_size: 100240
+#max_event_size: 1048576
 
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
