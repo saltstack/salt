@@ -203,14 +203,32 @@ typically also include a hard-coded default.
 
 
 GCE instances do not allow remote access to the root user by default.
-Instead, another user must be used to run the deploy script using sudo.
+Instead, another user must be used to run the deploy script using sudo. 
+Append something like this to ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    my-gce-config:
-      # Configure which user to use to run the deploy script
-      ssh_username: user
-      ssh_keyfile: /home/user/.ssh/google_compute_engine
+  all_settings:
+      ...
+  
+      # SSH to GCE instances as gceuser
+      ssh_username: gceuser
+
+      # Use the local private SSH key file located here
+      ssh_keyfile: /etc/cloud/google_compute_engine
+
+If you have not already used this SSH key to login to instances in this
+GCE project you will also need to add the public key to your projects
+metadata at https://cloud.google.com/console. You could also add it via
+the metadata setting too:
+
+.. code-block:: yaml
+
+  all_settings:
+      ...
+
+      metadata: '{"one": "1", "2": "two",
+                  "sshKeys": "gceuser:ssh-rsa <Your SSH Public Key> gceuser@host"}'
 
 
 Single instance details
