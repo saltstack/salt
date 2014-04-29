@@ -354,7 +354,7 @@ class SaltEvent(object):
         else:  # new style longer than 20 chars
             tagend = TAGEND
         serialized_data = salt.utils.trim_dict(self.serial.dumps(data), 
-                self.opts.get('max_event_size', 10000),
+                self.opts.get('max_event_size', 10240),
                 is_msgpacked=True
                 )
         log.debug('Sending event - data = {0}'.format(data))
