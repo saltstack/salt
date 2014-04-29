@@ -589,8 +589,6 @@ def create_container(image,
         daemon mode
     environment
         environment variable mapping ({'foo':'BAR'})
-    dns
-        list of DNS servers
     ports
         ports redirections ({'222': {}})
     volumes
@@ -603,8 +601,6 @@ def create_container(image,
         attach ttys
     stdin_open
         let stdin open
-    volumes_from
-        container to get volumes definition from
     name
         name given to container
 
@@ -887,6 +883,7 @@ def restart(container, timeout=10, *args, **kwargs):
 def start(container, binds=None, port_bindings=None,
           lxc_conf=None, publish_all_ports=None, links=None,
           privileged=False,
+          dns=None, volumes_from=None,
           *args, **kwargs):
     '''
     restart the specified container
@@ -925,10 +922,25 @@ def start(container, binds=None, port_bindings=None,
                         'port_bindings must be formatted as a dictionary of '
                         'dictionaries'
                     )
-            client.start(dcontainer, binds=binds, port_bindings=bindings,
-                         lxc_conf=lxc_conf,
-                         publish_all_ports=publish_all_ports, links=links,
-                         privileged=privileged)
+            try:
+                client.start(dcontainer, binds=binds, port_bindings=bindings,
+                             lxc_conf=lxc_conf,
+                             publish_all_ports=publish_all_ports, links=links,
+                             privileged=privileged,
+                             dns=dns, volumes_from=volumes_from)
+            except TypeError:
+                # maybe older version of docker-py <= 0.3.1 dns and
+                # volumes_from are not accepted
+                # FIXME:
+                # Ideally we should write an explicit check based on
+                # version of docker-py package, but
+                # https://github.com/dotcloud/docker-py/issues/216
+                # prevents us to do it at the time I'm writing this.
+                client.start(dcontainer, binds=binds, port_bindings=bindings,
+                             lxc_conf=lxc_conf,
+                             publish_all_ports=publish_all_ports, links=links,
+                             privileged=privileged)
+
             if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),

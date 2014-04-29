@@ -547,7 +547,7 @@ def script(*args, **kw):
 
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
-            privileged=False):
+            privileged=False, dns=None, volumes_from=None):
     '''
     Ensure that a container is running. (`docker inspect`)
 
@@ -585,6 +585,21 @@ def running(name, container=None, port_bindings=None, binds=None,
                 "5000/tcp":
                     HostIp: ""
                     HostPort: "5000"
+    dns
+        List of DNS servers.
+
+        .. code-block:: yaml
+
+            - dns:
+                - 127.0.0.1
+
+    volumes_from
+        List of container names to get volumes definition from
+
+        .. code-block:: yaml
+
+            - dns:
+                - name_other_container
     '''
     is_running = __salt__['docker.is_running'](container)
     if is_running:
@@ -594,7 +609,9 @@ def running(name, container=None, port_bindings=None, binds=None,
         started = __salt__['docker.start'](
             container, binds=binds, port_bindings=port_bindings,
             lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
-            links=links, privileged=privileged)
+            links=links, privileged=privileged,
+            dns=dns, volumes_from=volumes_from,
+        )
         is_running = __salt__['docker.is_running'](container)
         if is_running:
             return _valid(
