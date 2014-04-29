@@ -88,7 +88,7 @@ def find_guest(name, quiet=False):
     return None
 
 
-def find_guests(names, quiet=False):
+def find_guests(names):
     '''
     Return a dict of hosts and named guests
     '''
