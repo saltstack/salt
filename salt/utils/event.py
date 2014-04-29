@@ -343,9 +343,6 @@ class SaltEvent(object):
         if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
 
-        if sys.getsizeof(data) > self.opts.get('max_event_size', 10000):
-            raise ValueError('Maximum event size for event tag {0}'.format(tag))
-
         if not self.cpush:
             self.connect_pull(timeout=timeout)
 
@@ -356,9 +353,12 @@ class SaltEvent(object):
             tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
         else:  # new style longer than 20 chars
             tagend = TAGEND
-
+        serialized_data = salt.utils.trim_dict(self.serial.dumps(data), 
+                self.opts.get('max_event_size', 10000),
+                is_msgpack=True
+                )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
+        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(serialized_data))
         try:
             self.push.send(event)
         except Exception as ex:
