@@ -23,7 +23,7 @@ the `process_queue` runner function is called events are created on the Salt
 Event bus that indicate the queue and a list of one or more minion IDs. The
 reactor is set up to match on event tags for a specific queue and then take
 infrastructure actions on those minion IDs. These actions might be to delete
-the mnion's key from the master, use salt-cloud to destroy the vm, or some
+the minion's key from the master, use salt-cloud to destroy the vm, or some
 other custom action.
 '''
 
@@ -53,7 +53,9 @@ def insert(queue, items, backend='sqlite'):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.insert'.format(backend)
-    ret = queue_funcs[cmd](queue=queue, items=items)
+    if cmd not in queue_funcs:
+        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+    ret = queue_funcs[cmd](items=items, queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
@@ -72,7 +74,9 @@ def delete(queue, items, backend='sqlite'):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.delete'.format(backend)
-    ret = queue_funcs[cmd](queue=queue, items=items)
+    if cmd not in queue_funcs:
+        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+    ret = queue_funcs[cmd](items=items, queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
@@ -88,6 +92,8 @@ def list_queues(backend='sqlite'):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_queues'.format(backend)
+    if cmd not in queue_funcs:
+        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd]()
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
@@ -106,6 +112,8 @@ def list_length(queue, backend='sqlite'):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_length'.format(backend)
+    if cmd not in queue_funcs:
+        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
@@ -124,6 +132,8 @@ def list_items(queue, backend='sqlite'):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.list_items'.format(backend)
+    if cmd not in queue_funcs:
+        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
@@ -145,6 +155,8 @@ def pop(queue, quantity=1, backend='sqlite'):
     '''
     queue_funcs = salt.loader.queues(__opts__)
     cmd = '{0}.pop'.format(backend)
+    if cmd not in queue_funcs:
+        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](quantity=quantity, queue=queue)
     salt.output.display_output(ret, 'nested', __opts__)
     return ret
