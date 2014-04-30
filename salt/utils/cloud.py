@@ -1388,7 +1388,7 @@ def scp_file(dest_path, contents, kwargs):
         ])
 
     if 'port' in kwargs:
-	ssh_args.extend(['-P {0}'.format(kwargs['port'])])
+        ssh_args.extend(['-P {0}'.format(kwargs['port'])])
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -1567,7 +1567,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         )
 
     if 'port' in kwargs:
-	ssh_args.extend(['-p {0}'.format(kwargs['port'])])
+        ssh_args.extend(['-p {0}'.format(kwargs['port'])])
 
     cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
         ' '.join(ssh_args), kwargs, pipes.quote(command)
