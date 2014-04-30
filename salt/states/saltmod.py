@@ -306,7 +306,6 @@ def function(
         fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
-        
         m_ret = mdata['ret']
         m_state = _check_func_result(m_ret)
 
@@ -315,7 +314,6 @@ def function(
                 fail.add(minion)
             failures[minion] = m_ret
             continue
-        
         changes[minion] = m_ret
             
     if changes:
@@ -346,23 +344,17 @@ def _check_func_result(running):
     Check the total return value of the run and determine if the running
     dict has any issues
     '''
+    
     if isinstance(running, bool):
         return running
-    
+        
     if not isinstance(running, dict):
         return False
 
     if not running:
         return False
 
-    for state_result in running.itervalues():
-        if not isinstance(state_result, dict):
-            # return false when hosts return a list instead of a dict
+    if 'result' in running:
+        if running.get('result', False) is False:
             return False
-
-        if 'result' in state_result:
-            if state_result.get('result', False) is False:
-                return False
-        return True
-
     return True
