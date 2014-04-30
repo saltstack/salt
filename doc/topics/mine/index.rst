@@ -1,5 +1,7 @@
 .. _salt-mine:
 
+.. index:: ! Mine, Salt Mine
+
 =============
 The Salt Mine
 =============
