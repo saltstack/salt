@@ -131,6 +131,8 @@ def _format_host(host, data):
                 comment = ret['comment'].join(' ').replace(
                     '\n',
                     '\n' + ' ' * 13)
+            for detail in ['start_time', 'duration']:
+                ret.setdefault(detail, '')
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,
