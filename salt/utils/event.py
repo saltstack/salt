@@ -353,9 +353,12 @@ class SaltEvent(object):
             tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
         else:  # new style longer than 20 chars
             tagend = TAGEND
-
+        serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
+                self.opts.get('max_event_size', 1048576),
+                is_msgpacked=True
+                )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
+        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
             self.push.send(event)
         except Exception as ex:
