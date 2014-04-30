@@ -307,8 +307,8 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                        log.info('Missing python-dateutil.  Ignoring job {0}'.format(job))
-                        continue
+                    log.info('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                    continue
 
                 if isinstance(data['when'], list):
                     _when = []
