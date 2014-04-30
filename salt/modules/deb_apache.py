@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'apache'
 
+
 def __virtual__():
     '''
     Only load the module if apache is installed
