@@ -409,6 +409,16 @@ def runner(opts):
     return load.gen_functions()
 
 
+def queues(opts):
+    '''
+    Directly call a function inside a loader directory
+    '''
+    load = _create_loader(
+        opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
+    )
+    return load.gen_functions()
+
+
 def clouds(opts):
     '''
     Return the cloud functions
