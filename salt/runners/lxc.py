@@ -46,7 +46,7 @@ def _do_names(names, fun):
     Invoke a function in the lxc module with no args
     '''
     ret = {}
-    hosts = find_guests(names, quiet=True)
+    hosts = find_guests(names)
     if not hosts:
         return False
 
