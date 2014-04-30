@@ -53,29 +53,29 @@ def _netstat_linux():
         comps = line.split()
         if line.startswith('tcp'):
             ret.append({
-                'inode': comps[7],
-                'local-address': comps[3],
-                'program': comps[8],
                 'proto': comps[0],
                 'recv-q': comps[1],
-                'remote-address': comps[4],
                 'send-q': comps[2],
+                'local-address': comps[3],
+                'remote-address': comps[4],
                 'state': comps[5],
-                'user': comps[6]})
+                'user': comps[6],
+                'inode': comps[7],
+                'program': comps[8]})
         if line.startswith('udp'):
             ret.append({
-                'inode': comps[6],
-                'local-address': comps[3],
-                'program': comps[7],
                 'proto': comps[0],
                 'recv-q': comps[1],
-                'remote-address': comps[4],
                 'send-q': comps[2],
-                'user': comps[5]})
+                'local-address': comps[3],
+                'remote-address': comps[4],
+                'user': comps[5],
+                'inode': comps[6],
+                'program': comps[7]})
     return ret
 
 
-def _conninfo_openbsd():
+def _netinfo_openbsd():
     '''
     Get process information for network connections using fstat
     '''
@@ -108,7 +108,9 @@ def _conninfo_openbsd():
 
         # Normalize to match netstat output
         local_addr = '.'.join(local_addr.rsplit(':', 1))
-        if remote_addr is not None:
+        if remote_addr is None:
+            remote_addr = '*.*'
+        else:
             remote_addr = '.'.join(remote_addr.rsplit(':', 1))
 
         ret.setdefault(
@@ -120,7 +122,32 @@ def _conninfo_openbsd():
     return ret
 
 
-def _ppid_openbsd():
+def _netinfo_freebsd_netbsd():
+    '''
+    Get process information for network connections using sockstat
+    '''
+    ret = {}
+    # NetBSD requires '-n' to disable port-to-service resolution
+    out = __salt__['cmd.run'](
+        'sockstat -46 {0} | tail -n+2'.format(
+            '-n' if __grains__['kernel'] == 'NetBSD' else ''
+        ),
+        output_loglevel='debug'
+    )
+    for line in out.splitlines():
+        user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
+        local_addr = '.'.join(local_addr.rsplit(':', 1))
+        remote_addr = '.'.join(remote_addr.rsplit(':', 1))
+        ret.setdefault(
+            local_addr, {}).setdefault(
+                remote_addr, {}).setdefault(
+                    proto, {}).setdefault(
+                        pid, {})['user'] = user
+        ret[local_addr][remote_addr][proto][pid]['cmd'] = cmd
+    return ret
+
+
+def _ppid():
     '''
     Return a dict of pid to ppid mappings
     '''
@@ -133,49 +160,66 @@ def _ppid_openbsd():
     return ret
 
 
-def _netstat_openbsd():
+def _netstat_bsd():
     '''
-    Return netstat information for OpenBSD
+    Return netstat information for BSD flavors
     '''
     ret = []
-    # Lookup TCP connections
-    cmd = 'netstat -p tcp -an | tail -n+3'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
-    for line in out.splitlines():
-        comps = line.split()
-        ret.append({
-            'proto': comps[0],
-            'recv-q': comps[1],
-            'send-q': comps[2],
-            'local-address': comps[3],
-            'remote-address': comps[4],
-            'state': comps[5]})
-    # Lookup UDP connections
-    cmd = 'netstat -p udp -an | tail -n+3'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
-    for line in out.splitlines():
-        comps = line.split()
-        ret.append({
-            'proto': comps[0],
-            'recv-q': comps[1],
-            'send-q': comps[2],
-            'local-address': comps[3],
-            'remote-address': comps[4]})
+    if __grains__['kernel'] == 'NetBSD':
+        for addr_family in ('inet', 'inet6'):
+            cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
+            out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+            for line in out.splitlines():
+                comps = line.split()
+                entry = {
+                    'proto': comps[0],
+                    'recv-q': comps[1],
+                    'send-q': comps[2],
+                    'local-address': comps[3],
+                    'remote-address': comps[4]
+                }
+                if entry['proto'].startswith('tcp'):
+                    entry['state'] = comps[5]
+                ret.append(entry)
+    else:
+        # Lookup TCP connections
+        cmd = 'netstat -p tcp -an | tail -n+3'
+        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        for line in out.splitlines():
+            comps = line.split()
+            ret.append({
+                'proto': comps[0],
+                'recv-q': comps[1],
+                'send-q': comps[2],
+                'local-address': comps[3],
+                'remote-address': comps[4],
+                'state': comps[5]})
+        # Lookup UDP connections
+        cmd = 'netstat -p udp -an | tail -n+3'
+        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        for line in out.splitlines():
+            comps = line.split()
+            ret.append({
+                'proto': comps[0],
+                'recv-q': comps[1],
+                'send-q': comps[2],
+                'local-address': comps[3],
+                'remote-address': comps[4]})
 
     # Add in user and program info
-    ppid = _ppid_openbsd()
-    conninfo = _conninfo_openbsd()
+    ppid = _ppid()
+    if __grains__['kernel'] == 'OpenBSD':
+        netinfo = _netinfo_openbsd()
+    elif __grains__['kernel'] in ('FreeBSD', 'NetBSD'):
+        netinfo = _netinfo_freebsd_netbsd()
     for idx in range(len(ret)):
         local = ret[idx]['local-address']
         remote = ret[idx]['remote-address']
-        if remote == '*.*':
-            # Listening, not connected to a remote address
-            remote = None
         proto = ret[idx]['proto']
         try:
             # Make a pointer to the info for this connection for easier
             # reference below
-            ptr = conninfo[local][remote][proto]
+            ptr = netinfo[local][remote][proto]
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
@@ -198,11 +242,11 @@ def netstat():
     Return information on open ports and states
 
     .. note::
-        On OpenBSD, the output additionally contains PID info (where available)
-        for each netstat entry
+        On BSD minions, the output contains PID info (where available) for each
+        netstat entry, fetched from sockstat/fstat output.
 
-    .. versionchanged:: Helium
-        Added support for OpenBSD.
+    .. versionchanged:: 2014.1.4
+        Added support for OpenBSD, FreeBSD, and NetBSD
 
     CLI Example:
 
@@ -212,8 +256,8 @@ def netstat():
     '''
     if __grains__['kernel'] == 'Linux':
         return _netstat_linux()
-    elif __grains__['kernel'] == 'OpenBSD':
-        return _netstat_openbsd()
+    elif __grains__['kernel'] in ('OpenBSD', 'FreeBSD', 'NetBSD'):
+        return _netstat_bsd()
     raise CommandExecutionError('Not yet supported on this platform')
 
 
