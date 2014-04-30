@@ -40,3 +40,51 @@ be adjusted for the minion via the `mine_interval` option:
 .. code-block:: yaml
 
     mine_interval: 60
+
+Example
+=======
+
+One way to use data from Salt Mine is in a State. The values can be retrieved
+via Jinja and used in the SLS file. The following example is a partial HAProxy
+configuration file and pulls IP addresses from all minions with the "web" grain
+to add them to the pool of load balanced servers.
+
+:file:`/srv/pillar/top.sls`:
+
+.. code-block:: yaml
+
+    base:
+      'G@roles:web':
+        - web
+
+:file:`/srv/pillar/web.sls`:
+
+.. code-block:: yaml
+
+    mine_functions:
+      network.ip_addrs: [eth0]
+
+    mine_interval: 5
+
+:file:`/srv/salt/haproxy.sls`:
+
+.. code-block:: yaml
+
+    haproxy_config:
+      file:
+        - managed
+        - name: /etc/haproxy/config
+        - source: salt://haproxy_config
+        - template: jinja
+
+:file:`/srv/salt/haproxy_config`:
+
+.. code-block:: yaml
+
+    <...file contents snipped...>
+
+    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', expr_form='grain').items() %}
+    server {{ server }} {{ addrs[0] }}:80 check
+    {% endfor %}
+
+    <...file contents snipped...>
