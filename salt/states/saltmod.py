@@ -55,6 +55,7 @@ def state(
         sls=None,
         env=None,
         test=False,
+        expect_minions=False,
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
@@ -91,6 +92,9 @@ def state(
 
     roster
         In the event of using salt-ssh, a roster system can be set
+
+    expect_minions
+        An optional boolean for failing if some minions do not respond
 
     fail_minions
         An optional list of targeted minions where failure is an option
@@ -133,6 +137,7 @@ def state(
 
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
+    cmd_kw['expect_minions'] = expect_minions
     if highstate:
         fun = 'state.highstate'
     elif sls:
@@ -184,8 +189,14 @@ def state(
     for minion, mdata in cmd_ret.iteritems():
         if mdata['out'] != 'highstate':
             log.warning("Output from salt state not highstate")
-        m_ret = mdata['ret']
-        m_state = salt.utils.check_state_result(m_ret)
+        
+        m_ret = False
+        
+        if mdata.get('failed', False):
+            m_state = False
+        else:
+            m_ret = mdata['ret']
+            m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
             if minion not in fail_minions:
@@ -232,6 +243,7 @@ def function(
         tgt_type=None,
         expr_form=None,
         ret='',
+        expect_minions=False,
         fail_minions=None,
         fail_function=None,
         arg=None,
@@ -257,6 +269,9 @@ def function(
 
     ret
         Optionally set a single or a list of returners to use
+
+    expect_minions
+        An optional boolean for failing if some minions do not respond
 
     fail_minions
         An optional list of targeted minions where failure is an option
@@ -291,6 +306,7 @@ def function(
 
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
+    cmd_kw['expect_minions'] = expect_minions
     fun = name
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     
@@ -311,8 +327,15 @@ def function(
         fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
-        m_ret = mdata['ret']
-        m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
+        
+        m_ret = False
+
+        if mdata.get('failed', False):
+            m_func = False
+        else:
+            m_ret = mdata['ret']
+            m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
+            
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
