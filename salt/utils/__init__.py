@@ -2201,11 +2201,17 @@ def get_gid_list(user=None, include_default=True):
     return sorted(set(gid_list))
 
 
-def trim_dict(data, max_dict_bytes, percent=50.0, stepper_size=10, replace_with='VALUE_TRIMMED', is_msgpacked=False):
+def trim_dict(
+        data,
+        max_dict_bytes,
+        percent=50.0,
+        stepper_size=10,
+        replace_with='VALUE_TRIMMED',
+        is_msgpacked=False):
     '''
     Takes a dictionary and iterates over its keys, looking for
     large values and replacing them with a trimmed string.
- 
+
     If after the first pass over dictionary keys, the dictionary
     is not sufficiently small, the stepper_size will be increased
     and the dictionary will be rescanned. This allows for progressive
