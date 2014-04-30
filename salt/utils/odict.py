@@ -63,7 +63,9 @@ except ImportError:
                 '''
                 super(OrderedDict, self).__init__()  # pylint: disable=E1003
                 if len(args) > 1:
-                    raise TypeError('expected at most 1 arguments, got %d' % len(args))
+                    raise TypeError(
+                        'expected at most 1 arguments, got {0}'.format(len(args))
+                    )
                 try:
                     self.__root
                 except AttributeError:
@@ -180,8 +182,10 @@ except ImportError:
 
                 '''
                 if len(args) > 2:
-                    raise TypeError('update() takes at most 2 positional '
-                                    'arguments (%d given)' % (len(args),))
+                    raise TypeError(
+                        'update() takes at most 2 positional '
+                        'arguments ({0} given)'.format(len(args))
+                    )
                 elif not args:
                     raise TypeError('update() takes at least 1 argument (0 given)')
                 self = args[0]
