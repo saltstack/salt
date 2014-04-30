@@ -199,9 +199,9 @@ def _sizeof_fmt(num):
     '''
     Return disk format size data
     '''
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
+    for unit in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
         if num < 1024.0:
-            return '%3.1f %s' % (num, x)
+            return '{0:3.1f} {1}'.format(num, unit)
         num /= 1024.0
 
 
