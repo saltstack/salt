@@ -349,7 +349,7 @@ class TestDaemon(object):
         Return a local client which will be used for example to ping and sync
         the test minions.
 
-        This client is defined as a class attribute because it's creation needs
+        This client is defined as a class attribute because its creation needs
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''

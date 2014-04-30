@@ -105,7 +105,7 @@ def __get_conn():
     def __esxi_auth():
         '''
         We rely on that the credentials is provided to libvirt through
-        it's built in mechanisms.
+        its built in mechanisms.
 
         Example libvirt `/etc/libvirt/auth.conf`:
 
