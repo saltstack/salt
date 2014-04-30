@@ -355,12 +355,12 @@ def installed(name,
         volumes = []
     if isinstance(environment, dict):
         for k in environment:
-            denvironment[u'%s' % k] = u'%s' % environment[k]
+            denvironment[unicode(k)] = unicode(environment[k])
     if isinstance(environment, list):
         for p in environment:
             if isinstance(p, dict):
                 for k in p:
-                    denvironment[u'%s' % k] = u'%s' % p[k]
+                    denvironment[unicode(k)] = unicode(p[k])
     for p in ports:
         if not isinstance(p, dict):
             dports[str(p)] = {}
@@ -370,7 +370,7 @@ def installed(name,
     for p in volumes:
         vals = []
         if not isinstance(p, dict):
-            vals.append('%s' % p)
+            vals.append('{0}'.format(p))
         else:
             for k in p:
                 vals.append('{0}:{1}'.format(k, p[k]))
