@@ -111,6 +111,7 @@ def state(
     ret = {'name': name,
            'changes': {},
            'comment': '',
+           'out': 'highstate',
            'result': True}
 
     if env is not None:
@@ -211,7 +212,7 @@ def state(
             no_change.add(minion)
 
     if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
+        ret['changes'] = {'ret': changes}
     if fail:
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
@@ -291,6 +292,7 @@ def function(
     ret = {'name': name,
            'changes': {},
            'comment': '',
+           'out': 'highstate',
            'result': True}
 
     if expr_form and tgt_type:
@@ -344,7 +346,7 @@ def function(
         changes[minion] = m_ret
             
     if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
+        ret['changes'] = {'ret': changes}
     if fail:
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
