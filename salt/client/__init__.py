@@ -186,7 +186,7 @@ class LocalClient(object):
         '''
         Return the information about a given job
         '''
-        log.debug('Checking whether jid %s is still running', jid)
+        log.debug('Checking whether jid {0} is still running'.format(jid))
         timeout = self.opts['gather_job_timeout']
 
         pub_data = self.run_job(tgt,
@@ -790,15 +790,18 @@ class LocalClient(object):
         found = set()
         # Check to see if the jid is real, if not return the empty dict
         if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
-            log.warning("jid does not exist")
+            log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid
             raise StopIteration()
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
-        log.debug("get_iter_returns for jid %s sent to %s will timeout at %s",
-                  jid, minions, datetime.fromtimestamp(timeout_at).time())
+        log.debug(
+            'get_iter_returns for jid {0} sent to {1} will timeout at {2}'.format(
+                jid, minions, datetime.fromtimestamp(timeout_at).time()
+            )
+        )
         while True:
             # Process events until timeout is reached or all minions have returned
             time_left = timeout_at - int(time.time())
@@ -808,13 +811,16 @@ class LocalClient(object):
             if raw is None:
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
-                    log.debug('jid %s found all minions %s', jid, found)
+                    log.debug('jid {0} found all minions {1}'.format(jid, found))
                     if self.opts['order_masters']:
                         if syndic_wait < self.opts.get('syndic_wait', 1):
                             syndic_wait += 1
                             timeout_at = int(time.time()) + 1
-                            log.debug('jid %s syndic_wait %s will now timeout at %s',
-                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
+                            log.debug(
+                                'jid {0} syndic_wait {1} will now timeout at {2}'.format(
+                                    jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()
+                                )
+                            )
                             continue
                     break
             else:
@@ -834,26 +840,32 @@ class LocalClient(object):
                     ret = {raw['id']: {'ret': raw['return']}}
                     if 'out' in raw:
                         ret[raw['id']]['out'] = raw['out']
-                    log.debug('jid %s return from %s', jid, raw['id'])
+                    log.debug('jid {0} return from {1}'.format(jid, raw['id']))
                     yield ret
 
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
-                log.debug('jid %s found all minions %s', jid, found)
+                log.debug('jid {0} found all minions {1}'.format(jid, found))
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
                         timeout_at = int(time.time()) + 1
-                        log.debug('jid %s syndic_wait %s will now timeout at %s',
-                                  jid, syndic_wait, datetime.fromtimestamp(timeout_at).time())
+                        log.debug(
+                            'jid {0} syndic_wait {1} will now timeout at {2}'.format(
+                                jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()
+                            )
+                        )
                         continue
                 break
             if last_time:
                 if len(found) < len(minions):
-                    log.info('jid %s minions %s did not return in time',
-                             jid, (minions - found))
+                    log.info(
+                        'jid {0} minions {1} did not return in time'.format(
+                            jid, (minions - found)
+                        )
+                    )
                 break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
@@ -864,12 +876,15 @@ class LocalClient(object):
                                  ]
                 if still_running:
                     timeout_at = int(time.time()) + timeout
-                    log.debug('jid %s still running on %s will now timeout at %s',
-                              jid, still_running, datetime.fromtimestamp(timeout_at).time())
+                    log.debug(
+                        'jid {0} still running on {1} will now timeout at {2}'.format(
+                            jid, still_running, datetime.fromtimestamp(timeout_at).time()
+                        )
+                    )
                     continue
                 else:
                     last_time = True
-                    log.debug('jid %s not running on any minions last time', jid)
+                    log.debug('jid {0} not running on any minions last time'.format(jid))
                     continue
             time.sleep(0.01)
 
@@ -886,14 +901,17 @@ class LocalClient(object):
             timeout = self.opts['timeout']
         start = int(time.time())
         timeout_at = start + timeout
-        log.debug("get_returns for jid %s sent to %s will timeout at %s",
-                  jid, minions, datetime.fromtimestamp(timeout_at).time())
+        log.debug(
+            'get_returns for jid {0} sent to {1} will timeout at {2}'.format(
+                jid, minions, datetime.fromtimestamp(timeout_at).time()
+            )
+        )
 
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
         if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
-            log.warning("jid does not exist")
+            log.warning('jid does not exist')
             return ret
 
         # Wait for the hosts to check in
@@ -906,17 +924,20 @@ class LocalClient(object):
                 ret[raw['id']] = raw['return']
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
-                    log.debug("jid %s found all minions", jid)
+                    log.debug('jid {0} found all minions'.format(jid))
                     break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
-                log.debug("jid %s found all minions", jid)
+                log.debug('jid {0} found all minions'.format(jid))
                 break
             if int(time.time()) > timeout_at:
-                log.info('jid %s minions %s did not return in time',
-                         jid, (minions - found))
+                log.info(
+                    'jid {0} minions {1} did not return in time'.format(
+                        jid, (minions - found)
+                    )
+                )
                 break
             time.sleep(0.01)
         return ret
@@ -1022,7 +1043,7 @@ class LocalClient(object):
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
         if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
-            log.warning("jid does not exist")
+            log.warning('jid does not exist')
             return ret
         # Wait for the hosts to check in
         while True:
@@ -1099,7 +1120,7 @@ class LocalClient(object):
         found = set()
         # Check to see if the jid is real, if not return the empty dict
         if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
-            log.warning("jid does not exist")
+            log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid
             raise StopIteration()
@@ -1197,7 +1218,7 @@ class LocalClient(object):
         found = set()
         # Check to see if the jid is real, if not return the empty dict
         if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
-            log.warning("jid does not exist")
+            log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid
             raise StopIteration()
