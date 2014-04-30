@@ -112,7 +112,7 @@ class Serial(object):
                 # raise the exception
                 raise
 
-            # msgpack is < 0.2.0, let's make it's life easier
+            # msgpack is < 0.2.0, let's make its life easier
             # Since OrderedDict is identified as a dictionary, we can't
             # make use of msgpack custom types, we will need to convert by
             # hand.

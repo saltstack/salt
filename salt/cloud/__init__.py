@@ -1874,7 +1874,7 @@ class Map(Cloud):
             if master_profile['minion'].get('local_master', False) and \
                     master_profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
-                # explicitely saying it's the local one
+                # explicitly saying it's the local one
                 local_master = True
 
             out = self.create(master_profile, local_master=local_master)
@@ -1939,7 +1939,7 @@ class Map(Cloud):
             if 'minion' in profile and profile['minion'].get('local_master', False) and \
                     profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
-                # explicitely saying it's the local one
+                # explicitly saying it's the local one
                 local_master = True
 
             if master_finger is not None and local_master is False:

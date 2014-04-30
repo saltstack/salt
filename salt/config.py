@@ -740,7 +740,7 @@ def minion_config(path,
         # in `5d60f77` in order not to break backwards compatibility.
         #
         # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop it's use.
+        # api calls to be updated in order to stop its use.
         salt.utils.warn_until(
             'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
@@ -967,7 +967,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             entry = os.path.join(os.path.dirname(path), entry)
 
         if os.path.isdir(entry):
-            # Path exists, let's update the entry(it's path might have been
+            # Path exists, let's update the entry (its path might have been
             # made absolute)
             deploy_scripts_search_path[idx] = entry
             continue
@@ -975,7 +975,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # It's not a directory? Remove it from the search path
         deploy_scripts_search_path.pop(idx)
 
-    # Add the built-in scripts directory to the search path(last resort)
+    # Add the built-in scripts directory to the search path (last resort)
     deploy_scripts_search_path.append(
         os.path.abspath(
             os.path.join(
@@ -1853,7 +1853,7 @@ def apply_minion_config(overrides=None,
         # in `5d60f77` in order not to break backwards compatibility.
         #
         # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop it's use.
+        # api calls to be updated in order to stop its use.
         salt.utils.warn_until(
             'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '

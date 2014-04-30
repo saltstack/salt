@@ -15,7 +15,7 @@ class Mock(object):
     '''
     Mock out specified imports
 
-    This allows autodoc to do it's thing without having oodles of req'd
+    This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
