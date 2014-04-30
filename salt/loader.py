@@ -979,7 +979,7 @@ class Loader(object):
 
     def process_virtual(self, mod, module_name):
         '''
-        Given a loaded module and it's default name determine its virtual name
+        Given a loaded module and its default name determine its virtual name
 
         This function returns a tuple. The first value will be either True or
         False and will indicate if the module should be loaded or not (ie. if

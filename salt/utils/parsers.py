@@ -328,7 +328,7 @@ class SaltfileMixIn(object):
         cli_config = saltfile_config[self.get_prog_name()]
 
         # If there are any options, who's names match any key from the loaded
-        # Saltfile, we need to update it's default value
+        # Saltfile, we need to update its default value
         for option in self.option_list:
             if option.dest is None:
                 # --version does not have dest attribute set for example.
@@ -639,8 +639,8 @@ class LogLevelMixIn(object):
         )
 
         if not is_writeable(logfile, check_parent=True):
-            # Since we're not be able to write to the log file or it's parent
-            # directory(if the log file does not exit), are we the same user
+            # Since we're not be able to write to the log file or its parent
+            # directory (if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
             current_user = salt.utils.get_user()
             if self.config['user'] != current_user:
@@ -648,7 +648,7 @@ class LogLevelMixIn(object):
                 # Is the current user in ACL?
                 if current_user in self.config.get('client_acl', {}).keys():
                     # Yep, the user is in ACL!
-                    # Let's write the logfile to it's home directory instead.
+                    # Let's write the logfile to its home directory instead.
                     user_salt_dir = os.path.expanduser('~/.salt')
                     if not os.path.isdir(user_salt_dir):
                         os.makedirs(user_salt_dir, 0750)
@@ -1932,7 +1932,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     os.makedirs(self.options.gen_keys_dir)
                 self.options.config_dir = self.options.gen_keys_dir
         super(SaltKeyOptionParser, self).process_config_dir()
-    # Don't change it's mixin priority!
+    # Don't change its mixin priority!
     process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
@@ -2267,7 +2267,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             dest='ssh_key_deploy',
             default=False,
             action='store_true',
-            help='Set this flag to atempt to deploy the authorized ssh key '
+            help='Set this flag to attempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy'
         )

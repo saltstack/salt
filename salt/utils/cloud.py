@@ -441,7 +441,7 @@ def ssh_usernames(vm_, opts, default_users=None):
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time
     # might need to pass before the remote service is available for logins and
-    # the proper username might have passed it's iteration.
+    # the proper username might have passed its iteration.
     # This has detected in a CentOS 5.7 EC2 image
     usernames.extend(initial)
     return usernames
