@@ -212,11 +212,30 @@ class SerializerExtension(Extension, object):
         json = {{ data|json }}
         python = {{ data|python }}
 
-    will be rendered has::
+    will be rendered as::
 
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
         python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
+
+    The yaml filter takes an optional flow_style parameter to control the
+    default-flow-style parameter of the YAML dumper.
+
+    .. code-block:: jinja
+
+        {{ data|yaml(False)}}
+
+    will be rendered as:
+
+    .. code-block: yaml
+
+        bar: 42
+        baz:
+          - 1
+          - 2
+          - 3
+        foo: true
+        qux: 2.0
 
     Load filters
     ~~~~~~~~~~~~
@@ -335,8 +354,8 @@ class SerializerExtension(Extension, object):
     def format_json(self, value):
         return Markup(json.dumps(value, sort_keys=True).strip())
 
-    def format_yaml(self, value):
-        return Markup(yaml.dump(value, default_flow_style=True,
+    def format_yaml(self, value, flow_style=True):
+        return Markup(yaml.dump(value, default_flow_style=flow_style,
                                 Dumper=OrderedDictDumper).strip())
 
     def format_python(self, value):
