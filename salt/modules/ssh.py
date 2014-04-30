@@ -756,3 +756,78 @@ def set_known_host(user, hostname,
     if os.geteuid() == 0:
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
+
+
+def user_keys(user=None, pubfile=None, prvfile=None):
+    '''
+    Return the user's ssh keys on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.user_keys
+
+        salt '*' ssh.user_keys user=user1
+
+        salt '*' ssh.user_keys user=user1 \
+                pubfile=/home/user1/.ssh/id_rsa.pub
+                prvfile=/home/user1/.ssh/id_rsa
+
+        salt '*' ssh.user_keys user="['user1','user2'] \
+                pubfile=id_rsa.pub prvfile=id_rsa
+
+    '''
+    if not user:
+        user = __salt__['user.list_users']()
+
+    if not isinstance(user, list):
+        # only one so convert to list
+        user = [user]
+
+    keys = {}
+    for u in user:
+        keys[u] = {}
+        userinfo = __salt__['user.info'](u)
+
+        if not 'home' in userinfo:
+            # no home directory, skip
+            continue
+
+        userKeys = []
+
+        if pubfile:
+            userKeys.append(pubfile)
+        else:
+            # Add the default public keys
+            userKeys += ['id_rsa.pub', 'id_dsa.pub']
+
+        if prvfile:
+            userKeys.append(prvfile)
+        else:
+            # Add the default private keys
+            userKeys += ['id_rsa', 'id_dsa']
+
+        for key in userKeys:
+            if key.startswith('/'):
+                keyname = os.path.basename(key)
+                fn_ = key
+            else:
+                # if not full path, assume key is in .ssh
+                # in user's home directory
+                keyname = key
+                fn_ = '{0}/.ssh/{1}'.format(userinfo['home'], key)
+
+            if os.path.exists(fn_):
+                try:
+                    with salt.utils.fopen(fn_, 'r') as _fh:
+                        keys[u][keyname] = ''.join(_fh.readlines())
+                except (IOError, OSError):
+                    pass
+
+    # clean up any empty items
+    _keys = {}
+    for key in keys:
+        if keys[key]:
+            _keys[key] = keys[key]
+    return _keys
