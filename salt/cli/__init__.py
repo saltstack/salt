@@ -166,27 +166,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
                     # Returns summary
                     if self.config['fun'] != 'sys.doc':
-                        return_counter = 0
-                        not_return_counter = 0
-                        not_return_minions = []
-                        for each_minion in ret:
-                             if ret[each_minion] == "Minion did not return":
-                                 not_return_counter += 1
-                                 not_return_minions.append(each_minion)
-                             else:
-                                 return_counter += 1
-                        # Display returns summary
-                        print('\n')
-                        print('-------------------------------------------')
-                        print('Summary')
-                        print('-------------------------------------------')
-                        if self.options.verbose:
-                            print('Target minions counter: %d' %(return_counter + not_return_counter))
-                        print('Recived returns counter: %d' %return_counter)
-                        if self.options.verbose:
-                            print('Not returns counter: %d' %not_return_counter)
-                            print('Not return minions: %s' % "".join(not_return_minions))
-                        print('-------------------------------------------')
+                        self._print_returns_summary(ret)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
@@ -199,6 +179,31 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+
+    def _print_returns_summary(self, ret):
+        '''
+        Display returns summary
+        '''
+        return_counter = 0
+        not_return_counter = 0
+        not_return_minions = []
+        for each_minion in ret:
+            if ret[each_minion] == "Minion did not return":
+                not_return_counter += 1
+                not_return_minions.append(each_minion)
+            else:
+                return_counter += 1
+        print('\n')
+        print('-------------------------------------------')
+        print('Summary')
+        print('-------------------------------------------')
+        if self.options.verbose:
+            print('Target minions counter: %d' %(return_counter + not_return_counter))
+        print('Recived returns counter: %d' %return_counter)
+        if self.options.verbose:
+            print('Not returns counter: %d' %not_return_counter)
+            print('Not return minions: %s' % " ".join(not_return_minions))
+        print('-------------------------------------------')
 
     def _output_ret(self, ret, out):
         '''
