@@ -480,7 +480,7 @@ def upgrade_bootstrap(directory='.',
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
-    LOG.debug('Using %s' % booturl)
+    LOG.debug('Using {0}'.format(booturl))
     # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
