@@ -233,6 +233,7 @@ def function(
         expr_form=None,
         ret='',
         fail_minions=None,
+        fail_function=None,
         arg=None,
         kwarg=None,
         timeout=None):
@@ -259,6 +260,10 @@ def function(
 
     fail_minions
         An optional list of targeted minions where failure is an option
+
+    fail_function
+        An optional string that points to a salt module that returns True or False
+        based on the returned data dict for individual minions
 
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
@@ -307,9 +312,8 @@ def function(
 
     for minion, mdata in cmd_ret.iteritems():
         m_ret = mdata['ret']
-        m_state = _check_func_result(m_ret)
-
-        if not m_state:
+        m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
+        if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
             failures[minion] = m_ret
@@ -338,23 +342,3 @@ def function(
                     )
             ret['comment'] += '\n'
     return ret
-
-def _check_func_result(running):
-    '''
-    Check the total return value of the run and determine if the running
-    dict has any issues
-    '''
-    
-    if isinstance(running, bool):
-        return running
-        
-    if not isinstance(running, dict):
-        return False
-
-    if not running:
-        return False
-
-    if 'result' in running:
-        if running.get('result', False) is False:
-            return False
-    return True
