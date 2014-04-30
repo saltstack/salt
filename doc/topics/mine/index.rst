@@ -20,13 +20,16 @@ Mine Functions
 To enable the Salt Mine the `mine_functions` option needs to be applied to a
 minion. This option can be applied via the minion's configuration file, or the
 minion's Pillar. The `mine_functions` option dictates what functions are being
-executed and allows for arguments to be passed in:
+executed and allows for arguments to be passed in. If no arguments are passed,
+an empty list must be added:
 
 .. code-block:: yaml
 
     mine_functions:
-      network.interfaces: [eth0]
       test.ping: []
+      network.ip_addrs
+        interface: eth0
+        cidr: '10.0.0.0/8'
 
 Mine Interval
 =============
