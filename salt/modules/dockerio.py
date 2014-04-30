@@ -660,9 +660,11 @@ def create_container(image,
             'info': _get_container_infos(container),
             'out': container_info
         }
+        __salt__['mine.send']('docker.get_containers', host=True)
         return callback(status, id=container, comment=comment, out=out)
     except Exception:
         invalid(status, id=image, out=traceback.format_exc())
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -788,6 +790,7 @@ def stop(container, timeout=10, *args, **kwargs):
                 comment=(
                     'An exception occurred while stopping '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -840,6 +843,7 @@ def kill(container, *args, **kwargs):
                 comment=(
                     'An exception occurred while killing '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -883,6 +887,7 @@ def restart(container, timeout=10, *args, **kwargs):
                 comment=(
                     'An exception occurred while restarting '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -965,6 +970,7 @@ def start(container, binds=None, port_bindings=None,
                 comment=(
                     'An exception occurred while starting '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -1007,6 +1013,7 @@ def wait(container, *args, **kwargs):
                 comment=(
                     'An exception occurred while waiting '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -1088,6 +1095,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
                         comment=(
                             'Container {0} is running, '
                             'won\'t remove it').format(container))
+                __salt__['mine.send']('docker.get_containers', host=True)
                 return status
             else:
                 kill(dcontainer)
@@ -1101,6 +1109,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
             status['comment'] = 'Container {0} was removed'.format(container)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
