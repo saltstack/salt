@@ -15,6 +15,7 @@
 from __future__ import print_function
 import os
 import sys
+import getpass
 import logging
 import optparse
 import traceback
@@ -22,6 +23,7 @@ from functools import partial
 
 # Import salt libs
 import salt.config as config
+import salt.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
@@ -193,7 +195,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report()), file=file)
-        self.exit()
+        self.exit(os.EX_OK)
 
 
 class MergeConfigMixIn(object):
@@ -1528,7 +1530,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     __metaclass__ = OptionParserMeta
 
-    default_timeout = 5
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
 
@@ -1649,7 +1651,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # passed in. Regardless, we're in an unknown state here.
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
-                sys.exit(1)
+                sys.exit(salt.exitcodes.EX_GENERIC)
 
         if self.options.doc:
             # Include the target
@@ -1732,7 +1734,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         'files.'
     )
 
-    default_timeout = 5
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options] \'<target>\' SOURCE DEST'
 
@@ -1748,7 +1750,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2080,7 +2082,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2109,10 +2111,10 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, LogLevelMixIn):
+                          OutputOptionsMixIn, TimeoutMixIn, LogLevelMixIn):
     __metaclass__ = OptionParserMeta
 
-    default_timeout = 1
+    default_timeout = config.DEFAULT_MASTER_OPTS['timeout']
 
     usage = '%prog [options]'
 
@@ -2133,23 +2135,6 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Display documentation for runners, pass a runner or '
                   'runner.function to see documentation on only that runner '
                   'or function.')
-        )
-        group = self.output_options_group = optparse.OptionGroup(
-            self, 'Output Options', 'Configure your preferred output format'
-        )
-        self.add_option_group(group)
-
-        group.add_option(
-            '--no-color', '--no-colour',
-            default=False,
-            action='store_true',
-            help='Disable all colored output'
-        )
-        group.add_option(
-            '--force-color', '--force-colour',
-            default=False,
-            action='store_true',
-            help='Force colored output'
         )
 
     def _mixin_after_parsed(self):
@@ -2173,6 +2158,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, TargetOptionsMixIn,
                           OutputOptionsMixIn, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
+
+    default_conn_timeout = config.DEFAULT_MASTER_OPTS['ssh_conn_timeout']
+    default_proc_timeout = config.DEFAULT_MASTER_OPTS['ssh_proc_timeout']
 
     usage = '%prog [options]'
 
@@ -2263,6 +2251,14 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'authenticating'
         )
         auth_group.add_option(
+            '--askpass',
+            dest='ssh_askpass',
+            default=False,
+            action='store_true',
+            help='Interactively ask for the SSH password with no echo - avoids '
+                 'password in process args and stored in history'
+        )
+        auth_group.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
             default=False,
@@ -2271,12 +2267,26 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy'
         )
+        auth_group.add_option(
+            '--ct', '--conn-timeout',
+            dest='ssh_conn_timeout',
+            type=int,
+            default=self.default_conn_timeout,
+            help=('Change the connection timeout for SSH; default=%default')
+        )
+        auth_group.add_option(
+            '--pt', '--proc-timeout',
+            dest='ssh_proc_timeout',
+            type=int,
+            default=self.default_proc_timeout,
+            help=('Change the connection timeout for SSH; default=%default')
+        )
         self.add_option_group(auth_group)
 
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2285,8 +2295,11 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        if len(self.args) > 0:
-            self.config['arg_str'] = ' '.join(self.args[1:])
+
+        self.config['argv'] = self.args[1:]
+
+        if self.options.ssh_askpass:
+            self.options.ssh_passwd = getpass.getpass('Password: ')
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -2317,7 +2330,7 @@ class SaltCloudParser(OptionParser,
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
-        self.exit()
+        self.exit(os.EX_OK)
 
     def parse_args(self, args=None, values=None):
         try:
@@ -2334,7 +2347,7 @@ class SaltCloudParser(OptionParser,
 
             print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
             pprint.pprint(self.config)
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         if self.args:
             self.config['names'] = self.args
