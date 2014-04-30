@@ -70,8 +70,14 @@ Now you can include your ciphers in your pillar data like so:
 '''
 
 import re
-import gnupg
+try:
+    import gnupg
+    HAS_GPG = True
+except:
+    HAS_GPG = False
 import logging
+
+from salt.exceptions import  SaltRenderError
 
 log = logging.getLogger(__name__)
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
@@ -105,6 +111,8 @@ def decrypt_object(o, gpg):
 
 
 def render(data, saltenv='base', sls='', argline='', **kwargs):
+    if not HAS_GPG:
+        raise SaltRenderError('GPG unavailable')
     if isinstance(__salt__, dict):
         if 'config.get' in __salt__:
             homedir = __salt__['config.get']('gpg_keydir', DEFAULT_GPG_KEYDIR)
