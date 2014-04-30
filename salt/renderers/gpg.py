@@ -73,11 +73,11 @@ import re
 try:
     import gnupg
     HAS_GPG = True
-except:
+except ImportError:
     HAS_GPG = False
 import logging
 
-from salt.exceptions import  SaltRenderError
+from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
