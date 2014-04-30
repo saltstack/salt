@@ -10,6 +10,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.payload
+import salt.utils.network
 
 __proxyenabled__ = ['*']
 
@@ -255,3 +256,26 @@ def flush():
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
+
+
+def get_docker(cidr=None):
+    '''
+    Get all mine data for 'docker.get_containers' and run an aggregation
+    routine.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.get_docker
+    '''
+    from pprint import pprint
+    if cidr:
+        pprint(cidr)
+        me = salt.utils.network.in_subnet(cidr, '192.168.1.1')
+    pprint(me)
+    return me
+    #cmd = 'docker.get_containers'
+    #containers = get('*', cmd)
+    #pprint(containers)
+    #return containers
