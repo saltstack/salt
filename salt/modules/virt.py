@@ -100,7 +100,7 @@ def __get_conn():
         connection = __salt__['config.get']('libvirt:connection', 'esx')
         if connection.startswith('esx://'):
             return connection
-        return '%s' % connection
+        return connection
 
     def __esxi_auth():
         '''
@@ -892,7 +892,7 @@ def get_disks(vm_):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
                     source.hasAttribute('name'):  # For rbd network
-                qemu_target = '%s:%s' % (
+                qemu_target = '{0}:{1}'.format(
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
