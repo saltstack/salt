@@ -227,7 +227,7 @@ class SerializerExtension(Extension, object):
 
     will be rendered as:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         bar: 42
         baz:
