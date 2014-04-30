@@ -233,8 +233,8 @@ except ImportError:
                 _repr_running[call_key] = 1
                 try:
                     if not self:
-                        return '%s()' % (self.__class__.__name__,)
-                    return '%s(%r)' % (self.__class__.__name__, self.items())
+                        return '{0}()'.format(self.__class__.__name__)
+                    return '{0}({1!r})'.format(self.__class__.__name__, self.items())
                 finally:
                     del _repr_running[call_key]
 
@@ -331,6 +331,6 @@ class DefaultOrderedDict(OrderedDict):
                           copy.deepcopy(self.items()))
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
-        return 'DefaultOrderedDict(%s, %s)' % (self.default_factory,
-                                               super(DefaultOrderedDict,
-                                                     self).__repr__())
+        return 'DefaultOrderedDict({0}, {1})'.format(self.default_factory,
+                                                     super(DefaultOrderedDict,
+                                                           self).__repr__())
