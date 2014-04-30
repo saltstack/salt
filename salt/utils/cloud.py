@@ -858,6 +858,9 @@ def deploy_windows(host,
                 creds,
             ))
         # Shell out to winexe to ensure salt-minion service started
+        win_cmd('winexe {0} "sc stop salt-minion"'.format(
+            creds,
+        ))
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
         ))
