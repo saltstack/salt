@@ -95,7 +95,7 @@ def extracted(name,
         ret['comment'] = '{0} already exists'.format(if_missing)
         return ret
 
-    log.debug("Input seem valid so far")
+    log.debug('Input seem valid so far')
     filename = os.path.join(__opts__['cachedir'],
                             '{0}.{1}'.format(if_missing.replace('/', '_'),
                                              archive_format))
@@ -107,7 +107,7 @@ def extracted(name,
                     source, name)
             return ret
 
-        log.debug("Archive file %s is not in cache, download it", source)
+        log.debug('Archive file {0} is not in cache, download it'.format(source))
         data = {
             filename: {
                 'file': [
@@ -121,14 +121,14 @@ def extracted(name,
             }
         }
         file_result = __salt__['state.high'](data)
-        log.debug("file.managed: %s", file_result)
+        log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         file_result = file_result[file_result.keys()[0]]
         if not file_result['result']:
-            log.debug("failed to download %s", source)
+            log.debug('failed to download {0}'.format(source))
             return file_result
     else:
-        log.debug("Archive file %s is already in cache", name)
+        log.debug('Archive file {0} is already in cache'.format(name))
 
     if __opts__['test']:
         ret['result'] = None
@@ -139,7 +139,7 @@ def extracted(name,
     __salt__['file.makedirs'](name)
 
     if archive_format in ('zip', 'rar'):
-        log.debug("Extract %s in %s", filename, name)
+        log.debug('Extract {0} in {1}'.format(filename, name))
         files = __salt__['archive.un{0}'.format(archive_format)](filename,
                                                                  name)
     else:
@@ -149,7 +149,7 @@ def extracted(name,
                 tar.extractall(name)
         else:
             # this is needed until merging PR 2651
-            log.debug("Untar %s in %s", filename, name)
+            log.debug('Untar {0} in {1}'.format(filename, name))
             for opt in ['x']:
                 if not opt in tar_options:
                     tar_options = '-{0} {1}'.format(opt, tar_options)
@@ -174,11 +174,11 @@ def extracted(name,
         if if_missing != name:
             ret['changes']['directories_created'].append(if_missing)
         ret['changes']['extracted_files'] = files
-        ret['comment'] = "{0} extracted in {1}".format(source, name)
+        ret['comment'] = '{0} extracted in {1}'.format(source, name)
         if not keep:
             os.unlink(filename)
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
-        ret['comment'] = "Can't extract content of {0}".format(source)
+        ret['comment'] = 'Can\'t extract content of {0}'.format(source)
     return ret
