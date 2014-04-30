@@ -30,7 +30,7 @@ def __virtual__():
 
 def _list(query=''):
     ret = {}
-    cmd = 'port list %s' % query
+    cmd = 'port list {0}'.format(query)
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
