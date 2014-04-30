@@ -164,7 +164,7 @@ def init(names,
         If salt-minion is not already installed, install it. Default: true
 
     config
-        Optional config paramers. By default, the id is set to the name of the
+        Optional config parameters. By default, the id is set to the name of the
         container.
     '''
     if host is None:
