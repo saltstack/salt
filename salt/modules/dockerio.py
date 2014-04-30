@@ -339,8 +339,8 @@ def _get_image_infos(image):
     if not status['id']:
         invalid(status)
         raise CommandExecutionError(
-            'ImageID "%s" could not be resolved to '
-            'an existing Image' % (image)
+            'ImageID {0!r} could not be resolved to '
+            'an existing Image'.format(image)
         )
     return status['out']
 
