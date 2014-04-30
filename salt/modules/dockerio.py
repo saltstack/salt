@@ -381,6 +381,7 @@ def get_containers(all=True,
                    since=None,
                    before=None,
                    limit=-1,
+                   host=False,
                    *args,
                    **kwargs):
     '''
@@ -392,6 +393,9 @@ def get_containers(all=True,
     trunc
         Set it to True to have the short ID
 
+    host
+        Include the Docker host's ipv4 and ipv6 address in return
+
     Returns a mapping of something which looks like
     container
 
@@ -400,9 +404,14 @@ def get_containers(all=True,
     .. code-block:: bash
 
         salt '*' docker.get_containers
+        salt '*' docker.get_containers host=True
     '''
     client = _get_client()
     status = base_status.copy()
+    if host:
+        status['host'] = {}
+        status['host']['ipv4'] = __salt__['network.ip_addrs']()
+        status['host']['ipv6'] = __salt__['network.ip_addrs6']()
     ret = client.containers(all=all,
                             trunc=trunc,
                             since=since,
