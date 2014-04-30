@@ -180,7 +180,7 @@ is the order in which states are defined in salt formulas. This is very
 straightforward on basic states which do not contain ``include`` statements
 or a ``top`` file, as the states are just ordered from the top of the file,
 but the include system starts to bring in some simple rules for how the
-`Definitiion Order` is defined.
+`Definition Order` is defined.
 
 Looking back at the "Low Data" and "High Data" shown above, the order key has
 been transparently added to the data to enable the `Definition Order`.
