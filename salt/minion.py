@@ -1184,7 +1184,7 @@ class Minion(MinionBase):
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        
+
         tries = self.opts.get('auth_tries', 1)
         safe = self.opts.get('auth_safemode', safe)
         while True:
@@ -1199,7 +1199,7 @@ class Minion(MinionBase):
             if acceptance_wait_time < acceptance_wait_time_max:
                 acceptance_wait_time += acceptance_wait_time
                 log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
-                
+
         self.aes = creds['aes']
         if self.opts.get('syndic_master_publish_port'):
             self.publish_port = self.opts.get('syndic_master_publish_port')
@@ -1353,7 +1353,7 @@ class Minion(MinionBase):
             loop_interval = self.process_schedule(self, loop_interval)
             try:
                 socks = self._do_poll(loop_interval)
-              
+
                 if ping_interval > 0:
                     if socks or not ping_at:
                         ping_at = time.time() + ping_interval
