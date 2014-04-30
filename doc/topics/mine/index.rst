@@ -4,13 +4,9 @@
 The Salt Mine
 =============
 
-Granted, it took a while for this name to be used in Salt, but version 0.15.0
-introduces a new system to Salt called the Salt Mine.
-
-The Salt Mine is used to bridge the gap between setting static variables and
-gathering live data. The Salt mine is used to collect arbitrary data from
-minions and store it on the master. This data is then made available to
-all minions via the ``mine`` module.
+The Salt Mine is used to collect arbitrary data from minions and store it on
+the master. This data is then made available to all minions via the
+:py:mod:`salt.modules.mine` module.
 
 The data is gathered on the minion and sent back to the master where only
 the most recent data is maintained (if long term data is required use
@@ -21,7 +17,7 @@ Mine Functions
 
 To enable the Salt Mine the `mine_functions` option needs to be applied to a
 minion. This option can be applied via the minion's configuration file, or the
-minion's pillar. The `mine_functions` option dictates what functions are being
+minion's Pillar. The `mine_functions` option dictates what functions are being
 executed and allows for arguments to be passed in:
 
 .. code-block:: yaml
