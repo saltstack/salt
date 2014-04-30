@@ -466,7 +466,7 @@ class SSH(object):
             print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
-            self.cache_job(jid, host, ret)
+            self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
