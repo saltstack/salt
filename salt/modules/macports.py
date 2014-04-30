@@ -15,6 +15,8 @@ log = logging.getLogger(__name__)
 
 LIST_ACTIVE_ONLY = True
 
+__virtualname__ = 'pkg'
+
 
 def __virtual__():
     '''
@@ -22,7 +24,7 @@ def __virtual__():
     '''
 
     if salt.utils.which('port') and __grains__['os'] == 'MacOS':
-        return 'pkg'
+        return __virtualname__
     return False
 
 
