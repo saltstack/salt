@@ -73,7 +73,7 @@ Rackspace currently has six compute regions which may be used:
     IAD -> Northern Virginia
     HKG -> Hong Kong
 
-Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions
+Note: Currently the LON region is only available with a UK account, and UK accounts cannot access other regions
 
 Authentication
 ==============

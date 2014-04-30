@@ -10,14 +10,14 @@ make sense for a particular cloud provider (Saltify, for instance).
 
 This matrix shows which features are available in which cloud providers, as far
 as Salt Cloud is concerned. This is not a comprehensive list of all features
-available in all cloud providers, and shoult not be used to make business
+available in all cloud providers, and should not be used to make business
 decisions concerning choosing a cloud provider. In most cases, adding support
 for a feature to Salt Cloud requires only a little effort.
 
 Legacy Drivers
 ==============
 Both AWS and Rackspace are listed as "Legacy". This is because those drivers
-have been replaced by other drivers, which are generally the prerferred method
+have been replaced by other drivers, which are generally the preferred method
 for working with those providers.
 
 The EC2 driver should be used instead of the AWS driver, when possible. The

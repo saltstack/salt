@@ -140,7 +140,7 @@ it can be verified with Salt:
 SSH to the instance
 ===================
 
-Additionally, the instance can be acessed via SSH using the floating IP assigned to it
+Additionally, the instance can be accessed via SSH using the floating IP assigned to it
 
 .. code-block:: bash
 
@@ -149,7 +149,7 @@ Additionally, the instance can be acessed via SSH using the floating IP assigned
 Using a private IP
 ==================
 
-Alternatively, in the cloud profile, using the private IP to log into the instance to set up the minion is another option, paerticularly if salt-cloud is running within the cloud on an instance that is on the same network with all the other instances (minions)
+Alternatively, in the cloud profile, using the private IP to log into the instance to set up the minion is another option, particularly if salt-cloud is running within the cloud on an instance that is on the same network with all the other instances (minions)
 
 The example below is a modified version of the previous example. Note the use of ``ssh_interface``:
 
