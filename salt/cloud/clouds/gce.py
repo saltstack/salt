@@ -1715,7 +1715,7 @@ def destroy(vm_name, call=None):
         transport=__opts__['transport']
     )
 
-    # Use the instance metadata to see if it's salt cloud profile was
+    # Use the instance metadata to see if its salt cloud profile was
     # preserved during instance create.  If so, use the profile value
     # to see if the 'delete_boot_pd' value is set to delete the disk
     # along with the instance.
