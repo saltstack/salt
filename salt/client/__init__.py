@@ -117,9 +117,7 @@ class LocalClient(object):
                 self.opts['transport'],
                 listen=not self.opts.get('__worker', False))
 
-        self.returner = salt.loader.returner(self.opts['master_job_cache'],
-                                             self.opts,
-                                             {})
+        self.returners = salt.loader.returners(self.opts, {})
 
     def __read_master_key(self):
         '''
@@ -791,7 +789,7 @@ class LocalClient(object):
         timeout_at = start + timeout
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returner['get_load'](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
@@ -894,7 +892,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returner['get_load'](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             return ret
 
@@ -935,7 +933,7 @@ class LocalClient(object):
         # create the iterator-- since we want to get anyone in the middle
         event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
 
-        data = self.returner['get_jid'](jid)
+        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -978,7 +976,7 @@ class LocalClient(object):
         '''
         ret = {}
 
-        data = self.returner['get_jid'](jid)
+        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -1023,7 +1021,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returner['get_load'](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             return ret
         # Wait for the hosts to check in
@@ -1100,7 +1098,7 @@ class LocalClient(object):
         timeout_at = start + timeout
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returner['get_load'](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
@@ -1198,7 +1196,7 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returner['get_load'](jid) != {}:
+        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
