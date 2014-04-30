@@ -237,13 +237,13 @@ def ext_pillar(minion_id, pillar, repo_string):
         # Support multiple key=val attributes as custom parameters.
         DELIM = '='
         if DELIM not in extraopt:
-            log.error(("Incorrectly formatted extra parameter."
-                       " Missing '%s': %s"), DELIM, extraopt)
+            log.error('Incorrectly formatted extra parameter. '
+                      'Missing {0!r}: {1}'.format(DELIM, extraopt))
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val
         else:
-            log.warning("Unrecognized extra parameter: %s", key)
+            log.warning('Unrecognized extra parameter: {0}'.format(key))
 
     gitpil = GitPillar(branch, repo_location, __opts__)
 
