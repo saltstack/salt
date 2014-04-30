@@ -15,6 +15,7 @@
 from __future__ import print_function
 import os
 import sys
+import getpass
 import logging
 import optparse
 import traceback
@@ -2117,7 +2118,16 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             dest='ssh_passwd',
             default='',
             help='Set the default password to attempt to use when '
-                 'authenticating')
+                 'authenticating'
+        )
+        self.add_option(
+            '--askpass',
+            dest='ssh_askpass',
+            default=False,
+            action='store_true',
+            help='Interactively ask for the SSH password with no echo - avoids '
+                 'password in process args and stored in history'
+        )
         self.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
@@ -2141,6 +2151,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['tgt'] = self.args[0]
         if len(self.args) > 0:
             self.config['arg_str'] = ' '.join(self.args[1:])
+
+        if self.options.ssh_askpass:
+            self.options.ssh_passwd = getpass.getpass('Password: ')
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
