@@ -7,6 +7,8 @@ Make me some salt!
 import os
 import sys
 import warnings
+import time
+from random import randint
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
@@ -41,7 +43,7 @@ try:
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit, MasterExit
+from salt.exceptions import SaltSystemExit, MasterExit, SaltClientError
 
 
 # Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
@@ -242,8 +244,8 @@ class Minion(parsers.MinionOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
         try:
+            self.prepare()
             if check_user(self.config['user']):
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
@@ -252,6 +254,14 @@ class Minion(parsers.MinionOptionParser):
                 logger.warn('Exiting on Ctrl-c')
             else:
                 logger.error(str(exc))
+        except SaltClientError as exc:
+            logger.error(exc)
+            if self.config.get('restart_on_error'):
+                logger.warn('** Restarting minion **')
+                s = randint(0, self.config.get('random_reauth_delay',10))
+                logger.info('Sleeping random_reauth_delay of {0} seconds'.format(s))
+                time.sleep(s)
+                return 'reconnect'
         finally:
             self.shutdown()
 
