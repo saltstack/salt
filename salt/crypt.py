@@ -339,7 +339,7 @@ class Auth(object):
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
-        
+
         try:
             payload = sreq.send_auto(
                 self.minion_sign_in_payload(),
