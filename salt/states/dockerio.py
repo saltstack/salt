@@ -540,7 +540,7 @@ def script(*args, **kw):
 
         Not yet implemented.
         Its implementation might be very similar from
-        :mod:`salt.states.dokcerio.run`
+        :mod:`salt.states.dockerio.run`
     '''
     raise NotImplementedError
 
