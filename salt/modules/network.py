@@ -9,6 +9,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 
 log = logging.getLogger(__name__)
@@ -41,20 +42,14 @@ def ping(host):
 
 # FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools
 # 1.6.0 (Ubuntu 10.10)
-def netstat():
+def _netstat_linux():
     '''
-    Return information on open ports and states
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.netstat
+    Return netstat information for Linux distros
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd).splitlines()
-    for line in out:
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
         comps = line.split()
         if line.startswith('tcp'):
             ret.append({
@@ -78,6 +73,148 @@ def netstat():
                 'send-q': comps[2],
                 'user': comps[5]})
     return ret
+
+
+def _conninfo_openbsd():
+    '''
+    Get process information for network connections using fstat
+    '''
+    ret = {}
+    _fstat_re = re.compile(
+        r'internet(6)? (?:stream tcp 0x\S+ (\S+)|dgram udp (\S+))'
+        r'(?: [<>=-]+ (\S+))?$'
+    )
+    out = __salt__['cmd.run']('fstat', output_loglevel='debug')
+    for line in out.splitlines():
+        try:
+            user, cmd, pid, _, details = line.split(None, 4)
+            ipv6, tcp, udp, remote_addr = _fstat_re.match(details).groups()
+        except (ValueError, AttributeError):
+            # Line either doesn't have the right number of columns, or the
+            # regex which looks for address information did not match. Either
+            # way, ignore this line and continue on to the next one.
+            continue
+        if tcp:
+            local_addr = tcp
+            proto = 'tcp{0}'.format('' if ipv6 is None else ipv6)
+        else:
+            local_addr = udp
+            proto = 'udp{0}'.format('' if ipv6 is None else ipv6)
+        if ipv6:
+            # IPv6 addresses have the address part enclosed in brackets (if the
+            # address part is not a wildcard) to distinguish the address from
+            # the port number. Remove them.
+            local_addr = ''.join(x for x in local_addr if x not in '[]')
+
+        # Normalize to match netstat output
+        local_addr = '.'.join(local_addr.rsplit(':', 1))
+        if remote_addr is not None:
+            remote_addr = '.'.join(remote_addr.rsplit(':', 1))
+
+        ret.setdefault(
+            local_addr, {}).setdefault(
+                remote_addr, {}).setdefault(
+                    proto, {}).setdefault(
+                        pid, {})['user'] = user
+        ret[local_addr][remote_addr][proto][pid]['cmd'] = cmd
+    return ret
+
+
+def _ppid_openbsd():
+    '''
+    Return a dict of pid to ppid mappings
+    '''
+    ret = {}
+    cmd = 'ps -ax -o pid,ppid | tail -n+2'
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
+        pid, ppid = line.split()
+        ret[pid] = ppid
+    return ret
+
+
+def _netstat_openbsd():
+    '''
+    Return netstat information for OpenBSD
+    '''
+    ret = []
+    # Lookup TCP connections
+    cmd = 'netstat -p tcp -an | tail -n+3'
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'proto': comps[0],
+            'recv-q': comps[1],
+            'send-q': comps[2],
+            'local-address': comps[3],
+            'remote-address': comps[4],
+            'state': comps[5]})
+    # Lookup UDP connections
+    cmd = 'netstat -p udp -an | tail -n+3'
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'proto': comps[0],
+            'recv-q': comps[1],
+            'send-q': comps[2],
+            'local-address': comps[3],
+            'remote-address': comps[4]})
+
+    # Add in user and program info
+    ppid = _ppid_openbsd()
+    conninfo = _conninfo_openbsd()
+    for idx in range(len(ret)):
+        local = ret[idx]['local-address']
+        remote = ret[idx]['remote-address']
+        if remote == '*.*':
+            # Listening, not connected to a remote address
+            remote = None
+        proto = ret[idx]['proto']
+        try:
+            # Make a pointer to the info for this connection for easier
+            # reference below
+            ptr = conninfo[local][remote][proto]
+        except KeyError:
+            continue
+        # Get the pid-to-ppid mappings for this connection
+        conn_ppid = dict((x, y) for x, y in ppid.iteritems() if x in ptr)
+        try:
+            # Master pid for this connection will be the pid whose ppid isn't
+            # in the subset dict we created above
+            master_pid = next(iter(
+                x for x, y in conn_ppid.iteritems() if y not in ptr
+            ))
+        except StopIteration:
+            continue
+        ret[idx]['user'] = ptr[master_pid]['user']
+        ret[idx]['program'] = '/'.join((master_pid, ptr[master_pid]['cmd']))
+    return ret
+
+
+def netstat():
+    '''
+    Return information on open ports and states
+
+    .. note::
+        On OpenBSD, the output additionally contains PID info (where available)
+        for each netstat entry
+
+    .. versionchanged:: Helium
+        Added support for OpenBSD.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.netstat
+    '''
+    if __grains__['kernel'] == 'Linux':
+        return _netstat_linux()
+    elif __grains__['kernel'] == 'OpenBSD':
+        return _netstat_openbsd()
+    raise CommandExecutionError('Not yet supported on this platform')
 
 
 def active_tcp():
