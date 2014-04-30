@@ -213,6 +213,7 @@ def state(
     if changes:
         ret['changes'] = {'out': 'highstate', 'ret': changes}
     if fail:
+        ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
     else:
         ret['comment'] = 'States ran successfully.'
@@ -345,6 +346,7 @@ def function(
     if changes:
         ret['changes'] = {'out': 'highstate', 'ret': changes}
     if fail:
+        ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
     else:
         ret['comment'] = 'Functions ran successfully.'
