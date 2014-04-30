@@ -28,12 +28,12 @@ def __virtual__():
     return False
 
 
-def _list(query=""):
+def _list(query=''):
     ret = {}
     cmd = 'port list %s' % query
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version_num, category = re.split(r"\s+", line.lstrip())[0:3]
+            name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
         except ValueError:
             continue
@@ -71,11 +71,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
     cmd = 'port installed'
     for line in __salt__['cmd.run'](cmd).splitlines():
         try:
-            name, version_num, active = re.split(r"\s+", line.lstrip())[0:3]
+            name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
         except ValueError:
             continue
-        if not LIST_ACTIVE_ONLY or active == "(active)":
+        if not LIST_ACTIVE_ONLY or active == '(active)':
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -122,7 +122,7 @@ def latest_version(*names, **kwargs):
     if salt.utils.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
-    available = _list(" ".join(names)) or {}
+    available = _list(' '.join(names)) or {}
     installed = __salt__['pkg.list_pkgs']() or {}
 
     ret = {}
@@ -131,7 +131,7 @@ def latest_version(*names, **kwargs):
         if not k in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
             ret[k] = v
         else:
-            ret[k] = ""
+            ret[k] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -258,10 +258,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         spec = None
 
         if version_num:
-            spec = (spec or "") + "@" + version_num
+            spec = (spec or '') + '@' + version_num
 
         if variant_spec:
-            spec = (spec or "") + variant_spec
+            spec = (spec or '') + variant_spec
 
         pkg_params = {name: spec}
 
@@ -270,9 +270,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     formulas_array = []
     for pname, pparams in pkg_params.items():
-        formulas_array.append(pname + (pparams or ""))
+        formulas_array.append(pname + (pparams or ''))
 
-    formulas = " ".join(formulas_array)
+    formulas = ' '.join(formulas_array)
 
     old = list_pkgs()
     cmd = 'port install {0}'.format(formulas)
@@ -301,7 +301,7 @@ def list_upgrades(refresh=True):
 
     if refresh:
         refresh_db()
-    return _list("outdated")
+    return _list('outdated')
 
 
 def upgrade_available(pkg, refresh=True):
@@ -321,7 +321,7 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    __salt__['cmd.run_all']("port selfupdate")
+    __salt__['cmd.run_all']('port selfupdate')
 
 
 def upgrade(refresh=True):
@@ -348,7 +348,7 @@ def upgrade(refresh=True):
     old = list_pkgs()
 
     for pkg in list_upgrades(refresh=refresh):
-        __salt__["pkg.install"](pkg)
+        __salt__['pkg.install'](pkg)
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
