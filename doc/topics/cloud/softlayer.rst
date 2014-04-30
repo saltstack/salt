@@ -7,7 +7,7 @@ SoftLayer is a public cloud provider, and baremetal hardware hosting provider.
 Dependencies
 ============
 The SoftLayer driver for Salt Cloud requires the softlayer package, which is
-available at PyPi:
+available at PyPI:
 
 https://pypi.python.org/pypi/SoftLayer
 

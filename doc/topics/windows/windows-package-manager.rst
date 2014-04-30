@@ -31,7 +31,7 @@ The install state/module function of the windows package manager works
 roughly as follows:
 
 1. Execute ``pkg.list_pkgs`` and store the result
-2. Check if any action needs to be taken. (ie compare required package
+2. Check if any action needs to be taken. (i.e. compare required package
    and version against ``pkg.list_pkgs`` results)
 3. If so, run the installer command.
 4. Execute ``pkg.list_pkgs`` and compare to the result stored from
@@ -89,7 +89,7 @@ The package definition file should look similar to this example for Firefox:
 More examples can be found here: https://github.com/saltstack/salt-winrepo
 
 The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
-so that the status can be verfied when running highstate.
+so that the status can be verified when running highstate.
 Note: It is still possible to successfully install packages using ``pkg.install``
 even if they don't match which can make this hard to troubleshoot.
 

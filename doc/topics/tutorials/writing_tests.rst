@@ -15,7 +15,7 @@ Getting Set Up For Tests
 ========================
 
 To walk through adding an integration test, start by getting the latest
-development code and the test system from github:
+development code and the test system from GitHub:
 
 .. note::
 

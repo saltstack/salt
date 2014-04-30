@@ -329,7 +329,7 @@ a function or an action.
 Create snapshot
 ---------------
 You can take a snapshot of an existing disk's content. The snapshot can then
-in turn be used to create other persistend disks. Note that to prevent data
+in turn be used to create other persistent disks. Note that to prevent data
 corruption, it is strongly suggested that you unmount the disk prior to
 taking a snapshot. You must name the snapshot and provide the name of the
 disk.
@@ -461,7 +461,7 @@ Load-balancer
 -------------
 When creating a new load-balancer, it requires a name, region, port range,
 and list of members. There are other optional parameters for protocol,
-and list of healtch checks. Deleting or showing details about the LB only
+and list of health checks. Deleting or showing details about the LB only
 requires the name.
 
 .. code-block:: bash
