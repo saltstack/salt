@@ -133,6 +133,9 @@ def create(vm_):
             'display_ssh_output', vm_, __opts__, default=True
         )
     }
+    if 'ssh_port' in vm_:
+	deploy_kwargs.update({'port': vm_['ssh_port']})
+
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
     if 'gateway' in vm_:
