@@ -258,7 +258,7 @@ class Minion(parsers.MinionOptionParser):
             logger.error(exc)
             if self.config.get('restart_on_error'):
                 logger.warn('** Restarting minion **')
-                s = randint(0, self.config.get('random_reauth_delay',10))
+                s = randint(0, self.config.get('random_reauth_delay', 10))
                 logger.info('Sleeping random_reauth_delay of {0} seconds'.format(s))
                 time.sleep(s)
                 return 'reconnect'
