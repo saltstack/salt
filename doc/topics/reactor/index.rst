@@ -1,8 +1,7 @@
 .. _reactor:
 
-.. index:: Reactor
-    single: Reactor; events
-    see: events; Reactor
+.. index:: ! Reactor, Salt Reactor
+    seealso: Event; Reactor
 
 ==============
 Reactor System
