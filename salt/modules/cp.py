@@ -311,6 +311,19 @@ def cache_file(path, saltenv='base', env=None):
     if path.startswith('salt://|'):
         # Strip pipe. Windows doesn't allow pipes in filenames
         path = 'salt://{0}'.format(path[8:])
+    env_splitter = '?saltenv='
+    if '?env=' in path:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using '
+            '\'saltenv\' not \'env\'. This functionality will be '
+            'removed in Salt Boron.'
+        )
+        env_splitter = '?env='
+    try:
+        path, saltenv = path.split(env_splitter)
+    except ValueError:
+        pass
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(
