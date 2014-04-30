@@ -34,7 +34,7 @@ def salt_minion():
     '''
     if '' in sys.path:
         sys.path.remove('')
-    
+
     reconnect = True
     while reconnect:
         reconnect = False
