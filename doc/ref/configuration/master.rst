@@ -526,7 +526,7 @@ Set additional directories to search for runner modules
 
 Default: ``False``
 
-Set to true to enable cython modules (.pyx files) to be compiled on the fly on
+Set to true to enable Cython modules (.pyx files) to be compiled on the fly on
 the Salt master
 
 .. code-block:: yaml
@@ -560,7 +560,7 @@ root of the base environment
 Default: ``{}``
 
 The master_tops option replaces the external_nodes option by creating
-a plugable system for the generation of external top data. The external_nodes
+a pluggable system for the generation of external top data. The external_nodes
 option is deprecated by the master_tops option.
 To gain the capabilities of the classic external_nodes system, use the
 following configuration:
@@ -883,7 +883,7 @@ information can be found in the :mod:`gitfs backend documentation
 
 Default: ``[]``
 
-The ``gitfs_ssl_verify`` option specifies whether to ignore ssl certificate
+The ``gitfs_ssl_verify`` option specifies whether to ignore SSL certificate
 errors when contacting the gitfs backend. You might want to set this to
 false if you're using a git backend that uses a self-signed certificate but
 keep in mind that setting this flag to anything other than the default of True

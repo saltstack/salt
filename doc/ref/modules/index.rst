@@ -104,7 +104,7 @@ Module Configuration
 --------------------
 
 Since parameters for configuring a module may be desired, Salt allows for
-configuration information from the  minion configuation file to be passed to
+configuration information from the  minion configuration file to be passed to
 execution modules.
 
 Since the minion configuration file is a YAML document, arbitrary configuration
@@ -188,7 +188,7 @@ Adding Documentation to Salt Modules
 
 It is strongly suggested that all Salt modules have documentation added.
 
-To add documenation add a `Python docstring`_ to the function.
+To add documentation add a `Python docstring`_ to the function.
 
 .. code-block:: python
 

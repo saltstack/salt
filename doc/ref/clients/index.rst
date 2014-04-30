@@ -5,7 +5,7 @@
 Python client API
 =================
 
-There are several ways to access Salt programatically.
+There are several ways to access Salt programmatically.
 
 Calling Salt from shell scripts
 ===============================
