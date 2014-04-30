@@ -321,7 +321,10 @@ def render(opts, functions, states=None):
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
     pack = [{'name': '__salt__',
-            'value': functions}]
+             'value': functions},
+            {'name': '__pillar__',
+             'value': opts.get('pillar', {})}]
+
     if states:
         pack.append({'name': '__states__', 'value': states})
     rend = LazyFilterLoader(load, 'render', pack=pack)
