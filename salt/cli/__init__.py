@@ -199,11 +199,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print('Summary')
         print('-------------------------------------------')
         if self.options.verbose:
-            print('Target minions counter: %d' %(return_counter + not_return_counter))
-        print('Recived returns counter: %d' %return_counter)
+            print('Target minions counter: {0}'.format(return_counter + not_return_counter))
+        print('Recived returns counter: {0}'.format(return_counter))
         if self.options.verbose:
-            print('Not returns counter: %d' %not_return_counter)
-            print('Not return minions: %s' % " ".join(not_return_minions))
+            print('Not returns counter: {0}'.format(not_return_counter))
+            print('Not return minions: {0}'.format(" ".join(not_return_minions)))
         print('-------------------------------------------')
 
     def _output_ret(self, ret, out):
