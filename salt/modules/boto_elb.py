@@ -207,7 +207,6 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.create_listeners myelb listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::11  11111:server-certificate/mycert"]]'
     '''
-    log.error(listeners)
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
