@@ -36,6 +36,16 @@ def __virtual__():
     return __virtualname__ if __grains__.get('os', '') == 'FreeBSD' else False
 
 
+def _portsnap():
+    '''
+    Return 'portsnap --interactive' for FreeBSD 10, otherwise 'portsnap'
+    '''
+    return 'portsnap{0}'.format(
+        ' --interactive' if float(__grains__['osrelease']) >= 10
+        else ''
+    )
+
+
 def _check_portname(name):
     '''
     Check if portname is valid and whether or not the directory exists in the
@@ -359,7 +369,7 @@ def update(extract=False):
 
         salt '*' ports.update
     '''
-    result = __salt__['cmd.run_all']('portsnap --interactive fetch')
+    result = __salt__['cmd.run_all']('{0} fetch'.format(_portsnap()))
     if not result['retcode'] == 0:
         raise CommandExecutionError(
             'Unable to fetch ports snapshot: {0}'.format(result['stderr'])
@@ -384,13 +394,13 @@ def update(extract=False):
     ret.append('Fetched {0} new ports or files'.format(new_port_count))
 
     if extract:
-        result = __salt__['cmd.run_all']('portsnap --interactive extract')
+        result = __salt__['cmd.run_all']('{0} extract'.format(_portsnap()))
         if not result['retcode'] == 0:
             raise CommandExecutionError(
                 'Unable to extract ports snapshot {0}'.format(result['stderr'])
             )
 
-    result = __salt__['cmd.run_all']('portsnap --interactive update')
+    result = __salt__['cmd.run_all']('{0} update'.format(_portsnap()))
     if not result['retcode'] == 0:
         raise CommandExecutionError(
             'Unable to apply ports snapshot: {0}'.format(result['stderr'])
