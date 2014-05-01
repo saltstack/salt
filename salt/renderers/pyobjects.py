@@ -178,14 +178,14 @@ The following lines are functionally equivalent:
     ret = salt.cmd.run(bar)
     ret = __salt__['cmd.run'](bar)
 
-Pillar, grain & mine data
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Pillar, grain, mine & config data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Pyobjects provides shortcut functions for calling ``pillar.get``,
-``grains.get`` & ``mine.get`` on the ``__salt__`` object. This helps maintain
-the readability of your state files.
+``grains.get``, ``mine.get`` & ``config.get`` on the ``__salt__`` object. This
+helps maintain the readability of your state files.
 
 Each type of data can be access by a function of the same name: ``pillar()``,
-``grains()`` and ``mine()``.
+``grains()``, ``mine()`` and ``config()``.
 
 The following pairs of lines are functionally equivalent:
 
@@ -202,6 +202,9 @@ The following pairs of lines are functionally equivalent:
 
     value = mine('os:Fedora', 'network.interfaces', 'grain')
     value = __salt__['mine.get']('os:Fedora', 'network.interfaces', 'grain')
+
+    value = config('foo:bar:baz', 'qux')
+    value = __salt__['config.get']('foo:bar:baz', 'qux')
 
 
 Map Data
@@ -360,6 +363,7 @@ def render(template, saltenv='base', sls='', **kwargs):
             'pillar': __salt__['pillar.get'],
             'grains': __salt__['grains.get'],
             'mine': __salt__['mine.get'],
+            'config': __salt__['config.get'],
 
             # the "dunder" formats are still available for direct use
             '__salt__': __salt__,
