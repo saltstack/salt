@@ -42,7 +42,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(1)
+        #sys.exit(salt.exitcodes.EX_GENERIC)
 
 
 def package(payload):
