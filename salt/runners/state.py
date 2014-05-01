@@ -96,7 +96,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {minion.opts['id']: running}
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+    salt.output.display_output(ret, 'highstate', opts=__opts__)
     return ret
 
 # Aliases for orchestrate runner
