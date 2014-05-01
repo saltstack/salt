@@ -22,6 +22,7 @@ from functools import partial
 
 # Import salt libs
 import salt.config as config
+import salt.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
@@ -193,7 +194,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report()), file=file)
-        self.exit()
+        self.exit(os.EX_OK)
 
 
 class MergeConfigMixIn(object):
@@ -1649,7 +1650,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # passed in. Regardless, we're in an unknown state here.
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
-                sys.exit(1)
+                sys.exit(salt.exitcodes.EX_GENERIC)
 
         if self.options.doc:
             # Include the target
@@ -1748,7 +1749,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2080,7 +2081,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2276,7 +2277,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2317,7 +2318,7 @@ class SaltCloudParser(OptionParser,
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
-        self.exit()
+        self.exit(os.EX_OK)
 
     def parse_args(self, args=None, values=None):
         try:
@@ -2334,7 +2335,7 @@ class SaltCloudParser(OptionParser,
 
             print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
             pprint.pprint(self.config)
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         if self.args:
             self.config['names'] = self.args
