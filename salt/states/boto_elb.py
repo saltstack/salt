@@ -33,21 +33,21 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 .. code-block:: yaml
 
-    myelb:
+    Ensure myelb ELB exists:
         boto_elb.present:
+            - name: myelb
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             - listeners:
-                - - 443
-                  - 80
-                  - HTTPS
-                  - HTTP
-                  - 'arn:aws:iam::1111111:server-certificate/mycert'
-                - - 8210
-                  - 8210
-                  - TCP
-                  - TCP
+                - elb_port: 443
+                  instance_port: 80
+                  elb_protocol: HTTPS
+                  instance_protocol: HTTP
+                  certificate: 'arn:aws:iam::1111111:server-certificate/mycert'
+                - elb_port: 8210
+                  instance_port: 8210
+                  elb_protocol: TCP
             - health_check:
                 target: 'HTTP:80/'
             - attributes:
@@ -56,18 +56,20 @@ as a passed in dict, or as a string to pull from pillars or minion config:
                 access_log:
                   enabled: true
                   s3_bucket_name: 'mybucket'
-                  s3_bucket_prefix: '/my-logs/'
+                  s3_bucket_prefix: 'my-logs'
                   emit_interval: 5
 
     # Using a profile from pillars
-    myelb:
+    Ensure myelb ELB exists:
         boto_elb.present:
+            - name: myelb
             - region: us-east-1
             - profile: myelbprofile
 
     # Passing in a profile
-    myelb:
+    Ensure myelb ELB exists:
         boto_elb.present:
+            - name: myelb
             - region: us-east-1
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
