@@ -760,7 +760,10 @@ def set_known_host(user, hostname,
 
 def user_keys(user=None, pubfile=None, prvfile=None):
     '''
+
     Return the user's ssh keys on the minion
+
+    .. versionadded:: Helium
 
     CLI Example:
 
