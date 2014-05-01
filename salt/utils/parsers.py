@@ -2295,8 +2295,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        if len(self.args) > 0:
-            self.config['arg_str'] = ' '.join(self.args[1:])
+
+        self.config['argv'] = self.args[1:]
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')

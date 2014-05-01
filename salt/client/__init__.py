@@ -1423,7 +1423,7 @@ class SSHClient(object):
         opts.update(kwargs)
         opts['timeout'] = timeout
         arg = salt.utils.args.condition_input(arg, kwarg)
-        opts['arg_str'] = '{0} {1}'.format(fun, ' '.join(arg))
+        opts['argv'] = [fun] + arg
         opts['selected_target_option'] = expr_form
         opts['tgt'] = tgt
         opts['arg'] = arg
