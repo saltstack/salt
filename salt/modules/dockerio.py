@@ -199,9 +199,9 @@ def _sizeof_fmt(num):
     '''
     Return disk format size data
     '''
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
+    for unit in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
         if num < 1024.0:
-            return '%3.1f %s' % (num, x)
+            return '{0:3.1f} {1}'.format(num, unit)
         num /= 1024.0
 
 
@@ -339,8 +339,8 @@ def _get_image_infos(image):
     if not status['id']:
         invalid(status)
         raise CommandExecutionError(
-            'ImageID "%s" could not be resolved to '
-            'an existing Image' % (image)
+            'ImageID {0!r} could not be resolved to '
+            'an existing Image'.format(image)
         )
     return status['out']
 

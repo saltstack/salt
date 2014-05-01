@@ -160,7 +160,7 @@ for comb in """
     """.strip().split():
 
     fmt, tmpl = comb.split('_')
-    OLD_STYLE_RENDERERS[comb] = "%s|%s" % (tmpl, fmt)
+    OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)
 
 
 def check_render_pipe_str(pipestr, renderers):

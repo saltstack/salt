@@ -1678,7 +1678,7 @@ class Syndic(Minion):
                 if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
                     break
                 raise
-            log.trace('Got event %s', event['tag'])
+            log.trace('Got event {0}'.format(event['tag']))
             if self.event_forward_timeout is None:
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']

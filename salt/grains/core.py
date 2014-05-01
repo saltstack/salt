@@ -173,7 +173,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+                log.debug('Unexpected lspci output: {0!r}'.format(line))
 
         if error:
             log.warn(
@@ -424,7 +424,7 @@ def _virtual(osdata):
         if not cmd:
             continue
 
-        cmd = '%s %s' % (command, ' '.join(args))
+        cmd = '{0} {1}'.format(command, ' '.join(args))
 
         ret = __salt__['cmd.run_all'](cmd)
 
@@ -433,7 +433,7 @@ def _virtual(osdata):
                 if salt.utils.is_windows():
                     continue
                 log.warn(
-                    'Although \'{0}\' was found in path, the current user '
+                    'Although {0!r} was found in path, the current user '
                     'cannot execute it. Grains output might not be '
                     'accurate.'.format(command)
                 )
