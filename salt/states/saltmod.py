@@ -349,11 +349,11 @@ def function(
         ret['changes'] = {'ret': changes}
     if fail:
         ret['result'] = False
-        ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
+        ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
     else:
-        ret['comment'] = 'Functions ran successfully.'
+        ret['comment'] = 'Function ran successfully.'
     if changes:
-        ret['comment'] += ' Functions ran on {0}.'.format(', '.join(changes))
+        ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
     if failures:
         ret['comment'] += '\nFailures:\n'
         for minion, failure in failures.iteritems():
