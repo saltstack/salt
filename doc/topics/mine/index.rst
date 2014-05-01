@@ -27,7 +27,7 @@ an empty list must be added:
 
     mine_functions:
       test.ping: []
-      network.ip_addrs
+      network.ip_addrs:
         interface: eth0
         cidr: '10.0.0.0/8'
 
