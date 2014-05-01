@@ -313,7 +313,7 @@ def function(
     if __opts__['test'] is True:
         ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={3}'
-                ).format(fun, tgt, str(test))
+                ).format(fun, tgt, str(False))
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
