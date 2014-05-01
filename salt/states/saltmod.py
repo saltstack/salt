@@ -189,7 +189,7 @@ def state(
         fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
-        if mdata['out'] != 'highstate':
+        if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
         
         m_ret = False
