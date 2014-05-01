@@ -18,6 +18,7 @@ import tempfile
 import os
 import shutil
 import re
+import random
 
 # Import salt libs
 import salt
@@ -93,6 +94,22 @@ def _lxc_profile(profile):
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
 
+def _rand_cpu_str(cpu):
+    '''
+    Return a random subset of cpus for the cpuset config
+    '''
+    cpu = int(cpu)
+    avail = __salt__['status.nproc']()
+    if cpu < avail:
+        return '0-{0}'.format(avail)
+    to_set = set()
+    while len(to_set) < cpu:
+        choice = random.radint(0, avail - 1)
+        if choice not in to_set:
+            to_set.add(str(choice))
+    return ','.join(sorted(to_set))
+
+
 def _config_list(**kwargs):
     '''
     Return a list of dicts from the salt level configurations
@@ -108,7 +125,9 @@ def _config_list(**kwargs):
     cpushare = kwargs.pop('cpushare', None)
     if cpushare:
         ret.append({'lxc.cgroup.cpu.shares': cpushare})
-
+    cpu = kwargs.pop('cpu')
+    if cpu and not cpuset:
+        ret.append({'lxc.cgroup.cpuset.cpus': _rand_cpu_str(cpu)})
     nic = kwargs.pop('nic')
 
     if nic:
@@ -275,10 +294,11 @@ def get_base(**kwargs):
 def init(name,
          cpuset=None,
          cpushare=None,
-         memory=None,
+         memory=1024,
          nic='default',
          profile=None,
          nic_opts=None,
+         cpu=None,
          **kwargs):
     '''
     Initialize a new container.
@@ -298,8 +318,12 @@ def init(name,
     name
         Name of the container.
 
+    cpus
+        Select a random number of cpu cores and assign it to the cpuset, if the
+        cpuset option is set then this option will be ignored
+
     cpuset
-        cgroups cpuset.
+        Explicitly define the cpus this container will be bound to
 
     cpushare
         cgroups cpu shares.
@@ -377,7 +401,7 @@ def init(name,
         if not ret.get('created', False):
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
-        for comp in _config_list(nic=nic, nic_opts=nic_opts, cpuset=cpuset, cpushare=cpushare, memory=memory):
+        for comp in _config_list(cpu=cpu, nic=nic, nic_opts=nic_opts, cpuset=cpuset, cpushare=cpushare, memory=memory):
             edit_conf(path, **comp)
     lxc_info = info(name)
     rootfs = lxc_info['rootfs']
