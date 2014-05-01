@@ -573,10 +573,13 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
 
         salt '*' ssh.get_known_host <user> <hostname>
     '''
-    uinfo = __salt__['user.info'](user)
-    full = os.path.join(uinfo.get('home', ''), config)
-    if not uinfo or not os.path.isfile(full):
-        return None
+    if user:
+        uinfo = __salt__['user.info'](user)
+        full = os.path.join(uinfo.get('home', ''), config)
+        if not uinfo or not os.path.isfile(full):
+            return None
+    else:
+        full = '/etc/ssh/ssh_known_hosts'
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
     lines = __salt__['cmd.run'](cmd).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
@@ -614,7 +617,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     return known_hosts[0] if known_hosts else None
 
 
-def check_known_host(user, hostname, key=None, fingerprint=None,
+def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
                      config='.ssh/known_hosts'):
     '''
     Check the record in known_hosts file, either by its value or by fingerprint
@@ -634,7 +637,13 @@ def check_known_host(user, hostname, key=None, fingerprint=None,
 
         salt '*' ssh.check_known_host <user> <hostname> key='AAAA...FAaQ=='
     '''
-    known_host = get_known_host(user, hostname, config=config)
+    if not hostname:
+        return {'status': 'error',
+                'error': 'hostname argument required'}
+    if not user:
+        known_host = get_known_host(user, hostname, config='/etc/ssh/ssh_known_hosts')
+    else:
+        known_host = get_known_host(user, hostname, config=config)
     if not known_host:
         return 'add'
     if key:
@@ -646,7 +655,7 @@ def check_known_host(user, hostname, key=None, fingerprint=None,
         return 'exists'
 
 
-def rm_known_host(user, hostname, config='.ssh/known_hosts'):
+def rm_known_host(user=None, hostname=None, config='.ssh/known_hosts'):
     '''
     Remove all keys belonging to hostname from a known_hosts file.
 
@@ -656,23 +665,30 @@ def rm_known_host(user, hostname, config='.ssh/known_hosts'):
 
         salt '*' ssh.rm_known_host <user> <hostname>
     '''
-    uinfo = __salt__['user.info'](user)
-    if not uinfo:
+    if not hostname:
         return {'status': 'error',
-                'error': 'User {0} does not exist'.format(user)}
-    full = os.path.join(uinfo.get('home', ''), config)
+                'error': 'hostname argument required'}
+    if user:
+        uinfo = __salt__['user.info'](user)
+        if not uinfo:
+            return {'status': 'error',
+                    'error': 'User {0} does not exist'.format(user)}
+        full = os.path.join(uinfo.get('home', ''), config)
+    else:
+        full = '/etc/ssh/ssh_known_hosts'
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
     cmd_result = __salt__['cmd.run'](cmd)
     # ssh-keygen creates a new file, thus a chown is required.
-    if os.geteuid() == 0:
+    if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'removed', 'comment': cmd_result}
 
 
-def set_known_host(user, hostname,
+def set_known_host(user=None,
+                   hostname=None,
                    fingerprint=None,
                    port=None,
                    enc=None,
@@ -693,6 +709,9 @@ def set_known_host(user, hostname,
         salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
                  enc='ssh-rsa' config='.ssh/known_hosts'
     '''
+    if not hostname:
+        return {'status': 'error',
+                'error': 'hostname argument required'}
     update_required = False
     stored_host = get_known_host(user, hostname, config)
 
@@ -720,11 +739,14 @@ def set_known_host(user, hostname,
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)
     # set up new value
-    uinfo = __salt__['user.info'](user)
-    if not uinfo:
-        return {'status': 'error',
-                'error': 'User {0} does not exist'.format(user)}
-    full = os.path.join(uinfo['home'], config)
+    if user:
+        uinfo = __salt__['user.info'](user)
+        if not uinfo:
+            return {'status': 'error',
+                    'error': 'User {0} does not exist'.format(user)}
+        full = os.path.join(uinfo['home'], config)
+    else:
+        full = '/etc/ssh/ssh_known_hosts'
     line = '{hostname} {enc} {key}\n'.format(**remote_host)
 
     # ensure ~/.ssh exists
@@ -741,8 +763,9 @@ def set_known_host(user, hostname,
                       'it'.format(ssh_dir))
     else:
         # set proper ownership/permissions
-        os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
-        os.chmod(ssh_dir, 0700)
+        if user:
+            os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
+            os.chmod(ssh_dir, 0700)
 
     # write line to known_hosts file
     try:
@@ -753,7 +776,7 @@ def set_known_host(user, hostname,
             "Couldn't append to known hosts file: '{0}'".format(exception)
         )
 
-    if os.geteuid() == 0:
+    if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 
