@@ -1929,7 +1929,6 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
@@ -2552,7 +2551,7 @@ def check_file_meta(
         changes['newfile'] = name
         return changes
     if 'hsum' in source_sum:
-        if source_sum['hsum'] != lstats['sum']:
+        if source_sum['hsum'] != get_sum(name, source_sum.get('hash_type', 'md5')):
             if not sfn and source:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if sfn:
