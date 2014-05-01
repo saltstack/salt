@@ -106,6 +106,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
 
     ret = __salt__[run_cmd](cmd, **kwargs)
 
+    if ret['retcode'] != 0:
+        log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
 
@@ -159,7 +161,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     if psql_version:
         return distutils.version.LooseVersion(psql_version)
     else:
-        log.warning('Attempt to parse version of Postgres server failed.'
+        log.warning('Attempt to parse version of Postgres server failed. '
                     'Is the server responding?')
         return None
 
@@ -258,7 +260,6 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                                    host=host, user=user, port=port,
                                    maintenance_db=maintenance_db,
                                    password=password)
-
     if cmdret['retcode'] > 0:
         return ret
 
@@ -469,10 +470,14 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           maintenance_db=maintenance_db,
                           password=password,
                           runas=runas)
-    if ver >= distutils.version.LooseVersion('9.1'):
-        replication_column = 'pg_roles.rolreplication'
+    if ver:
+        if ver >= distutils.version.LooseVersion('9.1'):
+            replication_column = 'pg_roles.rolreplication'
+        else:
+            replication_column = 'NULL'
     else:
-        replication_column = 'NULL'
+        log.error('Could not retrieve Postgres version. Is Postgresql server running?')
+        return False
 
     query = (
         'SELECT '
@@ -553,8 +558,11 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas,
                           return_password=return_password)
-    return all_users.get(name, None)
-
+    try:
+        return all_users.get(name, None)
+    except AttributeError:
+        log.error('Could not retrieve Postgres role. Is Postgres running?')
+        return False
 
 def user_exists(name,
                 user=None, host=None, port=None, maintenance_db=None,
@@ -808,7 +816,7 @@ def _role_update(name,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db, password,
                        runas=runas):
-        log.info('{0} {1!r} does not exist'.format(typ_.capitalize(), name))
+        log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
