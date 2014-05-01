@@ -312,7 +312,7 @@ def function(
     fun = name
     if __opts__['test'] is True:
         ret['comment'] = (
-                'Function {0} will be executed on target {1} as test={3}'
+                'Function {0} will be executed on target {1} as test={2}'
                 ).format(fun, tgt, str(False))
         ret['result'] = None
         return ret
