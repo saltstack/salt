@@ -497,9 +497,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         }
 
     if args:
-        path += '?%s'
         params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params, **kwargs)
+        req = urllib2.Request(url='{0}?{1}'.format(path, params), **kwargs)
     else:
         req = urllib2.Request(url=path, **kwargs)
 

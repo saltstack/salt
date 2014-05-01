@@ -533,7 +533,7 @@ def start(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/%s' % node['id'],
+                      command='/my/machines/{0}'.format(node['id']),
                       location=node['location'], data={'action': 'start'})
     return ret[0] in VALID_RESPONSE_CODES
 
