@@ -180,7 +180,7 @@ def get_var(var):
     '''
     makeconf = _get_makeconf()
     cmd = 'grep "^{0}" {1} | grep -vE "^#"'.format(var, makeconf)
-    out = __salt__['cmd.run'](cmd).split('=', 1)
+    out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=', 1)
     try:
         ret = out[1].replace('"', '')
         return ret
