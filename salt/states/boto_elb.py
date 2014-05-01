@@ -176,23 +176,43 @@ def _elb_present(
     ret = {'result': None, 'comment': '', 'changes': {}}
     if not listeners:
         listeners = []
+    _listeners = []
     for listener in listeners:
         if len(listener) < 3:
             raise SaltInvocationError('Listeners must have at minimum port,'
                                       ' instance_port and protocol values in'
                                       ' the provided list.')
-        elif len(listener) == 3:
-            # Returned listeners will have 4 values. There's no way for us to
-            # reliably get back complex and non-complex listeners, so we'll
-            # have to make due with this.
-            listener.append(listener[2])
+        if 'elb_port' not in listener:
+            raise SaltInvocationError('elb_port is a required value for'
+                                      ' listeners.')
+        if 'instance_port' not in listener:
+            raise SaltInvocationError('instance_port is a required value for'
+                                      ' listeners.')
+        if 'elb_protocol' not in listener:
+            raise SaltInvocationError('elb_protocol is a required value for'
+                                      ' listeners.')
+        listener['elb_protocol'] = listener['elb_protocol'].upper()
+        if listener['elb_protocol'] == 'HTTPS' and 'certificate' not in listener:
+            raise SaltInvocationError('certificate is a required value for'
+                                      ' listeners if HTTPS is set for'
+                                      ' elb_protocol.')
+        # We define all listeners as complex listeners.
+        if 'instance_protocol' not in listener:
+            listener['instance_protocol'] = listener['elb_protocol'].upper()
+        else:
+            listener['instance_protocol'] = listener['instance_protocol'].upper()
+        _listener = [listener['elb_port'], listener['instance_port'],
+                     listener['elb_protocol'], listener['instance_protocol']]
+        if 'certificate' in listener:
+            _listener.append(listener['certificate'])
+        _listeners.append(_listener)
     exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'ELB {0} is set to be created.'.format(name)
             return ret
         created = __salt__['boto_elb.create'](name, availability_zones,
-                                              listeners, subnets,
+                                              _listeners, subnets,
                                               security_groups, scheme, region,
                                               key, keyid, profile)
         if created:
@@ -205,7 +225,8 @@ def _elb_present(
             ret['comment'] = 'Failed to create {0} ELB.'.format(name)
     else:
         ret['comment'] = 'ELB {0} present.'.format(name)
-        _ret = _listeners_present(name, listeners, region, key, keyid, profile)
+        _ret = _listeners_present(name, _listeners, region, key, keyid,
+                                  profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
         if _ret['result'] is not None:
