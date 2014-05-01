@@ -481,8 +481,14 @@ def check_db(*names, **kwargs):
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
             repoquery_cmd = repoquery_base + ' {0}'.format(name)
-            provides = set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-            ret[name]['suggestions'] = sorted(provides)
+            provides = sorted(
+                set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
+            )
+            if name in provides:
+                # Package was not in avail but was found by the repoquery_cmd
+                ret[name]['found'] = True
+            else:
+                ret[name]['suggestions'] = sorted(provides)
     return ret
 
 
