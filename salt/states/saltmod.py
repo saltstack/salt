@@ -164,8 +164,10 @@ def state(
 
     if __opts__['test'] is True:
         ret['comment'] = (
-                'State run to be executed on target {0} as test={1}'
-                ).format(tgt, str(test))
+                '{0} will be run on target {1} as test={2}'
+                ).format(fun == 'state.highstate' and 'Highstate'
+                    or 'States '+','.join(cmd_kw['arg']),
+                tgt, str(test))
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
@@ -308,6 +310,12 @@ def function(
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     fun = name
+    if __opts__['test'] is True:
+        ret['comment'] = (
+                'Function {0} will be executed on target {1} as test={3}'
+                ).format(fun, tgt, str(test))
+        ret['result'] = None
+        return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     
     changes = {}
