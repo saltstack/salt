@@ -201,7 +201,7 @@ def state(
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret
+            failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         for state_item in m_ret.itervalues():
             if state_item['changes']:
@@ -339,7 +339,7 @@ def function(
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret
+            failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         changes[minion] = m_ret
             
