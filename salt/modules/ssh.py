@@ -617,7 +617,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
     return known_hosts[0] if known_hosts else None
 
 
-def check_known_host(hostname, user=None, key=None, fingerprint=None,
+def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
                      config='.ssh/known_hosts'):
     '''
     Check the record in known_hosts file, either by its value or by fingerprint
@@ -637,6 +637,9 @@ def check_known_host(hostname, user=None, key=None, fingerprint=None,
 
         salt '*' ssh.check_known_host <user> <hostname> key='AAAA...FAaQ=='
     '''
+    if not hostname:
+        return {'status': 'error',
+                'error': 'hostname argument required'}
     if not user:
         known_host = get_known_host(user, hostname, config='/etc/ssh/ssh_known_hosts')
     else:
@@ -652,7 +655,7 @@ def check_known_host(hostname, user=None, key=None, fingerprint=None,
         return 'exists'
 
 
-def rm_known_host(hostname, user=None, config='.ssh/known_hosts'):
+def rm_known_host(user=None, hostname=None, config='.ssh/known_hosts'):
     '''
     Remove all keys belonging to hostname from a known_hosts file.
 
@@ -662,6 +665,9 @@ def rm_known_host(hostname, user=None, config='.ssh/known_hosts'):
 
         salt '*' ssh.rm_known_host <user> <hostname>
     '''
+    if not hostname:
+        return {'status': 'error',
+                'error': 'hostname argument required'}
     if user:
         uinfo = __salt__['user.info'](user)
         if not uinfo:
@@ -681,8 +687,8 @@ def rm_known_host(hostname, user=None, config='.ssh/known_hosts'):
     return {'status': 'removed', 'comment': cmd_result}
 
 
-def set_known_host(hostname,
-                   user=None,
+def set_known_host(user=None,
+                   hostname=None,
                    fingerprint=None,
                    port=None,
                    enc=None,
@@ -703,6 +709,9 @@ def set_known_host(hostname,
         salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
                  enc='ssh-rsa' config='.ssh/known_hosts'
     '''
+    if not hostname:
+        return {'status': 'error',
+                'error': 'hostname argument required'}
     update_required = False
     stored_host = get_known_host(user, hostname, config)
 
