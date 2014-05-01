@@ -11,6 +11,7 @@
 '''
 
 # Import salt libs
+import salt.exitcodes
 from salt.exceptions import SaltException
 
 
@@ -24,7 +25,7 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     This exception is raised when the execution should be stopped.
     '''
-    def __init__(self, message, exit_code=1):
+    def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
         self.message = message
         self.exit_code = exit_code

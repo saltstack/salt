@@ -371,7 +371,7 @@ class Auth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(0)
+                        sys.exit(os.EX_OK)
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
