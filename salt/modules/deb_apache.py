@@ -16,6 +16,8 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'apache'
+
 
 def __virtual__():
     '''
@@ -23,7 +25,7 @@ def __virtual__():
     '''
     cmd = _detect_os()
     if salt.utils.which(cmd) and __grains__['os_family'] == 'Debian':
-        return 'apache'
+        return __virtualname__
     return False
 
 
