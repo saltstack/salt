@@ -27,15 +27,14 @@ import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
-from salt.utils import yamlloader
 from salt.utils.validate.path import is_writeable
 from salt._compat import string_types
+from salt.minion import yamlify_arg
 
 if not utils.is_windows():
     import salt.cloud.exceptions
 
 # Import 3rd-party libs
-import yaml
 from yaml.scanner import ScannerError as YAMLScannerError
 
 
@@ -59,7 +58,7 @@ def parse_args_kwargs(args):
                     _kwargs[arg_name] = arg_value
                     continue
                 try:
-                    _kwargs[arg_name] = yaml.load(arg_value, Loader=yamlloader.CustomLoader)
+                    _kwargs[arg_name] = yamlify_arg(arg_value)
                 except YAMLScannerError:
                     _kwargs[arg_name] = arg_value
             else:
@@ -73,7 +72,7 @@ def parse_args_kwargs(args):
                     _args.append(arg)
                     continue
                 try:
-                    _args.append(yaml.load(arg, Loader=yamlloader.CustomLoader))
+                    _args.append(yamlify_arg(arg))
                 except YAMLScannerError:
                     _args.append(arg)
     return _args, _kwargs
