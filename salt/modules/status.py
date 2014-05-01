@@ -353,6 +353,24 @@ def vmstats():
     return ret
 
 
+def nproc():
+    '''
+    Return the number of processing units availabe on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.nproc
+    '''
+    data = __salt__['cmd.run']('nproc')
+    try:
+        ret = int(data.strip())
+    except Exception:
+        return 0
+    return ret
+
+
 def netstats():
     '''
     Return the network stats for this minion
