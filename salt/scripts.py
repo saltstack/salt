@@ -132,7 +132,7 @@ def salt_cloud():
 
     if not HAS_SALTCLOUD:
         print('salt-cloud is not available in this system')
-        sys.exit(1)
+        sys.exit(os.EX_UNAVAILABLE)
 
     try:
         cloud = salt.cloud.cli.SaltCloud()
