@@ -307,16 +307,11 @@ def load_states():
     __context__['pyobjects_states'] = states
 
 
-def render(template, saltenv='base', sls='', **kwargs):
+def build_globals(__context__, __salt__, __pillar__, __grains__):
     if 'pyobjects_states' not in __context__:
         load_states()
 
-    # these hold the scope that our sls file will be executed with
     _globals = {}
-    _locals = {}
-
-    # this will be used to fetch any import files
-    client = get_file_client(__opts__)
 
     # create our StateFactory objects
     mod_globals = {'StateFactory': StateFactory}
@@ -368,6 +363,17 @@ def render(template, saltenv='base', sls='', **kwargs):
         })
     except NameError:
         pass
+
+    return _globals
+
+
+def render(template, saltenv='base', sls='', **kwargs):
+    # these hold the scope that our sls file will be executed with
+    _globals = build_globals(__context__, __salt__, __pillar__, __grains__)
+    _locals = {}
+
+    # this will be used to fetch any import files
+    client = get_file_client(__opts__)
 
     # process our sls imports
     #
