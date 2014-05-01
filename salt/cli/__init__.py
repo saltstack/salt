@@ -166,7 +166,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
                     # Returns summary
                     if self.config['fun'] != 'sys.doc':
-                        self._print_returns_summary(ret)
+                        if self.options.output is None:
+                            self._print_returns_summary(ret)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
