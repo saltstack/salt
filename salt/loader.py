@@ -225,7 +225,8 @@ def outputters(opts):
         'output',
         'output',
         ext_type_dirs='outputter_dirs')
-    return LazyFilterLoader(load, 'output')
+#    return LazyFilterLoader(load, 'output')
+    return load.filter_func('output')
 
 
 def auth(opts, whitelist=None):
