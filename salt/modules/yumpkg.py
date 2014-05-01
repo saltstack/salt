@@ -488,7 +488,7 @@ def check_db(*names, **kwargs):
                 # Package was not in avail but was found by the repoquery_cmd
                 ret[name]['found'] = True
             else:
-                ret[name]['suggestions'] = sorted(provides)
+                ret[name]['suggestions'] = provides
     return ret
 
 
