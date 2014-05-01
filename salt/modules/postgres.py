@@ -106,7 +106,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
 
     ret = __salt__[run_cmd](cmd, **kwargs)
 
-    if ret['retcode'] != 0:
+    if ret.get('retcode', 0) != 0:
         log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
