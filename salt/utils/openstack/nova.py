@@ -205,13 +205,13 @@ class SaltNova(object):
 
     def show_instance(self, name):
         '''
-        Find a server by it's name (libcloud)
+        Find a server by its name (libcloud)
         '''
         return self.server_list().get(name, {})
 
     def server_by_name(self, name):
         '''
-        Find a server by it's name
+        Find a server by its name
         '''
         return self.server_show_libcloud(
             self.server_list().get(name, {}).get('id', '')

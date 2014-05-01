@@ -372,7 +372,7 @@ def _search(quidditch, retries=5):
     comment = ''
     while not passed:
         log.debug('Searching. tries left: {0}'.format(str(retries)))
-        #let the updater make it's own search string. MORE POWER this way.
+        #let the updater make its own search string. MORE POWER this way.
         passed = quidditch.AutoSearch()
         log.debug('Done searching: {0}'.format(str(passed)))
         if isinstance(passed, Exception):

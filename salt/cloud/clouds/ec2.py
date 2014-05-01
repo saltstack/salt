@@ -1284,23 +1284,20 @@ def create(vm_=None, call=None):
 
             if rd_name in dev_list:
                 dev_index = dev_list.index(rd_name)
-                termination_key = spot_prefix +\
-                    'BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % dev_index
-                params[termination_key] =\
-                    str(set_del_root_vol_on_destroy).lower()
+                termination_key = '{0}BlockDeviceMapping.{1}.Ebs.DeleteOnTermination'.format(spot_prefix, dev_index)
+                params[termination_key] = str(set_del_root_vol_on_destroy).lower()
             else:
                 dev_index = len(dev_list)
                 params[
-                    spot_prefix + 'BlockDeviceMapping.%d.DeviceName'
-                    % dev_index
+                    '{0}BlockDeviceMapping.{1}.Ebs.DeviceName'.format(
+                        spot_prefix, dev_index
+                    )
                 ] = rd_name
                 params[
-                    spot_prefix +
-                    'BlockDeviceMapping.%d.Ebs.DeleteOnTermination'
-                    % dev_index
-                ] = str(
-                    set_del_root_vol_on_destroy
-                ).lower()
+                    '{0}BlockDeviceMapping.{1}.Ebs.DeleteOnTermination'.format(
+                        spot_prefix, dev_index
+                    )
+                ] = str(set_del_root_vol_on_destroy).lower()
 
     set_del_all_vols_on_destroy = config.get_cloud_config_value(
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False
@@ -2629,8 +2626,8 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
         if volume_id is not None and volume_id != item['ebs']['volumeId']:
             continue
 
-        params['BlockDeviceMapping.%d.DeviceName' % (idx)] = device_name
-        params['BlockDeviceMapping.%d.Ebs.DeleteOnTermination' % (idx)] = value
+        params['BlockDeviceMapping.{0}.DeviceName'.format(idx)] = device_name
+        params['BlockDeviceMapping.{0}.Ebs.DeleteOnTermination'.format(idx)] = value
 
     query(params, return_root=True)
 

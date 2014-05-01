@@ -800,7 +800,7 @@ def list_(prefix=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error("Can't parse line '%s'", line)
+            logger.error('Can\'t parse line {0!r}'.format(line))
             continue
 
         if prefix:

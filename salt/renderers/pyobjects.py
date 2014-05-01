@@ -28,7 +28,7 @@ Creating state data
 ^^^^^^^^^^^^^^^^^^^
 Pyobjects takes care of creating an object for each of the available states on
 the minion. Each state is represented by an object that is the CamelCase
-version of it's name (ie. ``File``, ``Service``, ``User``, etc), and these
+version of its name (ie. ``File``, ``Service``, ``User``, etc), and these
 objects expose all of their available state functions (ie. ``File.managed``,
 ``Service.running``, etc).
 

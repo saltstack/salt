@@ -306,15 +306,16 @@ class _Ini(object):
         file_contents = ''
         for section in self.sections:
             if not section.section_name == 'DEFAULT_IMPLICIT':
-                file_contents += '[%s]\n' % section.section_name
+                file_contents += '[{0}]\n'.format(section.section_name)
             for item in section:
                 if isinstance(item, _Option):
-                    file_contents += '%s%s%s\n' % (item.name, item.separator,
-                                                   item.value)
+                    file_contents += '{0}{1}{2}\n'.format(
+                        item.name, item.separator, item.value
+                    )
                 elif item == '\n':
                     file_contents += '\n'
                 else:
-                    file_contents += '# %s\n' % item
+                    file_contents += '# {0}\n'.format(item)
             file_contents += '\n'
         return file_contents
 

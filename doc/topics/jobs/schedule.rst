@@ -72,7 +72,7 @@ Scheduler With Returner
 =======================
 
 The scheduler is also useful for tasks like gathering monitoring data about
-a minion, this schedule option will gather status data and send it to a mysql
+a minion, this schedule option will gather status data and send it to a MySQL
 returner database:
 
 .. code-block:: yaml

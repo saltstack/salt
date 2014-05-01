@@ -1462,7 +1462,7 @@ def __ssl_option_sanitize(ssl_option):
         if normal_key in __ssl_options_parameterized__:
             # SSL option parameters (cipher, issuer, subject) are pasted directly to SQL so
             # we need to sanitize for single quotes...
-            new_ssl_option.append("%s '%s'" % (normal_key, opt[key].replace("'", '')))
+            new_ssl_option.append("{0} '{1}'".format(normal_key, opt[key].replace("'", '')))
         # omit if falsey
         elif opt[key]:
             new_ssl_option.append(normal_key)

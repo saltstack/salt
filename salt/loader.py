@@ -321,7 +321,10 @@ def render(opts, functions, states=None):
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
     pack = [{'name': '__salt__',
-            'value': functions}]
+             'value': functions},
+            {'name': '__pillar__',
+             'value': opts.get('pillar', {})}]
+
     if states:
         pack.append({'name': '__states__', 'value': states})
     rend = LazyFilterLoader(load, 'render', pack=pack)
@@ -976,7 +979,7 @@ class Loader(object):
 
     def process_virtual(self, mod, module_name):
         '''
-        Given a loaded module and it's default name determine its virtual name
+        Given a loaded module and its default name determine its virtual name
 
         This function returns a tuple. The first value will be either True or
         False and will indicate if the module should be loaded or not (ie. if

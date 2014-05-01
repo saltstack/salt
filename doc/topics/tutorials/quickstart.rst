@@ -21,7 +21,7 @@ commands with ``salt``, the ``salt-call`` command is used instead:
 Bootstrap Salt Minion
 =====================
 
-The `salt-bootstrap`_ script makes boostrapping a server with Salt simple
+The `salt-bootstrap`_ script makes bootstrapping a server with Salt simple
 for any OS with a Bourne shell:
 
 .. code-block:: bash

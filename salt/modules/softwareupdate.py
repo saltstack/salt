@@ -219,7 +219,7 @@ def schedule(*status):
 def upgrade(rec=False, restart=True):
     '''
     Install all available upgrades. Returns a dictionary containing the name
-    of the update and the status of it's installation.
+    of the update and the status of its installation.
 
     Return values:
     - ``True``: The update was installed.
@@ -268,12 +268,12 @@ def upgrade(rec=False, restart=True):
 def install(*updates):
     '''
     Install a named upgrade. Returns a dictionary containing the name
-    of the update and the status of it's installation.
+    of the update and the status of its installation.
 
     Return values:
     - ``True``: The update was installed.
     - ``False``: The update was not installed.
-    - ``None``: There is no update avaliable with that name.
+    - ``None``: There is no update available with that name.
 
     CLI Example:
 
@@ -288,7 +288,7 @@ def install(*updates):
     if len(updates) == 0:
         return ''
 
-    avaliable_upgrades = _get_upgradable()
+    available_upgrades = _get_upgradable()
 
     for name in updates:
         cmd = ['softwareupdate', '--install', name]
@@ -298,7 +298,7 @@ def install(*updates):
     upgrades_left = _get_upgradable()
 
     for name in updates:
-        if name not in avaliable_upgrades:
+        if name not in available_upgrades:
             ret[name] = None
         elif name not in upgrades_left:
             ret[name] = True
@@ -375,7 +375,7 @@ def download(*updates):
 
 def download_all(rec=False, restart=True):
     '''
-    Download all avaliable updates so that they can be installed later
+    Download all available updates so that they can be installed later
     with the install or upgrade function. It returns a list of updates
     that are now downloaded.
 

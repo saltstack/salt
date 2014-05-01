@@ -63,7 +63,9 @@ except ImportError:
                 '''
                 super(OrderedDict, self).__init__()  # pylint: disable=E1003
                 if len(args) > 1:
-                    raise TypeError('expected at most 1 arguments, got %d' % len(args))
+                    raise TypeError(
+                        'expected at most 1 arguments, got {0}'.format(len(args))
+                    )
                 try:
                     self.__root
                 except AttributeError:
@@ -180,8 +182,10 @@ except ImportError:
 
                 '''
                 if len(args) > 2:
-                    raise TypeError('update() takes at most 2 positional '
-                                    'arguments (%d given)' % (len(args),))
+                    raise TypeError(
+                        'update() takes at most 2 positional '
+                        'arguments ({0} given)'.format(len(args))
+                    )
                 elif not args:
                     raise TypeError('update() takes at least 1 argument (0 given)')
                 self = args[0]
@@ -233,8 +237,8 @@ except ImportError:
                 _repr_running[call_key] = 1
                 try:
                     if not self:
-                        return '%s()' % (self.__class__.__name__,)
-                    return '%s(%r)' % (self.__class__.__name__, self.items())
+                        return '{0}()'.format(self.__class__.__name__)
+                    return '{0}({1!r})'.format(self.__class__.__name__, self.items())
                 finally:
                     del _repr_running[call_key]
 
@@ -331,6 +335,6 @@ class DefaultOrderedDict(OrderedDict):
                           copy.deepcopy(self.items()))
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
-        return 'DefaultOrderedDict(%s, %s)' % (self.default_factory,
-                                               super(DefaultOrderedDict,
-                                                     self).__repr__())
+        return 'DefaultOrderedDict({0}, {1})'.format(self.default_factory,
+                                                     super(DefaultOrderedDict,
+                                                           self).__repr__())
