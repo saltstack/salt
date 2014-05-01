@@ -191,9 +191,9 @@ def state(
     for minion, mdata in cmd_ret.iteritems():
         if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
-        
+
         m_ret = False
-        
+
         if mdata.get('failed', False):
             m_state = False
         else:
@@ -317,7 +317,7 @@ def function(
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    
+
     changes = {}
     fail = set()
     failures = {}
@@ -343,14 +343,14 @@ def function(
         else:
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
-            
+
         if not m_func:
             if minion not in fail_minions:
                 fail.add(minion)
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         changes[minion] = m_ret
-            
+
     if changes:
         ret['changes'] = {'out': 'highstate', 'ret': changes}
     if fail:
