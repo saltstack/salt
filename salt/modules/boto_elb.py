@@ -44,10 +44,7 @@ log = logging.getLogger(__name__)
 try:
     import boto
     import boto.ec2
-    import boto.ec2.elb
-    from boto.ec2.elb import HealthCheck
-    from boto.ec2.elb.attributes import AccessLogAttribute
-    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
+    import boto.ec2.elb as elb
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -416,7 +413,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         log.error('No supported attributes for ELB.')
         return False
     if al:
-        _al = AccessLogAttribute()
+        _al = elb.attributes.AccessLogAttribute()
         _al.enabled = al.get('enabled', False)
         if not _al.enabled:
             msg = 'Access log attribute configured, but enabled config missing'
@@ -433,7 +430,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             log.error(msg.format(name))
             return False
     if czlb:
-        _czlb = CrossZoneLoadBalancingAttribute()
+        _czlb = elb.attributes.CrossZoneLoadBalancingAttribute()
         _czlb.enabled = czlb['enabled']
         added_attr = conn.modify_lb_attribute(name, 'crossZoneLoadBalancing',
                                               _czlb.enabled)
@@ -486,7 +483,7 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    hc = HealthCheck(**health_check)
+    hc = elb.HealthCheck(**health_check)
     try:
         conn.configure_health_check(name, hc)
         log.info('Configured health check on ELB {0}'.format(name))
@@ -522,7 +519,7 @@ def _get_conn(region, key, keyid, profile):
         keyid = __salt__['config.option']('elb.keyid')
 
     try:
-        conn = boto.ec2.elb.connect_to_region(region, aws_access_key_id=keyid,
+        conn = elb.connect_to_region(region, aws_access_key_id=keyid,
                                               aws_secret_access_key=key)
     except boto.exception.NoAuthHandlerFound:
         log.error('No authentication credentials found when attempting to'
