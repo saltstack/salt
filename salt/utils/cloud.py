@@ -59,12 +59,6 @@ from jinja2 import Template
 import yaml
 
 try:
-    import keyring
-    HAS_KEYRING = True
-except ImportError:
-    HAS_KEYRING = False
-
-try:
     import getpass
     HAS_GETPASS = True
 except ImportError:
@@ -864,6 +858,9 @@ def deploy_windows(host,
                 creds,
             ))
         # Shell out to winexe to ensure salt-minion service started
+        win_cmd('winexe {0} "sc stop salt-minion"'.format(
+            creds,
+        ))
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
         ))
@@ -2056,40 +2053,49 @@ def retrieve_password_from_keyring(credential_id, username):
     '''
     Retrieve particular user's password for a specified credential set from system keyring.
     '''
-    if not HAS_KEYRING:
+    try:
+        import keyring
+        return keyring.get_password(credential_id, username)
+    except ImportError:
         log.error('USE_KEYRING configured as a password, but no keyring module is installed')
         return False
-    return keyring.get_password(credential_id, username)
 
 
 def _save_password_in_keyring(credential_id, username, password):
     '''
     Saves provider password in system keyring
     '''
-    if not HAS_KEYRING:
+    try:
+        import keyring
+        return keyring.set_password(credential_id, username, password)
+    except ImportError:
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
-    return keyring.set_password(credential_id, username, password)
 
 
-def store_password_in_keyring(credential_id, username):
+def store_password_in_keyring(credential_id, username, password=None):
     '''
     Interactively prompts user for a password and stores it in system keyring
     '''
-    if not HAS_KEYRING:
+    try:
+        import keyring
+        import keyring.errors
+        if password is None:
+            prompt = 'Please enter password for {0}: '.format(credential_id)
+            try:
+                password = getpass.getpass(prompt)
+            except EOFError:
+                password = None
+
+            if not password:
+                # WE should raise something else here to be able to use this
+                # as/from an API
+                raise RuntimeError('Invalid password provided.')
+
+        try:
+            _save_password_in_keyring(credential_id, username, password)
+        except keyring.errors.PasswordSetError as exc:
+            log.debug('Problem saving password in the keyring: {0}'.format(exc))
+    except ImportError:
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
-
-    prompt = "Please enter password for %s:" % credential_id
-    try:
-        password = getpass.getpass(prompt)
-    except EOFError:
-        password = None
-
-    if not password or len(password) < 1:
-        raise RuntimeError("Invalid password provided.")
-
-    try:
-        _save_password_in_keyring(credential_id, username, password)
-    except Exception, e:
-        log.debug("Problem saving password in the keyring: {0}".format(str(e)))

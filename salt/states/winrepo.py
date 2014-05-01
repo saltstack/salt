@@ -18,7 +18,9 @@ def __virtual__():
     Load this state if this is the salt-master
     '''
 
-    return 'winrepo' if 'salt-master' in __grains__['roles'] else False
+    return ('winrepo'
+            if 'salt-master' in __grains__.get('roles', [])
+            else False)
 
 
 def genrepo(name, force=False, allow_empty=False):

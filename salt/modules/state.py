@@ -566,7 +566,7 @@ def sls_id(
     '''
     Call a single ID from the named module(s) and handle all requisites
 
-    .. versionaddded:: Helium
+    .. versionadded:: Helium
 
     CLI Example:
 

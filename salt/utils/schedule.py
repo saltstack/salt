@@ -46,6 +46,40 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
+    ... versionadded:: Helium
+
+Frequency of jobs can also be specified using date strings supported by
+the python dateutil library.
+
+    schedule:
+      job1:
+        function: state.sls
+        args:
+          - httpd
+        kwargs:
+          test: True
+        when: 5:00pm
+
+This will schedule the command: state.sls httpd test=True at 5:00pm minion
+localtime.
+
+    schedule:
+      job1:
+        function: state.sls
+        args:
+          - httpd
+        kwargs:
+          test: True
+        when:
+            - Monday 5:00pm
+            - Tuesday 3:00pm
+            - Wednesday 5:00pm
+            - Thursday 3:00pm
+            - Friday 5:00pm
+
+This will schedule the command: state.sls httpd test=True at 5pm on Monday, Wednesday
+and Friday, and 3pm on Tuesday and Thursday.
+
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.
@@ -72,6 +106,12 @@ import sys
 import logging
 import errno
 import random
+
+try:
+    import dateutil.parser as dateutil_parser
+    _WHEN_SUPPORTED = True
+except ImportError:
+    _WHEN_SUPPORTED = False
 
 # Import Salt libs
 import salt.utils
@@ -120,6 +160,7 @@ class Schedule(object):
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
+               'schedule': data['name'],
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
 
         proc_fn = os.path.join(
@@ -139,20 +180,21 @@ class Schedule(object):
                 fn = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
-                    log.debug('schedule.handle_func: Checking job against '
-                              'fun {0}: {1}'.format(ret['fun'], job))
-                    if ret['fun'] == job['fun'] and os_is_running(job['pid']):
-                        jobcount += 1
-                        log.debug(
-                            'schedule.handle_func: Incrementing jobcount, now '
-                            '{0}, maxrunning is {1}'.format(
-                                      jobcount, data['maxrunning']))
-                        if jobcount >= data['maxrunning']:
+                    if 'schedule' in job:
+                        log.debug('schedule.handle_func: Checking job against '
+                                  'fun {0}: {1}'.format(ret['fun'], job))
+                        if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
+                            jobcount += 1
                             log.debug(
-                                'schedule.handle_func: The scheduled job {0} '
-                                'was not started, {1} already running'.format(
-                                    func, data['maxrunning']))
-                            return False
+                                'schedule.handle_func: Incrementing jobcount, now '
+                                '{0}, maxrunning is {1}'.format(
+                                          jobcount, data['maxrunning']))
+                            if jobcount >= data['maxrunning']:
+                                log.debug(
+                                    'schedule.handle_func: The scheduled job {0} '
+                                    'was not started, {1} already running'.format(
+                                        ret['schedule'], data['maxrunning']))
+                                return False
 
         salt.utils.daemonize_if(self.opts)
 
@@ -249,12 +291,100 @@ class Schedule(object):
                     )
                 )
                 continue
+            if 'name' not in data:
+                data['name'] = job
             # Add up how many seconds between now and then
+            when = 0
             seconds = 0
-            seconds += int(data.get('seconds', 0))
-            seconds += int(data.get('minutes', 0)) * 60
-            seconds += int(data.get('hours', 0)) * 3600
-            seconds += int(data.get('days', 0)) * 86400
+
+            # clean this up
+            if ('seconds' in data or 'hours' in data or 'minutes' in data or 'days' in data) and 'when' in data:
+                log.info('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
+                continue
+
+            # clean this up
+            if 'seconds' in data or 'minutes' in data or 'hours' in data or 'days' in data:
+                # Add up how many seconds between now and then
+                seconds += int(data.get('seconds', 0))
+                seconds += int(data.get('minutes', 0)) * 60
+                seconds += int(data.get('hours', 0)) * 3600
+                seconds += int(data.get('days', 0)) * 86400
+            elif 'when' in data:
+                if not _WHEN_SUPPORTED:
+                    log.info('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                    continue
+
+                if isinstance(data['when'], list):
+                    _when = []
+                    now = int(time.time())
+                    for i in data['when']:
+                        try:
+                            tmp = int(dateutil_parser.parse(i).strftime('%s'))
+                        except ValueError:
+                            log.info('Invalid date string {0}.  Ignoring.'.format(i))
+                            continue
+                        if tmp >= now:
+                            _when.append(tmp)
+                    _when.sort()
+                    if _when:
+                        # Grab the first element
+                        # which is the next run time
+                        when = _when[0]
+
+                        # If we're switching to the next run in a list
+                        # ensure the job can run
+                        if '_when' in data and data['_when'] != when:
+                            data['_when_run'] = True
+                            data['_when'] = when
+                        seconds = when - int(time.time())
+
+                        # scheduled time is in the past
+                        if seconds < 0:
+                            continue
+
+                        if not '_when_run' in data:
+                            data['_when_run'] = True
+
+                        # Backup the run time
+                        if not '_when' in data:
+                            data['_when'] = when
+
+                        # A new 'when' ensure _when_run is True
+                        if when > data['_when']:
+                            data['_when'] = when
+                            data['_when_run'] = True
+
+                    else:
+                        continue
+
+                else:
+                    try:
+                        when = int(dateutil_parser.parse(data['when']).strftime('%s'))
+                    except ValueError:
+                        log.info('Invalid date string.  Ignoring')
+                        continue
+
+                    now = int(time.time())
+                    seconds = when - now
+
+                    # scheduled time is in the past
+                    if seconds < 0:
+                        continue
+
+                    if not '_when_run' in data:
+                        data['_when_run'] = True
+
+                    # Backup the run time
+                    if not '_when' in data:
+                        data['_when'] = when
+
+                    # A new 'when' ensure _when_run is True
+                    if when > data['_when']:
+                        data['_when'] = when
+                        data['_when_run'] = True
+
+            else:
+                continue
             # Check if the seconds variable is lower than current lowest
             # loop interval needed. If it is lower then overwrite variable
             # external loops using can then check this variable for how often
@@ -264,31 +394,49 @@ class Schedule(object):
             now = int(time.time())
             run = False
             if job in self.intervals:
-                if now - self.intervals[job] >= seconds:
-                    run = True
+                if 'when' in data:
+                    if now - when >= seconds:
+                        if data['_when_run']:
+                            data['_when_run'] = False
+                            run = True
+                else:
+                    if now - self.intervals[job] >= seconds:
+                        run = True
             else:
-                run = True
                 if 'splay' in data:
-                    data['_seconds'] = data['seconds']
+                    if 'when' in data:
+                        log.debug('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                    else:
+                        data['_seconds'] = data['seconds']
+
+                if 'when' in data:
+                    if now - when >= seconds:
+                        if data['_when_run']:
+                            data['_when_run'] = False
+                            run = True
+                else:
+                    run = True
 
             if not run:
                 continue
             else:
                 if 'splay' in data:
-                    if isinstance(data['splay'], dict):
-                        if data['splay']['end'] > data['splay']['start']:
-                            splay = random.randint(data['splay']['start'], data['splay']['end'])
-                        else:
-                            log.info('schedule.handle_func: Invalid Splay, end must be larger than start. Ignoring splay.')
-                            splay = None
+                    if 'when' in data:
+                        log.debug('Unable to use "splay" with "when" option at this time.  Ignoring.')
                     else:
-                        splay = random.randint(0, data['splay'])
+                        if isinstance(data['splay'], dict):
+                            if data['splay']['end'] > data['splay']['start']:
+                                splay = random.randint(data['splay']['start'], data['splay']['end'])
+                            else:
+                                log.info('schedule.handle_func: Invalid Splay, end must be larger than start. Ignoring splay.')
+                                splay = None
+                        else:
+                            splay = random.randint(0, data['splay'])
 
-                    if splay:
-                        log.debug('schedule.handle_func: Adding splay of '
-                                  '{0} seconds to next run.'.format(splay))
-
-                        data['seconds'] = data['_seconds'] + splay
+                        if splay:
+                            log.debug('schedule.handle_func: Adding splay of '
+                                      '{0} seconds to next run.'.format(splay))
+                            data['seconds'] = data['_seconds'] + splay
 
                 log.debug('Running scheduled job: {0}'.format(job))
 

@@ -272,11 +272,24 @@ def absent(name,
            'comment': ''}
 
     # Get just the key
-    keydata = name.split(' ')
-    if len(keydata) > 1:
-        name = keydata[1]
+    sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
+    fullkey = sshre.search(name)
+    # if it is {key} [comment]
+    if not fullkey:
+        key_and_comment = name.split()
+        name = key_and_comment[0]
+        if len(key_and_comment) == 2:
+            comment = key_and_comment[1]
     else:
-        name = keydata[0]
+        # if there are options, set them
+        if fullkey.group(1):
+            options = fullkey.group(1).split(',')
+        # key is of format: {enc} {key} [comment]
+        comps = fullkey.group(2).split()
+        enc = comps[0]
+        name = comps[1]
+        if len(comps) == 3:
+            comment = comps[2]
 
     if __opts__['test']:
         check = __salt__['ssh.check_key'](

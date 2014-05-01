@@ -353,7 +353,7 @@ def refresh_pillar():
 
         salt '*' saltutil.refresh_pillar
     '''
-    __salt__['event.fire']({}, 'pillar_refresh')
+    return __salt__['event.fire']({}, 'pillar_refresh')
 
 
 def refresh_modules():
@@ -366,7 +366,7 @@ def refresh_modules():
 
         salt '*' saltutil.refresh_modules
     '''
-    __salt__['event.fire']({}, 'module_refresh')
+    return __salt__['event.fire']({}, 'module_refresh')
 
 
 def is_running(fun):

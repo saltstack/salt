@@ -102,6 +102,7 @@ VALID_OPTS = {
     'log_fmt_console': str,
     'log_fmt_logfile': tuple,
     'log_granular_levels': dict,
+    'max_event_size': int,
     'test': bool,
     'cython_enable': bool,
     'show_timeout': bool,
@@ -222,6 +223,8 @@ VALID_OPTS = {
     'ssh_timeout': float,
     'ssh_user': str,
     'raet_port': int,
+    'sqlite_queue_dir': str,
+    'queue_dirs': list,
 }
 
 # default configurations
@@ -288,6 +291,7 @@ DEFAULT_MINION_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'max_event_size': 1048576,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
@@ -377,6 +381,7 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_tags': 'tags',
     'svnfs_env_whitelist': [],
     'svnfs_env_blacklist': [],
+    'max_event_size': 1048576,
     'minionfs_env': 'base',
     'minionfs_mountpoint': '',
     'minionfs_whitelist': [],
@@ -474,6 +479,8 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4506,
+    'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
+    'queue_dirs': [],
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
