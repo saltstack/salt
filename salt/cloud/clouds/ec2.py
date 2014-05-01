@@ -2997,3 +2997,49 @@ def describe_snapshots(kwargs=None, call=None):
 
     data = query(params, return_root=True)
     return data
+
+
+def get_console_output(
+        name=None,
+        instance_id=None,
+        call=None,
+        kwargs=None,
+    ):
+    '''
+    Show the console output from the instance.
+
+    By default, returns decoded data, not the Base64-encoded data that is
+    actually returned from the EC2 API.
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
+        )
+
+    if not instance_id:
+        instance_id = _get_node(name)['instanceId']
+
+    if kwargs is None:
+        kwargs = {}
+
+    if instance_id is None:
+        if 'instance_id' in kwargs:
+            instance_id = kwargs['instance_id']
+            del kwargs['instance_id']
+
+    params = {'Action': 'GetConsoleOutput',
+              'InstanceId': instance_id}
+
+    ret = []
+    data = query(params, return_root=True)
+    for item in data:
+        pprint.pprint(item.keys())
+        if item.keys()[0] == 'output':
+            ret.append(
+                {'output_decoded': binascii.a2b_base64(item.values()[0])}
+            )
+        else:
+            ret.append(item)
+
+    return ret
