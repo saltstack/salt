@@ -410,7 +410,7 @@ def queues(opts):
     load = _create_loader(
         opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
     )
-    return load.gen_functions()
+    return LazyLoader(load)
 
 
 def clouds(opts):
