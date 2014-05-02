@@ -310,10 +310,12 @@ def load_states():
     __context__['pyobjects_states'] = states
 
 
-def build_globals(__context__, __salt__, __pillar__, __grains__):
+def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     if 'pyobjects_states' not in __context__:
         load_states()
 
+    # these hold the scope that our sls file will be executed with
+    _locals = {}
     _globals = {}
 
     # create our StateFactory objects
@@ -368,13 +370,10 @@ def build_globals(__context__, __salt__, __pillar__, __grains__):
     except NameError:
         pass
 
-    return _globals
-
-
-def render(template, saltenv='base', sls='', **kwargs):
-    # these hold the scope that our sls file will be executed with
-    _globals = build_globals(__context__, __salt__, __pillar__, __grains__)
-    _locals = {}
+    # if salt_data is not True then we just return the global scope we've
+    # built instead of returning salt data from the registry
+    if not salt_data:
+        return _globals
 
     # this will be used to fetch any import files
     client = get_file_client(__opts__)
@@ -385,11 +384,6 @@ def render(template, saltenv='base', sls='', **kwargs):
     # so that they may bring in objects from other files. while we do this we
     # disable the registry since all we're looking for here is python objects,
     # not salt state data
-    #
-    # once we have our template we scan through it and look for any "from X
-    # import Y" statements and if X ends in .sls then we process it by passing
-    # the file in X through the pyobjects renderer and putting the requested
-    # variables into our template
     template_data = []
     Registry.enabled = False
     for line in template.readlines():
