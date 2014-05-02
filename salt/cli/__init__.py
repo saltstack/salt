@@ -165,9 +165,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             ret.update(ret_)
 
                     # Returns summary
-                    if self.config['fun'] != 'sys.doc':
-                        if self.options.output is None:
-                            self._print_returns_summary(ret)
+                    if self.config['cli_summary'] is True:
+                        if self.config['fun'] != 'sys.doc':
+                            if self.options.output is None:
+                                self._print_returns_summary(ret)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
