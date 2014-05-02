@@ -1272,6 +1272,7 @@ class LazyLoader(MutableMapping):
         if mod_funcs is None:
             # if we couldn't find it, then it could be a virtual or we don't have it
             # until we have a better way, we have to load them all to know
+            # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
         self._dict.update(mod_funcs)
@@ -1342,6 +1343,7 @@ class LazyFilterLoader(LazyLoader):
         if mod_funcs is None:
             # if we couldn't find it, then it could be a virtual or we don't have it
             # until we have a better way, we have to load them all to know
+            # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
 
