@@ -157,10 +157,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     else:
                         if self.options.verbose:
                             kwargs['verbose'] = True
+                        ret = {}
                         for full_ret in cmd_func(**kwargs):
-                            ret, out, retcode = self._format_ret(full_ret)
+                            ret_, out, retcode = self._format_ret(full_ret)
                             retcodes.append(retcode)
-                            self._output_ret(ret, out)
+                            self._output_ret(ret_, out)
+                            ret.update(ret_)
+
+                    # Returns summary
+                    if self.config['fun'] != 'sys.doc':
+                        if self.options.output is None:
+                            self._print_returns_summary(ret)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
@@ -173,6 +180,31 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+
+    def _print_returns_summary(self, ret):
+        '''
+        Display returns summary
+        '''
+        return_counter = 0
+        not_return_counter = 0
+        not_return_minions = []
+        for each_minion in ret:
+            if ret[each_minion] == "Minion did not return":
+                not_return_counter += 1
+                not_return_minions.append(each_minion)
+            else:
+                return_counter += 1
+        print('\n')
+        print('-------------------------------------------')
+        print('Summary')
+        print('-------------------------------------------')
+        if self.options.verbose:
+            print('Target minions counter: {0}'.format(return_counter + not_return_counter))
+        print('Recived returns counter: {0}'.format(return_counter))
+        if self.options.verbose:
+            print('Not returns counter: {0}'.format(not_return_counter))
+            print('Not return minions: {0}'.format(" ".join(not_return_minions)))
+        print('-------------------------------------------')
 
     def _output_ret(self, ret, out):
         '''
