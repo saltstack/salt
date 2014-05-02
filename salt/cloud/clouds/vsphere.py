@@ -5,6 +5,8 @@ vSphere Cloud Module
 
 The vSphere cloud module is used to control access to VMWare vSphere.
 
+:depends:   - PySphere Python module
+
 Use of this module only requires a URL, username and password. Set up the cloud
 configuration at:
 
