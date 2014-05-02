@@ -97,8 +97,11 @@ class Caller(object):
                 if active_level <= logging.DEBUG:
                     sys.stderr.write(trace)
                 sys.exit(salt.exitcodes.EX_GENERIC)
-            ret['retcode'] = sys.modules[
-                func.__module__].__context__.get('retcode', 0)
+            try:
+                ret['retcode'] = sys.modules[
+                    func.__module__].__context__.get('retcode', 0)
+            except AttributeError:
+                ret['retcode'] = 1 
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
