@@ -2546,7 +2546,7 @@ def check_file_meta(
     changes = {}
     if not source_sum:
         source_sum = dict()
-    lstats = stats(name, follow_symlinks=False)
+    lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
     if not lstats:
         changes['newfile'] = name
         return changes
