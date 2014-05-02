@@ -160,6 +160,8 @@ def add(name, user=None, conf_file=None, bin_env=None):
     '''
     if name.endswith(':'):
         name = name[:-1]
+    elif name.endswith(':*'):
+        name = name[:-2]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('add', name, conf_file, bin_env), runas=user
     )
@@ -186,6 +188,8 @@ def remove(name, user=None, conf_file=None, bin_env=None):
     '''
     if name.endswith(':'):
         name = name[:-1]
+    elif name.endswith(':*'):
+        name = name[:-2]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('remove', name, conf_file, bin_env), runas=user
     )
