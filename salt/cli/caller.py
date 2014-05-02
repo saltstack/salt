@@ -101,7 +101,7 @@ class Caller(object):
                 ret['retcode'] = sys.modules[
                     func.__module__].__context__.get('retcode', 0)
             except AttributeError:
-                ret['retcode'] = 1 
+                ret['retcode'] = 1
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(

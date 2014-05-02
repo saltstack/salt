@@ -321,7 +321,6 @@ def function(
     changes = {}
     fail = set()
     failures = {}
-    no_change = set()
 
     if fail_minions is None:
         fail_minions = ()
@@ -335,7 +334,6 @@ def function(
         fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
-        
         m_ret = False
 
         if mdata.get('failed', False):
