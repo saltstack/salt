@@ -771,6 +771,7 @@ class LocalClient(object):
             timeout=None,
             tgt='*',
             tgt_type='glob',
+            expect_minions=False,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -866,6 +867,9 @@ class LocalClient(object):
                             jid, (minions - found)
                         )
                     )
+                if expect_minions:
+                    for minion in list((minions - found)):
+                        yield {minion: {'failed': True}}
                 break
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the

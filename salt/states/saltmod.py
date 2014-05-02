@@ -55,6 +55,7 @@ def state(
         sls=None,
         env=None,
         test=False,
+        expect_minions=False,
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
@@ -91,6 +92,9 @@ def state(
 
     roster
         In the event of using salt-ssh, a roster system can be set
+
+    expect_minions
+        An optional boolean for failing if some minions do not respond
 
     fail_minions
         An optional list of targeted minions where failure is an option
@@ -133,6 +137,7 @@ def state(
 
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
+    cmd_kw['expect_minions'] = expect_minions
     if highstate:
         fun = 'state.highstate'
     elif sls:
@@ -159,8 +164,10 @@ def state(
 
     if __opts__['test'] is True:
         ret['comment'] = (
-                'State run to be executed on target {0} as test={1}'
-                ).format(tgt, str(test))
+                '{0} will be run on target {1} as test={2}'
+                ).format(fun == 'state.highstate' and 'Highstate'
+                    or 'States '+','.join(cmd_kw['arg']),
+                tgt, str(test))
         ret['result'] = None
         return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
@@ -182,15 +189,21 @@ def state(
         fail_minions = ()
 
     for minion, mdata in cmd_ret.iteritems():
-        if mdata['out'] != 'highstate':
+        if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
-        m_ret = mdata['ret']
-        m_state = salt.utils.check_state_result(m_ret)
+
+        m_ret = False
+
+        if mdata.get('failed', False):
+            m_state = False
+        else:
+            m_ret = mdata['ret']
+            m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret
+            failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         for state_item in m_ret.itervalues():
             if state_item['changes']:
@@ -232,6 +245,9 @@ def function(
         tgt_type=None,
         expr_form=None,
         ret='',
+        expect_minions=False,
+        fail_minions=None,
+        fail_function=None,
         arg=None,
         kwarg=None,
         timeout=None):
@@ -255,6 +271,16 @@ def function(
 
     ret
         Optionally set a single or a list of returners to use
+
+    expect_minions
+        An optional boolean for failing if some minions do not respond
+
+    fail_minions
+        An optional list of targeted minions where failure is an option
+
+    fail_function
+        An optional string that points to a salt module that returns True or False
+        based on the returned data dict for individual minions
 
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
@@ -282,9 +308,68 @@ def function(
 
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
+    cmd_kw['expect_minions'] = expect_minions
     fun = name
+    if __opts__['test'] is True:
+        ret['comment'] = (
+                'Function {0} will be executed on target {1} as test={2}'
+                ).format(fun, tgt, str(False))
+        ret['result'] = None
+        return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    ret['changes'] = cmd_ret
-    ret['comment'] = 'Function {0} ran successfully on {0}'.format(
-            ', '.join(cmd_ret))
+
+    changes = {}
+    fail = set()
+    failures = {}
+    no_change = set()
+
+    if fail_minions is None:
+        fail_minions = ()
+    elif isinstance(fail_minions, salt._compat.string_types):
+        fail_minions = [minion.strip() for minion in fail_minions.split(',')]
+    elif not isinstance(fail_minions, list):
+        ret.setdefault('warnings', []).append(
+            '\'fail_minions\' needs to be a list or a comma separated '
+            'string. Ignored.'
+        )
+        fail_minions = ()
+
+    for minion, mdata in cmd_ret.iteritems():
+        
+        m_ret = False
+
+        if mdata.get('failed', False):
+            m_func = False
+        else:
+            m_ret = mdata['ret']
+            m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
+
+        if not m_func:
+            if minion not in fail_minions:
+                fail.add(minion)
+            failures[minion] = m_ret and m_ret or 'Minion did not respond'
+            continue
+        changes[minion] = m_ret
+
+    if changes:
+        ret['changes'] = {'out': 'highstate', 'ret': changes}
+    if fail:
+        ret['result'] = False
+        ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+    else:
+        ret['comment'] = 'Function ran successfully.'
+    if changes:
+        ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
+    if failures:
+        ret['comment'] += '\nFailures:\n'
+        for minion, failure in failures.iteritems():
+            ret['comment'] += '\n'.join(
+                    (' ' * 4 + l)
+                    for l in salt.output.out_format(
+                        {minion: failure},
+                        'highstate',
+                        __opts__,
+                        ).splitlines()
+                    )
+            ret['comment'] += '\n'
     return ret
