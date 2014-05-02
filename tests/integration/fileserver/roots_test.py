@@ -30,6 +30,7 @@ class RootsTest(integration.ModuleCase):
                                          'fileserver_ignoresymlinks': False,
                                          'fileserver_followsymlinks': False,
                                          'file_ignore_regex': False,
+                                         'cachedir': self.master_opts['cachedir'],
                                          'file_ignore_glob': False}):
             ret = roots.file_list({'saltenv': 'base'})
             self.assertIn('testfile', ret)
@@ -106,6 +107,7 @@ class RootsTest(integration.ModuleCase):
                                          'fileserver_ignoresymlinks': False,
                                          'fileserver_followsymlinks': False,
                                          'file_ignore_regex': False,
+                                         'cachedir': self.master_opts['cachedir'],
                                          'file_ignore_glob': False}):
             ret = roots.file_list_emptydirs({'saltenv': 'base'})
             self.assertIn('empty_dir', ret)
@@ -115,6 +117,7 @@ class RootsTest(integration.ModuleCase):
                                  'fileserver_ignoresymlinks': False,
                                  'fileserver_followsymlinks': False,
                                  'file_ignore_regex': False,
+                                 'cachedir': self.master_opts['cachedir'],
                                  'file_ignore_glob': False}):
             ret = roots.dir_list({'saltenv': 'base'})
             self.assertIn('empty_dir', ret)

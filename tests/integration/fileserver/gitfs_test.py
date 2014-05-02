@@ -39,7 +39,8 @@ if not gitfs.__virtual__():
     GITFS_AVAILABLE = False
 
 
-# @skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
+@skipIf(True, 'GitFS tests not yet ready')
+@skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitFSTest(integration.ModuleCase):
     def setUp(self):
@@ -100,7 +101,6 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.dir_list(load)
             self.assertIn('grail', ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
     def test_file_list_emptydirs(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
