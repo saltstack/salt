@@ -1595,7 +1595,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then
         the chunk
         '''
-        if self.opts['state_aggregate'] and not low.get('__agg__'):
+        if self.opts.get('state_aggregate') and not low.get('__agg__'):
             agg_fun = '{0}.mod_aggregate'.format(low['state'])
 	    if agg_fun in self.states:
                 try:
