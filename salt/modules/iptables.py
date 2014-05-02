@@ -214,7 +214,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
                 kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
                 rule += '! '
-            dports = ','.join(kwargs['dports'])
+            dports = ','.join([str(i) for i in kwargs['dports']])
         else:
             if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
                 dports = re.sub(bang_not_pat, '', kwargs['dports'])
@@ -222,7 +222,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             else:
                 dports = kwargs['dports']
 
-        rule += '--dports {0} '.format(','.join([str(i) for i in dports]))
+        rule += '--dports {0} '.format(dports)
         del kwargs['dports']
 
     if 'sports' in kwargs:
@@ -235,7 +235,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
                 kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
                 rule += '! '
-            sports = ','.join(kwargs['sports'])
+            sports = ','.join([str(i) for i in kwargs['sports']])
         else:
             if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
                 sports = re.sub(bang_not_pat, '', kwargs['sports'])
@@ -243,7 +243,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             else:
                 sports = kwargs['sports']
 
-        rule += '--sports {0} '.format(','.join([str(i) for i in sports]))
+        rule += '--sports {0} '.format(sports)
         del kwargs['sports']
 
     if 'comment' in kwargs:
