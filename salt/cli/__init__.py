@@ -165,9 +165,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             ret.update(ret_)
 
                     # Returns summary
-                    if self.config['fun'] != 'sys.doc':
-                        if self.options.output is None:
-                            self._print_returns_summary(ret)
+                    if self.config['cli_summary'] is True:
+                        if self.config['fun'] != 'sys.doc':
+                            if self.options.output is None:
+                                self._print_returns_summary(ret)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
@@ -199,11 +200,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print('Summary')
         print('-------------------------------------------')
         if self.options.verbose:
-            print('Target minions counter: {0}'.format(return_counter + not_return_counter))
-        print('Received returns counter: {0}'.format(return_counter))
+            print('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
+        print('# of Minions Returned: {0}'.format(return_counter))
         if self.options.verbose:
-            print('Not returns counter: {0}'.format(not_return_counter))
-            print('Not return minions: {0}'.format(" ".join(not_return_minions)))
+            print('# of Minions Did Not Return: {0}'.format(not_return_counter))
+            print('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
         print('-------------------------------------------')
 
     def _output_ret(self, ret, out):

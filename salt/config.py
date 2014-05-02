@@ -229,6 +229,7 @@ VALID_OPTS = {
     'queue_dirs': list,
     'restart_on_error': bool,
     'ping_interval': int,
+    'cli_summary': bool,
 }
 
 # default configurations
@@ -489,6 +490,7 @@ DEFAULT_MASTER_OPTS = {
     'raet_port': 4506,
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
+    'cli_summary': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

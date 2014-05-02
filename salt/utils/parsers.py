@@ -1640,6 +1640,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'when one wants to pass commas as arguments to '
                   'some of the commands in a compound command.')
         )
+        self.add_option(
+            '--summary',
+            dest='cli_summary',
+            default=False,
+            action='store_true',
+            help=('Display summary information about a salt command')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
