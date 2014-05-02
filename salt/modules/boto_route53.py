@@ -62,7 +62,7 @@ def __virtual__():
     return True
 
 
-def get_record(name, zone, type, fetch_all=False, region=None, key=None,
+def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                keyid=None, profile=None):
     '''
     Get a record from a zone.
@@ -79,39 +79,37 @@ def get_record(name, zone, type, fetch_all=False, region=None, key=None,
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
         return None
-    _type = type.upper()
+    _type = record_type.upper()
     ret = odict.OrderedDict()
     if _type == 'A':
         _record = _zone.get_a(name, fetch_all)
         if _record:
             ret['name'] = _record.name
             ret['value'] = _record.to_print()
-            ret['type'] = _record.type
+            ret['record_type'] = _record.type
             ret['ttl'] = _record.ttl
     elif _type == 'CNAME':
         _record = _zone.get_cname(name, fetch_all)
         if _record:
             ret['name'] = _record.name
             ret['value'] = _record.to_print()
-            ret['type'] = _record.type
+            ret['record_type'] = _record.type
             ret['ttl'] = _record.ttl
     elif _type == 'MX':
         _record = _zone.get_mx(name, fetch_all)
         if _record:
             ret['name'] = _record.name
             ret['value'] = _record.to_print()
-            ret['type'] = _record.type
+            ret['record_type'] = _record.type
             ret['ttl'] = _record.ttl
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
         log.error(msg)
         return None
-    if not ret:
-        log.error('Failed to find record {0} in zone {1}.'.format(name, zone))
     return ret
 
 
-def add_record(name, value, zone, type, identifier=None, ttl=None, comment='',
+def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None):
     '''
     Add a record to a zone.
@@ -128,15 +126,15 @@ def add_record(name, value, zone, type, identifier=None, ttl=None, comment='',
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
         return False
-    _type = type.upper()
+    _type = record_type.upper()
     if _type == 'A':
-        status = _zone.add_a(name, value, ttl, identifier, comment)
+        status = _zone.add_a(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn)
     elif _type == 'CNAME':
-        status = _zone.add_cname(name, value, ttl, identifier, comment)
+        status = _zone.add_cname(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn)
     elif _type == 'MX':
-        status = _zone.add_mx(name, value, ttl, identifier, comment)
+        status = _zone.add_mx(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn)
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
@@ -145,8 +143,8 @@ def add_record(name, value, zone, type, identifier=None, ttl=None, comment='',
     return False
 
 
-def update_record(name, value, zone, type, identifier=None, ttl=None,
-                  comment='', region=None, key=None, keyid=None, profile=None):
+def update_record(name, value, zone, record_type, identifier=None, ttl=None,
+                  region=None, key=None, keyid=None, profile=None):
     '''
     Modify a record in a zone.
 
@@ -162,15 +160,15 @@ def update_record(name, value, zone, type, identifier=None, ttl=None,
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
         return False
-    _type = type.upper()
+    _type = record_type.upper()
     if _type == 'A':
-        status = _zone.update_a(name, value, ttl, identifier, comment)
+        status = _zone.update_a(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn)
     elif _type == 'CNAME':
-        status = _zone.update_cname(name, value, ttl, identifier, comment)
+        status = _zone.update_cname(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn)
     elif _type == 'MX':
-        status = _zone.update_mx(name, value, ttl, identifier, comment)
+        status = _zone.update_mx(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn)
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
@@ -179,7 +177,7 @@ def update_record(name, value, zone, type, identifier=None, ttl=None,
     return False
 
 
-def delete_record(name, zone, type, identifier=None, all_records=False,
+def delete_record(name, zone, record_type, identifier=None, all_records=False,
                   region=None, key=None, keyid=None, profile=None):
     '''
     Modify a record in a zone.
@@ -196,7 +194,7 @@ def delete_record(name, zone, type, identifier=None, all_records=False,
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
         return False
-    _type = type.upper()
+    _type = record_type.upper()
     if _type == 'A':
         status = _zone.delete_a(name, identifier, all_records)
         return _wait_for_sync(status.id, conn)
