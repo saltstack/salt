@@ -314,7 +314,7 @@ def get_docker(interfaces=None, cidrs=None):
             good_ips = []
             for cidr in cidrs:
                 for ip_ in host_ips:
-                    if salt.utils.network.in_subnet(cidr, [ip_,]):
+                    if salt.utils.network.in_subnet(cidr, [ip_]):
                         good_ips.append(ip_)
             host_ips = list(set(good_ips))
 
