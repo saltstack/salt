@@ -410,8 +410,7 @@ def get_containers(all=True,
     status = base_status.copy()
     if host:
         status['host'] = {}
-        status['host']['ipv4'] = __salt__['network.ip_addrs']()
-        status['host']['ipv6'] = __salt__['network.ip_addrs6']()
+        status['host']['interfaces'] = __salt__['network.interfaces']()
     ret = client.containers(all=all,
                             trunc=trunc,
                             since=since,
