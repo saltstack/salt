@@ -1595,6 +1595,13 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then
         the chunk
         '''
+        if self.opts['state_aggregate'] and not low.get('__agg__'):
+            agg_fun = '{0}.mod_aggregate'.format(low['state'])
+	    if agg_fun in self.states:
+                try:
+                    low = self.states[agg_fun](low, chunks, running)
+                except TypeError:
+                    log.error('Failed to execute aggregate for state {0}'.format(low['state']))
         self._mod_init(low)
         tag = _gen_tag(low)
         if not low.get('prerequired'):
