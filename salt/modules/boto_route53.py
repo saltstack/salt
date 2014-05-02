@@ -4,10 +4,10 @@ Connection module for Amazon Route53
 
 .. versionadded:: Helium
 
-:configuration: This module accepts explicit route53 credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
-    credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+:configuration: This module accepts explicit route53 credentials but can also
+    utilize IAM roles assigned to the instance trough Instance Profiles.
+    Dynamic credentials are then automatically obtained from AWS API and no
+    further configuration is necessary. More Information available at::
 
        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
@@ -221,7 +221,7 @@ def _wait_for_sync(status, conn):
             return True
         i = i + 1
         time.sleep(10)
-    log.error('Timed out waiting for route53 status update.')
+    log.error('Timed out waiting for Route53 status update.')
     return False
 
 

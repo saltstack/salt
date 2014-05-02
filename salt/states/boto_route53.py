@@ -33,27 +33,40 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 .. code-block:: yaml
 
-    myqueue:
+    mycnamerecord:
         boto_route53.present:
+            - name: test.example.com.
+            - value: my-elb.us-east-1.elb.amazonaws.com.
+            - zone: example.com.
+            - ttl: 60
+            - type: CNAME
             - region: us-east-1
-            - key: GKTADJGHEIQSXMKKRBJ08H
-            - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            - attributes:
-                ReceiveMessageWaitTimeSeconds: 20
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     # Using a profile from pillars
-    myqueue:
+    myarecord:
         boto_route53.present:
+            - name: test.example.com.
+            - value: 1.1.1.1
+            - zone: example.com.
+            - ttl: 60
+            - type: A
             - region: us-east-1
             - profile: myprofile
 
     # Passing in a profile
-    myqueue:
+    myarecord:
         boto_route53.present:
+            - name: test.example.com.
+            - value: 1.1.1.1
+            - zone: example.com.
+            - ttl: 60
+            - type: A
             - region: us-east-1
             - profile:
-                key: GKTADJGHEIQSXMKKRBJ08H
-                keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                keyid: GKTADJGHEIQSXMKKRBJ08H
+                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
 
@@ -88,7 +101,7 @@ def present(
         The zone to create the record in.
 
     record_type
-        The record type. Current supported values: A, CNAME, MX
+        The record type. Currently supported values: A, CNAME, MX
 
     ttl
         The time to live for the record.
@@ -97,7 +110,7 @@ def present(
         The unique identifier to use for this record.
 
     region
-        Region to create the queue
+        The region to connect to.
 
     key
         Secret key to be used.
@@ -148,12 +161,9 @@ def present(
         _r_values.sort()
         if _values != _r_values:
             need_to_update = True
-            print 'Value does not match'
         if identifier and identifier != record['identifier']:
-            print 'Identifier does not match'
             need_to_update = True
         if ttl and str(ttl) != str(record['ttl']):
-            print 'ttl does not match'
             need_to_update = True
         if need_to_update:
             if __opts__['test']:
@@ -192,7 +202,7 @@ def absent(
         keyid=None,
         profile=None):
     '''
-    Ensure the named sqs queue is deleted.
+    Ensure the Route53 record is deleted.
 
     name
         Name of the record.
