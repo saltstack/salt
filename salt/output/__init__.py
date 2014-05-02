@@ -90,6 +90,7 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = True
 
     outputters = salt.loader.outputters(opts)
+    # TODO: raise an exception? This means if you do --out foobar you get nested
     if out not in outputters:
         return outputters['nested']
     return outputters[out]

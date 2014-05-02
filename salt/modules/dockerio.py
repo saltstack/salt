@@ -22,7 +22,8 @@ Installation prerequisites
 
 - You will need the 'docker-py' python package in your python installation
   running salt. The version of docker-py should support `version 1.6 of docker
-  remote API. <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
+  remote API.
+  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 - For now, you need docker-py from sources:
 
     https://github.com/dotcloud/docker-py
@@ -198,9 +199,9 @@ def _sizeof_fmt(num):
     '''
     Return disk format size data
     '''
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
+    for unit in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
         if num < 1024.0:
-            return '%3.1f %s' % (num, x)
+            return '{0:3.1f} {1}'.format(num, unit)
         num /= 1024.0
 
 
@@ -273,10 +274,9 @@ def _get_client(version=None, timeout=None):
         # only if defined by user.
         kwargs['timeout'] = timeout
     client = docker.Client(**kwargs)
-    # force 1..5 API for registry login
     if not version:
-        if client._version == '1.4':
-            client._version = '1.5'
+        # set version that match docker deamon
+        client._version = client.version()['ApiVersion']
     if getattr(client, '_cfg', None) is None:
         client._cfg = {
             'Configs': {},
@@ -300,7 +300,7 @@ def _merge_auth_bits():
             fic.close()
     except Exception:
         config = {'rootPath': '/dev/null'}
-    if not 'Configs' in config:
+    if 'Configs' not in config:
         config['Configs'] = {}
     config['Configs'].update(
         __pillar__.get('docker-registries', {})
@@ -339,8 +339,8 @@ def _get_image_infos(image):
     if not status['id']:
         invalid(status)
         raise CommandExecutionError(
-            'ImageID "%s" could not be resolved to '
-            'an existing Image' % (image)
+            'ImageID {0!r} could not be resolved to '
+            'an existing Image'.format(image)
         )
     return status['out']
 
@@ -371,10 +371,7 @@ def _get_container_infos(container):
             'an existing container'.format(
                 container)
         )
-    if (
-        (not 'id' in status['out'])
-        and ('ID' in status['out'])
-    ):
+    if 'id' not in status['out'] and 'ID' in status['out']:
         status['out']['id'] = status['out']['ID']
     return status['out']
 
@@ -384,6 +381,7 @@ def get_containers(all=True,
                    since=None,
                    before=None,
                    limit=-1,
+                   host=False,
                    *args,
                    **kwargs):
     '''
@@ -395,6 +393,9 @@ def get_containers(all=True,
     trunc
         Set it to True to have the short ID
 
+    host
+        Include the Docker host's ipv4 and ipv6 address in return
+
     Returns a mapping of something which looks like
     container
 
@@ -403,9 +404,13 @@ def get_containers(all=True,
     .. code-block:: bash
 
         salt '*' docker.get_containers
+        salt '*' docker.get_containers host=True
     '''
     client = _get_client()
     status = base_status.copy()
+    if host:
+        status['host'] = {}
+        status['host']['interfaces'] = __salt__['network.interfaces']()
     ret = client.containers(all=all,
                             trunc=trunc,
                             since=since,
@@ -589,8 +594,6 @@ def create_container(image,
         daemon mode
     environment
         environment variable mapping ({'foo':'BAR'})
-    dns
-        list of DNS servers
     ports
         ports redirections ({'222': {}})
     volumes
@@ -603,8 +606,6 @@ def create_container(image,
         attach ttys
     stdin_open
         let stdin open
-    volumes_from
-        container to get volumes definition from
     name
         name given to container
 
@@ -658,9 +659,11 @@ def create_container(image,
             'info': _get_container_infos(container),
             'out': container_info
         }
+        __salt__['mine.send']('docker.get_containers', host=True)
         return callback(status, id=container, comment=comment, out=out)
     except Exception:
         invalid(status, id=image, out=traceback.format_exc())
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -786,6 +789,7 @@ def stop(container, timeout=10, *args, **kwargs):
                 comment=(
                     'An exception occurred while stopping '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -838,6 +842,7 @@ def kill(container, *args, **kwargs):
                 comment=(
                     'An exception occurred while killing '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -881,12 +886,14 @@ def restart(container, timeout=10, *args, **kwargs):
                 comment=(
                     'An exception occurred while restarting '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
 def start(container, binds=None, port_bindings=None,
           lxc_conf=None, publish_all_ports=None, links=None,
           privileged=False,
+          dns=None, volumes_from=None,
           *args, **kwargs):
     '''
     restart the specified container
@@ -925,10 +932,25 @@ def start(container, binds=None, port_bindings=None,
                         'port_bindings must be formatted as a dictionary of '
                         'dictionaries'
                     )
-            client.start(dcontainer, binds=binds, port_bindings=bindings,
-                         lxc_conf=lxc_conf,
-                         publish_all_ports=publish_all_ports, links=links,
-                         privileged=privileged)
+            try:
+                client.start(dcontainer, binds=binds, port_bindings=bindings,
+                             lxc_conf=lxc_conf,
+                             publish_all_ports=publish_all_ports, links=links,
+                             privileged=privileged,
+                             dns=dns, volumes_from=volumes_from)
+            except TypeError:
+                # maybe older version of docker-py <= 0.3.1 dns and
+                # volumes_from are not accepted
+                # FIXME:
+                # Ideally we should write an explicit check based on
+                # version of docker-py package, but
+                # https://github.com/dotcloud/docker-py/issues/216
+                # prevents us to do it at the time I'm writing this.
+                client.start(dcontainer, binds=binds, port_bindings=bindings,
+                             lxc_conf=lxc_conf,
+                             publish_all_ports=publish_all_ports, links=links,
+                             privileged=privileged)
+
             if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),
@@ -947,6 +969,7 @@ def start(container, binds=None, port_bindings=None,
                 comment=(
                     'An exception occurred while starting '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -989,6 +1012,7 @@ def wait(container, *args, **kwargs):
                 comment=(
                     'An exception occurred while waiting '
                     'your container {0}').format(container))
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -1070,6 +1094,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
                         comment=(
                             'Container {0} is running, '
                             'won\'t remove it').format(container))
+                __salt__['mine.send']('docker.get_containers', host=True)
                 return status
             else:
                 kill(dcontainer)
@@ -1083,6 +1108,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
             status['comment'] = 'Container {0} was removed'.format(container)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc())
+    __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
 
@@ -1162,9 +1188,7 @@ def inspect_container(container, *args, **kwargs):
         valid(status, id=container, out=infos)
     except Exception:
         invalid(status, id=container, out=traceback.format_exc(),
-                comment=(
-                    'Container does not exit: {0}'
-                ).format(container))
+                comment='Container does not exit: {0}'.format(container))
     return status
 
 
@@ -1811,7 +1835,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                 (ret['retcode'] != 0))
                 or (func == 'cmd.retcode' and ret != 0)):
             return invalid(status, id=container, out=ret,
-                            comment=comment)
+                           comment=comment)
         valid(status, id=container, out=ret, comment=comment,)
     except Exception:
         invalid(status, id=container,
@@ -2062,7 +2086,8 @@ def _script(status,
                            command,
                            cwd=cwd,
                            stdin=stdin,
-                           output_loglevel=kwargs.get('output_loglevel', 'info'),
+                           output_loglevel=kwargs.get('output_loglevel',
+                                                      'info'),
                            quiet=kwargs.get('quiet', False),
                            runas=runas,
                            shell=shell,

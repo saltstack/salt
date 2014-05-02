@@ -61,7 +61,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default=''):
+def get(key, default='', delim=':'):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -76,13 +76,19 @@ def get(key, default=''):
 
         pkg:apache
 
+
+    delim
+        Specify an alternate delimiter to use when traversing a nested dict
+
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__grains__, key, default)
+    return salt.utils.traverse_dict(__grains__, key, default, delim)
 
 
 def has_value(key):

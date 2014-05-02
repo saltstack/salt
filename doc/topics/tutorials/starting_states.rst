@@ -143,7 +143,7 @@ the Apache ID, the user and group will be the Apache user and group. The
 the group, and that the group will be made only after the Apache package is
 installed.
 
-Next,the ``require`` statement under service was changed to watch, and is
+Next, the ``require`` statement under service was changed to watch, and is
 now watching 3 states instead of just one. The watch statement does the same
 thing as require, making sure that the other states run before running the
 state with a watch, but it adds an extra component. The ``watch`` statement

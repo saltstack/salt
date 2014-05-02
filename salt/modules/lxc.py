@@ -18,6 +18,7 @@ import tempfile
 import os
 import shutil
 import re
+import random
 
 # Import salt libs
 import salt
@@ -93,6 +94,22 @@ def _lxc_profile(profile):
     return __salt__['config.option']('lxc.profile', {}).get(profile, {})
 
 
+def _rand_cpu_str(cpu):
+    '''
+    Return a random subset of cpus for the cpuset config
+    '''
+    cpu = int(cpu)
+    avail = __salt__['status.nproc']()
+    if cpu < avail:
+        return '0-{0}'.format(avail)
+    to_set = set()
+    while len(to_set) < cpu:
+        choice = random.radint(0, avail - 1)
+        if choice not in to_set:
+            to_set.add(str(choice))
+    return ','.join(sorted(to_set))
+
+
 def _config_list(**kwargs):
     '''
     Return a list of dicts from the salt level configurations
@@ -108,7 +125,9 @@ def _config_list(**kwargs):
     cpushare = kwargs.pop('cpushare', None)
     if cpushare:
         ret.append({'lxc.cgroup.cpu.shares': cpushare})
-
+    cpu = kwargs.pop('cpu')
+    if cpu and not cpuset:
+        ret.append({'lxc.cgroup.cpuset.cpus': _rand_cpu_str(cpu)})
     nic = kwargs.pop('nic')
 
     if nic:
@@ -275,10 +294,11 @@ def get_base(**kwargs):
 def init(name,
          cpuset=None,
          cpushare=None,
-         memory=None,
+         memory=1024,
          nic='default',
          profile=None,
          nic_opts=None,
+         cpu=None,
          **kwargs):
     '''
     Initialize a new container.
@@ -298,8 +318,12 @@ def init(name,
     name
         Name of the container.
 
+    cpus
+        Select a random number of cpu cores and assign it to the cpuset, if the
+        cpuset option is set then this option will be ignored
+
     cpuset
-        cgroups cpuset.
+        Explicitly define the cpus this container will be bound to
 
     cpushare
         cgroups cpu shares.
@@ -377,7 +401,7 @@ def init(name,
         if not ret.get('created', False):
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
-        for comp in _config_list(nic=nic, nic_opts=nic_opts, cpuset=cpuset, cpushare=cpushare, memory=memory):
+        for comp in _config_list(cpu=cpu, nic=nic, nic_opts=nic_opts, cpuset=cpuset, cpushare=cpushare, memory=memory):
             edit_conf(path, **comp)
     lxc_info = info(name)
     rootfs = lxc_info['rootfs']
@@ -996,10 +1020,10 @@ def info(name):
         ret['memory_limit'] = limit
         ret['memory_free'] = free
         ret['size'] = __salt__['cmd.run'](
-            ('lxc-attach -n \'{0}\' -- '
+            ('lxc-attach -n \'{0}\' -- env -i '
              'df /|tail -n1|awk \'{{print $2}}\'').format(name))
         ipaddr = __salt__['cmd.run'](
-            'lxc-attach -n \'{0}\' -- ip addr show'.format(name))
+            'lxc-attach -n \'{0}\' -- env -i ip addr show'.format(name))
         for line in ipaddr.splitlines():
             if 'inet' in line:
                 line = line.split()
@@ -1270,7 +1294,7 @@ def bootstrap(name, config=None, approve_key=True, install=True):
             cp(name, cfg_files['privkey'], os.path.join(configdir, 'minion.pem'))
             cp(name, cfg_files['pubkey'], os.path.join(configdir, 'minon.pub'))
 
-            cmd = 'sh /tmp/bootstrap.sh -c {0}'.format(configdir)
+            cmd = 'PATH=$PATH:/bin:/sbin:/usr/sbin sh /tmp/bootstrap.sh -c {0}'.format(configdir)
             res = not __salt__['lxc.run_cmd'](name, cmd, stdout=False)
         else:
             res = False
@@ -1333,8 +1357,12 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     prior_state = _ensure_running(name, no_start=no_start)
     if not prior_state:
         return prior_state
-    res = __salt__['cmd.run_all'](
-            'lxc-attach -n \'{0}\' -- {1}'.format(name, cmd))
+    if attachable(name):
+        res = __salt__['cmd.run_all'](
+                'lxc-attach -n \'{0}\' -- env -i {1}'.format(name, cmd))
+    else:
+        rootfs = info(name).get('rootfs')
+        res = __salt__['cmd.run_chroot'](rootfs, cmd)
 
     if preserve_state:
         if prior_state == 'stopped':
@@ -1377,11 +1405,31 @@ def cp(name, src, dest):
     if not dest_name:
         dest_name = src_name
 
-    cmd = 'cat {0} | lxc-attach -n {1} -- tee {2} > /dev/null'.format(
+    cmd = 'cat {0} | lxc-attach -n {1} -- env -i tee {2} > /dev/null'.format(
             src, name, os.path.join(dest_dir, dest_name))
     log.info(cmd)
     ret = __salt__['cmd.run_all'](cmd)
     return ret
+
+
+def attachable(name):
+    '''
+    Return True if the named container can be attached to via the lxc-attach
+    command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.attachable ubuntu
+    '''
+    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(name)
+    data = __salt__['cmd.run_all'](cmd)
+    if not data['retcode']:
+        return True
+    if data['stderr'].startswith('lxc-attach: failed to get the init pid'):
+        return False
+    return False
 
 
 def read_conf(conf_file, out_format='simple'):

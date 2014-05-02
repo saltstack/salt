@@ -28,7 +28,7 @@ Creating state data
 ^^^^^^^^^^^^^^^^^^^
 Pyobjects takes care of creating an object for each of the available states on
 the minion. Each state is represented by an object that is the CamelCase
-version of it's name (ie. ``File``, ``Service``, ``User``, etc), and these
+version of its name (ie. ``File``, ``Service``, ``User``, etc), and these
 objects expose all of their available state functions (ie. ``File.managed``,
 ``Service.running``, etc).
 
@@ -178,14 +178,14 @@ The following lines are functionally equivalent:
     ret = salt.cmd.run(bar)
     ret = __salt__['cmd.run'](bar)
 
-Pillar, grain & mine data
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Pillar, grain, mine & config data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Pyobjects provides shortcut functions for calling ``pillar.get``,
-``grains.get`` & ``mine.get`` on the ``__salt__`` object. This helps maintain
-the readability of your state files.
+``grains.get``, ``mine.get`` & ``config.get`` on the ``__salt__`` object. This
+helps maintain the readability of your state files.
 
 Each type of data can be access by a function of the same name: ``pillar()``,
-``grains()`` and ``mine()``.
+``grains()``, ``mine()`` and ``config()``.
 
 The following pairs of lines are functionally equivalent:
 
@@ -202,6 +202,9 @@ The following pairs of lines are functionally equivalent:
 
     value = mine('os:Fedora', 'network.interfaces', 'grain')
     value = __salt__['mine.get']('os:Fedora', 'network.interfaces', 'grain')
+
+    value = config('foo:bar:baz', 'qux')
+    value = __salt__['config.get']('foo:bar:baz', 'qux')
 
 
 Map Data
@@ -307,16 +310,13 @@ def load_states():
     __context__['pyobjects_states'] = states
 
 
-def render(template, saltenv='base', sls='', **kwargs):
+def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     if 'pyobjects_states' not in __context__:
         load_states()
 
     # these hold the scope that our sls file will be executed with
-    _globals = {}
     _locals = {}
-
-    # this will be used to fetch any import files
-    client = get_file_client(__opts__)
+    _globals = {}
 
     # create our StateFactory objects
     mod_globals = {'StateFactory': StateFactory}
@@ -360,6 +360,7 @@ def render(template, saltenv='base', sls='', **kwargs):
             'pillar': __salt__['pillar.get'],
             'grains': __salt__['grains.get'],
             'mine': __salt__['mine.get'],
+            'config': __salt__['config.get'],
 
             # the "dunder" formats are still available for direct use
             '__salt__': __salt__,
@@ -369,17 +370,20 @@ def render(template, saltenv='base', sls='', **kwargs):
     except NameError:
         pass
 
+    # if salt_data is not True then we just return the global scope we've
+    # built instead of returning salt data from the registry
+    if not salt_data:
+        return _globals
+
+    # this will be used to fetch any import files
+    client = get_file_client(__opts__)
+
     # process our sls imports
     #
     # we allow pyobjects users to use a special form of the import statement
     # so that they may bring in objects from other files. while we do this we
     # disable the registry since all we're looking for here is python objects,
     # not salt state data
-    #
-    # once we have our template we scan through it and look for any "from X
-    # import Y" statements and if X ends in .sls then we process it by passing
-    # the file in X through the pyobjects renderer and putting the requested
-    # variables into our template
     template_data = []
     Registry.enabled = False
     for line in template.readlines():

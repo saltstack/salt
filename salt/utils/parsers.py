@@ -15,6 +15,7 @@
 from __future__ import print_function
 import os
 import sys
+import getpass
 import logging
 import optparse
 import traceback
@@ -22,6 +23,7 @@ from functools import partial
 
 # Import salt libs
 import salt.config as config
+import salt.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
@@ -193,7 +195,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report()), file=file)
-        self.exit()
+        self.exit(os.EX_OK)
 
 
 class MergeConfigMixIn(object):
@@ -328,7 +330,7 @@ class SaltfileMixIn(object):
         cli_config = saltfile_config[self.get_prog_name()]
 
         # If there are any options, who's names match any key from the loaded
-        # Saltfile, we need to update it's default value
+        # Saltfile, we need to update its default value
         for option in self.option_list:
             if option.dest is None:
                 # --version does not have dest attribute set for example.
@@ -639,8 +641,8 @@ class LogLevelMixIn(object):
         )
 
         if not is_writeable(logfile, check_parent=True):
-            # Since we're not be able to write to the log file or it's parent
-            # directory(if the log file does not exit), are we the same user
+            # Since we're not be able to write to the log file or its parent
+            # directory (if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
             current_user = salt.utils.get_user()
             if self.config['user'] != current_user:
@@ -648,7 +650,7 @@ class LogLevelMixIn(object):
                 # Is the current user in ACL?
                 if current_user in self.config.get('client_acl', {}).keys():
                     # Yep, the user is in ACL!
-                    # Let's write the logfile to it's home directory instead.
+                    # Let's write the logfile to its home directory instead.
                     user_salt_dir = os.path.expanduser('~/.salt')
                     if not os.path.isdir(user_salt_dir):
                         os.makedirs(user_salt_dir, 0750)
@@ -1638,6 +1640,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'when one wants to pass commas as arguments to '
                   'some of the commands in a compound command.')
         )
+        self.add_option(
+            '--summary',
+            dest='cli_summary',
+            default=False,
+            action='store_true',
+            help=('Display summary information about a salt command')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
@@ -1649,7 +1658,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # passed in. Regardless, we're in an unknown state here.
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
-                sys.exit(1)
+                sys.exit(salt.exitcodes.EX_GENERIC)
 
         if self.options.doc:
             # Include the target
@@ -1748,7 +1757,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -1932,7 +1941,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     os.makedirs(self.options.gen_keys_dir)
                 self.options.config_dir = self.options.gen_keys_dir
         super(SaltKeyOptionParser, self).process_config_dir()
-    # Don't change it's mixin priority!
+    # Don't change its mixin priority!
     process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
@@ -2080,7 +2089,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2263,11 +2272,19 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'authenticating'
         )
         auth_group.add_option(
+            '--askpass',
+            dest='ssh_askpass',
+            default=False,
+            action='store_true',
+            help='Interactively ask for the SSH password with no echo - avoids '
+                 'password in process args and stored in history'
+        )
+        auth_group.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
             default=False,
             action='store_true',
-            help='Set this flag to atempt to deploy the authorized ssh key '
+            help='Set this flag to attempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy'
         )
@@ -2276,7 +2293,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(1)
+            self.exit(os.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2285,8 +2302,11 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        if len(self.args) > 0:
-            self.config['arg_str'] = ' '.join(self.args[1:])
+
+        self.config['argv'] = self.args[1:]
+
+        if self.options.ssh_askpass:
+            self.options.ssh_passwd = getpass.getpass('Password: ')
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -2317,7 +2337,7 @@ class SaltCloudParser(OptionParser,
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
-        self.exit()
+        self.exit(os.EX_OK)
 
     def parse_args(self, args=None, values=None):
         try:
@@ -2334,7 +2354,7 @@ class SaltCloudParser(OptionParser,
 
             print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
             pprint.pprint(self.config)
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         if self.args:
             self.config['names'] = self.args

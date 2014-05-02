@@ -42,7 +42,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(1)
+        #sys.exit(salt.exitcodes.EX_GENERIC)
 
 
 def package(payload):
@@ -112,7 +112,7 @@ class Serial(object):
                 # raise the exception
                 raise
 
-            # msgpack is < 0.2.0, let's make it's life easier
+            # msgpack is < 0.2.0, let's make its life easier
             # Since OrderedDict is identified as a dictionary, we can't
             # make use of msgpack custom types, we will need to convert by
             # hand.
@@ -177,11 +177,12 @@ class SREQ(object):
             tried += 1
             if polled:
                 break
-            elif tried >= tries:
+            if tries > 1:
+                log.info('SaltReqTimeoutError: after {0} seconds. (Try {1} of {2})'.format(
+                  timeout, tried, tries))
+            if tried >= tries:
                 raise SaltReqTimeoutError(
-                    'Waited {0} seconds'.format(
-                        timeout * tried
-                    )
+                    'SaltReqTimeoutError: after {0} seconds, ran {1} tries'.format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())
 

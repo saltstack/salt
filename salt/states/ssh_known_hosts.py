@@ -22,7 +22,7 @@ Manage the information stored in the known_hosts files.
 
 def present(
         name,
-        user,
+        user=None,
         fingerprint=None,
         port=None,
         enc=None,
@@ -65,8 +65,11 @@ def present(
            'changes': {},
            'result': None if __opts__['test'] else True,
            'comment': ''}
+    if not user:
+        config = '/etc/ssh/ssh_known_hosts'
+
     if __opts__['test']:
-        result = __salt__['ssh.check_known_host'](user, name,
+        result = __salt__['ssh.check_known_host'](user=user, hostname=name,
                                                   fingerprint=fingerprint,
                                                   config=config)
         if result == 'exists':
@@ -82,7 +85,7 @@ def present(
                                                                      config)
             return dict(ret, comment=comment)
 
-    result = __salt__['ssh.set_known_host'](user, name,
+    result = __salt__['ssh.set_known_host'](user=user, hostname=name,
                 fingerprint=fingerprint,
                 port=port,
                 enc=enc,
@@ -90,7 +93,7 @@ def present(
                 hash_hostname=hash_hostname)
     if result['status'] == 'exists':
         return dict(ret,
-                    comment='{0} already exists in {1}'.format(name, config))
+                    Gcomment='{0} already exists in {1}'.format(name, config))
     elif result['status'] == 'error':
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
@@ -101,7 +104,7 @@ def present(
                          name, config, fingerprint))
 
 
-def absent(name, user, config='.ssh/known_hosts'):
+def absent(name, user=None, config='.ssh/known_hosts'):
     '''
     Verifies that the specified host is not known by the given user
 
@@ -119,7 +122,10 @@ def absent(name, user, config='.ssh/known_hosts'):
            'changes': {},
            'result': None if __opts__['test'] else True,
            'comment': ''}
-    known_host = __salt__['ssh.get_known_host'](user, name, config=config)
+    if not user:
+        config = '/etc/ssh/ssh_known_hosts'
+
+    known_host = __salt__['ssh.get_known_host'](user=user, hostname=name, config=config)
     if not known_host:
         return dict(ret, comment='Host is already absent')
 
@@ -128,7 +134,7 @@ def absent(name, user, config='.ssh/known_hosts'):
                                                                      config)
         return dict(ret, comment=comment)
 
-    rm_result = __salt__['ssh.rm_known_host'](user, name, config=config)
+    rm_result = __salt__['ssh.rm_known_host'](user=user, hostname=name, config=config)
     if rm_result['status'] == 'error':
         return dict(ret, result=False, comment=rm_result['error'])
     else:

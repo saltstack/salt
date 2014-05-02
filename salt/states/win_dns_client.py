@@ -99,13 +99,13 @@ def primary_suffix(name,
         suffix=None,
         updates=False):
     '''
-    .. versionadded:: TODO
+    .. versionadded:: Helium
 
     Configure the global primary DNS suffix of a DHCP client.
 
     suffix : None
         The suffix which is advertised for this client when acquiring a DHCP lease
-        When none is set, the explicitely configured DNS suffix will be removed.
+        When none is set, the explicitly configured DNS suffix will be removed.
 
     updates : False
         Allow syncing the DNS suffix with the AD domain when the client's AD domain membership changes

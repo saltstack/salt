@@ -468,8 +468,8 @@ class Pillar(object):
                             ext = self.ext_pillars[key](self.opts['id'], pillar, val)
                         update(pillar, ext)
 
-                    except TypeError as e:
-                        if e.message.startswith('ext_pillar() takes exactly '):
+                    except TypeError as exc:
+                        if exc.message.startswith('ext_pillar() takes exactly '):
                             log.warning('Deprecation warning: ext_pillar "{0}"'
                                         ' needs to accept minion_id as first'
                                         ' argument'.format(key))

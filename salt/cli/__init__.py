@@ -157,10 +157,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     else:
                         if self.options.verbose:
                             kwargs['verbose'] = True
+                        ret = {}
                         for full_ret in cmd_func(**kwargs):
-                            ret, out, retcode = self._format_ret(full_ret)
+                            ret_, out, retcode = self._format_ret(full_ret)
                             retcodes.append(retcode)
-                            self._output_ret(ret, out)
+                            self._output_ret(ret_, out)
+                            ret.update(ret_)
+
+                    # Returns summary
+                    if self.config['cli_summary'] is True:
+                        if self.config['fun'] != 'sys.doc':
+                            if self.options.output is None:
+                                self._print_returns_summary(ret)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
@@ -173,6 +181,31 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+
+    def _print_returns_summary(self, ret):
+        '''
+        Display returns summary
+        '''
+        return_counter = 0
+        not_return_counter = 0
+        not_return_minions = []
+        for each_minion in ret:
+            if ret[each_minion] == "Minion did not return":
+                not_return_counter += 1
+                not_return_minions.append(each_minion)
+            else:
+                return_counter += 1
+        print('\n')
+        print('-------------------------------------------')
+        print('Summary')
+        print('-------------------------------------------')
+        if self.options.verbose:
+            print('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
+        print('# of Minions Returned: {0}'.format(return_counter))
+        if self.options.verbose:
+            print('# of Minions Did Not Return: {0}'.format(not_return_counter))
+            print('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
+        print('-------------------------------------------')
 
     def _output_ret(self, ret, out):
         '''
@@ -344,11 +377,11 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         if self.options.doc:
             caller.print_docs()
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         if self.options.grains_run:
             caller.print_grains()
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         caller.run()
 
@@ -387,7 +420,7 @@ class SaltRun(parsers.SaltRunOptionParser):
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
             runner._print_docs()
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when
         # someone tries to use the runners via the python API

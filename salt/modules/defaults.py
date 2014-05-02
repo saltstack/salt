@@ -25,11 +25,11 @@ def _get_files(pillar_name):
     and fetches them from the Salt master.
     '''
     _mk_client()
-    pillar_name = pillar_name.replace(".", "/")
+    pillar_name = pillar_name.replace('.', '/')
     paths = []
 
     for ext in ('yaml', 'json'):
-        source_url = 'salt://%s/%s' % (pillar_name, 'defaults.' + ext)
+        source_url = 'salt://{0}/{1}'.format(pillar_name, 'defaults.' + ext)
         paths.append(source_url)
 
     return __context__['cp.fileclient'].cache_files(paths)

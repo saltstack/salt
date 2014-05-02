@@ -138,6 +138,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             del kwargs[ignore]
 
     rule = ''
+    proto = False
     bang_not_pat = re.compile(r'[!,not]\s?')
 
     if 'if' in kwargs:
@@ -162,6 +163,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             rule += '! '
 
         rule += '-p {0} '.format(kwargs['proto'])
+        proto = True
 
     if 'match' in kwargs:
         if not isinstance(kwargs['match'], list):
@@ -186,14 +188,6 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '--state {0} '.format(kwargs['connstate'])
         del kwargs['connstate']
 
-    if 'proto' in kwargs:
-        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
-            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
-            rule += '! '
-
-        rule += '-m {0} '.format(kwargs['proto'])
-        del kwargs['proto']
-
     if 'dport' in kwargs:
         if str(kwargs['dport']).startswith('!') or str(kwargs['dport']).startswith('not'):
             kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
@@ -213,12 +207,14 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'dports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
+            if not proto:
+                return 'Error: proto must be specified'
 
         if isinstance(kwargs['dports'], list):
             if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
                 kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
                 rule += '! '
-            dports = ','.join(kwargs['dports'])
+            dports = ','.join([str(i) for i in kwargs['dports']])
         else:
             if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
                 dports = re.sub(bang_not_pat, '', kwargs['dports'])
@@ -232,12 +228,14 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'sports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
+            if not proto:
+                return 'Error: proto must be specified'
 
         if isinstance(kwargs['sports'], list):
             if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
                 kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
                 rule += '! '
-            sports = ','.join(kwargs['sports'])
+            sports = ','.join([str(i) for i in kwargs['sports']])
         else:
             if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
                 sports = re.sub(bang_not_pat, '', kwargs['sports'])

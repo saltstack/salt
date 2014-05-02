@@ -46,9 +46,17 @@ States so this is a quick and natural way to use Formulas.
 
 .. seealso:: :ref:`Setting up GitFS <tutorial-gitfs>`
 
-1.  Add one or more Formula repository URLs as remotes in the
+1.  Fork one or more Formula repositories to your own Github account.
+2.  Add the forked repository URLs as remotes in the
     :conf_master:`gitfs_remotes` list in the Salt Master configuration file.
-2.  Restart the Salt master.
+3.  Restart the Salt master.
+
+.. note::
+
+    Although it is possible to add the formula URLs to Gitfs without forking
+    first, this is not recommended.  Relying on a repository that one does not
+    directly control could result in problems if there is upstream breakage in
+    the repo.
 
 Adding a Formula directory manually
 -----------------------------------

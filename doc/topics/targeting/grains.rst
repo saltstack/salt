@@ -174,7 +174,7 @@ change, consider using :doc:`Pillar <../pillar/index>` instead.
 Precedence
 ==========
 
-Core grains can be overriden by custom grains. As there are several ways of
+Core grains can be overridden by custom grains. As there are several ways of
 defining custom grains, there is an order of precedence which should be kept in
 mind when defining them. The order of evaluation is as follows:
 

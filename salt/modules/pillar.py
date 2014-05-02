@@ -14,14 +14,14 @@ from salt._compat import string_types
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False):
+def get(key, default='', merge=False, delim=':'):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
 
-    If the merge parameter is set to `True`, the default will be recursively
+    If the merge parameter is set to ``True``, the default will be recursively
     merged into the returned pillar data.
 
     The value can also represent a value in a nested dict using a ":" delimiter
@@ -34,6 +34,12 @@ def get(key, default='', merge=False):
 
         pkg:apache
 
+
+    delim
+        Specify an alternate delimiter to use when traversing a nested dict
+
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
@@ -42,9 +48,9 @@ def get(key, default='', merge=False):
     '''
     if merge:
         return salt.utils.dictupdate.update(default,
-            salt.utils.traverse_dict(__pillar__, key, ''))
+            salt.utils.traverse_dict(__pillar__, key, '', delim))
 
-    return salt.utils.traverse_dict(__pillar__, key, default)
+    return salt.utils.traverse_dict(__pillar__, key, default, delim)
 
 
 def items(*args):

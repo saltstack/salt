@@ -371,7 +371,7 @@ def _parse_interfaces():
                         if sline[0] in ['up', 'down', 'pre-up', 'post-up', 'pre-down', 'post-down']:
                             ud = sline.pop(0)
                             cmd = ' '.join(sline)
-                            cmd_key = '%s_cmds' % (re.sub('-', '_', ud))
+                            cmd_key = '{0}_cmds'.format(re.sub('-', '_', ud))
                             if not cmd_key in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context][cmd_key] = []
                             adapters[iface_name]['data'][context][cmd_key].append(cmd)

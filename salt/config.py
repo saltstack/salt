@@ -102,6 +102,7 @@ VALID_OPTS = {
     'log_fmt_console': str,
     'log_fmt_logfile': tuple,
     'log_granular_levels': dict,
+    'max_event_size': int,
     'test': bool,
     'cython_enable': bool,
     'show_timeout': bool,
@@ -213,6 +214,8 @@ VALID_OPTS = {
     'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
     'auth_timeout': int,
+    'auth_tries': int,
+    'auth_safemode': bool,
     'random_master': bool,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
@@ -222,6 +225,11 @@ VALID_OPTS = {
     'ssh_timeout': float,
     'ssh_user': str,
     'raet_port': int,
+    'sqlite_queue_dir': str,
+    'queue_dirs': list,
+    'restart_on_error': bool,
+    'ping_interval': int,
+    'cli_summary': bool,
 }
 
 # default configurations
@@ -288,6 +296,7 @@ DEFAULT_MINION_OPTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'max_event_size': 1048576,
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
@@ -323,12 +332,16 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'auth_timeout': 60,
+    'auth_tries': 1,
+    'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4510,
+    'restart_on_error': False,
+    'ping_interval': 0,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -377,6 +390,7 @@ DEFAULT_MASTER_OPTS = {
     'svnfs_tags': 'tags',
     'svnfs_env_whitelist': [],
     'svnfs_env_blacklist': [],
+    'max_event_size': 1048576,
     'minionfs_env': 'base',
     'minionfs_mountpoint': '',
     'minionfs_whitelist': [],
@@ -452,7 +466,7 @@ DEFAULT_MASTER_OPTS = {
     'win_repo_mastercachefile': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR,
                                              'win', 'repo', 'winrepo.p'),
     'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
-    'syndic_wait': 1,
+    'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
@@ -474,6 +488,9 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
     'raet_port': 4506,
+    'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
+    'queue_dirs': [],
+    'cli_summary': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -733,7 +750,7 @@ def minion_config(path,
         # in `5d60f77` in order not to break backwards compatibility.
         #
         # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop it's use.
+        # api calls to be updated in order to stop its use.
         salt.utils.warn_until(
             'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '
@@ -960,7 +977,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
             entry = os.path.join(os.path.dirname(path), entry)
 
         if os.path.isdir(entry):
-            # Path exists, let's update the entry(it's path might have been
+            # Path exists, let's update the entry (its path might have been
             # made absolute)
             deploy_scripts_search_path[idx] = entry
             continue
@@ -968,7 +985,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # It's not a directory? Remove it from the search path
         deploy_scripts_search_path.pop(idx)
 
-    # Add the built-in scripts directory to the search path(last resort)
+    # Add the built-in scripts directory to the search path (last resort)
     deploy_scripts_search_path.append(
         os.path.abspath(
             os.path.join(
@@ -1846,7 +1863,7 @@ def apply_minion_config(overrides=None,
         # in `5d60f77` in order not to break backwards compatibility.
         #
         # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop it's use.
+        # api calls to be updated in order to stop its use.
         salt.utils.warn_until(
             'Helium',
             'The functionality behind the \'check_dns\' keyword argument is '

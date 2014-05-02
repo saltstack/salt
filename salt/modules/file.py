@@ -1895,7 +1895,7 @@ def statvfs(path):
     return False
 
 
-def stats(path, hash_type='md5', follow_symlinks=True):
+def stats(path, hash_type=None, follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -1929,7 +1929,8 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
+    if hash_type:
+        ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
@@ -2545,9 +2546,7 @@ def check_file_meta(
     changes = {}
     if not source_sum:
         source_sum = dict()
-    lstats = stats(
-        name, source_sum.get('hash_type', 'md5'), follow_symlinks=False
-    )
+    lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
     if not lstats:
         changes['newfile'] = name
         return changes

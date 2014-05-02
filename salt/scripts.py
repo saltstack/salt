@@ -7,6 +7,7 @@ This module contains the function calls to execute command line scripts
 from __future__ import print_function
 import os
 import sys
+import time
 
 # Import salt libs
 import salt
@@ -33,8 +34,18 @@ def salt_minion():
     '''
     if '' in sys.path:
         sys.path.remove('')
-    minion = salt.Minion()
-    minion.start()
+
+    reconnect = True
+    while reconnect:
+        reconnect = False
+        minion = salt.Minion()
+        ret = minion.start()
+        if ret == 'reconnect':
+            del minion
+            minion = None
+            # give extra time for resources like ZMQ to close.
+            time.sleep(10)
+            reconnect = True
 
 
 def salt_syndic():
@@ -121,7 +132,7 @@ def salt_cloud():
 
     if not HAS_SALTCLOUD:
         print('salt-cloud is not available in this system')
-        sys.exit(1)
+        sys.exit(os.EX_UNAVAILABLE)
 
     try:
         cloud = salt.cloud.cli.SaltCloud()

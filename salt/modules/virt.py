@@ -100,12 +100,12 @@ def __get_conn():
         connection = __salt__['config.get']('libvirt:connection', 'esx')
         if connection.startswith('esx://'):
             return connection
-        return '%s' % connection
+        return connection
 
     def __esxi_auth():
         '''
         We rely on that the credentials is provided to libvirt through
-        it's built in mechanisms.
+        its built in mechanisms.
 
         Example libvirt `/etc/libvirt/auth.conf`:
 
@@ -892,7 +892,7 @@ def get_disks(vm_):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
                     source.hasAttribute('name'):  # For rbd network
-                qemu_target = '%s:%s' % (
+                qemu_target = '{0}:{1}'.format(
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
@@ -1630,7 +1630,7 @@ def vm_cputime(vm_=None):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
                 'cputime': int(raw[4]),
-                'cputime_percent': int('%.0f' % cputime_percent)
+                'cputime_percent': int('{0:.0f}'.format(cputime_percent))
                }
     info = {}
     if vm_:

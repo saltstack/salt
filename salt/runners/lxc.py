@@ -46,7 +46,7 @@ def _do_names(names, fun):
     Invoke a function in the lxc module with no args
     '''
     ret = {}
-    hosts = find_guests(names, quiet=True)
+    hosts = find_guests(names)
     if not hosts:
         return False
 
@@ -88,7 +88,7 @@ def find_guest(name, quiet=False):
     return None
 
 
-def find_guests(names, quiet=False):
+def find_guests(names):
     '''
     Return a dict of hosts and named guests
     '''
@@ -164,7 +164,7 @@ def init(names,
         If salt-minion is not already installed, install it. Default: true
 
     config
-        Optional config paramers. By default, the id is set to the name of the
+        Optional config parameters. By default, the id is set to the name of the
         container.
     '''
     if host is None:

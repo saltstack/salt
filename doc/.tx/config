@@ -4256,3 +4256,9 @@ source_file = _build/locale/topics/cloud/vexxhost.pot
 source_lang = en
 source_name = topics/cloud/vexxhost.rst
 
+[salt.topics--event--master_events]
+file_filter = locale/<lang>/LC_MESSAGES/topics/event/master_events.po
+source_file = _build/locale/topics/event/master_events.pot
+source_lang = en
+source_name = topics/event/master_events.rst
+

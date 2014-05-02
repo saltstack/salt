@@ -41,7 +41,9 @@ if HAS_PIP is True:
         HAS_PIP = False
         # Remove references to the loaded pip module above so reloading works
         import sys
-        del pip, sys.modules['pip']
+        del pip
+        if 'pip' in sys.modules:
+            del sys.modules['pip']
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +218,7 @@ def installed(name,
         Salt from an active `virtualenv`_.
 
         The reason for this requirement is because ``pip`` already does a
-        pretty good job parsing it's own requirements. It makes no sense for
+        pretty good job parsing its own requirements. It makes no sense for
         Salt to do ``pip`` requirements parsing and validation before passing
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.

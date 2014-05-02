@@ -82,8 +82,6 @@ def _format_host(host, data):
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
-            start_time = ret['start_time']
-            duration = ret['duration']
             if schanged:
                 tcolor = colors['CYAN']
             if ret['result'] is False:
@@ -133,6 +131,8 @@ def _format_host(host, data):
                 comment = ret['comment'].join(' ').replace(
                     '\n',
                     '\n' + ' ' * 13)
+            for detail in ['start_time', 'duration']:
+                ret.setdefault(detail, '')
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,

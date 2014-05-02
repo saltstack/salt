@@ -217,7 +217,7 @@ This makes handling nested structures much easier.
     It should be noted that within templating, the ``pillar`` variable is just
     a dictionary.  This means that calling ``pillar.get()`` inside of a
     template will just use the default dictionary ``.get()`` function which
-    does not include the extra ``:`` delimeter functionality.  It must be
+    does not include the extra ``:`` delimiter functionality.  It must be
     called using the above syntax (``salt['pillar.get']('foo:bar:baz',
     'qux')``) to get the salt function, instead of the default dictionary
     behavior.

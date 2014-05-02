@@ -19,6 +19,7 @@ import logging
 
 # Import salt libs
 import salt.config
+import salt.exitcodes
 import salt.output
 import salt.utils
 from salt.utils import parsers
@@ -73,7 +74,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.options.output, self.config
             )
             print(display_output(ret))
-            self.exit(0)
+            self.exit(os.EX_OK)
 
         log.info('salt-cloud starting')
         mapper = salt.cloud.Map(self.config)
@@ -146,7 +147,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
             if not matching:
                 print('No machines were found to be destroyed')
-                self.exit()
+                self.exit(os.EX_OK)
 
             msg = 'The following virtual machines are set to be destroyed:\n'
             names = set()
@@ -240,7 +241,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.selected_query_option is None:
             if len(mapper.rendered_map) == 0:
                 sys.stderr.write('No nodes defined in this map')
-                self.exit(1)
+                self.exit(salt.exitcodes.EX_GENERIC)
             try:
                 ret = {}
                 run_map = True
@@ -308,7 +309,7 @@ class SaltCloud(parsers.SaltCloudParser):
         )
         # display output using salt's outputter system
         print(display_output(ret))
-        self.exit(0)
+        self.exit(os.EX_OK)
 
     def print_confirm(self, msg):
         if self.options.assume_yes:
@@ -347,4 +348,4 @@ class SaltCloud(parsers.SaltCloudParser):
             # enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
-        self.exit(1)
+        self.exit(salt.exitcodes.EX_GENERIC)

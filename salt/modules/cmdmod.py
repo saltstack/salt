@@ -1254,4 +1254,4 @@ def run_chroot(root, cmd):
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     log.info(res)
-    return res['retcode']
+    return res

@@ -35,7 +35,7 @@ On CentOS, RHEL, or Fedora:
 Installing Halite Using pip
 ===========================
 
-To begin the installation of Halite from PyPi, you'll need to install pip. The
+To begin the installation of Halite from PyPI, you'll need to install pip. The
 Salt package, as well as the bootstrap, do not install pip by default.
 
 On CentOS, RHEL, or Fedora:

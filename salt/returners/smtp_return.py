@@ -99,7 +99,8 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
     if HAS_GNUPG and gpgowner:
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~%s/.gnupg' % gpgowner), options=['--trust-model always'])
+        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                        options=['--trust-model always'])
         encrypted_data = gpg.encrypt(content, to_addrs)
         if encrypted_data.ok:
             log.debug('smtp_return: Encryption successful')
