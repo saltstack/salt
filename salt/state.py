@@ -1597,7 +1597,7 @@ class State(object):
         '''
         if self.opts.get('state_aggregate') and not low.get('__agg__'):
             agg_fun = '{0}.mod_aggregate'.format(low['state'])
-	    if agg_fun in self.states:
+            if agg_fun in self.states:
                 try:
                     low = self.states[agg_fun](low, chunks, running)
                 except TypeError:
