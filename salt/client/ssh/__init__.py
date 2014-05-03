@@ -23,6 +23,8 @@ import salt.client.ssh.wrapper
 import salt.config
 import salt.exceptions
 import salt.loader
+import salt.exitcodes
+import salt.exitcodes
 import salt.minion
 import salt.roster
 import salt.state
@@ -34,143 +36,104 @@ import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
 
+# The directory where salt thin is deployed
+DEFAULT_THIN_DIR = '/tmp/.salt'
+
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
 
 
-# This shim facilitates remote salt-call operations
-# - Uses /bin/sh for maximum compatibility
+# METHODOLOGY:
+# 
+#   1) Make the _thinnest_ /bin/sh shim (SSH_SH_SHIM) to find the python
+#      interpreter and get it invoked
+#   2) Once a qualified python is found start it with the SSH_PY_SHIM
+
+# NOTE:
+#   * SSH_SH_SHIM is generic and can be used to load+exec *any* python
+#     script on the target.
+#   * SSH_PY_SHIM is in a separate file rather than stuffed in a string
+#     in salt/client/ssh/__init__.py - this makes testing *easy* because
+#     it can be invoked directly.
+#   * SSH_PY_SHIM is base64 encoded and formatted into the SSH_SH_SHIM
+#     string.  This makes the python script "armored" so that it can
+#     all be passed in the SSH command and will not need special quoting
+#     (which likely would be impossibe to do anyway)
+#   * The formatted SSH_SH_SHIM with the SSH_PY_SHIM payload is a bit
+#     big (~7.5k).  If this proves problematic for an SSH command we
+#     might try simply invoking "/bin/sh -s" and passing the formatted
+#     SSH_SH_SHIM on SSH stdin.
+
+# NOTE: there are two passes of formatting:
+# 1) Substitute in static values
+#   - EX_THIN_PYTHON_OLD  - exit code if a suitable python is not found
+# 2) Substitute in instance-specific commands
+#   - DEBUG       - enable shim debugging (any non-zero string enables)
+#   - SUDO        - load python and execute as root (any non-zero string enables)
+#   - SSH_PY_CODE - base64-encoded python code to execute
+#   - SSH_PY_ARGS - arguments to pass to python code
+SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+# This shim generically loads python code . . . and *no* more.
+# - Uses /bin/sh for maximum compatibility - then jumps to
+#   python for ultra-maximum compatibility.
 #
 # 1. Identify a suitable python
-# 2. Test for remote salt-call and version if present
-# 3. Signal to (re)deploy if missing or out of date
-#    - If this is a a first deploy, then test python version
-# 4. Perform salt-call
+# 2. Jump to python
 
-# Note there are two levels of formatting.
-# - First format pass inserts salt version and delimiter
-# - Second pass at run-time and inserts optional "sudo" and command
-SSH_SHIM = r'''/bin/sh << 'EOF'
-      #!/bin/sh
+set -e
+set -u
 
-      MISS_PKG=""
+DEBUG="{{DEBUG}}"
+if [ -n "$DEBUG" ]; then
+    set -x
+fi
 
-      command -v tar >/dev/null
-      if [ $? -ne 0 ]
-      then
-         MISS_PKG="$MISS_PKG tar"
-      fi
+SUDO=""
+if [ -n "{{SUDO}}" ]; then
+    SUDO="sudo root -c"
+fi
+ 
+EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}    # Python interpreter is too old and incompatible
 
-      for py_candidate in \
-            python27      \
-            python2.7     \
-            python26      \
-            python2.6     \
-            python2       \
-            python        ;
-      do
-         command -v $py_candidate >/dev/null
-         if [ $? -eq 0 ]
-         then
-               PYTHON="$py_candidate"
-               break
-         fi
-      done
+PYTHON_CMDS="
+    python27
+    python2.7
+    python26
+    python2.6
+    python2
+    python
+"
 
-      if [ -z "$PYTHON" ]
-      then
-         MISS_PKG="$MISS_PKG python"
-      fi
+main()
+{{{{
+    local py_cmd
+    local py_cmd_path
+    for py_cmd in $PYTHON_CMDS; do
+        if "$py_cmd" -c 'import sys; sys.exit(not sys.hexversion >= 0x02060000);' >/dev/null 2>&1; then
+            local py_cmd_path
+            py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
+            echo "FOUND: $py_cmd_path"
+            eval $SUDO exec "$py_cmd_path" -c 'exec "{{SSH_PY_CODE}}".decode("base64")' -- {{SSH_PY_ARGS}}
+        else
+            echo "WARNING: $py_cmd not found or too old" >&2
+        fi
+    done
 
-      SALT="/tmp/.salt/salt-call"
-      if [ "{{2}}" = "md5" ]
-      then
-         for md5_candidate in \
-            md5sum            \
-            md5               \
-            csum              \
-            digest            ;
-         do
-            command -v $md5_candidate >/dev/null
-            if [ $? -eq 0 ]
-            then
-                SUMCHECK="$md5_candidate"
-                break
-            fi
-         done
-      else
-         command -v "{{2}}" >/dev/null
-         if [ $? -eq 0 ]
-         then
-            SUMCHECK="{{2}}"
-         fi
-      fi
+    echo "ERROR: Unable to locate appropriate python command" >&2
+    exit $EX_PYTHON_OLD
+}}}}
 
-      if [ -z "$SUMCHECK" ]
-      then
-         MISS_PKG="$MISS_PKG md5sum/md5/csum"
-      fi
+main
+EOF'''.format(
+    EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
+    DELIMETER=RSTR,
+    VERSION=__version__,
+)
 
-      if [ -n "$MISS_PKG" ]
-      then
-            echo "The following required Packages are missing: $MISS_PKG" >&2
-            exit 127
-      fi
+with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
+    SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
 
-      # MD5 check for systems with a BSD userland (includes OSX).
-      if [ "$SUMCHECK" = "md5" ]
-      then
-         SUMCHECK="md5 -q"
-      # MD5 check for AIX systems.
-      elif [ "$SUMCHECK" = "csum" ]
-      then
-         SUMCHECK="csum -h MD5"
-      # MD5 check for Solaris systems.
-      elif [ "$SUMCHECK" = "digest" ]
-      then
-         SUMCHECK="digest -a md5"
-      fi
-
-      if [ -f "$SALT" ]
-      then
-         if [ "`cat /tmp/.salt/version`" != "{0}" ]
-         then
-            {{0}} rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
-            if [ $? -ne 0 ]; then
-                exit 1
-            fi
-            echo "{1}"
-            echo "deploy"
-            exit 1
-         fi
-      else
-         PY_TOO_OLD=`$PYTHON -c "import sys; print sys.hexversion < 0x02060000"`
-         if [ "$PY_TOO_OLD" = "True" ];
-         then
-            echo "Python too old" >&2
-            exit 1
-         fi
-         if [ -f /tmp/.salt/salt-thin.tgz ]
-         then
-             if [ "`$SUMCHECK /tmp/.salt/salt-thin.tgz | cut -f1 -d\ `" = "{{3}}" ]
-             then
-                 cd /tmp/.salt/ && gunzip -c salt-thin.tgz | {{0}} tar opxvf -
-             else
-                 echo "Mismatched checksum for /tmp/.salt/salt-thin.tgz" >&2
-                 exit 1
-             fi
-         else
-             mkdir -m 0700 -p /tmp/.salt
-             echo "{1}"
-             echo "deploy"
-             exit 1
-         fi
-      fi
-      echo "{{4}}" > /tmp/.salt/minion
-      echo "{1}"
-      eval {{0}} $PYTHON $SALT --local --out json -l quiet {{1}} -c /tmp/.salt
-EOF'''.format(salt.__version__, RSTR)
 
 log = logging.getLogger(__name__)
 
@@ -337,7 +300,7 @@ class SSH(object):
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
-        if stdout.startswith('deploy'):
+        if retcode == salt.exitcodes.EX_THIN_DEPLOY and stdout.startswith('deploy'):
             single.deploy()
             stdout, stderr, retcode = single.run()
         # This job is done, yield
@@ -598,7 +561,9 @@ class Single(object):
         else:
             stdout, stderr, retcode = self.cmd_block()
 
-        if stdout.startswith('deploy') and not deploy_attempted:
+        if retcode == salt.exitcodes.EX_THIN_DEPLOY \
+           and stdout.startswith('deploy') \
+           and not deploy_attempted:
             self.deploy()
             return self.run(deploy_attempted=True)
 
@@ -668,6 +633,30 @@ class Single(object):
         ret = json.dumps(self.wfuncs[self.fun](*self.args, **self.kwargs))
         return ret, '', None
 
+    def _cmd_str(self):
+        '''
+        Prepare the command string
+        '''
+        sudo = 'sudo' if self.target['sudo'] else ''
+        thin_sum = salt.utils.thin.thin_sum(self.opts['cachedir'], 'sha1')
+
+        ssh_py_shim_args = [
+            '-d', RSTR,
+            '-s', DEFAULT_THIN_DIR,
+            '--checksum', thin_sum,
+            '--hashfunc', 'sha1',
+            '-v', __version__,
+            '--',
+        ] + self.argv
+
+        cmd = SSH_SH_SHIM.format(
+            DEBUG='',
+            SUDO=sudo,
+            SSH_PY_CODE=SSH_PY_SHIM,
+            SSH_PY_ARGS=' '.join([self._escape_arg(arg) for arg in ssh_py_shim_args]),
+        )
+
+
     def cmd(self):
         '''
         Prepare the pre-check command to send to the subsystem
@@ -684,18 +673,10 @@ class Single(object):
                 salt.utils.args.parse_input(self.args)
             )
             self.sls_seed(*args, **kwargs)
-        cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
-        sudo = 'sudo' if self.target['sudo'] else ''
-        thin_sum = salt.utils.thin.thin_sum(
-                self.opts['cachedir'],
-                self.opts['hash_type'])
-        cmd = SSH_SHIM.format(
-                sudo,
-                cmd_str,
-                self.opts['hash_type'],
-                thin_sum,
-                self.minion_config)
-        for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd):
+
+        cmd_str = self._cmd_str()
+        log.debug('Performing shimmed, non-blocking command as follows:\n{0}'.format(' '.join(self.argv)))
+        for stdout, stderr, retcode in self.shell.exec_nb_cmd(self._cmd_str()):
             yield stdout, stderr, retcode
 
     def cmd_block(self, is_retry=False):
@@ -706,19 +687,10 @@ class Single(object):
         # 2. check is salt-call is on the target
         # 3. deploy salt-thin
         # 4. execute command
-        cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
-        sudo = 'sudo' if self.target['sudo'] else ''
-        thin_sum = salt.utils.thin.thin_sum(
-                self.opts['cachedir'],
-                self.opts['hash_type'])
-        cmd = SSH_SHIM.format(
-                sudo,
-                cmd_str,
-                self.opts['hash_type'],
-                thin_sum,
-                self.minion_config)
-        log.debug('Performing shimmed command as follows:\n{0}'.format(cmd))
-        stdout, stderr, retcode = self.shell.exec_cmd(cmd)
+
+        cmd_str = self._cmd_str()
+        log.debug('Performing shimmed, blocking command as follows:\n{0}'.format(' '.join(self.argv)))
+        stdout, stderr, retcode = self.shell.exec_cmd(self._cmd_str())
 
         log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
         log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
@@ -730,7 +702,7 @@ class Single(object):
 
         if RSTR in stdout:
             stdout = stdout.split(RSTR)[1].strip()
-        if stdout.startswith('deploy'):
+        if retcode == salt.exitcodes.EX_THIN_DEPLOY and stdout.startswith('deploy'):
             self.deploy()
             stdout, stderr, retcode = self.shell.exec_cmd(cmd)
             if RSTR in stdout:
@@ -739,33 +711,72 @@ class Single(object):
         return stdout, stderr, retcode
 
     def categorize_shim_errors(self, stdout, stderr, retcode):
-        # Unused stdout and retcode for now but these may be used to
+        # Unused stdout for now but these may be used to
         # categorize errors
         _ = stdout
-        _ = retcode
+
+        if RSTR in stderr:
+            # RSTR was found which means that the SHIM successfully invoked
+            # salt and error classification is unnecessary.
+            return None
+
+        if stderr.startswith('Permission denied'):
+            return None
 
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
-        if stderr.startswith('Permission denied'):
-            return None
+
         errors = [
-            ('sudo: no tty present and no askpass program specified',
-                'sudo expected a password, NOPASSWD required'),
-            ('Python too old',
-                'salt requires python 2.6 or better on target hosts'),
-            ('sudo: sorry, you must have a tty to run sudo',
-                'sudo is configured with requiretty'),
-            ('Failed to open log file',
-                perm_error_fmt.format(stderr)),
-            ('Permission denied:.*/salt',
-                perm_error_fmt.format(stderr)),
-            ('Failed to create directory path.*/salt',
-                perm_error_fmt.format(stderr)),
-            ]
+            (
+                (),
+                'sudo: no tty present and no askpass program specified',
+                'sudo expected a password, NOPASSWD required'
+            ),
+            (
+                (salt.exitcodes.EX_THIN_PYTHON_OLD,),
+                'Python interpreter is too old',
+                'salt requires python 2.6 or newer on target hosts'
+            ),
+            (
+                (salt.exitcodes.EX_THIN_CHECKSUM,),
+                'checksum mismatched',
+                'The salt thin transfer was corrupted'
+            ),
+            (
+                (os.EX_CANTCREATE,),
+                'salt path .* exists but is not a directory',
+                'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
+            ),
+            (
+                (os.EX_SOFTWARE,),
+                '',
+                'An internal error occurred with the shim, please investigate:\n ' + stderr,
+            ),
+            (
+                (),
+                'sudo: sorry, you must have a tty to run sudo',
+                'sudo is configured with requiretty'
+            ),
+            (
+                (),
+                'Failed to open log file',
+                perm_error_fmt.format(stderr)
+            ),
+            (
+                (),
+                'Permission denied:.*/salt',
+                perm_error_fmt.format(stderr)
+            ),
+            (
+                (),
+                'Failed to create directory path.*/salt',
+                perm_error_fmt.format(stderr)
+            ),
+        ]
 
         for error in errors:
-            if re.search(error[0], stderr):
-                return error[1]
+            if retcode in error[0] or re.search(error[1], stderr):
+                return error[2]
         return None
 
     def sls_seed(self,
