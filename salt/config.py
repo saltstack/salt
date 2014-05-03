@@ -1990,7 +1990,7 @@ def apply_master_config(overrides=None, defaults=None):
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'autoreject_file', 'token_dir'
+        'autosign_file', 'autoreject_file', 'token_dir', 'sqlite_queue_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system
