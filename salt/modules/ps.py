@@ -527,7 +527,6 @@ def boot_time(time_format=None):
     return b_time
 
 
-
 def network_io_counters(interface=None):
     '''
     Return network I/O statisitics.
