@@ -559,6 +559,8 @@ def show_image(kwargs, call=None):
         )
 
     items = query(action='template', command=kwargs['image'])
+    if 'error' in items:
+        return items['error']
     return {items.attrib['name']: items.attrib}
 
 
