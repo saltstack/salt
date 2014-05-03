@@ -77,6 +77,170 @@ def host_to_ip(host):
     return ip
 
 
+def _sort_hostnames(hostname_list):
+    '''
+    sort minion ids favoring in order of:
+        - FQDN
+        - public ipaddress
+        - localhost alias
+        - private ipaddress
+    '''
+    # punish matches in order of preference
+    punish = [
+        'localhost.localdomain',
+        'localhost.my.domain',
+        'localhost',
+        'ip6-localhost',
+        'ip6-loopback',
+        '127.0.2.1',
+        '127.0.1.1',
+        '127.0.0.1',
+        '0.0.0.0',
+        '::1',
+        'fe00::',
+        'fe02::',
+    ]
+
+    def _cmp_hostname(a, b):
+        # should never have a space in hostname
+        if ' ' in a:
+            return 1
+        if ' ' in b:
+            return -1
+
+        # punish localhost list
+        if a in punish:
+            if b in punish:
+                return punish.index(a) - punish.index(b)
+            return 1
+        if b in punish:
+            return -1
+
+        # punish ipv6
+        if ':' in a or ':' in b:
+            return a.count(':') - b.count(':')
+
+        # punish ipv4
+        a_is_ipv4 = a.count('.') == 3 and not any(c.isalpha() for c in a)
+        b_is_ipv4 = b.count('.') == 3 and not any(c.isalpha() for c in b)
+        if a_is_ipv4 and a.startswith('127.'):
+            return 1
+        if b_is_ipv4 and b.startswith('127.'):
+            return -1
+        if a_is_ipv4 and not b_is_ipv4:
+            return 1
+        if a_is_ipv4 and b_is_ipv4:
+            return 0
+        if not a_is_ipv4 and b_is_ipv4:
+            return -1
+
+        # favor hosts with more dots
+        diff = b.count('.') - a.count('.')
+        if diff != 0:
+            return diff
+
+        # favor longest fqdn
+        return len(b) - len(a)
+
+    return sorted(hostname_list, cmp=_cmp_hostname)
+
+
+def get_hostnames():
+    '''
+    Get list of hostnames using multiple strategies
+    '''
+    l = []
+    l.append(socket.gethostname())
+    l.append(socket.getfqdn())
+
+    # try socket.getaddrinfo
+    try:
+        addrinfo = socket.getaddrinfo(
+            socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+            socket.SOL_TCP, socket.AI_CANONNAME
+        )
+        for info in addrinfo:
+            # info struct [family, socktype, proto, canonname, sockaddr]
+            if len(info) >= 4:
+                l.append(info[3])
+    except socket.gaierror:
+        pass
+
+    # try /etc/hostname
+    try:
+        with salt.utils.fopen('/etc/hostname') as hfl:
+            name = hfl.read().strip()
+        l.append(name.replace(' ',''))
+    except (IOError, OSError):
+        pass
+
+    # try /etc/hosts
+    try:
+        with salt.utils.fopen('/etc/hosts') as hfl:
+            for line in hfl:
+                names = line.split()
+                try:
+                    ip_ = names.pop(0)
+                except IndexError:
+                    continue
+                if ip_.startswith('127.'):
+                    for name in names:
+                        l.append(name.replace(' ',''))
+    except (IOError, OSError):
+        pass
+
+    # try windows hosts
+    if salt.utils.is_windows():
+        try:
+            windir = os.getenv('WINDIR')
+            with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
+                for line in hfl:
+                    # skip commented or blank lines
+                    if line[0] == '#' or len(line) <= 1:
+                        continue
+                    # process lines looking for '127.' in first column
+                    try:
+                        entry = line.split()
+                        if entry[0].startswith('127.'):
+                            for name in entry[1:]:  # try each name in the row
+                                l.append(name.replace(' ',''))
+                    except IndexError:
+                        pass  # could not split line (malformed entry?)
+        except (IOError, OSError):
+            pass
+
+    # remove duplicates
+    l = list(set(l))
+    return l
+
+
+def generate_minion_id():
+    '''
+    Returns a minion id after checking multiple sources for a FQDN.
+    If no FQDN is found you may get an ip address
+
+    CLI Example::
+
+        salt '*' network.generate_minion_id
+    '''
+    possible_ids = get_hostnames()
+
+    ip_addresses = [IPv4Address(addr) for addr
+                    in salt.utils.network.ip_addrs(include_loopback=True)
+                    if not addr.startswith('127.')]
+
+    # include public and private ipaddresses
+    for addr in ip_addresses:
+        possible_ids.append(str(addr))
+
+    # if no minion id
+    if len(possible_ids) == 0:
+        return 'noname'
+
+    hosts = _sort_hostnames(possible_ids)
+    return hosts[0]
+
+
 def get_fqhostname():
     '''
     Returns the fully qualified hostname
@@ -85,30 +249,27 @@ def get_fqhostname():
 
         salt '*' network.get_fqhostname
     '''
-    h_name = socket.gethostname()
-    if h_name.find('.') >= 0:
-        return h_name
-    else:
-        h_fqdn = socket.getfqdn()
-        try:
-            addrinfo = socket.getaddrinfo(
-                h_name, 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
-                socket.SOL_TCP, socket.AI_CANONNAME
-            )[0]
-        except IndexError:
-            # Handle possible empty struct returns
-            return h_fqdn
-        except socket.gaierror:
-            return h_fqdn
-        else:
-            # Struct contanis the following elements:
-            #     family, socktype, proto, canonname, sockaddr
-            try:
-                # Prevent returning an empty string by falling back to
-                # socket.getfqdn()
-                return addrinfo[3] or h_fqdn
-            except IndexError:
-                return h_fqdn
+    l = []
+    l.append(socket.getfqdn())
+
+    # try socket.getaddrinfo
+    try:
+        addrinfo = socket.getaddrinfo(
+            socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+            socket.SOL_TCP, socket.AI_CANONNAME
+        )
+        for info in addrinfo:
+            # info struct [family, socktype, proto, canonname, sockaddr]
+            if len(info) >= 4:
+                l.append(info[3])
+    except socket.gaierror:
+        pass
+
+    l = _sort_hostnames(l)
+    if len(l):
+        return l[0]
+
+    return None
 
 
 def ip_to_host(ip):
