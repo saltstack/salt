@@ -512,19 +512,19 @@ def boot_time(time_format=None):
         salt '*' ps.boot_time
     '''
     try:
-        boot_time = int(psutil.boot_time())
+        b_time = int(psutil.boot_time())
     except AttributeError:
         # get_boot_time() has been removed in newer psutil versions, and has
         # been replaced by boot_time() which provides the same information.
-        boot_time = int(psutil.get_boot_time())
+        b_time = int(psutil.get_boot_time())
     if time_format:
         # Load epoch timestamp as a datetime.datetime object
-        boot_time = datetime.datetime.fromtimestamp(boot_time)
+        b_time = datetime.datetime.fromtimestamp(b_time)
         try:
-            return boot_time.strftime(time_format)
+            return b_time.strftime(time_format)
         except TypeError as exc:
             raise SaltInvocationError('Invalid format string: {0}'.format(exc))
-    return boot_time
+    return b_time
 
 
 
