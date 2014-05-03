@@ -9,6 +9,10 @@ See http://code.google.com/p/psutil.
 
 # Import python libs
 import time
+import datetime
+
+# Import salt libs
+from salt.exceptions import SaltInvocationError
 
 # Import third party libs
 try:
@@ -395,7 +399,12 @@ def total_physical_memory():
 
         salt '*' ps.total_physical_memory
     '''
-    return psutil.TOTAL_PHYMEM
+    try:
+        return psutil.virtual_memory().total
+    except AttributeError:
+        # TOTAL_PHYMEM is deprecated but with older psutil versions this is
+        # needed as a fallback.
+        return psutil.TOTAL_PHYMEM
 
 
 def num_cpus():
@@ -408,20 +417,47 @@ def num_cpus():
 
         salt '*' ps.num_cpus
     '''
-    return psutil.NUM_CPUS
+    try:
+        return psutil.cpu_count()
+    except AttributeError:
+        # NUM_CPUS is deprecated but with older psutil versions this is needed
+        # as a fallback.
+        return psutil.NUM_CPUS
 
 
-def boot_time():
+def boot_time(time_format=None):
     '''
     Return the boot time in number of seconds since the epoch began.
 
     CLI Example:
 
+    time_format
+        Optionally specify a `strftime`_ format string. Use
+        ``time_format='%c'`` to get a nicely-formatted locale specific date and
+        time (i.e. ``Fri May  2 19:08:32 2014``).
+
+        .. _strftime: https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior
+
+        .. versionadded:: 2014.1.4
+
     .. code-block:: bash
 
         salt '*' ps.boot_time
     '''
-    return psutil.BOOT_TIME
+    try:
+        b_time = int(psutil.boot_time())
+    except AttributeError:
+        # get_boot_time() has been removed in newer psutil versions, and has
+        # been replaced by boot_time() which provides the same information.
+        b_time = int(psutil.get_boot_time())
+    if time_format:
+        # Load epoch timestamp as a datetime.datetime object
+        b_time = datetime.datetime.fromtimestamp(b_time)
+        try:
+            return b_time.strftime(time_format)
+        except TypeError as exc:
+            raise SaltInvocationError('Invalid format string: {0}'.format(exc))
+    return b_time
 
 
 def network_io_counters():
