@@ -35,7 +35,8 @@ from salt.version import SaltStackVersion
 
 log = logging.getLogger(__name__)
 
-
+# mock hostname should be more complex than the systems FQDN
+MOCK_HOSTNAME = 'vary.long.complex.fqdn.com'
 
 MOCK_ETC_HOSTS = (
     '##\n'
@@ -45,14 +46,14 @@ MOCK_ETC_HOSTS = (
     '# when the system is booting.  Do not change this entry.\n'
     '##\n'
     '\n'  # This empty line MUST STAY HERE, it factors into the tests
-    '127.0.0.1      localhost   foo.bar.net\n'
-    '10.0.0.100     foo.bar.net\n'
+    '127.0.0.1      localhost   {0}\n'.format(MOCK_HOSTNAME)
+    '10.0.0.100     {0}\n'.format(MOCK_HOSTNAME)
     '200.200.200.2  other.host.alias.com\n'
     '::1            ip6-localhost ip6-loopback\n'
     'fe00::0        ip6-localnet\n'
     'ff00::0        ip6-mcastprefix\n'
 )
-MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
+MOCK_ETC_HOSTNAME = '{0}\n'.format(MOCK_HOSTNAME)
 
 
 def _unhandled_mock_read(filename):
@@ -458,7 +459,7 @@ class ConfigTestCase(TestCase):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
             self.assertEqual(
-                sconfig.get_id(cache=False), ('foo.bar.com', False)
+                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
@@ -469,7 +470,7 @@ class ConfigTestCase(TestCase):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
             self.assertEqual(
-                sconfig.get_id(cache=False), ('foo.bar.net', False)
+                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
 
