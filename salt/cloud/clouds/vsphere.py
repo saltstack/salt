@@ -3,6 +3,8 @@
 vSphere Cloud Module
 ====================
 
+.. versionadded:: Helium
+
 The vSphere cloud module is used to control access to VMWare vSphere.
 
 :depends:   - PySphere Python module
