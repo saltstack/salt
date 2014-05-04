@@ -82,21 +82,6 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def get_attr_list():
-    '''
-    Get a list of attributes managed for autoscale groups.
-
-    CLI example::
-
-        salt myminion boto_asg.get_attr_list myasg region=us-east-1
-    '''
-    return ['name', 'availability_zones', 'default_cooldown',
-            'desired_capacity', 'health_check_period', 'health_check_type',
-            'launch_config_name', 'load_balancers', 'max_size', 'min_size',
-            'placement_group', 'vpc_zone_identifier', 'tags',
-            'termination_policies']
-
-
 def get_config(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get the configuration for an autoscale group
@@ -110,9 +95,17 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         return None
     try:
         asg = conn.get_all_groups(names=[name])
-        asg = asg[0]
+        if asg:
+            asg = asg[0]
+        else:
+            return {}
         ret = odict.OrderedDict()
-        for attr in get_attr_list():
+        attrs = ['name', 'availability_zones', 'default_cooldown',
+                 'desired_capacity', 'health_check_period',
+                 'health_check_type', 'launch_config_name', 'load_balancers',
+                 'max_size', 'min_size', 'placement_group',
+                 'vpc_zone_identifier', 'tags', 'termination_policies']
+        for attr in attrs:
             if attr == 'tags':
                 _tags = []
                 for tag in asg.tags:
@@ -152,24 +145,24 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         load_balancers = json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
+    _tags = []
     if isinstance(tags, string_types):
         tags = json.loads(tags)
-        _tags = []
-        for tag in tags:
-            try:
-                key = tag.get('key')
-            except KeyError:
-                log.error('Tag missing key.')
-                return False
-            try:
-                value = tag.get('value')
-            except KeyError:
-                log.error('Tag missing value.')
-                return False
-            propagate_at_launch = tag.get('propagate_at_launch', None)
-            _tag = autoscale.Tag(key=key, value=value, resource_id=name,
-                                 propagate_at_launch=propagate_at_launch)
-            _tags.append(_tag)
+    for tag in tags:
+        try:
+            key = tag.get('key')
+        except KeyError:
+            log.error('Tag missing key.')
+            return False
+        try:
+            value = tag.get('value')
+        except KeyError:
+            log.error('Tag missing value.')
+            return False
+        propagate_at_launch = tag.get('propagate_at_launch', False)
+        _tag = autoscale.Tag(key=key, value=value, resource_id=name,
+                             propagate_at_launch=propagate_at_launch)
+        _tags.append(_tag)
     if isinstance(termination_policies, string_types):
         termination_policies = json.loads(termination_policies)
     try:
@@ -216,24 +209,24 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         load_balancers = json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
+    _tags = []
     if isinstance(tags, string_types):
         tags = json.loads(tags)
-        _tags = []
-        for tag in tags:
-            try:
-                key = tag.get('key')
-            except KeyError:
-                log.error('Tag missing key.')
-                return False
-            try:
-                value = tag.get('value')
-            except KeyError:
-                log.error('Tag missing value.')
-                return False
-            propagate_at_launch = tag.get('propagate_at_launch', None)
-            _tag = autoscale.Tag(key=key, value=value, resource_id=name,
-                                 propagate_at_launch=propagate_at_launch)
-            _tags.append(_tag)
+    for tag in tags:
+        try:
+            key = tag.get('key')
+        except KeyError:
+            log.error('Tag missing key.')
+            return False
+        try:
+            value = tag.get('value')
+        except KeyError:
+            log.error('Tag missing value.')
+            return False
+        propagate_at_launch = tag.get('propagate_at_launch', False)
+        _tag = autoscale.Tag(key=key, value=value, resource_id=name,
+                             propagate_at_launch=propagate_at_launch)
+        _tags.append(_tag)
     if isinstance(termination_policies, string_types):
         termination_policies = json.loads(termination_policies)
     try:
@@ -250,6 +243,9 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
         _asg.update()
+        # Seems the update call doesn't handle tags, so we'll need to update
+        # that separately.
+        conn.create_or_update_tags(_tags)
         log.info('Updated ASG {0}'.format(name))
         return True
     except boto.exception.BotoServerError as e:
@@ -293,7 +289,7 @@ def _get_conn(region, key, keyid, profile):
             _profile = profile
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
-        region = _profile.get('keyid', None)
+        region = _profile.get('region', None)
 
     if not region and __salt__['config.option']('asg.region'):
         region = __salt__['config.option']('asg.region')
