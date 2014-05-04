@@ -720,6 +720,33 @@ def remote_set(cwd, name='origin', url=None, user=None):
     return remote_get(cwd=cwd, remote=name, user=None)
 
 
+def branch(cwd, rev, opts=None, user=None):
+    '''
+    Interacts with branches.
+
+    cwd
+        The path to the Git repository
+
+    rev
+        The branch/revision to be used in the command.
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' git.branch mybranch --set-upstream-to=origin/mybranch
+    '''
+    cmd = 'git branch {0} {1}'.format(rev, opts)
+    _git_run(cmd, cwd=cwd, user=user)
+    return current_branch(cwd, user=user)
+
+
 def reset(cwd, opts=None, user=None):
     '''
     Reset the repository checkout
