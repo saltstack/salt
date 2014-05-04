@@ -29,32 +29,65 @@ as a passed in dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
-    Ensure state of myasg:
-        boto_asg.present:
-            - name: myasg
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    # Using a profile from pillars
-    Ensure state of myasg:
-        boto_asg.present:
-            - name: myasg
-            - region: us-east-1
-            - profile: myprofile
+    # Using a profile from pillars.
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
 
-    # Passing in a profile
-    Ensure state of myasg:
-        boto_asg.present:
-            - name: myasg
-            - region: us-east-1
-            - profile:
-                keyid: GKTADJGHEIQSXMKKRBJ08H
-                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    # Passing in a profile.
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
+
+    # Deleting an autoscale group with running instances.
+    Ensure myasg is deleted:
+      boto_asg.absent:
+        - name: myasg
+        # If instances exist, we must force the deletion of the asg.
+        - force: True
 '''
 
 
@@ -106,7 +139,8 @@ def present(
         The desired capacity of the group.
 
     load_balancers
-        List of load balancers for the group.
+        List of load balancers for the group. Once set this can not be
+        updated (Amazon restriction).
 
     default_cooldown
         Number of seconds after a Scaling Activity completes before any further
@@ -114,7 +148,7 @@ def present(
 
     health_check_type
         The service you want the health status from, Amazon EC2 or Elastic Load
-        Balancer.
+        Balancer (EC2 or ELB).
 
     health_check_period
         Length of time in seconds after a new EC2 instance comes into service
@@ -122,7 +156,7 @@ def present(
 
     placement_group
         Physical location of your cluster placement group created in Amazon
-        EC2.
+        EC2. Once set this can not be updated (Amazon restriction).
 
     vpc_zone_identifier
         A list of the subnet identifiers of the Virtual Private Cloud.
@@ -153,7 +187,6 @@ def present(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is not None and not asg:
         if __opts__['test']:
@@ -181,16 +214,30 @@ def present(
             ret['comment'] = 'Failed to create autoscale group'
     elif asg:
         need_update = False
-        attrs = __salt__['boto_asg.get_attr_list']
-        for key in attrs:
-            value = __opts__.get(key)
-            if hasattr(asg, key):
-                _value = getattr(asg, key)
-                if isinstance(_value, list):
+        # If any of these attributes can't be modified after creation
+        # time, we should remove them from the dict.
+        config = {
+            'launch_config_name': launch_config_name,
+            'availability_zones': availability_zones,
+            'min_size': min_size,
+            'max_size': max_size,
+            'desired_capacity': desired_capacity,
+            'default_cooldown': default_cooldown,
+            'health_check_type': health_check_type,
+            'health_check_period': health_check_period,
+            'vpc_zone_identifier': vpc_zone_identifier,
+            'tags': tags,
+            'termination_policies': termination_policies
+        }
+        for key, value in config.iteritems():
+            if not value:
+                continue
+            if key in asg:
+                _value = asg[key]
+                if isinstance(value, list):
                     _value.sort()
                     value.sort()
                 if _value != value:
-                    setattr(asg, key, value)
                     need_update = True
         if need_update:
             if __opts__['test']:
@@ -256,13 +303,11 @@ def absent(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
-
     if asg is not None and asg:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Autoscale group set to be removed.'
+            ret['comment'] = 'Autoscale group set to be deleted.'
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
@@ -270,6 +315,7 @@ def absent(
             ret['result'] = True
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
+            ret['comment'] = 'Deleted autoscale group.'
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to delete autoscale group.'
@@ -278,5 +324,4 @@ def absent(
         ret['comment'] = 'Failed to check autoscale group existence.'
     else:
         ret['comment'] = 'Autoscale group does not exist.'
-
     return ret
