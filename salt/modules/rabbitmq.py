@@ -127,6 +127,7 @@ def add_user(name, password=None, runas=None):
 
     res = __salt__['cmd.run'](
         'rabbitmqctl add_user {0} {1!r}'.format(name, password),
+        output_loglevel='quiet',
         runas=runas)
 
     if clear_pw:
@@ -173,6 +174,7 @@ def change_password(name, password, runas=None):
     '''
     res = __salt__['cmd.run'](
         'rabbitmqctl change_password {0} {1!r}'.format(name, password),
+        output_loglevel='quiet',
         runas=runas)
     msg = 'Password Changed'
 
