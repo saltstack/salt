@@ -74,7 +74,7 @@ class CloudClient(object):
         opts['show_deploy_args'] = False
         opts['script_args'] = ''
         # Update it with the passed kwargs
-        opts.update(kwargs)
+        opts.update(kwargs['kwargs'])
         return opts
 
     def low(self, fun, low):
