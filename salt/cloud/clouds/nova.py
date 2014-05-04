@@ -183,6 +183,7 @@ def get_conn():
 
     return conn
 
+
 def avail_locations(conn=None, call=None):
     '''
     Return a list of locations
@@ -192,7 +193,7 @@ def avail_locations(conn=None, call=None):
             'The avail_locations function must be called with '
             '-f or --function, or with the --list-locations option'
         )
-    
+
     if conn is None:
         conn = get_conn()
 
