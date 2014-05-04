@@ -230,6 +230,14 @@ def latest(name,
                                              force=force_checkout,
                                              user=user)
 
+                    if __salt__['git.config_get'](target,
+                                                  'branch.{0}.remote'.format(rev),
+                                                  user=user ) != remote_name:
+                        __salt__['git.branch'](target,
+                                               rev,
+                                               opts='--set-upstream {0}/{1}'.format(remote_name, rev),
+                                               user=user)
+
                 # check if we are on a branch to merge changes
                 cmd = "git symbolic-ref -q HEAD"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=user)
