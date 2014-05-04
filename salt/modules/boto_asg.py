@@ -123,14 +123,14 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     _tags.append(_tag)
                 ret['tags'] = _tags
             else:
-                ret[attr] = asg.attr
+                ret[attr] = getattr(asg, attr)
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return {}
 
 
-def create(name, launch_config, availability_zones, min_size, max_size,
+def create(name, launch_config_name, availability_zones, min_size, max_size,
            desired_capacity=None, load_balancers=None, default_cooldown=None,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
@@ -174,7 +174,7 @@ def create(name, launch_config, availability_zones, min_size, max_size,
         termination_policies = json.loads(termination_policies)
     try:
         _asg = autoscale.AutoScalingGroup(
-            name=name, launch_config=launch_config,
+            name=name, launch_config=launch_config_name,
             availability_zones=availability_zones,
             min_size=min_size, max_size=max_size,
             desired_capacity=desired_capacity, load_balancers=load_balancers,
@@ -194,7 +194,7 @@ def create(name, launch_config, availability_zones, min_size, max_size,
         return False
 
 
-def update(name, launch_config, availability_zones, min_size, max_size,
+def update(name, launch_config_name, availability_zones, min_size, max_size,
            desired_capacity=None, load_balancers=None, default_cooldown=None,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
@@ -239,7 +239,7 @@ def update(name, launch_config, availability_zones, min_size, max_size,
     try:
         _asg = autoscale.AutoScalingGroup(
             connection=conn,
-            name=name, launch_config=launch_config,
+            name=name, launch_config=launch_config_name,
             availability_zones=availability_zones,
             min_size=min_size, max_size=max_size,
             desired_capacity=desired_capacity, load_balancers=load_balancers,
