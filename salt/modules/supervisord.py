@@ -83,7 +83,7 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.start <group>:
     '''
     if name.endswith(':*'):
-        name = name[:-2]
+        name = name[:-1]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('start', name, conf_file, bin_env), runas=user
     )
@@ -110,6 +110,8 @@ def restart(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.restart <service>
         salt '*' supervisord.restart <group>:
     '''
+    if name.endswith(':*'):
+        name = name[:-1]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('restart', name, conf_file, bin_env), runas=user
     )
@@ -136,6 +138,8 @@ def stop(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.stop <service>
         salt '*' supervisord.stop <group>:
     '''
+    if name.endswith(':*'):
+        name = name[:-1]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('stop', name, conf_file, bin_env), runas=user
     )
