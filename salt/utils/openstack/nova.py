@@ -159,6 +159,12 @@ class SaltNova(object):
         self.kwargs['service_type'] = 'volume'
         self.volume_conn = client.Client(**self.kwargs)
 
+    def get_catalog(self):
+        '''
+        Return service catalog
+        '''
+        return self.catalog
+
     def server_show_libcloud(self, uuid):
         '''
         Make output look like libcloud output for consistency
