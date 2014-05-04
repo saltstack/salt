@@ -82,6 +82,8 @@ def start(name='all', user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.start <service>
         salt '*' supervisord.start <group>:
     '''
+    if name.endswith(':*'):
+        name = name[:-2]
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('start', name, conf_file, bin_env), runas=user
     )
