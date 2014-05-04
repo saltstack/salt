@@ -11,7 +11,8 @@ The typical use-case would be to use ciphers in your pillar data, and keep a
 secret key on your master. You can put the public key in source control so that
 developers can add new secrets quickly and easily.
 
-This renderer requires the gnupg package.
+This renderer requires the python-gnupg package. Be careful to install the
+``python-gnupg`` package, not the ``gnupg`` package, or you will get errors.
 
 To set things up, you will first need to generate a keypair. On your master,
 run:
