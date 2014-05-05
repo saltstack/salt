@@ -283,9 +283,9 @@ class BasicTestCase(unittest.TestCase):
         self.store = storing.Store(stamp=0.0)
         self.timer = StoreTimer(store=self.store, duration=1.0)
 
-        self.saltDirpath = tempfile.mkdtemp(prefix="salt", suffix="")
+        self.saltDirpath = tempfile.mkdtemp(prefix="salt", suffix="main", dir='/tmp')
 
-        pkiDirpath = os.path.join(self.saltDirpath, 'keyo', 'pki')
+        pkiDirpath = os.path.join(self.saltDirpath, 'pki')
         if not os.path.exists(pkiDirpath):
                 os.makedirs(pkiDirpath)
 
@@ -319,8 +319,11 @@ class BasicTestCase(unittest.TestCase):
                      transport='raet',
                      )
 
-        self.masterKeeper = RaetKey(opts=self.opts)
-        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="keep")
+        self.masterSafe = salting.SaltSafe(opts=self.opts)
+        print("masterSafe local =\n{0}".format(masterSafe.loadLocalData()))
+        print("masterSafe remote =\n{0}".format(masterSafe.loadAllRemoteData()))
+
+        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="keep", '/tmp')
 
 
 
@@ -355,7 +358,7 @@ class BasicTestCase(unittest.TestCase):
 
         return data
 
-    def createRoadStack(self, data, eid=0, main=None, auto=None, ha=None):
+    def createRoadStack(self, data, eid=0, main=None, auto=None, ha=None, safe=None):
         '''
         Creates stack and local estate from data with
         local estate.eid = eid
@@ -428,24 +431,17 @@ class BasicTestCase(unittest.TestCase):
         Basic keep setup for stack keep and safe persistence load and dump
         '''
         console.terse("{0}\n".format(self.testBasic.__doc__))
-        self.assertDictEqual(self.masterKeeper.all_keys(), {'accepted': [],
-                                                            'local': [],
-                                                            'rejected': [],
-                                                            'pending': []})
-
 
         auto = True
         data = self.createRoadData(name='main', base=self.baseDirpath)
         keeping.clearAllKeepSafe(data['dirpath'])
 
-
-
         main = self.createRoadStack(data=data,
                                      eid=1,
                                      main=True,
                                      auto=auto,
-                                     ha=None)
-        #default ha is ("", raeting.RAET_PORT)
+                                     ha=None, #default ha is ("", raeting.RAET_PORT)
+                                     safe=self.masterSafe)
 
         console.terse("{0}\nkeep dirpath = {1}\nsafe dirpath = {0}\n".format(
                 main.name, main.keep.dirpath, main.safe.dirpath))
@@ -453,6 +449,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('road/keep/main'))
         self.assertTrue(main.safe.dirpath.endswith('road/keep/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.safe.auto)
 
         data = self.createRoadData(name='other', base=self.baseDirpath)
         keeping.clearAllKeepSafe(data['dirpath'])
@@ -470,7 +467,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
 
 
-        #self.assertFalse(main.safe.auto)
+
 
 def runOne(test):
     '''

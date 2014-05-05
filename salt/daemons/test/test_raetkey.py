@@ -41,9 +41,9 @@ class BasicTestCase(unittest.TestCase):
         self.store = storing.Store(stamp=0.0)
         self.timer = StoreTimer(store=self.store, duration=1.0)
 
-        self.saltDirpath = tempfile.mkdtemp(prefix="salt", suffix="")
+        self.saltDirpath = tempfile.mkdtemp(prefix="salt", suffix="main", dir='/tmp')
 
-        pkiDirpath = os.path.join(self.saltDirpath, 'keyo', 'pki')
+        pkiDirpath = os.path.join(self.saltDirpath, 'pki')
         if not os.path.exists(pkiDirpath):
                 os.makedirs(pkiDirpath)
 
@@ -77,8 +77,8 @@ class BasicTestCase(unittest.TestCase):
                      transport='raet',
                      )
 
-        self.masterKeeper = RaetKey(opts=self.opts)
-        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="keep")
+        self.mainKeeper = RaetKey(opts=self.opts)
+        self.baseDirpath = tempfile.mkdtemp(prefix="salt",  suffix="keep", dir='/tmp')
 
     def tearDown(self):
         if os.path.exists(self.saltDirpath):
@@ -115,20 +115,20 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testAutoAccept.__doc__))
         self.opts['auto_accept'] = True
         self.assertTrue(self.opts['auto_accept'])
-        self.assertDictEqual(self.masterKeeper.all_keys(), {'accepted': [],
+        self.assertDictEqual(self.mainKeeper.all_keys(), {'accepted': [],
                                                             'local': [],
                                                             'rejected': [],
                                                             'pending': []})
 
-        localkeys = self.masterKeeper.read_local()
+        localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {})
 
         main = self.createRoadData(name='main', base=self.baseDirpath)
-        self.masterKeeper.write_local(main['prihex'], main['sighex'])
-        localkeys = self.masterKeeper.read_local()
+        self.mainKeeper.write_local(main['prihex'], main['sighex'])
+        localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {'priv': main['prihex'],
                                      'sign': main['sighex']})
-        allkeys = self.masterKeeper.all_keys()
+        allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
                                        'local': [self.localFilepath],
                                        'rejected': [],
@@ -137,36 +137,36 @@ class BasicTestCase(unittest.TestCase):
         other1 = self.createRoadData(name='other1', base=self.baseDirpath)
         other2 = self.createRoadData(name='other2', base=self.baseDirpath)
 
-        status = self.masterKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
+        status = self.mainKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
         self.assertEqual(status, 'accepted')
-        status = self.masterKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
+        status = self.mainKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
         self.assertEqual(status, 'accepted')
 
-        allkeys = self.masterKeeper.all_keys()
+        allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': ['other1', 'other2'],
                                 'local': [self.localFilepath],
                                 'pending': [],
                                 'rejected': []} )
 
-        remotekeys = self.masterKeeper.read_remote(other1['name'])
+        remotekeys = self.mainKeeper.read_remote(other1['name'])
         self.assertDictEqual(remotekeys, {   'device_id': 2,
                                              'minion_id': 'other1',
                                              'pub': other1['pubhex'],
                                              'verify': other1['verhex']} )
 
-        remotekeys = self.masterKeeper.read_remote(other2['name'])
+        remotekeys = self.mainKeeper.read_remote(other2['name'])
         self.assertDictEqual(remotekeys, {   'device_id': 3,
                                                'minion_id': 'other2',
                                                'pub': other2['pubhex'],
                                                'verify': other2['verhex']} )
 
-        listkeys = self.masterKeeper.list_keys()
+        listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
                                         'rejected': [],
                                         'pending': []})
 
 
-        allremotekeys = self.masterKeeper.read_all_remote()
+        allremotekeys = self.mainKeeper.read_all_remote()
         self.assertDictEqual(allremotekeys, {2:
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
@@ -188,20 +188,20 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testAutoAccept.__doc__))
         self.opts['auto_accept'] = False
         self.assertFalse(self.opts['auto_accept'])
-        self.assertDictEqual(self.masterKeeper.all_keys(), {'accepted': [],
+        self.assertDictEqual(self.mainKeeper.all_keys(), {'accepted': [],
                                                             'local': [],
                                                             'rejected': [],
                                                             'pending': []})
 
-        localkeys = self.masterKeeper.read_local()
+        localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {})
 
         main = self.createRoadData(name='main', base=self.baseDirpath)
-        self.masterKeeper.write_local(main['prihex'], main['sighex'])
-        localkeys = self.masterKeeper.read_local()
+        self.mainKeeper.write_local(main['prihex'], main['sighex'])
+        localkeys = self.mainKeeper.read_local()
         self.assertDictEqual(localkeys, {'priv': main['prihex'],
                                      'sign': main['sighex']})
-        allkeys = self.masterKeeper.all_keys()
+        allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
                                        'local': [self.localFilepath],
                                        'rejected': [],
@@ -210,38 +210,38 @@ class BasicTestCase(unittest.TestCase):
         other1 = self.createRoadData(name='other1', base=self.baseDirpath)
         other2 = self.createRoadData(name='other2', base=self.baseDirpath)
 
-        status = self.masterKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
+        status = self.mainKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
         self.assertEqual(status, 'pending')
-        status = self.masterKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
+        status = self.mainKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
         self.assertEqual(status, 'pending')
 
-        allkeys = self.masterKeeper.all_keys()
+        allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': [],
                                 'local': [self.localFilepath],
                                 'pending': ['other1', 'other2'],
                                 'rejected': []} )
 
-        remotekeys = self.masterKeeper.read_remote(other1['name'])
+        remotekeys = self.mainKeeper.read_remote(other1['name'])
         self.assertDictEqual(remotekeys, {})
         #self.assertDictEqual(remotekeys, {   'device_id': 2,
                                              #'minion_id': 'other1',
                                              #'pub': other1['pubhex'],
                                              #'verify': other1['verhex']} )
 
-        remotekeys = self.masterKeeper.read_remote(other2['name'])
+        remotekeys = self.mainKeeper.read_remote(other2['name'])
         self.assertDictEqual(remotekeys, {})
         #self.assertDictEqual(remotekeys, {   'device_id': 3,
                                                #'minion_id': 'other2',
                                                #'pub': other2['pubhex'],
                                                #'verify': other2['verhex']} )
 
-        listkeys = self.masterKeeper.list_keys()
+        listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': [],
                                         'rejected': [],
                                         'pending': ['other1', 'other2']})
 
 
-        allremotekeys = self.masterKeeper.read_all_remote()
+        allremotekeys = self.mainKeeper.read_all_remote()
         self.assertDictEqual(allremotekeys, {2:
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
@@ -255,35 +255,35 @@ class BasicTestCase(unittest.TestCase):
                                                   'pub': other2['pubhex'],
                                                   'device_id': 3}})
 
-        self.masterKeeper.accept_all()
+        self.mainKeeper.accept_all()
 
-        allkeys = self.masterKeeper.all_keys()
+        allkeys = self.mainKeeper.all_keys()
         self.assertDictEqual(allkeys, {'accepted': ['other1', 'other2'],
                                 'local': [self.localFilepath],
                                 'pending': [],
                                 'rejected': []} )
 
-        remotekeys = self.masterKeeper.read_remote(other1['name'])
+        remotekeys = self.mainKeeper.read_remote(other1['name'])
         #self.assertDictEqual(remotekeys, {})
         self.assertDictEqual(remotekeys, {   'device_id': 2,
                                              'minion_id': 'other1',
                                              'pub': other1['pubhex'],
                                              'verify': other1['verhex']} )
 
-        remotekeys = self.masterKeeper.read_remote(other2['name'])
+        remotekeys = self.mainKeeper.read_remote(other2['name'])
         #self.assertDictEqual(remotekeys, {})
         self.assertDictEqual(remotekeys, {   'device_id': 3,
                                                'minion_id': 'other2',
                                                'pub': other2['pubhex'],
                                                'verify': other2['verhex']} )
 
-        listkeys = self.masterKeeper.list_keys()
+        listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
                                         'rejected': [],
                                         'pending': []})
 
 
-        allremotekeys = self.masterKeeper.read_all_remote()
+        allremotekeys = self.mainKeeper.read_all_remote()
         self.assertDictEqual(allremotekeys, {2:
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
