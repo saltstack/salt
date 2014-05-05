@@ -276,9 +276,6 @@ class SaltStackVersion(object):
             version_string += 'rc{0}'.format(self.rc)
         if self.noc and self.sha:
             version_string += '-{0}-{1}'.format(self.noc, self.sha)
-
-        if (self.major, self.minor) in self.RMATCH:
-            version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
         return version_string
 
     @property
