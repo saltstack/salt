@@ -576,7 +576,12 @@ class State(object):
         '''
         Execute the aggregation systems to runtime modify the low chunk
         '''
-        if self.functions['config.option']('mod_aggregate') and not low.get('__agg__'):
+        agg_opt = self.functions['config.option']('mod_aggregate')
+        if agg_opt is True:
+            agg_opt = [low['state']]
+        else:
+            return low
+        if low['state'] in agg_opt and not low.get('__agg__'):
             agg_fun = '{0}.mod_aggregate'.format(low['state'])
             if agg_fun in self.states:
                 try:
