@@ -1723,16 +1723,9 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     '''
     Guess the id of the minion.
 
-    - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
-    - If salt.utils.network.get_fqhostname returns us something other than
-      localhost, use it
-    - Check /etc/hostname for a value other than localhost
-    - Check /etc/hosts for something that isn't localhost that maps to 127.*
-    - Look for a routeable / public IP
-    - A private IP is better than a loopback IP
-    - localhost may be better than killing the minion
-
-    Any non-ip id will be cached for later use in ``CONFIG_DIR/minion_id``
+    If CONFIG_DIR/minion_id exists, use the cached minion ID from that file.
+    If no minion id is configured, use multiple sources to find a FQDN.
+    If no FQDN is found you may get an ip address.
 
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
@@ -1763,91 +1756,12 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    # Check salt.utils.network.get_fqhostname()
-    fqdn = salt.utils.network.get_fqhostname()
-    if fqdn != 'localhost':
-        log.info('Found minion id from get_fqhostname(): {0}'.format(fqdn))
-        if minion_id and cache:
-            _cache_id(fqdn, id_cache)
-        return fqdn, False
-
-    # Check /etc/hostname
-    try:
-        with salt.utils.fopen('/etc/hostname') as hfl:
-            name = hfl.read().strip()
-        if re.search(r'\s', name):
-            log.warning('Whitespace character detected in /etc/hostname. '
-                        'This file should not contain any whitespace.')
-        else:
-            if name != 'localhost':
-                if minion_id and cache:
-                    _cache_id(name, id_cache)
-                return name, False
-    except (IOError, OSError):
-        pass
-
-    # Can /etc/hosts help us?
-    try:
-        with salt.utils.fopen('/etc/hosts') as hfl:
-            for line in hfl:
-                names = line.split()
-                try:
-                    ip_ = names.pop(0)
-                except IndexError:
-                    continue
-                if ip_.startswith('127.'):
-                    for name in names:
-                        if name != 'localhost':
-                            log.info('Found minion id in hosts file: {0}'
-                                     .format(name))
-                            if minion_id and cache:
-                                _cache_id(name, id_cache)
-                            return name, False
-    except (IOError, OSError):
-        pass
-
-    if salt.utils.is_windows():
-        # Can Windows 'hosts' file help?
-        try:
-            windir = os.getenv('WINDIR')
-            with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
-                for line in hfl:
-                    # skip commented or blank lines
-                    if line[0] == '#' or len(line) <= 1:
-                        continue
-                    # process lines looking for '127.' in first column
-                    try:
-                        entry = line.split()
-                        if entry[0].startswith('127.'):
-                            for name in entry[1:]:  # try each name in the row
-                                if name != 'localhost':
-                                    log.info('Found minion id in hosts file: {0}'
-                                            .format(name))
-                                    if minion_id and cache:
-                                        _cache_id(name, id_cache)
-                                    return name, False
-                    except IndexError:
-                        pass  # could not split line (malformed entry?)
-        except (IOError, OSError):
-            pass
-
-    # What IP addresses do we have?
-    ip_addresses = [salt.utils.network.IPv4Address(addr) for addr
-                    in salt.utils.network.ip_addrs(include_loopback=True)
-                    if not addr.startswith('127.')]
-
-    for addr in ip_addresses:
-        if not addr.is_private:
-            log.info('Using public ip address for id: {0}'.format(addr))
-            return str(addr), True
-
-    if ip_addresses:
-        addr = ip_addresses.pop(0)
-        log.info('Using private ip address for id: {0}'.format(addr))
-        return str(addr), True
-
-    log.error('No id found, falling back to localhost')
-    return 'localhost', False
+    newid = salt.utils.network.generate_minion_id()
+    log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
+    if minion_id and cache:
+        _cache_id(newid, id_cache)
+    is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
+    return newid, is_ipv4
 
 
 def apply_minion_config(overrides=None,

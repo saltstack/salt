@@ -35,6 +35,8 @@ from salt.version import SaltStackVersion
 
 log = logging.getLogger(__name__)
 
+# mock hostname should be more complex than the systems FQDN
+MOCK_HOSTNAME = 'vary.long.complex.fqdn.com'
 
 MOCK_ETC_HOSTS = (
     '##\n'
@@ -44,10 +46,14 @@ MOCK_ETC_HOSTS = (
     '# when the system is booting.  Do not change this entry.\n'
     '##\n'
     '\n'  # This empty line MUST STAY HERE, it factors into the tests
-    '127.0.0.1      localhost   foo.bar.net\n'
-    '10.0.0.100     foo.bar.net\n'
+    '127.0.0.1      localhost   ' + MOCK_HOSTNAME + '\n'
+    '10.0.0.100     ' + MOCK_HOSTNAME + '\n'
+    '200.200.200.2  other.host.alias.com\n'
+    '::1            ip6-localhost ip6-loopback\n'
+    'fe00::0        ip6-localnet\n'
+    'ff00::0        ip6-mcastprefix\n'
 )
-MOCK_ETC_HOSTNAME = 'foo.bar.com\n'
+MOCK_ETC_HOSTNAME = '{0}\n'.format(MOCK_HOSTNAME)
 
 
 def _unhandled_mock_read(filename):
@@ -67,6 +73,8 @@ def _fopen_side_effect_etc_hostname(filename):
         mock_open = MagicMock()
         mock_open.read.return_value = MOCK_ETC_HOSTNAME
         yield mock_open
+    elif filename == '/etc/hosts':
+        raise IOError(2, "No such file or directory: '{0}'".format(filename))
     else:
         _unhandled_mock_read(filename)
 
@@ -78,7 +86,7 @@ def _fopen_side_effect_etc_hosts(filename):
     '''
     log.debug('Mock-reading {0}'.format(filename))
     if filename == '/etc/hostname':
-        raise IOError(2, "No such file or directory: '/etc/hostname'")
+        raise IOError(2, "No such file or directory: '{0}'".format(filename))
     elif filename == '/etc/hosts':
         mock_open = MagicMock()
         mock_open.__iter__.return_value = MOCK_ETC_HOSTS.splitlines()
@@ -443,18 +451,6 @@ class ConfigTestCase(TestCase):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
-    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='foo.bar.org'))
-    def test_get_id_socket_get_fqhostname(self):
-        '''
-        Test calling salt.config.get_id() and getting the hostname from
-        salt.utils.network.get_fqhostname()
-        '''
-        with patch('salt.utils.fopen',
-                   MagicMock(side_effect=_unhandled_mock_read)):
-            self.assertEqual(
-                sconfig.get_id(cache=False), ('foo.bar.org', False)
-            )
-
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
     def test_get_id_etc_hostname(self):
         '''
@@ -463,7 +459,7 @@ class ConfigTestCase(TestCase):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
             self.assertEqual(
-                sconfig.get_id(cache=False), ('foo.bar.com', False)
+                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
@@ -474,7 +470,7 @@ class ConfigTestCase(TestCase):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
             self.assertEqual(
-                sconfig.get_id(cache=False), ('foo.bar.net', False)
+                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
 
