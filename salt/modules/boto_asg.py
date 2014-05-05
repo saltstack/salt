@@ -4,22 +4,22 @@ Connection module for Amazon Autoscale Groups
 
 .. versionadded:: Helium
 
-:configuration: This module accepts explicit autoscale credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
-    credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+:configuration: This module accepts explicit autoscale credentials but can also
+    utilize IAM roles assigned to the instance trough Instance Profiles.
+    Dynamic credentials are then automatically obtained from AWS API and no
+    further configuration is necessary. More Information available at::
 
        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
     in the minion's config file::
 
-        autoscale.keyid: GKTADJGHEIQSXMKKRBJ08H
-        autoscale.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        asg.keyid: GKTADJGHEIQSXMKKRBJ08H
+        asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     A region may also be specified in the configuration::
 
-        autoscale.region: us-east-1
+        asg.region: us-east-1
 
     If a region is not specified, the default is us-east-1.
 
@@ -106,6 +106,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                  'max_size', 'min_size', 'placement_group',
                  'vpc_zone_identifier', 'tags', 'termination_policies']
         for attr in attrs:
+            # Tags are objects, so we need to turn them into dicts.
             if attr == 'tags':
                 _tags = []
                 for tag in asg.tags:
@@ -145,9 +146,10 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         load_balancers = json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    _tags = []
     if isinstance(tags, string_types):
         tags = json.loads(tags)
+    # Make a list of tag objects from the dict.
+    _tags = []
     for tag in tags:
         try:
             key = tag.get('key')
@@ -209,9 +211,10 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         load_balancers = json.loads(load_balancers)
     if isinstance(vpc_zone_identifier, string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    _tags = []
     if isinstance(tags, string_types):
         tags = json.loads(tags)
+    # Make a list of tag objects from the dict.
+    _tags = []
     for tag in tags:
         try:
             key = tag.get('key')
