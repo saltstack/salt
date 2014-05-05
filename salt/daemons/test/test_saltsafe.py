@@ -282,9 +282,32 @@ class BasicTestCase(unittest.TestCase):
         self.store = storing.Store(stamp=0.0)
         self.timer = StoreTimer(store=self.store, duration=1.0)
 
-        self.saltDirpath = tempfile.mkdtemp(prefix="salt", suffix="main", dir='/tmp')
+        self.mainDirpath = tempfile.mkdtemp(prefix="salt", suffix='main', dir='/tmp')
+        opts = self.createOpts(self.mainDirpath, openMode=True, autoAccept=True)
+        self.mainSafe = salting.SaltSafe(opts=opts)
 
-        pkiDirpath = os.path.join(self.saltDirpath, 'pki')
+        self.otherDirpath = tempfile.mkdtemp(prefix="salt", suffix='other', dir='/tmp')
+        opts = self.createOpts(self.otherDirpath, openMode=True, autoAccept=True)
+        self.otherSafe = salting.SaltSafe(opts=opts)
+
+        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="base", dir='/tmp')
+
+    def tearDown(self):
+        if os.path.exists(self.mainDirpath):
+            shutil.rmtree(self.mainDirpath)
+
+        if os.path.exists(self.otherDirpath):
+            shutil.rmtree(self.otherDirpath)
+
+        if os.path.exists(self.baseDirpath):
+            shutil.rmtree(self.baseDirpath)
+
+    def createOpts(self, dirpath, openMode=True, autoAccept=True):
+        '''
+        Create associated pki directories for stack and return opts
+        '''
+
+        pkiDirpath = os.path.join(dirpath, 'pki')
         if not os.path.exists(pkiDirpath):
                 os.makedirs(pkiDirpath)
 
@@ -306,30 +329,18 @@ class BasicTestCase(unittest.TestCase):
             print mode
             os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
 
-        self.cacheDirpath = os.path.join(self.saltDirpath, 'cache')
-        self.sockDirpath = os.path.join(self.saltDirpath, 'sock')
+        cacheDirpath = os.path.join(dirpath, 'cache')
+        sockDirpath = os.path.join(dirpath, 'sock')
 
-        self.opts = dict(
+        opts = dict(
                      pki_dir=pkiDirpath,
-                     sock_dir=self.sockDirpath,
-                     cachedir=self.cacheDirpath,
-                     open_mode=True,
-                     auto_accept=True,
+                     sock_dir=sockDirpath,
+                     cachedir=cacheDirpath,
+                     open_mode=openMode,
+                     auto_accept=autoAccept,
                      transport='raet',
                      )
-
-        self.mainSafe = salting.SaltSafe(opts=self.opts)
-
-        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="base", dir='/tmp')
-
-
-
-    def tearDown(self):
-        if os.path.exists(self.saltDirpath):
-            shutil.rmtree(self.saltDirpath)
-
-        if os.path.exists(self.baseDirpath):
-            shutil.rmtree(self.baseDirpath)
+        return opts
 
     def createRoadData(self, name, base):
         '''
@@ -433,36 +444,31 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(self.mainSafe.loadLocalData(), None)
         self.assertEqual(self.mainSafe.loadAllRemoteData(), {})
 
-        auto = True
         data = self.createRoadData(name='main', base=self.baseDirpath)
         main = self.createRoadStack(data=data,
                                      eid=1,
                                      main=True,
-                                     auto=auto,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      safe=self.mainSafe)
 
-        console.terse("{0}\nkeep dirpath = {1}\nsafe dirpath = {0}\n".format(
+        console.terse("{0}\nkeep dirpath = {1}\nsafe dirpath = {2}\n".format(
                 main.name, main.keep.dirpath, main.safe.dirpath))
-        self.assertEqual(main.keep.dirpath, main.safe.dirpath)
         self.assertTrue(main.keep.dirpath.endswith('road/keep/main'))
-        self.assertTrue(main.safe.dirpath.endswith('road/keep/main'))
+        self.assertTrue(main.safe.dirpath.endswith('pki'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.safe.auto)
 
         data = self.createRoadData(name='other', base=self.baseDirpath)
-        keeping.clearAllKeepSafe(data['dirpath'])
         other = self.createRoadStack(data=data,
                                      eid=0,
                                      main=None,
-                                     auto=None,
-                                     ha=("", raeting.RAET_TEST_PORT))
+                                     ha=("", raeting.RAET_TEST_PORT),
+                                     safe=self.otherSafe)
 
         console.terse("{0} keep dirpath = {1} safe dirpath = {0}\n".format(
                 other.name, other.keep.dirpath, other.safe.dirpath))
-        self.assertEqual(other.keep.dirpath, other.safe.dirpath)
         self.assertTrue(other.keep.dirpath.endswith('road/keep/other'))
-        self.assertTrue(other.safe.dirpath.endswith('road/keep/other'))
+        self.assertTrue(other.safe.dirpath.endswith('pki'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
 
 

@@ -23,16 +23,15 @@ class SaltSafe(object):
     '''
     Interface between Salt Key management and RAET keep key management
     '''
-    Auto = False #auto accept
     LocalFields = ['sighex', 'prihex']
     RemoteFields = ['eid', 'name', 'acceptance', 'verhex', 'pubhex']
 
-    def __init__(self, opts=None, **kwa):
+    def __init__(self, opts, **kwa):
         '''
         Setup SaltSafe instance
         '''
-        if opts is None:
-            opts = {}
+        self.auto = opts['auto_accept']
+        self.dirpath = opts['pki_dir']
         self.saltRaetKey = RaetKey(opts)
 
     def verifyLocalData(self, data):
