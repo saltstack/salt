@@ -41,8 +41,7 @@ def genrepo(name, force=False, allow_empty=False):
            'changes': {},
            'comment': ''}
 
-    # TODO - get from salt.config without the need of pillar
-    master_config = __pillar__['master']
+    master_config = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, 'master'))
     win_repo = master_config['win_repo']
     win_repo_mastercachefile = master_config['win_repo_mastercachefile']
 
@@ -74,9 +73,7 @@ def genrepo(name, force=False, allow_empty=False):
     if not execute and not force:
         return ret
 
-    runner = salt.runner.RunnerClient(
-        salt.config.master_config(master_config['conf_file'])
-    )
+    runner = salt.runner.RunnerClient(master_config)
     runner_ret = runner.cmd('winrepo.genrepo', [])
     ret['changes'] = {'winrepo': runner_ret}
     if isinstance(runner_ret, dict) and runner_ret == {} and not allow_empty:
