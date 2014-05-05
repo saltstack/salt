@@ -195,7 +195,6 @@ def _fingerprint(public_key):
     return ':'.join(chunks)
 
 
-
 def host_keys(keydir=None):
     '''
     Return the minion's host keys
