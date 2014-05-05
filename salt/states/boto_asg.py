@@ -188,7 +188,10 @@ def present(
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
-    if asg is not None and not asg:
+    if asg is None:
+        ret['result'] = False
+        ret['comment'] = 'Failed to check autoscale group existence.'
+    elif not asg:
         if __opts__['test']:
             msg = 'Autoscale group set to be created.'
             ret['comment'] = msg
@@ -212,7 +215,7 @@ def present(
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create autoscale group'
-    elif asg:
+    else:
         need_update = False
         # If any of these attributes can't be modified after creation
         # time, we should remove them from the dict.
@@ -230,6 +233,9 @@ def present(
             'termination_policies': termination_policies
         }
         for key, value in config.iteritems():
+            # Only modify values being specified; introspection is difficult
+            # otherwise since it's hard to track default values, which will
+            # always be returned from AWS.
             if not value:
                 continue
             if key in asg:
@@ -267,9 +273,6 @@ def present(
                 ret['comment'] = 'Failed to update autoscale group.'
         else:
             ret['comment'] = 'Autoscale group present.'
-    elif asg is None:
-        ret['result'] = False
-        ret['comment'] = 'Failed to check autoscale group existence.'
     return ret
 
 
@@ -304,7 +307,10 @@ def absent(
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
-    if asg is not None and asg:
+    if asg is None:
+        ret['result'] = False
+        ret['comment'] = 'Failed to check autoscale group existence.'
+    elif asg:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Autoscale group set to be deleted.'
@@ -319,9 +325,6 @@ def absent(
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to delete autoscale group.'
-    elif asg is None:
-        ret['result'] = False
-        ret['comment'] = 'Failed to check autoscale group existence.'
     else:
         ret['comment'] = 'Autoscale group does not exist.'
     return ret
