@@ -572,6 +572,27 @@ class State(object):
                     return
                 self.mod_init.add(low['state'])
 
+    def _mod_aggregate(self, low, running, chunks):
+        '''
+        Execute the aggregation systems to runtime modify the low chunk
+        '''
+        agg_opt = self.functions['config.option']('mod_aggregate')
+        if low.get('aggregate') is True:
+            agg_opt = low['aggregate']
+        if agg_opt is True:
+            agg_opt = [low['state']]
+        else:
+            return low
+        if low['state'] in agg_opt and not low.get('__agg__'):
+            agg_fun = '{0}.mod_aggregate'.format(low['state'])
+            if agg_fun in self.states:
+                try:
+                    low = self.states[agg_fun](low, chunks, running)
+                    low['__agg__'] = True
+                except TypeError:
+                    log.error('Failed to execute aggregate for state {0}'.format(low['state']))
+        return low
+
     def load_modules(self, data=None):
         '''
         Load the modules into the state
@@ -1595,13 +1616,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then
         the chunk
         '''
-        if self.opts.get('state_aggregate') and not low.get('__agg__'):
-            agg_fun = '{0}.mod_aggregate'.format(low['state'])
-	    if agg_fun in self.states:
-                try:
-                    low = self.states[agg_fun](low, chunks, running)
-                except TypeError:
-                    log.error('Failed to execute aggregate for state {0}'.format(low['state']))
+        low = self._mod_aggregate(low, running, chunks)
         self._mod_init(low)
         tag = _gen_tag(low)
         if not low.get('prerequired'):

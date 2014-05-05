@@ -254,6 +254,12 @@ def _run(cmd,
             'instead.'
         )
 
+    if not _is_valid_shell(shell):
+        log.warning(
+            'Attempt to run a shell command with what may be an invalid shell! '
+            'Check to ensure that she shell <{0}> is valid for this user.'
+            .format(shell))
+
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
     # the minion is running.
@@ -1255,3 +1261,32 @@ def run_chroot(root, cmd):
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     log.info(res)
     return res
+
+
+def _is_valid_shell(shell):
+    '''
+    Attempts to search for valid shells on a system and
+    see if a given shell is in the list
+    '''
+    if salt.utils.is_windows():
+        return True  # Don't even try this for Windows
+    shells = '/etc/shells'
+    available_shells = []
+    if os.path.exists(shells):
+        try:
+            with salt.utils.fopen(shells, 'r') as shell_fp:
+                lines = shell_fp.read().splitlines()
+            for line in lines:
+                if line.startswith('#'):
+                    continue
+                else:
+                    available_shells.append(line)
+        except OSError:
+            return True
+    else:
+        # No known method of determining available shells
+        return None
+    if shell in available_shells:
+        return True
+    else:
+        return False

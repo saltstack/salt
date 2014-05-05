@@ -28,10 +28,6 @@
 # Run the script with -h for usage details.
 #
 
-
-# Terminate script if any command fails
-set -o errexit
-
 ################################# FUNCTIONS ##################################
 
 function _timestamp {

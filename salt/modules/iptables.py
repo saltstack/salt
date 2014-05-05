@@ -164,6 +164,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
         rule += '-p {0} '.format(kwargs['proto'])
         proto = True
+        del kwargs['proto']
 
     if 'match' in kwargs:
         if not isinstance(kwargs['match'], list):
@@ -315,7 +316,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             flag = '--'
 
         return '{0} -t {1} {2}{3} {4} {5} {6}'.format(_iptables_cmd(family),
-            table, flag, command, chain, position, rule)
+               table, flag, command, chain, position, rule)
 
     return rule
 

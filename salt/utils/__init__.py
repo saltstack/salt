@@ -1399,6 +1399,13 @@ def check_ipc_path_max_len(uri):
         )
 
 
+def gen_state_tag(low):
+    '''
+    Generate the running dict tag string from the low data structure
+    '''
+    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+
+
 def check_state_result(running):
     '''
     Check the total return value of the run and determine if the running

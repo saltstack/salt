@@ -24,6 +24,7 @@ def present(
         name,
         user=None,
         fingerprint=None,
+        key=None,
         port=None,
         enc=None,
         config='.ssh/known_hosts',
@@ -69,9 +70,26 @@ def present(
         config = '/etc/ssh/ssh_known_hosts'
 
     if __opts__['test']:
-        result = __salt__['ssh.check_known_host'](user=user, hostname=name,
-                                                  fingerprint=fingerprint,
-                                                  config=config)
+        if key and fingerprint:
+            comment = 'Specify either "key" or "fingerprint", not both.'
+            ret['result'] = False
+            return dict(ret, comment=comment)
+        elif key:
+            if not enc:
+                comment = 'Required argument "enc" if using "key" argument.'
+                ret['result'] = False
+                return dict(ret, comment=comment)
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      key=key,
+                                                      config=config)
+        elif fingerprint:
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      fingerprint=fingerprint,
+                                                      config=config)
+        else:
+            comment = 'Arguments key or fingerprint required.'
+            ret['result'] = False
+            return dict(ret, comment=comment)
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
             ret['result'] = True
@@ -87,6 +105,7 @@ def present(
 
     result = __salt__['ssh.set_known_host'](user=user, hostname=name,
                 fingerprint=fingerprint,
+                key=key,
                 port=port,
                 enc=enc,
                 config=config,
@@ -97,11 +116,18 @@ def present(
     elif result['status'] == 'error':
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
-        fingerprint = result['new']['fingerprint']
-        return dict(ret,
-                changes={'old': result['old'], 'new': result['new']},
-                comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
-                         name, config, fingerprint))
+        if key:
+            new_key = result['new']['key']
+            return dict(ret,
+                    changes={'old': result['old'], 'new': result['new']},
+                    comment='{0}\'s key saved to {1} (key: {2})'.format(
+                             name, config, new_key))
+        else:
+            fingerprint = result['new']['fingerprint']
+            return dict(ret,
+                    changes={'old': result['old'], 'new': result['new']},
+                    comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
+                             name, config, fingerprint))
 
 
 def absent(name, user=None, config='.ssh/known_hosts'):

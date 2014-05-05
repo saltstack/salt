@@ -559,7 +559,14 @@ def show_image(kwargs, call=None):
         )
 
     items = query(action='template', command=kwargs['image'])
-    return {items.attrib['name']: items.attrib}
+    if 'error' in items:
+        return items['error']
+
+    ret = {}
+    for item in items:
+        ret.update({item.attrib['name']: item.attrib})
+
+    return ret
 
 
 def show_instance(name, call=None):

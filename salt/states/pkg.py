@@ -1114,7 +1114,8 @@ def uptodate(name, refresh=False):
     Verify that the system is completely up to date.
 
     name
-        Does nothing.
+        The name has no functional value and is only used as a tracking
+        reference
 
     refresh
         refresh the package database before checkif for new upgrades
@@ -1184,3 +1185,43 @@ def mod_init(low):
             salt.utils.fopen(rtag, 'w+').write('')
         return ret
     return False
+
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all packages in the available
+    low chunks and merges them into a single pkgs ref in the present low data
+    '''
+    pkgs = []
+    agg_enabled = [
+            'installed',
+            'latest',
+            'removed',
+            'purged',
+            ]
+    if low.get('fun') not in agg_enabled:
+        return low
+    for chunk in chunks:
+        tag = salt.utils.gen_state_tag(chunk)
+        if tag in running:
+            # Already ran the pkg state, skip aggregation
+            continue
+        if chunk.get('state') == 'pkg':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Pull out the pkg names!
+            if 'pkgs' in chunk:
+                pkgs.extend(chunk['pkgs'])
+                chunk['__agg__'] = True
+            elif 'name' in chunk:
+                pkgs.append(chunk['name'])
+                chunk['__agg__'] = True
+    if pkgs:
+        if 'pkgs' in low:
+            low['pkgs'].extend(pkgs)
+        else:
+            low['pkgs'] = pkgs
+    return low
