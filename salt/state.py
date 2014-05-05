@@ -604,10 +604,11 @@ class State(object):
         Refresh all the modules
         '''
         log.debug('Refreshing modules...')
-        # In case a package has been installed into the current python
-        # process 'site-packages', the 'site' module needs to be reloaded in
-        # order for the newly installed package to be importable.
-        reload(site)
+        if self.opts['grains'].get('os') != 'MacOS':
+            # In case a package has been installed into the current python
+            # process 'site-packages', the 'site' module needs to be reloaded in
+            # order for the newly installed package to be importable.
+            reload(site)
         self.load_modules()
         self.functions['saltutil.refresh_modules']()
 
@@ -1680,8 +1681,7 @@ class State(object):
             pre_ret = {'changes': {},
                        'result': True,
                        'comment': 'No changes detected',
-                       '__run_num__': self.__run_num,
-                       '__sls__': low['__sls__']}
+                       '__run_num__': self.__run_num}
             running[tag] = pre_ret
             self.pre[tag] = pre_ret
             self.__run_num += 1
@@ -2410,13 +2410,9 @@ class BaseHighState(object):
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
                         if 'is not available on the salt master' in error:
-                            # match SLS foobar in environment
-                            this_sls = 'SLS {0} in saltenv'.format(
-                                sls_match)
-                            if this_sls in error:
-                                errors[i] = (
-                                    'No matching sls found for {0!r} '
-                                    'in env {1!r}'.format(sls_match, saltenv))
+                            errors[i] = (
+                                'No matching sls found for {0!r} '
+                                'in env {1!r}'.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)

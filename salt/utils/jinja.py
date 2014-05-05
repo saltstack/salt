@@ -379,6 +379,7 @@ class SerializerExtension(Extension, object):
         parser.fail('Unknown format ' + parser.stream.current.value,
                     parser.stream.current.lineno)
 
+    # pylint: disable=E1120,E1121
     def parse_load(self, parser):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
@@ -458,24 +459,4 @@ class SerializerExtension(Extension, object):
                 .set_lineno(lineno)
             ).set_lineno(lineno)
         ]
-
-    def parse_text(self, parser):
-        import_node = parser.parse_import()
-        target = import_node.target
-        lineno = import_node.lineno
-
-        return [
-            import_node,
-            nodes.Assign(
-                nodes.Name(target, 'store').set_lineno(lineno),
-                nodes.Filter(
-                    nodes.Name(target, 'load').set_lineno(lineno),
-                    'load_text',
-                    [],
-                    [],
-                    None,
-                    None
-                )
-                .set_lineno(lineno)
-            ).set_lineno(lineno)
-        ]
+    # pylint: enable=E1120,E1121

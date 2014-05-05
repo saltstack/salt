@@ -157,12 +157,12 @@ class SaltEvent(object):
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        hash_type = getattr(hashlib, kwargs.get('hash_type', 'md5'))
         # Substr the first 10 chars off, because some algorithms produce
         # longer hashes than others, and may exceed the IPC maximum length
         # for UNIX sockets.
-        id_hash = hash_type(self.opts.get('id', '')).hexdigest()
-        if self.opts.get('hash_type', 'md5') == 'sha256':
+        id_hash = hash_type(kwargs.get('id', '')).hexdigest()
+        if kwargs.get('hash_type', 'md5') == 'sha256':
             id_hash = id_hash[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
@@ -272,12 +272,14 @@ class SaltEvent(object):
         '''
         self.subscribe()
 
-        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
-            self.pending_events.remove(evt)
-            if full:
-                return evt
-            else:
-                return evt['data']
+        if use_pending:
+            for evt in [x for x in self.pending_events
+                        if x['tag'].startswith(tag)]:
+                self.pending_events.remove(evt)
+                if full:
+                    return evt
+                else:
+                    return evt['data']
 
         start = time.time()
         timeout_at = start + wait
@@ -289,7 +291,8 @@ class SaltEvent(object):
                 continue
 
             if not mtag.startswith(tag):  # tag not match
-                self.pending_events.append(ret)
+                if use_pending:
+                    self.pending_events.append(ret)
                 wait = timeout_at - time.time()
                 continue
 

@@ -397,9 +397,10 @@ def zero(protocol=None, service_address=None):
     '''
 
     if service_address:
-        cmd = '{0} -Z {1}'.format(__detect_os(),
-                                  _build_cmd(protocol=None,
-                                            service_address=None))
+        cmd = '{0} -Z {1}'.format(
+            __detect_os(),
+            _build_cmd(protocol=protocol, service_address=service_address)
+        )
     else:
         cmd = '{0} -Z'.format(__detect_os())
     out = __salt__['cmd.run_all'](cmd)

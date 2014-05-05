@@ -26,7 +26,6 @@ as either absent or present
 
 # Import python libs
 import logging
-import os
 
 # Import salt libs
 import salt.utils

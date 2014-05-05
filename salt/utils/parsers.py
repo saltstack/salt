@@ -29,15 +29,14 @@ import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
-from salt.utils import yamlloader
 from salt.utils.validate.path import is_writeable
 from salt._compat import string_types
+from salt.minion import yamlify_arg
 
 if not utils.is_windows():
     import salt.cloud.exceptions
 
 # Import 3rd-party libs
-import yaml
 from yaml.scanner import ScannerError as YAMLScannerError
 
 
@@ -61,7 +60,7 @@ def parse_args_kwargs(args):
                     _kwargs[arg_name] = arg_value
                     continue
                 try:
-                    _kwargs[arg_name] = yaml.load(arg_value, Loader=yamlloader.CustomLoader)
+                    _kwargs[arg_name] = yamlify_arg(arg_value)
                 except YAMLScannerError:
                     _kwargs[arg_name] = arg_value
             else:
@@ -75,7 +74,7 @@ def parse_args_kwargs(args):
                     _args.append(arg)
                     continue
                 try:
-                    _args.append(yaml.load(arg, Loader=yamlloader.CustomLoader))
+                    _args.append(yamlify_arg(arg))
                 except YAMLScannerError:
                     _args.append(arg)
     return _args, _kwargs
@@ -1711,7 +1710,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                                 self.config['arg'][cmd_index].append(arg)
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
-                                          'defining all arguments.')
+                                          'defining all arguments.\n')
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
@@ -1785,20 +1784,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
 
     def _mixin_setup(self):
-        # XXX: Remove '--key-logfile' support in 2014.1.0
-        utils.warn_until(
-            'Hydrogen',
-            'Remove \'--key-logfile\' support',
-            _dont_call_warnings=True
-        )
-        self.logging_options_group.add_option(
-            '--key-logfile',
-            default=None,
-            help='Send all output to a file. Default is {0!r}'.format(
-                self._default_logging_logfile_
-            )
-        )
-
         actions_group = optparse.OptionGroup(self, 'Actions')
         actions_group.add_option(
             '-l', '--list',
@@ -1983,20 +1968,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Schedule __create_keys_dir() to run if there's a value for
         # --create-keys-dir
         self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
-
-    def process_key_logfile(self):
-        if self.options.key_logfile:
-            # XXX: Remove '--key-logfile' support in 2014.1.0
-            # In < 2014.1.0 error out
-            utils.warn_until(
-                'Hydrogen',
-                'Remove \'--key-logfile\' support',
-                _dont_call_warnings=True
-            )
-            self.error(
-                'The \'--key-logfile\' option has been deprecated in favour '
-                'of \'--log-file\''
-            )
 
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is

@@ -679,59 +679,14 @@ def update():
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         try:
-            log.debug('Fetching from {0}'.format(repo['uri']))
-            if provider == 'gitpython':
-                try:
-                    fetch_results = origin.fetch()
-                except AssertionError:
-                    fetch_results = origin.fetch()
-                for fetch in fetch_results:
-                    if fetch.old_commit is not None:
-                        data['changed'] = True
-            elif provider == 'pygit2':
-                fetch = origin.fetch()
-                if fetch.get('received_objects', 0):
-                    data['changed'] = True
-            elif provider == 'dulwich':
-                client, path = \
-                    dulwich.client.get_transport_and_path_from_url(
-                        origin, thin_packs=True
-                    )
-                refs_pre = repo['repo'].get_refs()
-                try:
-                    refs_post = client.fetch(path, repo['repo'])
-                except dulwich.errors.NotGitRepository:
-                    log.critical(
-                        'Dulwich does not recognize remote {0} as a valid '
-                        'remote URI. Perhaps it is missing \'.git\' at the '
-                        'end.'.format(repo['uri'])
-                    )
-                    continue
-                except KeyError:
-                    log.critical(
-                        'Local repository cachedir {0!r} (corresponding '
-                        'remote: {1}) has been corrupted. Salt will now '
-                        'attempt to remove the local checkout to allow it to '
-                        'be re-initialized in the next fileserver cache '
-                        'update.'
-                        .format(repo['cachedir'], repo['uri'])
-                    )
-                    try:
-                        salt.utils.rm_rf(repo['cachedir'])
-                    except OSError as exc:
-                        log.critical(
-                            'Unable to remove {0!r}: {1}'
-                            .format(repo['cachedir'], exc)
-                        )
-                    continue
-                if refs_post is None:
-                    # Empty repository
-                    log.warning(
-                        'gitfs remote {0!r} is an empty repository and will '
-                        'be skipped.'.format(origin)
-                    )
-                    continue
-                if refs_pre != refs_post:
+            log.debug("Fetching from {0}".format(origin.url))
+            _f = []
+            try:
+                _f = origin.fetch()
+            except AssertionError:
+                _f = origin.fetch()
+            for fetch in _f:
+                if fetch.old_commit is not None:
                     data['changed'] = True
                     # Update local refs
                     for ref in _dulwich_env_refs(refs_post):

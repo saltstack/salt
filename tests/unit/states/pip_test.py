@@ -55,7 +55,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 ret = pip_state.installed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', str(w[-1].message)
                 )
                 self.assertSaltTrueReturn({'testsuite': ret})
@@ -63,7 +63,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 # message?
                 self.assertInSalStatetWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', {'testsuite': ret}
                 )
 
@@ -93,7 +93,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 ret = pip_state.removed('pep8', runas='me!')
                 self.assertEqual(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', str(w[-1].message)
                 )
                 self.assertSaltTrueReturn({'testsuite': ret})
@@ -101,7 +101,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 # message?
                 self.assertInSalStatetWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Hydrogen (Unreleased). '
+                    'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', {'testsuite': ret}
                 )
 

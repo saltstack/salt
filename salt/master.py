@@ -121,7 +121,49 @@ class SMaster(object):
         A key needs to be placed in the filesystem with permissions 0400 so
         clients are required to run as root.
         '''
-        return salt.daemons.masterapi.access_keys(self.opts)
+        users = []
+        keys = {}
+        acl_users = set(self.opts['client_acl'].keys())
+        if self.opts.get('user'):
+            acl_users.add(self.opts['user'])
+        acl_users.add(salt.utils.get_user())
+        for user in pwd.getpwall():
+            users.append(user.pw_name)
+        for user in acl_users:
+            log.info(
+                'Preparing the {0} key for local communication'.format(
+                    user
+                )
+            )
+
+            if user not in users:
+                try:
+                    user = pwd.getpwnam(user)
+                except KeyError:
+                    log.error('ACL user {0} is not available'.format(user))
+                    continue
+            keyfile = os.path.join(
+                self.opts['cachedir'], '.{0}_key'.format(user)
+            )
+
+            if os.path.exists(keyfile):
+                log.debug('Removing stale keyfile: {0}'.format(keyfile))
+                os.unlink(keyfile)
+
+            key = salt.crypt.Crypticle.generate_key_string()
+            cumask = os.umask(191)
+            with salt.utils.fopen(keyfile, 'w+') as fp_:
+                fp_.write(key)
+            os.umask(cumask)
+            os.chmod(keyfile, 256)
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
+            keys[user] = key
+        return keys
 
 
 class Master(SMaster):
@@ -1216,6 +1258,12 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        mods = set()
+        for func in self.mminion.functions.values():
+            mods.add(func.__module__)
+        for mod in mods:
+            sys.modules[mod].__grains__ = load['grains']
+
         pillar = salt.pillar.Pillar(
                 self.opts,
                 load['grains'],
@@ -1235,6 +1283,8 @@ class AESFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+        for mod in mods:
+            sys.modules[mod].__grains__ = self.opts['grains']
         return data
 
     def _minion_event(self, load):
@@ -1289,9 +1339,6 @@ class AESFuncs(object):
         new_loadp = False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
-            load['arg'] = load.get('arg', load.get('fun_args', []))
-            load['tgt_type'] = 'glob'
-            load['tgt'] = load['id']
             load['jid'] = salt.utils.prep_jid(
                 self.opts['cachedir'],
                 self.opts['hash_type'],

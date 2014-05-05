@@ -30,6 +30,7 @@ can be either present or absent:
 '''
 
 # Import python libs
+import grp
 import sys
 
 
@@ -104,125 +105,74 @@ def present(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Group {0} is present and up to date'.format(name)}
+           'comment': ''}
 
-    if members and (addusers or delusers):
-        ret['result'] = None
-        ret['comment'] = (
-            'Error: Conflicting options "members" with "addusers" and/or'
-            ' "delusers" can not be used together. ')
-        return ret
-
-    if addusers and delusers:
-        #-- if trying to add and delete the same user(s) at the same time.
-        if not set(addusers).isdisjoint(set(delusers)):
-            ret['result'] = None
-            ret['comment'] = (
-                'Error. Same user(s) can not be added and deleted'
-                ' simultaneously')
-            return ret
-
-    changes = _changes(name,
-                       gid,
-                       addusers,
-                       delusers,
-                       members)
-    if changes:
-        ret['comment'] = (
-            'The following group attributes are set to be changed:\n')
-        for key, val in changes.items():
-            ret['comment'] += '{0}: {1}\n'.format(key, val)
-
-        if __opts__['test']:
-            ret['result'] = None
-            return ret
-
-        for key, val in changes.items():
-            if key == 'gid':
-                __salt__['group.chgid'](name, gid)
-                continue
-            if key == 'addusers':
-                for user in val:
-                    __salt__['group.adduser'](name, user)
-                continue
-            if key == 'delusers':
-                for user in val:
-                    __salt__['group.deluser'](name, user)
-                continue
-            if key == 'members':
-                __salt__['group.members'](name, ','.join(members))
-                continue
-        # Clear cached group data
-        sys.modules[
-            __salt__['test.ping'].__module__
-            ].__context__.pop('group.getent', None)
-        changes = _changes(name,
-                           gid,
-                           addusers,
-                           delusers,
-                           members)
-        if changes:
-            ret['result'] = False
-            ret['comment'] += 'Some changes could not be applied'
-            ret['changes'] = {'Failed': changes}
-        else:
-            ret['changes'] = {'Final': 'All Changed applied successfully'}
-
-    if changes is False:
-        # The group is not present, make it!
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Group {0} set to be added'.format(name)
-            return ret
-
-        grps = __salt__['group.getent']()
-        # Test if gid is free
+    grp_info = __salt__['group.info'](name)
+    if grp_info:
+        # Group already exists
         if gid is not None:
-            gid_group = None
-            for lgrp in grps:
-                if lgrp['gid'] == gid:
-                    gid_group = lgrp['name']
-                    break
-
-            if gid_group is not None:
-                ret['result'] = False
-                ret['comment'] = (
-                    'Group {0} is not present but gid {1} is already taken by'
-                    ' group {2}'.format(name, gid, gid_group))
+            # is the GID correct?
+            if grp_info['gid'] == gid:
+                ret['comment'] = 'No change'
                 return ret
-
-        # Group is not present, make it.
-        if __salt__['group.add'](name,
-                                 gid,
-                                 system=system):
-            # if members to be added
-            grp_members = None
-            if members:
-                grp_members = ','.join(members)
-            if addusers:
-                grp_members = ','.join(addusers)
-            if grp_members:
-                __salt__['group.members'](name, grp_members)
-            # Clear cached group data
-            sys.modules[__salt__['test.ping'].__module__].__context__.pop(
-                'group.getent', None)
-            ret['comment'] = 'New group {0} created'.format(name)
-            ret['changes'] = __salt__['group.info'](name)
-            changes = _changes(name,
-                               gid,
-                               addusers,
-                               delusers,
-                               members)
-            if changes:
-                ret['result'] = False
-                ret['comment'] = (
-                    'Group {0} has been created but, some changes could not'
-                    ' be applied')
-                ret['changes'] = {'Failed': changes}
+            else:
+                # Gid is not correct.
+                if __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = (
+                        'Group {0} exists but the gid will '
+                        'be changed to {1}').format(name, gid)
+                    return ret
+                ret['result'] = __salt__['group.chgid'](name, gid)
+                # Clear cached group data
+                sys.modules[
+                    __salt__['test.ping'].__module__
+                ].__context__.pop('group.getent', None)
+                if ret['result']:
+                    ret['comment'] = ('Changed gid to {0} for group {1}'
+                                      .format(gid, name))
+                    ret['changes'] = {name: gid}
+                    return ret
+                else:
+                    ret['comment'] = ('Failed to change gid to {0} for '
+                                      'group {1}'.format(gid, name))
+                    return ret
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create new group {0}'.format(name)
-    return ret
+            ret['comment'] = 'Group {0} is already present'.format(name)
+            return ret
+    else:
+        # Group is not present, test if gid is free
+        if gid is not None:
+            try:
+                gid_ent = grp.getgrgid(gid)
+                # If we do NOT get a KeyError here, GID is already taken
+                ret['result'] = False
+                ret['comment'] = ('Group {0} is not present but gid {1}'
+                                  ' is already taken by group {2}'
+                                  .format(name, gid, gid_ent.gr_name))
+                return ret
+            except KeyError:
+                # Group ID is not taken. Ok to make the group.
+                pass
+    # Now actually make the group
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Group {0} is not present and should '
+                          'be created'
+                          ).format(name)
+        return ret
+    ret['result'] = __salt__['group.add'](name, gid, system=system)
+    # Clear cached group data
+    sys.modules[
+        __salt__['test.ping'].__module__
+    ].__context__.pop('group.getent', None)
+    if ret['result']:
+        ret['changes'] = __salt__['group.info'](name)
+        ret['comment'] = 'Added group {0}'.format(name)
+        return ret
+    else:
+        ret['comment'] = 'Failed to apply group {0}'.format(name)
+        return ret
 
 
 def absent(name):

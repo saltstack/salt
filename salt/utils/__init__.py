@@ -122,6 +122,9 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
+#KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
+
 log = logging.getLogger(__name__)
 
 
@@ -703,7 +706,7 @@ def backup_minion(path, bkroot):
     dname, bname = os.path.split(path)
     fstat = os.stat(path)
     msecs = str(int(time.time() * 1000000))[-6:]
-    stamp = time.asctime().replace(' ', '_')
+    stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')
     stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
     bkpath = os.path.join(bkroot,
                           dname[1:],
@@ -1770,8 +1773,8 @@ def warn_until(version,
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
             '{lineno}, is supposed to be shown until version '
-            '{until_version!r} is released. Current version is now '
-            '{salt_version!r}. Please remove the warning.'.format(
+            '{until_version} is released. Current version is now '
+            '{salt_version}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
                 until_version=version.formatted_version,
@@ -2107,7 +2110,6 @@ def get_group_list(user=None, include_default=True):
         # Just return an empty list
         return []
     group_names = None
-    ugroups = set()
     if not isinstance(user, string_types):
         raise Exception
     if hasattr(os, 'getgrouplist'):
@@ -2115,6 +2117,7 @@ def get_group_list(user=None, include_default=True):
         log.trace('Trying os.getgrouplist for {0!r}'.format(user))
         try:
             group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+            log.trace('os.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
         except Exception:
             pass
     else:
@@ -2123,6 +2126,7 @@ def get_group_list(user=None, include_default=True):
         try:
             import pysss
             group_names = list(pysss.getgrouplist(user))
+            log.trace('pysss.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
         except Exception:
             pass
     if group_names is None:
@@ -2138,7 +2142,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    ugroups.update(group_names)
+        log.trace('Generic group list for user {0!r}: {1!r}'.format(user, group_names))
     if include_default is False:
         # Historically, saltstack code for getting group lists did not
         # include the default group. Some things may only want
@@ -2146,12 +2150,11 @@ def get_group_list(user=None, include_default=True):
         # default group.
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
-            ugroups.remove(default_group)
+            group_names.remove(default_group)
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
-    return sorted(ugroups)
+    return sorted(set(group_names))
 
 
 def get_group_dict(user=None, include_default=True):

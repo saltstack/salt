@@ -27,7 +27,7 @@ import salt.utils
 import salt.utils.network
 import salt.pillar
 import salt.syspaths
-from salt._compat import string_types
+import salt.utils.validate.path
 
 import sys
 #can't use salt.utils.is_windows, because config.py is included from salt.utils
@@ -202,6 +202,11 @@ VALID_OPTS = {
     'gather_job_timeout': int,
     'auth_timeout': int,
     'enumerate_proxy_minions': bool,
+    'ssh_passwd': str,
+    'ssh_port': str,
+    'ssh_sudo': bool,
+    'ssh_timeout': float,
+    'ssh_user': str,
 }
 
 # default configurations
@@ -301,7 +306,7 @@ DEFAULT_MINION_OPTS = {
     'minion_id_caching': True,
     'keysize': 4096,
     'salt_transport': 'zeromq',
-    'auth_timeout': 3,
+    'auth_timeout': 60,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -423,6 +428,11 @@ DEFAULT_MASTER_OPTS = {
     'salt_transport': 'zeromq',
     'gather_job_timeout': 2,
     'enumerate_proxy_minions': False,
+    'ssh_passwd': '',
+    'ssh_port': '22',
+    'ssh_sudo': False,
+    'ssh_timeout': 60,
+    'ssh_user': 'root',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -603,7 +613,7 @@ def load_config(path, env_var, default_path=None):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    if os.path.isfile(path):
+    if salt.utils.validate.path.is_readable(path):
         opts = _read_conf_file(path)
         opts['conf_file'] = path
         return opts
