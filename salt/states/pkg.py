@@ -1193,6 +1193,14 @@ def mod_aggregate(low, chunks, running):
     low chunks and merges them into a single pkgs ref in the present low data
     '''
     pkgs = []
+    agg_enabled = [
+            'installed',
+            'latest',
+            'removed',
+            'purged',
+            ]
+    if low.get('fun') not in agg_enabled:
+        return low
     for chunk in chunks:
         tag = salt.utils.gen_state_tag(chunk)
         if tag in running:
@@ -1201,6 +1209,10 @@ def mod_aggregate(low, chunks, running):
         if chunk.get('state') == 'pkg':
             if '__agg__' in chunk:
                 continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Pull out the pkg names!
             if 'pkgs' in chunk:
                 pkgs.extend(chunk['pkgs'])
                 chunk['__agg__'] = True

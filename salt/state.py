@@ -577,6 +577,8 @@ class State(object):
         Execute the aggregation systems to runtime modify the low chunk
         '''
         agg_opt = self.functions['config.option']('mod_aggregate')
+        if low.get('aggregate') is True:
+            agg_opt = low['aggregate']
         if agg_opt is True:
             agg_opt = [low['state']]
         else:
