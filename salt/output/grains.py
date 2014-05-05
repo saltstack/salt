@@ -1,6 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
 Special outputter for grains
+============================
+
+This outputter is a more condensed version of the :mod:`nested
+<salt.output.nested>` outputter, used by default to display grains when the
+following functions are invoked:
+
+* :mod:`grains.item <salt.modules.grains.item>`
+* :mod:`grains.items <salt.modules.grains.items>`
+* :mod:`grains.setval <salt.modules.grains.setval>`
+
+Example output::
+
+    myminion:
+      dictionary: {'abc': 123, 'def': 456}
+      list:
+          Hello
+          World
+      bar: baz
 '''
 
 # Import salt libs
