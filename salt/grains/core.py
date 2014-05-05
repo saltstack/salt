@@ -525,11 +525,11 @@ def _virtual(osdata):
         if os.path.isfile('/proc/self/status'):
             with salt.utils.fopen('/proc/self/status') as status_file:
                 for line in status_file:
-                    vz_re = re.compile('^envID:\s+(\d+)$')
+                    vz_re = re.compile(r'^envID:\s+(\d+)$')
                     vz_match = vz_re.match(line.rstrip('\n'))
                     if vz_match and int(vz_match.groups()[0]) != 0:
                         grains['virtual'] = 'openvzve'
-                    elif vz_match and int(vz_match.groups()[0]) == 0: 
+                    elif vz_match and int(vz_match.groups()[0]) == 0:
                         grains['virtual'] = 'openvzhn'
         elif isdir('/proc/sys/xen') or \
                 isdir('/sys/bus/xen') or isdir('/proc/xen'):
