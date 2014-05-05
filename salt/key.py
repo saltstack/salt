@@ -7,6 +7,7 @@ used to manage salt keys directly without interfacing with the CLI.
 # Import python libs
 from __future__ import print_function
 import os
+import stat
 import shutil
 import fnmatch
 import hashlib
@@ -1047,6 +1048,10 @@ class RaetKey(Key):
                    'sign': sign}
         path = os.path.join(self.opts['pki_dir'], 'local.key')
         c_umask = os.umask(191)
+        if os.path.exists(path):
+            #mode = os.stat(path).st_mode
+            os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
         with salt.utils.fopen(path, 'w+') as fp_:
             fp_.write(self.serial.dumps(keydata))
+            os.chmod(path, stat.S_IRUSR)
         os.umask(c_umask)
