@@ -751,11 +751,9 @@ def set_known_host(user=None,
         full = os.path.join(uinfo['home'], config)
     else:
         full = '/etc/ssh/ssh_known_hosts'
-    if not key:
-        line = '{hostname} {enc} {key}\n'.format(**remote_host)
-    else:
+    if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
-        line = '{hostname} {enc} {key}\n'.format(**remote_host)
+    line = '{hostname} {enc} {key}\n'.format(**remote_host)
 
     # ensure ~/.ssh exists
     ssh_dir = os.path.dirname(full)
