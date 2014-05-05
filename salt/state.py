@@ -2022,7 +2022,7 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        preferred_base = 'base' # This should be made configurable
+        preferred_base = 'base'  # This should be made configurable
         locked = {}
         for ctops_key, ctops in tops.items():
             for ctop in ctops:
