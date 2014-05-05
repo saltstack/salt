@@ -295,7 +295,7 @@ class Authorize(object):
                         good = True
             if not good:
                 log.warning(
-                    'Authentication failure of type "eauth" occurred. ZZZZZ'
+                    'Authentication failure of type "eauth" occurred.'
                 )
                 return False
         return good
