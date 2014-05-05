@@ -104,10 +104,9 @@ def test():
     localFilepath = os.path.join(pkiDirpath, 'local.key')
     if os.path.exists(localFilepath):
         mode = os.stat(localFilepath).st_mode
-        print mode
         os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IRUSR)
-        mode = os.stat(localFilepath).st_mode
-        print mode
+
+
 
     cacheDirpath = os.path.join('/tmp/raet', 'cache', 'minion')
     sockDirpath = os.path.join('/tmp/raet', 'sock', 'minion')
@@ -319,11 +318,9 @@ class BasicTestCase(unittest.TestCase):
                      transport='raet',
                      )
 
-        self.masterSafe = salting.SaltSafe(opts=self.opts)
-        print("masterSafe local =\n{0}".format(masterSafe.loadLocalData()))
-        print("masterSafe remote =\n{0}".format(masterSafe.loadAllRemoteData()))
+        self.mainSafe = salting.SaltSafe(opts=self.opts)
 
-        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="keep", '/tmp')
+        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="base", dir='/tmp')
 
 
 
@@ -379,10 +376,11 @@ class BasicTestCase(unittest.TestCase):
 
         stack = stacking.RoadStack(name=data['name'],
                                    local=local,
-                                   auto=auto,
                                    main=main,
                                    dirpath=data['dirpath'],
-                                   store=self.store)
+                                   store=self.store,
+                                   safe=safe,
+                                   auto=auto,)
 
         return stack
 
@@ -432,16 +430,17 @@ class BasicTestCase(unittest.TestCase):
         '''
         console.terse("{0}\n".format(self.testBasic.__doc__))
 
+        self.assertEqual(self.mainSafe.loadLocalData(), None)
+        self.assertEqual(self.mainSafe.loadAllRemoteData(), {})
+
         auto = True
         data = self.createRoadData(name='main', base=self.baseDirpath)
-        keeping.clearAllKeepSafe(data['dirpath'])
-
         main = self.createRoadStack(data=data,
                                      eid=1,
                                      main=True,
                                      auto=auto,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
-                                     safe=self.masterSafe)
+                                     safe=self.mainSafe)
 
         console.terse("{0}\nkeep dirpath = {1}\nsafe dirpath = {0}\n".format(
                 main.name, main.keep.dirpath, main.safe.dirpath))

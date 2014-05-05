@@ -62,7 +62,6 @@ class BasicTestCase(unittest.TestCase):
         self.localFilepath = os.path.join(pkiDirpath, 'local.key')
         if os.path.exists(self.localFilepath):
             mode = os.stat(self.localFilepath).st_mode
-            print mode
             os.chmod(self.localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
 
         self.cacheDirpath = os.path.join(self.saltDirpath, 'cache')
@@ -78,7 +77,7 @@ class BasicTestCase(unittest.TestCase):
                      )
 
         self.mainKeeper = RaetKey(opts=self.opts)
-        self.baseDirpath = tempfile.mkdtemp(prefix="salt",  suffix="keep", dir='/tmp')
+        self.baseDirpath = tempfile.mkdtemp(prefix="salt",  suffix="base", dir='/tmp')
 
     def tearDown(self):
         if os.path.exists(self.saltDirpath):
