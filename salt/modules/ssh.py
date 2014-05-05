@@ -13,6 +13,7 @@ import re
 import hashlib
 import binascii
 import logging
+import subprocess
 
 # Import salt libs
 import salt.utils
@@ -516,6 +517,11 @@ def set_auth_key(
             if os.geteuid() == 0:
                 os.chown(dpath, uinfo['uid'], uinfo['gid'])
             os.chmod(dpath, 448)
+            # If SELINUX is available run a restorecon on the file
+            rcon = salt.utils.which('restorecon')
+            if rcon:
+                cmd = [rcon, dpath]
+                subprocess.call(cmd)
 
         if not os.path.isfile(fconfig):
             new_file = True
@@ -539,6 +545,11 @@ def set_auth_key(
             if os.geteuid() == 0:
                 os.chown(fconfig, uinfo['uid'], uinfo['gid'])
             os.chmod(fconfig, 384)
+            # If SELINUX is available run a restorecon on the file
+            rcon = salt.utils.which('restorecon')
+            if rcon:
+                cmd = [rcon, fconfig]
+                subprocess.call(cmd)
         return 'new'
 
 
