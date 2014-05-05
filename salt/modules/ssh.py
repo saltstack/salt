@@ -690,6 +690,7 @@ def rm_known_host(user=None, hostname=None, config='.ssh/known_hosts'):
 def set_known_host(user=None,
                    hostname=None,
                    fingerprint=None,
+                   key=None,
                    port=None,
                    enc=None,
                    hash_hostname=True,
@@ -719,22 +720,25 @@ def set_known_host(user=None,
         update_required = True
     elif fingerprint and fingerprint != stored_host['fingerprint']:
         update_required = True
+    elif key and key != stored_host['key']:
+        update_required = True
 
     if not update_required:
         return {'status': 'exists', 'key': stored_host}
 
-    remote_host = recv_known_host(hostname,
-                                  enc=enc,
-                                  port=port,
-                                  hash_hostname=hash_hostname)
-    if not remote_host:
-        return {'status': 'error',
-                'error': 'Unable to receive remote host key'}
+    if not key:
+        remote_host = recv_known_host(hostname,
+                                      enc=enc,
+                                      port=port,
+                                      hash_hostname=hash_hostname)
+        if not remote_host:
+            return {'status': 'error',
+                    'error': 'Unable to receive remote host key'}
 
-    if fingerprint and fingerprint != remote_host['fingerprint']:
-        return {'status': 'error',
-                'error': ('Remote host public key found but its fingerprint '
-                          'does not match one you have provided')}
+        if fingerprint and fingerprint != remote_host['fingerprint']:
+            return {'status': 'error',
+                    'error': ('Remote host public key found but its fingerprint '
+                              'does not match one you have provided')}
 
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)
@@ -747,6 +751,8 @@ def set_known_host(user=None,
         full = os.path.join(uinfo['home'], config)
     else:
         full = '/etc/ssh/ssh_known_hosts'
+    if key:
+        remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
     line = '{hostname} {enc} {key}\n'.format(**remote_host)
 
     # ensure ~/.ssh exists
@@ -766,6 +772,9 @@ def set_known_host(user=None,
         if user:
             os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
             os.chmod(ssh_dir, 0700)
+
+    if key:
+        cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
 
     # write line to known_hosts file
     try:
@@ -857,3 +866,37 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         if keys[key]:
             _keys[key] = keys[key]
     return _keys
+
+
+@decorators.which('ssh-keygen')
+def hash_known_hosts(user=None, config='.ssh/known_host'):
+    '''
+
+    Hash all the hostnames in the known hosts file.
+
+    .. versionadded:: Helium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.hash_known_hosts
+
+    '''
+    if user:
+        uinfo = __salt__['user.info'](user)
+        if not uinfo:
+            return {'status': 'error',
+                    'error': 'User {0} does not exist'.format(user)}
+        full = os.path.join(uinfo.get('home', ''), config)
+    else:
+        full = '/etc/ssh/ssh_known_hosts'
+    if not os.path.isfile(full):
+        return {'status': 'error',
+                'error': 'Known hosts file {0} does not exist'.format(full)}
+    cmd = 'ssh-keygen -H -f "{0}"'.format(full)
+    cmd_result = __salt__['cmd.run'](cmd)
+    # ssh-keygen creates a new file, thus a chown is required.
+    if os.geteuid() == 0 and user:
+        os.chown(full, uinfo['uid'], uinfo['gid'])
+    return {'status': 'updated', 'comment': cmd_result}
