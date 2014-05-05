@@ -523,7 +523,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzve'
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
-            with salt.utils.fopen('/proc/self/status'):
+            with salt.utils.fopen('/proc/self/status') as status_file:
                 for line in status_file:
                     vz_re = re.compile('^envID:\s+(\d+)$')
                     vz_match = vz_re.match(line.rstrip('\n'))
