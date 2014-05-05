@@ -92,7 +92,7 @@ class SaltSafe(object):
                     rdata['acceptance'] = raeting.ACCEPTANCES[status]
                     rdata['verhex'] = keydata['verify']
                     rdata['pubhex'] = keydata['pub']
-                    data[rdata['eid']] = rdata
+                    data[str(rdata['eid'])] = rdata
 
         return data
 

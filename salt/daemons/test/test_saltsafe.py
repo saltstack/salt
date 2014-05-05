@@ -444,8 +444,8 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(self.mainSafe.loadLocalData(), None)
         self.assertEqual(self.mainSafe.loadAllRemoteData(), {})
 
-        data = self.createRoadData(name='main', base=self.baseDirpath)
-        main = self.createRoadStack(data=data,
+        dataMain = self.createRoadData(name='main', base=self.baseDirpath)
+        main = self.createRoadStack(data=dataMain,
                                      eid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
@@ -457,20 +457,123 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.safe.dirpath.endswith('pki'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.safe.auto)
+        self.assertDictEqual(main.keep.loadLocalData(), {'eid': 1,
+                                                         'name': 'main',
+                                                         'main': True,
+                                                         'host': '0.0.0.0',
+                                                         'port': 7530,
+                                                         'sid': 0})
+        self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
+                                                     'sighex': dataMain['sighex']})
 
-        data = self.createRoadData(name='other', base=self.baseDirpath)
-        other = self.createRoadStack(data=data,
+
+        data1 = self.createRoadData(name='remote1', base=self.baseDirpath)
+        main.addRemote(estating.RemoteEstate(eid=3,
+                                        name=data1['name'],
+                                        ha=('127.0.0.1', 7532),
+                                        verkey=data1['verhex'],
+                                        pubkey=data1['pubhex']))
+
+        data2 = self.createRoadData(name='remote2', base=self.baseDirpath)
+        main.addRemote(estating.RemoteEstate(eid=4,
+                                        name=data2['name'],
+                                        ha=('127.0.0.1', 7533),
+                                        verkey=data2['verhex'],
+                                        pubkey=data2['pubhex']))
+
+        main.dumpRemotes()
+
+        self.assertDictEqual(main.safe.loadAllRemoteData(),
+            {'3':
+                {'eid': 3,
+                 'name': data1['name'],
+                 'acceptance': 1,
+                 'verhex': data1['verhex'],
+                 'pubhex': data1['pubhex']},
+            '4':
+                {'eid': 4,
+                 'name': data2['name'],
+                 'acceptance': 1,
+                 'verhex': data2['verhex'],
+                 'pubhex': data2['pubhex']}})
+
+        self.assertDictEqual(main.keep.loadAllRemoteData(),
+            {'3':
+                {'eid': 3,
+                 'name': 'remote1',
+                 'host': '127.0.0.1',
+                 'port': 7532,
+                 'sid': 0,
+                 'rsid': 0},
+            '4':
+                {'eid': 4,
+                 'name': 'remote2',
+                 'host': '127.0.0.1',
+                 'port': 7533,
+                 'sid': 0,
+                 'rsid': 0}})
+
+        # now recreate with saved data
+        main.server.close()
+        main = stacking.RoadStack(name='main',
+                                  dirpath=dataMain['dirpath'],
+                                  store=self.store,
+                                  safe=self.mainSafe)
+
+        self.assertEqual(main.local.priver.keyhex, dataMain['prihex'])
+        self.assertEqual(main.local.signer.keyhex, dataMain['sighex'])
+
+        self.assertEqual(len(main.remotes.values()), 2)
+
+
+        self.assertEqual(self.otherSafe.loadLocalData(), None)
+        self.assertEqual(self.otherSafe.loadAllRemoteData(), {})
+
+        dataOther = self.createRoadData(name='other', base=self.baseDirpath)
+        other = self.createRoadStack(data=dataOther,
                                      eid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      safe=self.otherSafe)
 
-        console.terse("{0} keep dirpath = {1} safe dirpath = {0}\n".format(
+        console.terse("{0} keep dirpath = {1} safe dirpath = {2}\n".format(
                 other.name, other.keep.dirpath, other.safe.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('road/keep/other'))
         self.assertTrue(other.safe.dirpath.endswith('pki'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
 
+        self.assertDictEqual(other.safe.loadLocalData(), {'prihex': dataOther['prihex'],
+                                                        'sighex': dataOther['sighex']})
+
+        data3 = self.createRoadData(name='remote3', base=self.baseDirpath)
+        other.addRemote(estating.RemoteEstate(eid=3,
+                                        name=data3['name'],
+                                        ha=('127.0.0.1', 7534),
+                                        verkey=data3['verhex'],
+                                        pubkey=data3['pubhex']))
+
+        data4 = self.createRoadData(name='remote4', base=self.baseDirpath)
+        other.addRemote(estating.RemoteEstate(eid=4,
+                                        name=data4['name'],
+                                        ha=('127.0.0.1', 7535),
+                                        verkey=data4['verhex'],
+                                        pubkey=data4['pubhex']))
+
+        other.dumpRemotes()
+        self.assertDictEqual(other.safe.loadAllRemoteData(),
+            {3:
+                {'eid': 3,
+                 'name': data3['name'],
+                 'acceptance': 1,
+                 'verhex': data3['verhex'],
+                 'pubhex': data3['pubhex']},
+            4:
+                {'eid': 4,
+                 'name': data4['name'],
+                 'acceptance': 1,
+                 'verhex': data4['verhex'],
+                 'pubhex': data4['pubhex']}})
+        other.server.close()
 
 
 
