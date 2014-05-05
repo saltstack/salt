@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
+Outputter for displaying results of state runs
+==============================================
+
 The return data from the Highstate command is a standard data structure
 which is parsed by the highstate outputter to deliver a clean and readable
 set of information about the HighState run on minions.
@@ -25,6 +28,26 @@ state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
+
+Example output::
+
+    myminion:
+    ----------
+              ID: test.ping
+        Function: module.run
+          Result: True
+         Comment: Module function test.ping executed
+         Changes:
+                  ----------
+                  ret:
+                      True
+
+    Summary
+    ------------
+    Succeeded: 1
+    Failed:    0
+    ------------
+    Total:     0
 '''
 
 # Import python libs
