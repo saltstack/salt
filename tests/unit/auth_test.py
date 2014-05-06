@@ -62,7 +62,7 @@ class LoadAuthTestCase(TestCase):
             self.lauth.get_groups(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
-
+@patch('salt.utils.verify.check_path_traversal')
 @patch('salt.utils.event.tagify', return_value=[])
 @patch('salt.utils.event.SaltEvent.fire_event', return_value='dummy_tag')
 @patch('salt.auth.LoadAuth.time_auth', return_value=True)
@@ -77,13 +77,13 @@ class MasterAuthTestCase(TestCase):
                                              'default_include': '',
                                              'extension_modules': '',
                                              'client_acl_blacklist': {},
-                                            'external_auth': {'pam': {'test_user': [{'*': ['test.ping']}], 'test_group%': [{'*': ['test.echo']}]}},
-                                            'master_job_cache': '',
+                                             'external_auth': {'pam': {'test_user': [{'*': ['test.ping']}], 'test_group%': [{'*': ['test.echo']}]}},
+                                             'master_job_cache': '',
                                             },
                                             None, None, None)
 
 
-    def test_master_publish_name(self, ck_minions_mock, time_auth_mock, fire_event_mock, tagify_mock):
+    def test_master_publish_name(self, ck_minions_mock, time_auth_mock, fire_event_mock, tagify_mock, check_path_mock):
         '''
         Test to ensure a simple name can auth against a given function
         '''
