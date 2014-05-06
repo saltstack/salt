@@ -99,7 +99,7 @@ class SvnPillar(object):
         self.root = root
         self.repo_dir = repo_dir
         self.repo_location = repo_location
-        
+
         if not os.path.isdir(repo_dir):
             os.makedirs(repo_dir)
             log.debug('Checking out fileserver for svn_pillar module')
@@ -115,30 +115,26 @@ class SvnPillar(object):
         except pysvn.ClientError as exc:
             log.error('Unable to fetch the latest changes from remote '
                       '{0}: {1}'.format(self.repo_location, exc))
-                          
+
     def pillar_dir(self):
         '''
         Returns the directory of the pillars (repo cache + branch + root)
         '''
-        
         repo_dir = self.repo_dir
-        root     = self.root
-        branch   = self.branch
+        root = self.root
+        branch = self.branch
         if branch == 'trunk' or branch == 'base':
             working_dir = os.path.join(repo_dir, 'trunk', root)
             if not os.path.isdir(working_dir):
                 log.error('Could not find {0}/trunk/{1}'.format(self.repo_location, root))
             else:
                 return os.path.normpath(working_dir)
-            
         working_dir = os.path.join(repo_dir, 'branches', branch, root)
         if os.path.isdir(working_dir):
             return os.path.normpath(working_dir)
-        
         working_dir = os.path.join(working_dir, 'tags', branch, root)
         if os.path.isdir(working_dir):
             return os.path.normpath(working_dir)
-        
         log.error('Could not find {0}/branches/{1}/{2}'.format(self.repo_location, branch, root))
         return repo_dir
 
@@ -191,13 +187,8 @@ def ext_pillar(minion_id, pillar, repo_string):
     # function
     if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
         return {}
-        
-    svnpil.update();
-
+    svnpil.update()
     opts = deepcopy(__opts__)
-
     opts['pillar_roots'][branch] = [pillar_dir]
-
     pil = Pillar(opts, __grains__, minion_id, branch)
-
     return pil.compile_pillar()
