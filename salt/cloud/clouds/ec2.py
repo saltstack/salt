@@ -982,6 +982,88 @@ def block_device_mappings(vm_):
     )
 
 
+def _request_eip(interface):
+    '''
+    Request and return Elastic IP
+    '''
+    params = {'Action': 'AllocateAddress'}
+    params['Domain'] = interface.setdefault('domain', 'vpc')
+    eip = query(params, return_root=True)
+    for e in eip:
+        if 'allocationId' in e:
+            return e['allocationId']
+    return None
+
+
+def _create_eni(interface, eip=None):
+    '''
+    Create and return an Elastic Interface
+    '''
+    params = {'Action': 'DescribeSubnets'}
+    subnet_query = query(params, return_root=True)
+    for subnet_query_result in subnet_query:
+        if 'item' in subnet_query_result:
+            for subnet in subnet_query_result['item']:
+                if subnet['subnetId'] == interface['SubnetId']:
+                    params = {'Action': 'CreateNetworkInterface',
+                              'SubnetId': interface['SubnetId']}
+                    if 'Description' in interface:
+                        params['Description'] = interface['Description']
+                    if 'PrivateIpAddress' in interface:
+                        params['PrivateIpAddress'] = interface['PrivateIpAddress']
+                    if 'PrivateIpAddresses' in interface:
+                        params.update(_param_from_config('PrivateIpAddresses', interface['PrivateIpAddresses']))
+                    if 'SecurityGroupId' in interface:
+                        params.update(_param_from_config('SecurityGroupId', interface['SecurityGroupId']))
+                    if 'AssociatePublicIpAddress' in interface:
+                        params['AssociatePublicIpAddress'] = interface['AssociatePublicIpAddress']
+                    if 'allocate_new_eip' in interface:
+                        if interface['allocate_new_eip']:
+                            if 'AssociatePublicIpAddress' in params:
+                                params.pop('AssociatePublicIpAddress')
+                    new_eni_query = query(params, return_root=True)
+                    for new_eni_query_result in new_eni_query:
+                        if 'networkInterfaceId' in new_eni_query_result:
+                            new_eni = new_eni_query_result['networkInterfaceId']
+                            if eip:
+                                params = {'Action': 'AssociateAddress',
+                                          'NetworkInterfaceId': new_eni,
+                                          'AllocationId': eip}
+                                new_eip_eni = query(params, return_root=True)
+                    return {'DeviceIndex': interface['DeviceIndex'],
+                               'NetworkInterfaceId': new_eni
+                             }
+    return None
+
+
+def _update_enis(interfaces, instance):
+    config_enis = {}
+    instance_enis = []
+    for interface in interfaces:
+        if 'DeviceIndex' in interface:
+            if interface['DeviceIndex'] in config_enis:
+                log.error(
+                    'Duplicate DeviceIndex in profile. Cannot update ENIs.'
+                )
+                return None
+            config_enis[str(interface['DeviceIndex'])] = interface
+    query_enis = instance[0]['instancesSet']['item']['networkInterfaceSet']['item']
+    if isinstance(query_enis, list):
+        for query_eni in query_enis:
+            instance_enis.append((query_eni['networkInterfaceId'], query_eni['attachment']))
+    else:
+        instance_enis.append((query_enis['networkInterfaceId'], query_enis['attachment']))
+
+    for eni_id, eni_data in instance_enis:
+        params = {'Action': 'ModifyNetworkInterfaceAttribute',
+                  'NetworkInterfaceId': eni_id,
+                  'Attachment.AttachmentId': eni_data['attachmentId'],
+                  'Attachment.DeleteOnTermination': config_enis[eni_data['deviceIndex']].setdefault('delete_interface_on_terminate', True)}
+        set_eni_attributes = query(params, return_root=True)
+
+    return None
+
+
 def _param_from_config(key, data):
     '''
     Return EC2 API parameters based on the given config data.
@@ -1178,8 +1260,15 @@ def request_instance(vm_=None, call=None):
     )
 
     if network_interfaces:
+        eni_devices = []
+        for interface in network_interfaces:
+            _new_eip = None
+            if interface['allocate_new_eip']:
+                _new_eip = _request_eip(interface)
+            _new_eni = _create_eni(interface, _new_eip)
+            eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',
-                                         network_interfaces))
+                                         eni_devices))
 
     set_ebs_optimized = config.get_cloud_config_value(
         'ebs_optimized', vm_, __opts__, search_global=False
@@ -1690,6 +1779,16 @@ def create(vm_=None, call=None):
         vm_['name'], tags,
         instance_id=instance_id, call='action', location=location
     )
+
+    network_interfaces = config.get_cloud_config_value(
+        'network_interfaces',
+        vm_,
+        __opts__,
+        search_global=False
+    )
+
+    if network_interfaces:
+        _update_enis(network_interfaces, data)
 
     # At this point, the node is created and tagged, and now needs to be
     # bootstrapped, once the necessary port is available.
