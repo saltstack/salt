@@ -7,6 +7,7 @@ for more documentation.
 '''
 import inspect
 import logging
+import sys
 
 from collections import namedtuple
 
@@ -366,3 +367,30 @@ class Map(object):
         'grains.filter_by': need_salt,
         'pillar.get': need_salt
     }
+
+
+class SaltModuleImporter(object):
+
+    def __init__(self, client, saltenv, _globals):
+        self.client = client
+        self.saltenv = saltenv
+        self._globals = _globals
+
+    def salt_import(self, uri):
+        state_file = self.client.cache_file(uri, self.saltenv)
+
+        if not state_file:
+            raise ImportError("salt_import: Could not find the file {0!r}".format(uri))
+
+        with open(state_file) as f:
+            state_contents = f.read()
+
+        state_locals = {}
+        if sys.version_info[0] > 2:
+            # in py3+ exec is a function
+            exec(state_contents, self._globals, state_locals)
+        else:
+            # prior to that it is a statement
+            exec state_contents in self._globals, state_locals
+
+        return state_locals

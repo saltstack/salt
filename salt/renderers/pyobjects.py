@@ -265,7 +265,7 @@ import sys
 
 from salt.loader import _create_loader
 from salt.fileclient import get_file_client
-from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
+from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map, SaltModuleImporter
 
 # our import regexes
 FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
@@ -377,6 +377,9 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
     # this will be used to fetch any import files
     client = get_file_client(__opts__)
+
+    my_importer = SaltModuleImporter(client, saltenv, _globals)
+    _globals['salt_import'] = my_importer.salt_import
 
     # process our sls imports
     #
