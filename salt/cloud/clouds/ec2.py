@@ -1780,6 +1780,9 @@ def create(vm_=None, call=None):
         instance_id=instance_id, call='action', location=location
     )
 
+    if network_interfaces:
+        _update_enis(network_interfaces, data)
+
     # At this point, the node is created and tagged, and now needs to be
     # bootstrapped, once the necessary port is available.
     log.info('Created node {0}'.format(vm_['name']))
