@@ -1780,6 +1780,13 @@ def create(vm_=None, call=None):
         instance_id=instance_id, call='action', location=location
     )
 
+    network_interfaces = config.get_cloud_config_value(
+        'network_interfaces',
+        vm_,
+        __opts__,
+        search_global=False
+    )
+
     if network_interfaces:
         _update_enis(network_interfaces, data)
 
