@@ -104,7 +104,7 @@ def _rand_cpu_str(cpu):
         return '0-{0}'.format(avail)
     to_set = set()
     while len(to_set) < cpu:
-        choice = random.radint(0, avail - 1)
+        choice = random.randint(0, avail - 1)
         if choice not in to_set:
             to_set.add(str(choice))
     return ','.join(sorted(to_set))
