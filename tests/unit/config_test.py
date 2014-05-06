@@ -36,7 +36,7 @@ from salt.version import SaltStackVersion
 log = logging.getLogger(__name__)
 
 # mock hostname should be more complex than the systems FQDN
-MOCK_HOSTNAME = 'vary.long.complex.fqdn.com'
+MOCK_HOSTNAME = 'very.long.complex.fqdn.that.is.crazy.extra.long.example.com'
 
 MOCK_ETC_HOSTS = (
     '##\n'
