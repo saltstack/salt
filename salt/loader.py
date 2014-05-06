@@ -399,7 +399,7 @@ def runner(opts):
     load = _create_loader(
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
-    return load.gen_functions()
+    return LazyLoader(load)
 
 
 def queues(opts):
@@ -1275,6 +1275,15 @@ class LazyLoader(MutableMapping):
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
+        else:
+            patched = []
+            # be sure that the global __salt__ dict is able of loading
+            # new functions from inside execution functions
+            for func in mod_funcs.values():
+                mod = sys.modules.get(func.__module__, None)
+                if mod and mod not in patched:
+                    patched.append(mod)
+                    mod.__salt__ = self
         self._dict.update(mod_funcs)
 
     def load_all(self):
@@ -1298,6 +1307,7 @@ class LazyLoader(MutableMapping):
         if key not in self._dict and not self.loaded:
             # load the item
             self._load(key)
+            log.debug('LazyLoaded {0}'.format(key))
         return self._dict[key]
 
     def __len__(self):
