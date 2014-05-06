@@ -1008,15 +1008,15 @@ def _create_eni(interface, eip=None):
                     params = {'Action': 'CreateNetworkInterface',
                               'SubnetId': interface['SubnetId']}
                     if 'Description' in interface:
-                        params['Description']=interface['Description']
+                        params['Description'] = interface['Description']
                     if 'PrivateIpAddress' in interface:
-                        params['PrivateIpAddress']=interface['PrivateIpAddress']
+                        params['PrivateIpAddress'] = interface['PrivateIpAddress']
                     if 'PrivateIpAddresses' in interface:
                         params.update(_param_from_config('PrivateIpAddresses', interface['PrivateIpAddresses']))
                     if 'SecurityGroupId' in interface:
                         params.update(_param_from_config('SecurityGroupId', interface['SecurityGroupId']))
                     if 'AssociatePublicIpAddress' in interface:
-                        params['AssociatePublicIpAddress']=interface['AssociatePublicIpAddress']
+                        params['AssociatePublicIpAddress'] = interface['AssociatePublicIpAddress']
                     if 'allocate_new_eip' in interface:
                         if interface['allocate_new_eip']:
                             if 'AssociatePublicIpAddress' in params:
@@ -1050,9 +1050,9 @@ def _update_enis(interfaces, instance):
     query_enis = instance[0]['instancesSet']['item']['networkInterfaceSet']['item']
     if isinstance(query_enis, list):
         for query_eni in query_enis:
-            instance_enis.append( (query_eni['networkInterfaceId'], query_eni['attachment']) )
+            instance_enis.append((query_eni['networkInterfaceId'], query_eni['attachment']))
     else:
-        instance_enis.append( (query_enis['networkInterfaceId'], query_enis['attachment']) )
+        instance_enis.append((query_enis['networkInterfaceId'], query_enis['attachment']))
 
     for eni_id, eni_data in instance_enis:
         params = {'Action': 'ModifyNetworkInterfaceAttribute',
@@ -1260,14 +1260,14 @@ def request_instance(vm_=None, call=None):
     )
 
     if network_interfaces:
-       eni_devices = []
-       for interface in network_interfaces:
-           _new_eip = None
-           if interface['allocate_new_eip']:
-               _new_eip = _request_eip(interface)
-           _new_eni = _create_eni(interface, _new_eip)
-           eni_devices.append(_new_eni)
-       params.update(_param_from_config(spot_prefix + 'NetworkInterface',
+        eni_devices = []
+        for interface in network_interfaces:
+            _new_eip = None
+            if interface['allocate_new_eip']:
+                _new_eip = _request_eip(interface)
+            _new_eni = _create_eni(interface, _new_eip)
+            eni_devices.append(_new_eni)
+        params.update(_param_from_config(spot_prefix + 'NetworkInterface',
                                          eni_devices))
 
     set_ebs_optimized = config.get_cloud_config_value(
