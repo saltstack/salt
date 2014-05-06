@@ -121,53 +121,48 @@ def list_present(name, value):
 
 def list_absent(name, value):
     '''
-    Ensure the value is absent in the list type grain
+    Delete a value from a grain formed as a list
 
     name
         The grain name
 
     value
-       The value is absent in the list type grain
+       The value to delete from the grain list
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
-        roles:
-          grains.list_absent:
-            - value: db
+      roles:
+        grains.list_absent:
+          - value: db
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
     grain = __grains__.get(name)
-
     if grain:
-        # check whether grain is a list
-        if not isinstance(grain, list):
-            ret['result'] = False
-            ret['comment'] = 'Grain {0} is not a valid list'.format(name)
-            return ret
-
-        if value not in grain:
-            ret['comment'] = 'Value {1} is absent in grain {0}'.format(name, value)
-            return ret
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Value {1} is set to be removed from grain {0}'.format(name, value)
-            ret['changes'] = {'old': grain}
-            return ret
-        __salt__['grains.remove'](name, value)
-        ret['changes'] = {'old': grain}
-
-        if value in __grains__.get(name):
-            ret['result'] = False
-            ret['comment'] = 'Failed to remove value {1} from grain {0}'.format(name, value)
-            return ret
-        ret['comment'] = 'Removed value {1} from grain {0}'.format(name, value)
+        if isinstance(grain, list):
+            if value not in grain:
+                ret['comment'] = 'Value {1} is absent from grain {0}' \
+                                 .format(name, value)
+                return ret
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Value {1} in grain {0} is set to ' \
+                                 'be deleted'.format(name, value)
+                ret['changes'] = {'deleted': value}
+                return ret
+            __salt__['grains.remove'](name, value)
+            ret['comment'] = 'Value {1} was deleted from grain {0}'\
+                .format(name, value)
+            ret['changes'] = {'deleted': value}
+        else:
+            ret['comment'] = 'Grain {0} is not a valid list'\
+                .format(name)
     else:
-        ret['comment'] = 'Grain {0} does not exist or is empty'.format(name)
+        ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
 
 
@@ -215,53 +210,6 @@ def absent(name, destructive=False):
             ret['comment'] = 'Value for grain {0} was set to {1}'\
                 .format(name, None)
             ret['changes'] = {'grain': name, 'value': None}
-    else:
-        ret['comment'] = 'Grain {0} does not exist'.format(name)
-    return ret
-
-
-def absent_list(name, value):
-    '''
-    .. versionadded:: Helium
-
-    Delete a value from a list in the grains config file
-
-    name
-        The grain name
-
-    value
-        The value to delete
-
-    .. code-block:: yaml
-
-      grain_name:
-        grains.absent_list:
-          - value: to_be_absent
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
-    grain = __grains__.get(name)
-    if grain:
-        if isinstance(grain, list):
-            if value not in grain:
-                ret['comment'] = 'Value {1} was not found in the list ' \
-                                 'for grain {0}'.format(name, value)
-                return ret
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Value {1} in grain {0} is set to ' \
-                                 'be deleted'.format(name, value)
-                ret['changes'] = {'deleted': value}
-                return ret
-            __salt__['grains.remove'](name, value)
-            ret['comment'] = 'Value {1} was deleted from grain {0}'\
-                .format(name, value)
-            ret['changes'] = {'deleted': value}
-        else:
-            ret['comment'] = 'Grain {0} is not a valid list'\
-                .format(name)
     else:
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
