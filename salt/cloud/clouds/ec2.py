@@ -2326,7 +2326,9 @@ def _list_nodes_full(location=None):
 
 def list_nodes_min(location=None, call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider. Only a list of VM names,
+    and their state, is returned. This is the minimum amount of information
+    needed to check for existing VMs.
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -2346,10 +2348,13 @@ def list_nodes_min(location=None, call=None):
     for instance in instances:
         if isinstance(instance['instancesSet']['item'], list):
             for item in instance['instancesSet']['item']:
-                ret[_extract_name_tag(item)] = True
+                state = item['instanceState']['name']
+                name = _extract_name_tag(item)
         else:
             item = instance['instancesSet']['item']
-            ret[_extract_name_tag(item)] = True
+            state = item['instanceState']['name']
+            name = _extract_name_tag(item)
+        ret[name] = {'state': state}
     return ret
 
 
