@@ -43,7 +43,6 @@ def get(key, default='', merge=False, delim=':'):
 
         .. versionadded:: Helium
 
-
     delim
         Specify an alternate delimiter to use when traversing a nested dict
 
