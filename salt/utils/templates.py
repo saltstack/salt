@@ -252,7 +252,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     unicode_context = {}
     for key, value in context.iteritems():
-        if not isinstance(value, string_types):
+        if isinstance(value, unicode):
             unicode_context[key] = value
             continue
 
