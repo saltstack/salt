@@ -399,7 +399,7 @@ def runner(opts):
     load = _create_loader(
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
-    return LazyLoader(load)
+    return load.gen_functions()
 
 
 def queues(opts):
