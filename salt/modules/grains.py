@@ -178,7 +178,7 @@ def setvals(grains, destructive=False):
 
     .. code-block:: bash
 
-        salt '*' grains.setvals "{'key1': 'vali1', 'key2': 'val2'}"
+        salt '*' grains.setvals "{'key1': 'val1', 'key2': 'val2'}"
     '''
     new_grains = grains
     if not isinstance(new_grains, collections.Mapping):
