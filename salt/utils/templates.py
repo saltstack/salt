@@ -252,13 +252,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     unicode_context = {}
     for key, value in context.iteritems():
-        if isinstance(value, unicode):
+        if not isinstance(value, string_types):
             unicode_context[key] = value
             continue
 
         # Let's try UTF-8 and fail if this still fails, that's why this is not
         # wrapped in a try/except
-        unicode_context[key] = unicode(value, 'utf-8')
+        if isinstance(value, unicode):
+            unicode_context[key] = value
+        else:
+            unicode_context[key] = unicode(value, 'utf-8')
 
     try:
         template = jinja_env.from_string(tmplstr)
