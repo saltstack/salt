@@ -169,3 +169,48 @@ def list_absent(name, value):
     else:
         ret['comment'] = 'Grain {0} is not exist or empty'.format(name)
     return ret
+
+
+def deleted(name, destructive=False):
+    '''
+    .. versionadded:: Helium
+
+    Delete a grain from the grains config file
+
+    name
+        The grain name
+
+    :param destructive: If destructive is true, delete the entire grain. If destructive
+    is false, set the grain's value to None. Defaults to False.
+
+    .. code-block:: yaml
+
+      grain_name:
+        grains.deleted
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    grain = __grains__.get(name)
+    if grain:
+        if __opts__['test']:
+            ret['result'] = None
+            if destructive is True:
+                ret['comment'] = 'Grain {0} is set to be deleted'.format(name)
+                ret['changes'] = {'deleted': name}
+            else:
+                ret['comment'] = 'Value for grain {0} is set to be deleted (None)'.format(name)
+                ret['changes'] = {'grain': name, 'value': None}
+            return ret
+        __salt__['grains.delval'](name, destructive)
+        if destructive is True:
+            ret['comment'] = 'Grain {0} was deleted'.format(name)
+            ret['changes'] = {'deleted': name}
+        else:
+            ret['comment'] = 'Value for grain {0} was set to {1}'.format(name, None)
+            ret['changes'] = {'grain': name, 'value': None}
+    else:
+        ret['comment'] = 'Grain {0} does not exist'.format(name)
+    return ret
