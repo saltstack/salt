@@ -547,7 +547,8 @@ def script(*args, **kw):
 
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
-            privileged=False, dns=None, volumes_from=None):
+            privileged=False, dns=None, volumes_from=None,
+            check_is_running=True):
     '''
     Ensure that a container is running. (`docker inspect`)
 
@@ -613,6 +614,11 @@ def running(name, container=None, port_bindings=None, binds=None,
 
             - dns:
                 - name_other_container
+
+    check_is_running
+        Enable checking if a container should run or not.
+        Useful for data-only containers that must be linked to another one.
+        e.g. nginx <- static-files
     '''
     is_running = __salt__['docker.is_running'](container)
     if is_running:
@@ -625,13 +631,18 @@ def running(name, container=None, port_bindings=None, binds=None,
             links=links, privileged=privileged,
             dns=dns, volumes_from=volumes_from,
         )
-        is_running = __salt__['docker.is_running'](container)
-        if is_running:
-            return _valid(
-                comment=('Container {!r} started.\n').format(container),
-                changes={name: True})
+        if check_is_running:
+            is_running = __salt__['docker.is_running'](container)
+            if is_running:
+                return _valid(
+                    comment='Container {!r} started.\n'.format(container),
+                    changes={name: True})
+            else:
+                return _invalid(
+                    comment=('Container {!r}'
+                            ' cannot be started\n{!s}').format(container,
+                                                                started['out']))
         else:
-            return _invalid(
-                comment=('Container {!r}'
-                         ' cannot be started\n{!s}').format(container,
-                                                            started['out']))
+            return _valid(
+                comment='Container {!r} started.\n'.format(container),
+                changes={name: True})
