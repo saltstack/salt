@@ -3,6 +3,9 @@
 Extract the pillar data for this minion
 '''
 
+# Import python libs
+import collections
+
 # Import third party libs
 import yaml
 
@@ -34,6 +37,12 @@ def get(key, default='', merge=False, delim=':'):
 
         pkg:apache
 
+    merge
+        Specify whether or not the retrieved values should be recursively
+        merged into the passed default.
+
+        .. versionadded:: Helium
+
 
     delim
         Specify an alternate delimiter to use when traversing a nested dict
@@ -47,8 +56,10 @@ def get(key, default='', merge=False, delim=':'):
         salt '*' pillar.get pkg:apache
     '''
     if merge:
-        return salt.utils.dictupdate.update(default,
-            salt.utils.traverse_dict(__pillar__, key, '', delim))
+        ret = salt.utils.traverse_dict(__pillar__, key, {}, delim)
+        if isinstance(ret, collections.Mapping) and \
+                isinstance(default, collections.Mapping):
+            return salt.utils.dictupdate.update(default, ret)
 
     return salt.utils.traverse_dict(__pillar__, key, default, delim)
 
