@@ -65,7 +65,6 @@ To use the EC2 cloud module, set up the cloud configuration at
 
 # Import python libs
 import os
-import copy
 import sys
 import stat
 import time
@@ -2348,10 +2347,10 @@ def list_nodes_min(location=None, call=None):
     for instance in instances:
         if isinstance(instance['instancesSet']['item'], list):
             for item in instance['instancesSet']['item']:
-                ret[_extract_name_tag(item)] = {}
+                ret[_extract_name_tag(item)] = None
         else:
             item = instance['instancesSet']['item']
-            ret[_extract_name_tag(item)] = {}
+            ret[_extract_name_tag(item)] = None
     return ret
 
 
