@@ -6,7 +6,7 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON
+from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import Salt libraries
 import salt.master
@@ -62,11 +62,14 @@ class LoadAuthTestCase(TestCase):
             self.lauth.get_groups(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
-@patch('salt.utils.verify.check_path_traversal')
-@patch('salt.utils.event.tagify', return_value=[])
+
+@patch('zmq.Context', MagicMock())
+@patch('salt.payload.Serial.dumps', MagicMock())
+@patch('salt.utils.verify.check_path_traversal', MagicMock())
+@patch('salt.master.tagify', MagicMock())
 @patch('salt.utils.event.SaltEvent.fire_event', return_value='dummy_tag')
-@patch('salt.auth.LoadAuth.time_auth', return_value=True)
-@patch('salt.utils.minions.CkMinions.check_minions', return_value='')
+@patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
+@patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions'))
 class MasterAuthTestCase(TestCase):
 
     @patch('salt.minion.MasterMinion')
@@ -79,13 +82,16 @@ class MasterAuthTestCase(TestCase):
                                              'client_acl_blacklist': {},
                                              'external_auth': {'pam': {'test_user': [{'*': ['test.ping']}], 'test_group%': [{'*': ['test.echo']}]}},
                                              'master_job_cache': '',
+                                             'ext_job_cache': '',
+                                             'sign_pub_messages': '',
                                             },
-                                            None, None, None)
+                                            MagicMock(), MagicMock(), MagicMock())
 
 
-    def test_master_publish_name(self, ck_minions_mock, time_auth_mock, fire_event_mock, tagify_mock, check_path_mock):
+    def test_master_publish_name(self, fire_event_mock):
         '''
-        Test to ensure a simple name can auth against a given function
+        Test to ensure a simple name can auth against a given function.
+        This tests to ensure test_user can access test.ping but *not* sys.doc
         '''
         valid_clear_load = {'tgt_type': 'glob',
                                 'jid': '',
@@ -101,11 +107,17 @@ class MasterAuthTestCase(TestCase):
                                 'user': 'test_user',
                                 'key': '',
                                 'arg': '',
-                                'fun': 'test.ping'
+                                'fun': 'test.ping',
                             }
-        ret = self.clear.publish(valid_clear_load)
-        expected_calls = [call('*', 'glob'), call('test_minion', 'glob'), call('test_minion', 'glob')]
-        ck_minions_mock.assert_has_calls(expected_calls)
+        # Can we access test.ping?
+        self.clear.publish(valid_clear_load)
+        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.ping')
+
+        # Are we denied access to sys.doc?
+        sys_doc_load = valid_clear_load
+        sys_doc_load['fun'] = 'sys.doc'
+        self.clear.publish(sys_doc_load)
+        self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc')  # If sys.doc were to fire, this would match
 
 
 if __name__ == '__main__':
