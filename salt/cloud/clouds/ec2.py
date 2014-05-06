@@ -1203,6 +1203,8 @@ def request_instance(vm_=None, call=None):
                 '\'del_root_vol_on_destroy\' should be a boolean value.'
             )
 
+    vm_['set_del_root_vol_on_destroy'] = set_del_root_vol_on_destroy
+
     if set_del_root_vol_on_destroy:
         # first make sure to look up the root device name
         # as Ubuntu and CentOS (and most likely other OSs)
@@ -1392,7 +1394,7 @@ def request_instance(vm_=None, call=None):
             finally:
                 raise SaltCloudSystemExit(exc.message)
 
-    return data
+    return data, vm_
 
 
 def query_instance(vm_=None, call=None):
@@ -1646,7 +1648,7 @@ def create(vm_=None, call=None):
 
     # Put together all of the information required to request the instance, and
     # then fire off the request for it
-    data = request_instance(vm_, location)
+    data, vm_ = request_instance(vm_, location)
 
     # Pull the instance ID, valid for both spot and normal instances
     instance_id = data[0]['instanceId']
@@ -1746,7 +1748,7 @@ def create(vm_=None, call=None):
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
                 'instance_id': ret['instanceId'],
-                'del_all_vols_on_destroy': set_del_all_vols_on_destroy
+                'del_all_vols_on_destroy': vm_['set_del_all_vols_on_destroy']
             },
             call='action'
         )
@@ -2346,10 +2348,10 @@ def list_nodes_min(location=None, call=None):
     for instance in instances:
         if isinstance(instance['instancesSet']['item'], list):
             for item in instance['instancesSet']['item']:
-                ret[_extract_name_tag(item)] = True
+                ret[_extract_name_tag(item)] = {}
         else:
             item = instance['instancesSet']['item']
-            ret[_extract_name_tag(item)] = True
+            ret[_extract_name_tag(item)] = {}
     return ret
 
 
