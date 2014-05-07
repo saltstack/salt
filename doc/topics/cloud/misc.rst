@@ -173,6 +173,13 @@ The amount of time until an ssh connection can be established via password or
 ssh key. Default 15 seconds.
 
 
+wait_for_passwd_maxtries
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The number of attempts to connect to the VM until we abandon.
+Default 15 attempts
+
+
 wait_for_fun_timeout
 ~~~~~~~~~~~~~~~~~~~~
 
