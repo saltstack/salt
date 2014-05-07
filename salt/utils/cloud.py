@@ -297,7 +297,7 @@ def bootstrap(vm_, opts):
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
-    ),
+    )
 
     deploy_kwargs = {
         'opts': opts,
