@@ -1586,6 +1586,15 @@ def query_instance(vm_=None, call=None):
         finally:
             raise SaltCloudSystemExit(exc.message)
 
+    if 'reactor' in vm_ and vm_['reactor'] is True:
+        salt.utils.cloud.fire_event(
+            'event',
+            'instance queried',
+            'salt/cloud/{0}/query_reactor'.format(vm_['name']),
+            {'data': data},
+            transport=__opts__['transport']
+        )
+
     return data
 
 
@@ -1662,8 +1671,7 @@ def wait_for_instance(
                 gateway=ssh_gateway_config
             ):
                 __opts__['ssh_username'] = user
-                if 'ssh_username' in vm_:
-                    del vm_['ssh_username']
+                vm_['ssh_username'] = user
                 break
         else:
             raise SaltCloudSystemExit(
@@ -1682,6 +1690,8 @@ def wait_for_instance(
             {'ip_address': ip_address},
             transport=__opts__['transport']
         )
+
+    return vm_
 
 
 def create(vm_=None, call=None):
@@ -1734,13 +1744,25 @@ def create(vm_=None, call=None):
         )
     )
 
-    # Put together all of the information required to request the instance, and
-    # then fire off the request for it
-    data, vm_ = request_instance(vm_, location)
+    if 'instance_id' in vm_:
+        # This was probably created via another process, and doesn't have
+        # things like salt keys created yet, so let's create them now.
+        if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
+                salt.config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    self.opts
+                )
+            )
+    else:
+        # Put together all of the information required to request the instance,
+        # and then fire off the request for it
+        data, vm_ = request_instance(vm_, location)
 
-    # Pull the instance ID, valid for both spot and normal instances
-    instance_id = data[0]['instanceId']
-    vm_['instance_id'] = instance_id
+        # Pull the instance ID, valid for both spot and normal instances
+        vm_['instance_id'] = data[0]['instanceId']
 
     # Wait for vital information, such as IP addresses, to be available
     # for the new instance
@@ -1776,8 +1798,11 @@ def create(vm_=None, call=None):
     )
 
     set_tags(
-        vm_['name'], tags,
-        instance_id=instance_id, call='action', location=location
+        vm_['name'],
+        tags,
+        instance_id=vm_['instance_id'],
+        call='action',
+        location=location
     )
 
     network_interfaces = config.get_cloud_config_value(
@@ -1807,7 +1832,7 @@ def create(vm_=None, call=None):
         'display_ssh_output', vm_, __opts__, default=True
     )
 
-    wait_for_instance(
+    vm_ = wait_for_instance(
         vm_, data, ip_address, display_ssh_output
     )
 
@@ -1860,7 +1885,7 @@ def create(vm_=None, call=None):
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['provider'],
-            'instance_id': instance_id,
+            'instance_id': vm_['instance_id'],
         },
         transport=__opts__['transport']
     )
