@@ -164,7 +164,7 @@ def install(name, clean=True):
         deinstall(name)
     result = __salt__['cmd.run_all'](
         'make install{0} BATCH=yes'.format(' clean' if clean else ''),
-        cwd=portpath
+        cwd=portpath, reset_system_locale=False
     )
     if result['retcode'] != 0:
         __context__['ports.install_error'] = result['stderr']
