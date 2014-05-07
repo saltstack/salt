@@ -662,6 +662,14 @@ def install(name=None,
     refresh
         Whether or not to update the yum database before executing.
 
+    reinstall
+        Specifying reinstall=True will use ``yum reinstall`` rather than
+        ``yum install`` for requested packages that are already installed.
+
+        If a version is specified with the requested package, then
+        ``yum reinstall`` will only be used if the installed version
+        matches the requested version.
+
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
 
