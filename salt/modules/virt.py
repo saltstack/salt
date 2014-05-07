@@ -608,11 +608,11 @@ def init(name,
 
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
     define_xml_str(xml)
-    
+
     if kwargs.get('seed') and seedable:
         install = kwargs.get('install', True)
         seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
-        
+
         __salt__[seed_cmd](img_dest,
                            id_=name,
                            config=kwargs.get('config'),
