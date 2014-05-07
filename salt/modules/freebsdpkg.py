@@ -128,7 +128,7 @@ def _match(names):
 
     # Look for full matches
     full_pkg_strings = []
-    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='debug')
+    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='trace')
     for line in out.splitlines():
         try:
             full_pkg_strings.append(line.split()[0])
@@ -268,7 +268,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
 
     ret = {}
     origins = {}
-    out = __salt__['cmd.run_stdout']('pkg_info -ao', output_loglevel='debug')
+    out = __salt__['cmd.run_stdout']('pkg_info -ao', output_loglevel='trace')
     pkgs_re = re.compile(r'Information for ([^:]+):\s*Origin:\n([^\n]+)')
     for pkg, origin in pkgs_re.findall(out):
         if not pkg:
@@ -377,7 +377,7 @@ def install(name=None,
     __salt__['cmd.run'](
         'pkg_add {0}'.format(' '.join(args)),
         env=env,
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -438,7 +438,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'pkg_delete {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -461,9 +461,9 @@ def rehash():
 
         salt '*' pkg.rehash
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='debug')
+    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
-        __salt__['cmd.run']('rehash', output_loglevel='debug')
+        __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 
 def file_list(*packages):
