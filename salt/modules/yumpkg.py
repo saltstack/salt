@@ -764,7 +764,7 @@ def install(name=None,
         targets = []
         for pkgname, version_num in pkg_params.iteritems():
             if version_num is None:
-                if use_reinstall and old.has_key(pkgname):
+                if use_reinstall and pkgname in old.keys():
                     reinstall.append(pkgname)
                 else:
                     targets.append(pkgname)
@@ -781,8 +781,6 @@ def install(name=None,
                         pkgname = namepart
 
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                print(version_num)
-                print(cver)
                 if use_reinstall and cver and salt.utils.compare_versions(
                                                            ver1=version_num,
                                                            oper='==',
@@ -829,7 +827,7 @@ def install(name=None,
     ret = salt.utils.compare_dicts(old, new)
     if reinstall:
         for pkgname in reinstall:
-            if not ret.has_key(pkgname):
+            if not pkgname in ret.keys():
                 ret.update({pkgname: {'old': old.get(pkgname),
                                       'new': new.get(pkgname)}})
     if ret:
