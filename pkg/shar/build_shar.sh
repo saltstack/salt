@@ -120,7 +120,7 @@ function _get_requirements {
         #
         # If -v was provided, then pip will download the specified version,
         # otherwise this variable will be blank.
-        output=`"$PIP" install $PIP_OPTS --download "$srcdir" salt$version`; return_code=$?
+        output=`"$PIP" install $PIP_OPTS --download "$srcdir" "salt${version}"`; return_code=$?
     fi
     _log "$output"
     test "$return_code" -eq 0 || _error 'Failed to download tarballs. Aborting.'
@@ -282,6 +282,9 @@ _display "Installing $salt_release"
 output=`$INSTALL 2>&1`; return_code=$?
 _log "$output"
 test "$return_code" -eq 0 || _error "Failed to install $salt_release. Aborting."
+_log 'Compressing man pages'
+output=`find "${pkgdir}/opt/share/man" -type f -not -name '*.gz' -exec gzip {} \;`
+_log "$output"
 
 # Everything worked, make the shar
 test -n "$build_id" && build_id="-${build_id}"
