@@ -7,8 +7,8 @@ If the manager webapp is not configured some of the functions won't work
 
 The following grains/pillar should be set::
 
-    tomcat-manager.user: admin user name
-    tomcat-manager.passwd: password
+    tomcat-manager:user: admin user name
+    tomcat-manager:passwd: password
 
 and also configure a user in the conf/tomcat-users.xml file::
 
@@ -78,6 +78,27 @@ def __catalina_home():
     return False
 
 
+def _get_credentials():
+    '''
+    Get the username and password from opts, grains & pillar
+    '''
+
+    ret = {
+        'user': False,
+        'passwd': False
+    }
+
+    for item in ret:
+        entry = 'tomcat-manager:{0}'.format(item)
+        for struct in [__opts__, __grains__, __pillar__]:
+            ret[item] = salt.utils.traverse_dict(struct, entry, '_|-')
+            if ret[item] == '_|-':
+                ret[item] = False
+            else:
+                break
+    return ret['user'], ret['passwd']
+
+
 def _auth(uri):
     '''
     returns a authentication handler.
@@ -86,19 +107,9 @@ def _auth(uri):
 
     If user & pass are missing return False
     '''
-    try:
-        user = __grains__['tomcat-manager']['user']
-        password = __grains__['tomcat-manager']['passwd']
-    except KeyError:
-        try:
-            user = salt.utils.option('tomcat-manager:user', '', __opts__,
-                    __pillar__)
-            password = salt.utils.option('tomcat-manager:passwd', '', __opts__,
-                    __pillar__)
-        except Exception:
-            return False
 
-    if user == '' or password == '':
+    user, password = _get_credentials()
+    if user is False or password is False:
         return False
 
     basic = urllib2.HTTPBasicAuthHandler()
@@ -460,7 +471,7 @@ def deploy_war(war,
     timeout : 180
         timeout for HTTP request
     temp_war_location : None
-        use another location to temporarily  copy to war file
+        use another location to temporarily copy to war file
         by default the system's temp directory is used
 
     CLI Examples:
