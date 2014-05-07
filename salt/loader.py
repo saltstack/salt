@@ -121,7 +121,7 @@ def minion_mods(opts, context=None, whitelist=None):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
@@ -151,7 +151,7 @@ def raw_mod(opts, name, functions):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
