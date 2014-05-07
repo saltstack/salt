@@ -471,7 +471,7 @@ def deploy_war(war,
     timeout : 180
         timeout for HTTP request
     temp_war_location : None
-        use another location to temporarily  copy to war file
+        use another location to temporarily copy to war file
         by default the system's temp directory is used
 
     CLI Examples:
