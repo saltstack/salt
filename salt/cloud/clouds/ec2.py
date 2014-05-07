@@ -326,9 +326,10 @@ def query(params=None, setname=None, requesturl=None, location=None,
                     result.text
                 )
             )
+            result.raise_for_status()
             break
         except requests.exceptions.HTTPError as exc:
-            root = ET.fromstring(exc.read())
+            root = ET.fromstring(exc.response.content)
             data = _xml_to_dict(root)
 
             # check to see if we should retry the query
@@ -338,7 +339,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                 log.error(
                     'EC2 Response Status Code and Error: [{0} {1}] {2}; '
                     'Attempts remaining: {3}'.format(
-                        exc.code, exc.msg, data, attempts
+                        exc.response.status_code, exc, data, attempts
                     )
                 )
                 # Wait a bit before continuing to prevent throttling
@@ -347,7 +348,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             log.error(
                 'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
-                    exc.code, exc.msg, data
+                    exc.response.status_code, exc, data
                 )
             )
             if return_url is True:
@@ -356,7 +357,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
     else:
         log.error(
             'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
-                exc.code, exc.msg, data
+                exc.response.status_code, exc, data
             )
         )
         if return_url is True:
