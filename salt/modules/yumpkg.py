@@ -11,7 +11,6 @@ import re
 
 # Import salt libs
 import salt.utils
-import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError

@@ -11,7 +11,6 @@ import re
 
 # Import salt libs
 import salt.utils
-import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
