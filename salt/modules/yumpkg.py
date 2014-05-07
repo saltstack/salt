@@ -1073,19 +1073,25 @@ def get_locked_packages(pattern=None, full=False):
     return current_locks
 
 
-def verify(*names):
+def verify(*names, **kwargs):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     Runs an rpm -Va on a system, and returns the results in a dict
+
+    Files with an attribute of config, doc, ghost, license or readme in the
+    package header can be ignored using the ``ignore_types`` keyword argument
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.verify
+        salt '*' pkg.verify httpd
+        salt '*' pkg.verify 'httpd postfix'
+        salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
     '''
-    return __salt__['lowpkg.verify'](*names)
+    return __salt__['lowpkg.verify'](*names, **kwargs)
 
 
 def group_list():
