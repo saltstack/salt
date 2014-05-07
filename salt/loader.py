@@ -168,6 +168,7 @@ def proxy(opts, functions, whitelist=None):
             'value': functions}
     return load.gen_functions(pack, whitelist=whitelist)
 
+
 def returners(opts, functions, whitelist=None):
     '''
     Returns the returner modules
