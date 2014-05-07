@@ -180,6 +180,25 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
+def interfaces_names():
+    '''
+    Return a list of all the interfaces names
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.interfaces_names
+    '''
+
+    ret = []
+    with salt.utils.winapi.Com():
+        c = wmi.WMI()
+        for iface in c.Win32_NetworkAdapter(NetEnabled=True):
+            ret.append(iface.NetConnectionID)
+    return ret
+
+
 def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
