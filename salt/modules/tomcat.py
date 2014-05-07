@@ -440,7 +440,8 @@ def deploy_war(war,
                url='http://localhost:8080/manager',
                saltenv='base',
                timeout=180,
-               env=None):
+               env=None,
+               temp_war_location=None):
     '''
     Deploy a WAR file
 
@@ -458,6 +459,9 @@ def deploy_war(war,
         function
     timeout : 180
         timeout for HTTP request
+    temp_war_location : None
+        use another location to temporarily  copy to war file
+        by default the system's temp directory is used
 
     CLI Examples:
 
@@ -486,13 +490,19 @@ def deploy_war(war,
         # Backwards compatibility
         saltenv = env
 
+    # Decide the location to copy the war for the deployment
+    tfile = 'salt.{0}'.format(os.path.basename(war))
+    if temp_war_location is not None:
+        if not os.path.isdir(temp_war_location):
+            return 'Error - "{0}" is not a directory'.format(temp_war_location)
+        tfile = os.path.join(temp_war_location, tfile)
+    else:
+        tfile = os.path.join(tempfile.gettempdir(), tfile)
+
     # Copy file name if needed
-    tfile = war
     cache = False
     if not os.path.isfile(war):
         cache = True
-        tfile = os.path.join(tempfile.gettempdir(), 'salt.' +
-                os.path.basename(war))
         cached = __salt__['cp.get_url'](war, tfile, saltenv)
         if not cached:
             return 'FAIL - could not cache the WAR file'
