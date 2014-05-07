@@ -1753,7 +1753,7 @@ def create(vm_=None, call=None):
                 salt.config.get_cloud_config_value(
                     'keysize',
                     vm_,
-                    self.opts
+                    __opts__
                 )
             )
     else:
