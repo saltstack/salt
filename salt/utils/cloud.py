@@ -293,11 +293,16 @@ def bootstrap(vm_, opts):
 
     ret = {}
 
-    deploy_script_code = os_script('script', vm_, opts)
+    deploy_script_code = os_script(
+        salt.config.get_cloud_config_value(
+            'os', vm_, opts, default='bootstrap-salt'
+        ),
+        vm_, opts
+    )
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
-    ),
+    )
 
     deploy_kwargs = {
         'opts': opts,
@@ -380,6 +385,7 @@ def bootstrap(vm_, opts):
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
+    del event_kwargs['opts']
     del event_kwargs['minion_pem']
     del event_kwargs['minion_pub']
     del event_kwargs['sudo_password']
