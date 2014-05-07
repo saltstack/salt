@@ -394,7 +394,7 @@ class LocalClient(object):
         for key, val in self.opts.items():
             if key not in opts:
                 opts[key] = val
-        batch = salt.cli.batch.Batch(opts, True)
+        batch = salt.cli.batch.Batch(opts, quiet=True)
         for ret in batch.run():
             yield ret
 
