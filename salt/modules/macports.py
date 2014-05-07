@@ -31,7 +31,8 @@ def __virtual__():
 def _list(query=''):
     ret = {}
     cmd = 'port list {0}'.format(query)
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
@@ -69,7 +70,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'port installed'
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    for line in out.splitlines():
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
@@ -178,7 +180,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'port uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -277,7 +279,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     old = list_pkgs()
     cmd = 'port install {0}'.format(formulas)
 
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -321,7 +323,7 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    __salt__['cmd.run_all']('port selfupdate')
+    __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
 
 
 def upgrade(refresh=True):

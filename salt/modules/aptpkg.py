@@ -16,7 +16,6 @@ import yaml
 
 # Import salt libs
 import salt.utils
-import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -126,7 +125,7 @@ def _get_virtual():
         __context__['pkg._get_virtual'] = {}
         if __salt__['cmd.has_exec']('grep-available'):
             cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
             virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
             for realpkg, provides in virtpkg_re.findall(out):
                 __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
@@ -197,7 +196,7 @@ def latest_version(*names, **kwargs):
         if isinstance(repo, list):
             cmd = cmd + repo
         out = __salt__['cmd.run_all'](cmd, python_shell=False,
-                                      output_loglevel='debug')
+                                      output_loglevel='trace')
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
@@ -274,7 +273,7 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         cols = line.split()
         if not cols:
@@ -767,7 +766,7 @@ def list_pkgs(versions_as_list=False,
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
@@ -836,7 +835,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
@@ -1737,16 +1736,30 @@ def _resolve_deps(name, pkgs, **kwargs):
 
 def owner(*paths):
     '''
-    Return the name of the package that owns the specified file. Files may be
-    passed as a string (``path``) or as a list of strings (``paths``). If
-    ``path`` contains a comma, it will be converted to ``paths``. If a file
-    name legitimately contains a comma, pass it in via ``paths``.
+    .. versionadded:: Helium
+
+    Return the name of the package that owns the file. Multiple file paths can
+    be passed. Like :mod:`pkg.version <salt.modules.aptpkg.version`, if a
+    single path is passed, a string will be returned, and if multiple paths are
+    passed, a dictionary of file/package name pairs will be returned.
+
+    If the file is not owned by a package, or is not present on the minion,
+    then an empty string will be returned for that path.
 
     CLI Example:
 
         salt '*' pkg.owner /usr/bin/apachectl
-        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+        salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     '''
-    cmd = "dpkg -S {0} | cut -d':' -f1"
-    return salt.utils.pkg.find_owner(
-        __salt__['cmd.run'], cmd, *paths)
+    if not paths:
+        return ''
+    ret = {}
+    cmd = 'dpkg -S {0!r} | cut -f1 -d:'
+    for path in paths:
+        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
+                                               output_loglevel='debug')
+        if 'no path found' in ret[path].lower():
+            ret[path] = ''
+    if len(ret) == 1:
+        return ret.values()[0]
+    return ret
