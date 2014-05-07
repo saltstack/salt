@@ -5,8 +5,8 @@ This state requires the manager webapp to be enabled
 
 The following grains/pillar should be set::
 
-    tomcat-manager.user: admin user name
-    tomcat-manager.passwd: password
+    tomcat-manager:user: admin user name
+    tomcat-manager:passwd: password
 
 and also configure a user in the conf/tomcat-users.xml file::
 
