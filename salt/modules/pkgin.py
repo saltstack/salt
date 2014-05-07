@@ -337,7 +337,7 @@ def install(name=None, refresh=False, fromrepo=None,
     )
     new = list_pkgs()
 
-    rehash()
+    _rehash()
     return salt.utils.compare_dicts(old, new)
 
 
@@ -463,17 +463,11 @@ def purge(name=None, pkgs=None, **kwargs):
     return remove(name=name, pkgs=pkgs)
 
 
-def rehash():
+def _rehash():
     '''
     Recomputes internal hash table for the PATH variable.
     Use whenever a new command is created during the current
     session.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.rehash
     '''
     shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
