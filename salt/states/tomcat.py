@@ -5,8 +5,8 @@ This state requires the manager webapp to be enabled
 
 The following grains/pillar should be set::
 
-    tomcat-manager.user: admin user name
-    tomcat-manager.passwd: password
+    tomcat-manager:user: admin user name
+    tomcat-manager:passwd: password
 
 and also configure a user in the conf/tomcat-users.xml file::
 
@@ -73,7 +73,7 @@ def war_deployed(name,
     timeout : 180
         timeout for HTTP request to the tomcat manager
     temp_war_location : None
-        use another location to temporarily  copy to war file
+        use another location to temporarily copy to war file
         by default the system's temp directory is used
 
     Example::
