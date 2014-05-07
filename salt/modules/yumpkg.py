@@ -750,11 +750,16 @@ def install(name=None,
 
     old = list_pkgs()
     downgrade = []
+    reinstall = []
+    use_reinstall = kwargs.get('reinstall', False)
     if pkg_type == 'repository':
         targets = []
         for pkgname, version_num in pkg_params.iteritems():
             if version_num is None:
-                targets.append(pkgname)
+                if use_reinstall and old.has_key(pkgname):
+                    reinstall.append(pkgname)
+                else:
+                    targets.append(pkgname)
             else:
                 cver = old.get(pkgname, '')
                 arch = ''
@@ -768,7 +773,14 @@ def install(name=None,
                         pkgname = namepart
 
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if not cver or salt.utils.compare_versions(ver1=version_num,
+                print(version_num)
+                print(cver)
+                if use_reinstall and cver and salt.utils.compare_versions(
+                                                           ver1=version_num,
+                                                           oper='==',
+                                                           ver2=cver):
+                    reinstall.append(pkgstr)
+                elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                            oper='>=',
                                                            ver2=cver):
                     targets.append(pkgstr)
@@ -786,6 +798,15 @@ def install(name=None,
         )
         __salt__['cmd.run'](cmd, output_loglevel='debug')
 
+    if reinstall:
+        cmd = 'yum -y {repo} {exclude} {gpgcheck} reinstall {pkg}'.format(
+            repo=repo_arg,
+            exclude=exclude_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(reinstall),
+        )
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
+
     if downgrade:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} downgrade {pkg}'.format(
             repo=repo_arg,
@@ -798,6 +819,11 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
+    if reinstall:
+        for pkgname in reinstall:
+            if not ret.has_key(pkgname):
+                ret.update({pkgname: {'old': old.get(pkgname),
+                                      'new': new.get(pkgname)}})
     if ret:
         __context__.pop('pkg._avail', None)
     return ret
