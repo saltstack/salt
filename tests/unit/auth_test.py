@@ -73,8 +73,8 @@ class MasterACLTestCase(TestCase):
     '''
     A class to check various aspects of the client ACL system
     '''
-    @patch('salt.minion.MasterMinion')
-    def setUp(self, mminion_mock):
+    @patch('salt.minion.MasterMinion', MagicMock())
+    def setUp(self):
         self.clear = salt.master.ClearFuncs({'sock_dir': '',
                                              'conf_file': '',
                                              'transport': '',
@@ -147,7 +147,7 @@ class MasterACLTestCase(TestCase):
         # Request sys.doc
         self.valid_clear_load['fun'] = 'sys.doc'
         # Did we fire it?
-        self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc') 
+        self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc')
 
 
     def test_master_publish_some_minions(self, fire_event_mock):
