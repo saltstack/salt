@@ -1669,7 +1669,9 @@ def wait_for_instance(
                     'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
                 key_filename=vm_['key_filename'],
                 display_ssh_output=display_ssh_output,
-                gateway=ssh_gateway_config
+                gateway=ssh_gateway_config,
+                maxtries=config.get_cloud_config_value(
+                    'wait_for_passwd_maxtries', vm_, __opts__, default=15),
             ):
                 __opts__['ssh_username'] = user
                 vm_['ssh_username'] = user
