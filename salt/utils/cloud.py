@@ -380,6 +380,7 @@ def bootstrap(vm_, opts):
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
+    del event_kwargs['opts']
     del event_kwargs['minion_pem']
     del event_kwargs['minion_pub']
     del event_kwargs['sudo_password']
