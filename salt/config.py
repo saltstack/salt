@@ -2016,8 +2016,11 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
 
     # Make sure the master_uri is set
     if 'master_uri' not in opts:
-        opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['interface'],
-                                                        port=opts['ret_port'])
+        opts['master_uri'] = 'tcp://{ip}:{port}'.format(
+            ip=salt.utils.ip_bracket(opts['interface']),
+            port=opts['ret_port']
+        )
+
     # Return the client options
     _validate_opts(opts)
     return opts
