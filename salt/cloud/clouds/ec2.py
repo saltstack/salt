@@ -2901,6 +2901,35 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
     return data
 
 
+def describe_volumes(kwargs=None, call=None):
+    '''
+    Describe a volume (or volumes)
+
+    volume_id
+        One or more volume IDs. Multiple IDs must be separated by ",".
+
+    TODO: Add all of the filters.
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_volumes function must be called with -f '
+            'or --function.'
+        )
+        return False
+
+    params = {'Action': 'DescribeVolumes'}
+
+    if 'volume_id' in kwargs:
+        volume_id = kwargs['volume_id'].split(',')
+        for volume_index, volume_id in enumerate(volume_id):
+            params['VolumeId.{0}'.format(volume_index)] = volume_id
+
+    log.debug(params)
+
+    data = query(params, return_root=True)
+    return data
+
+
 def create_keypair(kwargs=None, call=None):
     '''
     Create an SSH keypair
@@ -3096,8 +3125,8 @@ def describe_snapshots(kwargs=None, call=None):
 
     params = {'Action': 'DescribeSnapshots'}
 
-    if 'snapshot_ids' in kwargs:
-        snapshot_ids = kwargs['snapshot_ids'].split(',')
+    if 'snapshot_id' in kwargs:
+        snapshot_ids = kwargs['snapshot_id'].split(',')
         for snapshot_index, snapshot_id in enumerate(snapshot_ids):
             params['SnapshotId.{0}'.format(snapshot_index)] = snapshot_id
 
