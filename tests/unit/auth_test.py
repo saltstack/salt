@@ -10,6 +10,7 @@ from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
 
 # Import Salt libraries
 import salt.master
+import integration
 from salt import auth
 
 ensure_in_syspath('../')
@@ -46,7 +47,6 @@ class LoadAuthTestCase(TestCase):
             ret = self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
-
     def test_get_groups(self):
         valid_eauth_load = {'username': 'test_user',
                             'show_timeout': False,
@@ -65,36 +65,30 @@ class LoadAuthTestCase(TestCase):
 
 @patch('zmq.Context', MagicMock())
 @patch('salt.payload.Serial.dumps', MagicMock())
-@patch('salt.utils.verify.check_path_traversal', MagicMock())
 @patch('salt.master.tagify', MagicMock())
 @patch('salt.utils.event.SaltEvent.fire_event', return_value='dummy_tag')
 @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
-class MasterACLTestCase(TestCase):
+class MasterACLTestCase(integration.ModuleCase):
     '''
     A class to check various aspects of the client ACL system
     '''
     @patch('salt.minion.MasterMinion', MagicMock())
+    @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
-        self.clear = salt.master.ClearFuncs({'sock_dir': '',
-                                             'conf_file': '',
-                                             'transport': '',
-                                             'default_include': '',
-                                             'extension_modules': '',
-                                             'client_acl_blacklist': {},
-                                             'external_auth': {'pam':
-                                                 {'test_user': [{'*': ['test.ping']},
-                                                                {'minion_glob*': ['foo.bar']},
-                                                                {'minion_func_test': ['func_test.*']}],
-                                                  'test_group%': [{'*': ['test.echo']}],
-                                                  'test_user_mminion': [{'target_minion': ['test.ping']}],
-                                                  '*':                 [{'my_minion':  ['my_mod.my_func']}],
-                                                }
-                                             },
-                                             'master_job_cache': '',
-                                             'ext_job_cache': '',
-                                             'sign_pub_messages': '',
-                                            },
-                                            MagicMock(), MagicMock(), MagicMock())
+        opts = self.minion_opts
+        opts['client_acl_blacklist'] = {}
+        opts['master_job_cache'] = ''
+        opts['sign_pub_messages'] = False
+        opts['external_auth'] = {'pam': {'test_user': [{'*': ['test.ping']},
+                                                       {'minion_glob*': ['foo.bar']},
+                                                       {'minion_func_test': ['func_test.*']}],
+                                                       'test_group%': [{'*': ['test.echo']}],
+                                                       'test_user_mminion': [{'target_minion': ['test.ping']}],
+                                                       '*': [{'my_minion': ['my_mod.my_func']}],
+                                         }
+                                 }
+
+        self.clear = salt.master.ClearFuncs(opts, MagicMock(), MagicMock(), MagicMock())
 
         self.valid_clear_load = {'tgt_type': 'glob',
                                 'jid': '',
@@ -111,8 +105,7 @@ class MasterACLTestCase(TestCase):
                                 'key': '',
                                 'arg': '',
                                 'fun': 'test.ping',
-                            }
-
+                                }
 
     @patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions'))
     def test_master_publish_name(self, fire_event_mock):
@@ -129,7 +122,6 @@ class MasterACLTestCase(TestCase):
         sys_doc_load['fun'] = 'sys.doc'
         self.clear.publish(sys_doc_load)
         self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc')  # If sys.doc were to fire, this would match
-
 
     @patch('salt.utils.minions.CkMinions.check_minions', MagicMock(return_value='some_minions'))
     def test_master_publish_group(self, fire_event_mock):
@@ -148,7 +140,6 @@ class MasterACLTestCase(TestCase):
         self.valid_clear_load['fun'] = 'sys.doc'
         # Did we fire it?
         self.assertNotEqual(fire_event_mock.call_args[0][0]['fun'], 'sys.doc')
-
 
     def test_master_publish_some_minions(self, fire_event_mock):
         '''
@@ -184,7 +175,6 @@ class MasterACLTestCase(TestCase):
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.mock_calls, [])
 
-
     def test_master_minion_glob(self, fire_event_mock):
         '''
         Test to ensure we can allow access to a given
@@ -208,7 +198,6 @@ class MasterACLTestCase(TestCase):
         self.assertTrue(fire_event_mock.called, 'Did not fire {0} for minion tgt {1}'.format(requested_function, requested_tgt))
         self.assertEqual(fire_event_mock.call_args[0][0]['fun'], requested_function, 'Did not fire {0} for minion glob'.format(requested_function))
 
-
     def test_master_function_glob(self, fire_event_mock):
         '''
         Test to ensure that we can allow access to a given
@@ -221,8 +210,6 @@ class MasterACLTestCase(TestCase):
         '''
         # Unimplemented
         pass
-
-
 
 if __name__ == '__main__':
     from integration import run_tests
