@@ -462,9 +462,14 @@ def run(opts):
     time.sleep(3)
     cmd = []
     if opts.peer:
-        cmd.extend(['salt-call', 'publish.publish'])
+        cmd.append('salt-call')
+        if opts.no_color:
+            cmd.append('--no-color')
+        cmd.append('publish.publish')
     else:
         cmd.extend(['salt', '-t', '1800'])
+        if opts.no_color:
+            cmd.append('--no-color')
 
     cmd.extend([
         '{target}', 'state.sls', '{prep_sls}', 'pillar="{pillar}"'
@@ -505,9 +510,14 @@ def run(opts):
         # Run the 2nd preparation SLS
         cmd = []
         if opts.peer:
-            cmd.extend(['salt-call', 'publish.publish'])
+            cmd.append('salt-call')
+            if opts.no_color:
+                cmd.append('--no-color')
+            cmd.append('publish.publish')
         else:
-            cmd.extend(['salt', '-t', '1800'])
+            cmd.extend(['salt', '-t', '30'])
+            if opts.no_color:
+                cmd.append('--no-color')
 
         cmd.extend([
             '{target}', 'state.sls', '{prep_sls_2}', 'pillar="{pillar}"'
@@ -608,9 +618,14 @@ def run(opts):
         print('Grabbing the cloned repository commit information ... ')
         cmd = []
         if opts.peer:
-            cmd.extend(['salt-call', '--out=json', 'publish.publish'])
+            cmd.extend(['salt-call', '--out=json'])
+            if opts.no_color:
+                cmd.append('--no-color')
+            cmd.append('publish.publish')
         else:
             cmd.extend(['salt', '-t', '100', '--out=json'])
+            if opts.no_color:
+                cmd.append('--no-color')
 
         cmd.extend([
             build_minion_target(opts, vm_name),
@@ -662,9 +677,15 @@ def run(opts):
     time.sleep(3)
     cmd = []
     if opts.peer:
-        cmd.extend(['salt-call', 'publish.publish'])
+        cmd.append('salt-call')
+        if opts.no_color:
+            cmd.append('--no-color')
+        cmd.append('publish.publish')
     else:
         cmd.extend(['salt', '-t', '100'])
+        if opts.no_color:
+            cmd.append('--no-color')
+
     cmd.extend([
         build_minion_target(opts, vm_name),
         'state.sls',
@@ -840,6 +861,13 @@ def parse():
         action='append',
         default=[],
         help='Match minions using compound matchers, the minion ID, plus the passed grain.'
+    )
+    parser.add_option(
+        '--no-color', '--no-colors',
+        dest='no_color',
+        action='store_true',
+        default=False,
+        help='Disable any couloured output'
     )
     parser.add_option(
         '--peer',
