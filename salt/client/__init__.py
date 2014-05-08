@@ -858,7 +858,7 @@ class LocalClient(object):
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid)
+            raw = self.event.get_event(wait, jid) if len(found.intersection(minions)) < len(minions) else None
             if raw is None:
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
