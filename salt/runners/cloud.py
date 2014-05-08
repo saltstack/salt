@@ -133,6 +133,10 @@ def create(provider, names, **kwargs):
             image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
             securitygroup=default delvol_on_destroy=True
     '''
+    create_kwargs = {}
+    for kwarg in kwargs:
+        if not kwarg.startswith('__'):
+            create_kwargs[kwarg] = kwargs[kwarg]
     client = _get_client()
-    info = client.create(provider, names, **kwargs)
+    info = client.create(provider, names, **create_kwargs)
     return info
