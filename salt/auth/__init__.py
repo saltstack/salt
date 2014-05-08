@@ -312,7 +312,8 @@ class Resolver(object):
 
     def _send_token_request(self, load):
         sreq = salt.payload.SREQ(
-            'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
+            'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+            ':{0[ret_port]}'.format(self.opts),
             )
         tdata = sreq.send('clear', load)
         return tdata
