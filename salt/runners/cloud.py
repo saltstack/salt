@@ -121,7 +121,7 @@ def action(
     return info
 
 
-def create(provider, names, **kwargs):
+def create(provider, instances, **kwargs):
     '''
     Create an instance using Salt Cloud
 
@@ -138,5 +138,5 @@ def create(provider, names, **kwargs):
         if not kwarg.startswith('__'):
             create_kwargs[kwarg] = kwargs[kwarg]
     client = _get_client()
-    info = client.create(provider, names, **create_kwargs)
+    info = client.create(provider, instances, **create_kwargs)
     return info
