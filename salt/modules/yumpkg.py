@@ -169,7 +169,7 @@ def _check_32(arch):
 def _in_pkg_dict(name, pkgdict):
     '''
     Searches for name in a dictionary of {'<package_name>': '<version>'}
-    name can be "<package_name>-<version>" or 
+    name can be "<package_name>-<version>" or
     "<path>/<package_name>-<version>.rpm"
     name will be split into a package name and version and compared to
     the items in pkgdict after trimming any path, arch or file extension
@@ -189,6 +189,7 @@ def _in_pkg_dict(name, pkgdict):
                 return []
         pos = name.rfind("-", 0, pos - 1)
     return []
+
 
 def normalize_name(name):
     '''
@@ -860,10 +861,13 @@ def install(name=None,
     if reinstall:
         for pkgname in reinstall:
             if not pkgname in old.keys():
-                pkgname, version_num = _in_pkg_dict(pkgname, old)
-                if not pkgname in ret.keys():
-                    ret.update({pkgname: {'old': old.get(pkgname),
-                                          'new': new.get(pkgname)}})
+                try:
+                    pkgname, version_num = _in_pkg_dict(pkgname, old)
+                    if not pkgname in ret.keys():
+                        ret.update({pkgname: {'old': old.get(pkgname),
+                                              'new': new.get(pkgname)}})
+                except ValueError:
+                    pass
             else:
                 if not pkgname in ret.keys():
                     ret.update({pkgname: {'old': old.get(pkgname),
