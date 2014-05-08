@@ -288,6 +288,10 @@ def get_cloud_init_mime(cloud_init):
     '''
     Get a mime multipart encoded string from a cloud-init dict. Currently
     supports scripts and cloud-config.
+
+    CLI Example::
+
+        salt myminion boto.get_cloud_init_mime <cloud init>
     '''
     if isinstance(cloud_init, string_types):
         cloud_init = json.loads(cloud_init)
