@@ -968,12 +968,17 @@ def replace(path,
 
     :param append_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
+
+        .. versionadded:: Helium
     :param prepend_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
+
+        .. versionadded:: Helium
     :param not_found_content: Content to use for append/prepend if not found. If
         None (default), uses repl. Useful when repl uses references to group in
         pattern.
 
+        .. versionadded:: Helium
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
