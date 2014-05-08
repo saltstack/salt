@@ -18,13 +18,15 @@ try:
 except ImportError:
     HAS_REDIS = False
 
+__virtualname__ = 'redis'
+
 
 def __virtual__():
     '''
     Only load this module if redis python module is installed
     '''
     if HAS_REDIS:
-        return 'redis_exec'
+        return __virtualname__
     else:
         return False
 
