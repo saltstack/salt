@@ -43,6 +43,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 def send(kwargs, opts):
     '''
     Send an email with the data
