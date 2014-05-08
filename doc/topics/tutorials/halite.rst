@@ -77,7 +77,7 @@ install that piece as well. On RHEL based distros, use one of the following:
     $ yum install python-devel
     $ yum install gcc
     $ pip install gevent
-
+    $ pip install pyopenssl
 
 On Debian based distributions:
 
@@ -97,6 +97,7 @@ On Debian based distributions:
     $ apt-get install python-dev
     $ apt-get install libevent-dev
     $ pip install gevent
+    $ pip install pyopenssl
 
 
 Configuring Halite Permissions
@@ -201,14 +202,7 @@ module:
 
 .. note::
 
-    You might wish to target only a specific minion. The example below
-    targets all connected minions.
-
-.. code-block:: bash
-
-    salt '*' tls.create_self_signed_cert test 
-
-You can also use ``salt-call`` to create a self-signed cert.
+    The following command needs to be run on your salt master.
 
 .. code-block:: bash
 
