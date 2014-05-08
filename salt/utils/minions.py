@@ -105,7 +105,7 @@ class CkMinions(object):
         
         # If there is no directory return an empty list
         if os.path.isdir(pki_dir) is False:
-            return list()
+            return []
 
         os.chdir(pki_dir)
         ret = set(glob.glob(expr))
