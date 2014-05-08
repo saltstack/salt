@@ -14,7 +14,7 @@ The following fields can be set in the minion conf file:
     smtp.subject (optional, but helpful)
     smtp.gpgowne' (optional)
     smtp.fields (optional)
-    smtp.message (optional)
+    smtp.content (optional)
 
 There are a few things to keep in mind:
 
