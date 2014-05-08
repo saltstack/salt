@@ -679,7 +679,7 @@ class Single(object):
             self.sls_seed(*args, **kwargs)
         cmd_str = self._cmd_str()
 
-        for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd):
+        for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd_str):
             yield stdout, stderr, retcode
 
     def cmd_block(self, is_retry=False):
