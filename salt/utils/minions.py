@@ -102,7 +102,7 @@ class CkMinions(object):
         '''
         cwd = os.getcwd()
         pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
-        
+
         # If there is no directory return an empty list
         if os.path.isdir(pki_dir) is False:
             return []
