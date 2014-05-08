@@ -2842,22 +2842,16 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     return data
 
 
-def show_volume(name=None, kwargs=None, instance_id=None, call=None):
+def show_volume(kwargs=None, call=None):
     '''
-    Show volume details
+    Wrapper around describe_volumes.
+    Here just to keep functionality.
+    Might be depreciated later.
     '''
     if not kwargs:
         kwargs = {}
 
-    if 'volume_id' not in kwargs:
-        log.error('A volume_id is required.')
-        return False
-
-    params = {'Action': 'DescribeVolumes',
-              'VolumeId.1': kwargs['volume_id']}
-
-    data = query(params, return_root=True)
-    return data
+    return describe_volumes(kwargs, call)
 
 
 def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
@@ -2916,6 +2910,9 @@ def describe_volumes(kwargs=None, call=None):
             'or --function.'
         )
         return False
+
+    if not kwargs:
+        kwargs = {}
 
     params = {'Action': 'DescribeVolumes'}
 
