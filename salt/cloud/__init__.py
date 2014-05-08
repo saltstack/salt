@@ -533,10 +533,15 @@ class Cloud(object):
         # Optimize Providers
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
+            # Make temp query for this driver to avoid overwrite next
+            this_query = query
             for driver, details in drivers.iteritems():
+                # If driver has function list_nodes_min, just replace it
+                # with query param to check existing vms on this driver
+                # for minimum information, Othwise still use query param.
                 if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                    query = 'list_nodes_min'
-                fun = '{0}.{1}'.format(driver, query)
+                    this_query = 'list_nodes_min'
+                fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
                         'Public cloud provider {0} is not available'.format(
@@ -548,7 +553,7 @@ class Cloud(object):
                 multiprocessing_data.append({
                     'fun': fun,
                     'opts': opts,
-                    'query': query,
+                    'query': this_query,
                     'alias': alias,
                     'driver': driver
                 })
