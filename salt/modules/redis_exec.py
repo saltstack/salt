@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module to provide redis functionality to Salt
 
@@ -9,9 +10,6 @@ Module to provide redis functionality to Salt
         redis.db: 0
         redis.password: None
 '''
-
-# Import python libs
-import logging
 
 # Import third party libs
 try:
@@ -69,7 +67,7 @@ def config_get(pattern, host=None, port=None, db=None, password=None):
 
     .. code-block:: bash
 
-        salt '*' redis_exec.config_get \*
+        salt '*' redis_exec.config_get '*'
         salt '*' redis_exec.config_get port
     '''
     server = _connect(host, port, db, password)
