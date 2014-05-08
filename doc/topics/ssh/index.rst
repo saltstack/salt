@@ -132,3 +132,23 @@ and ``cachedir``. Those should point to a full path writable for the user.
 It's recommed not to modify /etc/salt for this purpose. Create a private copy
 of /etc/salt for the user and run the command with ``-c /new/config/path``.
 
+Define CLI Options with Saltfile
+================================
+
+If you are commonly passing in CLI options to ``salt-ssh``, you can create
+a ``Saltfile`` to automatically use these options. This is common if you're
+managing several different salt projects on the same server.
+
+So if you ``cd`` into a directory with a Saltfile with the following
+contents:
+
+.. code-block:: yaml
+
+    salt-ssh:
+      config_dir: path/to/config/dir
+      max_prox: 30
+
+Instead of having to call
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 \* test.ping`` you
+can call ``salt-ssh \* test.ping``.
+
