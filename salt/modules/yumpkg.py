@@ -861,13 +861,10 @@ def install(name=None,
     if reinstall:
         for pkgname in reinstall:
             if not pkgname in old.keys():
-                try:
-                    pkgname, version_num = _in_pkg_dict(pkgname, old)
-                    if not pkgname in ret.keys():
-                        ret.update({pkgname: {'old': old.get(pkgname),
-                                              'new': new.get(pkgname)}})
-                except ValueError:
-                    pass
+                pkglist = _in_pkg_dict(pkgname, old)
+                if len(pkglist) > 0 and not pkglist[0] in ret.keys():
+                    ret.update({pkglist[0]: {'old': old.get(pkglist[0]),
+                                          'new': new.get(pkglist[0])}})
             else:
                 if not pkgname in ret.keys():
                     ret.update({pkgname: {'old': old.get(pkgname),
