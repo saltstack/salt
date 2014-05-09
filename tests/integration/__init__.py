@@ -346,21 +346,19 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
-    def prep_ssh(self, sshd_port=2827):
+    def prep_ssh(self):
         '''
         Generate keys and start an ssh daemon on an alternate port
         '''
         keygen = salt.utils.which('ssh-keygen')
         sshd = salt.utils.which('sshd')
 
-        print(keygen)
-        print(sshd)
         if not (keygen and sshd):
             print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
             return
         if not os.path.exists(TMP_CONF_DIR):
             os.makedirs(TMP_CONF_DIR)
-        
+
         keygen_process = subprocess.Popen(
                 [keygen, '-t', 'ecdsa', '-b', '521', '-C', '"$(whoami)@$(hostname)-$(date -I)"', '-f', 'key_test', '-P', 'INSECURE_TEMPORARY_KEY_PASSWORD'],
                 stdout=subprocess.PIPE,
