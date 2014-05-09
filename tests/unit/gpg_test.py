@@ -16,8 +16,6 @@ ensure_in_syspath('../')
 import salt.loader
 import salt.config
 from salt.state import HighState
-from salt.renderers import gpg
-from salt.exceptions import SaltRenderError
 
 OPTS = salt.config.minion_config(None)
 OPTS['state_events'] = False
