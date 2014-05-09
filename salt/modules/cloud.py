@@ -298,3 +298,19 @@ def network_create(provider, names, **kwargs):
     '''
     client = _get_client()
     return client.extra_action(provider=provider, names=names, action='network_create', **kwargs)
+
+
+def virtual_interface_list(provider, names, **kwargs):
+    '''
+    Create private network
+    '''
+    client = _get_client()
+    return client.extra_action(provider=provider, names=names, action='virtual_interface_list', **kwargs)
+
+
+def virtual_interface_create(provider, names, **kwargs):
+    '''
+    Create private network
+    '''
+    client = _get_client()
+    return client.extra_action(provider=provider, names=names, action='virtual_interface_list', **kwargs)

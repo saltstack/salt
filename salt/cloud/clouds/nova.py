@@ -958,6 +958,7 @@ def volume_list(**kwargs):
     conn = get_conn()
     return conn.volume_list()
 
+
 def network_list(call=None, **kwargs):
     '''
     List private networks
@@ -965,9 +966,26 @@ def network_list(call=None, **kwargs):
     conn = get_conn()
     return conn.network_list()
 
+
 def network_create(name, **kwargs):
     '''
     Create private networks
     '''
     conn = get_conn()
     return conn.network_create(name, **kwargs)
+
+
+def virtual_interface_list(name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.virtual_interface_list(name)
+
+
+def virtual_interface_create(name, netname, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.virtual_interface_create(name, netname)

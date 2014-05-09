@@ -771,6 +771,31 @@ class SaltNova(object):
         net = nt_ks.networks.create(**kwargs)
         return net.__dict__
 
+    def _server_uuid_from_name(self, name):
+        '''
+        Get server uuid from name
+        '''
+        return self.server_list().get(name, {}).get('id', '')
+
+    def virtual_interface_list(self, name):
+        '''
+        Get virtual interfaces on slice
+        '''
+        nt_ks = self.compute_conn
+        nets = nt_ks.virtual_interfaces.list(self._server_uuid_from_name(name))
+        return [network.__dict__ for network in nets]
+
+    def virtual_interface_create(self, name, net_name):
+        '''
+        Add an interfaces to a slice
+        '''
+        nt_ks = self.compute_conn
+        serverid = self._server_uuid_from_name(name)
+        networkid = self.network_show(name).get('id', '')
+        nets = nt_ks.virtual_interface.create(networkid, serverid)
+        log.debug('Nets: \n{0}'.format(nets))
+        return nets
+
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.
 #
