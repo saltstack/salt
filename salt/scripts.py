@@ -11,6 +11,7 @@ import time
 
 # Import salt libs
 import salt
+import salt.exceptions
 import salt.cli
 try:
     import salt.cloud.cli
@@ -121,6 +122,8 @@ def salt_ssh():
         client.run()
     except KeyboardInterrupt:
         raise SystemExit('\nExiting gracefully on Ctrl-c')
+    except salt.exceptions.SaltClientError as err:
+        raise SystemExit(err)
 
 
 def salt_cloud():
