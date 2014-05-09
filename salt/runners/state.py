@@ -8,6 +8,7 @@ from __future__ import print_function
 import fnmatch
 import json
 import logging
+import sys
 
 # Import salt libs
 import salt.output
@@ -177,6 +178,7 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
         if fnmatch.fnmatch(ret['tag'], tagmatch):
             if not quiet:
                 print('{0}\t{1}'.format(ret['tag'], json.dumps(ret['data'])))
+                sys.stdout.flush()
 
             count -= 1
             logger.debug('Remaining event matches: {0}'.format(count))
