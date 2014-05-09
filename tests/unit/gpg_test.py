@@ -3,6 +3,7 @@
 # Import Python libs
 import os
 from collections import OrderedDict
+from imp import find_module
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -36,12 +37,9 @@ DECRYPTED_STRING = "I am not a secret anymore"
 SKIP = False
 
 try:
-    import gnupg
-    gpg.render('test')
-except SaltRenderError or ImportError:
+    find_module('gnupg')
+except ImportError:
     SKIP = True
-except Exception:
-    pass
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
