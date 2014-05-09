@@ -9,6 +9,7 @@ try:
     from novaclient.v1_1 import client
     import novaclient.auth_plugin
     import novaclient.exceptions
+    import novaclient.extension
     HAS_NOVA = True
 except ImportError:
     pass
@@ -119,6 +120,15 @@ class SaltNova(object):
 
         if not 'api_key' in self.kwargs.keys():
             self.kwargs['api_key'] = password
+        extensions = []
+        if 'extensions' in kwargs:
+            exts = []
+            for key, item in self.kwargs['extensions'].items():
+                mod = __import__(item.replace('-', '_'))
+                exts.append(
+                    novaclient.extension.Extension(key, mod)
+                )
+            self.kwargs['extensions'] = exts
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
@@ -710,6 +720,79 @@ class SaltNova(object):
         for item in nt_ks.items.list():
             ret.append(item.__dict__)
         return ret
+
+    def _network_show(self, name, network_lst):
+        '''
+        Parse the returned network list
+        '''
+        for net in network_lst:
+            if net.label == name:
+                return net.__dict__
+        return False
+
+    def network_show(self, name):
+        '''
+        Show network information
+        '''
+        nt_ks = self.compute_conn
+        net_list = nt_ks.networks.list()
+        return self._network_show(name, net_list)
+
+    def network_list(self):
+        '''
+        List extra private networks
+        '''
+        nt_ks = self.compute_conn
+        return [network.__dict__ for network in nt_ks.networks.list()]
+
+    def _sanatize_network_params(self, kwargs):
+        '''
+        Sanatize novaclient network parameters
+        '''
+        params = [
+            'label', 'bridge', 'bridge_interface', 'cidr', 'cidr_v6', 'dns1',
+            'dns2', 'fixed_cidr', 'gateway', 'gateway_v6', 'multi_host',
+            'priority', 'project_id', 'vlan_start', 'vpn_start'
+        ]
+
+        for variable in kwargs.keys():
+            if variable not in params:
+                del kwargs[variable]
+        return kwargs
+
+    def network_create(self, name, **kwargs):
+        '''
+        Create extra private network
+        '''
+        nt_ks = self.compute_conn
+        kwargs['label'] = name
+        kwargs = self._sanatize_network_params(kwargs)
+        net = nt_ks.networks.create(**kwargs)
+        return net.__dict__
+
+    def _server_uuid_from_name(self, name):
+        '''
+        Get server uuid from name
+        '''
+        return self.server_list().get(name, {}).get('id', '')
+
+    def virtual_interface_list(self, name):
+        '''
+        Get virtual interfaces on slice
+        '''
+        nt_ks = self.compute_conn
+        nets = nt_ks.virtual_interfaces.list(self._server_uuid_from_name(name))
+        return [network.__dict__ for network in nets]
+
+    def virtual_interface_create(self, name, net_name):
+        '''
+        Add an interfaces to a slice
+        '''
+        nt_ks = self.compute_conn
+        serverid = self._server_uuid_from_name(name)
+        networkid = self.network_show(net_name).get('id', '')
+        nets = nt_ks.virtual_interfaces.create(networkid, serverid)
+        return nets
 
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.
