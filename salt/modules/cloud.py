@@ -297,7 +297,7 @@ def network_list(provider):
 
     '''
     client = _get_client()
-    return client.extra_action(action='network_list', provider=provider)
+    return client.extra_action(action='network_list', provider=provider, names='names')
 
 
 def network_create(provider, names, **kwargs):
