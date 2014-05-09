@@ -305,6 +305,9 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
+        if self.parser.options.ssh:
+            self.prep_ssh()
+
         if self.parser.options.sysinfo:
             try:
                 print_header(
@@ -342,6 +345,45 @@ class TestDaemon(object):
             return self
         finally:
             self.post_setup_minions()
+
+    def prep_ssh(self, sshd_port=2827):
+        '''
+        Generate keys and start an ssh daemon on an alternate port
+        '''
+        keygen = salt.utils.which('ssh-keygen')
+        sshd = salt.utils.which('sshd')
+
+        print(keygen)
+        print(sshd)
+        if not (keygen and sshd):
+            print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
+            return
+        if not os.path.exists(TMP_CONF_DIR):
+            os.makedirs(TMP_CONF_DIR)
+        
+        keygen_process = subprocess.Popen(
+                [keygen, '-t', 'ecdsa', '-b', '521', '-C', '"$(whoami)@$(hostname)-$(date -I)"', '-f', 'key_test', '-P', 'INSECURE_TEMPORARY_KEY_PASSWORD'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+                cwd=TMP_CONF_DIR 
+        )
+        out, err = keygen_process.communicate()
+        if err:
+            print('ssh-keygen had errors: {0}'.format(err))
+        sshd_config_path = os.path.join(FILES, 'files/sshd_config')
+        shutil.copy(os.path.join(FILES, 'conf/sshd_config'), TMP_CONF_DIR)
+        auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+        with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+            ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
+        sshd_process = subprocess.Popen(
+                [sshd, '-f', 'sshd_config'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+                cwd=TMP_CONF_DIR
+        )
+        shutil.copy(os.path.join(FILES, 'conf/roster'), TMP_CONF_DIR)
 
     @property
     def client(self):
@@ -884,6 +926,13 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-ssh
+        '''
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
