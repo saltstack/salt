@@ -3122,6 +3122,10 @@ def describe_snapshots(kwargs=None, call=None):
 
     params = {'Action': 'DescribeSnapshots'}
 
+    # The AWS correct way is to use non-plurals like snapshot_id INSTEAD of snapshot_ids.
+    if 'snapshot_ids' in kwargs:
+        kwargs['snapshot_id'] = kwargs['snapshot_ids']
+
     if 'snapshot_id' in kwargs:
         snapshot_ids = kwargs['snapshot_id'].split(',')
         for snapshot_index, snapshot_id in enumerate(snapshot_ids):
