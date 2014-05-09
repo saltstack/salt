@@ -182,7 +182,10 @@ class SSH(object):
                     )
                 )
         if not os.path.isfile(priv):
-            salt.client.ssh.shell.gen_key(priv)
+            try:
+                salt.client.ssh.shell.gen_key(priv)
+            except OSError:
+                raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
         self.defaults = {
             'user': self.opts.get(
                 'ssh_user',
