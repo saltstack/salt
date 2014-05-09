@@ -260,6 +260,11 @@ else
     _unpack_salt_tarball
 fi
 
+_display "Deactivating temp virtualenv"
+deactivate
+_display "Destroying temp virtualenv at $venv_path"
+rm -rf "$venv_path"
+
 _display "Reading requirements from $requirements"
 deps=()
 for dep in `cat "$requirements" | awk '{print $1}'`; do
@@ -322,11 +327,6 @@ test "$return_code" -eq 0 || _error "Failed to install $salt_release. Aborting."
 _log 'Compressing man pages'
 output=`find "${pkgdir}${prefix}/share/man" -type f -not -name '*.gz' -exec gzip {} \;`
 _log "$output"
-
-_display "Deactivating temp virtualenv"
-deactivate
-_display "Destroying temp virtualenv at $venv_path"
-rm -rf "$venv_path"
 
 # Everything worked, make the shar
 test -n "$build_id" && build_id="-${build_id}"
