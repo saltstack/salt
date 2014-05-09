@@ -2566,7 +2566,7 @@ def append(name,
         text = tmpret['data']
 
     for item in range(len(text)):
-        if isinstance(item, integer_types):
+        if isinstance(text[item], integer_types):
             text[item] = str(text[item])
 
     if isinstance(text, string_types):
