@@ -957,3 +957,10 @@ def volume_list(**kwargs):
     '''
     conn = get_conn()
     return conn.volume_list()
+
+def network_list(call=None, **kwargs):
+    '''
+    Attach block volume
+    '''
+    conn = get_conn()
+    return conn.network_list()

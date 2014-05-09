@@ -9,6 +9,7 @@ try:
     from novaclient.v1_1 import client
     import novaclient.auth_plugin
     import novaclient.exceptions
+    import novaclient.extension
     HAS_NOVA = True
 except ImportError:
     pass
@@ -119,6 +120,15 @@ class SaltNova(object):
 
         if not 'api_key' in self.kwargs.keys():
             self.kwargs['api_key'] = password
+        extensions = []
+        if 'extensions' in kwargs:
+            exts = []
+            for key, item in self.kwargs['extensions'].items():
+                mod = __import__(item.replace('-','_'))
+                exts.append(
+                    novaclient.extension.Extension(key, mod)
+                )
+            self.kwargs['extensions'] = exts
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
@@ -710,6 +720,13 @@ class SaltNova(object):
         for item in nt_ks.items.list():
             ret.append(item.__dict__)
         return ret
+
+    def network_list(self):
+        '''
+        List extra private networks
+        '''
+        nt_ks = self.compute_conn
+        return [network.__dict__ for network in nt_ks.networks.list()]
 
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.

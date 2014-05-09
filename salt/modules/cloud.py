@@ -283,3 +283,7 @@ def volume_detach(provider, names, **kwargs):
     client = _get_client()
     info = client.volume_action(provider, names, action='detach', **kwargs)
     return info
+
+def network_list(provider):
+    client = _get_client()
+    return action(fun='network_list', provider=provider)
