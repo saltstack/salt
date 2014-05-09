@@ -313,4 +313,4 @@ def virtual_interface_create(provider, names, **kwargs):
     Create private network
     '''
     client = _get_client()
-    return client.extra_action(provider=provider, names=names, action='virtual_interface_list', **kwargs)
+    return client.extra_action(provider=provider, names=names, action='virtual_interface_create', **kwargs)

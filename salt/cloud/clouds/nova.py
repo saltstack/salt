@@ -983,9 +983,9 @@ def virtual_interface_list(name, **kwargs):
     return conn.virtual_interface_list(name)
 
 
-def virtual_interface_create(name, netname, **kwargs):
+def virtual_interface_create(name, net_name, **kwargs):
     '''
     Create private networks
     '''
     conn = get_conn()
-    return conn.virtual_interface_create(name, netname)
+    return conn.virtual_interface_create(name, net_name)

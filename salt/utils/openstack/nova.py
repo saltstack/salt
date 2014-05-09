@@ -791,9 +791,8 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         serverid = self._server_uuid_from_name(name)
-        networkid = self.network_show(name).get('id', '')
-        nets = nt_ks.virtual_interface.create(networkid, serverid)
-        log.debug('Nets: \n{0}'.format(nets))
+        networkid = self.network_show(net_name).get('id', '')
+        nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
 #The following is a list of functions that need to be incorporated in the
