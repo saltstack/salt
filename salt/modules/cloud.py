@@ -288,6 +288,13 @@ def volume_detach(provider, names, **kwargs):
 def network_list(provider):
     '''
     List private networks
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.network_list my-nova
+
     '''
     return client.extra_action(action='network_list', provider=provider)
 
@@ -295,6 +302,13 @@ def network_list(provider):
 def network_create(provider, names, **kwargs):
     '''
     Create private network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.network_create my-nova names=['salt'] cidr='192.168.100.0/24'
+
     '''
     client = _get_client()
     return client.extra_action(provider=provider, names=names, action='network_create', **kwargs)
@@ -302,7 +316,14 @@ def network_create(provider, names, **kwargs):
 
 def virtual_interface_list(provider, names, **kwargs):
     '''
-    Create private network
+    List virtual interfaces on a server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.virtual_interface_list my-nova names=['salt-master']
+
     '''
     client = _get_client()
     return client.extra_action(provider=provider, names=names, action='virtual_interface_list', **kwargs)
@@ -310,7 +331,14 @@ def virtual_interface_list(provider, names, **kwargs):
 
 def virtual_interface_create(provider, names, **kwargs):
     '''
-    Create private network
+    Attach private interfaces to a server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.virtual_interface_create my-nova names=['salt-master'] net_name='salt'
+
     '''
     client = _get_client()
     return client.extra_action(provider=provider, names=names, action='virtual_interface_create', **kwargs)
