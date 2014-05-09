@@ -960,7 +960,14 @@ def volume_list(**kwargs):
 
 def network_list(call=None, **kwargs):
     '''
-    Attach block volume
+    List private networks
     '''
     conn = get_conn()
     return conn.network_list()
+
+def network_create(name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.network_create(name, **kwargs)

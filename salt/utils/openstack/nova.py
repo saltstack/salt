@@ -728,6 +728,33 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         return [network.__dict__ for network in nt_ks.networks.list()]
 
+    def _sanatize_network_params(kwargs):
+        '''
+        Sanatize novaclient network parameters
+        '''
+        params = [
+            'label', 'bridge', 'bridge_interface', 'cidr', 'cidr_v6', 'dns1',
+            'dns2', 'fixed_cidr', 'gateway', 'gateway_v6', 'multi_host',
+            'priority', 'project_id', 'vlan_start', 'vpn_start'
+        ]
+
+        for variable in kwargs.keys():
+            if variable not in params:
+                del kwargs[variable]
+        return kwargs
+
+
+    def network_create(self, name, **kwargs):
+        '''
+        Create extra private network
+        '''
+        nt_ks = self.compute_conn
+        kwargs['label'] = name
+        kwargs = _sanatize_network_params(kwargs)
+        net = nt_ks.networks.create(**kwargs)
+        log.debug('Network: \n{0}'.format(net))
+        return net
+
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.
 #

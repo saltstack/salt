@@ -284,6 +284,18 @@ def volume_detach(provider, names, **kwargs):
     info = client.volume_action(provider, names, action='detach', **kwargs)
     return info
 
+
 def network_list(provider):
+    '''
+    List private networks
+    '''
     client = _get_client()
     return action(fun='network_list', provider=provider)
+
+
+def network_create(provider, names, **kwargs):
+    '''
+    Create private network
+    '''
+    client = _get_client()
+    return action(fun='network_create', provider=provider, names=names)
