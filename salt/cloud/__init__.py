@@ -330,7 +330,7 @@ class CloudClient(object):
                 mapper.create(vm_))
         return ret
 
-    def volume_action(self, provider, names, action, **kwargs):
+    def extra_action(self, names, provider, action, **kwargs):
         '''
         Perform actions with block storage devices
 
@@ -338,8 +338,11 @@ class CloudClient(object):
 
         .. code-block:: python
 
-            client.volume_action(names=['myblock'], action='create',
+            client.extra_action(names=['myblock'], action='volume_create',
                 provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
+            )
+            client.extra_action(names=['salt-net'], action='network_create',
+                provider='my-nova', kwargs={'cidr': '192.168.100.0/24'}
             )
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
@@ -353,35 +356,13 @@ class CloudClient(object):
 
         ret = {}
         for name in names:
-            volume_ = kwargs.copy()
-            volume_['name'] = name
-            volume_['provider'] = provider
-            volume_['profile'] = None
-            volume_['action'] = action
+            extra_ = kwargs.copy()
+            extra_['name'] = name
+            extra_['provider'] = provider
+            extra_['profile'] = None
+            extra_['action'] = action
             ret[name] = salt.utils.cloud.simple_types_filter(
-                mapper.volumes(volume_)
-            )
-        return ret
-
-    def network_action(self, names, provider, action, **kwargs):
-        mapper = salt.cloud.Map(self._opts_defaults())
-        providers = mapper.map_providers_parallel()
-        if provider in providers:
-            provider += ':{0}'.format(providers[provider].keys()[0])
-        else:
-            return False
-        if isinstance(names, str):
-            names = names.split(',')
-
-        ret = {}
-        for name in names:
-            network_ = kwargs.copy()
-            network_['name'] = name
-            network_['provider'] = provider
-            network_['profile'] = None
-            network_['action'] = action
-            ret[name] = salt.utils.cloud.simple_types_filter(
-                mapper.networks(network_)
+                mapper.extras(extra_)
             )
         return ret
 
@@ -1189,19 +1170,19 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def networks(self, network_):
+    def extras(self, extra_):
         '''
-        Volume actions
+        Extra actions
         '''
         output = {}
 
-        alias, driver = network_['provider'].split(':')
-        fun = '{0}.{1}'.format(driver, network_['action'])
+        alias, driver = extra_['provider'].split(':')
+        fun = '{0}.{1}'.format(driver, extra_['action'])
         if fun not in self.clouds:
             log.error(
                 'Creating {0[name]!r} using {0[provider]!r} as the provider '
                 'cannot complete since {1!r} is not available'.format(
-                    network_,
+                    extra_,
                     driver
                 )
             )
@@ -1210,50 +1191,16 @@ class Cloud(object):
         try:
             with context.func_globals_inject(
                 self.clouds[fun],
-                __active_provider_name__=network_['provider']
+                __active_provider_name__=extra_['provider']
             ):
-                output = self.clouds[fun](**network_)
+                output = self.clouds[fun](**extra_)
         except KeyError as exc:
             log.exception(
                 (
                     'Failed to perform {0[provider]}.{0[action]} '
                     'on {0[name]}. '
                     'Configuration value {1} needs to be set'
-                ).format(network_, exc)
-            )
-        return output
-
-    def volumes(self, volume_):
-        '''
-        Volume actions
-        '''
-        output = {}
-
-        alias, driver = volume_['provider'].split(':')
-        fun = '{0}.volume_{1}'.format(driver, volume_['action'])
-        if fun not in self.clouds:
-            log.error(
-                'Creating {0[name]!r} using {0[provider]!r} as the provider '
-                'cannot complete since {1!r} is not available'.format(
-                    volume_,
-                    driver
-                )
-            )
-            return
-
-        try:
-            with context.func_globals_inject(
-                self.clouds[fun],
-                __active_provider_name__=volume_['provider']
-            ):
-                output = self.clouds[fun](**volume_)
-        except KeyError as exc:
-            log.exception(
-                (
-                    'Failed to perform {0[provider]}.volume_{0[action]} '
-                    'on {0[name]}. '
-                    'Configuration value {1} needs to be set'
-                ).format(volume_, exc)
+                ).format(extra_, exc)
             )
         return output
 

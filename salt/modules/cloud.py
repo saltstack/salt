@@ -213,7 +213,7 @@ def volume_list(provider):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, 'name', action='list')
+    info = client.extra_action(provider, 'name', action='volume_list')
     return info['name']
 
 
@@ -229,7 +229,7 @@ def volume_delete(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='delete', **kwargs)
+    info = client.extra_action(provider, names, action='volume_delete', **kwargs)
     return info
 
 
@@ -246,7 +246,7 @@ def volume_create(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='create', **kwargs)
+    info = client.extra_action(provider, names, action='volume_create', **kwargs)
     return info
 
 
@@ -264,7 +264,7 @@ def volume_attach(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='attach', **kwargs)
+    info = client.extra_action(provider, names, action='volume_attach', **kwargs)
     return info
 
 
@@ -281,7 +281,7 @@ def volume_detach(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='detach', **kwargs)
+    info = client.extra_action(provider, names, action='volume_detach', **kwargs)
     return info
 
 
@@ -289,7 +289,7 @@ def network_list(provider):
     '''
     List private networks
     '''
-    return client.network_action(action='network_list', provider=provider)
+    return client.extra_action(action='network_list', provider=provider)
 
 
 def network_create(provider, names, **kwargs):
@@ -297,4 +297,4 @@ def network_create(provider, names, **kwargs):
     Create private network
     '''
     client = _get_client()
-    return client.network_action(provider=provider, names=names, action='network_create', **kwargs)
+    return client.extra_action(provider=provider, names=names, action='network_create', **kwargs)
