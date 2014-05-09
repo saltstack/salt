@@ -344,6 +344,8 @@ class SSH(object):
         returned = set()
         rets = set()
         init = False
+        if not self.targets:
+            raise salt.exceptions.SaltClientError('No matching targets found in roster.')
         while True:
             if len(running) < self.opts.get('ssh_max_procs', 25) and not init:
                 try:
