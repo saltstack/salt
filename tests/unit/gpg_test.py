@@ -3,11 +3,12 @@
 # Import Python libs
 import os
 from collections import OrderedDict
+from imp import find_module
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, Mock
+from salttesting.mock import patch, Mock, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../')
 
@@ -31,9 +32,17 @@ I AM SO SECRET!
 -----END PGP MESSAGE-----
 """
 DECRYPTED_STRING = "I am not a secret anymore"
+SKIP = False
+
+try:
+    find_module('gnupg')
+except ImportError:
+    SKIP = True
 
 
-class PyDSLRendererTestCase(TestCase):
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(SKIP, "GPG must be installed")
+class GPGTestCase(TestCase):
 
     def setUp(self):
         self.HIGHSTATE = HighState(OPTS)
@@ -47,58 +56,48 @@ class PyDSLRendererTestCase(TestCase):
             data, env=env, sls=sls, **kws
         )
 
-    def make_decryption_mock(self, gpg_mock, decrypted_string):
+    def make_decryption_mock(self):
         decrypted_data_mock = Mock()
         decrypted_data_mock.ok = True
         decrypted_data_mock.__str__ = lambda x: DECRYPTED_STRING
-
-        decrypt_mock = Mock(return_value=decrypted_data_mock)
-        gpg_mock.decrypt = decrypt_mock
-
-        return gpg_mock
+        return decrypted_data_mock
 
     def make_nested_object(self, s):
         return OrderedDict([
-            ('array_key', [1, False, s])
+            ('array_key', [1, False, s]),
             ('string_key', "A Normal String"),
             ('dict_key', {1: None}),
-            ('obj_key', object()),
         ])
 
     @patch('gnupg.GPG')
     def test_homedir_is_passed_to_gpg(self, gpg_mock):
         self.render_sls({})
-        gpg_mock.assert_called_with(OPTS['gpg_keydir'])
+        gpg_mock.assert_called_with(gnupghome=OPTS['gpg_keydir'])
 
     def test_normal_string_is_unchanged(self):
         s = 'I am just another string'
         new_s = self.render_sls(s)
         self.assertEqual(s, new_s)
 
-    @patch('gnupg.GPG')
-    def test_encrypted_string_is_decrypted(self, gpg_mock):
-        gpg_mock = self.make_decryption_mock(gpg_mock)
-
-        new_s = self.render_sls(ENCRYPTED_STRING)
+    def test_encrypted_string_is_decrypted(self):
+        with patch('gnupg.GPG.decrypt', return_value=self.make_decryption_mock()):
+            new_s = self.render_sls(ENCRYPTED_STRING)
         self.assertEqual(new_s, DECRYPTED_STRING)
 
-    @patch('gnupg.GPG')
-    def test_encrypted_string_is_unchanged_when_gpg_fails(self, gpg_mock):
-        decrypted_data_mock = Mock()
-        decrypted_data_mock.ok = False
-
-        decrypt_mock = Mock(return_value=decrypted_data_mock)
-        gpg_mock.decrypt = decrypt_mock
-
-        new_s = self.render_sls(ENCRYPTED_STRING)
+    def test_encrypted_string_is_unchanged_when_gpg_fails(self):
+        d_mock = self.make_decryption_mock()
+        d_mock.ok = False
+        with patch('gnupg.GPG.decrypt', return_value=d_mock):
+            new_s = self.render_sls(ENCRYPTED_STRING)
         self.assertEqual(new_s, ENCRYPTED_STRING)
 
-    @patch('gnupg.GPG')
-    def test_nested_object_is_decrypted(self, gpg_mock):
-        gpg_mock = self.make_decryption_mock(gpg_mock)
-
+    def test_nested_object_is_decrypted(self):
         encrypted_o = self.make_nested_object(ENCRYPTED_STRING)
         decrypted_o = self.make_nested_object(DECRYPTED_STRING)
-
-        new_o = self.render_sls(encrypted_o)
+        with patch('gnupg.GPG.decrypt', return_value=self.make_decryption_mock()):
+            new_o = self.render_sls(encrypted_o)
         self.assertEqual(new_o, decrypted_o)
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(GPGTestCase, needs_daemon=False)
