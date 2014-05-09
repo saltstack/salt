@@ -124,7 +124,7 @@ class SaltNova(object):
         if 'extensions' in kwargs:
             exts = []
             for key, item in self.kwargs['extensions'].items():
-                mod = __import__(item.replace('-','_'))
+                mod = __import__(item.replace('-', '_'))
                 exts.append(
                     novaclient.extension.Extension(key, mod)
                 )
@@ -759,7 +759,6 @@ class SaltNova(object):
             if variable not in params:
                 del kwargs[variable]
         return kwargs
-
 
     def network_create(self, name, **kwargs):
         '''

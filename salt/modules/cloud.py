@@ -296,6 +296,7 @@ def network_list(provider):
         salt minionname cloud.network_list my-nova
 
     '''
+    client = _get_client()
     return client.extra_action(action='network_list', provider=provider)
 
 
