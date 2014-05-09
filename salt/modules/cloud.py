@@ -289,8 +289,7 @@ def network_list(provider):
     '''
     List private networks
     '''
-    client = _get_client()
-    return action(fun='network_list', provider=provider)
+    return client.network_action(action='network_list', provider=provider)
 
 
 def network_create(provider, names, **kwargs):
@@ -298,4 +297,4 @@ def network_create(provider, names, **kwargs):
     Create private network
     '''
     client = _get_client()
-    return action(fun='network_create', provider=provider, names=names)
+    return client.network_action(provider=provider, names=names, action='network_create', **kwargs)

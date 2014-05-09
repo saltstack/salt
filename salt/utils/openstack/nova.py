@@ -721,6 +721,23 @@ class SaltNova(object):
             ret.append(item.__dict__)
         return ret
 
+    def _network_show(self, name, network_lst):
+        '''
+        Parse the returned network list
+        '''
+        for net in network_lst:
+            if net.label == name:
+                return net.__dict__
+        return False
+
+    def network_show(self, name):
+        '''
+        Show network information
+        '''
+        nt_ks = self.compute_conn
+        net_list = nt_ks.networks.list()
+        return self._network_show(name, net_list)
+
     def network_list(self):
         '''
         List extra private networks
@@ -728,7 +745,7 @@ class SaltNova(object):
         nt_ks = self.compute_conn
         return [network.__dict__ for network in nt_ks.networks.list()]
 
-    def _sanatize_network_params(kwargs):
+    def _sanatize_network_params(self, kwargs):
         '''
         Sanatize novaclient network parameters
         '''
@@ -750,10 +767,9 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         kwargs['label'] = name
-        kwargs = _sanatize_network_params(kwargs)
+        kwargs = self._sanatize_network_params(kwargs)
         net = nt_ks.networks.create(**kwargs)
-        log.debug('Network: \n{0}'.format(net))
-        return net
+        return net.__dict__
 
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.

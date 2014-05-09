@@ -363,6 +363,28 @@ class CloudClient(object):
             )
         return ret
 
+    def network_action(self, names, provider, action, **kwargs):
+        mapper = salt.cloud.Map(self._opts_defaults())
+        providers = mapper.map_providers_parallel()
+        if provider in providers:
+            provider += ':{0}'.format(providers[provider].keys()[0])
+        else:
+            return False
+        if isinstance(names, str):
+            names = names.split(',')
+
+        ret = {}
+        for name in names:
+            network_ = kwargs.copy()
+            network_['name'] = name
+            network_['provider'] = provider
+            network_['profile'] = None
+            network_['action'] = action
+            ret[name] = salt.utils.cloud.simple_types_filter(
+                mapper.networks(network_)
+            )
+        return ret
+
     def action(
         self,
         fun=None,
@@ -1165,6 +1187,40 @@ class Cloud(object):
                 timeout=self.opts['timeout'] * 60
             )
             output['ret'] = action_out
+        return output
+
+    def networks(self, network_):
+        '''
+        Volume actions
+        '''
+        output = {}
+
+        alias, driver = network_['provider'].split(':')
+        fun = '{0}.{1}'.format(driver, network_['action'])
+        if fun not in self.clouds:
+            log.error(
+                'Creating {0[name]!r} using {0[provider]!r} as the provider '
+                'cannot complete since {1!r} is not available'.format(
+                    network_,
+                    driver
+                )
+            )
+            return
+
+        try:
+            with context.func_globals_inject(
+                self.clouds[fun],
+                __active_provider_name__=network_['provider']
+            ):
+                output = self.clouds[fun](**network_)
+        except KeyError as exc:
+            log.exception(
+                (
+                    'Failed to perform {0[provider]}.{0[action]} '
+                    'on {0[name]}. '
+                    'Configuration value {1} needs to be set'
+                ).format(network_, exc)
+            )
         return output
 
     def volumes(self, volume_):
