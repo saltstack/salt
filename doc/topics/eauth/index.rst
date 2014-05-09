@@ -62,7 +62,7 @@ append a ``%`` to the ID:
     external_auth:
       pam:
         admins%:
-          - '*'
+          - '*':
             - 'pkg.*'
 
 Tokens

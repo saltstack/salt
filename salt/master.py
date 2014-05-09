@@ -2341,13 +2341,34 @@ class ClearFuncs(object):
                 )
                 return ''
             try:
-                name = self.loadauth.load_name(extra)
+                name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
+                groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
+                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+
+                # First we need to know if the user is allowed to proceed via any of their group memberships.
+                group_auth_match = False
+                for group_config in group_perm_keys:
+                    group_config = group_config.rstrip('%')
+                    for group in groups:
+                        if group == group_config:
+                            group_auth_match = True
+                # If a group_auth_match is set it means only that we have a user which matches at least one or more
+                # of the groups defined in the configuration file.
+
+                # If neither a catchall, a named membership or a group membership is found, there is no need
+                # to continue. Simply deny the user access.
                 if not ((name in self.opts['external_auth'][extra['eauth']]) |
-                        ('*' in self.opts['external_auth'][extra['eauth']])):
+                        ('*' in self.opts['external_auth'][extra['eauth']]) |
+                        group_auth_match):
+                        # A group def is defined and the user is a member
+                        #[group for groups in ['external_auth'][extra['eauth']]]):
+                    # Auth successful, but no matching user found in config
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
+
+                # Perform the actual authentication. If we fail here, do not continue.
                 if not self.loadauth.time_auth(extra):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
@@ -2360,13 +2381,17 @@ class ClearFuncs(object):
                 )
                 return ''
 
-            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
+#            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
 
-            # Auth has succeeded, get groups this user is a member of
-            groups = self.loadauth.get_groups(extra)
+            # We now have an authenticated session and it is time to determine
+            # what the user has access to.
 
-            if groups:
-                auth_list = self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
+            auth_list = []
+            if name in self.opts['external_auth'][extra['eauth']]:
+                auth_list = self.opts['external_auth'][extra['eauth']][name]
+            if group_auth_match:
+                auth_list.append(self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list))
+
             good = self.ckminions.auth_check(
                     auth_list,
                     clear_load['fun'],
