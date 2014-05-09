@@ -127,10 +127,10 @@ main()
         if "$py_cmd" -c 'import sys; sys.exit(not sys.hexversion >= 0x02060000);' >/dev/null 2>&1; then
             local py_cmd_path
             py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
-            echo "FOUND: $py_cmd_path" >&2
             exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")' -- {{SSH_PY_ARGS}}
+            exit 0
         else
-            echo "WARNING: $py_cmd not found or too old" >&2
+            continue
         fi
     done
 
@@ -726,7 +726,7 @@ class Single(object):
         else:
             # RSTR was found in stdout but not stderr - which means there
             # is a SHIM command for the master.
-            shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
+            shim_command = re.split(r'\r?\n', stdout, 1)[1].strip()
             if 'deploy' == shim_command and retcode == salt.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
