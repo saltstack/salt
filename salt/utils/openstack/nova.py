@@ -301,11 +301,17 @@ class SaltNova(object):
         Delete a block device
         '''
         nt_ks = self.volume_conn
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except:
+            raise SaltCloudSystemExit('Unable to find {0} volume.'.format(name))
         if volume['status'] == 'deleted':
             return volume
-        response = nt_ks.volumes.delete(volume['id'])
-        return self.volume_show(name)
+        try:
+            response = nt_ks.volumes.delete(volume['id'])
+            return volume
+        except:
+            return False
 
     def volume_detach(self,
                       name,
