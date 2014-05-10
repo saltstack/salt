@@ -364,7 +364,7 @@ class TestDaemon(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 close_fds=True,
-                cwd=TMP_CONF_DIR 
+                cwd=TMP_CONF_DIR
         )
         out, err = keygen_process.communicate()
         if err:
