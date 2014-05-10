@@ -2754,7 +2754,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     return query(requesturl=requesturl)
 
 
-def create_volume(kwargs=None, call=None):
+def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
     '''
@@ -2790,12 +2790,15 @@ def create_volume(kwargs=None, call=None):
     log.debug(params)
 
     data = query(params, return_root=True)
+    volume_id = {k: v for d in data for k, v in d.items()}['volumeId']
 
-    # Wait a few seconds to make sure the volume
-    # has had a chance to shift to available state
-    # TODO: Should probably create a util method to
-    # wait for available status and fail on others
-    time.sleep(5)
+    # Waits till volume is available
+    if wait_to_finish:
+        salt.utils.cloud.run_func_until_ret_arg(fun=describe_volumes,
+                                                kwargs={'volume_id': volume_id},
+                                                fun_call=call,
+                                                argument_being_watched='status',
+                                                required_argument_response='available')
 
     return data
 
@@ -2999,7 +3002,7 @@ def delete_keypair(kwargs=None, call=None):
     return data
 
 
-def create_snapshot(kwargs=None, call=None):
+def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a snapshot
     '''
@@ -3015,7 +3018,7 @@ def create_snapshot(kwargs=None, call=None):
         return False
 
     if 'description' not in kwargs:
-        kwargs['description'] = 'pew'
+        kwargs['description'] = ''
 
     params = {'Action': 'CreateSnapshot'}
 
@@ -3028,6 +3031,16 @@ def create_snapshot(kwargs=None, call=None):
     log.debug(params)
 
     data = query(params, return_root=True)
+    snapshot_id = { k: v for d in data for k, v in d.items()}['snapshotId']
+
+    # Waits till volume is available
+    if wait_to_finish:
+        salt.utils.cloud.run_func_until_ret_arg(fun=describe_snapshots,
+                                                kwargs={'snapshot_id': snapshot_id},
+                                                fun_call=call,
+                                                argument_being_watched='status',
+                                                required_argument_response='completed')
+
     return data
 
 
