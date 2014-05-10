@@ -2,6 +2,7 @@
 '''
 Nova class
 '''
+from __future__ import with_statement
 
 # Import third party libs
 HAS_NOVA = False
