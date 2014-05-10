@@ -144,30 +144,30 @@ class SaltNova(object):
             self.catalog = \
                 conn.client.service_catalog.catalog['access']['serviceCatalog']
 
-            if not region_name is None:
-                servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
-                self.kwargs['bypass_url'] = get_entry(
-                    servers_endpoints,
-                    'region',
-                    region_name.upper()
-                )['publicURL']
+        if not region_name is None:
+            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
+            self.kwargs['bypass_url'] = get_entry(
+                servers_endpoints,
+                'region',
+                region_name.upper()
+            )['publicURL']
 
-            self.compute_conn = client.Client(**self.kwargs)
+        self.compute_conn = client.Client(**self.kwargs)
 
-            if not region_name is None:
-                servers_endpoints = get_entry(
-                    self.catalog,
-                    'type',
-                    'volume'
-                )['endpoints']
-                self.kwargs['bypass_url'] = get_entry(
-                    servers_endpoints,
-                    'region',
-                    region_name.upper()
-                )['publicURL']
+        if not region_name is None:
+            servers_endpoints = get_entry(
+                self.catalog,
+                'type',
+                'volume'
+            )['endpoints']
+            self.kwargs['bypass_url'] = get_entry(
+                servers_endpoints,
+                'region',
+                region_name.upper()
+            )['publicURL']
 
-            self.kwargs['service_type'] = 'volume'
-            self.volume_conn = client.Client(**self.kwargs)
+        self.kwargs['service_type'] = 'volume'
+        self.volume_conn = client.Client(**self.kwargs)
 
     def get_catalog(self):
         '''
