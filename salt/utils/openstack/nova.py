@@ -160,7 +160,7 @@ class SaltNova(object):
                 'type',
                 'volume'
             )['endpoints']
-            kwargs['bypass_url'] = get_entry(
+            self.kwargs['bypass_url'] = get_entry(
                 servers_endpoints,
                 'region',
                 region_name.upper()
