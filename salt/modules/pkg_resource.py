@@ -207,7 +207,7 @@ def sort_pkglist(pkgs):
     # so long as the sorting is consistent.
     try:
         for key in pkgs.keys():
-            pkgs[key].sort()
+            pkgs[key] = sorted(set(pkgs[key]))
     except AttributeError as e:
         log.exception(e)
 
