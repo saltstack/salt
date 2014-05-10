@@ -953,7 +953,7 @@ def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
 
 def volume_list(**kwargs):
     '''
-    Attach block volume
+    List block devices
     '''
     conn = get_conn()
     return conn.volume_list()

@@ -213,7 +213,7 @@ def volume_list(provider):
 
     '''
     client = _get_client()
-    info = client.extra_action(provider, 'name', action='volume_list')
+    info = client.extra_action(action='volume_list', provider=provider, names='name')
     return info['name']
 
 
@@ -229,7 +229,7 @@ def volume_delete(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.extra_action(provider, names, action='volume_delete', **kwargs)
+    info = client.extra_action(provider=provider, names=names, action='volume_delete', **kwargs)
     return info
 
 
@@ -246,7 +246,7 @@ def volume_create(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.extra_action(provider, names, action='volume_create', **kwargs)
+    info = client.extra_action(action='volume_create', names=names, provider=provider, **kwargs)
     return info
 
 
@@ -264,7 +264,7 @@ def volume_attach(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.extra_action(provider, names, action='volume_attach', **kwargs)
+    info = client.extra_action(provider=provider, names=names, action='volume_attach', **kwargs)
     return info
 
 
@@ -281,7 +281,7 @@ def volume_detach(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.extra_action(provider, names, action='volume_detach', **kwargs)
+    info = client.extra_action(provider=provider, names=names, action='volume_detach', **kwargs)
     return info
 
 
