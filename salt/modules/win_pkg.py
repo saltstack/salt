@@ -76,38 +76,35 @@ def latest_version(*names, **kwargs):
     if salt.utils.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
-    pkgs = list_pkgs()
+    installed_pkgs = list_pkgs(versions_as_list=True)
+    log.trace('List of installed packages: {0}'.format(installed_pkgs))
+
+    # iterate over all requested package names
     for name in names:
-        candidate = '0'
-        version_num = '0'
-        pkginfo = _get_package_info(name)
-        if not pkginfo:
-            log.error('Unable to locate package {0}'.format(name))
-            continue
-        if len(pkginfo) == 1:
-            candidate = pkginfo.keys()[0]
-            full_name = pkginfo[candidate]['full_name']
-            ret[name] = ''
-            if full_name in pkgs:
-                version_num = pkgs[full_name]
-            if salt.utils.compare_versions(ver1=str(candidate),
+        latest_installed = '0'
+        latest_available = '0'
+
+        # get latest installed version of package
+        if name in installed_pkgs:
+            log.trace('Sorting out the latest available version of {0}'.format(name))
+            latest_installed = sorted(installed_pkgs[name], cmp=_reverse_cmp_pkg_versions).pop()
+            log.debug('Latest installed version of package {0} is {1}'.format(name, latest_installed))
+
+        # get latest available (from win_repo) version of package
+        pkg_info = _get_package_info(name)
+        log.trace('Raw win_repo pkg_info for {0} is {1}'.format(name, pkg_info))
+        latest_available = _get_latest_pkg_version(pkg_info)
+        if latest_available:
+            log.debug('Latest available version of package {0} is {1}'.format(name, latest_available))
+
+            # check, whether latest available version is newer than latest installed version
+            if salt.utils.compare_versions(ver1=str(latest_available),
                                            oper='>',
-                                           ver2=str(version_num)):
-                ret[name] = candidate
-            continue
-        for ver in pkginfo.keys():
-            if salt.utils.compare_versions(ver1=str(ver),
-                                           oper='>',
-                                           ver2=str(candidate)):
-                candidate = ver
-        full_name = pkginfo[candidate]['full_name']
-        ret[name] = ''
-        if full_name in pkgs:
-            version_num = pkgs[full_name]
-        if salt.utils.compare_versions(ver1=str(candidate),
-                                       oper='>',
-                                       ver2=str(version_num)):
-            ret[name] = candidate
+                                           ver2=str(latest_installed)):
+                log.debug('Upgrade of {0} from {1} to {2} is available'.format(name, latest_installed, latest_available))
+                ret[name] = latest_available
+            else:
+                log.debug('No newer version than {0} of {1} is available'.format(latest_installed, name))
     if len(names) == 1:
         return ret[names[0]]
     return ret
