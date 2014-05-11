@@ -1025,6 +1025,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
+            show_timeout=False,
             show_jid=False):
         '''
         Get the returns for the command line interface via the event system
@@ -1074,7 +1075,7 @@ class LocalClient(object):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > timeout_at:
-                if verbose:
+                if verbose or show_timeout:
                     if self.opts.get('minion_data_cache', False) \
                             or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
