@@ -419,7 +419,7 @@ def run(options):
             # Let's find out if the installed version matches the passed in pillar
             # information
             print('Grabbing bootstrapped minion version information ... ')
-            cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name))
+            cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(options, vm_name))
             print('Running CMD: {0}'.format(cmd))
             sys.stdout.flush()
             proc = subprocess.Popen(
@@ -482,7 +482,7 @@ def run(options):
         '{target}', 'state.sls', '{prep_sls}', 'pillar="{pillar}"'
     ])
 
-    cmd = ' '.join(cmd).format(target=build_minion_target(opts, vm_name),
+    cmd = ' '.join(cmd).format(target=build_minion_target(options, vm_name),
                                prep_sls=options.prep_sls,
                                pillar=build_pillar_data(options))
     print('Running CMD: {0}'.format(cmd))
@@ -530,7 +530,7 @@ def run(options):
             '{target}', 'state.sls', '{prep_sls_2}', 'pillar="{pillar}"'
         ])
 
-        cmd = ' '.join(cmd).format(target=build_minion_target(opts, vm_name),
+        cmd = ' '.join(cmd).format(target=build_minion_target(options, vm_name),
                                    prep_sls_2=options.prep_sls_2,
                                    pillar=build_pillar_data(options))
         print('Running CMD: {0}'.format(cmd))
@@ -572,7 +572,7 @@ def run(options):
             cmd.extend(['salt', '-t', '100', '--out=json'])
 
         cmd.extend([
-            build_minion_target(opts, vm_name),
+            build_minion_target(options, vm_name),
             'git.remote_get', '/testing'
         ])
 
@@ -635,7 +635,7 @@ def run(options):
                 cmd.append('--no-color')
 
         cmd.extend([
-            build_minion_target(opts, vm_name),
+            build_minion_target(options, vm_name),
             'git.revision', '/testing'
         ])
 
@@ -694,7 +694,7 @@ def run(options):
             cmd.append('--no-color')
 
     cmd.extend([
-        build_minion_target(opts, vm_name),
+        build_minion_target(options, vm_name),
         'state.sls',
         options.sls,
         'pillar="{0}"'.format(build_pillar_data(options))
