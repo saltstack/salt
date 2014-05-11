@@ -357,8 +357,8 @@ class SaltNova(object):
         '''
         try:
             volume = self.volume_show(name)
-        except keyerror as exc:
-            raise saltcloudsystemexit('unable to find {0} volume: {1}'.format(name, exc))
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
             server.id,
