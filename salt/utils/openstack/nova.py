@@ -2,6 +2,7 @@
 '''
 Nova class
 '''
+from __future__ import with_statement
 
 # Import third party libs
 HAS_NOVA = False
@@ -132,17 +133,20 @@ class SaltNova(object):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        conn = client.Client(**self.kwargs)
-        try:
-            conn.client.authenticate()
-        except novaclient.exceptions.AmbiguousEndpoints:
-            raise SaltCloudSystemExit(
-                "Nova provider requires a 'region_name' to be specified"
-            )
+        if not hasattr(client.Client, '__exit__'):
+            raise SaltCloudSystemExit("Newer version of novaclient required for __exit__.")
 
-        self.kwargs['auth_token'] = conn.client.auth_token
-        self.catalog = \
-            conn.client.service_catalog.catalog['access']['serviceCatalog']
+        with client.Client(**self.kwargs) as conn:
+            try:
+                conn.client.authenticate()
+            except novaclient.exceptions.AmbiguousEndpoints:
+                raise SaltCloudSystemExit(
+                    "Nova provider requires a 'region_name' to be specified"
+                )
+
+            self.kwargs['auth_token'] = conn.client.auth_token
+            self.catalog = \
+                conn.client.service_catalog.catalog['access']['serviceCatalog']
 
         if not region_name is None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
@@ -301,11 +305,14 @@ class SaltNova(object):
         Delete a block device
         '''
         nt_ks = self.volume_conn
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         if volume['status'] == 'deleted':
             return volume
         response = nt_ks.volumes.delete(volume['id'])
-        return self.volume_show(name)
+        return volume
 
     def volume_detach(self,
                       name,
@@ -313,7 +320,10 @@ class SaltNova(object):
         '''
         Detach a block device
         '''
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         if not volume['attachments']:
             return True
         response = self.compute_conn.volumes.delete_server_volume(
@@ -348,7 +358,10 @@ class SaltNova(object):
         '''
         Attach a block device
         '''
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
             server.id,
@@ -669,7 +682,10 @@ class SaltNova(object):
         Show details of one server
         '''
         ret = {}
-        servers = self.server_list_detailed()
+        try:
+            servers = self.server_list_detailed()
+        except AttributeError as exc:
+            raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
         for server_name, server in servers.iteritems():
             if str(server['id']) == server_id:
                 ret[server_name] = server
