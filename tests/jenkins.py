@@ -343,36 +343,36 @@ def download_remote_logs(options):
         time.sleep(0.25)
 
 
-def run(opts):
+def run(options):
     '''
     RUN!
     '''
     vm_name = os.environ.get(
-        'JENKINS_LXC_VM_NAME' if opts.lxc else 'JENKINS_SALTCLOUD_VM_NAME',
-        generate_vm_name(opts)
+        'JENKINS_LXC_VM_NAME' if options.lxc else 'JENKINS_SALTCLOUD_VM_NAME',
+        generate_vm_name(options)
     )
 
-    if opts.download_remote_reports:
-        opts.download_coverage_report = vm_name
-        opts.download_unittest_reports = vm_name
+    if options.download_remote_reports:
+        options.download_coverage_report = vm_name
+        options.download_unittest_reports = vm_name
 
     cmd = []
-    if opts.peer:
+    if options.peer:
         cmd.extend(['salt-call', 'publish.runner'])
     else:
         cmd.append('salt-run')
 
-    if opts.lxc:
+    if options.lxc:
         cmd.extend(['lxc.init', vm_name, 'template={provider}'])
     else:
         cmd.extend(['cloud.profile', '{provider}_{platform}', vm_name])
 
-    if not opts.lxc:
-        if opts.bootstrap_salt_commit is not None:
-            if opts.bootstrap_salt_url is None:
-                opts.bootstrap_salt_url = 'https://github.com/saltstack/salt.git'
+    if not options.lxc:
+        if options.bootstrap_salt_commit is not None:
+            if options.bootstrap_salt_url is None:
+                options.bootstrap_salt_url = 'https://github.com/saltstack/salt.git'
 
-            if opts.peer:
+            if options.peer:
                 cmd.extend(['salt-call', 'publish.runner'])
             else:
                 cmd.append('salt-run')
@@ -384,7 +384,7 @@ def run(opts):
         else:
             cmd.extend(['--script-args', '"-D"'])
 
-    cmd = ' '.join(cmd).format(**opts.__dict__)
+    cmd = ' '.join(cmd).format(**options.__dict__)
 
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
@@ -403,8 +403,8 @@ def run(opts):
     if retcode != 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(opts)
+        if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+            delete_vm(options)
         sys.exit(retcode)
 
     print('VM Bootstrapped. Exit code: {0}'.format(retcode))
@@ -414,8 +414,8 @@ def run(opts):
     sys.stdout.flush()
     time.sleep(5)
 
-    if not opts.lxc:
-        if opts.bootstrap_salt_commit is not None:
+    if not options.lxc:
+        if options.bootstrap_salt_commit is not None:
             # Let's find out if the installed version matches the passed in pillar
             # information
             print('Grabbing bootstrapped minion version information ... ')
@@ -434,15 +434,22 @@ def run(opts):
             if retcode != 0:
                 print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
                 sys.stdout.flush()
-                if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(opts)
+                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    delete_vm(options)
+                sys.exit(retcode)
+
+            if not stdout.strip():
+                print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
+                sys.stdout.flush()
+                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    delete_vm(options)
                 sys.exit(retcode)
 
             try:
                 version_info = json.loads(stdout.strip())
                 bootstrap_minion_version = os.environ.get(
                     'SALT_MINION_BOOTSTRAP_RELEASE',
-                    opts.bootstrap_salt_commit[:7]
+                    options.bootstrap_salt_commit[:7]
                 )
                 if bootstrap_minion_version not in version_info[vm_name]:
                     print('\n\nATTENTION!!!!\n')
@@ -450,8 +457,8 @@ def run(opts):
                     print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], bootstrap_minion_version))
                     print('\n\n')
                     sys.stdout.flush()
-                    #if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    #    delete_vm(opts)
+                    #if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    #    delete_vm(options)
                     #sys.exit(retcode)
                 else:
                     print('matches!')
@@ -461,14 +468,14 @@ def run(opts):
     # Run preparation SLS
     time.sleep(3)
     cmd = []
-    if opts.peer:
+    if options.peer:
         cmd.append('salt-call')
-        if opts.no_color:
+        if options.no_color:
             cmd.append('--no-color')
         cmd.append('publish.publish')
     else:
         cmd.extend(['salt', '-t', '1800'])
-        if opts.no_color:
+        if options.no_color:
             cmd.append('--no-color')
 
     cmd.extend([
@@ -476,8 +483,8 @@ def run(opts):
     ])
 
     cmd = ' '.join(cmd).format(target=build_minion_target(opts, vm_name),
-                               prep_sls=opts.prep_sls,
-                               pillar=build_pillar_data(opts))
+                               prep_sls=options.prep_sls,
+                               pillar=build_pillar_data(options))
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -500,23 +507,23 @@ def run(opts):
     if retcode != 0:
         print('Failed to execute the preparation SLS file. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(opts)
+        if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+            delete_vm(options)
         sys.exit(retcode)
 
-    if opts.prep_sls_2 is not None:
+    if options.prep_sls_2 is not None:
         time.sleep(3)
 
         # Run the 2nd preparation SLS
         cmd = []
-        if opts.peer:
+        if options.peer:
             cmd.append('salt-call')
-            if opts.no_color:
+            if options.no_color:
                 cmd.append('--no-color')
             cmd.append('publish.publish')
         else:
             cmd.extend(['salt', '-t', '30'])
-            if opts.no_color:
+            if options.no_color:
                 cmd.append('--no-color')
 
         cmd.extend([
@@ -524,8 +531,8 @@ def run(opts):
         ])
 
         cmd = ' '.join(cmd).format(target=build_minion_target(opts, vm_name),
-                                   prep_sls_2=opts.prep_sls_2,
-                                   pillar=build_pillar_data(opts))
+                                   prep_sls_2=options.prep_sls_2,
+                                   pillar=build_pillar_data(options))
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -548,18 +555,18 @@ def run(opts):
         if retcode != 0:
             print('Failed to execute the 2nd preparation SLS file. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(opts)
+            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(options)
             sys.exit(retcode)
 
     # Run remote checks
-    if opts.test_git_url is not None:
+    if options.test_git_url is not None:
         time.sleep(1)
         # Let's find out if the cloned repository if checked out from the
         # desired repository
         print('Grabbing the cloned repository remotes information ... ')
         cmd = []
-        if opts.peer:
+        if options.peer:
             cmd.extend(['salt-call', '--out=json', 'publish.publish'])
         else:
             cmd.extend(['salt', '-t', '100', '--out=json'])
@@ -586,45 +593,45 @@ def run(opts):
         if retcode != 0:
             print('Failed to get the cloned repository remote. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(opts)
+            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(options)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(opts)
+            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(options)
             sys.exit(retcode)
 
         try:
             remotes_info = json.loads(stdout.strip())
-            if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
+            if remotes_info is None or remotes_info[vm_name] is None or options.test_git_url not in remotes_info[vm_name]:
                 print('The cloned repository remote is not the desired one:')
-                print(' {0!r} is not in {1}'.format(opts.test_git_url, remotes_info))
+                print(' {0!r} is not in {1}'.format(options.test_git_url, remotes_info))
                 sys.stdout.flush()
-                if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(opts)
+                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    delete_vm(options)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    if opts.test_git_commit is not None:
+    if options.test_git_commit is not None:
         time.sleep(1)
 
         # Let's find out if the cloned repository is checked out at the desired
         # commit
         print('Grabbing the cloned repository commit information ... ')
         cmd = []
-        if opts.peer:
+        if options.peer:
             cmd.extend(['salt-call', '--out=json'])
-            if opts.no_color:
+            if options.no_color:
                 cmd.append('--no-color')
             cmd.append('publish.publish')
         else:
             cmd.extend(['salt', '-t', '100', '--out=json'])
-            if opts.no_color:
+            if options.no_color:
                 cmd.append('--no-color')
 
         cmd.extend([
@@ -649,25 +656,25 @@ def run(opts):
         if retcode != 0:
             print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(opts)
+            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(options)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(opts)
+            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(options)
             sys.exit(retcode)
 
         try:
             revision_info = json.loads(stdout.strip())
-            if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
+            if revision_info[vm_name][7:] != options.test_git_commit[7:]:
                 print('The cloned repository commit is not the desired one:')
-                print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
+                print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], options.test_git_commit[:7]))
                 sys.stdout.flush()
-                if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(opts)
+                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    delete_vm(options)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
@@ -676,21 +683,21 @@ def run(opts):
     # Run tests here
     time.sleep(3)
     cmd = []
-    if opts.peer:
+    if options.peer:
         cmd.append('salt-call')
-        if opts.no_color:
+        if options.no_color:
             cmd.append('--no-color')
         cmd.append('publish.publish')
     else:
         cmd.extend(['salt', '-t', '100'])
-        if opts.no_color:
+        if options.no_color:
             cmd.append('--no-color')
 
     cmd.extend([
         build_minion_target(opts, vm_name),
         'state.sls',
-        opts.sls,
-        'pillar="{0}"'.format(build_pillar_data(opts))
+        options.sls,
+        'pillar="{0}"'.format(build_pillar_data(options))
     ])
 
     cmd = ' '.join(cmd)
@@ -729,14 +736,14 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
-    if opts.download_remote_reports:
+    if options.download_remote_reports:
         # Download unittest reports
-        download_unittest_reports(opts)
+        download_unittest_reports(options)
         # Download coverage report
-        download_coverage_report(opts)
+        download_coverage_report(options)
 
-    if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-        delete_vm(opts)
+    if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+        delete_vm(options)
     return retcode
 
 
