@@ -304,15 +304,12 @@ class SaltNova(object):
         nt_ks = self.volume_conn
         try:
             volume = self.volume_show(name)
-        except:
-            raise SaltCloudSystemExit('Unable to find {0} volume.'.format(name))
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         if volume['status'] == 'deleted':
             return volume
-        try:
-            response = nt_ks.volumes.delete(volume['id'])
-            return volume
-        except:
-            return False
+        response = nt_ks.volumes.delete(volume['id'])
+        return volume
 
     def volume_detach(self,
                       name,
@@ -320,7 +317,10 @@ class SaltNova(object):
         '''
         Detach a block device
         '''
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         if not volume['attachments']:
             return True
         response = self.compute_conn.volumes.delete_server_volume(
@@ -355,7 +355,10 @@ class SaltNova(object):
         '''
         Attach a block device
         '''
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except keyerror as exc:
+            raise saltcloudsystemexit('unable to find {0} volume: {1}'.format(name, exc))
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
             server.id,
