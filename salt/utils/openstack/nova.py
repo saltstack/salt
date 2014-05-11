@@ -676,7 +676,10 @@ class SaltNova(object):
         Show details of one server
         '''
         ret = {}
-        servers = self.server_list_detailed()
+        try:
+            servers = self.server_list_detailed()
+        except AttributeError as exc:
+            raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
         for server_name, server in servers.iteritems():
             if str(server['id']) == server_id:
                 ret[server_name] = server
