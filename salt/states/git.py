@@ -238,8 +238,8 @@ def latest(name,
                             ret['changes'] = { 'old': current_remote, 'new': remote_name }
                             return _neutral_test(ret,
                                                  ('Repository {0} update is probably required.'
-                                                  'Current remote is {1} should be {2}'.format(target, current_remote, remote_name))
-                        log.debug('Setting branch {0} to upstream {1}'.format(rev, remote_name) )
+                                                  'Current remote is {1} should be {2}'.format(target, current_remote, remote_name)))
+                        log.debug('Setting branch {0} to upstream {1}'.format(rev, remote_name))
                         __salt__['git.branch'](target,
                                                rev,
                                                opts='--set-upstream {0}/{1}'.format(remote_name, rev),
