@@ -214,7 +214,7 @@ def create(name,
     opts = ''
     for key in kwargs:
         if not key.startswith('__'):
-            if kwargs[key] == True:
+            if kwargs[key] is True:
                 opts += '--{0} '.format(key)
             else:
                 opts += '--{0}={1} '.format(key, kwargs[key])
