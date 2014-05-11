@@ -133,6 +133,9 @@ class SaltNova(object):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
+        if not hasattr(client.Client, '__exit__'):
+            raise SaltCloudSystemExit("Newer version of novaclient required for __exit__.")
+
         with client.Client(**self.kwargs) as conn:
             try:
                 conn.client.authenticate()
