@@ -802,9 +802,11 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
+
+    .. versionchanged:: Helium
 
     Return a dict containing the new package names and versions::
 
@@ -816,11 +818,39 @@ def upgrade(refresh=True):
     .. code-block:: bash
 
         salt '*' pkg.upgrade
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+    disableexcludes
+        Disable exclude from main, for a repo or for everything.
+        (e.g., ``yum --disableexcludes='main'``)
+
+        .. versionadded:: Helium
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
+
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    exclude_arg = _get_excludes_option(**kwargs)
+
     old = list_pkgs()
-    cmd = 'yum -q -y upgrade'
+    cmd = 'yum -q -y {repo} {exclude} {gpgcheck} upgrade'.format(
+        repo=repo_arg,
+        exclude=exclude_arg,
+        gpgcheck='--nogpgcheck' if skip_verify else '')
+
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
