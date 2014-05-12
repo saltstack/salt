@@ -52,7 +52,6 @@ class MdadmTestCase(TestCase):
                     ['/dev/sdb1',
                      '/dev/sdc1',
                      '/dev/sdd1'],
-                    test_mode=False,
                     force=True,
                     chunk=256,
                     test_mode=True
