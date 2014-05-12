@@ -232,10 +232,10 @@ def latest(name,
 
                     current_remote = __salt__['git.config_get'](target,
                                                          'branch.{0}.remote'.format(rev),
-                                                         user=user )
+                                                         user=user)
                     if current_remote != remote_name:
                         if __opts__['test']:
-                            ret['changes'] = { 'old': current_remote, 'new': remote_name }
+                            ret['changes'] = {'old': current_remote, 'new': remote_name}
                             return _neutral_test(ret,
                                                  ('Repository {0} update is probably required.'
                                                   'Current remote is {1} should be {2}'.format(target, current_remote, remote_name)))
@@ -244,7 +244,7 @@ def latest(name,
                                                rev,
                                                opts='--set-upstream {0}/{1}'.format(remote_name, rev),
                                                user=user)
-                        ret['changes'][ 'remote/{0}/{1}'.format(remote_name, rev) ] = '{0} => {1}'.format(current_remote, remote_name)
+                        ret['changes']['remote/{0}/{1}'.format(remote_name, rev)] = '{0} => {1}'.format(current_remote, remote_name)
 
                 # check if we are on a branch to merge changes
                 cmd = "git symbolic-ref -q HEAD"
