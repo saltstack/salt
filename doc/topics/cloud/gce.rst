@@ -203,14 +203,32 @@ typically also include a hard-coded default.
 
 
 GCE instances do not allow remote access to the root user by default.
-Instead, another user must be used to run the deploy script using sudo.
+Instead, another user must be used to run the deploy script using sudo. 
+Append something like this to ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
-    my-gce-config:
-      # Configure which user to use to run the deploy script
-      ssh_username: user
-      ssh_keyfile: /home/user/.ssh/google_compute_engine
+  all_settings:
+      ...
+  
+      # SSH to GCE instances as gceuser
+      ssh_username: gceuser
+
+      # Use the local private SSH key file located here
+      ssh_keyfile: /etc/cloud/google_compute_engine
+
+If you have not already used this SSH key to login to instances in this
+GCE project you will also need to add the public key to your projects
+metadata at https://cloud.google.com/console. You could also add it via
+the metadata setting too:
+
+.. code-block:: yaml
+
+  all_settings:
+      ...
+
+      metadata: '{"one": "1", "2": "two",
+                  "sshKeys": "gceuser:ssh-rsa <Your SSH Public Key> gceuser@host"}'
 
 
 Single instance details
@@ -311,7 +329,7 @@ a function or an action.
 Create snapshot
 ---------------
 You can take a snapshot of an existing disk's content. The snapshot can then
-in turn be used to create other persistend disks. Note that to prevent data
+in turn be used to create other persistent disks. Note that to prevent data
 corruption, it is strongly suggested that you unmount the disk prior to
 taking a snapshot. You must name the snapshot and provide the name of the
 disk.
@@ -443,7 +461,7 @@ Load-balancer
 -------------
 When creating a new load-balancer, it requires a name, region, port range,
 and list of members. There are other optional parameters for protocol,
-and list of healtch checks. Deleting or showing details about the LB only
+and list of health checks. Deleting or showing details about the LB only
 requires the name.
 
 .. code-block:: bash

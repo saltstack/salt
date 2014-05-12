@@ -106,11 +106,8 @@ from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils.openstack import nova
 
 # Import nova libs
-HASNOVA = False
 try:
-    from novaclient.v1_1 import client  # pylint: disable=W0611
     import novaclient.exceptions
-    HASNOVA = True
 except ImportError:
     pass
 
@@ -144,9 +141,7 @@ log = logging.getLogger(__name__)
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
-avail_locations = namespaced_function(avail_locations, globals())
 script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
 reboot = namespaced_function(reboot, globals())
 
 
@@ -155,10 +150,7 @@ def __virtual__():
     '''
     Check for Nova configurations
     '''
-    if get_configured_provider() is False:
-        return False
-
-    return True
+    return nova.HAS_NOVA
 
 
 def get_configured_provider():
@@ -190,6 +182,27 @@ def get_conn():
     conn = nova.SaltNova(**kwargs)
 
     return conn
+
+
+def avail_locations(conn=None, call=None):
+    '''
+    Return a list of locations
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
+    if conn is None:
+        conn = get_conn()
+
+    endpoints = nova.get_entry(conn.get_catalog(), 'type', 'compute')['endpoints']
+    ret = {}
+    for endpoint in endpoints:
+        ret[endpoint['region']] = endpoint
+
+    return ret
 
 
 def get_image(conn, vm_):
@@ -815,15 +828,6 @@ def create(vm_):
     return ret
 
 
-def avail_locations():
-    '''
-    Would normally return a list of available datacenters (ComputeRegions?
-    Availability Zones?), but those don't seem to be available via the nova
-    client.
-    '''
-    return {}
-
-
 def avail_images():
     '''
     Return a dict of all available VM images on the cloud provider.
@@ -949,7 +953,39 @@ def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
 
 def volume_list(**kwargs):
     '''
-    Attach block volume
+    List block devices
     '''
     conn = get_conn()
     return conn.volume_list()
+
+
+def network_list(call=None, **kwargs):
+    '''
+    List private networks
+    '''
+    conn = get_conn()
+    return conn.network_list()
+
+
+def network_create(name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.network_create(name, **kwargs)
+
+
+def virtual_interface_list(name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.virtual_interface_list(name)
+
+
+def virtual_interface_create(name, net_name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.virtual_interface_create(name, net_name)

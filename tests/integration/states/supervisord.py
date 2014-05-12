@@ -21,6 +21,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.which('supervisorctl') is None, 'supervisord not installed')
 class SupervisordTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
     '''

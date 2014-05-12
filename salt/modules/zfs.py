@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-''' Module for running ZFS command
+'''
+Salt interface to ZFS commands
 '''
 
 # Import Python libs

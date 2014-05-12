@@ -10,6 +10,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.payload
+import salt.utils.network
 
 __proxyenabled__ = ['*']
 
@@ -255,3 +256,82 @@ def flush():
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
+
+
+def get_docker(interfaces=None, cidrs=None):
+    '''
+    Get all mine data for 'docker.get_containers' and run an aggregation
+    routine. The "interfaces" parameter allows for specifying which network
+    interfaces to select ip addresses from. The "cidrs" parameter allows for
+    specifying a list of cidrs which the ip address must match.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mine.get_docker
+        salt '*' mine.get_docker interfaces='eth0'
+        salt '*' mine.get_docker interfaces='["eth0", "eth1"]'
+        salt '*' mine.get_docker cidrs='107.170.147.0/24'
+        salt '*' mine.get_docker cidrs='["107.170.147.0/24", "172.17.42.0/24"]'
+        salt '*' mine.get_docker interfaces='["eth0", "eth1"]' cidrs='["107.170.147.0/24", "172.17.42.0/24"]'
+    '''
+    # Enforce that interface and cidr are lists
+    if interfaces:
+        interface_ = []
+        interface_.extend(interfaces if isinstance(interfaces, list) else [interfaces])
+        interfaces = interface_
+    if cidrs:
+        cidr_ = []
+        cidr_.extend(cidrs if isinstance(cidrs, list) else [cidrs])
+        cidrs = cidr_
+
+    # Get docker info
+    cmd = 'docker.get_containers'
+    docker_hosts = get('*', cmd)
+
+    proxy_lists = {}
+
+    # Process docker info
+    for host, containers in docker_hosts.items():
+        host_ips = []
+
+        # Prepare host_ips list
+        if not interfaces:
+            for iface, info in containers['host']['interfaces'].items():
+                if 'inet' in info:
+                    for ip_ in info['inet']:
+                        host_ips.append(ip_['address'])
+        else:
+            for interface in interfaces:
+                if interface in containers['host']['interfaces']:
+                    for item in containers['host']['interfaces'][interface]['inet']:
+                        host_ips.append(item['address'])
+        host_ips = list(set(host_ips))
+
+        # Filter out ips from host_ips with cidrs
+        if cidrs:
+            good_ips = []
+            for cidr in cidrs:
+                for ip_ in host_ips:
+                    if salt.utils.network.in_subnet(cidr, [ip_]):
+                        good_ips.append(ip_)
+            host_ips = list(set(good_ips))
+
+        # Process each container
+        if containers['out']:
+            for container in containers['out']:
+                if container['Image'] not in proxy_lists:
+                    proxy_lists[container['Image']] = {}
+                for dock_port in container['Ports']:
+                    # If port is 0.0.0.0, then we must get the docker host IP
+                    if dock_port['IP'] == '0.0.0.0':
+                        for ip_ in host_ips:
+                            proxy_lists[container['Image']].setdefault('ipv4', []).append(
+                                '{0}:{1}'.format(ip_, dock_port['PublicPort']))
+                            proxy_lists[container['Image']]['ipv4'] = list(set(proxy_lists[container['Image']]['ipv4']))
+                    elif dock_port['IP']:
+                        proxy_lists[container['Image']].setdefault('ipv4', []).append(
+                            '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
+                        proxy_lists[container['Image']]['ipv4'] = list(set(proxy_lists[container['Image']]['ipv4']))
+    return proxy_lists

@@ -15,9 +15,13 @@ import salt.utils.minions
 import salt.daemons.masterapi
 
 
-class MaintFork(ioflo.base.deeding.Deed):
+class ForkMaint(ioflo.base.deeding.Deed):
     '''
     For off the maintinence process from the master router process
+    FloScript:
+
+    do fork maint at enter
+
     '''
     Ioinits = {'opts': '.salt.opts'}
 
@@ -57,9 +61,13 @@ class MaintFork(ioflo.base.deeding.Deed):
         self._fork_maint()
 
 
-class MaintSetup(ioflo.base.deeding.Deed):
+class SetupMaint(ioflo.base.deeding.Deed):
     '''
     Init loader objects used
+    FloScript:
+
+    do setup maint at enter
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'fileserver': '.salt.loader.fileserver',
@@ -78,9 +86,13 @@ class MaintSetup(ioflo.base.deeding.Deed):
                 self.opts.value)
 
 
-class CleanFileserver(ioflo.base.deeding.Deed):
+class FileserverClean(ioflo.base.deeding.Deed):
     '''
     Clear the fileserver backend caches
+    FloScript:
+
+    do fileserver clean at enter
+
     '''
     Ioinits = {'opts': '.salt.opts'}
 
@@ -91,9 +103,13 @@ class CleanFileserver(ioflo.base.deeding.Deed):
         salt.daemons.masterapi.clean_fsbackend(self.opts.value)
 
 
-class JobsOldClear(ioflo.base.deeding.Deed):
+class ClearOldJobs(ioflo.base.deeding.Deed):
     '''
     Iterate over the jobs directory and clean out the old jobs
+    FloScript:
+
+    do clear old jobs
+
     '''
     Ioinits = {'opts': '.salt.opts'}
 
@@ -104,9 +120,13 @@ class JobsOldClear(ioflo.base.deeding.Deed):
         salt.daemons.masterapi.clean_old_jobs(self.opts.value)
 
 
-class BackendsUpdate(ioflo.base.deeding.Deed):
+class UpdateBackends(ioflo.base.deeding.Deed):
     '''
     Update the fileserver and external pillar caches
+    FloScript:
+
+    do update backends
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'fileserver': '.salt.loader.fileserver',

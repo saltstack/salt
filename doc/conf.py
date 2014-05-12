@@ -15,7 +15,7 @@ class Mock(object):
     '''
     Mock out specified imports
 
-    This allows autodoc to do it's thing without having oodles of req'd
+    This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
@@ -107,7 +107,6 @@ import salt.version
 
 
 formulas_dir = os.path.join(os.pardir, docs_basepath, 'formulas')
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # ----- Intersphinx Settings ------------------------------------------------>
 intersphinx_mapping = {
@@ -123,7 +122,7 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.1'
+release = '2014.1.4'
 
 language = 'en'
 locale_dirs = [
@@ -142,6 +141,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc
+    'shorturls',
 ]
 
 modindex_common_prefix = ['salt.']
@@ -166,12 +166,10 @@ extlinks = {
 locale_dirs = ['locale/']
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
-### HTML options
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'saltstack'
 
+
+### HTML options
+html_theme = 'saltstack'
 html_theme_path = ['_themes']
 html_title = None
 html_short_title = 'Salt'
@@ -181,29 +179,43 @@ html_logo = None # specfied in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
+# Set a var if we're building docs for the live site or not
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
+
+# Use Google customized search or use Sphinx built-in JavaScript search
+if on_saltstack:
+    html_search_template = 'googlesearch.html'
+else:
+    html_search_template = 'searchbox.html'
+
 html_additional_pages = {
     '404': '404.html',
 }
 
 html_default_sidebars = [
+    html_search_template,
+    'version.html',
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
-    'searchbox.html',
+    'saltstack.html',
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
+        html_search_template,
+        'version.html',
         'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
-        'searchbox.html',
+        'saltstack.html',
     ],
     'ref/formula/all/*': [
     ],
 }
 
 html_context = {
+    'on_saltstack': on_saltstack,
     'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
@@ -215,7 +227,6 @@ html_last_updated_fmt = '%b %d, %Y'
 html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
-html_use_opensearch = 'http://docs.saltstack.com'
 
 ### Latex options
 latex_documents = [
@@ -247,6 +258,7 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'dash-feed://',
                     r'https://github.com/saltstack/salt/',
                     r'http://bootstrap.saltstack.org',
+                    r'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh',
                     r'media.readthedocs.org/dash/salt/latest/salt.xml',
                     r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
                     r'https://help.github.com/articles/fork-a-repo',

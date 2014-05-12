@@ -497,9 +497,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         }
 
     if args:
-        path += '?%s'
         params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params, **kwargs)
+        req = urllib2.Request(url='{0}?{1}'.format(path, params), **kwargs)
     else:
         req = urllib2.Request(url=path, **kwargs)
 
@@ -560,7 +559,14 @@ def show_image(kwargs, call=None):
         )
 
     items = query(action='template', command=kwargs['image'])
-    return {items.attrib['name']: items.attrib}
+    if 'error' in items:
+        return items['error']
+
+    ret = {}
+    for item in items:
+        ret.update({item.attrib['name']: item.attrib})
+
+    return ret
 
 
 def show_instance(name, call=None):

@@ -46,8 +46,10 @@ except ImportError:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
     else:
         ROOT_DIR = '/'
-        if 'bsd' in __platform:
+        if 'freebsd' in __platform:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
+        elif 'netbsd' in __platform:
+            CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
         else:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
     CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')

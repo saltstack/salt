@@ -30,6 +30,8 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
+        #import  wingdbstub
+
         self.node = node
         self.sock_dir = sock_dir
         self.listen = listen
@@ -44,7 +46,7 @@ class SaltEvent(object):
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
-                prefix=self.node,
+                lanename=self.node,
                 yid=0,
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
@@ -119,6 +121,7 @@ class SaltEvent(object):
                     return event['data']
             if start + wait < time.time():
                 return None
+            time.sleep(0.01)
 
     def get_event_noblock(self):
         '''

@@ -13,6 +13,7 @@ import datetime
 import traceback
 
 # Import salt libs
+import salt.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
@@ -95,9 +96,12 @@ class Caller(object):
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:
                     sys.stderr.write(trace)
-                sys.exit(1)
-            ret['retcode'] = sys.modules[
-                func.__module__].__context__.get('retcode', 0)
+                sys.exit(salt.exitcodes.EX_GENERIC)
+            try:
+                ret['retcode'] = sys.modules[
+                    func.__module__].__context__.get('retcode', 0)
+            except AttributeError:
+                ret['retcode'] = 1
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
@@ -105,11 +109,11 @@ class Caller(object):
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(1)
+            sys.exit(salt.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(1)
+            sys.exit(salt.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
         except (IOError, OSError):

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
+Outputter for displaying results of state runs
+==============================================
+
 The return data from the Highstate command is a standard data structure
 which is parsed by the highstate outputter to deliver a clean and readable
 set of information about the HighState run on minions.
@@ -25,6 +28,26 @@ state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
+
+Example output::
+
+    myminion:
+    ----------
+              ID: test.ping
+        Function: module.run
+          Result: True
+         Comment: Module function test.ping executed
+         Changes:
+                  ----------
+                  ret:
+                      True
+
+    Summary
+    ------------
+    Succeeded: 1
+    Failed:    0
+    ------------
+    Total:     0
 '''
 
 # Import python libs
@@ -115,7 +138,9 @@ def _format_host(host, data):
                 '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
                 '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
                 '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
-                '    {tcolor} Comment: {comment}{colors[ENDC]}'
+                '    {tcolor} Comment: {comment}{colors[ENDC]}',
+                '    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                '    {tcolor} Duration: {ret[duration]!s} ms{colors[ENDC]}'
             ]
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
@@ -129,6 +154,8 @@ def _format_host(host, data):
                 comment = ret['comment'].join(' ').replace(
                     '\n',
                     '\n' + ' ' * 13)
+            for detail in ['start_time', 'duration']:
+                ret.setdefault(detail, '')
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,

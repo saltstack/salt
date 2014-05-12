@@ -358,7 +358,7 @@ def destroy(vm_, call=None):
 
 def create(vm_, call=None):
     '''Create an lxc Container.
-    This function is indopotent and will try to either provision
+    This function is idempotent and will try to either provision
     or finish the provision of an lxc container.
     '''
     mopts = _master_opts()
@@ -384,6 +384,11 @@ def create(vm_, call=None):
     netmask = vm_.get('netmask', '24')
     bridge = vm_.get('bridge', 'lxcbr0')
     gateway = vm_.get('gateway', 'auto')
+    autostart = vm_.get('autostart', True)
+    if autostart:
+        autostart = "1"
+    else:
+        autostart = "0"
     size = vm_.get('size', '10G')
     ssh_username = vm_.get('ssh_username', 'user')
     sudo = vm_.get('sudo', True)
@@ -453,6 +458,7 @@ def create(vm_, call=None):
             lxc_conf.append({'lxc.network.ipv4.gateway': gateway})
         if bridge is not None:
             lxc_conf.append({'lxc.network.link': bridge})
+    lxc_conf.append({'lxc.start.auto': autostart})
     changes['100_creation'] = ''
     created = False
     cret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}

@@ -20,6 +20,7 @@ import traceback
 import copy
 import re
 
+
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
 # Windows
 try:
@@ -56,6 +57,12 @@ from salt.cloud.exceptions import (
 # Import third party libs
 from jinja2 import Template
 import yaml
+
+try:
+    import getpass
+    HAS_GETPASS = True
+except ImportError:
+    HAS_GETPASS = False
 
 NSTATES = {
     0: 'running',
@@ -286,11 +293,16 @@ def bootstrap(vm_, opts):
 
     ret = {}
 
-    deploy_script_code = os_script(vm_)
+    deploy_script_code = os_script(
+        salt.config.get_cloud_config_value(
+            'os', vm_, opts, default='bootstrap-salt'
+        ),
+        vm_, opts
+    )
 
     ssh_username = salt.config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    ),
+        'ssh_username', vm_, opts, default='root'
+    )
 
     deploy_kwargs = {
         'opts': opts,
@@ -373,6 +385,7 @@ def bootstrap(vm_, opts):
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
+    del event_kwargs['opts']
     del event_kwargs['minion_pem']
     del event_kwargs['minion_pub']
     del event_kwargs['sudo_password']
@@ -434,7 +447,7 @@ def ssh_usernames(vm_, opts, default_users=None):
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time
     # might need to pass before the remote service is available for logins and
-    # the proper username might have passed it's iteration.
+    # the proper username might have passed its iteration.
     # This has detected in a CentOS 5.7 EC2 image
     usernames.extend(initial)
     return usernames
@@ -851,6 +864,9 @@ def deploy_windows(host,
                 creds,
             ))
         # Shell out to winexe to ensure salt-minion service started
+        win_cmd('winexe {0} "sc stop salt-minion"'.format(
+            creds,
+        ))
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
         ))
@@ -1377,6 +1393,9 @@ def scp_file(dest_path, contents, kwargs):
             '-i {0}'.format(kwargs['key_filename'])
         ])
 
+    if 'port' in kwargs:
+        ssh_args.extend(['-P {0}'.format(kwargs['port'])])
+
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
         ssh_gateway_port = 22
@@ -1393,7 +1412,13 @@ def scp_file(dest_path, contents, kwargs):
 
         ssh_args.extend([
             # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+            # Don't add new hosts to the host key database
+            '-oStrictHostKeyChecking=no',
+            # Set hosts key database path to /dev/null, ie, non-existing
+            '-oUserKnownHostsFile=/dev/null',
+            # Don't re-use the SSH connection. Less failures.
+            '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
@@ -1528,7 +1553,13 @@ def root_cmd(command, tty, sudo, **kwargs):
 
         ssh_args.extend([
             # Setup ProxyCommand
-            '-oProxyCommand="ssh {0} {1}@{2} -p {3} nc -q0 %h %p"'.format(
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
@@ -1540,6 +1571,10 @@ def root_cmd(command, tty, sudo, **kwargs):
                 ssh_gateway_user, ssh_gateway, ssh_gateway_port
             )
         )
+
+    if 'port' in kwargs:
+        ssh_args.extend(['-p {0}'.format(kwargs['port'])])
+
     cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
@@ -2025,3 +2060,55 @@ def _salt_cloud_force_ascii(exc):
     raise exc
 
 codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)
+
+
+def retrieve_password_from_keyring(credential_id, username):
+    '''
+    Retrieve particular user's password for a specified credential set from system keyring.
+    '''
+    try:
+        import keyring
+        return keyring.get_password(credential_id, username)
+    except ImportError:
+        log.error('USE_KEYRING configured as a password, but no keyring module is installed')
+        return False
+
+
+def _save_password_in_keyring(credential_id, username, password):
+    '''
+    Saves provider password in system keyring
+    '''
+    try:
+        import keyring
+        return keyring.set_password(credential_id, username, password)
+    except ImportError:
+        log.error('Tried to store password in keyring, but no keyring module is installed')
+        return False
+
+
+def store_password_in_keyring(credential_id, username, password=None):
+    '''
+    Interactively prompts user for a password and stores it in system keyring
+    '''
+    try:
+        import keyring
+        import keyring.errors
+        if password is None:
+            prompt = 'Please enter password for {0}: '.format(credential_id)
+            try:
+                password = getpass.getpass(prompt)
+            except EOFError:
+                password = None
+
+            if not password:
+                # WE should raise something else here to be able to use this
+                # as/from an API
+                raise RuntimeError('Invalid password provided.')
+
+        try:
+            _save_password_in_keyring(credential_id, username, password)
+        except keyring.errors.PasswordSetError as exc:
+            log.debug('Problem saving password in the keyring: {0}'.format(exc))
+    except ImportError:
+        log.error('Tried to store password in keyring, but no keyring module is installed')
+        return False

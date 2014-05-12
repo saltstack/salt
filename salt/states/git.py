@@ -18,6 +18,7 @@ authentication, it is also possible to pass private keys to use explicitly.
 # Import python libs
 import logging
 import os
+import os.path
 import shutil
 
 # Import salt libs
@@ -121,7 +122,7 @@ def latest(name,
         return _fail(ret, '"target" option is required')
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -156,9 +157,8 @@ def latest(name,
 
     bare = bare or mirror
     check = 'refs' if bare else '.git'
-
-    if os.path.isdir(target) and os.path.isdir('{0}/{1}'.format(target,
-                                                                check)):
+    checkdir = os.path.join(target, check)
+    if os.path.isdir(target) and os.path.isdir(checkdir):
         # git pull is probably required
         log.debug(('target {0} is found, "git pull" '
                    'is probably required'.format(target)))
@@ -230,8 +230,24 @@ def latest(name,
                                              force=force_checkout,
                                              user=user)
 
+                    current_remote = __salt__['git.config_get'](target,
+                                                         'branch.{0}.remote'.format(rev),
+                                                         user=user )
+                    if current_remote != remote_name:
+                        if __opts__['test']:
+                            ret['changes'] = { 'old': current_remote, 'new': remote_name }
+                            return _neutral_test(ret,
+                                                 ('Repository {0} update is probably required.'
+                                                  'Current remote is {1} should be {2}'.format(target, current_remote, remote_name)))
+                        log.debug('Setting branch {0} to upstream {1}'.format(rev, remote_name))
+                        __salt__['git.branch'](target,
+                                               rev,
+                                               opts='--set-upstream {0}/{1}'.format(remote_name, rev),
+                                               user=user)
+                        ret['changes'][ 'remote/{0}/{1}'.format(remote_name, rev) ] = '{0} => {1}'.format(current_remote, remote_name)
+
                 # check if we are on a branch to merge changes
-                cmd = "git symbolic-ref -q HEAD > /dev/null"
+                cmd = "git symbolic-ref -q HEAD"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=user)
                 if 0 == retcode:
                     __salt__['git.fetch' if bare else 'git.pull'](target,
@@ -349,7 +365,7 @@ def present(name, bare=True, runas=None, user=None, force=False):
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -374,9 +390,9 @@ def present(name, bare=True, runas=None, user=None, force=False):
 
     # If the named directory is a git repo return True
     if os.path.isdir(name):
-        if bare and os.path.isfile('{0}/HEAD'.format(name)):
+        if bare and os.path.isfile(os.path.join(name, 'HEAD')):
             return ret
-        elif not bare and os.path.isdir('{0}/.git'.format(name)):
+        elif not bare and os.path.isdir(os.path.join(name, '.git')):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error

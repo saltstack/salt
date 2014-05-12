@@ -5,6 +5,7 @@ Support for iptables
 
 # Import python libs
 import os
+import re
 import sys
 import shlex
 
@@ -102,8 +103,22 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
         salt '*' iptables.build_rule match=state \\
             connstate=RELATED,ESTABLISHED jump=ACCEPT
+
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
             full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+
+        salt '*' iptables.build_rule filter INPUT command=A \\
+            full=True match=state state=RELATED,ESTABLISHED \\
+            source='127.0.0.1' jump=ACCEPT
+
+        .. Invert Rules
+        salt '*' iptables.build_rule filter INPUT command=A \\
+            full=True match=state state=RELATED,ESTABLISHED \\
+            source='! 127.0.0.1' jump=ACCEPT
+
+        salt '*' iptables.build_rule filter INPUT command=A \\
+            full=True match=state state=RELATED,ESTABLISHED \\
+            destination='not 127.0.0.1' jump=ACCEPT
 
         IPv6:
         salt '*' iptables.build_rule match=state \\
@@ -123,13 +138,33 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             del kwargs[ignore]
 
     rule = ''
+    proto = False
+    bang_not_pat = re.compile(r'[!,not]\s?')
 
     if 'if' in kwargs:
+        if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
+            kwargs['if'] = re.sub(bang_not_pat, '', kwargs['if'])
+            rule += '! '
+
         rule += '-i {0} '.format(kwargs['if'])
         del kwargs['if']
 
+    if 'of' in kwargs:
+        if kwargs['of'].startswith('!') or kwargs['of'].startswith('not'):
+            kwargs['of'] = re.sub(bang_not_pat, '', kwargs['of'])
+            rule += '! '
+
+        rule += '-i {0} '.format(kwargs['of'])
+        del kwargs['of']
+
     if 'proto' in kwargs:
+        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
+            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
+            rule += '! '
+
         rule += '-p {0} '.format(kwargs['proto'])
+        proto = True
+        del kwargs['proto']
 
     if 'match' in kwargs:
         if not isinstance(kwargs['match'], list):
@@ -147,29 +182,46 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['state']
 
     if 'connstate' in kwargs:
+        if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
+            kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
+            rule += '! '
+
         rule += '--state {0} '.format(kwargs['connstate'])
         del kwargs['connstate']
 
-    if 'proto' in kwargs:
-        rule += '-m {0} '.format(kwargs['proto'])
-        del kwargs['proto']
-
     if 'dport' in kwargs:
+        if str(kwargs['dport']).startswith('!') or str(kwargs['dport']).startswith('not'):
+            kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
+            rule += '! '
+
         rule += '--dport {0} '.format(kwargs['dport'])
         del kwargs['dport']
 
     if 'sport' in kwargs:
+        if str(kwargs['sport']).startswith('!') or str(kwargs['sport']).startswith('not'):
+            kwargs['sport'] = re.sub(bang_not_pat, '', kwargs['sport'])
+            rule += '! '
+
         rule += '--sport {0} '.format(kwargs['sport'])
         del kwargs['sport']
 
     if 'dports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
+            if not proto:
+                return 'Error: proto must be specified'
 
         if isinstance(kwargs['dports'], list):
-            dports = ','.join(kwargs['dports'])
+            if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
+                kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
+                rule += '! '
+            dports = ','.join([str(i) for i in kwargs['dports']])
         else:
-            dports = kwargs['dports']
+            if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
+                dports = re.sub(bang_not_pat, '', kwargs['dports'])
+                rule += '! '
+            else:
+                dports = kwargs['dports']
 
         rule += '--dports {0} '.format(dports)
         del kwargs['dports']
@@ -177,11 +229,20 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'sports' in kwargs:
         if not '-m multiport' in rule:
             rule += '-m multiport '
+            if not proto:
+                return 'Error: proto must be specified'
 
         if isinstance(kwargs['sports'], list):
-            sports = ','.join(kwargs['sports'])
+            if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
+                kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
+                rule += '! '
+            sports = ','.join([str(i) for i in kwargs['sports']])
         else:
-            sports = kwargs['dports']
+            if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
+                sports = re.sub(bang_not_pat, '', kwargs['sports'])
+                rule += '! '
+            else:
+                sports = kwargs['sports']
 
         rule += '--sports {0} '.format(sports)
         del kwargs['sports']
@@ -193,6 +254,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if 'set' in kwargs and kwargs['set']:
+        if kwargs['set'].startswith('!') or kwargs['set'].startswith('not'):
+            kwargs['set'] = re.sub(bang_not_pat, '', kwargs['set'])
+            rule += '! '
+
         rule += '--match-set {0} '.format(kwargs['set'])
         del kwargs['set']
 
@@ -225,6 +290,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['reject-with']
 
     for item in kwargs:
+        if kwargs[item].startswith('!') or kwargs[item].startswith('not'):
+            kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
+            rule += '! '
+
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
         else:
@@ -247,7 +316,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             flag = '--'
 
         return '{0} -t {1} {2}{3} {4} {5} {6}'.format(_iptables_cmd(family),
-            table, flag, command, chain, position, rule)
+               table, flag, command, chain, position, rule)
 
     return rule
 
@@ -383,6 +452,34 @@ def save(filename=None, family='ipv4'):
     return out
 
 
+def _has_check():
+    '''
+    Check if the iptables on has --check function
+    '''
+
+    if __grains__['os_family'] == 'RedHat':
+        if __grains__['osfullname'] == 'Fedora':
+            return False
+        elif __grains__['osrelease'] <= 6:
+            return True
+        else:
+            return False
+    elif __grains__['os'] == 'Ubuntu':
+        if __grains__['osrelease'] == '10.04':
+            return True
+        else:
+            return False
+    elif __grains__['os'] == 'Debian':
+        if __grains__['osrelease'].split('.')[0] == '6':
+            return True
+        else:
+            return False
+    elif __salt__['cmd.run']('iptables -h').find('--check') == -1:
+        return True
+    else:
+        return False
+
+
 def check(table='filter', chain=None, rule=None, family='ipv4'):
     '''
     Check for the existence of a rule in the table and chain
@@ -409,7 +506,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    if __grains__['os_family'] == 'RedHat':
+    if _has_check():
         cmd = '{0}-save' . format(_iptables_cmd(family))
         out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
             table,

@@ -62,7 +62,7 @@ append a ``%`` to the ID:
     external_auth:
       pam:
         admins%:
-          - '*'
+          - '*':
             - 'pkg.*'
 
 Tokens
@@ -126,7 +126,7 @@ the ``{{ username }}`` value for the username when querying LDAP.
     auth.ldap.filter: uid={{ username }}
 
 If group support for LDAP is desired, one can specify an OU that contains group
-data. This is pre-pendeed to the basedn to create a search path
+data. This is prepended to the basedn to create a search path
 
 .. code-block:: yaml
 

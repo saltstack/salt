@@ -49,9 +49,13 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class StackUdpRaetSalt(ioflo.base.deeding.Deed):
+class SaltRaetRoadStack(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
+    FloScript:
+
+    do salt raet road stack
+
     '''
     Ioinits = {
             'inode': 'raet.udp.stack.',
@@ -106,9 +110,14 @@ class StackUdpRaetSalt(ioflo.base.deeding.Deed):
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
 
-class CloserStackUdpRaetSalt(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+
+class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
-    CloserStackUdpRaetSalt closes stack server socket connection
+    Closes stack server socket connection
+    FloScript:
+
+    salt raet road stack closer at exit
+
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -121,9 +130,14 @@ class CloserStackUdpRaetSalt(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         if self.stack.value and isinstance(self.stack.value, RoadStack):
             self.stack.value.server.close()
 
-class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
+
+class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     '''
     Initiates join transaction with master
+    FloScript:
+
+    do salt raet road stack joiner at enter
+
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -141,11 +155,17 @@ class JoinerStackUdpRaetSalt(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.join(mha=self.mha)
+            stack.join(mha=self.mha, timeout=0.0)
 
-class JoinedStackUdpRaetSalt(ioflo.base.deeding.Deed):
+
+class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
     '''
     Updates status with .joined of zeroth remote estate (master)
+    FloScript:
+
+    do salt raet road stack joined
+    go next if joined in .raet.udp.stack.status
+
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -166,9 +186,13 @@ class JoinedStackUdpRaetSalt(ioflo.base.deeding.Deed):
         self.status.update(joined=joined)
 
 
-class AllowerStackUdpRaetSalt(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
     '''
     Initiates allow (CurveCP handshake) transaction with master
+    FloScript:
+
+    do salt raet road stack allower at enter
+
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -184,9 +208,15 @@ class AllowerStackUdpRaetSalt(ioflo.base.deeding.Deed):
             stack.allow()
         return None
 
-class AllowedStackUdpRaetSalt(ioflo.base.deeding.Deed):
+
+class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
     '''
     Updates status with .allowed of zeroth remote estate (master)
+    FloScript:
+
+    do salt raet road stack allowed
+    go next if allowed in .raet.udp.stack.status
+
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
@@ -206,9 +236,14 @@ class AllowedStackUdpRaetSalt(ioflo.base.deeding.Deed):
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
 
-class ModulesLoad(ioflo.base.deeding.Deed):
+
+class LoadModules(ioflo.base.deeding.Deed):
     '''
     Reload the minion modules
+    FloScript:
+
+    do load modules at enter
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
@@ -253,6 +288,10 @@ class ModulesLoad(ioflo.base.deeding.Deed):
 class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the schedule
+    FloScript:
+
+    do schedule
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
@@ -280,6 +319,10 @@ class Schedule(ioflo.base.deeding.Deed):
 class Setup(ioflo.base.deeding.Deed):
     '''
     Only intended to be called once at the top of the house
+    FloScript:
+
+    do setup at enter
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'event_yards': '.salt.event.yards',
@@ -320,6 +363,10 @@ class Setup(ioflo.base.deeding.Deed):
 class Rx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
+    FloScript:
+
+    do rx
+
     '''
     Ioinits = {
                'uxd_stack': '.salt.uxd.stack.stack',
@@ -337,6 +384,10 @@ class Rx(ioflo.base.deeding.Deed):
 class Tx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
+    FloScript:
+
+    do tx
+
     '''
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
@@ -359,6 +410,10 @@ class Router(ioflo.base.deeding.Deed):
 
     This is the initial static salt router, we want to create a dynamic
     router that takes a map that defines where packets are send
+    FloScript:
+
+    do router
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'local_cmd': '.salt.local.local_cmd',
@@ -390,8 +445,8 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_yard is not None:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.remotes:
-                self.uxd_stack.value.transmit(msg, d_yard.uid)
+            if d_yard in self.uxd_stack.value.uids:
+                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
                 return
             return
         if d_share is None:
@@ -405,7 +460,7 @@ class Router(ioflo.base.deeding.Deed):
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
             self.uxd_stack.value.transmit(msg,
-                    self.stack.value.uids.get(next(self.workers.value)))
+                    self.uxd_stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -414,6 +469,7 @@ class Router(ioflo.base.deeding.Deed):
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
         '''
+        #import wingdbstub
         try:
             d_estate = msg['route']['dst'][0]
             d_yard = msg['route']['dst'][1]
@@ -425,7 +481,7 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.udp_stack.value.local:
             # Forward to the correct estate
-            eid = self.udp_stack.value.eids.get(d_estate)
+            eid = self.udp_stack.value.uids.get(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
         if d_share == 'pub_ret':
@@ -434,8 +490,8 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_yard != self.uxd_stack.value.local.name:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.remotes:
-                self.uxd_stack.value.transmit(msg, d_yard.uid)
+            if d_yard in self.uxd_stack.value.uids:
+                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
                 return
             return
         if d_share is None:
@@ -463,6 +519,10 @@ class Router(ioflo.base.deeding.Deed):
 class Eventer(ioflo.base.deeding.Deed):
     '''
     Fire events!
+    FloScript:
+
+    do eventer
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'event_yards': '.salt.event.yards',
@@ -482,7 +542,7 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         rm_ = []
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.remotes:
+            if y_name not in self.uxd_stack.value.uids:
                 rm_.append(y_name)
                 continue
             route = {'src': ('router', self.uxd_stack.value.local.name, None),
@@ -513,6 +573,10 @@ class Eventer(ioflo.base.deeding.Deed):
 class Publisher(ioflo.base.deeding.Deed):
     '''
     Publish to the minions
+    FloScript:
+
+    do publisher
+
     '''
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.local.publish',
@@ -523,8 +587,8 @@ class Publisher(ioflo.base.deeding.Deed):
         Publish the message out to the targeted minions
         '''
         pub_data = pub_msg['return']
-        for minion in self.udp_stack.value.eids:
-            eid = self.udp_stack.value.eids.get(minion)
+        for minion in self.udp_stack.value.uids:
+            eid = self.udp_stack.value.uids.get(minion)
             if eid:
                 route = {
                         'dst': (minion, None, 'fun'),
@@ -542,9 +606,13 @@ class Publisher(ioflo.base.deeding.Deed):
                     )
 
 
-class ExecutorNix(ioflo.base.deeding.Deed):
+class NixExecutor(ioflo.base.deeding.Deed):
     '''
     Execute a function call on a *nix based system
+    FloScript:
+
+    do nix executor
+
     '''
     Ioinits = {'opts_store': '.salt.opts',
                'grains': '.salt.grains',
@@ -578,7 +646,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
                 yid=0,
-                prefix=self.opts['id'],
+                lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir']
                 )
         ret_stack.addRemote(main_yard)
@@ -623,7 +691,7 @@ class ExecutorNix(ioflo.base.deeding.Deed):
             log.debug('Command details {0}'.format(data))
             ex_yard = RemoteYard(
                     yid=data['jid'],
-                    prefix=self.opts['id'],
+                    lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
             self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(

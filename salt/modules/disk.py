@@ -6,6 +6,7 @@ Module for gathering disk information
 # Import python libs
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -209,8 +210,9 @@ def blkid(device=None):
         comps = line.split()
         device = comps[0][:-1]
         info = {}
-        for elem in comps[1:]:
-            key, value = elem.split('=')
+        device_attributes = re.split(('\"*\"'), line.partition(' ')[2])
+        for key, value in zip(*[iter(device_attributes)]*2):
+            key = key.strip('=').strip(' ')
             info[key] = value.strip('"')
         ret[device] = info
 

@@ -117,7 +117,7 @@ Or just type
 
 .. code-block:: bash
 
-    ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/mxcl/homebrew/go)"
 
 
 Now type the following commands in your terminal (you may want to type brew
@@ -379,7 +379,7 @@ indentation level as the other properties):
     # salt-vagrant config
     config.vm.provision :salt do |salt|
         salt.run_highstate = true
-        salt.minion_config = "./minion.conf"
+        salt.minion_config = "/etc/salt/minion"
         salt.minion_key = "./minion1.pem"
         salt.minion_pub = "./minion1.pub"
     end

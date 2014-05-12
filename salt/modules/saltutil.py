@@ -353,7 +353,7 @@ def refresh_pillar():
 
         salt '*' saltutil.refresh_pillar
     '''
-    __salt__['event.fire']({}, 'pillar_refresh')
+    return __salt__['event.fire']({}, 'pillar_refresh')
 
 
 def refresh_modules():
@@ -366,7 +366,7 @@ def refresh_modules():
 
         salt '*' saltutil.refresh_modules
     '''
-    __salt__['event.fire']({}, 'module_refresh')
+    return __salt__['event.fire']({}, 'module_refresh')
 
 
 def is_running(fun):
@@ -438,6 +438,29 @@ def running():
                 continue
         ret.append(data)
     return ret
+
+
+def clear_cache():
+    '''
+    Forcibly removes all caches on a minion.
+
+    WARNING: The safest way to clear a minion cache is by first stopping
+    the minion and then deleting the cache files before restarting it.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.clear_cache
+    '''
+    for root, dirs, files in salt.utils.safe_walk(__opts__['cachedir'], followlinks=False):
+        for name in files:
+            try:
+                os.remove(os.path.join(root, name))
+            except OSError as exc:
+                log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                return False
+    return True
 
 
 def cached():

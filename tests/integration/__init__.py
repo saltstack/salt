@@ -305,6 +305,9 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
+        if self.parser.options.ssh:
+            self.prep_ssh()
+
         if self.parser.options.sysinfo:
             try:
                 print_header(
@@ -343,13 +346,50 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
+    def prep_ssh(self):
+        '''
+        Generate keys and start an ssh daemon on an alternate port
+        '''
+        keygen = salt.utils.which('ssh-keygen')
+        sshd = salt.utils.which('sshd')
+
+        if not (keygen and sshd):
+            print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
+            return
+        if not os.path.exists(TMP_CONF_DIR):
+            os.makedirs(TMP_CONF_DIR)
+
+        keygen_process = subprocess.Popen(
+                [keygen, '-t', 'ecdsa', '-b', '521', '-C', '"$(whoami)@$(hostname)-$(date -I)"', '-f', 'key_test', '-P', 'INSECURE_TEMPORARY_KEY_PASSWORD'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+                cwd=TMP_CONF_DIR
+        )
+        out, err = keygen_process.communicate()
+        if err:
+            print('ssh-keygen had errors: {0}'.format(err))
+        sshd_config_path = os.path.join(FILES, 'files/sshd_config')
+        shutil.copy(os.path.join(FILES, 'conf/sshd_config'), TMP_CONF_DIR)
+        auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+        with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+            ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
+        sshd_process = subprocess.Popen(
+                [sshd, '-f', 'sshd_config'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+                cwd=TMP_CONF_DIR
+        )
+        shutil.copy(os.path.join(FILES, 'conf/roster'), TMP_CONF_DIR)
+
     @property
     def client(self):
         '''
         Return a local client which will be used for example to ping and sync
         the test minions.
 
-        This client is defined as a class attribute because it's creation needs
+        This client is defined as a class attribute because its creation needs
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
@@ -878,28 +918,35 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
-    def run_salt(self, arg_str, with_retcode=False):
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_run(self, arg_str, with_retcode=False):
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-ssh
+        '''
+        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-run
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_run_plus(self, fun, options='', *arg):
+    def run_run_plus(self, fun, options='', *arg, **kwargs):
         '''
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
         ret = {}
         ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg))
+            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
         )
         opts = salt.config.master_config(
             self.get_config_file_path('master')
@@ -922,16 +969,16 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
             with_retcode=with_retcode
         )
 
-    def run_cp(self, arg_str, with_retcode=False):
+    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''

@@ -27,7 +27,7 @@ STATIC = (
 )
 
 
-def display_output(data, out, opts=None):
+def display_output(data, out=None, opts=None):
     '''
     Print the passed data using the desired output
     '''
@@ -90,6 +90,7 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = True
 
     outputters = salt.loader.outputters(opts)
+    # TODO: raise an exception? This means if you do --out foobar you get nested
     if out not in outputters:
         return outputters['nested']
     return outputters[out]

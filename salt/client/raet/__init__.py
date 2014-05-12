@@ -27,6 +27,8 @@ class LocalClient(salt.client.LocalClient):
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None):
+
+        #import  wingdbstub
         salt.client.LocalClient.__init__(self, c_path, mopts)
 
     def pub(self,
@@ -57,7 +59,7 @@ class LocalClient(salt.client.LocalClient):
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
-                prefix='master',
+                lanename='master',
                 yid=0,
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)
@@ -67,7 +69,7 @@ class LocalClient(salt.client.LocalClient):
         stack.transmit(msg)
         stack.serviceAll()
         while True:
-            time.sleep(0.001)
+            time.sleep(0.01)
             stack.serviceAll()
             for msg in stack.rxMsgs:
                 return msg.get('return', {}).get('ret', {})

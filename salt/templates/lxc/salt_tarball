@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 #
 # template script for installing lxc containers via a single tarball
@@ -23,7 +23,13 @@ lxc_network_link="br0"
 default_path="/var/lib/lxc"
 
 deploy_tar() {
+    if [ -f ${path}/config ]
+    then
+        cp ${path}/config ${path}/_orig_config
+    fi
     tar xvf ${imgtar} -C ${path}
+    sed -i '/lxc.rootfs/d' ${path}/config
+    echo "lxc.rootfs = ${path}/rootfs" >> ${path}/config
 }
 
 usage() {
@@ -80,7 +86,7 @@ if [ -z "${path}" ]; then
     path="${default_path}/${name}"
 fi
 
-if [ "${EUID}" != "0" ]; then
+if [ $(id -u) -ne 0 ]; then
     echo "This script should be run as 'root'"
     exit 1
 fi

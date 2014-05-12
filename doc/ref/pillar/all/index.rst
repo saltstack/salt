@@ -19,6 +19,7 @@ Full list of builtin pillar modules
     hiera
     libvirt
     mongo
+    mysql
     pillar_ldap
     puppet
     reclass_adapter

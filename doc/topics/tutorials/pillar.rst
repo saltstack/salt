@@ -76,7 +76,7 @@ To start setting up the pillar, the /srv/pillar directory needs to be present:
 
     mkdir /srv/pillar
 
-Now ceate a simple top file, following the same format as the top file used for
+Now create a simple top file, following the same format as the top file used for
 states:
 
 ``/srv/pillar/top.sls``:
@@ -153,7 +153,7 @@ state, you can use Jinja:
 This approach allows for users to be safely defined in a pillar and then the
 user data is applied in an sls file.
 
-Paramaterizing States With Pillar
+Parameterizing States With Pillar
 =================================
 
 Pillar data can be accessed in state files to customise behaviour for each 

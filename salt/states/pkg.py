@@ -422,6 +422,12 @@ def installed(
         Update the repo database of available packages prior to installing the
         requested package.
 
+    hold
+        Force the package to be held at the current installed version.
+        Currently works with YUM & APT based systems.
+
+        .. versionadded:: Helium
+
     Example:
 
     .. code-block:: yaml
@@ -433,6 +439,7 @@ def installed(
             - skip_suggestions: True
             - version: 2.0.6~ubuntu3
             - refresh: True
+            - hold: False
 
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
@@ -450,6 +457,7 @@ def installed(
               - foo
               - bar
               - baz
+            - hold: True
 
     ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
     :mod:`ebuild <salt.modules.ebuild>`,
@@ -542,10 +550,40 @@ def installed(
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
                                    **kwargs)
+
     try:
         desired, targets, to_unpurge = result
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
+
+        # check that the hold function is available
+        if 'pkg.hold' in __salt__:
+            if 'hold' in kwargs:
+                if kwargs['hold']:
+                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs)
+                else:
+                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
+
+                modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
+                not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
+                failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
+
+                if modified_hold:
+                    for i in modified_hold:
+                        result['comment'] += ' {0}'.format(i['comment'])
+                        result['result'] = i['result']
+                        change_name = i['name']
+                        result['changes'][change_name] = i['changes']
+
+                if not_modified_hold:
+                    for i in not_modified_hold:
+                        result['comment'] += ' {0}'.format(i['comment'])
+                        result['result'] = i['result']
+
+                if failed_hold:
+                    for i in failed_hold:
+                        result['comment'] += ' {0}'.format(i['comment'])
+                        result['result'] = i['result']
         return result
 
     if to_unpurge and 'lowpkg.unpurge' not in __salt__:
@@ -582,6 +620,9 @@ def installed(
                 'comment': ' '.join(comment)}
 
     changes = {'installed': {}}
+    modified_hold = None
+    not_modified_hold = None
+    failed_hold = None
     if targets:
         try:
             pkg_ret = __salt__['pkg.install'](name,
@@ -601,6 +642,17 @@ def installed(
                     'result': False,
                     'comment': 'An error was encountered while installing '
                             'package(s): {0}'.format(exc)}
+
+        if 'pkg.hold' in __salt__:
+            if 'hold' in kwargs:
+                if kwargs['hold']:
+                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs)
+                else:
+                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
+
+                modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
+                not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
+                failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
@@ -647,6 +699,17 @@ def installed(
                 )
             )
 
+    if modified_hold:
+        for i in modified_hold:
+            comment.append(i['comment'])
+            change_name = i['name']
+            if len(changes[change_name]['new']) > 0:
+                changes[change_name]['new'] += '\n'
+            changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
+            if len(changes[change_name]['old']) > 0:
+                changes[change_name]['old'] += '\n'
+            changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
+
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -665,6 +728,10 @@ def installed(
                 )
             )
 
+    if not_modified_hold:
+        for i in not_modified_hold:
+            comment.append(i['comment'])
+
     if failed:
         if sources:
             summary = ', '.join(failed)
@@ -673,6 +740,11 @@ def installed(
                                  for x in failed])
         comment.insert(0, 'The following packages failed to '
                           'install/update: {0}.'.format(summary))
+
+    if failed_hold:
+        for i in failed_hold:
+            comment.append(i['comment'])
+
         return {'name': name,
                 'changes': changes,
                 'result': False,
@@ -1042,7 +1114,8 @@ def uptodate(name, refresh=False):
     Verify that the system is completely up to date.
 
     name
-        Does nothing.
+        The name has no functional value and is only used as a tracking
+        reference
 
     refresh
         refresh the package database before checkif for new upgrades
@@ -1112,3 +1185,43 @@ def mod_init(low):
             salt.utils.fopen(rtag, 'w+').write('')
         return ret
     return False
+
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all packages in the available
+    low chunks and merges them into a single pkgs ref in the present low data
+    '''
+    pkgs = []
+    agg_enabled = [
+            'installed',
+            'latest',
+            'removed',
+            'purged',
+            ]
+    if low.get('fun') not in agg_enabled:
+        return low
+    for chunk in chunks:
+        tag = salt.utils.gen_state_tag(chunk)
+        if tag in running:
+            # Already ran the pkg state, skip aggregation
+            continue
+        if chunk.get('state') == 'pkg':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Pull out the pkg names!
+            if 'pkgs' in chunk:
+                pkgs.extend(chunk['pkgs'])
+                chunk['__agg__'] = True
+            elif 'name' in chunk:
+                pkgs.append(chunk['name'])
+                chunk['__agg__'] = True
+    if pkgs:
+        if 'pkgs' in low:
+            low['pkgs'].extend(pkgs)
+        else:
+            low['pkgs'] = pkgs
+    return low

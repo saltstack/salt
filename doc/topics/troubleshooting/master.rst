@@ -196,7 +196,7 @@ Passing the -c Option to Salt Returns a Permissions Error
 =========================================================
 
 Using the ``-c`` option with the Salt command modifies the configuration
-directory. When the configuratio file is read it will still base data off of
+directory. When the configuration file is read it will still base data off of
 the ``root_dir`` setting. This can result in unintended behavior if you are
 expecting files such as ``/etc/salt/pki`` to be pulled from the location
 specified with ``-c``. Modify the ``root_dir`` setting to address this

@@ -40,6 +40,7 @@ except ImportError:
 import salt.utils
 import salt.utils.find
 import salt.utils.filebuffer
+import salt.utils.files
 import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt._compat
@@ -305,6 +306,34 @@ def set_mode(path, mode):
     except Exception:
         return 'Invalid Mode ' + mode
     return get_mode(path)
+
+
+def lchown(path, user, group):
+    '''
+    Chown a file, pass the file the desired user and group without following
+    symlinks.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.chown /etc/passwd root root
+    '''
+    uid = user_to_uid(user)
+    gid = group_to_gid(group)
+    err = ''
+    if uid == '':
+        if user:
+            err += 'User does not exist\n'
+        else:
+            uid = -1
+    if gid == '':
+        if group:
+            err += 'Group does not exist\n'
+        else:
+            gid = -1
+
+    return os.lchown(path, uid, gid)
 
 
 def chown(path, user, group):
@@ -939,12 +968,17 @@ def replace(path,
 
     :param append_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
+
+        .. versionadded:: Helium
     :param prepend_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
+
+        .. versionadded:: Helium
     :param not_found_content: Content to use for append/prepend if not found. If
         None (default), uses repl. Useful when repl uses references to group in
         pattern.
 
+        .. versionadded:: Helium
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -1152,7 +1186,7 @@ def blockreplace(path,
     done = False
     # we do not use in_place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
-    # written file.
+    # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
     fi_file = fileinput.input(path,
                 inplace=False, backup=False,
@@ -1170,6 +1204,11 @@ def blockreplace(path,
                 if marker_end in line:
                     # end of block detected
                     in_block = False
+
+                    # Check for multi-line '\n' terminated content as split will
+                    # introduce an unwanted additional new line.
+                    if content[-1] == '\n':
+                        content = content[:-1]
 
                     # push new block content in file
                     for cline in content.split("\n"):
@@ -1589,7 +1628,7 @@ def truncate(path, length):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
-    Seek to a position on a file and write to it
+    Seek to a position on a file and delete everything after that point
 
     CLI Example:
 
@@ -1623,6 +1662,24 @@ def link(src, path):
     except (OSError, IOError):
         raise CommandExecutionError('Could not create {0!r}'.format(path))
     return False
+
+
+def is_link(path):
+    '''
+    Check if the path is a symlink
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_link /path/to/link
+    '''
+    # This function exists because os.path.islink does not support Windows,
+    # therefore a custom function will need to be called. This function
+    # therefore helps API consistency by providing a single function to call for
+    # both operating systems.
+
+    return os.path.islink(path)
 
 
 def symlink(src, path):
@@ -1669,15 +1726,25 @@ def rename(src, dst):
     return False
 
 
-def copy(src, dst):
+def copy(src, dst, recurse=False, remove_existing=False):
     '''
-    Copy a file or directory
+    Copy a file or directory from source to dst
+
+    In order to copy a directory, the recurse flag is required, and
+    will by default overwrite files in the destination with the same path,
+    and retain all other existing files. (similar to cp -r on unix)
+
+    remove_existing will remove all files in the target directory,
+    and then copy files from the source.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.copy /path/to/src /path/to/dst
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True
+        salt '*' file.copy /path/to/src_dir /path/to/dst_dir recurse=True remove_existing=True
+
     '''
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
@@ -1688,7 +1755,18 @@ def copy(src, dst):
         pre_mode = __salt__['config.manage_mode'](get_mode(src))
 
     try:
-        shutil.copyfile(src, dst)
+        if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
+            if not recurse:
+                raise SaltInvocationError(
+                    "Cannot copy overwriting a directory without recurse flag set to true!")
+            if remove_existing:
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+            else:
+                salt.utils.files.recursive_copy(src, dst)
+        else:
+            shutil.copyfile(src, dst)
     except OSError:
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
@@ -1827,7 +1905,7 @@ def statvfs(path):
     return False
 
 
-def stats(path, hash_type='md5', follow_symlinks=True):
+def stats(path, hash_type=None, follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -1861,7 +1939,8 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
+    if hash_type:
+        ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
@@ -2297,7 +2376,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
 
         salt '*' file.check_perms /etc/sudoers '{}' root root 400
 
-    .. versionchanged:: 2014.1.2
+    .. versionchanged:: 2014.1.3
         ``follow_symlinks`` option added
     '''
     if not ret:
@@ -2343,12 +2422,16 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
             perms['cgroup'] = group
     if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
+            if os.path.islink(name) and not follow_symlinks:
+                chown_func = lchown
+            else:
+                chown_func = chown
             if user is None:
                 user = perms['luser']
             if group is None:
                 group = perms['lgroup']
             try:
-                chown(name, user, group)
+                chown_func(name, user, group)
             except OSError:
                 ret['result'] = False
 
@@ -2473,9 +2556,7 @@ def check_file_meta(
     changes = {}
     if not source_sum:
         source_sum = dict()
-    lstats = stats(
-        name, source_sum.get('hash_type', 'md5'), follow_symlinks=False
-    )
+    lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
     if not lstats:
         changes['newfile'] = name
         return changes
@@ -2598,8 +2679,7 @@ def manage_file(name,
                 template=None,   # pylint: disable=W0613
                 show_diff=True,
                 contents=None,
-                dir_mode=None,
-                mkdirs=False):
+                dir_mode=None):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2744,7 +2824,7 @@ def manage_file(name,
                     ret['result'] = False
                     return ret
             if not os.path.isdir(os.path.dirname(name)):
-                if makedirs and mkdirs:
+                if makedirs:
                     # check for existence of windows drive letter
                     if salt.utils.is_windows():
                         drive, _ = os.path.splitdrive(name)
@@ -3438,3 +3518,81 @@ def grep(path,
         raise CommandExecutionError(exc.strerror)
 
     return ret
+
+
+def open_files(by_pid=False):
+    '''
+    Return a list of all physical open files on the system.
+
+    CLI Examples:
+
+        salt '*' file.open_files
+        salt '*' file.open_files by_pid=True
+    '''
+    # First we collect valid PIDs
+    pids = {}
+    procfs = os.listdir('/proc/')
+    for pfile in procfs:
+        try:
+            pids[int(pfile)] = []
+        except ValueError:
+            # Not a valid PID, move on
+            pass
+
+    # Then we look at the open files for each PID
+    files = {}
+    for pid in pids.keys():
+        ppath = '/proc/{0}'.format(pid)
+        try:
+            tids = os.listdir('{0}/task'.format(ppath))
+        except OSError:
+            continue
+
+        # Collect the names of all of the file descriptors
+        fd_ = []
+
+        #try:
+        #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
+        #except:
+        #    pass
+
+        for fpath in os.listdir('{0}/fd'.format(ppath)):
+            fd_.append('{0}/fd/{1}'.format(ppath, fpath))
+
+        for tid in tids:
+            try:
+                fd_.append(
+                    os.path.realpath('{0}/task/{1}/exe'.format(ppath, tid))
+                )
+            except OSError:
+                continue
+
+            for tpath in os.listdir('{0}/task/{1}/fd'.format(ppath, tid)):
+                fd_.append('{0}/task/{1}/fd/{2}'.format(ppath, tid, tpath))
+
+        fd_ = sorted(set(fd_))
+
+        # Loop through file descriptors and return useful data for each file
+        for fdpath in fd_:
+            # Sometimes PIDs and TIDs disappear before we can query them
+            try:
+                name = os.path.realpath(fdpath)
+                # Running stat on the file cuts out all of the sockets and
+                # deleted files from the list
+                os.stat(name)
+            except OSError:
+                continue
+
+            if not name in files:
+                files[name] = [pid]
+            else:
+                # We still want to know which PIDs are using each file
+                files[name].append(pid)
+                files[name] = sorted(set(files[name]))
+
+            pids[pid].append(name)
+            pids[pid] = sorted(set(pids[pid]))
+
+    if by_pid:
+        return pids
+    return files

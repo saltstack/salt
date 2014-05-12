@@ -23,16 +23,15 @@ class SaltSafe(object):
     '''
     Interface between Salt Key management and RAET keep key management
     '''
-    Auto = False #auto accept
     LocalFields = ['sighex', 'prihex']
     RemoteFields = ['eid', 'name', 'acceptance', 'verhex', 'pubhex']
 
-    def __init__(self, opts=None, **kwa):
+    def __init__(self, opts, **kwa):
         '''
         Setup SaltSafe instance
         '''
-        if opts is None:
-            opts = {}
+        self.auto = opts['auto_accept']
+        self.dirpath = opts['pki_dir']
         self.saltRaetKey = RaetKey(opts)
 
     def verifyLocalData(self, data):
@@ -93,7 +92,7 @@ class SaltSafe(object):
                     rdata['acceptance'] = raeting.ACCEPTANCES[status]
                     rdata['verhex'] = keydata['verify']
                     rdata['pubhex'] = keydata['pub']
-                    data[rdata['eid']] = rdata
+                    data[str(rdata['eid'])] = rdata
 
         return data
 
@@ -173,7 +172,8 @@ class SaltSafe(object):
                 remote.verfer = nacling.Verifier(verhex)
             if (pubhex and pubhex != remote.pubber.keyhex):
                 remote.pubber = nacling.Publican(pubhex)
-        remote.acceptance = status
+            remote.acceptance = status
+
         return status
 
     def rejectRemote(self, remote):
@@ -199,7 +199,7 @@ class SaltSafe(object):
         self.saltRaetKey.accept(match=mid, include_rejected=True)
 
 
-def clearAllRoadSafe(dirpath, opts):
+def clearAllKeepSafe(dirpath, opts):
     '''
     Convenience function to clear all road and safe keep data in dirpath
     '''

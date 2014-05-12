@@ -41,7 +41,9 @@ if HAS_PIP is True:
         HAS_PIP = False
         # Remove references to the loaded pip module above so reloading works
         import sys
-        del pip, sys.modules['pip']
+        del pip
+        if 'pip' in sys.modules:
+            del sys.modules['pip']
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +209,7 @@ def installed(name,
         Extra global options to be supplied to the setup.py call before the
         install command.
 
-        .. versionadded:: 2014.1.2
+        .. versionadded:: 2014.1.3
 
     .. admonition:: Attention
 
@@ -216,7 +218,7 @@ def installed(name,
         Salt from an active `virtualenv`_.
 
         The reason for this requirement is because ``pip`` already does a
-        pretty good job parsing it's own requirements. It makes no sense for
+        pretty good job parsing its own requirements. It makes no sense for
         Salt to do ``pip`` requirements parsing and validation before passing
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
@@ -248,10 +250,9 @@ def installed(name,
                'value of repo, {1!r}'.format(
                    name,
                    repo,
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
+                   version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Hydrogen', msg)
+        salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
@@ -313,10 +314,9 @@ def installed(name,
         msg = ('The \'runas\' argument to pip.installed is deprecated, and '
                'will be removed in Salt {version}. Please use \'user\' '
                'instead.'.format(
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
+                   version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Hydrogen', msg)
+        salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
 
         # "There can only be one"
@@ -507,10 +507,9 @@ def removed(name,
         msg = ('The \'runas\' argument to pip.installed is deprecated, and '
                'will be removed in Salt {version}. Please use \'user\' '
                'instead.'.format(
-                   version=_SaltStackVersion.from_name(
-                       'Hydrogen').formatted_version
+                   version=_SaltStackVersion.from_name('Lithium').formatted_version
                ))
-        salt.utils.warn_until('Hydrogen', msg)
+        salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
 
     # "There can only be one"

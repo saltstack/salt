@@ -125,7 +125,7 @@ def _get_virtual():
         __context__['pkg._get_virtual'] = {}
         if __salt__['cmd.has_exec']('grep-available'):
             cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
             virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
             for realpkg, provides in virtpkg_re.findall(out):
                 __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
@@ -196,7 +196,7 @@ def latest_version(*names, **kwargs):
         if isinstance(repo, list):
             cmd = cmd + repo
         out = __salt__['cmd.run_all'](cmd, python_shell=False,
-                                      output_loglevel='debug')
+                                      output_loglevel='trace')
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
@@ -273,7 +273,7 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         cols = line.split()
         if not cols:
@@ -574,6 +574,128 @@ def upgrade(refresh=True, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 
+def hold(name=None, pkgs=None, **kwargs):
+    '''
+    Set package in 'hold' state, meaning it will not be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.hold <package name>
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.hold pkgs='["foo", "bar"]'
+
+    .. versionadded:: Helium
+
+    '''
+
+    if not name and not pkgs:
+        return 'Error: name or pkgs needs to be specified.'
+
+    if name and not pkgs:
+        pkgs = []
+        pkgs.append(name)
+
+    ret = {}
+    for pkg in pkgs:
+
+        if isinstance(pkg, dict):
+            pkg = pkg.keys()[0]
+
+        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
+        state = get_selections(pattern=pkg, state=hold)
+        if not state:
+            ret[pkg]['comment'] = 'Package {0} not currently held.'.format(pkg)
+        elif not salt.utils.is_true(state.get('hold', False)):
+            if 'test' in kwargs and kwargs['test']:
+                ret[pkg].update(result=None)
+                ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
+            else:
+                result = set_selections(
+                    selection={'hold': [pkg]}
+                )
+                ret[pkg].update(changes=result[pkg], result=True)
+                ret[pkg]['comment'] = 'Package {0} is now being held.'.format(pkg)
+        else:
+            ret[pkg].update(result=True)
+            ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
+    return ret
+
+
+def unhold(name=None, pkgs=None, **kwargs):
+    '''
+    Set package current in 'hold' state to install state,
+    meaning it will be upgraded.
+
+    name
+        The name of the package, e.g., 'tmux'
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unhold <package name>
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.unhold pkgs='["foo", "bar"]'
+
+    .. versionadded:: Helium
+
+    '''
+
+    log.debug('calling unhold {0}')
+    if not name and not pkgs:
+        return 'Error: name or pkgs needs to be specified.'
+
+    if name and not pkgs:
+        pkgs = []
+        pkgs.append(name)
+
+    ret = {}
+    for pkg in pkgs:
+
+        if isinstance(pkg, dict):
+            pkg = pkg.keys()[0]
+
+        ret[pkg] = {'changes': {}, 'result': False, 'comment': ''}
+        state = get_selections(pattern=pkg)
+        if not state:
+            ret[pkg]['comment'] = 'Package {0} does not have a state.'.format(pkg)
+        elif salt.utils.is_true(state.get('hold', False)):
+            if 'test' in kwargs and kwargs['test']:
+                ret[pkg].update(result=None)
+                ret['comment'] = 'Package {0} is set not to be held.'.format(pkg)
+            else:
+                result = set_selections(
+                    selection={'install': [pkg]}
+                )
+                ret[pkg].update(changes=result[pkg], result=True)
+                ret[pkg]['comment'] = 'Package {0} is no longer being held.'.format(pkg)
+        else:
+            ret[pkg].update(result=True)
+            ret[pkg]['comment'] = 'Package {0} is already set not to be held.'.format(pkg)
+
+    log.debug('in unhold {0}'.format(ret))
+    return ret
+
+
 def _clean_pkglist(pkgs):
     '''
     Go through package list and, if any packages have more than one virtual
@@ -644,7 +766,7 @@ def list_pkgs(versions_as_list=False,
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
@@ -713,7 +835,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
@@ -1610,3 +1732,34 @@ def _resolve_deps(name, pkgs, **kwargs):
             except MinionError as exc:
                 raise CommandExecutionError(exc)
     return
+
+
+def owner(*paths):
+    '''
+    .. versionadded:: Helium
+
+    Return the name of the package that owns the file. Multiple file paths can
+    be passed. Like :mod:`pkg.version <salt.modules.aptpkg.version`, if a
+    single path is passed, a string will be returned, and if multiple paths are
+    passed, a dictionary of file/package name pairs will be returned.
+
+    If the file is not owned by a package, or is not present on the minion,
+    then an empty string will be returned for that path.
+
+    CLI Example:
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
+    '''
+    if not paths:
+        return ''
+    ret = {}
+    cmd = 'dpkg -S {0!r} | cut -f1 -d:'
+    for path in paths:
+        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
+                                               output_loglevel='debug')
+        if 'no path found' in ret[path].lower():
+            ret[path] = ''
+    if len(ret) == 1:
+        return ret.values()[0]
+    return ret

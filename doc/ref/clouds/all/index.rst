@@ -17,14 +17,17 @@ Full list of Salt Cloud modules
     gce
     gogrid
     joyent
-    lxc
     libcloud_aws
     linode
+    lxc
     msazure
     nova
+    opennebula
     openstack
     parallels
     proxmox
     rackspace
     saltify
     softlayer
+    softlayer_hw
+    vsphere

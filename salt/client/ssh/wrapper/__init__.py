@@ -44,14 +44,12 @@ class FunctionWrapper(object):
             '''
             The remote execution function
             '''
-            arg_str = ['{0} '.format(cmd)]
-            for arg in args:
-                arg_str.append('{0} '.format(arg))
-            for key, val in kwargs.items():
-                arg_str.append('{0}={1} '.format(key, val))
+            args = [cmd]
+            args.extend([str(arg) for arg in args])
+            args.extend(['{0}={1}'.format(key, val) for key, val in kwargs.items()])
             single = salt.client.ssh.Single(
                     self.opts,
-                    ''.join(arg_str),
+                    ' '.join(args),
                     **self.kwargs
             )
             stdout, _, _ = single.cmd_block()

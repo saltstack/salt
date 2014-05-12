@@ -5,11 +5,7 @@ Support for the Git SCM
 
 # Import python libs
 import os
-try:
-    import pipes
-    HAS_PIPES = True
-except ImportError:
-    HAS_PIPES = False
+import subprocess
 
 # Import salt libs
 from salt import utils, exceptions
@@ -19,9 +15,7 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    if not all((utils.which('git'), HAS_PIPES)):
-        return False
-    return True
+    return True if utils.which('git') else False
 
 
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
@@ -35,24 +29,49 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     env = {}
 
     if identity:
-        env = {
-            'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
-                                    'git/ssh-id-wrapper'),
-            'GIT_IDENTITY': identity
-        }
+        stderrs = []
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=cwd,
-                                     runas=runas,
-                                     env=env,
-                                     **kwargs)
+        # if the statefile provides multiple identities, they need to be tried
+        # (but also allow a string instead of a list)
+        if not isinstance(identity, list):
+            # force it into a list
+            identity = [identity]
 
-    retcode = result['retcode']
+        # try each of the identities, independently
+        for id_file in identity:
+            env = {
+                'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
+                                        'git/ssh-id-wrapper'),
+                'GIT_IDENTITY': id_file
+            }
 
-    if retcode == 0:
-        return result['stdout']
+            result = __salt__['cmd.run_all'](cmd,
+                                             cwd=cwd,
+                                             runas=runas,
+                                             env=env,
+                                             **kwargs)
+
+            # if the command was successful, no need to try additional IDs
+            if result['retcode'] == 0:
+                return result['stdout']
+            else:
+                stderrs.append(result['stderr'])
+
+        # we've tried all IDs and still haven't passed, so error out
+        raise exceptions.CommandExecutionError("\n\n".join(stderrs))
+
     else:
-        raise exceptions.CommandExecutionError(result['stderr'])
+        result = __salt__['cmd.run_all'](cmd,
+                                         cwd=cwd,
+                                         runas=runas,
+                                         env=env,
+                                         **kwargs)
+        retcode = result['retcode']
+
+        if retcode == 0:
+            return result['stdout']
+        else:
+            raise exceptions.CommandExecutionError(result['stderr'])
 
 
 def _git_getdir(cwd, user=None):
@@ -572,9 +591,10 @@ def commit(cwd, message, user=None, opts=None):
         salt '*' git.commit /path/to/git/repo 'The commit message'
     '''
 
-    if not opts:
-        opts = ''
-    cmd = 'git commit -m {0} {1}'.format(pipes.quote(message), opts)
+    cmd = subprocess.list2cmdline(['git', 'commit', '-m', message])
+    # add opts separately; they don't need to be quoted
+    if opts:
+        cmd = cmd + ' ' + opts
     return _git_run(cmd, cwd=cwd, runas=user)
 
 
@@ -698,6 +718,33 @@ def remote_set(cwd, name='origin', url=None, user=None):
     cmd = 'git remote add {0} {1}'.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user)
     return remote_get(cwd=cwd, remote=name, user=None)
+
+
+def branch(cwd, rev, opts=None, user=None):
+    '''
+    Interacts with branches.
+
+    cwd
+        The path to the Git repository
+
+    rev
+        The branch/revision to be used in the command.
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run git as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' git.branch mybranch --set-upstream-to=origin/mybranch
+    '''
+    cmd = 'git branch {0} {1}'.format(rev, opts)
+    _git_run(cmd, cwd=cwd, user=user)
+    return current_branch(cwd, user=user)
 
 
 def reset(cwd, opts=None, user=None):

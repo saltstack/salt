@@ -21,12 +21,12 @@ commands with ``salt``, the ``salt-call`` command is used instead:
 Bootstrap Salt Minion
 =====================
 
-The `salt-bootstrap`_ script makes boostrapping a server with Salt simple
+The `salt-bootstrap`_ script makes bootstrapping a server with Salt simple
 for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    wget -O - http://bootstrap.saltstack.org | sudo sh
+    wget -O - https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
 to test out salt, the `salty-vagrant`_ tool will  provision the VM for you.

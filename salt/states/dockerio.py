@@ -30,8 +30,8 @@ Available Functions
   .. code-block:: yaml
 
       corp/mysuperdocker_img:
-          docker.built:
-              - path: /path/to/dir/container/Dockerfile
+        docker.built:
+          - path: /path/to/dir/container/Dockerfile
 
 - pulled
 
@@ -45,52 +45,59 @@ Available Functions
   .. code-block:: yaml
 
       mysuperdocker-container:
-          docker.installed:
-              - name: mysuperdocker
-              - hostname: superdocker
-              - image: corp/mysuperdocker_img
+        docker.installed:
+          - name: mysuperdocker
+          - hostname: superdocker
+          - image: corp/mysuperdocker_img
 - running
 
   .. code-block:: yaml
 
       my_service:
-          docker.running:
-              - container: mysuperdocker
-              - port_bindings:
-                  "5000/tcp":
-                      HostIp: ""
-                      HostPort: "5000"
+        docker.running:
+          - container: mysuperdocker
+          - port_bindings:
+              "5000/tcp":
+                  HostIp: ""
+                  HostPort: "5000"
+
+  .. note::
+
+      The ``port_bindings`` argument above is a dictionary. Note the
+      double-indentation, this is required for PyYAML to load the data
+      structure properly as a dictionary. More information can be found
+      :ref:`here <nested-dict-indentation>`
 
 
 - absent
 
   .. code-block:: yaml
 
-       mys_old_uperdocker:
-          docker.absent
+      mys_old_uperdocker:
+        docker.absent
 
 - run
 
   .. code-block:: yaml
 
-       /finish-install.sh:
-           docker.run:
-               - container: mysuperdocker
-               - unless: grep -q something /var/log/foo
-               - docker_unless: grep -q done /install_log
+      /finish-install.sh:
+        docker.run:
+          - container: mysuperdocker
+          - unless: grep -q something /var/log/foo
+          - docker_unless: grep -q done /install_log
 
 .. note::
 
-    The docker modules are named `dockerio` because
+    The docker modules are named ``dockerio`` because
     the name 'docker' would conflict with the underlying docker-py library.
 
     We should add magic to all methods to also match containers by name
     now that the 'naming link' stuff has been merged in docker.
     This applies for example to:
 
-        - running
-        - absent
-        - run
+    - running
+    - absent
+    - run
 
 
 '''
@@ -348,12 +355,12 @@ def installed(name,
         volumes = []
     if isinstance(environment, dict):
         for k in environment:
-            denvironment[u'%s' % k] = u'%s' % environment[k]
+            denvironment[unicode(k)] = unicode(environment[k])
     if isinstance(environment, list):
         for p in environment:
             if isinstance(p, dict):
                 for k in p:
-                    denvironment[u'%s' % k] = u'%s' % p[k]
+                    denvironment[unicode(k)] = unicode(p[k])
     for p in ports:
         if not isinstance(p, dict):
             dports[str(p)] = {}
@@ -363,7 +370,7 @@ def installed(name,
     for p in volumes:
         vals = []
         if not isinstance(p, dict):
-            vals.append('%s' % p)
+            vals.append('{0}'.format(p))
         else:
             for k in p:
                 vals.append('{0}:{1}'.format(k, p[k]))
@@ -452,8 +459,8 @@ def run(name,
         docked_onlyif=None,
         docked_unless=None,
         *args, **kwargs):
-    '''Run a command in a specific container
-
+    '''
+    Run a command in a specific container
 
     You can match by either name or hostname
 
@@ -480,9 +487,10 @@ def run(name,
 
     '''
     if hostname:
-        salt.utils.warn_until((0, 19),
-                              'The argument \'hostname\' argument'
-                              ' has been deprecated.')
+        salt.utils.warn_until(
+            'Helium',
+            'The \'hostname\' argument has been deprecated.'
+        )
     retcode = __salt__['docker.retcode']
     drun_all = __salt__['docker.run_all']
     valid = functools.partial(_valid, name=name)
@@ -532,14 +540,15 @@ def script(*args, **kw):
 
         Not yet implemented.
         Its implementation might be very similar from
-        :mod:`salt.states.dokcerio.run`
+        :mod:`salt.states.dockerio.run`
     '''
     raise NotImplementedError
 
 
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
-            privileged=False):
+            privileged=False, dns=None, volumes_from=None,
+            check_is_running=True):
     '''
     Ensure that a container is running. (`docker inspect`)
 
@@ -555,7 +564,7 @@ def running(name, container=None, port_bindings=None, binds=None,
         .. code-block:: yaml
 
             - binds:
-                - /var/log/service: /var/log/service
+                /var/log/service: /var/log/service
 
     publish_all_ports
 
@@ -577,6 +586,39 @@ def running(name, container=None, port_bindings=None, binds=None,
                 "5000/tcp":
                     HostIp: ""
                     HostPort: "5000"
+    binds
+        List of volumes to mount
+
+        .. code-block:: yaml
+
+            - binds:
+                /home/user1:
+                    bind: /mnt/vol2
+                    ro: true
+                /var/www:
+                    bind: /mnt/vol1
+                    ro: false
+
+    dns
+        List of DNS servers.
+
+        .. code-block:: yaml
+
+            - dns:
+                - 127.0.0.1
+
+    volumes_from
+        List of container names to get volumes definition from
+
+        .. code-block:: yaml
+
+            - dns:
+                - name_other_container
+
+    check_is_running
+        Enable checking if a container should run or not.
+        Useful for data-only containers that must be linked to another one.
+        e.g. nginx <- static-files
     '''
     is_running = __salt__['docker.is_running'](container)
     if is_running:
@@ -586,14 +628,21 @@ def running(name, container=None, port_bindings=None, binds=None,
         started = __salt__['docker.start'](
             container, binds=binds, port_bindings=port_bindings,
             lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
-            links=links, privileged=privileged)
-        is_running = __salt__['docker.is_running'](container)
-        if is_running:
-            return _valid(
-                comment=('Container {!r} started.\n').format(container),
-                changes={name: True})
+            links=links, privileged=privileged,
+            dns=dns, volumes_from=volumes_from,
+        )
+        if check_is_running:
+            is_running = __salt__['docker.is_running'](container)
+            if is_running:
+                return _valid(
+                    comment='Container {!r} started.\n'.format(container),
+                    changes={name: True})
+            else:
+                return _invalid(
+                    comment=('Container {!r}'
+                            ' cannot be started\n{!s}').format(container,
+                                                                started['out']))
         else:
-            return _invalid(
-                comment=('Container {!r}'
-                         ' cannot be started\n{!s}').format(container,
-                                                            started['out']))
+            return _valid(
+                comment='Container {!r} started.\n'.format(container),
+                changes={name: True})

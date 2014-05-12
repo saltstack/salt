@@ -9,6 +9,7 @@ import os.path
 import os
 import re
 import StringIO
+import time
 
 # Import third party libs
 import jinja2
@@ -371,7 +372,7 @@ def _parse_interfaces():
                         if sline[0] in ['up', 'down', 'pre-up', 'post-up', 'pre-down', 'post-down']:
                             ud = sline.pop(0)
                             cmd = ' '.join(sline)
-                            cmd_key = '%s_cmds' % (re.sub('-', '_', ud))
+                            cmd_key = '{0}_cmds'.format(re.sub('-', '_', ud))
                             if not cmd_key in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context][cmd_key] = []
                             adapters[iface_name]['data'][context][cmd_key].append(cmd)
@@ -1447,7 +1448,9 @@ def apply_network_settings(**settings):
         )
         return True
     else:
-        return __salt__['service.restart']('networking')
+        stop = __salt__['service.stop']('networking')
+        time.sleep(2)
+        return stop and __salt__['service.start']('networking')
 
 
 def build_network_settings(**settings):

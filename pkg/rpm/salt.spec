@@ -12,7 +12,7 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.4
+%define _salttesting_ver 2014.4.24
 
 Name: salt
 Version: %{salt_version}
@@ -69,6 +69,8 @@ BuildRequires: python-unittest2
 # https://github.com/saltstack/salt/issues/3749
 BuildRequires: python-mock
 BuildRequires: git
+
+Requires: python-libcloud
 %endif
 
 BuildRequires: m2crypto
@@ -320,6 +322,15 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue May 6 2014 Erik Johnson <erik@saltstack.com> - 2014.1.4-1
+- Update to bugfix release 2014.1.4
+
+* Fri Apr 18 2014 Erik Johnson <erik@saltstack.com> - 2014.1.3-1
+- Update to bugfix release 2014.1.3
+
+* Fri Mar 21 2014 Erik Johnson <erik@saltstack.com> - 2014.1.1-1
+- Update to bugfix release 2014.1.1
+
 * Thu Feb 20 2014 Erik Johnson <erik@saltstack.com> - 2014.1.0-1
 - Update to feature release 2014.1.0
 

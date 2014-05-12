@@ -24,8 +24,10 @@ cloud is operating on.
 Minion Configuration
 ====================
 
-The default minion configuration is set up in this file. This is where the
-minions that are created derive their configuration from.
+The default minion configuration is set up in this file. Minions created by
+salt-cloud derive their configuration from this file.  Almost all parameters
+found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can
+be used here.
 
 .. code-block:: yaml
 
@@ -33,7 +35,8 @@ minions that are created derive their configuration from.
         master: saltmaster.example.com
 
 
-In particular, this is the location to specify the location of the salt master.
+In particular, this is the location to specify the location of the salt master
+and its listening port, if the port is not set to the default.
 
 
 New Cloud Configuration Syntax

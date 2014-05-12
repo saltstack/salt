@@ -194,6 +194,8 @@ class CloudClient(object):
         opts['show_deploy_args'] = False
         opts['script_args'] = ''
         # Update it with the passed kwargs
+        if 'kwargs' in kwargs:
+            opts.update(kwargs['kwargs'])
         opts.update(kwargs)
         return opts
 
@@ -276,6 +278,18 @@ class CloudClient(object):
             mapper.run_profile(profile, names, vm_overrides=vm_overrides)
         )
 
+    def map_run(self, path, **kwargs):
+        '''
+        Pass in a location for a map to execute
+        '''
+        kwarg = {'map': path}
+        kwarg.update(kwargs)
+        mapper = salt.cloud.Map(self._opts_defaults(**kwarg))
+        dmap = mapper.map_data()
+        return salt.utils.cloud.simple_types_filter(
+            mapper.run_map(dmap)
+        )
+
     def destroy(self, names):
         '''
         Destroy the named VMs
@@ -316,7 +330,7 @@ class CloudClient(object):
                 mapper.create(vm_))
         return ret
 
-    def volume_action(self, provider, names, action, **kwargs):
+    def extra_action(self, names, provider, action, **kwargs):
         '''
         Perform actions with block storage devices
 
@@ -324,8 +338,11 @@ class CloudClient(object):
 
         .. code-block:: python
 
-            client.volume_action(names=['myblock'], action='create',
+            client.extra_action(names=['myblock'], action='volume_create',
                 provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
+            )
+            client.extra_action(names=['salt-net'], action='network_create',
+                provider='my-nova', kwargs={'cidr': '192.168.100.0/24'}
             )
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
@@ -339,13 +356,13 @@ class CloudClient(object):
 
         ret = {}
         for name in names:
-            volume_ = kwargs.copy()
-            volume_['name'] = name
-            volume_['provider'] = provider
-            volume_['profile'] = None
-            volume_['action'] = action
+            extra_ = kwargs.copy()
+            extra_['name'] = name
+            extra_['provider'] = provider
+            extra_['profile'] = None
+            extra_['action'] = action
             ret[name] = salt.utils.cloud.simple_types_filter(
-                mapper.volumes(volume_)
+                mapper.extras(extra_)
             )
         return ret
 
@@ -519,10 +536,15 @@ class Cloud(object):
         # Optimize Providers
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
+            # Make temp query for this driver to avoid overwrite next
+            this_query = query
             for driver, details in drivers.iteritems():
+                # If driver has function list_nodes_min, just replace it
+                # with query param to check existing vms on this driver
+                # for minimum information, Othwise still use query param.
                 if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                    query = 'list_nodes_min'
-                fun = '{0}.{1}'.format(driver, query)
+                    this_query = 'list_nodes_min'
+                fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
                         'Public cloud provider {0} is not available'.format(
@@ -534,7 +556,7 @@ class Cloud(object):
                 multiprocessing_data.append({
                     'fun': fun,
                     'opts': opts,
-                    'query': query,
+                    'query': this_query,
                     'alias': alias,
                     'driver': driver
                 })
@@ -887,8 +909,16 @@ class Cloud(object):
             if not ret:
                 continue
 
+            vm_ = {
+                'name': name,
+                'profile': None,
+                'provider': ':'.join([alias, driver])
+            }
+            minion_dict = salt.config.get_cloud_config_value(
+                'minion', vm_, self.opts, default={}
+            )
             key_file = os.path.join(
-                self.opts['pki_dir'], 'minions', name
+                self.opts['pki_dir'], 'minions', minion_dict.get('id', name)
             )
             globbed_key_file = glob.glob('{0}.*'.format(key_file))
 
@@ -902,7 +932,7 @@ class Cloud(object):
 
             if os.path.isfile(key_file) and not globbed_key_file:
                 # Single key entry. Remove it!
-                salt.utils.cloud.remove_key(self.opts['pki_dir'], name)
+                salt.utils.cloud.remove_key(self.opts['pki_dir'], os.path.basename(key_file))
                 continue
 
             if not os.path.isfile(key_file) and globbed_key_file:
@@ -1106,7 +1136,7 @@ class Cloud(object):
 
                 # a small pause makes the sync work reliably
                 time.sleep(3)
-                client = salt.client.get_local_client()
+                client = salt.client.get_local_client(mopts=self.opts)
                 ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
                     self.opts['sync_after_install']
                 ))
@@ -1131,7 +1161,7 @@ class Cloud(object):
                     self.opts['start_action'], vm_['name']
                 )
             )
-            client = salt.client.get_local_client()
+            client = salt.client.get_local_client(mopts=self.opts)
             action_out = client.cmd(
                 vm_['name'],
                 self.opts['start_action'],
@@ -1140,19 +1170,19 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def volumes(self, volume_):
+    def extras(self, extra_):
         '''
-        Volume actions
+        Extra actions
         '''
         output = {}
 
-        alias, driver = volume_['provider'].split(':')
-        fun = '{0}.volume_{1}'.format(driver, volume_['action'])
+        alias, driver = extra_['provider'].split(':')
+        fun = '{0}.{1}'.format(driver, extra_['action'])
         if fun not in self.clouds:
             log.error(
                 'Creating {0[name]!r} using {0[provider]!r} as the provider '
                 'cannot complete since {1!r} is not available'.format(
-                    volume_,
+                    extra_,
                     driver
                 )
             )
@@ -1161,16 +1191,16 @@ class Cloud(object):
         try:
             with context.func_globals_inject(
                 self.clouds[fun],
-                __active_provider_name__=volume_['provider']
+                __active_provider_name__=extra_['provider']
             ):
-                output = self.clouds[fun](**volume_)
+                output = self.clouds[fun](**extra_)
         except KeyError as exc:
             log.exception(
                 (
-                    'Failed to perform {0[provider]}.volume_{0[action]} '
+                    'Failed to perform {0[provider]}.{0[action]} '
                     'on {0[name]}. '
                     'Configuration value {1} needs to be set'
-                ).format(volume_, exc)
+                ).format(extra_, exc)
             )
         return output
 
@@ -1194,7 +1224,14 @@ class Cloud(object):
         vms = alias_data.setdefault(driver, {})
 
         for name in names:
-            if name in vms and vms[name]['state'].lower() != 'terminated':
+            name_exists = False
+            if name in vms:
+                if 'state' in vms[name]:
+                    if vms[name]['state'].lower() != 'terminated':
+                        name_exists = True
+                else:
+                    name_exists = True
+            if name_exists:
                 msg = '{0} already exists under {0}:{1}'.format(
                     name, alias, driver
                 )
@@ -1847,7 +1884,7 @@ class Map(Cloud):
             if master_profile['minion'].get('local_master', False) and \
                     master_profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
-                # explicitely saying it's the local one
+                # explicitly saying it's the local one
                 local_master = True
 
             out = self.create(master_profile, local_master=local_master)
@@ -1909,10 +1946,10 @@ class Map(Cloud):
                 # Already deployed, it's the master's minion
                 continue
 
-            if profile['minion'].get('local_master', False) and \
+            if 'minion' in profile and profile['minion'].get('local_master', False) and \
                     profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
-                # explicitely saying it's the local one
+                # explicitly saying it's the local one
                 local_master = True
 
             if master_finger is not None and local_master is False:

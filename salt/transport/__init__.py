@@ -2,6 +2,7 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+import time
 
 # Import Salt Libs
 import salt.payload
@@ -56,12 +57,12 @@ class RAETChannel(Channel):
         self.stack = LaneStack(
                 lanename=self.opts['id'],
                 yid=salt.utils.gen_jid(),
-                dirpath=self.opts['cache_dir'],
-                hadirpath=self.opts['sock_dir'])
+                dirpath=self.opts['cachedir'],
+                sockdirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.RemoteYard(
                 yid=0,
-                prefix=self.opts['id'],
+                lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemote(self.router_yard)
         src = (self.opts['id'], self.stack.local.name, None)
@@ -82,6 +83,7 @@ class RAETChannel(Channel):
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['yard0'])
         while True:
+            time.sleep(0.01)
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 for msg in self.stack.rxMsgs:
@@ -99,7 +101,7 @@ class ZeroMQChannel(Channel):
         self.ttype = 'zeromq'
 
         # crypt defaults to 'aes'
-        self.crypt = kwargs['crypt'] if 'crypt' in kwargs else 'aes'
+        self.crypt = kwargs.get('crypt', 'aes')
 
         self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':

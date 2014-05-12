@@ -45,6 +45,8 @@ def succeed_without_changes(name):
     '''
     Returns successful.
 
+    .. versionadded:: Helium
+
     name
         A unique string.
     '''
@@ -67,6 +69,8 @@ def succeed_without_changes(name):
 def fail_without_changes(name):
     '''
     Returns failure.
+
+    .. versionadded:: Helium
 
     name:
         A unique string.
@@ -92,6 +96,8 @@ def fail_without_changes(name):
 def succeed_with_changes(name):
     '''
     Returns successful and changes is not empty
+
+    .. versionadded:: Helium
 
     name:
         A unique string.
@@ -127,6 +133,8 @@ def fail_with_changes(name):
     '''
     Returns failure and changes is not empty.
 
+    .. versionadded:: Helium
+
     name:
         A unique string.
     '''
@@ -160,6 +168,8 @@ def fail_with_changes(name):
 def configurable_test_state(name, changes=True, result=True, comment=''):
     '''
     A configurable test state which determines its output based on the inputs.
+
+    .. versionadded:: Helium
 
     name:
         A unique string.

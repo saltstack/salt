@@ -1,8 +1,7 @@
 .. _reactor:
 
-.. index:: Reactor
-    single: Reactor; events
-    see: events; Reactor
+.. index:: ! Reactor, Salt Reactor
+    seealso: Event; Reactor
 
 ==============
 Reactor System
@@ -120,7 +119,7 @@ Example usage:
 
 .. code-block:: bash
 
-    wget https://raw.github.com/saltstack/salt/develop/tests/eventlisten.py
+    wget https://raw.githubusercontent.com/saltstack/salt/develop/tests/eventlisten.py
     python eventlisten.py
 
     # OR
@@ -198,7 +197,7 @@ the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
 method, not the remote method. A field starts with :strong:`cmd` to use the
 :strong:`LocalClient` subsystem. The result is, to execute a remote command, 
-a reactor fomular would look like this:
+a reactor formula would look like this:
 
 .. code-block:: yaml
 
@@ -306,7 +305,7 @@ will come online at random and need to have keys automatically accepted. We'll
 also add that we don't want all servers being automatically accepted. For this
 example, we'll assume that all hosts that have an id that starts with 'ink'
 will be automatically accepted and have state.highstate executed. On top of
-thise, we're going to add that a host coming up that was replaced (meaning a new
+this, we're going to add that a host coming up that was replaced (meaning a new
 key) will also be accepted.
 
 Our master configuration will be rather simple. All minions that attempte to

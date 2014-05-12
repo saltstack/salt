@@ -187,3 +187,38 @@ allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
+
+What is the best way to restart a Salt daemon using Salt?
+---------------------------------------------------------
+
+Restarting Salt using Salt without having the restart interrupt the whole
+process is a tricky problem to solve. We're still working on it but in the
+meantime a good way is to use the system scheduler with a short interval. The
+following example is a state that will always execute at the very end of a
+state run.
+
+For Unix machines:
+
+.. code-block:: yaml
+
+    salt-minion-reload:
+      cmd:
+        - run
+        - name: echo service salt-minion restart | at now + 1 minute
+        - order: last
+
+For Windows machines:
+
+.. code-block:: yaml
+
+    schedule-start:
+      cmd:
+        - run
+        - name: at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net start salt-minion"
+        - shell: powershell
+        - order: last
+      service:
+        - dead
+        - name: salt-minion
+        - require:
+            - cmd: schedule-start

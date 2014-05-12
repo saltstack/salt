@@ -35,7 +35,8 @@ def installed(name,
               dir=None,
               runas=None,
               user=None,
-              force_reinstall=False):
+              force_reinstall=False,
+              registry=None):
     '''
     Verify that the given package is installed and is at the correct version
     (if specified).
@@ -65,13 +66,18 @@ def installed(name,
 
         .. versionadded:: 0.17.0
 
+    registry
+        The NPM registry to install the package from.
+
+        .. versionadded:: Helium
+
     force_reinstall
         Install the package even if it is already installed
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -97,7 +103,9 @@ def installed(name,
     prefix = name.split('@')[0].strip()
 
     try:
-        installed_pkgs = __salt__['npm.list'](pkg=name, dir=dir)
+        installed_pkgs = __salt__['npm.list'](pkg=name,
+                                              dir=dir,
+                                              registry=registry)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
@@ -165,7 +173,7 @@ def removed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -239,7 +247,7 @@ def bootstrap(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

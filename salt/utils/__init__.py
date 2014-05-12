@@ -263,12 +263,12 @@ def daemonize(redirect_out=True):
         pid = os.fork()
         if pid > 0:
             # exit first parent
-            sys.exit(0)
+            sys.exit(os.EX_OK)
     except OSError as exc:
         log.error(
             'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
         )
-        sys.exit(1)
+        sys.exit(salt.exitcodes.EX_GENERIC)
 
     # decouple from parent environment
     os.chdir('/')
@@ -280,14 +280,14 @@ def daemonize(redirect_out=True):
     try:
         pid = os.fork()
         if pid > 0:
-            sys.exit(0)
+            sys.exit(os.EX_OK)
     except OSError as exc:
         log.error(
             'fork #2 failed: {0} ({1})'.format(
                 exc.errno, exc.strerror
             )
         )
-        sys.exit(1)
+        sys.exit(salt.exitcodes.EX_GENERIC)
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
@@ -477,8 +477,10 @@ def gen_mac(prefix='AC:DE:48'):
      - https://www.wireshark.org/tools/oui-lookup.html
      - https://en.wikipedia.org/wiki/MAC_address
     '''
-    r = random.randint
-    return '%s:%02X:%02X:%02X' % (prefix, r(0, 0xff), r(0, 0xff), r(0, 0xff))
+    return '{0}:{1:02X}:{2:02X}:{3:02X}'.format(prefix,
+                                                random.randint(0, 0xff),
+                                                random.randint(0, 0xff),
+                                                random.randint(0, 0xff))
 
 
 def ip_bracket(addr):
@@ -573,6 +575,12 @@ def prep_jid(cachedir, sum_type, user='root', nocache=False):
     '''
     Return a job id and prepare the job id directory
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'All job_cache management has been moved into the local_cache '
+                    'returner, this util function will be removed-- please use '
+                    'the returner'
+                )
     jid = gen_jid()
 
     jid_dir_ = jid_dir(jid, cachedir, sum_type)
@@ -596,6 +604,12 @@ def jid_dir(jid, cachedir, sum_type):
     '''
     Return the jid_dir for the given job id
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'All job_cache management has been moved into the local_cache '
+                    'returner, this util function will be removed-- please use '
+                    'the returner'
+                )
     jid = str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
@@ -605,6 +619,11 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     '''
     Return the load data for a given job id
     '''
+    salt.utils.warn_until(
+                    'Boron',
+                    'Getting the load has been moved into the returner interface '
+                    'please get the data from the master_job_cache '
+                )
     _dir = jid_dir(jid, cachedir, sum_type)
     load_fn = os.path.join(_dir, '.load.p')
     if not os.path.isfile(load_fn):
@@ -1380,6 +1399,13 @@ def check_ipc_path_max_len(uri):
         )
 
 
+def gen_state_tag(low):
+    '''
+    Generate the running dict tag string from the low data structure
+    '''
+    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+
+
 def check_state_result(running):
     '''
     Check the total return value of the run and determine if the running
@@ -1770,8 +1796,8 @@ def warn_until(version,
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
             '{lineno}, is supposed to be shown until version '
-            '{until_version!r} is released. Current version is now '
-            '{salt_version!r}. Please remove the warning.'.format(
+            '{until_version} is released. Current version is now '
+            '{salt_version}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
                 until_version=version.formatted_version,
@@ -2182,3 +2208,75 @@ def get_gid_list(user=None, include_default=True):
         return []
     gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
     return sorted(set(gid_list))
+
+
+def trim_dict(
+        data,
+        max_dict_bytes,
+        percent=50.0,
+        stepper_size=10,
+        replace_with='VALUE_TRIMMED',
+        is_msgpacked=False):
+    '''
+    Takes a dictionary and iterates over its keys, looking for
+    large values and replacing them with a trimmed string.
+
+    If after the first pass over dictionary keys, the dictionary
+    is not sufficiently small, the stepper_size will be increased
+    and the dictionary will be rescanned. This allows for progressive
+    scanning, removing large items first and only making additional
+    passes for smaller items if necessary.
+
+    This function uses msgpack to calculate the size of the dictionary
+    in question. While this might seem like unnecessary overhead, a
+    data structure in python must be serialized in order for sys.getsizeof()
+    to accurately return the items referenced in the structure.
+
+    Ex:
+    >>> salt.utils.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
+    {'a': 'b', 'c': 'VALUE_TRIMMED'}
+
+    To improve performance, it is adviseable to pass in msgpacked
+    data structures instead of raw dictionaries. If a msgpack
+    structure is passed in, it will not be unserialized unless
+    necessary.
+
+    If a msgpack is passed in, it will be repacked if necessary
+    before being returned.
+    '''
+    serializer = salt.payload.Serial({'serial': 'msgpack'})
+    if is_msgpacked:
+        dict_size = sys.getsizeof(data)
+    else:
+        dict_size = sys.getsizeof(serializer.dumps(data))
+    if dict_size > max_dict_bytes:
+        if is_msgpacked:
+            data = serializer.loads(data)
+        while True:
+            percent = float(percent)
+            max_val_size = float(max_dict_bytes * (percent / 100))
+            try:
+                for key in data:
+                    if sys.getsizeof(data[key]) > max_val_size:
+                        data[key] = replace_with
+                percent = percent - stepper_size
+                max_val_size = float(max_dict_bytes * (percent / 100))
+                cur_dict_size = sys.getsizeof(serializer.dumps(data))
+                if cur_dict_size < max_dict_bytes:
+                    if is_msgpacked:  # Repack it
+                        return serializer.dumps(data)
+                    else:
+                        return data
+                elif max_val_size == 0:
+                    if is_msgpacked:
+                        return serializer.dumps(data)
+                    else:
+                        return data
+            except ValueError:
+                pass
+        if is_msgpacked:
+            return serializer.dumps(data)
+        else:
+            return data
+    else:
+        return data

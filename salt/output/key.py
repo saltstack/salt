@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Salt Key makes use of the outputter system to format information sent to the
-``salt-key`` command. This outputter is geared towards ingesting very specific
-data and should only be used with the salt-key command.
+Display salt-key output
+=======================
+
+The ``salt-key`` command makes use of this outputter to format its output.
 '''
 
 # Import salt libs
