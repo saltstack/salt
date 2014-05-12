@@ -443,11 +443,11 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
         return ret
     elif not name in volumes.keys():
         ret['comment'] = 'Volume {0} does not exist'.format(name)
-        ret['result'] = False
+        ret['result'] = True
         return ret
     elif not instance and not server_name is None:
         ret['comment'] = 'Server {0} does not exist'.format(server_name)
-        ret['result'] = False
+        ret['result'] = True
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Volume {0} will be will be detached.'.format(
