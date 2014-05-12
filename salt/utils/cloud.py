@@ -2135,8 +2135,12 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=No
     '''
     status = None
     while status != required_argument_response:
-        result = fun(kwargs, call=fun_call)
-        result = {k: v for d in result for k, v in d.items()}['item']
+        f_result = fun(kwargs, call=fun_call)
+        r_set = {}
+        for d in f_result:
+            for k, v in d.items():
+                r_set[k] = v
+        result = r_set.get('item')
         status = _unwrap_dict(result, argument_being_watched)
         log.debug('Function: {0}, Watched arg: {1}, Response: {2}'.format(str(fun).split(' ')[1],
                                                                           argument_being_watched,
