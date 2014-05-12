@@ -2112,3 +2112,35 @@ def store_password_in_keyring(credential_id, username, password=None):
     except ImportError:
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
+
+
+def _unwrap_dict(dictionary, index_string):
+    '''
+    Accepts index in form of a string
+    Returns final value
+    Example: dictionary = {'a': {'b': {'c': 'foobar'}}}
+             index_string = 'a,b,c'
+             returns 'foobar'
+    '''
+    index = index_string.split(',')
+    for k in index:
+        dictionary = dictionary[k]
+    return dictionary
+
+
+def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=None, required_argument_response=None):
+    '''
+    Waits until the function retrieves some required argument.
+    NOTE: Tested with ec2 describe_volumes and describe_snapshots only.
+    '''
+    status = None
+    while status != required_argument_response:
+        result = fun(kwargs, call=fun_call)
+        result = {k: v for d in result for k, v in d.items()}['item']
+        status = _unwrap_dict(result, argument_being_watched)
+        log.debug('Function: {0}, Watched arg: {1}, Response: {2}'.format(str(fun).split(' ')[1],
+                                                                          argument_being_watched,
+                                                                          status))
+        time.sleep(5)
+
+    return True
