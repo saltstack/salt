@@ -2576,6 +2576,7 @@ def append(name,
         slines = fp_.readlines()
 
     count = 0
+    test_lines = []
 
     try:
         for chunk in text:
@@ -2598,12 +2599,28 @@ def append(name,
                 if __opts__['test']:
                     ret['comment'] = 'File {0} is set to be updated'.format(name)
                     ret['result'] = None
-                    return ret
-                __salt__['file.append'](name, line)
+                    test_lines.append('{0}\n'.format(line))
+                else:
+                    __salt__['file.append'](name, line)
                 count += 1
     except TypeError:
         ret['comment'] = 'No text found to append. Nothing appended'
         ret['result'] = False
+        return ret
+
+    if __opts__['test']:
+        nlines = slines + test_lines
+        ret['result'] = None
+        if slines != nlines:
+            if not salt.utils.istextfile(name):
+                ret['changes']['diff'] = 'Replace binary file'
+            else:
+                # Changes happened, add them
+                ret['changes']['diff'] = (
+                    ''.join(difflib.unified_diff(slines, nlines))
+                )
+        else:
+            ret['comment'] = 'File {0} is in correct state'.format(name)
         return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
@@ -2618,7 +2635,10 @@ def append(name,
                 ''.join(difflib.unified_diff(slines, nlines))
             )
 
-    ret['comment'] = 'Appended {0} lines'.format(count)
+    if count:
+        ret['comment'] = 'Appended {0} lines'.format(count)
+    else:
+        ret['comment'] = 'File {0} is in correct state'.format(name)
     ret['result'] = True
     return ret
 
@@ -2721,6 +2741,7 @@ def prepend(name,
         slines = fp_.readlines()
 
     count = 0
+    test_lines = []
 
     preface = []
     for chunk in text:
@@ -2743,9 +2764,25 @@ def prepend(name,
             if __opts__['test']:
                 ret['comment'] = 'File {0} is set to be updated'.format(name)
                 ret['result'] = None
-                return ret
-            preface.append(line)
+                test_lines.append('{0}\n'.format(line))
+            else:
+                preface.append(line)
             count += 1
+
+    if __opts__['test']:
+        nlines = test_lines + slines
+        ret['result'] = None
+        if slines != nlines:
+            if not salt.utils.istextfile(name):
+                ret['changes']['diff'] = 'Replace binary file'
+            else:
+                # Changes happened, add them
+                ret['changes']['diff'] = (
+                    ''.join(difflib.unified_diff(slines, nlines))
+                )
+        else:
+            ret['comment'] = 'File {0} is in correct state'.format(name)
+        return ret
 
     __salt__['file.prepend'](name, *preface)
 
@@ -2761,7 +2798,10 @@ def prepend(name,
                 ''.join(difflib.unified_diff(slines, nlines))
             )
 
-    ret['comment'] = 'Prepended {0} lines'.format(count)
+    if count:
+        ret['comment'] = 'Prepended {0} lines'.format(count)
+    else:
+        ret['comment'] = 'File {0} is in correct state'.format(name)
     ret['result'] = True
     return ret
 
