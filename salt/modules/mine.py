@@ -25,6 +25,12 @@ def _auth():
         __context__['auth'] = salt.crypt.SAuth(__opts__)
     return __context__['auth']
 
+def _mine_function_available(func):
+    if func not in __salt__:
+        log.error('Function {0} in mine_functions not available'
+                 .format(func))
+        return False
+    return True
 
 def update(clear=False):
     '''
@@ -51,16 +57,21 @@ def update(clear=False):
     m_data = __salt__['config.option']('mine_functions', {})
     data = {}
     for func in m_data:
-        if func not in __salt__:
-            log.error('Function {0} in mine_functions not available'
-                      .format(func))
-            continue
         try:
             if m_data[func] and isinstance(m_data[func], dict):
-                data[func] = __salt__[func](**m_data[func])
+                mine_func = m_data[func].pop('mine_function', func)
+                if not _mine_function_available(mine_func): continue
+                data[func] = __salt__[mine_func](**m_data[func])
             elif m_data[func] and isinstance(m_data[func], list):
-                data[func] = __salt__[func](*m_data[func])
+                mine_func = func
+                if isinstance(m_data[func][0], dict) and 'mine_function' in m_data[func][0]:
+                    mine_func = m_data[func][0]['mine_function']
+                    m_data[func].pop(0)
+
+                if not _mine_function_available(mine_func): continue
+                data[func] = __salt__[mine_func](*m_data[func])
             else:
+                if not _mine_function_available(func): continue
                 data[func] = __salt__[func]()
         except Exception:
             log.error('Function {0} in mine_functions failed to execute'
