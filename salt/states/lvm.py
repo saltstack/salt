@@ -90,7 +90,7 @@ def pv_absent(name):
     else:
         changes = __salt__['lvm.pvremove'](name)
 
-        if not __salt__['lvm.pvdisplay'](name):
+        if __salt__['lvm.pvdisplay'](name):
             ret['comment'] = 'Failed to remove Physical Volume {0}'.format(name)
             ret['result'] = False
         else:
