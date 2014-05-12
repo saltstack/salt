@@ -217,11 +217,10 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.safe.dirpath.endswith('pki'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.safe.auto)
-        self.assertDictEqual(main.keep.loadLocalData(), {'eid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': 'main',
+                                                         'ha': ['0.0.0.0', 7530],
                                                          'main': True,
-                                                         'host': '0.0.0.0',
-                                                         'port': 7530,
                                                          'sid': 0})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
                                                      'sighex': dataMain['sighex']})
@@ -245,13 +244,13 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(main.safe.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': data1['name'],
                  'acceptance': 1,
                  'verhex': data1['verhex'],
                  'pubhex': data1['pubhex']},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': data2['name'],
                  'acceptance': 1,
                  'verhex': data2['verhex'],
@@ -259,17 +258,15 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': 'remote1',
-                 'host': '127.0.0.1',
-                 'port': 7532,
+                 'ha': ['127.0.0.1', 7532],
                  'sid': 0,
                  'rsid': 0},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': 'remote2',
-                 'host': '127.0.0.1',
-                 'port': 7533,
+                 'ha': ['127.0.0.1', 7533],
                  'sid': 0,
                  'rsid': 0}})
 
@@ -323,13 +320,13 @@ class BasicTestCase(unittest.TestCase):
         other.dumpRemotes()
         self.assertDictEqual(other.safe.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': data3['name'],
                  'acceptance': 1,
                  'verhex': data3['verhex'],
                  'pubhex': data3['pubhex']},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': data4['name'],
                  'acceptance': 1,
                  'verhex': data4['verhex'],
@@ -338,17 +335,15 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(other.keep.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': 'remote3',
-                 'host': '127.0.0.1',
-                 'port': 7534,
+                 'ha': ['127.0.0.1', 7534],
                  'sid': 0,
                  'rsid': 0},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': 'remote4',
-                 'host': '127.0.0.1',
-                 'port': 7535,
+                 'ha': ['127.0.0.1', 7535],
                  'sid': 0,
                  'rsid': 0}})
 
@@ -375,11 +370,10 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.safe.dirpath.endswith('pki'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.safe.auto)
-        self.assertDictEqual(main.keep.loadLocalData(), {'eid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': 'main',
+                                                         'ha': ['0.0.0.0', 7530],
                                                          'main': True,
-                                                         'host': '0.0.0.0',
-                                                         'port': 7530,
                                                          'sid': 0})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
                                                      'sighex': dataMain['sighex']})

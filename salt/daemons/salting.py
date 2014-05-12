@@ -24,7 +24,7 @@ class SaltSafe(object):
     Interface between Salt Key management and RAET keep key management
     '''
     LocalFields = ['sighex', 'prihex']
-    RemoteFields = ['eid', 'name', 'acceptance', 'verhex', 'pubhex']
+    RemoteFields = ['uid', 'name', 'acceptance', 'verhex', 'pubhex']
 
     def __init__(self, opts, **kwa):
         '''
@@ -72,7 +72,7 @@ class SaltSafe(object):
         Dump the data from the remote estate given by uid
         '''
         self.saltRaetKey.status(data['name'],
-                                data['eid'],
+                                data['uid'],
                                 data['pubhex'],
                                 data['verhex'])
 
@@ -87,12 +87,12 @@ class SaltSafe(object):
                 keydata = self.saltRaetKey.read_remote(mid, status)
                 if keydata:
                     rdata = odict()
-                    rdata['eid'] = keydata['device_id']
+                    rdata['uid'] = keydata['device_id']
                     rdata['name'] = keydata['minion_id']
                     rdata['acceptance'] = raeting.ACCEPTANCES[status]
                     rdata['verhex'] = keydata['verify']
                     rdata['pubhex'] = keydata['pub']
-                    data[str(rdata['eid'])] = rdata
+                    data[str(rdata['uid'])] = rdata
 
         return data
 
@@ -119,7 +119,7 @@ class SaltSafe(object):
         will persist the data
         '''
         data = odict([
-                        ('eid', remote.eid),
+                        ('uid', remote.uid),
                         ('name', remote.name),
                         ('acceptance', remote.acceptance),
                         ('verhex', remote.verfer.keyhex),
@@ -141,7 +141,7 @@ class SaltSafe(object):
             return None
 
         data = odict()
-        data['eid'] = keydata['device_id']
+        data['uid'] = keydata['device_id']
         data['name'] = keydata['minion_id']
         data['acceptance'] = raeting.ACCEPTANCES[status]
         data['verhex'] = keydata['verify']
