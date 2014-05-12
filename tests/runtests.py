@@ -122,7 +122,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             help='Run salt-ssh tests. These tests will spin up a temporary '
                  'SSH server on your machine. In certain environments, this '
-                 'may be insecure! Default: $default'
+                 'may be insecure! Default: False'
         )
         self.output_options_group.add_option(
             '--no-colors',

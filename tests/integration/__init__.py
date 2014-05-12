@@ -17,6 +17,7 @@ import logging
 import tempfile
 import subprocess
 import multiprocessing
+import json
 from hashlib import md5
 from datetime import datetime, timedelta
 try:
@@ -326,6 +327,7 @@ class TestDaemon(object):
         '''
         Generate keys and start an ssh daemon on an alternate port
         '''
+        print(' * Initializing SSH subsystem')
         keygen = salt.utils.which('ssh-keygen')
         sshd = salt.utils.which('sshd')
 
@@ -335,30 +337,50 @@ class TestDaemon(object):
         if not os.path.exists(TMP_CONF_DIR):
             os.makedirs(TMP_CONF_DIR)
 
+        pub_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+        priv_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test')
+        if os.path.exists(pub_key_test_file):
+            os.remove(pub_key_test_file)
+        if os.path.exists(priv_key_test_file):
+            os.remove(priv_key_test_file)
         keygen_process = subprocess.Popen(
-                [keygen, '-t', 'ecdsa', '-b', '521', '-C', '"$(whoami)@$(hostname)-$(date -I)"', '-f', 'key_test',
-                 '-P', 'INSECURE_TEMPORARY_KEY_PASSWORD'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=TMP_CONF_DIR
+            [keygen, '-t',
+                     'ecdsa',
+                     '-b',
+                     '521',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'key_test'
+                     '-P'
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=TMP_CONF_DIR
         )
-        out, err = keygen_process.communicate()
-        if err:
-            print('ssh-keygen had errors: {0}'.format(err))
-        sshd_config_path = os.path.join(FILES, 'files/ext-conf/sshd_config')
+        _, keygen_err = keygen_process.communicate()
+        if keygen_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_err))
+        sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, TMP_CONF_DIR)
         auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
         with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
-        sshd_process = subprocess.Popen(
-                [sshd, '-f', 'sshd_config'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=TMP_CONF_DIR
+        self.sshd_process = subprocess.Popen(
+            [sshd, '-f', 'sshd_config'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=TMP_CONF_DIR
         )
-        shutil.copy(os.path.join(FILES, 'conf/roster'), TMP_CONF_DIR)
+        _, sshd_err = self.sshd_process.communicate()
+        if sshd_err:
+            print('sshd had errors on startup: {0}'.format(sshd_err))
+        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        shutil.copy(roster_path, TMP_CONF_DIR)
+        with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
     @property
     def client(self):
@@ -389,6 +411,7 @@ class TestDaemon(object):
         salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
         self.smaster_process.join()
         self._exit_mockbin()
+        self._exit_ssh()
         self._clean()
 
     def pre_setup_minions(self):
@@ -408,7 +431,7 @@ class TestDaemon(object):
         if wait_minion_connections.exitcode > 0:
             print(
                 '\n {RED_BOLD}*{ENDC} ERROR: Minions failed to connect'.format(
-                **self.colors
+                    **self.colors
                 )
             )
             return False
@@ -474,6 +497,13 @@ class TestDaemon(object):
         if MOCKBIN not in path_items:
             path_items.insert(0, MOCKBIN)
         os.environ['PATH'] = os.pathsep.join(path_items)
+
+    def _exit_ssh(self):
+        if hasattr(self, 'sshd_process'):
+            try:
+                self.sshd_process.kill()
+            except OSError:
+                pass
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')
@@ -705,6 +735,8 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
         for triplet in os.walk(integration_config_dir):
             partial = triplet[0].replace(integration_config_dir, "")[1:]
+            if partial.startswith('_'):
+                continue
             for fname in triplet[2]:
                 if fname.startswith(('.', '_')):
                     continue
@@ -906,8 +938,8 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        arg_str = '--roster-file {0} localhost {1} --out=json'.format(os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
@@ -1015,6 +1047,21 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         self.assertIn(parsed_version.string, out)
+
+
+class SSHCase(ShellCase):
+    '''
+    Execute a command via salt-ssh
+    '''
+    def _arg_str(self, function, arg):
+        return '{0} {1}'.format(function, ' '.join(arg))
+
+    def run_function(self, function, arg=(), timeout=25, **kwargs):
+        ret = self.run_ssh(self._arg_str(function, arg))
+        try:
+            return json.loads(ret)['localhost']
+        except Exception:
+            return ret
 
 
 class SaltReturnAssertsMixIn(object):
