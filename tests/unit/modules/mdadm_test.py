@@ -17,7 +17,6 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import mdadm
-from salt.exceptions import CommandNotFoundError
 
 mdadm.__salt__ = {}
 
