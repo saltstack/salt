@@ -97,8 +97,12 @@ def list_directory(path, bucket, region, opts=None, user=None):
 
     retcode = 0
     if not out.strip():
-        retcode = 1
-        out = u'Directory {0} is not in bucket {1}'.format(path, bucket)
+        if path == '/':
+            retcode = 0
+            out = ''
+        else:
+            retcode = 1
+            out = u'Directory {0} is not in bucket {1}'.format(path, bucket)
 
     ret = {
         'retcode': retcode,

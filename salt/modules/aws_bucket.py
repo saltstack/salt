@@ -122,6 +122,30 @@ def delete_bucket(name, region, force=False, user=None, opts=None):
         salt '*' aws_bucket.delete_bucket saltbucket eu-west-1
     '''
     delete = {'bucket': name}
+
+    bucket_contents = __salt__['aws_file.list_directory'](
+        path='/',
+        bucket=name,
+        region=region,
+        opts=opts,
+        user=user)
+
+    if bucket_contents['retcode'] != 0:
+        return {
+            'retcode': bucket_contents['retcode'],
+            'stdout': '',
+            'stderr': bucket_contents['stdout'],
+        }
+
+    if not force and bucket_contents['stdout']:
+        return {
+            'retcode': 1,
+            'stdout': '',
+            'stderr': u'Bucket {bucket} in {region} is not empty'.format(
+                bucket=name,
+                region=region),
+        }
+
     rtn = aws.cli(
         's3api', 'delete-bucket', region, __salt__, opts=opts, user=user,
         **delete)
