@@ -176,6 +176,7 @@ def list_available(*names):
             if not pkginfo:
                 continue
             versions[name] = pkginfo.keys() if pkginfo else []
+    versions = sorted(versions, cmp=_reverse_cmp_pkg_versions)
     return versions
 
 
