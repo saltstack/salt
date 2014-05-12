@@ -202,6 +202,23 @@ def pvcreate(devices, **kwargs):
     return out[0]
 
 
+def pvremove(devices):
+    '''
+    Remove a physical device being used as an LVM physical volume
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt mymachine lvm.pvremove /dev/sdb1,/dev/sdb2
+    '''
+    cmd = 'pvremove -y'
+    for device in devices.split(','):
+        cmd += ' {0}'.format(device)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out[0]
+
+
 def vgcreate(vgname, devices, **kwargs):
     '''
     Create an LVM volume group

@@ -69,6 +69,36 @@ def pv_present(name, **kwargs):
     return ret
 
 
+def pv_absent(name):
+    '''
+    Ensure that a Physical Device is not being used by lvm
+
+    name
+        The device name to initialize.
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    if not __salt__['lvm.pvdisplay'](name):
+        ret['comment'] = 'Physical Volume {0} does not exist'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Physical Volume {0} is set to be removed'.format(name)
+        ret['result'] = None
+        return ret
+    else:
+        changes = __salt__['lvm.pvremove'](name)
+
+        if not __salt__['lvm.pvdisplay'](name):
+            ret['comment'] = 'Failed to remove Physical Volume {0}'.format(name)
+            ret['result'] = False
+        else:
+            ret['comment'] = 'Removed Physical Volume {0}'.format(name)
+            ret['changes'] = changes
+    return ret
+
+
 def vg_present(name, devices=None, **kwargs):
     '''
     Create an LVM volume group
