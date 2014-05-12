@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 Display clean output of an overstate stage
+==========================================
+
+This outputter is used to display :ref:`OverState <states-overstate>` stages,
+and should not be called directly.
 '''
 
 

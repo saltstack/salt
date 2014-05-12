@@ -209,6 +209,43 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
+Onfail
+------
+
+.. versionadded:: Helium
+
+The ``onfail`` requisite allows for reactions to happen strictly as a response
+to the failure of another state. This can be used in a number of ways, such as
+executing a second attempt to set up a service or begin to execute a separate
+thread of states because of a failure.
+
+The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
+
+.. code_block:: yaml
+
+    primary_mount:
+      mount:
+        - mounted
+        - name: /mnt/share
+        - device: 10.0.0.45:/share
+        - fstype: nfs
+
+    backup_mount:
+      mount:
+        - mounted
+        - name: /mnt/share
+        - device: 192.168.40.34:/share
+        - fstype: nfs
+        - onfail:
+          - mount: primary_mount
+
+Onchanges
+---------
+
+The ``onchanges`` requisite makes a state only apply if the required states
+generate changes. This can be a useful way to execute a post hook after
+changing aspects of a system.
+
 Use
 ---
 

@@ -376,7 +376,10 @@ def _get_reg_software():
                     "DisplayVersion")
                 if name not in ignore_list:
                     if prd_name != 'Not Found':
-                        reg_software[prd_name] = prd_ver
+                        # some MS Office updates don't register a product name which means
+                        # their information is useless
+                        if prd_name != '':
+                            reg_software[prd_name] = prd_ver
     return reg_software
 
 
@@ -550,7 +553,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             cached_pkg=cached_pkg,
             install_flags=install_flags
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -646,7 +649,7 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
             cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', '') + " " + (extra_uninstall_flags or ''))
         if pkginfo[version].get('msiexec'):
             cmd = 'msiexec /x ' + cmd
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

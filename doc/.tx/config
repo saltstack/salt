@@ -4262,3 +4262,15 @@ source_file = _build/locale/topics/event/master_events.pot
 source_lang = en
 source_name = topics/event/master_events.rst
 
+[salt.ref--states--aggregate]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/aggregate.po
+source_file = _build/locale/ref/states/aggregate.pot
+source_lang = en
+source_name = ref/states/aggregate.rst
+
+[salt.topics--releases--2014_1_4]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.4.po
+source_file = _build/locale/topics/releases/2014.1.4.pot
+source_lang = en
+source_name = topics/releases/2014.1.4.rst
+

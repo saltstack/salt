@@ -11,7 +11,6 @@ import re
 
 # Import salt libs
 import salt.utils
-import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -1073,19 +1072,25 @@ def get_locked_packages(pattern=None, full=False):
     return current_locks
 
 
-def verify(*names):
+def verify(*names, **kwargs):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     Runs an rpm -Va on a system, and returns the results in a dict
+
+    Files with an attribute of config, doc, ghost, license or readme in the
+    package header can be ignored using the ``ignore_types`` keyword argument
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.verify
+        salt '*' pkg.verify httpd
+        salt '*' pkg.verify 'httpd postfix'
+        salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
     '''
-    return __salt__['lowpkg.verify'](*names)
+    return __salt__['lowpkg.verify'](*names, **kwargs)
 
 
 def group_list():
@@ -1534,16 +1539,30 @@ def expand_repo_def(repokwargs):
 
 def owner(*paths):
     '''
-    Return the name of the package that owns the specified file. Files may be
-    passed as a string (``path``) or as a list of strings (``paths``). If
-    ``path`` contains a comma, it will be converted to ``paths``. If a file
-    name legitimately contains a comma, pass it in via ``paths``.
+    .. versionadded:: Helium
+
+    Return the name of the package that owns the file. Multiple file paths can
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    single path is passed, a string will be returned, and if multiple paths are
+    passed, a dictionary of file/package name pairs will be returned.
+
+    If the file is not owned by a package, or is not present on the minion,
+    then an empty string will be returned for that path.
 
     CLI Example:
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
     '''
-    cmd = "rpm -qf --queryformat '%{{NAME}}' {0}"
-    return salt.utils.pkg.find_owner(
-        __salt__['cmd.run'], cmd, *paths)
+    if not paths:
+        return ''
+    ret = {}
+    cmd = 'rpm -qf --queryformat "%{NAME}" {0!r}'
+    for path in paths:
+        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
+                                               output_loglevel='debug')
+        if 'not owned' in ret[path].lower():
+            ret[path] = ''
+    if len(ret) == 1:
+        return ret.values()[0]
+    return ret

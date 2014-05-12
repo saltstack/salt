@@ -99,7 +99,7 @@ class OptionParserMeta(MixInMeta):
 
 
 class OptionParser(optparse.OptionParser):
-    VERSION = version.__version__
+    VERSION = version.__saltstack_version__.formatted_version
 
     usage = '%prog'
 

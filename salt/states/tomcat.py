@@ -5,8 +5,8 @@ This state requires the manager webapp to be enabled
 
 The following grains/pillar should be set::
 
-    tomcat-manager.user: admin user name
-    tomcat-manager.passwd: password
+    tomcat-manager:user: admin user name
+    tomcat-manager:passwd: password
 
 and also configure a user in the conf/tomcat-users.xml file::
 
@@ -54,7 +54,8 @@ def __virtual__():
 def war_deployed(name,
                  war,
                  url='http://localhost:8080/manager',
-                 timeout=180):
+                 timeout=180,
+                 temp_war_location=None):
     '''
     Enforce that the WAR will be deployed and started in the context path
     it will make use of WAR versions
@@ -71,6 +72,9 @@ def war_deployed(name,
         the URL of the server manager webapp
     timeout : 180
         timeout for HTTP request to the tomcat manager
+    temp_war_location : None
+        use another location to temporarily copy to war file
+        by default the system's temp directory is used
 
     Example::
 
@@ -144,7 +148,8 @@ def war_deployed(name,
                                                'yes',
                                                url,
                                                __env__,
-                                               timeout)
+                                               timeout,
+                                               temp_war_location=temp_war_location)
 
     # Return
     if deploy_res.startswith('OK'):

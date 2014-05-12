@@ -121,7 +121,7 @@ def minion_mods(opts, context=None, whitelist=None):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
@@ -151,7 +151,7 @@ def raw_mod(opts, name, functions):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
@@ -166,11 +166,7 @@ def proxy(opts, functions, whitelist=None):
     load = _create_loader(opts, 'proxy', 'proxy')
     pack = {'name': '__proxy__',
             'value': functions}
-    return LazyLoader(load,
-                      functions,
-                      pack,
-                      whitelist=whitelist,
-                      )
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def returners(opts, functions, whitelist=None):
@@ -194,7 +190,7 @@ def pillars(opts, functions):
     load = _create_loader(opts, 'pillar', 'pillar')
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyFilterLoader(load, 'ext_pillar', pack=pack)
+    return load.filter_func('ext_pillar', pack)
 
 
 def tops(opts):
@@ -205,7 +201,7 @@ def tops(opts):
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
-    return LazyFilterLoader(load, 'top', whitelist=whitelist)
+    return load.filter_func('top', whitelist=whitelist)
 
 
 def wheels(opts, whitelist=None):
@@ -213,7 +209,7 @@ def wheels(opts, whitelist=None):
     Returns the wheels modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
-    return LazyLoader(load, whitelist=whitelist)
+    return load.gen_functions(whitelist=whitelist)
 
 
 def outputters(opts):
@@ -225,7 +221,7 @@ def outputters(opts):
         'output',
         'output',
         ext_type_dirs='outputter_dirs')
-    return LazyFilterLoader(load, 'output')
+    return load.filter_func('output')
 
 
 def auth(opts, whitelist=None):
@@ -233,7 +229,7 @@ def auth(opts, whitelist=None):
     Returns the auth modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
-    return LazyLoader(load, whitelist=whitelist)
+    return load.gen_functions(whitelist=whitelist)
 
 
 def fileserver(opts, backends):
@@ -241,7 +237,7 @@ def fileserver(opts, backends):
     Returns the file server modules
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
-    return LazyLoader(load, whitelist=backends)
+    return load.gen_functions(whitelist=backends)
 
 
 def roster(opts, whitelist=None):
@@ -249,7 +245,7 @@ def roster(opts, whitelist=None):
     Returns the roster modules
     '''
     load = _create_loader(opts, 'roster', 'roster')
-    return LazyLoader(load, whitelist=whitelist)
+    return load.gen_functions(whitelist=whitelist)
 
 
 def states(opts, functions, whitelist=None):
@@ -267,7 +263,7 @@ def states(opts, functions, whitelist=None):
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyLoader(load, pack=pack, whitelist=whitelist)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def search(opts, returners, whitelist=None):
@@ -291,7 +287,7 @@ def log_handlers(opts):
         int_type='handlers',
         base_path=os.path.join(SALT_BASE_PATH, 'log')
     )
-    return LazyFilterLoader(load, 'setup_handlers')
+    return load.filter_func('setup_handlers')
 
 
 def ssh_wrapper(opts, functions=None):
@@ -310,7 +306,7 @@ def ssh_wrapper(opts, functions=None):
     )
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyLoader(load, pack=pack)
+    return load.gen_functions(pack)
 
 
 def render(opts, functions, states=None):
@@ -327,7 +323,7 @@ def render(opts, functions, states=None):
 
     if states:
         pack.append({'name': '__states__', 'value': states})
-    rend = LazyFilterLoader(load, 'render', pack=pack)
+    rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
@@ -399,7 +395,7 @@ def runner(opts):
     load = _create_loader(
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
-    return LazyLoader(load)
+    return load.gen_functions()
 
 
 def queues(opts):
@@ -409,7 +405,7 @@ def queues(opts):
     load = _create_loader(
         opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
     )
-    return LazyLoader(load)
+    return load.gen_functions()
 
 
 def clouds(opts):
@@ -1275,6 +1271,15 @@ class LazyLoader(MutableMapping):
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
+        else:
+            patched = []
+            # be sure that the global __salt__ dict is able of loading
+            # new functions from inside execution functions
+            for func in mod_funcs.values():
+                mod = sys.modules.get(func.__module__, None)
+                if mod and mod not in patched:
+                    patched.append(mod)
+                    mod.__salt__ = self
         self._dict.update(mod_funcs)
 
     def load_all(self):
@@ -1298,6 +1303,7 @@ class LazyLoader(MutableMapping):
         if key not in self._dict and not self.loaded:
             # load the item
             self._load(key)
+            log.debug('LazyLoaded {0}'.format(key))
         return self._dict[key]
 
     def __len__(self):

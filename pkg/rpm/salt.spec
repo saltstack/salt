@@ -12,7 +12,7 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.4
+%define _salttesting_ver 2014.4.24
 
 Name: salt
 Version: %{salt_version}
@@ -31,7 +31,6 @@ Source5: %{name}-master.service
 Source6: %{name}-syndic.service
 Source7: %{name}-minion.service
 Source8: README.fedora
-Patch0: fix-setup-py.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -139,8 +138,6 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -c
-cd %{name}-%{version}
-%patch0 -p1
 %setup -T -D -a 1
 
 %build
@@ -325,6 +322,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue May 6 2014 Erik Johnson <erik@saltstack.com> - 2014.1.4-1
+- Update to bugfix release 2014.1.4
+
 * Fri Apr 18 2014 Erik Johnson <erik@saltstack.com> - 2014.1.3-1
 - Update to bugfix release 2014.1.3
 

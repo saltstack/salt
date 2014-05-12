@@ -109,7 +109,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Run unit tests'
         )
-
+        self.test_selection_group.add_option(
+            '--ssh',
+            action='store_true',
+            default=False,
+            help='Run salt-ssh tests. These tests will spin up a temporary '
+                 'SSH server on your machine. In certain environments, this '
+                 'may be insecure! Default: $default'
+        )
         self.output_options_group.add_option(
             '--no-colors',
             '--no-colours',

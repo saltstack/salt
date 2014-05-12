@@ -104,7 +104,7 @@ def _rand_cpu_str(cpu):
         return '0-{0}'.format(avail)
     to_set = set()
     while len(to_set) < cpu:
-        choice = random.radint(0, avail - 1)
+        choice = random.randint(0, avail - 1)
         if choice not in to_set:
             to_set.add(str(choice))
     return ','.join(sorted(to_set))
@@ -403,16 +403,18 @@ def init(name,
         path = '/var/lib/lxc/{0}/config'.format(name)
         for comp in _config_list(cpu=cpu, nic=nic, nic_opts=nic_opts, cpuset=cpuset, cpushare=cpushare, memory=memory):
             edit_conf(path, **comp)
-    lxc_info = info(name)
-    rootfs = lxc_info['rootfs']
+    ret['state'] = start(name)['state']
     ret['name'] = name
     if seed:
         ret['seeded'] = __salt__['lxc.bootstrap'](
             name, config=salt_config, approve_key=approve_key, install=install)
     elif seed_cmd:
+        lxc_info = info(name)
+        rootfs = lxc_info['rootfs']
         ret['seeded'] = __salt__[seed_cmd](rootfs, name, salt_config)
-    if start_:
-        ret['state'] = start(name)['state']
+    if not start_:
+        stop(name)
+        ret['state'] = 'stopped'
     else:
         ret['state'] = state(name)
     return ret
@@ -727,6 +729,10 @@ def _change_state(cmd, name, expected):
 
 
 def _ensure_running(name, no_start=False):
+    '''
+    If the container is not currently running, start it. This function returns
+    the state that the container was in before changing
+    '''
     prior_state = __salt__['lxc.state'](name)
     if not prior_state:
         return None

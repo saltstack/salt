@@ -4,6 +4,8 @@
 Full list of builtin output modules
 ===================================
 
+Follow one of the below links for further information and examples
+
 .. currentmodule:: salt.output
 
 .. autosummary::

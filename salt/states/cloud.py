@@ -154,7 +154,9 @@ def absent(name, onlyif=None, unless=None):
            'comment': ''}
     retcode = __salt__['cmd.retcode']
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-    if not instance:
+    if not instance or \
+            ('Not Actioned/Not Running' in ret
+            and name in ret['Not Actioned/Not Running']):
         ret['result'] = True
         ret['comment'] = 'Instance {0} already absent'.format(name)
         return ret
@@ -416,6 +418,8 @@ def volume_attached(name, server_name, provider=None, **kwargs):
 def volume_detached(name, server_name=None, provider=None, **kwargs):
     '''
     Check if a block volume is attached.
+
+    Returns True if server or Volume do not exist.
     '''
     ret = _check_name(name)
     if not ret['result']:
@@ -441,11 +445,11 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
         return ret
     elif not name in volumes.keys():
         ret['comment'] = 'Volume {0} does not exist'.format(name)
-        ret['result'] = False
+        ret['result'] = True
         return ret
     elif not instance and not server_name is None:
         ret['comment'] = 'Server {0} does not exist'.format(server_name)
-        ret['result'] = False
+        ret['result'] = True
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Volume {0} will be will be detached.'.format(

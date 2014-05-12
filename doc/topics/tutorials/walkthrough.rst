@@ -334,6 +334,30 @@ addresses, etc:
 
     salt '*' network.interfaces
 
+
+Changing the Output Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default output format used for most Salt commands is called the ``nested``
+outputter, but there are several other outputters that can be used to change
+the way the output is displayed. For instance, the ``pprint`` outputter can be
+used to display the return data using Python's ``pprint`` module:
+
+.. code-block:: bash
+
+    root@saltmaster:~# salt myminion grains.item pythonpath --out=pprint
+    {'myminion': {'pythonpath': ['/usr/lib64/python2.7',
+                                 '/usr/lib/python2.7/plat-linux2',
+                                 '/usr/lib64/python2.7/lib-tk',
+                                 '/usr/lib/python2.7/lib-tk',
+                                 '/usr/lib/python2.7/site-packages',
+                                 '/usr/lib/python2.7/site-packages/gst-0.10',
+                                 '/usr/lib/python2.7/site-packages/gtk-2.0']}}
+
+The full list of Salt outputters, as well as example output, can be found
+:ref:`here <all-salt.output>`.
+
+
 ``salt-call``
 ~~~~~~~~~~~~~
 

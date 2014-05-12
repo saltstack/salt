@@ -304,6 +304,7 @@ DEFAULT_MINION_OPTS = {
     'state_output': 'full',
     'state_auto_order': True,
     'state_events': False,
+    'state_aggregate': False,
     'acceptance_wait_time': 10,
     'acceptance_wait_time_max': 0,
     'rejected_retry': False,
@@ -451,6 +452,7 @@ DEFAULT_MASTER_OPTS = {
     'state_output': 'full',
     'state_auto_order': True,
     'state_events': False,
+    'state_aggregate': False,
     'search': '',
     'search_index_interval': 3600,
     'loop_interval': 60,
@@ -2014,8 +2016,11 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
 
     # Make sure the master_uri is set
     if 'master_uri' not in opts:
-        opts['master_uri'] = 'tcp://{ip}:{port}'.format(ip=opts['interface'],
-                                                        port=opts['ret_port'])
+        opts['master_uri'] = 'tcp://{ip}:{port}'.format(
+            ip=salt.utils.ip_bracket(opts['interface']),
+            port=opts['ret_port']
+        )
+
     # Return the client options
     _validate_opts(opts)
     return opts

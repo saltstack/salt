@@ -187,7 +187,7 @@ log = logging.getLogger(__name__)
 
 def _reinterpreted_state(state):
     '''
-    Re-interpret the state returned by salt.sate.run using our protocol.
+    Re-interpret the state returned by salt.state.run using our protocol.
     '''
     ret = state['changes']
     state['changes'] = {}
