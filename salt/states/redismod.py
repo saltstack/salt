@@ -39,7 +39,7 @@ def __virtual__():
     return False
 
 
-def string(name, value, **connection_args):
+def string(name, value, expire=None, expireat=None, **connection_args):
     '''
     Ensure that the key exists in redis with the value specified
 
@@ -48,6 +48,12 @@ def string(name, value, **connection_args):
 
     value
         Data to persist in key
+
+    expire
+        Sets time to live for key in seconds
+
+    expireat
+        Sets expiration time for key via UNIX timestamp, overrides `expire`
     '''
     ret = {'name': name,
            'changes': {},
@@ -55,12 +61,19 @@ def string(name, value, **connection_args):
            'comment': 'Key already set to defined value'}
 
     old_key = __salt__['redis.get_key'](name, **connection_args)
-    if old_key == value:
-        return ret
 
-    __salt__['redis.set_key'](name, value, **connection_args)
-    ret['changes'][name] = 'Updated'
-    ret['comment'] = 'Key updated to new value'
+    if old_key != value:
+        __salt__['redis.set_key'](name, value, **connection_args)
+        ret['changes'][name] = 'Value updated'
+        ret['comment'] = 'Key updated to new value'
+
+    if expireat:
+        __salt__['redis.expireat'](name, expireat, **connection_args)
+        ret['changes']['expireat'] = 'Key expires at %s' % expireat
+    elif expire:
+        __salt__['redis.expire'](name, expire, **connection_args)
+        ret['changes']['expire'] = 'TTL set to %s seconds' % expire
+
     return ret
 
 

@@ -152,6 +152,34 @@ def exists(key, host=None, port=None, db=None, password=None):
     return server.exists(key)
 
 
+def expire(key, seconds, host=None, port=None, db=None, password=None):
+    '''
+    Set a keys time to live in seconds
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.expire foo 300
+    '''
+    server = _connect(host, port, db, password)
+    return server.expire(key, seconds)
+
+
+def expireat(key, timestamp, host=None, port=None, db=None, password=None):
+    '''
+    Set a keys expire at given UNIX time
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.expireat foo 1400000000
+    '''
+    server = _connect(host, port, db, password)
+    return server.expireat(key, timestamp)
+
+
 def flushall(host=None, port=None, db=None, password=None):
     '''
     Remove all keys from all databases
@@ -206,6 +234,21 @@ def info(host=None, port=None, db=None, password=None):
     '''
     server = _connect(host, port, db, password)
     return server.info()
+
+
+def keys(pattern='*', host=None, port=None, db=None, password=None):
+    '''
+    Get redis keys, supports glob style patterns
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.keys
+        salt '*' redis.keys test*
+    '''
+    server = _connect(host, port, db, password)
+    return server.keys(pattern)
 
 
 def lastsave(host=None, port=None, db=None, password=None):
