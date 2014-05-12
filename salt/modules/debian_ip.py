@@ -878,9 +878,13 @@ def _parse_bridge_opts(opts, iface):
             config.update({'waitport': opts['waitport']})
         else:
             values = opts['waitport'].split()
-            time = values.pop(0)
-            if time.isdigit() and values:
-                config.update({'waitport': '{0} {1}'.format(time, ' '.join(values))})
+            waitport_time = values.pop(0)
+            if waitport_time.isdigit() and values:
+                config.update({
+                    'waitport': '{0} {1}'.format(
+                        waitport_time, ' '.join(values)
+                    )
+                })
             else:
                 _raise_error_iface(iface, opt, ['integer [interfaces]'])
 
