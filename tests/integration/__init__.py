@@ -360,7 +360,8 @@ class TestDaemon(object):
             os.makedirs(TMP_CONF_DIR)
 
         keygen_process = subprocess.Popen(
-                [keygen, '-t', 'ecdsa', '-b', '521', '-C', '"$(whoami)@$(hostname)-$(date -I)"', '-f', 'key_test', '-P', 'INSECURE_TEMPORARY_KEY_PASSWORD'],
+                [keygen, '-t', 'ecdsa', '-b', '521', '-C', '"$(whoami)@$(hostname)-$(date -I)"', '-f', 'key_test',
+                 '-P', 'INSECURE_TEMPORARY_KEY_PASSWORD'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 close_fds=True,
@@ -369,8 +370,8 @@ class TestDaemon(object):
         out, err = keygen_process.communicate()
         if err:
             print('ssh-keygen had errors: {0}'.format(err))
-        sshd_config_path = os.path.join(FILES, 'files/sshd_config')
-        shutil.copy(os.path.join(FILES, 'conf/sshd_config'), TMP_CONF_DIR)
+        sshd_config_path = os.path.join(FILES, 'files/ext-conf/sshd_config')
+        shutil.copy(sshd_config_path, TMP_CONF_DIR)
         auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
         with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
