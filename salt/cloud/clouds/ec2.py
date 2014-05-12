@@ -3035,7 +3035,11 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     log.debug(params)
 
     data = query(params, return_root=True)
-    snapshot_id = { k: v for d in data for k, v in d.items()}['snapshotId']
+    r_data = {}
+    for d in data:
+        for k, v in d.items():
+            r_data[k] = v
+    snapshot_id = r_data['snapshotId']
 
     # Waits till volume is available
     if wait_to_finish:
