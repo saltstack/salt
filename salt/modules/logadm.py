@@ -12,6 +12,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 default_conf = '/etc/logadm.conf'
 
+
 def __virtual__():
     '''
     Only work on Solaris based systems
@@ -37,6 +38,7 @@ def _parse_conf(conf_file=default_conf):
             splitline = line.split(' ', 1)
             ret[splitline[0]] = splitline[1]
     return ret
+
 
 def show_conf(conf_file=default_conf):
     '''
@@ -84,6 +86,7 @@ def rotate(name,
         return dict(Error='Failed in adding log', Output=result['stderr'])
 
     return dict(Result='Success')
+
 
 def remove(name, conf_file=default_conf):
     '''
