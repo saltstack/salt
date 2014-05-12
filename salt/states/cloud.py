@@ -418,6 +418,8 @@ def volume_attached(name, server_name, provider=None, **kwargs):
 def volume_detached(name, server_name=None, provider=None, **kwargs):
     '''
     Check if a block volume is attached.
+
+    Returns True if server or Volume do not exist.
     '''
     ret = _check_name(name)
     if not ret['result']:
