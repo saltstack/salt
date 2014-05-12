@@ -57,7 +57,9 @@ def exists(
             ret['comment'] = 'AWS SQS queue {0} is set to be created'.format(
                     name)
             return ret
+
         created = __salt__['aws_sqs.create_queue'](name, region, opts, user)
+
         if created['retcode'] == 0:
             ret['changes']['new'] = created['stdout']
         else:

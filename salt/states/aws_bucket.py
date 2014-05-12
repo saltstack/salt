@@ -67,6 +67,12 @@ def exists(
             region=region)
         return ret
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = u'AWS Bucket {bucket} is set to be created'.format(
+            bucket=name)
+        return ret
+
     created = __salt__['aws_bucket.create_bucket'](
         name=name,
         region=region,
@@ -121,9 +127,15 @@ def absent(
         user=user)
 
     if not exists:
-        ret['comment'] = u'Bucket {name} exists in {region}'.format(
+        ret['comment'] = u'Bucket {name} is not in {region}'.format(
             name=name,
             region=region)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'AWS Bucket {bucket} is set to be deleted'.format(
+            bucket=name)
         return ret
 
     deleted = __salt__['aws_bucket.delete_bucket'](
