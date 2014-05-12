@@ -4,7 +4,6 @@ Module for managing Solaris logadm based log rotations.
 '''
 
 # Import python libs
-import os
 import logging
 
 # Import salt libs
@@ -59,42 +58,48 @@ def rotate(name,
            size=False,
            copy=True,
            conf_file=default_conf):
-  '''
-  Set up pattern for logging.
+    '''
+    Set up pattern for logging.
 
-  CLI Example:
+    CLI Example:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
       salt '*' logadm.rotate myapplog pattern='/var/log/myapp/*.log' count=7
-  '''
-  command = "logadm -f {0} -w {1}".format(conf_file, name)
-  if (count):   command += " -C {0}".format(count)
-  if (age):     command += " -A {0}".format(age)
-  if (copy):    command += " -c"
-  if (size):    command += " -s {0}".format(size)
-  if (pattern): command += " {0}".format(pattern)
-  result = __salt__['cmd.run_all'](command)
-  if result['retcode'] != 0:
-      return dict(Error='Failed in adding log', Output=result['stderr'])
+    '''
+    command = "logadm -f {0} -w {1}".format(conf_file, name)
+    if count:
+        command += " -C {0}".format(count)
+    if age:
+        command += " -A {0}".format(age)
+    if copy:
+        command += " -c"
+    if size:
+        command += " -s {0}".format(size)
+    if pattern:
+        command += " {0}".format(pattern)
 
-  return dict(Result='Success')
+    result = __salt__['cmd.run_all'](command)
+    if result['retcode'] != 0:
+        return dict(Error='Failed in adding log', Output=result['stderr'])
+
+    return dict(Result='Success')
 
 def remove(name, conf_file=default_conf):
-  '''
-  Remove log pattern from logadm
+    '''
+    Remove log pattern from logadm
 
-  CLI Example:
+    CLI Example:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
       salt '*' logadm.remove myapplog
-  '''
-  command = "logadm -f {0} -r {1}".format(conf_file, name)
-  result = __salt__['cmd.run_all'](command)
-  if result['retcode'] != 0:
-      return dict(
-        Error='Failure in removing log. Possibly already removed?',
-        Output= result['stderr']
-      )
-  return dict(Result='Success')
+    '''
+    command = "logadm -f {0} -r {1}".format(conf_file, name)
+    result = __salt__['cmd.run_all'](command)
+    if result['retcode'] != 0:
+        return dict(
+            Error='Failure in removing log. Possibly already removed?',
+            Output=result['stderr']
+        )
+    return dict(Result='Success')
