@@ -9,6 +9,7 @@ import os.path
 import os
 import re
 import StringIO
+import time
 
 # Import third party libs
 import jinja2
@@ -877,9 +878,13 @@ def _parse_bridge_opts(opts, iface):
             config.update({'waitport': opts['waitport']})
         else:
             values = opts['waitport'].split()
-            time = values.pop(0)
-            if time.isdigit() and values:
-                config.update({'waitport': '{0} {1}'.format(time, ' '.join(values))})
+            waitport_time = values.pop(0)
+            if waitport_time.isdigit() and values:
+                config.update({
+                    'waitport': '{0} {1}'.format(
+                        waitport_time, ' '.join(values)
+                    )
+                })
             else:
                 _raise_error_iface(iface, opt, ['integer [interfaces]'])
 
@@ -1447,7 +1452,9 @@ def apply_network_settings(**settings):
         )
         return True
     else:
-        return __salt__['service.restart']('networking')
+        stop = __salt__['service.stop']('networking')
+        time.sleep(2)
+        return stop and __salt__['service.start']('networking')
 
 
 def build_network_settings(**settings):

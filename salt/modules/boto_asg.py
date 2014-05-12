@@ -37,6 +37,8 @@ Connection module for Amazon Autoscale Groups
 # Import Python libs
 import logging
 import json
+import yaml
+import email.mime.multipart
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +46,7 @@ log = logging.getLogger(__name__)
 try:
     import boto
     import boto.ec2
+    import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -84,7 +87,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
 def get_config(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Get the configuration for an autoscale group
+    Get the configuration for an autoscale group.
 
     CLI example::
 
@@ -131,9 +134,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            termination_policies=None, region=None, key=None, keyid=None,
            profile=None):
     '''
-    Create an ELB
+    Create an autoscale group.
 
-    CLI example to create an ELB::
+    CLI example::
 
         salt myminion boto_asg.create myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     '''
@@ -184,7 +187,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create ELB {0}'.format(name)
+        msg = 'Failed to create ASG {0}'.format(name)
         log.error(msg)
         return False
 
@@ -196,7 +199,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            termination_policies=None, region=None, key=None, keyid=None,
            profile=None):
     '''
-    Update an ELB
+    Update an autoscale group.
 
     CLI example::
 
@@ -253,7 +256,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to update ELB {0}'.format(name)
+        msg = 'Failed to update ASG {0}'.format(name)
         log.error(msg)
         return False
 
@@ -277,6 +280,131 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to delete autoscale group {0}'.format(name)
+        log.error(msg)
+        return False
+
+
+def get_cloud_init_mime(cloud_init):
+    '''
+    Get a mime multipart encoded string from a cloud-init dict. Currently
+    supports scripts and cloud-config.
+
+    CLI Example::
+
+        salt myminion boto.get_cloud_init_mime <cloud init>
+    '''
+    if isinstance(cloud_init, string_types):
+        cloud_init = json.loads(cloud_init)
+    _cloud_init = email.mime.multipart.MIMEMultipart()
+    if 'scripts' in cloud_init:
+        for script_name, script in cloud_init['scripts'].iteritems():
+            _script = email.mime.text.MIMEText(script, 'x-shellscript')
+            _cloud_init.attach(_script)
+    if 'cloud-config' in cloud_init:
+        cloud_config = cloud_init['cloud-config']
+        _cloud_config = email.mime.text.MIMEText(yaml.dump(cloud_config),
+                                                 'cloud-config')
+        _cloud_init.attach(_cloud_config)
+    return _cloud_init.as_string()
+
+
+def launch_configuration_exists(name, region=None, key=None, keyid=None,
+                                profile=None):
+    '''
+    Check for a launch configuration's existence.
+
+    CLI example::
+
+        salt myminion boto_asg.launch_configuration_exists mylc
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    lc = conn.get_all_launch_configurations(names=[name])
+    if lc:
+        return True
+    else:
+        return False
+
+
+def create_launch_configuration(name, image_id=None, key_name=None,
+                                security_groups=None, user_data=None,
+                                instance_type='m1.small', kernel_id=None,
+                                ramdisk_id=None, block_device_mappings=None,
+                                instance_monitoring=False, spot_price=None,
+                                instance_profile_name=None,
+                                ebs_optimized=False,
+                                associate_public_ip_address=None,
+                                volume_type=None, delete_on_termination=True,
+                                iops=None, use_block_device_types=False,
+                                region=None, key=None, keyid=None,
+                                profile=None):
+    '''
+    Create a launch configuration.
+
+    CLI example::
+
+        salt myminion boto_asg.create_launch_configuration mylc image_id=ami-0b9c9f62 key_name='mykey' security_groups='["mygroup"]' instance_type='c3.2xlarge'
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if isinstance(security_groups, string_types):
+        security_groups = json.loads(security_groups)
+    if isinstance(block_device_mappings, string_types):
+        block_device_mappings = json.loads(block_device_mappings)
+    _bdms = []
+    if block_device_mappings:
+        # Boto requires objects for the mappings and the devices.
+        _block_device_map = blockdevicemapping.BlockDeviceMapping()
+        for block_device_dict in block_device_mappings:
+            for block_device, attributes in block_device_dict.iteritems():
+                _block_device = blockdevicemapping.EBSBlockDeviceType()
+                for attribute, value in attributes.iteritems():
+                    setattr(_block_device, attribute, value)
+                _block_device_map[block_device] = _block_device
+        _bdms = [_block_device_map]
+    lc = autoscale.LaunchConfiguration(
+        name=name, image_id=image_id, key_name=key_name,
+        security_groups=security_groups, user_data=user_data,
+        instance_type=instance_type, kernel_id=kernel_id,
+        ramdisk_id=ramdisk_id, block_device_mappings=_bdms,
+        instance_monitoring=instance_monitoring, spot_price=spot_price,
+        instance_profile_name=instance_profile_name,
+        ebs_optimized=ebs_optimized,
+        associate_public_ip_address=associate_public_ip_address,
+        volume_type=volume_type, delete_on_termination=delete_on_termination,
+        iops=iops, use_block_device_types=use_block_device_types)
+    try:
+        conn.create_launch_configuration(lc)
+        log.info('Created LC {0}'.format(name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create LC {0}'.format(name)
+        log.error(msg)
+        return False
+
+
+def delete_launch_configuration(name, region=None, key=None, keyid=None,
+                                profile=None):
+    '''
+    Delete a launch configuration.
+
+    CLI example::
+
+        salt myminion boto_asg.delete_launch_configuration mylc
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        conn.delete_launch_configuration(name)
+        log.info('Deleted LC {0}'.format(name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete LC {0}'.format(name)
         log.error(msg)
         return False
 

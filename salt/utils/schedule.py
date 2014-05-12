@@ -80,6 +80,24 @@ localtime.
 This will schedule the command: state.sls httpd test=True at 5pm on Monday, Wednesday
 and Friday, and 3pm on Tuesday and Thursday.
 
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        range:
+            start: 8:00am
+            end: 5:00pm
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour) between the hours of 8am and 5pm.  The range parameter must be a
+dictionary with the date strings using the dateutil format.
+
+    ... versionadded:: Helium
+
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.
@@ -110,8 +128,10 @@ import random
 try:
     import dateutil.parser as dateutil_parser
     _WHEN_SUPPORTED = True
+    _RANGE_SUPPORTED = True
 except ImportError:
     _WHEN_SUPPORTED = False
+    _RANGE_SUPPORTED = False
 
 # Import Salt libs
 import salt.utils
@@ -321,7 +341,7 @@ class Schedule(object):
                         try:
                             tmp = int(dateutil_parser.parse(i).strftime('%s'))
                         except ValueError:
-                            log.info('Invalid date string {0}.  Ignoring.'.format(i))
+                            log.info('Invalid date string {0}.  Ignoring job {1}.'.format(i, job))
                             continue
                         if tmp >= now:
                             _when.append(tmp)
@@ -416,6 +436,35 @@ class Schedule(object):
                             run = True
                 else:
                     run = True
+
+            if run:
+                if 'range' in data:
+                    if not _RANGE_SUPPORTED:
+                        log.info('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                        continue
+                    else:
+                        if isinstance(data['range'], dict):
+                            try:
+                                start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
+                            except ValueError:
+                                log.info('Invalid date string for start.  Ignoring job {0}.'.format(job))
+                                continue
+                            try:
+                                end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
+                            except ValueError:
+                                log.info('Invalid date string for end.  Ignoring job {0}.'.format(job))
+                                continue
+                            if end > start:
+                                if now >= start and now <= end:
+                                    run = True
+                                else:
+                                    run = False
+                            else:
+                                log.info('schedule.handle_func: Invalid range, end must be larger than start. Ignoring job {0}.'.format(job))
+                                continue
+                        else:
+                            log.info('schedule.handle_func: Invalid, range must be specified as a dictionary. Ignoring job {0}.'.format(job))
+                            continue
 
             if not run:
                 continue

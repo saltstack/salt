@@ -49,7 +49,8 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       files:
           /path/to/dest.txt:
               /local/path/to/src.txt
-
+      # Skips the service catalog API endpoint, and uses the following
+      base_url: http://192.168.1.101:3000/v2/12345
       provider: openstack
       userdata_file: /tmp/userdata.txt
 
@@ -236,6 +237,14 @@ def get_conn():
                                                  search_global=False)
     if service_type:
         authinfo['ex_force_service_type'] = service_type
+
+    base_url = config.get_cloud_config_value('base_url',
+                                             vm_,
+                                             __opts__,
+                                             search_global=False)
+
+    if base_url:
+        authinfo['ex_force_base_url'] = base_url
 
     insecure = config.get_cloud_config_value(
         'insecure', vm_, __opts__, search_global=False

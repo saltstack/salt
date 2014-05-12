@@ -846,13 +846,13 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             userKeys.append(pubfile)
         else:
             # Add the default public keys
-            userKeys += ['id_rsa.pub', 'id_dsa.pub']
+            userKeys += ['id_rsa.pub', 'id_dsa.pub', 'id_ecdsa.pub', 'id_ed25519.pub']
 
         if prvfile:
             userKeys.append(prvfile)
         else:
             # Add the default private keys
-            userKeys += ['id_rsa', 'id_dsa']
+            userKeys += ['id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519']
 
         for key in userKeys:
             if key.startswith('/'):

@@ -2,6 +2,7 @@
 '''
 Nova class
 '''
+from __future__ import with_statement
 
 # Import third party libs
 HAS_NOVA = False
@@ -9,6 +10,7 @@ try:
     from novaclient.v1_1 import client
     import novaclient.auth_plugin
     import novaclient.exceptions
+    import novaclient.extension
     HAS_NOVA = True
 except ImportError:
     pass
@@ -119,20 +121,32 @@ class SaltNova(object):
 
         if not 'api_key' in self.kwargs.keys():
             self.kwargs['api_key'] = password
+        extensions = []
+        if 'extensions' in kwargs:
+            exts = []
+            for key, item in self.kwargs['extensions'].items():
+                mod = __import__(item.replace('-', '_'))
+                exts.append(
+                    novaclient.extension.Extension(key, mod)
+                )
+            self.kwargs['extensions'] = exts
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        conn = client.Client(**self.kwargs)
-        try:
-            conn.client.authenticate()
-        except novaclient.exceptions.AmbiguousEndpoints:
-            raise SaltCloudSystemExit(
-                "Nova provider requires a 'region_name' to be specified"
-            )
+        if not hasattr(client.Client, '__exit__'):
+            raise SaltCloudSystemExit("Newer version of novaclient required for __exit__.")
 
-        self.kwargs['auth_token'] = conn.client.auth_token
-        self.catalog = \
-            conn.client.service_catalog.catalog['access']['serviceCatalog']
+        with client.Client(**self.kwargs) as conn:
+            try:
+                conn.client.authenticate()
+            except novaclient.exceptions.AmbiguousEndpoints:
+                raise SaltCloudSystemExit(
+                    "Nova provider requires a 'region_name' to be specified"
+                )
+
+            self.kwargs['auth_token'] = conn.client.auth_token
+            self.catalog = \
+                conn.client.service_catalog.catalog['access']['serviceCatalog']
 
         if not region_name is None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
@@ -150,7 +164,7 @@ class SaltNova(object):
                 'type',
                 'volume'
             )['endpoints']
-            kwargs['bypass_url'] = get_entry(
+            self.kwargs['bypass_url'] = get_entry(
                 servers_endpoints,
                 'region',
                 region_name.upper()
@@ -291,11 +305,14 @@ class SaltNova(object):
         Delete a block device
         '''
         nt_ks = self.volume_conn
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         if volume['status'] == 'deleted':
             return volume
         response = nt_ks.volumes.delete(volume['id'])
-        return self.volume_show(name)
+        return volume
 
     def volume_detach(self,
                       name,
@@ -303,7 +320,10 @@ class SaltNova(object):
         '''
         Detach a block device
         '''
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         if not volume['attachments']:
             return True
         response = self.compute_conn.volumes.delete_server_volume(
@@ -338,7 +358,10 @@ class SaltNova(object):
         '''
         Attach a block device
         '''
-        volume = self.volume_show(name)
+        try:
+            volume = self.volume_show(name)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
             server.id,
@@ -659,7 +682,10 @@ class SaltNova(object):
         Show details of one server
         '''
         ret = {}
-        servers = self.server_list_detailed()
+        try:
+            servers = self.server_list_detailed()
+        except AttributeError as exc:
+            raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
         for server_name, server in servers.iteritems():
             if str(server['id']) == server_id:
                 ret[server_name] = server
@@ -710,6 +736,79 @@ class SaltNova(object):
         for item in nt_ks.items.list():
             ret.append(item.__dict__)
         return ret
+
+    def _network_show(self, name, network_lst):
+        '''
+        Parse the returned network list
+        '''
+        for net in network_lst:
+            if net.label == name:
+                return net.__dict__
+        return False
+
+    def network_show(self, name):
+        '''
+        Show network information
+        '''
+        nt_ks = self.compute_conn
+        net_list = nt_ks.networks.list()
+        return self._network_show(name, net_list)
+
+    def network_list(self):
+        '''
+        List extra private networks
+        '''
+        nt_ks = self.compute_conn
+        return [network.__dict__ for network in nt_ks.networks.list()]
+
+    def _sanatize_network_params(self, kwargs):
+        '''
+        Sanatize novaclient network parameters
+        '''
+        params = [
+            'label', 'bridge', 'bridge_interface', 'cidr', 'cidr_v6', 'dns1',
+            'dns2', 'fixed_cidr', 'gateway', 'gateway_v6', 'multi_host',
+            'priority', 'project_id', 'vlan_start', 'vpn_start'
+        ]
+
+        for variable in kwargs.keys():
+            if variable not in params:
+                del kwargs[variable]
+        return kwargs
+
+    def network_create(self, name, **kwargs):
+        '''
+        Create extra private network
+        '''
+        nt_ks = self.compute_conn
+        kwargs['label'] = name
+        kwargs = self._sanatize_network_params(kwargs)
+        net = nt_ks.networks.create(**kwargs)
+        return net.__dict__
+
+    def _server_uuid_from_name(self, name):
+        '''
+        Get server uuid from name
+        '''
+        return self.server_list().get(name, {}).get('id', '')
+
+    def virtual_interface_list(self, name):
+        '''
+        Get virtual interfaces on slice
+        '''
+        nt_ks = self.compute_conn
+        nets = nt_ks.virtual_interfaces.list(self._server_uuid_from_name(name))
+        return [network.__dict__ for network in nets]
+
+    def virtual_interface_create(self, name, net_name):
+        '''
+        Add an interfaces to a slice
+        '''
+        nt_ks = self.compute_conn
+        serverid = self._server_uuid_from_name(name)
+        networkid = self.network_show(net_name).get('id', '')
+        nets = nt_ks.virtual_interfaces.create(networkid, serverid)
+        return nets
 
 #The following is a list of functions that need to be incorporated in the
 #nova module. This list should be updated as functions are added.

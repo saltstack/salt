@@ -2842,22 +2842,16 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     return data
 
 
-def show_volume(name=None, kwargs=None, instance_id=None, call=None):
+def show_volume(kwargs=None, call=None):
     '''
-    Show volume details
+    Wrapper around describe_volumes.
+    Here just to keep functionality.
+    Might be depreciated later.
     '''
     if not kwargs:
         kwargs = {}
 
-    if 'volume_id' not in kwargs:
-        log.error('A volume_id is required.')
-        return False
-
-    params = {'Action': 'DescribeVolumes',
-              'VolumeId.1': kwargs['volume_id']}
-
-    data = query(params, return_root=True)
-    return data
+    return describe_volumes(kwargs, call)
 
 
 def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
@@ -2896,6 +2890,38 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
 
     params = {'Action': 'DeleteVolume',
               'VolumeId': kwargs['volume_id']}
+
+    data = query(params, return_root=True)
+    return data
+
+
+def describe_volumes(kwargs=None, call=None):
+    '''
+    Describe a volume (or volumes)
+
+    volume_id
+        One or more volume IDs. Multiple IDs must be separated by ",".
+
+    TODO: Add all of the filters.
+    '''
+    if call != 'function':
+        log.error(
+            'The describe_volumes function must be called with -f '
+            'or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    params = {'Action': 'DescribeVolumes'}
+
+    if 'volume_id' in kwargs:
+        volume_id = kwargs['volume_id'].split(',')
+        for volume_index, volume_id in enumerate(volume_id):
+            params['VolumeId.{0}'.format(volume_index)] = volume_id
+
+    log.debug(params)
 
     data = query(params, return_root=True)
     return data
@@ -3096,8 +3122,12 @@ def describe_snapshots(kwargs=None, call=None):
 
     params = {'Action': 'DescribeSnapshots'}
 
+    # The AWS correct way is to use non-plurals like snapshot_id INSTEAD of snapshot_ids.
     if 'snapshot_ids' in kwargs:
-        snapshot_ids = kwargs['snapshot_ids'].split(',')
+        kwargs['snapshot_id'] = kwargs['snapshot_ids']
+
+    if 'snapshot_id' in kwargs:
+        snapshot_ids = kwargs['snapshot_id'].split(',')
         for snapshot_index, snapshot_id in enumerate(snapshot_ids):
             params['SnapshotId.{0}'.format(snapshot_index)] = snapshot_id
 

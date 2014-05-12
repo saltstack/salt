@@ -866,7 +866,7 @@ def list_nodes(call=None, **kwargs):
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
             'state': server_tmp['status'],
-            'private_ips': [server_tmp['accessIPv4']],
+            'private_ips': [addrs['addr'] for addrs in server_tmp['addresses']['private']],
             'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
         }
     return ret
@@ -953,7 +953,39 @@ def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
 
 def volume_list(**kwargs):
     '''
-    Attach block volume
+    List block devices
     '''
     conn = get_conn()
     return conn.volume_list()
+
+
+def network_list(call=None, **kwargs):
+    '''
+    List private networks
+    '''
+    conn = get_conn()
+    return conn.network_list()
+
+
+def network_create(name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.network_create(name, **kwargs)
+
+
+def virtual_interface_list(name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.virtual_interface_list(name)
+
+
+def virtual_interface_create(name, net_name, **kwargs):
+    '''
+    Create private networks
+    '''
+    conn = get_conn()
+    return conn.virtual_interface_create(name, net_name)

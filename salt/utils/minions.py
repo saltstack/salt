@@ -101,7 +101,13 @@ class CkMinions(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
+        pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
+
+        # If there is no directory return an empty list
+        if os.path.isdir(pki_dir) is False:
+            return []
+
+        os.chdir(pki_dir)
         ret = set(glob.glob(expr))
         try:
             os.chdir(cwd)
