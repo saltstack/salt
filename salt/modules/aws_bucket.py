@@ -31,7 +31,8 @@ def list_buckets(region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run aws_bucket as a user other than what the minion runs as
+        Run as a different user. This user must have access permissions to AWS
+        configured.
 
     CLI Example:
 

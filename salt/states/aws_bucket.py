@@ -48,6 +48,38 @@ def exists(
     opts : None
         Include additonal arguments and options to the aws command line.
     '''
+    exists = __salt__['aws_bucket.bucket_exists'](
+        name=name,
+        region=region,
+        opts=opts,
+        user=user)
+
+    ret = {
+        'changes': {},
+        'comment': '',
+        'name': name,
+        'result': True,
+    }
+
+    if exists:
+        ret['comment'] = u'{Bucket {bucket} in {region} already exists'.format(
+            bucket=name,
+            region=region)
+        return ret
+
+    created = __salt__['aws_bucket.create_bucket'](
+        name=name,
+        region=region,
+        opts=opts,
+        user=user)
+
+    if created['retcode'] == 0:
+        ret['changes'][name] = created['stdout']
+    else:
+        ret['result'] = False
+        ret['comment'] = created['stderr']
+
+    return ret
 
 
 def absent(
@@ -75,3 +107,37 @@ def absent(
     opts : None
         Include additional arguments and options to the aws command line.
     '''
+    ret = {
+        'changes': {},
+        'comment': '',
+        'name': name,
+        'result': True,
+    }
+
+    exists = __salt__['aws_bucket.bucket_exists'](
+        name=name,
+        region=region,
+        opts=opts,
+        user=user)
+
+    if not exists:
+        ret['comment'] = u'Bucket {name} exists in {region}'.format(
+            name=name,
+            region=region)
+        return ret
+
+    deleted = __salt__['aws_bucket.delete_bucket'](
+        name=name,
+        region=region,
+        force=force,
+        user=user,
+        opts=opts)
+
+    if deleted['retcode'] == 0:
+        ret['changes'][name] = deleted['stdout']
+        ret['comment'] = u'Bucket deleted'
+    else:
+        ret['result'] = False
+        ret['comment'] = deleted['stderr']
+
+    return ret
