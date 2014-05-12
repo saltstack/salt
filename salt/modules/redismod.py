@@ -118,6 +118,40 @@ def dbsize(host=None, port=None, db=None, password=None):
     return server.dbsize()
 
 
+def delete(*keys, **connection_args):
+    '''
+    Deletes the keys from redis, returns number of keys deleted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.delete foo
+    '''
+    # Get connection args from keywords if set
+    conn_args = {}
+    for arg in ['host', 'port', 'db', 'password']:
+        if arg in connection_args:
+            conn_args[arg] = connection_args[arg]
+
+    server = _connect(**conn_args)
+    return server.delete(*keys)
+
+
+def exists(key, host=None, port=None, db=None, password=None):
+    '''
+    Return true if the key exists in redis
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.exists foo
+    '''
+    server = _connect(host, port, db, password)
+    return server.exists(key)
+
+
 def flushall(host=None, port=None, db=None, password=None):
     '''
     Remove all keys from all databases
