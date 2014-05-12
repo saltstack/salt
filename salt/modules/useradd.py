@@ -325,7 +325,18 @@ def chgroups(name, groups, append=False):
     if append:
         cmd += '-a '
     cmd += '-G "{0}" {1}'.format(','.join(groups), name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmdret = __salt__['cmd.run_all'](cmd)
+    ret = not cmdret['retcode']
+    # try to fallback on gpasswd to add user to localgroups
+    # for old lib-pamldap support
+    if not ret and ('not found in' in cmdret['stderr']):
+        ret = True
+        for group in groups:
+            cmd = 'gpasswd -a {0} {1}'.format(name, group)
+            cmdret = __salt__['cmd.run_all'](cmd)
+            if cmdret['retcode']:
+                ret = False
+    return ret
 
 
 def chfullname(name, fullname):
