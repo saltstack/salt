@@ -2790,7 +2790,11 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     log.debug(params)
 
     data = query(params, return_root=True)
-    volume_id = {k: v for d in data for k, v in d.items()}['volumeId']
+    r_data = {}
+    for d in data:
+        for k, v in d.items():
+            r_data[k] = v
+    volume_id = r_data['volumeId']
 
     # Waits till volume is available
     if wait_to_finish:
