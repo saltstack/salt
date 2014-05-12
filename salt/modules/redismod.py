@@ -176,7 +176,7 @@ def info(host=None, port=None, db=None, password=None):
 
 def lastsave(host=None, port=None, db=None, password=None):
     '''
-    Get the UNIX time stamp of the last successful save to disk
+    Get the UNIX time in seconds of the last successful save to disk
 
     CLI Example:
 
@@ -185,7 +185,7 @@ def lastsave(host=None, port=None, db=None, password=None):
         salt '*' redis.lastsave
     '''
     server = _connect(host, port, db, password)
-    return str(server.lastsave())
+    return int(server.lastsave().strftime("%s"))
 
 
 def ping(host=None, port=None, db=None, password=None):
@@ -259,7 +259,8 @@ def shutdown(host=None, port=None, db=None, password=None):
     return False
 
 
-def slaveof(master_host=None, master_port=None, host=None, port=None, db=None, password=None):
+def slaveof(master_host=None, master_port=None, host=None, port=None, db=None,
+            password=None):
     '''
     Make the server a slave of another instance, or promote it as master
 
@@ -280,7 +281,7 @@ def slaveof(master_host=None, master_port=None, host=None, port=None, db=None, p
 
 def time(host=None, port=None, db=None, password=None):
     '''
-    Return the current server time
+    Return the current server UNIX time in seconds
 
     CLI Example:
 
