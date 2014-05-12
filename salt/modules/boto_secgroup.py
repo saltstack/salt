@@ -73,14 +73,40 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.conn.get_all_security_groups([name])
+        conn.get_all_security_groups([name])
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
 
 
-def get_config(name, region=None, key=None, keyid=None, profile=None):
+def _split_rules(rules):
+    '''
+    Split rules with combined grants into individual rules.
+
+    Amazon returns a set of rules with the same protocol, from and to ports
+    together as a single rule with a set of grants. Authorizing and revoking
+    rules, however, is done as a split set of rules. This function splits the
+    rules up.
+    '''
+    split = []
+    for rule in rules:
+        ip_protocol = rule.get('ip_protocol')
+        to_port = rule.get('to_port')
+        from_port = rule.get('from_port')
+        grants = rule.get('grants')
+        for grant in grants:
+            _rule = {'ip_protocol': ip_protocol,
+                     'to_port': to_port,
+                     'from_port': from_port}
+            for key, val in grant.iteritems():
+                _rule[key] = val
+            split.append(_rule)
+    return split
+
+
+def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
+               profile=None):
     '''
     Get the configuration for a security group.
 
@@ -91,11 +117,18 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return None
+    if not (name or group_id):
+        return None
     try:
-        sg = conn.get_all_security_groups([name])
+        if name:
+            sg = conn.get_all_security_groups([name])
+        else:
+            sg = conn.get_all_security_groups(group_ids=[group_id])
         sg = sg[0]
         ret = odict.OrderedDict()
         ret['name'] = name
+        ret['group_id'] = sg.id
+        ret['owner_id'] = sg.owner_id
         ret['description'] = sg.description
         # TODO: add support for tags
         _rules = []
@@ -109,27 +142,26 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 if attr == 'grants':
                     _grants = []
                     for grant in val:
-                        g_attrs = ['name', 'owner_id', 'group_id', 'cidr_ip']
+                        g_attrs = {'name': 'source_group_name',
+                                   'owner_id': 'source_group_owner_id',
+                                   'group_id': 'source_group_group_id',
+                                   'cidr_ip': 'cidr_ip'}
                         _grant = odict.OrderedDict()
-                        for g_attr in g_attrs:
+                        for g_attr, g_attr_map in g_attrs.iteritems():
                             g_val = getattr(grant, g_attr)
                             if not g_val:
                                 continue
-                            _grant[g_attr] = g_val
+                            _grant[g_attr_map] = g_val
                         _grants.append(_grant)
                     _rule['grants'] = _grants
-                elif attr == 'groups':
-                    if isinstance(val, string_types):
-                        _rule['groups'] = [val]
-                    else:
-                        _groups = []
-                        for group in val:
-                            _groups.append(str(group))
-                        _rule['groups'] = _groups
+                elif attr == 'from_port':
+                    _rule[attr] = int(val)
+                elif attr == 'to_port':
+                    _rule[attr] = int(val)
                 else:
                     _rule[attr] = val
             _rules.append(_rule)
-        ret['rules'] = _rules
+        ret['rules'] = _split_rules(_rules)
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -180,10 +212,10 @@ def delete(name, group_id=None, region=None, key=None, keyid=None,
         return False
 
 
-def authorize(name, src_security_group_name=None,
-              src_security_group_owner_id=None, ip_protocol=None,
+def authorize(name, source_group_name=None,
+              source_group_owner_id=None, ip_protocol=None,
               from_port=None, to_port=None, cidr_ip=None, group_id=None,
-              src_security_group_group_id=None, region=None, key=None,
+              source_group_group_id=None, region=None, key=None,
               keyid=None, profile=None):
     '''
     Add a new rule to an existing security group.
@@ -197,11 +229,11 @@ def authorize(name, src_security_group_name=None,
         return False
     try:
         added = conn.authorize_security_group(
-            group_name=name, src_security_group_name=src_security_group_name,
-            src_security_group_owner_id=src_security_group_owner_id,
+            group_name=name, src_security_group_name=source_group_name,
+            src_security_group_owner_id=source_group_owner_id,
             ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
             cidr_ip=cidr_ip, group_id=group_id,
-            src_security_group_group_id=src_security_group_group_id)
+            src_security_group_group_id=source_group_group_id)
         if added:
             log.info('Added rule to security group {0}.'.format(name))
             return True
@@ -216,10 +248,10 @@ def authorize(name, src_security_group_name=None,
         return False
 
 
-def revoke(name, src_security_group_name=None,
-           src_security_group_owner_id=None, ip_protocol=None,
+def revoke(name, source_group_name=None,
+           source_group_owner_id=None, ip_protocol=None,
            from_port=None, to_port=None, cidr_ip=None, group_id=None,
-           src_security_group_group_id=None, region=None, key=None,
+           source_group_group_id=None, region=None, key=None,
            keyid=None, profile=None):
     '''
     Remove a rule from an existing security group.
@@ -232,12 +264,12 @@ def revoke(name, src_security_group_name=None,
     if not conn:
         return False
     try:
-        revoked = conn.revoked_security_group(
-            group_name=name, src_security_group_name=src_security_group_name,
-            src_security_group_owner_id=src_security_group_owner_id,
+        revoked = conn.revoke_security_group(
+            group_name=name, src_security_group_name=source_group_name,
+            src_security_group_owner_id=source_group_owner_id,
             ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
             cidr_ip=cidr_ip, group_id=group_id,
-            src_security_group_group_id=src_security_group_group_id)
+            src_security_group_group_id=source_group_group_id)
         if revoked:
             log.info('Removed rule from security group {0}.'.format(name))
             return True
