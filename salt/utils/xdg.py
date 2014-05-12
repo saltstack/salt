@@ -4,6 +4,7 @@ Create an XDG function to get the config dir
 '''
 import os
 
+
 def xdg_config_dir(config_dir=None):
     '''
     Check xdg locations for config files
