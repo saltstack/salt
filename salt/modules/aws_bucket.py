@@ -96,7 +96,7 @@ def create_bucket(name, region, opts=None, user=None):
     }
 
 
-def delete_bucket(name, region, user=None, opts=None):
+def delete_bucket(name, region, force=False, user=None, opts=None):
     '''
     Deletes the named bucket. The named bucket must be in the region
     specified.

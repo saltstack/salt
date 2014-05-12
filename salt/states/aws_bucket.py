@@ -62,7 +62,7 @@ def exists(
     }
 
     if exists:
-        ret['comment'] = u'{Bucket {bucket} in {region} already exists'.format(
+        ret['comment'] = u'Bucket {bucket} in {region} already exists'.format(
             bucket=name,
             region=region)
         return ret
