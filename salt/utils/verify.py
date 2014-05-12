@@ -23,6 +23,7 @@ else:
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 import salt.utils
+from salt.utils.network import host_to_ip, get_fqhostname
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +112,13 @@ def verify_socket(interface, pub_port, ret_port):
     '''
     Attempt to bind to the sockets to verify that they are available
     '''
+
+    # SO_REUSEADDR will only work with different address. The ip
+    # 0.0.0.0 can't be used since it include '127.0.0.1'
+    if interface in ['0.0.0.0', '127.0.0.1']:
+        # get the external IP address for this host
+        hostname = get_fqhostname()
+        interface = host_to_ip(hostname)
 
     addr_family = lookup_family(interface)
     pubsock = socket.socket(addr_family, socket.SOCK_STREAM)

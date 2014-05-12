@@ -1963,6 +1963,8 @@ def apply_master_config(overrides=None, defaults=None):
             )
         )
         opts['worker_threads'] = 3
+    if opts['interface'] == '0.0.0.0':
+        opts['interface'] = '127.0.0.1'
     return opts
 
 
