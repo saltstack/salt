@@ -69,10 +69,10 @@ def string(name, value, expire=None, expireat=None, **connection_args):
 
     if expireat:
         __salt__['redis.expireat'](name, expireat, **connection_args)
-        ret['changes']['expireat'] = 'Key expires at {}'.format(expireat)
+        ret['changes']['expireat'] = 'Key expires at {0}'.format(expireat)
     elif expire:
         __salt__['redis.expire'](name, expire, **connection_args)
-        ret['changes']['expire'] = 'TTL set to {} seconds'.format(expire)
+        ret['changes']['expire'] = 'TTL set to {0} seconds'.format(expire)
 
     return ret
 
