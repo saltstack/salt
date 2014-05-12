@@ -28,6 +28,7 @@ import salt.utils.network
 import salt.pillar
 import salt.syspaths
 import salt.utils.validate.path
+import salt.utils.xdg
 from salt._compat import string_types
 
 import sys
@@ -1975,12 +1976,14 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 
+    client_config_dir = salt.utils.xdg.xdg_config_dir()
+
     # Get the token file path from the provided defaults. If not found, specify
     # our own, sane, default
     opts = {
         'token_file': defaults.get(
             'token_file',
-            os.path.expanduser('~/.salt_token')
+            os.path.join(client_config_dir, 'salt_token')
         )
     }
     # Update options with the master configuration, either from the provided
@@ -1989,11 +1992,12 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         master_config(path, defaults=defaults)
     )
     # Update with the users salt dot file or with the environment variable
+    saltrc_config = os.path.join(client_config_dir, 'saltrc')
     opts.update(
         load_config(
-            os.path.expanduser('~/.saltrc'),
+            saltrc_config,
             env_var,
-            os.path.expanduser('~/.saltrc')
+            saltrc_config
         )
     )
     # Make sure we have a proper and absolute path to the token file

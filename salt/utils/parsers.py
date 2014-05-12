@@ -30,6 +30,7 @@ import salt.syspaths as syspaths
 import salt.utils as utils
 import salt.version as version
 import salt.utils.args
+import salt.utils.xdg
 from salt.utils.validate.path import is_writeable
 
 if not utils.is_windows():
@@ -651,7 +652,7 @@ class LogLevelMixIn(object):
                 if current_user in self.config.get('client_acl', {}).keys():
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
-                    user_salt_dir = os.path.expanduser('~/.salt')
+                    user_salt_dir = salt.utils.xdg.xdg_config_dir('salt')
                     if not os.path.isdir(user_salt_dir):
                         os.makedirs(user_salt_dir, 0750)
                     logfile_basename = os.path.basename(
