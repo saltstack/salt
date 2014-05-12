@@ -320,8 +320,8 @@ def absent(
             msg = 'Security group {0} is set to be removed.'.format(name)
             ret['comment'] = msg
             return ret
-        deleted = __salt__['boto_secgroup.delete'](name, region, key, keyid,
-                                                   profile)
+        deleted = __salt__['boto_secgroup.delete'](name, None, region, key,
+                                                   keyid, profile)
         if deleted:
             ret['result'] = True
             ret['changes']['old'] = {'secgroup': sg}

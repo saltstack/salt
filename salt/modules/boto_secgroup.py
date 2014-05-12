@@ -202,7 +202,7 @@ def delete(name, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    deleted = conn.delelte_security_group(name, group_id)
+    deleted = conn.delete_security_group(name, group_id)
     if deleted:
         log.info('Deleted security group {0}.'.format(name))
         return True
