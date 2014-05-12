@@ -25,7 +25,7 @@ def _error_occurred(ret):
     '''
     error_strings = (
         u'Invalid choice',
-        u'A client error (NoSuchKey) occurred when calling the HeadObject operation',
+        u'A client error',
     )
 
     for error in error_strings:
@@ -93,7 +93,7 @@ def list_directory(path, bucket, region, opts=None, user=None):
     
     out = out = __salt__['cmd.run'](cmd, runas=user)
 
-    out = '\n'.join([o.strip() for o in out.split('\n')])
+    out = '\n'.join(o.strip().replace('PRE ', '') for o in out.split('\n'))
 
     retcode = 0
     if not out.strip():
@@ -226,7 +226,7 @@ def copy(src, dst, bucket, region, force=False, opts=None, user=None):
     }
 
 
-def remove(path, bucket, region, opts=None, user=None):
+def remove(path, bucket, region, recursive=False, opts=None, user=None):
     '''
     Remove a file from S3.
 
@@ -238,6 +238,9 @@ def remove(path, bucket, region, opts=None, user=None):
 
     region
         Region to get the bucket from
+
+    recursive : False
+        If the path is a directory, recursively delete the contents as well
 
     opts : None
         Any additional options to add to the command line
@@ -252,7 +255,11 @@ def remove(path, bucket, region, opts=None, user=None):
     '''
     remove_path = _construct_path(bucket, path, False)
 
-    cmd = _construct_cmd('rm', remove_path, _get_region(region))
+    args = []
+    if recursive:
+        args.append('--recursive')
+
+    cmd = _construct_cmd('rm', remove_path, _get_region(region), *args)
 
     ret = __salt__['cmd.run'](cmd, runas=user)
     retcode = 0
@@ -262,5 +269,6 @@ def remove(path, bucket, region, opts=None, user=None):
 
     return {
         'retcode': retcode,
-        'stdout': ret,
+        'stderr': ret if retcode else '',
+        'stdout': ret if retcode == 0 else '',
     }

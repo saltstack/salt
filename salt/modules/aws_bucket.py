@@ -137,14 +137,30 @@ def delete_bucket(name, region, force=False, user=None, opts=None):
             'stderr': bucket_contents['stdout'],
         }
 
-    if not force and bucket_contents['stdout']:
-        return {
-            'retcode': 1,
-            'stdout': '',
-            'stderr': u'Bucket {bucket} in {region} is not empty'.format(
+    if bucket_contents['stdout']:
+        if not force:
+            return {
+                'retcode': 1,
+                'stdout': '',
+                'stderr': u'Bucket {bucket} in {region} is not empty'.format(
+                    bucket=name,
+                    region=region),
+            }
+
+        for filename in bucket_contents['stdout'].split('\n'):
+            removed_file = __salt__['aws_file.remove'](
+                path=filename,
+                recursive=True,
                 bucket=name,
-                region=region),
-        }
+                region=region,
+                user=user,
+                opts=opts)
+            if removed_file['retcode'] != 0: # Something went wrong, stop
+                return {
+                    'retcode': removed_file['retcode'],
+                    'stdout': '',
+                    'stderr': removed_file['stderr'],
+                }
 
     rtn = aws.cli(
         's3api', 'delete-bucket', region, __salt__, opts=opts, user=user,
