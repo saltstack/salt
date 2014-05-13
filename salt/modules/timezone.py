@@ -10,6 +10,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -156,11 +157,21 @@ def zone_compare(timezone):
         return 'Error: {0} does not exist.'.format(tzfile)
 
     hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = hash_type(fp_.read()).hexdigest()
 
-    with salt.utils.fopen(tzfile, 'r') as fp_:
-        etczone = hash_type(fp_.read()).hexdigest()
+    try:
+        with salt.utils.fopen(zonepath, 'r') as fp_:
+            usrzone = hash_type(fp_.read()).hexdigest()
+    except IOError as exc:
+        raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
+
+    try:
+        with salt.utils.fopen(tzfile, 'r') as fp_:
+            etczone = hash_type(fp_.read()).hexdigest()
+    except IOError as exc:
+        raise CommandExecutionError(
+            'Problem reading timezone file {0}: {1}'
+            .format(tzfile, exc.strerror)
+        )
 
     if usrzone == etczone:
         return True
