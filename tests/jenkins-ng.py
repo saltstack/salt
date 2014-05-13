@@ -125,6 +125,10 @@ def get_minion_external_address(options):
         'external_ip'
     ])
 
+    cmd = ' '.join(cmd)
+    print('Running CMD: {0!r}'.format(cmd))
+    sys.stdout.flush()
+
     proc = subprocess.Popen(
         cmd,
         shell=True,
@@ -158,7 +162,7 @@ def get_minion_external_address(options):
     except ValueError:
         print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    setattr('minion_external_ip', options, external_ip)
+    setattr(options, 'minion_external_ip', external_ip)
     return external_ip
 
 
@@ -216,7 +220,7 @@ def get_minion_python_executable(options):
     except ValueError:
         print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    setattr('minion_python_executable', options, python_executable)
+    setattr(options, 'minion_python_executable', python_executable)
     return python_executable
 
 
@@ -253,7 +257,7 @@ def sync_minion(options):
             )
             sys.exit(proc.returncode)
 
-        setattr('salt_minion_synced', options, 'yes')
+        setattr(options, 'salt_minion_synced', 'yes')
 
 
 def build_pillar_data(options):
@@ -328,10 +332,12 @@ def download_unittest_reports(options):
 
     if options.ssh:
         cmds = (
-            'scp -r root@{0}:/tmp/xml-unitests-output/ {1}'.format(
-                get_minion_external_address(options),
-                os.path.join(options.workspace, 'xml-unitests-output')
-            ),
+            ' '.join(build_scp_command(options,
+                                       '-r',
+                                       'root@{0}:/tmp/xml-unitests-output/'.format(
+                                           get_minion_external_address(options)
+                                       ),
+                                       os.path.join(options.workspace, 'xml-unitests-output'))),
         )
     else:
         os.makedirs(xml_reports_path)
@@ -383,10 +389,11 @@ def download_coverage_report(options):
 
     if options.ssh:
         cmds = (
-            'scp -r root@{0}:/tmp/coverage.xml {1}'.format(
-                get_minion_external_address(options),
-                os.path.join(options.workspace, 'coverage.xml')
-            ),
+            ' '.join(build_scp_command(options,
+                                       'root@{0}:/tmp/coverage.xml'.format(
+                                           get_minion_external_address(options)
+                                       ),
+                                       os.path.join(options.workspace, 'coverage.xml'))),
         )
     else:
         cmds = (
@@ -446,17 +453,19 @@ def download_remote_logs(options):
     if options.ssh:
         for remote_log in options.remote_log_path:
             cmds.append(
-                'scp -r root@{0}:{1} {2}'.format(
-                    get_minion_external_address(options),
-                    remote_log,
-                    os.path.join(
-                        options.workspace,
-                        '{0}{1}'.format(
-                            os.path.basename(remote_log),
-                            '' if remote_log.endswith('.log') else '.log'
-                        )
-                    )
-                )
+                ' '.join(build_scp_command(options,
+                                           '-r',
+                                           'root@{0}:{1}'.format(
+                                               get_minion_external_address(options),
+                                               remote_log
+                                           ),
+                                           os.path.join(
+                                               options.workspace,
+                                               '{0}{1}'.format(
+                                                   os.path.basename(remote_log),
+                                                   '' if remote_log.endswith('.log') else '.log'
+                                                )
+                                           )))
             )
     else:
         for remote_log in options.remote_log_path:
@@ -566,6 +575,35 @@ def prepare_ssh_access(options):
                 proc.returncode
             )
         )
+
+
+def build_ssh_command(options, *parameters):
+    return [
+        'ssh',
+        '-i',
+        os.path.join(options.workspace, 'jenkins_ssh_key_test'),
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none',
+        'root@{0}'.format(get_minion_external_address(options))
+    ] + parameters
+
+
+def build_scp_command(options, *parameters):
+    return [
+        'scp',
+        '-i',
+        os.path.join(options.workspace, 'jenkins_ssh_key_test'),
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none',
+    ] + parameters
 
 
 def main():
@@ -832,13 +870,9 @@ def main():
             print('Grabbing bootstrapped minion version information ... ')
             cmd = []
             if options.ssh:
-                cmd.extend([
-                    'ssh',
-                    'root@{0}'.format(get_minion_external_address(options)),
-                    'salt-call',
-                    '--out=json',
-                    'test.version'
-                ])
+                cmd.extend(
+                    build_ssh_command(options, 'salt-call', '--out=json', 'test.version')
+                )
             else:
                 if options.peer:
                     cmd.extend(['salt-call', '--out=json', 'publish.publish'])
@@ -846,8 +880,10 @@ def main():
                     cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
                 cmd.append('test.version')
 
+            cmd = ' '.join(cmd)
             print('Running CMD: {0}'.format(cmd))
             sys.stdout.flush()
+
             proc = subprocess.Popen(
                 cmd,
                 shell=True,
@@ -895,15 +931,10 @@ def main():
     time.sleep(3)
     cmd = []
     if options.ssh:
-        cmd.extend([
-            'ssh',
-            'root@{0}'.format(get_minion_external_address(options)),
-            'salt-call',
-        ])
+        cmd.extend(build_ssh_command(options, 'salt-call'))
         if options.no_color:
             cmd.append('--no-color')
     else:
-
         if options.peer:
             cmd.append('salt-call')
             if options.no_color:
@@ -947,15 +978,10 @@ def main():
         # Run the 2nd preparation SLS
         cmd = []
         if options.ssh:
-            cmd.extend([
-                'ssh',
-                'root@{0}'.format(get_minion_external_address(options)),
-                'salt-call',
-            ])
+            cmd.extend(build_ssh_command(options, 'salt-call'))
             if options.no_color:
                 cmd.append('--no-color')
         else:
-
             if options.peer:
                 cmd.append('salt-call')
                 if options.no_color:
@@ -1001,12 +1027,7 @@ def main():
         print('Grabbing the cloned repository remotes information ... ')
         cmd = []
         if options.ssh:
-            cmd.extend([
-                'ssh',
-                'root@{0}'.format(get_minion_external_address(options)),
-                'salt-call',
-                '--out=json',
-            ])
+            cmd.extend(build_ssh_command(options, 'salt-call', '--out=json'))
         else:
             if options.peer:
                 cmd.extend(['salt-call', '--out=json', 'publish.publish'])
@@ -1068,12 +1089,7 @@ def main():
         print('Grabbing the cloned repository commit information ... ')
         cmd = []
         if options.ssh:
-            cmd.extend([
-                'ssh',
-                'root@{0}'.format(get_minion_external_address(options)),
-                'salt-call',
-                '--out=json',
-            ])
+            cmd.extend(build_ssh_command(options, 'salt-call', '--out=json'))
         else:
             if options.peer:
                 cmd.extend(['salt-call', '--out=json', 'publish.publish'])
@@ -1132,14 +1148,12 @@ def main():
     time.sleep(3)
     cmd = []
     if options.ssh:
-        cmd.extend([
-            'ssh',
-            'root@{0}'.format(get_minion_external_address(options)),
-            get_minion_python_executable(options),
-        ])
+        cmd.extend(build_ssh_command(options, get_minion_python_executable(options)))
         if options.sls:
+            cmd.append('salt-call')
+            if options.no_color:
+                cmd.append('--no-color')
             cmd.extend([
-                'salt-call',
                 'state.sls',
                 'pillar="{0}"'.format(build_pillar_data(options))
             ])
@@ -1149,10 +1163,11 @@ def main():
                 '-v',
                 '--run-destructive',
                 '--sysinfo',
-                '--no-colors',
                 '--xml=/tmp/xml-unitests-output',
                 '--coverage-xml=/tmp/coverage.xml'
             ])
+            if options.no_color:
+                cmd.append('--no-color')
 
         cmd = ' '.join(cmd)
 
