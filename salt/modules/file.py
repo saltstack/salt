@@ -2690,6 +2690,10 @@ def manage_file(name,
     .. code-block:: bash
 
         salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
+
+    .. versionchanged:: Helium
+        ``follow_symlinks`` option added
+
     '''
     if not ret:
         ret = {'name': name,

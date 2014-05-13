@@ -1140,6 +1140,13 @@ def managed(name,
         When using content_pillar, a newline is inserted into the data gathered
         from pillar. When loading some data this newline is better left off.
         Setting contents_pillar_newline to False will omit this newline.
+
+    follow_symlinks : True
+        .. versionadded:: Helium
+
+        If the desired path is a symlink follow it and make changes to the
+        file to which the symlink points.
+
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
