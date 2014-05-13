@@ -744,7 +744,7 @@ class SaltNova(object):
         for net in network_lst:
             if net.label == name:
                 return net.__dict__
-        return False
+        return {}
 
     def network_show(self, name):
         '''
