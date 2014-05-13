@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
