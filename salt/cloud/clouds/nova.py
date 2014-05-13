@@ -392,6 +392,12 @@ def destroy(name, conn=None, call=None):
 
 
 def request_instance(vm_=None, call=None):
+    '''
+    Put together all of the information necessary to request an instance 
+    through Novaclient and then fire off the request the instance.
+
+    Returns data about the instance
+    '''
     if call == 'function':
         # Technically this function may be called other ways too, but it
         # definitely cannot be called with --function.
