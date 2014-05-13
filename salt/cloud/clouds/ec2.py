@@ -2450,7 +2450,7 @@ def _list_nodes_full(location=None):
                 )
             )
 
-    provider = opts['function'][1]
+    provider = __opts__['function'][1]
     salt.utils.cloud.cache_node_list(ret, provider, __opts__)
     return ret
 
