@@ -2449,6 +2449,8 @@ def _list_nodes_full(location=None):
                     public_ips=item.get('ipAddress', [])
                 )
             )
+
+    salt.utils.cloud.cache_node_list(ret, __opts__)
     return ret
 
 
