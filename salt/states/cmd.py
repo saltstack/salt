@@ -37,7 +37,18 @@ touch /tmp/foo if it does not exist.
     The ``creates`` option will be supported starting with the feature release
     codenamed Helium
 
-Note that when executing a command or script, the state (i.e., changed or not)
+Salt determines whether the ``cmd`` state is successfully enforced based on the exit
+code returned by the command. If the command returns a zero exit code, then salt
+determines that the state was successfully enforced. If the script returns a non-zero
+exit code, then salt determines that it failed to successfully enforce the state.
+If a command returns a non-zero exit code but you wish to treat this as a success,
+then you must place the command in a script and explicitly set the exit code of
+the script to zero.
+
+Please note that the success or failure of the state is not affected by whether a state
+change occurred nor the stateful argument.
+
+When executing a command or script, the state (i.e., changed or not)
 of the command is unknown to Salt's state system. Therefore, by default, the
 ``cmd`` state assumes that any command execution results in a changed state.
 
