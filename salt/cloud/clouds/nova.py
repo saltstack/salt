@@ -49,12 +49,6 @@ examples could be set up in the cloud configuration at
       config_profile: my_openstack_profile
 
       ssh_key_name: mykey
-      # The OpenStack Nova network UUIDs
-      networks:
-          - fixed:
-              - 4402cd51-37ee-435e-a966-8245956dc0e6
-          - floating:
-              - Ext-Net
 
       provider: nova
       userdata_file: /tmp/userdata.txt
@@ -407,6 +401,9 @@ def request_instance(vm_=None, call=None):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
+    kwargs = {
+        'name': vm_['name']
+    }
 
     try:
         kwargs['image_id'] = get_image(conn, vm_)
@@ -462,8 +459,6 @@ def request_instance(vm_=None, call=None):
         'networks', vm_, __opts__, search_global=False
     )
 
-    floating = []
-
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
     )
@@ -492,7 +487,7 @@ def request_instance(vm_=None, call=None):
 
     try:
         data = conn.boot(**kwargs)
-    except tException as exc:
+    except Exception as exc:
         log.error(
             'Error creating {0} on Nova\n\n'
             'The following exception was thrown by libcloud when trying to '
@@ -561,9 +556,9 @@ def create(vm_):
         data, vm_ = request_instance(vm_)
 
         # Pull the instance ID, valid for both spot and normal instances
-        vm_['instance_id'] = data[0]['id']
+        vm_['instance_id'] = data.id
 
-    def __query_node_data(vm_, data, floating):
+    def __query_node_data(vm_, data):
         try:
             nodelist = list_nodes_full()
             log.debug(
@@ -611,23 +606,6 @@ def create(vm_):
                 log.debug('Waiting for managed cloud automation to complete')
                 return
 
-        if floating:
-            try:
-                name = data.name
-                ip = floating[0].ip_address
-                conn.ex_attach_floating_ip_to_node(data, ip)
-                log.info(
-                    (
-                        'Attaching floating IP "{0}"'
-                        ' to node "{1}"'
-                    ).format(ip, name)
-                )
-            except Exception as e:
-                # Note(pabelanger): Because we loop, we only want to attach the
-                # floating IP address one. So, expect failures if the IP is
-                # already attached.
-                pass
-
         result = []
         private = nodelist[vm_['name']].private_ips
         public = nodelist[vm_['name']].public_ips
@@ -673,7 +651,7 @@ def create(vm_):
     try:
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
-            update_args=(vm_, data, floating),
+            update_args=(vm_, data),
             timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
