@@ -39,7 +39,7 @@ def present(name,
             db_port=None,
             db_user=None):
     '''
-    Ensure that the named user is present with the specified privileges
+    Ensure that the named extension is present with the specified privileges
 
     name
         The name of the extension to manage
@@ -94,7 +94,7 @@ def present(name,
         ext_version=ext_version,
         **db_args)
 
-    # The extension is not present, make it!
+    # The extension is not present, install it!
     toinstall = postgres._EXTENSION_NOT_INSTALLED in mtdata
     if toinstall:
         mode = 'install'
