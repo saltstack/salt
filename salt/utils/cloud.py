@@ -1820,6 +1820,8 @@ def init_cachedir(base=None):
             os.makedirs(dir_)
         os.chmod(base, 0755)
 
+    return base
+
 
 def request_minion_cachedir(
         minion_id,
@@ -2033,6 +2035,27 @@ def update_bootstrap(config):
             continue
 
     return {'Success': {'Files updated': finished_full}}
+
+
+def cache_node_list(nodes, opts):
+    '''
+    If configured to do so, update the cloud cachedir with the current list of
+    nodes. Also fires configured events pertaining to the node list.
+    '''
+    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+        return
+
+    base = os.path.join(init_cachedir(), 'active')
+    provider = opts['function'][1]
+    driver = opts['providers'][provider].keys()[0]
+    prov_dir = os.path.join(base, driver, provider)
+    if not os.path.exists(prov_dir):
+        os.makedirs(prov_dir)
+
+    for node in nodes:
+        path = os.path.join(prov_dir, '{0}.json'.format(node))
+        with salt.utils.fopen(path, 'w') as fh_:
+            json.dump(nodes[node], fh_)
 
 
 def _salt_cloud_force_ascii(exc):
