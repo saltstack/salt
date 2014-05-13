@@ -84,19 +84,6 @@ class S3Credentials(object):
         self.verify_ssl = verify_ssl
 
 
-def __init__(__opts__):
-    '''
-    Initialize the local cache directory
-    '''
-
-    log.debug('Initializing S3 Pillar Cache')
-
-    cache_dir = _get_cache_dir()
-
-    if not os.path.isdir(cache_dir):
-        os.makedirs(cache_dir)
-
-
 def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
                multiple_env=False, environment='base', service_url=None):
     '''
@@ -160,10 +147,16 @@ def _init(creds, multiple_env, environment):
 
 def _get_cache_dir():
     '''
-    Get pillar cache directory
+    Get pillar cache directory. Initialize it if it does not exist.
     '''
 
-    return os.path.join(__opts__['cachedir'], 'pillar_s3fs')
+    cache_dir = os.path.join(__opts__['cachedir'], 'pillar_s3fs')
+
+    if not os.path.isdir(cache_dir):
+        log.debug('Initializing S3 Pillar Cache')
+        os.makedirs(cache_dir)
+
+    return cache_dir
 
 
 def _get_cached_file_name(bucket, saltenv, path):
