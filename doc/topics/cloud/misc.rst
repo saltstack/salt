@@ -207,4 +207,45 @@ update_cachedir
 
 On supported cloud providers, whether or not to maintain a cache of nodes
 returned from a --full-query. The data will be stored in ``json`` format under
-``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.json``.
+``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.json``. This
+setting can be True or False.
+
+
+diff_cache_events
+~~~~~~~~~~~~~~~~~
+
+When the cloud cachedir is being managed, if differences are encountered
+between the data that is returned live from the cloud provider and the data in
+the cache, fire events which describe the changes. This setting can be True or
+False.
+
+Some of these events will contain data which describe a node. Because some of
+the fields returned may contain sensitive data, the ``cache_event_strip_fields``
+configuration option exists to strip those fields from the event return.
+
+.. code-block:: yaml
+
+    cache_event_strip_fields:
+      - password
+      - priv_key
+
+The following are events that can be fired based on this data.
+
+
+salt/cloud/minionid/cache_node_new
+**********************************
+A new node was found on the cloud provider which was not listed in the cloud
+cachedir. A dict describing the new node will be contained in the event.
+
+
+salt/cloud/minionid/cache_node_missing
+**************************************
+A node that was previously listed in the cloud cachedir is no longer available
+on the cloud provider.
+
+
+salt/cloud/minionid/cache_node_diff
+***********************************
+One or more pieces of data in the cloud cachedir has changed on the cloud
+provider. A dict containing both the old and the new data will be contained in
+the event.
