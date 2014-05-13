@@ -31,6 +31,7 @@ detail here_.
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
+
 def __virtual__():
     '''
     Only load if the timezone module is available in __salt__
