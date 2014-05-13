@@ -378,44 +378,7 @@ def managedcloud(vm_):
     )
 
 
-def create(vm_):
-    '''
-    Create a single VM from a data dict
-    '''
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
-    key_filename = config.get_cloud_config_value(
-        'ssh_key_file', vm_, __opts__, search_global=False, default=None
-    )
-    if key_filename is not None:
-        key_filename = os.path.expanduser(key_filename)
-        if not os.path.isfile(key_filename):
-            raise SaltCloudConfigError(
-                'The defined ssh_key_file {0!r} does not exist'.format(
-                    key_filename
-                )
-            )
-
-    if deploy is True and key_filename is None and \
-            salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
-        )
-
-    salt.utils.cloud.fire_event(
-        'event',
-        'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-        },
-        transport=__opts__['transport']
-    )
-
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+def request_instance(vm_=None, call=None):
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
     kwargs = {
@@ -532,6 +495,7 @@ def create(vm_):
                     pass
                 else:
                     raise
+    vm_['floating'] = floating
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
@@ -573,6 +537,7 @@ def create(vm_):
 
     try:
         data = conn.create_node(**kwargs)
+        return data, vm_
     except Exception as exc:
         log.error(
             'Error creating {0} on OpenStack\n\n'
@@ -583,7 +548,66 @@ def create(vm_):
             # Show the traceback if the debug logging level is enabled
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
-        return False
+        return False, vm_
+
+
+def create(vm_):
+    '''
+    Create a single VM from a data dict
+    '''
+    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
+    key_filename = config.get_cloud_config_value(
+        'ssh_key_file', vm_, __opts__, search_global=False, default=None
+    )
+    if key_filename is not None:
+        key_filename = os.path.expanduser(key_filename)
+        if not os.path.isfile(key_filename):
+            raise SaltCloudConfigError(
+                'The defined ssh_key_file {0!r} does not exist'.format(
+                    key_filename
+                )
+            )
+
+    if deploy is True and key_filename is None and \
+            salt.utils.which('sshpass') is None:
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
+            'is not set and \'sshpass\' binary is not present on the '
+            'system for the password.'
+        )
+
+    vm_['key_filename'] = key_filename
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'starting create',
+        'salt/cloud/{0}/creating'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+        transport=__opts__['transport']
+    )
+    if 'instance_id' in vm_:
+        # This was probably created via another process, and doesn't have
+        # things like salt keys created yet, so let's create them now.
+        if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
+                salt.config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    __opts__
+                )
+            )
+    else:
+        # Put together all of the information required to request the instance,
+        # and then fire off the request for it
+        data, vm_ = request_instance(vm_)
+
+        # Pull the instance ID, valid for both spot and normal instances
+        vm_['instance_id'] = data.id
 
     def __query_node_data(vm_, data, floating):
         try:
@@ -699,7 +723,7 @@ def create(vm_):
     try:
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
-            update_args=(vm_, data, floating),
+            update_args=(vm_, data, vm_['floating']),
             timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
