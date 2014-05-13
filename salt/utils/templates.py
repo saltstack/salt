@@ -20,7 +20,9 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import SaltRenderError
+from salt.exceptions import (
+    SaltRenderError, CommandExecutionError, SaltInvocationError
+)
 from salt.utils.jinja import ensure_sequence_filter
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
@@ -285,7 +287,17 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 exc, out),
             line,
             tmplstr)
-    except Exception, exc:
+    except (SaltInvocationError, CommandExecutionError) as exc:
+        trace = traceback.extract_tb(sys.exc_info()[2])
+        line, out = _get_jinja_error(trace, context=unicode_context)
+        if not line:
+            tmplstr = ''
+        raise SaltRenderError(
+            'Problem running salt function in Jinja template: {0}{1}'.format(
+                exc, out),
+            line,
+            tmplstr)
+    except Exception as exc:
         tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=unicode_context)
