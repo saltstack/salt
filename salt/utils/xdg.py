@@ -15,6 +15,7 @@ def xdg_config_dir(config_dir=None):
         return xdg_config_directory
     else:
         if config_dir is None:
-            return os.path.expanduser('~/.')
+            config_dir = '~/.'
         else:
-            return os.path.expand(os.path.join('~/.', config_dir))
+            config_dir = os.path.join('~/.', config_dir)
+        return os.path.expanduser(config_dir)
