@@ -2037,7 +2037,7 @@ def update_bootstrap(config):
     return {'Success': {'Files updated': finished_full}}
 
 
-def cache_node_list(nodes, opts):
+def cache_node_list(nodes, provider, opts):
     '''
     If configured to do so, update the cloud cachedir with the current list of
     nodes. Also fires configured events pertaining to the node list.
@@ -2048,7 +2048,6 @@ def cache_node_list(nodes, opts):
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    provider = opts['function'][1]
     driver = opts['providers'][provider].keys()[0]
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
