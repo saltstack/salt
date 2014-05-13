@@ -4,7 +4,7 @@ Connection module for Amazon Security Groups
 
 .. versionadded:: Helium
 
-:configuration: This module accepts explicit security group credentials but can
+:configuration: This module accepts explicit ec2 credentials but can
     also utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at::
@@ -124,48 +124,50 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
             sg = conn.get_all_security_groups([name])
         else:
             sg = conn.get_all_security_groups(group_ids=[group_id])
-        sg = sg[0]
-        ret = odict.OrderedDict()
-        ret['name'] = name
-        ret['group_id'] = sg.id
-        ret['owner_id'] = sg.owner_id
-        ret['description'] = sg.description
-        # TODO: add support for tags
-        _rules = []
-        for rule in sg.rules:
-            attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
-            _rule = odict.OrderedDict()
-            for attr in attrs:
-                val = getattr(rule, attr)
-                if not val:
-                    continue
-                if attr == 'grants':
-                    _grants = []
-                    for grant in val:
-                        g_attrs = {'name': 'source_group_name',
-                                   'owner_id': 'source_group_owner_id',
-                                   'group_id': 'source_group_group_id',
-                                   'cidr_ip': 'cidr_ip'}
-                        _grant = odict.OrderedDict()
-                        for g_attr, g_attr_map in g_attrs.iteritems():
-                            g_val = getattr(grant, g_attr)
-                            if not g_val:
-                                continue
-                            _grant[g_attr_map] = g_val
-                        _grants.append(_grant)
-                    _rule['grants'] = _grants
-                elif attr == 'from_port':
-                    _rule[attr] = int(val)
-                elif attr == 'to_port':
-                    _rule[attr] = int(val)
-                else:
-                    _rule[attr] = val
-            _rules.append(_rule)
-        ret['rules'] = _split_rules(_rules)
-        return ret
     except boto.exception.BotoServerError as e:
+        msg = 'Failed to get config for security group {0}.'.format(name)
+        log.error(msg)
         log.debug(e)
         return {}
+    sg = sg[0]
+    ret = odict.OrderedDict()
+    ret['name'] = name
+    ret['group_id'] = sg.id
+    ret['owner_id'] = sg.owner_id
+    ret['description'] = sg.description
+    # TODO: add support for tags
+    _rules = []
+    for rule in sg.rules:
+        attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
+        _rule = odict.OrderedDict()
+        for attr in attrs:
+            val = getattr(rule, attr)
+            if not val:
+                continue
+            if attr == 'grants':
+                _grants = []
+                for grant in val:
+                    g_attrs = {'name': 'source_group_name',
+                               'owner_id': 'source_group_owner_id',
+                               'group_id': 'source_group_group_id',
+                               'cidr_ip': 'cidr_ip'}
+                    _grant = odict.OrderedDict()
+                    for g_attr, g_attr_map in g_attrs.iteritems():
+                        g_val = getattr(grant, g_attr)
+                        if not g_val:
+                            continue
+                        _grant[g_attr_map] = g_val
+                    _grants.append(_grant)
+                _rule['grants'] = _grants
+            elif attr == 'from_port':
+                _rule[attr] = int(val)
+            elif attr == 'to_port':
+                _rule[attr] = int(val)
+            else:
+                _rule[attr] = val
+        _rules.append(_rule)
+    ret['rules'] = _split_rules(_rules)
+    return ret
 
 
 def create(name, description, vpc_id=None, region=None, key=None, keyid=None,

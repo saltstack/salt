@@ -29,7 +29,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
@@ -114,8 +114,6 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not rules:
-        rules = []
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     _ret = _security_group_present(name, description, vpc_id, region, key,
                                    keyid, profile)
@@ -125,6 +123,8 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+    if not rules:
+        rules = []
     _ret = _rules_present(name, rules, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -173,17 +173,16 @@ def _get_rule_changes(rules, _rules):
     for rule in rules:
         try:
             ip_protocol = rule.get('ip_protocol')
-            supported_protocols = ['tcp', 'udp', 'icmp', 'all']
-            if ip_protocol not in supported_protocols:
-                msg = ('Invalid ip_protocol {0} specified in security group'
-                       ' rule.')
-                raise SaltInvocationError(msg.format(ip_protocol))
             to_port = rule.get('to_port')
             from_port = rule.get('from_port')
         except KeyError:
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
                                       ' rules.')
+        supported_protocols = ['tcp', 'udp', 'icmp', 'all']
+        if ip_protocol not in supported_protocols:
+            msg = ('Invalid ip_protocol {0} specified in security group rule.')
+            raise SaltInvocationError(msg.format(ip_protocol))
         cidr_ip = rule.get('cidr_ip', None)
         group_name = rule.get('source_group_name', None)
         group_id = rule.get('source_group_group_id', None)
