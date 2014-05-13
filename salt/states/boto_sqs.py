@@ -36,8 +36,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
     myqueue:
         boto_sqs.present:
             - region: us-east-1
-            - key: GKTADJGHEIQSXMKKRBJ08H
-            - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             - attributes:
                 ReceiveMessageWaitTimeSeconds: 20
 
@@ -52,8 +52,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         boto_sqs.present:
             - region: us-east-1
             - profile:
-                key: GKTADJGHEIQSXMKKRBJ08H
-                keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                keyid: GKTADJGHEIQSXMKKRBJ08H
+                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
 
@@ -77,8 +77,11 @@ def present(
     name
         Name of the SQS queue.
 
+    attributes
+        A dict of key/value SQS attributes.
+
     region
-        Region to create the queue
+        Region to connect to.
 
     key
         Secret key to be used.
@@ -90,18 +93,19 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
     if not is_present:
-        ret['comment'] = 'AWS SQS queue {0} is set to be created.'.format(name)
         if __opts__['test']:
-            ret['result'] = None
+            msg = 'AWS SQS queue {0} is set to be created.'.format(name)
+            ret['comment'] = msg
             return ret
         created = __salt__['boto_sqs.create'](name, region, key, keyid,
                                               profile)
         if created:
+            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = {'queue': name}
         else:
@@ -158,7 +162,7 @@ def absent(
         Name of the SQS queue.
 
     region
-        Region to remove the queue from
+        Region to connect to.
 
     key
         Secret key to be used.
@@ -176,7 +180,6 @@ def absent(
 
     if is_present:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
                 name)
             return ret
