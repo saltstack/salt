@@ -2041,6 +2041,8 @@ def cache_node_list(nodes, opts):
     '''
     If configured to do so, update the cloud cachedir with the current list of
     nodes. Also fires configured events pertaining to the node list.
+
+    .. versionadded:: Helium
     '''
     if not 'update_cachedir' in opts or not opts['update_cachedir']:
         return
