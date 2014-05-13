@@ -193,3 +193,18 @@ wait_for_spot_timeout
 
 The amount of time Salt Cloud should wait before an EC2 Spot instance is 
 available. This setting is only available for the EC2 cloud driver.
+
+
+Salt Cloud Cache
+================
+
+Salt Cloud can maintain a cache of node data, for supported providers. The
+following options manage this functionality.
+
+
+update_cachedir
+~~~~~~~~~~~~~~~
+
+On supported cloud providers, whether or not to maintain a cache of nodes
+returned from a --full-query. The data will be stored in ``json`` format under
+``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.json``.
