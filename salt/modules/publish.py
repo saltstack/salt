@@ -47,13 +47,11 @@ def _publish(
     '''
     if fun == 'publish.publish':
         log.info('Function name is \'publish.publish\'. Returning {}')
-        # Need to log something here
         return {}
 
     arg = _normalize_arg(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_pub',
@@ -70,8 +68,6 @@ def _publish(
     sreq = salt.transport.Channel.factory(__opts__)
     try:
         peer_data = sreq.send(load)
-        # peer_data = auth.crypticle.loads(
-        #     sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
@@ -83,8 +79,6 @@ def _publish(
             'tok': tok,
             'jid': peer_data['jid']}
     ret = sreq.send(load)
-    #  auth.crypticle.loads(
-    #         sreq.send('aes', auth.crypticle.dumps(load), 5))
     if form == 'clean':
         cret = {}
         for host in ret:
@@ -216,7 +210,6 @@ def runner(fun, arg=None, timeout=5):
     arg = _normalize_arg(arg)
 
     log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',
@@ -229,7 +222,5 @@ def runner(fun, arg=None, timeout=5):
     sreq = salt.transport.Channel.factory(__opts__)
     try:
         return sreq.send(load)
-        # return auth.crypticle.loads(
-        #    sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)
