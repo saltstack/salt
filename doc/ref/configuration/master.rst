@@ -395,6 +395,21 @@ public keys from minions.
 
     auto_accept: False
 
+.. conf_master:: autosign_timeout
+
+``autosign_timeout``
+-----------------
+
+.. versionadded:: 2014.1.0 (Hydrogen)??????????????????
+
+Default: ``120``
+
+Time in minutes that a incomming public key with a matching name found in
+pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
+are removed when the master checks the minion_autosign directory. This method
+to auto accept minions can be safer than a autosign_file because the
+keyid record can expire and is limited to being an exact name match.
+
 .. conf_master:: autosign_file
 
 ``autosign_file``
