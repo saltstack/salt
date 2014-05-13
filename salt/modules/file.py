@@ -2679,7 +2679,8 @@ def manage_file(name,
                 template=None,   # pylint: disable=W0613
                 show_diff=True,
                 contents=None,
-                dir_mode=None):
+                dir_mode=None,
+                follow_symlinks=True):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -2689,6 +2690,10 @@ def manage_file(name,
     .. code-block:: bash
 
         salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
+
+    .. versionchanged:: Helium
+        ``follow_symlinks`` option added
+
     '''
     if not ret:
         ret = {'name': name,
@@ -2698,9 +2703,14 @@ def manage_file(name,
 
     # Check changes if the target file exists
     if os.path.isfile(name):
+        if os.path.islink(name) and follow_symlinks:
+            real_name = os.path.realpath(name)
+        else:
+            real_name = name
+
         # Only test the checksums on files with managed contents
         if source:
-            name_sum = get_hash(name, source_sum['hash_type'])
+            name_sum = get_hash(real_name, source_sum['hash_type'])
 
         # Check if file needs to be replaced
         if source and source_sum['hsum'] != name_sum:
@@ -2729,13 +2739,13 @@ def manage_file(name,
                 ret['changes']['diff'] = '<show_diff=False>'
             else:
                 # Check to see if the files are bins
-                bdiff = _binary_replace(name, sfn)
+                bdiff = _binary_replace(real_name, sfn)
                 if bdiff:
                     ret['changes']['diff'] = bdiff
                 else:
                     with contextlib.nested(
                             salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(name, 'rb')) as (src, name_):
+                            salt.utils.fopen(real_name, 'rb')) as (src, name_):
                         slines = src.readlines()
                         nlines = name_.readlines()
                     ret['changes']['diff'] = \
@@ -2744,7 +2754,7 @@ def manage_file(name,
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.copyfile(sfn,
-                                    name,
+                                    real_name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
             except IOError:
@@ -2761,7 +2771,7 @@ def manage_file(name,
             # Compare contents of files to know if we need to replace
             with contextlib.nested(
                     salt.utils.fopen(tmp, 'rb'),
-                    salt.utils.fopen(name, 'rb')) as (src, name_):
+                    salt.utils.fopen(real_name, 'rb')) as (src, name_):
                 slines = src.readlines()
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
@@ -2772,7 +2782,7 @@ def manage_file(name,
                 elif not show_diff:
                     ret['changes']['diff'] = '<show_diff=False>'
                 else:
-                    if salt.utils.istextfile(name):
+                    if salt.utils.istextfile(real_name):
                         ret['changes']['diff'] = \
                             ''.join(difflib.unified_diff(nlines, slines))
                     else:
@@ -2782,7 +2792,7 @@ def manage_file(name,
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
                     salt.utils.copyfile(tmp,
-                                        name,
+                                        real_name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
                 except IOError:
@@ -2791,7 +2801,40 @@ def manage_file(name,
                         ret, 'Failed to commit change, permission error')
             __clean_tmp(tmp)
 
-        ret, _ = check_perms(name, ret, user, group, mode)
+        # check for changing symlink to regular file here
+        if os.path.islink(name) and not follow_symlinks:
+            if not sfn:
+                sfn = __salt__['cp.cache_file'](source, saltenv)
+            if not sfn:
+                return _error(
+                    ret, 'Source file {0} not found'.format(source))
+            # If the downloaded file came from a non salt server source verify
+            # that it matches the intended sum value
+            if salt._compat.urlparse(source).scheme != 'salt':
+                dl_sum = get_hash(sfn, source_sum['hash_type'])
+                if dl_sum != source_sum['hsum']:
+                    ret['comment'] = ('File sum set for file {0} of {1} does '
+                                      'not match real sum of {2}'
+                                      ).format(name,
+                                               source_sum['hsum'],
+                                               dl_sum)
+                    ret['result'] = False
+                    return ret
+
+            try:
+                salt.utils.copyfile(sfn,
+                                    name,
+                                    __salt__['config.backup_mode'](backup),
+                                    __opts__['cachedir'])
+            except IOError:
+                __clean_tmp(sfn)
+                return _error(
+                    ret, 'Failed to commit change, permission error')
+
+            ret['changes']['diff'] = \
+                'Replace symbolic link with regular file'
+
+        ret, _ = check_perms(name, ret, user, group, mode, follow_symlinks)
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(name)
