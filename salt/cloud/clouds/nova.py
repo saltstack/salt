@@ -90,7 +90,6 @@ accept them
 
 # Import python libs
 import os
-import copy
 import logging
 import socket
 import pprint
@@ -393,7 +392,7 @@ def destroy(name, conn=None, call=None):
 
 def request_instance(vm_=None, call=None):
     '''
-    Put together all of the information necessary to request an instance 
+    Put together all of the information necessary to request an instance
     through Novaclient and then fire off the request the instance.
 
     Returns data about the instance
@@ -414,28 +413,22 @@ def request_instance(vm_=None, call=None):
     try:
         kwargs['image_id'] = get_image(conn, vm_)
     except Exception as exc:
-        log.error(
+        raise SaltCloudSystemExit(
             'Error creating {0} on OPENSTACK\n\n'
             'Could not find image {1}: {2}\n'.format(
                 vm_['name'], vm_['image'], exc
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            )
         )
-        return False
 
     try:
         kwargs['flavor_id'] = get_size(conn, vm_)
     except Exception as exc:
-        log.error(
+        raise SaltCloudSystemExit(
             'Error creating {0} on OPENSTACK\n\n'
             'Could not find size {1}: {2}\n'.format(
                 vm_['name'], vm_['size'], exc
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            )
         )
-        return False
 
     kwargs['key_name'] = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
@@ -508,7 +501,6 @@ def request_instance(vm_=None, call=None):
     return data, vm_
 
 
-
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -532,6 +524,8 @@ def create(vm_):
             'system for the password.'
         )
 
+    vm_['key_filename'] = key_filename
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -543,6 +537,7 @@ def create(vm_):
         },
         transport=__opts__['transport']
     )
+    conn = get_conn()
 
     if 'instance_id' in vm_:
         # This was probably created via another process, and doesn't have

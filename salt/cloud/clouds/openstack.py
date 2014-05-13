@@ -118,7 +118,6 @@ Alternatively, one could use the private IP to connect by specifying:
 
 # Import python libs
 import os
-import copy
 import logging
 import socket
 import pprint
@@ -400,28 +399,22 @@ def request_instance(vm_=None, call=None):
     try:
         kwargs['image'] = get_image(conn, vm_)
     except Exception as exc:
-        log.error(
+        raise SaltCloudSystemExit(
             'Error creating {0} on OPENSTACK\n\n'
             'Could not find image {1}: {2}\n'.format(
                 vm_['name'], vm_['image'], exc
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            )
         )
-        return False
 
     try:
         kwargs['size'] = get_size(conn, vm_)
     except Exception as exc:
-        log.error(
+        raise SaltCloudSystemExit(
             'Error creating {0} on OPENSTACK\n\n'
             'Could not find size {1}: {2}\n'.format(
                 vm_['name'], vm_['size'], exc
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            )
         )
-        return False
 
     kwargs['ex_keyname'] = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
@@ -601,6 +594,9 @@ def create(vm_):
         },
         transport=__opts__['transport']
     )
+
+    conn = get_conn()
+
     if 'instance_id' in vm_:
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
