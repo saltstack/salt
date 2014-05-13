@@ -172,11 +172,13 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.verify_env()
-        if salt.utils.verify.verify_socket(
-                opts['interface'],
-                opts['publish_port'],
-                opts['ret_port']):
-            self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+        pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
+        if os.path.isfile(pull_sock):
+            self.event = salt.utils.event.get_event(
+                    'master',
+                    opts['sock_dir'],
+                    opts['transport'],
+                    listen=False)
         else:
             self.event = None
         self.opts = opts
