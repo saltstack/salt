@@ -245,7 +245,7 @@ def _find_install_targets(name=None,
                     if kwargs['allow_updates']:
                         comparison = '>='
                 if not _fulfills_version_spec(cver, comparison, verstr):
-                    log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver,comparison,verstr))
+                    log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver, comparison, verstr))
                     targets[pkgname] = pkgver
 
         if problems:
