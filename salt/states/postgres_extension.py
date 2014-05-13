@@ -3,7 +3,7 @@
 Management of PostgreSQL extensions (eg: postgis)
 =================================================
 
-The postgres_users module is used to create and manage Postgres extensions.
+The postgres_extensions module is used to create and manage Postgres extensions.
 
 .. code-block:: yaml
 
@@ -86,7 +86,7 @@ def present(name,
         'port': db_port,
         'password': db_password,
     }
-    # check if user exists
+    # check if extension exists
     mode = 'create'
     mtdata = __salt__['postgres.create_metadata'](
         name,
@@ -94,7 +94,7 @@ def present(name,
         ext_version=ext_version,
         **db_args)
 
-    # The user is not present, make it!
+    # The extension is not present, make it!
     toinstall = postgres._EXTENSION_NOT_INSTALLED in mtdata
     if toinstall:
         mode = 'install'
@@ -143,10 +143,10 @@ def absent(name,
            db_port=None,
            db_user=None):
     '''
-    Ensure that the named user is absent
+    Ensure that the named extension is absent
 
     name
-        Extension username of the extension to remove
+        Extension name of the extension to remove
 
     cascade
         Drop on cascade
@@ -187,7 +187,7 @@ def absent(name,
         'port': db_port,
         'password': db_password,
     }
-    # check if user exists and remove it
+    # check if extension exists and remove it
     exists = __salt__['postgres.is_installed_extension'](name, **db_args)
     if exists:
         if __opts__['test']:
