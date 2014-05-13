@@ -744,7 +744,7 @@ class SaltNova(object):
         for net in network_lst:
             if net.label == name:
                 return net.__dict__
-        return False
+        return {}
 
     def network_show(self, name):
         '''
@@ -806,7 +806,9 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         serverid = self._server_uuid_from_name(name)
-        networkid = self.network_show(net_name).get('id', '')
+        networkid = self.network_show(net_name).get('id', None}
+        if networkid is None:
+            return {net_name: False}
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
