@@ -379,6 +379,18 @@ def managedcloud(vm_):
 
 
 def request_instance(vm_=None, call=None):
+    '''
+    Put together all of the information necessary to request an instance on Openstack
+    and then fire off the request the instance.
+
+    Returns data about the instance
+    '''
+    if call == 'function':
+        # Technically this function may be called other ways too, but it
+        # definitely cannot be called with --function.
+        raise SaltCloudSystemExit(
+            'The request_instance action must be called with -a or --action.'
+        )
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
     kwargs = {
