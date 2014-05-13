@@ -964,6 +964,7 @@ def managed(name,
             contents=None,
             contents_pillar=None,
             contents_pillar_newline=True,
+            follow_symlinks=True,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1205,7 +1206,7 @@ def managed(name,
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
-        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode)
+        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode, follow_symlinks)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -1286,7 +1287,8 @@ def managed(name,
                 template,
                 show_diff,
                 contents,
-                dir_mode)
+                dir_mode,
+                follow_symlinks)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
