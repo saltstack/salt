@@ -15,9 +15,9 @@ config file.
 * ``redis.db`` - The Redis database to use. Defaults to ``0``.
 * ``redis.host`` - The Redis host to connect to. Defaults to ``'salt'``.
 * ``redis.port`` - The port that the Redis database is listening on. Defaults
-to ``6379``.
+  to ``6379``.
 * ``redis.password`` - The password for authenticating with Redis. Only
-required if you are using master auth. Defaults to ``None``.
+  required if you are using master auth. Defaults to ``None``.
 
 Configuring the Redis ext_pillar
 ================================
