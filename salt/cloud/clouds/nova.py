@@ -776,6 +776,8 @@ def list_nodes_full(call=None, **kwargs):
         ret[server] = conn.server_show_libcloud(
             server_list[server]['id']
         ).__dict__
+
+    salt.utils.cloud.cache_node_list(ret, __opts__)
     return ret
 
 
