@@ -311,7 +311,7 @@ def available(name, limit=''):
     elif limit == 'sysvinit':
         return _service_is_sysv(name)
     else:
-        return _service_is_upstart(name) or _service_is_sysv(name)
+        return _service_is_upstart(name) or _service_is_sysv(name) or _service_is_chkconfig(name)
 
 
 def missing(name, limit=''):
