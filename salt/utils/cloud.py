@@ -2054,10 +2054,120 @@ def cache_node_list(nodes, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
 
+    # Check to see if any nodes in the cache are not in the new list
+    missing_node_cache(prov_dir, nodes.keys(), opts)
+
     for node in nodes:
+        diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, '{0}.json'.format(node))
         with salt.utils.fopen(path, 'w') as fh_:
             json.dump(nodes[node], fh_)
+
+
+def missing_node_cache(prov_dir, node_list, opts):
+    '''
+    Check list of nodes to see if any nodes which were previously known about
+    in the cache have been removed from the node list.
+
+    This function will only run if configured to do so in the main Salt Cloud
+    configuration file (normally /etc/salt/cloud).
+
+    .. code-block:: yaml
+
+        diff_cache_events: True
+
+    .. versionadded:: Helium
+    '''
+    cached_nodes = []
+    for node in os.listdir(prov_dir):
+        cached_nodes.append(node.replace('.json', ''))
+
+    log.debug(sorted(cached_nodes))
+    log.debug(sorted(node_list))
+    for node in cached_nodes:
+        if node not in node_list:
+            fire_event(
+                'event',
+                'cached node missing from provider',
+                'salt/cloud/{0}/cache_node_missing'.format(node),
+                {'missing node': node},
+                transport=opts.get('transport', 'zeromq')
+            )
+
+
+def diff_node_cache(prov_dir, node, new_data, opts):
+    '''
+    Check new node data against current cache. If data differ, fire an event
+    which consists of the new node data.
+
+    This function will only run if configured to do so in the main Salt Cloud
+    configuration file (normally /etc/salt/cloud).
+
+    .. code-block:: yaml
+
+        diff_cache_events: True
+
+    .. versionadded:: Helium
+    '''
+    if not 'diff_cache_events' in opts or not opts['diff_cache_events']:
+        return
+
+    path = os.path.join(prov_dir, node)
+    path = '{0}.json'.format(path)
+
+    if not os.path.exists(path):
+        event_data = _strip_cache_events(new_data, opts)
+
+        fire_event(
+            'event',
+            'new node found',
+            'salt/cloud/{0}/cache_node_new'.format(node),
+            {'new_data': event_data},
+            transport=opts.get('transport', 'zeromq')
+        )
+        return
+
+    with salt.utils.fopen(path, 'r') as fh_:
+        cache_data = json.load(fh_)
+
+    # Perform a simple diff between the old and the new data, and if it differs,
+    # return both dicts.
+    # TODO: Return an actual diff
+    diff = cmp(new_data, cache_data)
+    if diff != 0:
+        fire_event(
+            'event',
+            'node data differs',
+            'salt/cloud/{0}/cache_node_diff'.format(node),
+            {
+                'new_data': _strip_cache_events(new_data, opts),
+                'cache_data': _strip_cache_events(cache_data, opts),
+            },
+            transport=opts.get('transport', 'zeromq')
+        )
+
+
+def _strip_cache_events(data, opts):
+    '''
+    Strip out user-configured sensitive event data. The fields to be stripped
+    are configured in the main Salt Cloud configuration file, usually
+    ``/etc/salt/cloud``.
+
+    .. code-block: yaml
+
+        cache_event_strip_fields:
+          - password
+          - priv_key
+
+    .. versionadded:: Helium
+    '''
+    event_data = copy.deepcopy(data)
+    strip_fields = opts.get('cache_event_strip_fields', [])
+    for field in strip_fields:
+        if field in event_data:
+            del event_data[field]
+
+    return event_data
 
 
 def _salt_cloud_force_ascii(exc):
