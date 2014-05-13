@@ -195,6 +195,13 @@ The amount of time Salt Cloud should wait before an EC2 Spot instance is
 available. This setting is only available for the EC2 cloud driver.
 
 
+Salt Cloud Cache
+================
+
+Salt Cloud can maintain a cache of node data, for supported providers. The
+following options manage this functionality.
+
+
 update_cachedir
 ~~~~~~~~~~~~~~~
 
