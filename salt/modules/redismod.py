@@ -5,10 +5,12 @@ Module to provide redis functionality to Salt
 :configuration: This module requires the redis python module and uses the
     following defaults which may be overridden in the minion configuration:
 
-        redis.host: 'localhost'
-        redis.port: 6379
-        redis.db: 0
-        redis.password: None
+.. code-block:: yaml
+
+    redis.host: 'localhost'
+    redis.port: 6379
+    redis.db: 0
+    redis.password: None
 '''
 
 # Import third party libs

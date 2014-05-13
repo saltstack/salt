@@ -164,6 +164,7 @@ Full list of builtin execution modules
     rbenv
     rdp
     reg
+    redismod
     rest_package
     rest_sample
     rest_service
