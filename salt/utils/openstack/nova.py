@@ -806,7 +806,7 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         serverid = self._server_uuid_from_name(name)
-        networkid = self.network_show(net_name).get('id', None}
+        networkid = self.network_show(net_name).get('id', None)
         if networkid is None:
             return {net_name: False}
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
