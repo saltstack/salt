@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 # Import python libs
-import tiem
+import time
 import logging
 
 # Import salt libs
