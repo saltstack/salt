@@ -76042,10 +76042,20 @@ no disk space:
 .UNINDENT
 .UNINDENT
 .sp
-Note that when executing a command or script, the state (i.e., changed or not)
+Salt determines whether the cmd state is successfully enforced based on the exit
+code returned by the command. If the command returns a zero exit code, then salt
+determines that the state was successfully enforced. If the script returns a non-zero
+exit code, then salt determines that it failed to successfully enforce the state.
+If a command returns a non-zero exit code but you wish to treat this as a success,
+then you must place the command in a script and explicitly set the exit code of
+the script to zero.
+.sp
+Please note that the success or failure of the state is not affected by whether a state 
+change occurred nor the stateful argument.
+.sp
+When executing a command or script, the state (i.e., changed or not)
 of the command is unknown to Salt\(aqs state system. Therefore, by default, the
 \fBcmd\fP state assumes that any command execution results in a changed state.
-.sp
 This means that if a \fBcmd\fP state is watched by another state then the
 state that\(aqs watching will always be executed due to the \fIchanged\fP state in
 the \fBcmd\fP state.
