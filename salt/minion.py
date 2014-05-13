@@ -927,7 +927,6 @@ class Minion(MinionBase):
                     )
                     log.error(traceback.format_exc())
 
-
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
         '''
