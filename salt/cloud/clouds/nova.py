@@ -775,7 +775,7 @@ def list_nodes_full(call=None, **kwargs):
     for server in server_list.keys():
         ret[server] = conn.server_show_libcloud(
             server_list[server]['id']
-        )
+        ).__dict__
     return ret
 
 
