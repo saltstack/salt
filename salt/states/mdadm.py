@@ -72,6 +72,14 @@ def present(name, opts=None):
            'name': name,
            'result': True}
 
+    salt.utils.warn_until(
+            'Helium',
+            'The mdadm API will change drastically in the \'Helium\' Salt '
+            ' release.  This will break current states and module calls. '
+            'See http://salt.rtfd.org/en/latest/ref/modules/all/salt.modules.mdadm.html '
+            'for more information.'
+            )
+
     args = [name]
     if isinstance(opts, str):
         opts = opts.split()
