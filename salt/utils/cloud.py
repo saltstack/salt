@@ -291,6 +291,15 @@ def bootstrap(vm_, opts):
             'system for the password.'
         )
 
+    if key_filename is None and ('password' not in vm_ or not vm_['password']):
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
+            'is not set and there is no password set for the vm. '
+            'Check your provider for the \'change_password\' option.'
+        )
+
+
+
     ret = {}
 
     deploy_script_code = os_script(

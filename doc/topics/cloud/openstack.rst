@@ -90,3 +90,12 @@ Here is an example of a profile:
 
 ``image`` can be one of the options listed in the output of ``nova image-list``.
 
+
+change_password
+~~~~~~~~~~~~~~~
+If no ssh_key_file is provided, and the server already exists, change_password
+will use the api to change the root password of the server so that it can be
+bootstrapped.
+
+.. code-block:: yaml
+    change_password: True
