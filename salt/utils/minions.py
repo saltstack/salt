@@ -12,7 +12,6 @@ import logging
 
 # Import salt libs
 import salt.payload
-import salt.utils.minions
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
