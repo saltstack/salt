@@ -31,13 +31,13 @@ def present(name, value, vtype='REG_DWORD', reflection=True):
 
     In the example below, this will prevent Windows from silently creating
     the key in:
-    ``HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Salt\version``
+    ``HKEY_CURRENT_USER\\SOFTWARE\\Wow6432Node\\Salt\\version``
 
     Example:
 
     .. code-block:: yaml
 
-        HKEY_CURRENT_USER\SOFTWARE\Salt\version:
+        HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version:
           reg.present:
             - value: 0.15.3
             - vtype: REG_SZ
