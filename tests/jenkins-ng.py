@@ -589,7 +589,6 @@ def build_ssh_command(options, *arguments, **parameters):
     if tty:
         cmd.append('-tt')
     cmd.extend([
-        'ssh',
         '-i',
         os.path.join(options.workspace, 'jenkins_ssh_key_test'),
         # Don't add new hosts to the host key database
