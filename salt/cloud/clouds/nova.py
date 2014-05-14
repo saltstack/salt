@@ -110,7 +110,6 @@ import salt.utils
 import salt.client
 
 # Import salt.cloud libs
-import salt.utils.cloud
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
