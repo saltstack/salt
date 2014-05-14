@@ -11,7 +11,6 @@ Getting Started
     :maxdepth: 3
 
     Installing salt cloud <install/index>
-    Configuration overview <overview>
 
 Using Salt Cloud
 ================
@@ -56,6 +55,7 @@ Cloud Provider Specifics
         Getting Started With Rackspace <rackspace>
         Getting Started With HP Cloud <hpcloud>
         Getting Started With SoftLayer <softlayer>
+        Getting Started With Vexxhost <vexxhost>
 
 Miscellaneous Options
 =====================

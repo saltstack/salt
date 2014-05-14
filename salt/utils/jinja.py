@@ -236,8 +236,7 @@ class SerializerExtension(Extension, object):
         foo: true
         qux: 2.0
 
-    Load filters
-    ~~~~~~~~~~~~
+    **Load filters**
 
     Strings and variables can be deserialized with **load_yaml** and
     **load_json** tags and filters. It allows one to manipulate data directly

@@ -398,7 +398,7 @@ public keys from minions.
 .. conf_master:: autosign_timeout
 
 ``autosign_timeout``
------------------
+--------------------
 
 .. versionadded:: Helium
 
