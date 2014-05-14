@@ -229,6 +229,13 @@ class SaltNova(object):
         '''
         return self.server_list().get(name, {})
 
+    def root_password(self, server_id, password):
+        '''
+        Change server(uuid's) root password
+        '''
+        nt_ks = self.compute.conn
+        nt_ks.servers.change_password(server_id, password)
+
     def server_by_name(self, name):
         '''
         Find a server by its name

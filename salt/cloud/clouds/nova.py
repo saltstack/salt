@@ -111,6 +111,7 @@ import salt.client
 
 # Import salt.cloud libs
 import salt.utils.cloud
+import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.cloud.exceptions import (
@@ -551,6 +552,8 @@ def create(vm_):
                     __opts__
                 )
             )
+        vm_['password'] = sup.secure_password()
+        conn.root_password(vm_['instance_id'], vm_['secure_password'])
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
