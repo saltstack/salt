@@ -948,10 +948,19 @@ def main():
                     version_info = version_info['local']
                 else:
                     version_info = version_info[options.vm_name]
-                if options.bootstrap_salt_commit[:7] not in version_info:
+
+                bootstrap_salt_commit = options.bootstrap_salt_commit
+                if re.match('v[0-9]+', bootstrap_salt_commit):
+                    # We've been passed a tag
+                    bootstrap_salt_commit = bootstrap_salt_commit[1:]
+                else:
+                    # Most likely a git SHA
+                    bootstrap_salt_commit = bootstrap_salt_commit[:7]
+
+                if bootstrap_salt_commit not in version_info:
                     print('\n\nATTENTION!!!!\n')
                     print('The boostrapped minion version commit does not contain the desired commit:')
-                    print(' {0!r} does not contain {1!r}'.format(version_info, options.bootstrap_salt_commit[:7]))
+                    print(' {0!r} does not contain {1!r}'.format(version_info, bootstrap_salt_commit))
                     print('\n\n')
                     sys.stdout.flush()
                     #if options.delete_vm:
