@@ -13,7 +13,9 @@ def get(tgt, fun, tgt_type='glob', output='yaml'):
     Gathers the data from the specified minions' mine, pass in the target,
     function to look up and the target type
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-run mine.get '*' network.interfaces
     '''

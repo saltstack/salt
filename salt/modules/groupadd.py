@@ -132,7 +132,9 @@ def adduser(name, username):
     '''
     Add a user in the group.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
          salt '*' group.adduser foo bar
 
@@ -148,7 +150,9 @@ def deluser(name, username):
     '''
     Remove a user from the group.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
          salt '*' group.deluser foo bar
 

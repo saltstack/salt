@@ -702,7 +702,9 @@ class StateFire(object):
         '''
         Fire an event off on the master server
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''

@@ -1098,7 +1098,9 @@ def get_profiles(hypervisor=None):
      - nic
      - disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_profiles
         salt '*' virt.get_profiles hypervisor=esxi

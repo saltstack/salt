@@ -132,7 +132,9 @@ def installed(name,
         numbers here using the standard operators ``==, >=, <=``. If
         ``requirements`` is given, this parameter will be ignored.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -154,7 +156,9 @@ def installed(name,
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -165,7 +169,9 @@ def installed(name,
 
     Or
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
