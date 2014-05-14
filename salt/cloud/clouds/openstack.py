@@ -609,6 +609,8 @@ def create(vm_):
                     __opts__
                 )
             )
+        vm_['password'] = sup.secure_password()
+        conn.ex_set_password(vm_['instance_id'], vm['password'])
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
