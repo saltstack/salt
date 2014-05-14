@@ -552,7 +552,7 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             )
         )
-        return False, vm_
+    return False, vm_
 
 
 def create(vm_):
