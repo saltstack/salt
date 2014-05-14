@@ -603,7 +603,10 @@ def build_ssh_command(options, *arguments, **parameters):
     return cmd + list(arguments)
 
 
-def build_scp_command(options, *parameters):
+def build_scp_command(options, *arguments):
+    '''
+    Build the SCP command with the required options
+    '''
     return [
         'scp',
         '-i',
@@ -614,7 +617,7 @@ def build_scp_command(options, *parameters):
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none',
-    ] + parameters
+    ] + list(arguments)
 
 
 def main():
