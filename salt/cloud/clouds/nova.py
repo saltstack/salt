@@ -498,6 +498,7 @@ def request_instance(vm_=None, call=None):
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False, vm_
+    vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
 
@@ -553,7 +554,7 @@ def create(vm_):
                 )
             )
         vm_['password'] = sup.secure_password()
-        conn.root_password(vm_['instance_id'], vm_['secure_password'])
+        conn.root_password(vm_['instance_id'], vm_['password'])
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
@@ -688,8 +689,8 @@ def create(vm_):
 
     ret.update(data.__dict__)
 
-    if 'password' in data.extra:
-        del data.extra['password']
+    if 'password' in ret['extra']:
+        del ret['extra']['password']
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
