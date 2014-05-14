@@ -203,7 +203,9 @@ def switch(cwd, remote, target=None, user=None, username=None,
     password : None
         Connect to the Subversion server with this password
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' svn.switch /path/to/repo svn://remote/repo
     '''

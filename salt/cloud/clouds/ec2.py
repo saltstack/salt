@@ -2190,7 +2190,9 @@ def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
@@ -2212,7 +2214,9 @@ def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -2294,7 +2298,9 @@ def reboot(name, call=None):
     '''
     Reboot a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot mymachine
     '''
@@ -2565,7 +2571,9 @@ def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a enable_term_protect mymachine
     '''
@@ -2582,7 +2590,9 @@ def disable_term_protect(name, call=None):
     '''
     Disable termination protection on a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a disable_term_protect mymachine
     '''
@@ -2599,7 +2609,9 @@ def _toggle_term_protect(name, value):
     '''
     Disable termination protection on a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a disable_term_protect mymachine
     '''
@@ -2618,7 +2630,9 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     '''
     Do not delete all/specified EBS volumes upon instance termination
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a show_delvol_on_destroy mymachine
     '''
@@ -2676,7 +2690,9 @@ def keepvol_on_destroy(name, kwargs=None, call=None):
     '''
     Do not delete all/specified EBS volumes upon instance termination
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a keepvol_on_destroy mymachine
     '''
@@ -2699,7 +2715,9 @@ def delvol_on_destroy(name, kwargs=None, call=None):
     '''
     Delete all/specified EBS volumes upon instance termination
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a delvol_on_destroy mymachine
     '''
