@@ -1038,12 +1038,12 @@ class State(object):
                         name = id_
                     else:
                         errors.append(
-                            'Cannot extend ID {0} in \'{1}:{2}\'. It is not '
+                            'Cannot extend ID \'{0}\' in \'{1}:{2}\'. It is not '
                             'part of the high state.\n'
-                            'This is likey due to a missing include statement '
-                            'or an incorrectly typed ID.\nEnsure that a'
+                            'This is likely due to a missing include statement '
+                            'or an incorrectly typed ID.\nEnsure that a '
                             'state with an ID of \'{0}\' is available\nin '
-                            'environment {1} and to SLS {2}'.format(
+                            'environment \'{1}\' and to SLS \'{2}\''.format(
                                 name,
                                 body.get('__env__', 'base'),
                                 body.get('__sls__', 'base'))
