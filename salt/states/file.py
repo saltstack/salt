@@ -1331,7 +1331,9 @@ def directory(name,
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
         a list of strings representing what you would like to recurse.
-        Example::
+        Example:
+
+        .. code-block:: yaml
 
             /var/log/httpd:
                 file.directory:
@@ -1622,7 +1624,9 @@ def recurse(name,
     include_pat
         When copying, include only this pattern from the source. Default
         is glob match; if prefixed with 'E@', then regexp match.
-        Example::
+        Example:
+
+        .. code-block:: yaml
 
           - include_pat: hello*       :: glob matches 'hello01', 'hello02'
                                          ... but not 'otherhello'
@@ -1637,7 +1641,9 @@ def recurse(name,
 
         Also, when 'clean=True', exclude this pattern from the removal
         list and preserve in the destination.
-        Example::
+        Example:
+
+        .. code-block:: yaml
 
           - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
                                                    APPDATA.02,.. for exclusion
@@ -1647,7 +1653,9 @@ def recurse(name,
     maxdepth
         When copying, only copy paths which are of depth `maxdepth` from the
         source path.
-        Example::
+        Example:
+
+        .. code-block:: yaml
 
           - maxdepth: 0      :: Only include files located in the source
                                 directory

@@ -789,7 +789,9 @@ def build_whitespace_split_regex(text):
     Create a regular expression at runtime which should match ignoring the
     addition or deletion of white space or line breaks, unless between commas
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
     >>> import re
     >>> from salt.utils import *

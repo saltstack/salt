@@ -76,7 +76,9 @@ def war_deployed(name,
         use another location to temporarily copy to war file
         by default the system's temp directory is used
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         jenkins:
           tomcat.war_deployed:
@@ -178,7 +180,9 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request to the tomcat manager
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         tomcat-service:
           service:
@@ -244,7 +248,9 @@ def undeployed(name,
     timeout : 180
         timeout for HTTP request to the tomcat manager
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         jenkins:
           tomcat.undeployed:
