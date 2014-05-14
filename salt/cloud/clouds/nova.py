@@ -569,7 +569,7 @@ def create(vm_):
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
                     pprint.pformat(
-                        nodelist[vm_['name']].__dict__
+                        nodelist[vm_['name']]
                     )
                 )
             )
@@ -584,7 +584,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']].state == 'ACTIVE'
+        running = nodelist[vm_['name']]['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
@@ -601,7 +601,7 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = conn.server_show_libcloud(
-                nodelist[vm_['name']].id
+                nodelist[vm_['name']]['id']
             ).extra
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
@@ -611,8 +611,8 @@ def create(vm_):
                 return
 
         result = []
-        private = nodelist[vm_['name']].private_ips
-        public = nodelist[vm_['name']].public_ips
+        private = nodelist[vm_['name']]['private_ips']
+        public = nodelist[vm_['name']]['public_ips']
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
