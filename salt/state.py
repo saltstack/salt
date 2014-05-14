@@ -1039,7 +1039,14 @@ class State(object):
                     else:
                         errors.append(
                             'Cannot extend ID {0} in \'{1}:{2}\'. It is not '
-                            'part of the high state.'.format(
+                            'part of the high state.\n\n'
+                            'This means that when we were compiling the '
+                            'state tree, we encountered a requsite '
+                            'that could not be resolved.\n\nCheck to make '
+                            'sure that you have created a state with an '
+                            'ID of \'{0}\'and that it is present in the '
+                            'environment \'{1}\' in order for the state '
+                            '\'{2}\' to run correctly.'.format(
                                 name,
                                 body.get('__env__', 'base'),
                                 body.get('__sls__', 'base'))
