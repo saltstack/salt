@@ -337,10 +337,10 @@ def download_unittest_reports(options):
         cmds = (
             ' '.join(build_scp_command(options,
                                        '-r',
-                                       'root@{0}:/tmp/xml-unitests-output/'.format(
+                                       'root@{0}:/tmp/xml-unitests-output/*'.format(
                                            get_minion_external_address(options)
                                        ),
-                                       os.path.join(options.workspace, 'xml-unitests-output'))),
+                                       os.path.join(options.workspace, 'xml-test-reports'))),
         )
     else:
         os.makedirs(xml_reports_path)
