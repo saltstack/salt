@@ -2702,7 +2702,7 @@ def manage_file(name,
                'result': True}
 
     # Check changes if the target file exists
-    if os.path.isfile(name):
+    if os.path.isfile(name) or os.path.islink(name):
         if os.path.islink(name) and follow_symlinks:
             real_name = os.path.realpath(name)
         else:
