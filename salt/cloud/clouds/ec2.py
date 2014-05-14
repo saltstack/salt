@@ -2347,7 +2347,6 @@ def _get_node(name, location=None):
     if location is None:
         location = get_location()
 
-    log.debug(list_nodes_full(location)[name])
     attempts = 10
     while attempts >= 0:
         try:
@@ -3195,8 +3194,6 @@ def get_console_output(
     By default, returns decoded data, not the Base64-encoded data that is
     actually returned from the EC2 API.
     '''
-    log.debug('*******************')
-
     if call != 'action':
         raise SaltCloudSystemExit(
             'The create_attach_volumes action must be called with '
@@ -3205,8 +3202,6 @@ def get_console_output(
 
     if not instance_id:
         instance_id = _get_node(name)['instanceId']
-
-    log.debug('instance_id is {0}'.format(instance_id))
 
     if kwargs is None:
         kwargs = {}
