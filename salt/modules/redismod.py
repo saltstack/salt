@@ -416,6 +416,7 @@ def slaveof(master_host=None, master_port=None, host=None, port=None, db=None,
     CLI Example:
 
     .. code-block:: bash
+
         # Become slave of redis-n01.example.com:6379
         salt '*' redis.slaveof redis-n01.example.com 6379
         salt '*' redis.slaveof redis-n01.example.com
