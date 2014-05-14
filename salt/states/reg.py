@@ -2,8 +2,6 @@
 '''
 Manage the registry on Windows
 '''
-# For some reason backslashes show up in here!
-# pylint: disable=W1401
 
 
 def __virtual__():
