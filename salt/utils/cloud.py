@@ -298,8 +298,6 @@ def bootstrap(vm_, opts):
             'Check your provider for the \'change_password\' option.'
         )
 
-
-
     ret = {}
 
     deploy_script_code = os_script(
