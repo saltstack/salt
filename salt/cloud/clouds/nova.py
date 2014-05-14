@@ -488,16 +488,13 @@ def request_instance(vm_=None, call=None):
     try:
         data = conn.boot(**kwargs)
     except Exception as exc:
-        log.error(
+        raise SaltCloudSystemExit(
             'Error creating {0} on Nova\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: {1}\n'.format(
                 vm_['name'], exc
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            )
         )
-        return False, vm_
     vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
