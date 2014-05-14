@@ -260,7 +260,9 @@ def _lookup_proxmox_task(upid):
 def get_resources_nodes(call=None, resFilter=None):
     '''
     Retrieve all hypervisors (nodes) available on this environment
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_resources_nodes my-proxmox-config
     '''
@@ -286,7 +288,9 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
     '''
     Retrieve all VMs available on this environment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_resources_vms my-proxmox-config
     '''
@@ -338,7 +342,9 @@ def avail_locations(call=None):
     '''
     Return a list of the hypervisors (nodes) which this Proxmox PVE machine manages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --list-locations my-proxmox-config
     '''
@@ -363,7 +369,9 @@ def avail_images(call=None, location='local', img_type='vztpl'):
     '''
     Return a list of the images that are on the provider
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --list-images my-proxmox-config
     '''
@@ -384,7 +392,9 @@ def list_nodes(call=None):
     '''
     Return a list of the VMs that are managed by the provider
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -Q my-proxmox-config
     '''
@@ -427,7 +437,9 @@ def list_nodes_full(call=None):
     '''
     Return a list of the VMs that are on the provider
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -F my-proxmox-config
     '''
@@ -443,7 +455,9 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -S my-proxmox-config
     '''
@@ -456,7 +470,9 @@ def create(vm_):
     '''
     Create a single VM from a data dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -p proxmox-ubuntu vmhostname
     '''
@@ -812,7 +828,9 @@ def destroy(name, call=None):
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -910,7 +928,9 @@ def start(name, vmid=None, call=None):
     '''
     Start a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a start mymachine
     '''
@@ -933,7 +953,9 @@ def stop(name, vmid=None, call=None):
     '''
     Stop a node ("pulling the plug").
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a stop mymachine
     '''
@@ -955,7 +977,9 @@ def shutdown(name=None, vmid=None, call=None):
     '''
     Shutdown a node via ACPI.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a shutdown mymachine
     '''

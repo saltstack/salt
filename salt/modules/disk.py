@@ -157,7 +157,9 @@ def percent(args=None):
     '''
     Return partion information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.percent /var
     '''
@@ -196,7 +198,9 @@ def blkid(device=None):
     '''
     Return block device attributes: UUID, LABEL, etc.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.blkid
         salt '*' disk.blkid /dev/sda

@@ -614,7 +614,9 @@ def destroy(name, call=None):
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -662,7 +664,9 @@ def start(name, call=None):
     '''
     Start a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a start mymachine
     '''
@@ -683,7 +687,9 @@ def stop(name, call=None):
     '''
     Stop a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a stop mymachine
     '''

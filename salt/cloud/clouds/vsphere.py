@@ -481,7 +481,9 @@ def destroy(name, call=None):  # pylint: disable=W0613
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''

@@ -615,7 +615,9 @@ def set_tags(name, tags, call=None):
     '''
     Set tags for a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
@@ -670,7 +672,9 @@ def del_tags(name, kwargs, call=None):
     '''
     Delete tags for a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
@@ -707,7 +711,9 @@ def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
