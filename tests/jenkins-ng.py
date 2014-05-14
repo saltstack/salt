@@ -580,8 +580,15 @@ def prepare_ssh_access(options):
         )
 
 
-def build_ssh_command(options, *parameters):
-    return [
+def build_ssh_command(options, *arguments, **parameters):
+    '''
+    Build the SSH command with the required options
+    '''
+    tty = parameters.get('tty', False)
+    cmd = ['ssh']
+    if tty:
+        cmd.append('-tt')
+    cmd.extend([
         'ssh',
         '-i',
         os.path.join(options.workspace, 'jenkins_ssh_key_test'),
@@ -592,7 +599,8 @@ def build_ssh_command(options, *parameters):
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none',
         'root@{0}'.format(get_minion_external_address(options))
-    ] + parameters
+    ])
+    return cmd + list(arguments)
 
 
 def build_scp_command(options, *parameters):
