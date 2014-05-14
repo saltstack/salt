@@ -36,6 +36,12 @@ import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
 
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
+
 # The directory where salt thin is deployed
 DEFAULT_THIN_DIR = '/tmp/.salt'
 
@@ -156,7 +162,7 @@ class SSH(object):
     def __init__(self, opts):
         self.verify_env()
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
-        if os.path.isfile(pull_sock):
+        if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
