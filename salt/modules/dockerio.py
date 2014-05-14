@@ -381,9 +381,7 @@ def get_containers(all=True,
                    since=None,
                    before=None,
                    limit=-1,
-                   host=False,
-                   *args,
-                   **kwargs):
+                   host=False):
     '''
     Get a list of mappings representing all containers
 
@@ -423,7 +421,7 @@ def get_containers(all=True,
     return status
 
 
-def logs(container, *args, **kwargs):
+def logs(container):
     '''
     Return logs for a specified container
 
@@ -451,9 +449,7 @@ def commit(container,
            tag=None,
            message=None,
            author=None,
-           conf=None,
-           *args,
-           **kwargs):
+           conf=None):
     '''
     Commit a container (promotes it to an image)
 
@@ -502,7 +498,7 @@ def commit(container,
     return status
 
 
-def diff(container, *args, **kwargs):
+def diff(container):
     '''
     Get container diffs
 
@@ -525,7 +521,7 @@ def diff(container, *args, **kwargs):
     return status
 
 
-def export(container, path, *args, **kwargs):
+def export(container, path):
     '''
     Export a container to a file
 
@@ -577,8 +573,7 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
-                     name=None,
-                     *args, **kwargs):
+                     name=None):
     '''
     Create a new container
 
@@ -667,7 +662,7 @@ def create_container(image,
     return status
 
 
-def version(*args, **kwargs):
+def version():
     '''
     Get docker version
 
@@ -687,7 +682,7 @@ def version(*args, **kwargs):
     return status
 
 
-def info(*args, **kwargs):
+def info():
     '''
     Get the version information about docker
 
@@ -710,7 +705,7 @@ def info(*args, **kwargs):
     return status
 
 
-def port(container, private_port, *args, **kwargs):
+def port(container, private_port):
     '''
     Private/Public for a specific port mapping allocation information
     This method is broken on docker-py side
@@ -740,7 +735,7 @@ def port(container, private_port, *args, **kwargs):
     return status
 
 
-def stop(container, timeout=10, *args, **kwargs):
+def stop(container, timeout=10):
     '''
     Stop a running container
 
@@ -793,7 +788,7 @@ def stop(container, timeout=10, *args, **kwargs):
     return status
 
 
-def kill(container, *args, **kwargs):
+def kill(container):
     '''
     Kill a running container
 
@@ -846,7 +841,7 @@ def kill(container, *args, **kwargs):
     return status
 
 
-def restart(container, timeout=10, *args, **kwargs):
+def restart(container, timeout=10):
     '''
     Restart a running container
 
@@ -890,13 +885,17 @@ def restart(container, timeout=10, *args, **kwargs):
     return status
 
 
-def start(container, binds=None, port_bindings=None,
-          lxc_conf=None, publish_all_ports=None, links=None,
+def start(container,
+          binds=None,
+          port_bindings=None,
+          lxc_conf=None,
+          publish_all_ports=None,
+          links=None,
           privileged=False,
-          dns=None, volumes_from=None,
-          *args, **kwargs):
+          dns=None,
+          volumes_from=None):
     '''
-    restart the specified container
+    Restart the specified container
 
     container
         Container id
@@ -908,7 +907,7 @@ def start(container, binds=None, port_bindings=None,
 
     .. code-block:: bash
 
-        salt '*' docker.start <container id>
+        salt '*' docker.start <container_id>
     '''
     if not binds:
         binds = {}
@@ -933,11 +932,15 @@ def start(container, binds=None, port_bindings=None,
                         'dictionaries'
                     )
             try:
-                client.start(dcontainer, binds=binds, port_bindings=bindings,
+                client.start(dcontainer,
+                             binds=binds,
+                             port_bindings=bindings,
                              lxc_conf=lxc_conf,
-                             publish_all_ports=publish_all_ports, links=links,
+                             publish_all_ports=publish_all_ports,
+                             links=links,
                              privileged=privileged,
-                             dns=dns, volumes_from=volumes_from)
+                             dns=dns,
+                             volumes_from=volumes_from)
             except TypeError:
                 # maybe older version of docker-py <= 0.3.1 dns and
                 # volumes_from are not accepted
@@ -946,9 +949,12 @@ def start(container, binds=None, port_bindings=None,
                 # version of docker-py package, but
                 # https://github.com/dotcloud/docker-py/issues/216
                 # prevents us to do it at the time I'm writing this.
-                client.start(dcontainer, binds=binds, port_bindings=bindings,
+                client.start(dcontainer,
+                             binds=binds,
+                             port_bindings=bindings,
                              lxc_conf=lxc_conf,
-                             publish_all_ports=publish_all_ports, links=links,
+                             publish_all_ports=publish_all_ports,
+                             links=links,
                              privileged=privileged)
 
             if is_running(dcontainer):
@@ -973,7 +979,7 @@ def start(container, binds=None, port_bindings=None,
     return status
 
 
-def wait(container, *args, **kwargs):
+def wait(container):
     '''
     Blocking wait for a container exit gracefully without
     timeout killing it
@@ -1016,7 +1022,7 @@ def wait(container, *args, **kwargs):
     return status
 
 
-def exists(container, *args, **kwargs):
+def exists(container):
     '''
     Check if a given container exists
 
@@ -1039,7 +1045,7 @@ def exists(container, *args, **kwargs):
         return False
 
 
-def is_running(container, *args, **kwargs):
+def is_running(container):
     '''
     Is this container running
 
@@ -1052,7 +1058,7 @@ def is_running(container, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' docker.is_running <container id>
+        salt '*' docker.is_running <container_id>
     '''
     try:
         infos = _get_container_infos(container)
@@ -1061,7 +1067,7 @@ def is_running(container, *args, **kwargs):
         return False
 
 
-def remove_container(container=None, force=False, v=False, *args, **kwargs):
+def remove_container(container, force=False, v=False):
     '''
     Removes a container from a docker installation
 
@@ -1080,7 +1086,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' docker.remove_container <container id>
+        salt '*' docker.remove_container <container_id>
     '''
     client = _get_client()
     status = base_status.copy()
@@ -1112,7 +1118,7 @@ def remove_container(container=None, force=False, v=False, *args, **kwargs):
     return status
 
 
-def top(container, *args, **kwargs):
+def top(container):
     '''
     Run the docker top command on a specific container
 
@@ -1134,7 +1140,7 @@ def top(container, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' docker.top <container id>
+        salt '*' docker.top <container_id>
     '''
     client = _get_client()
     status = base_status.copy()
@@ -1164,7 +1170,7 @@ def top(container, *args, **kwargs):
     return status
 
 
-def inspect_container(container, *args, **kwargs):
+def inspect_container(container):
     '''
     Get container information. This is similar to the docker inspect command.
 
@@ -1192,7 +1198,7 @@ def inspect_container(container, *args, **kwargs):
     return status
 
 
-def login(url=None, username=None, password=None, email=None, *args, **kwargs):
+def login(url=None, username=None, password=None, email=None):
     '''
     Wrapper to the docker.py login method, does not do much yet
 
@@ -1200,13 +1206,13 @@ def login(url=None, username=None, password=None, email=None, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' docker.login <container id>
+        salt '*' docker.login <container_id>
     '''
     client = _get_client()
     return client.login(url, username, password, email)
 
 
-def search(term, *args, **kwargs):
+def search(term):
     '''
     Search for an image on the registry
 
@@ -1229,7 +1235,7 @@ def search(term, *args, **kwargs):
     return status
 
 
-def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
+def _create_image_assemble_error_status(status, ret, logs):
     '''
     Given input in this form::
 
@@ -1272,7 +1278,7 @@ def _create_image_assemble_error_status(status, ret, logs, *args, **kwargs):
     return status
 
 
-def import_image(src, repo, tag=None, *args, **kwargs):
+def import_image(src, repo, tag=None):
     '''
     Import content from a local tarball or a URL to a docker image
 
@@ -1311,7 +1317,7 @@ def import_image(src, repo, tag=None, *args, **kwargs):
     return status
 
 
-def tag(image, repository, tag=None, force=False, *args, **kwargs):
+def tag(image, repository, tag=None, force=False):
     '''
     Tag an image into a repository
 
@@ -1356,7 +1362,7 @@ def tag(image, repository, tag=None, force=False, *args, **kwargs):
     return status
 
 
-def get_images(name=None, quiet=False, all=True, *args, **kwargs):
+def get_images(name=None, quiet=False, all=True):
     '''
     List docker images
 
@@ -1413,8 +1419,7 @@ def build(path=None,
           fileobj=None,
           nocache=False,
           rm=True,
-          timeout=None,
-          *args, **kwargs):
+          timeout=None):
     '''
     Build a docker image from a dockerfile or an URL
 
@@ -1470,7 +1475,7 @@ def build(path=None,
     return status
 
 
-def remove_image(image, *args, **kwargs):
+def remove_image(image):
     '''
     Remove an image from a system.
 
@@ -1516,7 +1521,7 @@ def remove_image(image, *args, **kwargs):
     return status
 
 
-def inspect_image(image, *args, **kwargs):
+def inspect_image(image):
     '''
     Inspect the status of an image and return relative data
 
@@ -1612,7 +1617,7 @@ def _pull_assemble_error_status(status, ret, logs):
     return status
 
 
-def pull(repo, tag=None, *args, **kwargs):
+def pull(repo, tag=None):
     '''
     Pulls an image from any registry. See above documentation for
     how to configure authenticated access.
@@ -1737,7 +1742,7 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo, *args, **kwargs):
+def push(repo):
     '''
     Pushes an image from any registry
     See this top level documentation to know
@@ -1783,7 +1788,7 @@ def push(repo, *args, **kwargs):
     return status
 
 
-def _run_wrapper(status, container, func, cmd, *args, **kwargs):
+def _run_wrapper(status, container, func, cmd):
     '''
     Wrapper to a cmdmod function
 
@@ -1843,7 +1848,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     return status
 
 
-def run(container, cmd, *args, **kwargs):
+def run(container, cmd):
     '''
     Wrapper for cmdmod.run inside a container context
 
@@ -1870,10 +1875,10 @@ def run(container, cmd, *args, **kwargs):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.run', cmd, *args, **kwargs)
+        status, container, 'cmd.run', cmd)
 
 
-def run_all(container, cmd, *args, **kwargs):
+def run_all(container, cmd):
     '''
     Wrapper for cmdmod.run_all inside a container context
 
@@ -1900,10 +1905,10 @@ def run_all(container, cmd, *args, **kwargs):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.run_all', cmd, *args, **kwargs)
+        status, container, 'cmd.run_all', cmd)
 
 
-def run_stderr(container, cmd, *args, **kwargs):
+def run_stderr(container, cmd):
     '''
     Wrapper for cmdmod.run_stderr inside a container context
 
@@ -1930,10 +1935,10 @@ def run_stderr(container, cmd, *args, **kwargs):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.run_stderr', cmd, *args, **kwargs)
+        status, container, 'cmd.run_stderr', cmd)
 
 
-def run_stdout(container, cmd, *args, **kwargs):
+def run_stdout(container, cmd):
     '''
     Wrapper for cmdmod.run_stdout inside a container context
 
@@ -1960,10 +1965,10 @@ def run_stdout(container, cmd, *args, **kwargs):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.run_stdout', cmd, *args, **kwargs)
+        status, container, 'cmd.run_stdout', cmd)
 
 
-def retcode(container, cmd, *args, **kwargs):
+def retcode(container, cmd):
     '''
     Wrapper for cmdmod.retcode inside a container context
 
@@ -1990,7 +1995,7 @@ def retcode(container, cmd, *args, **kwargs):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.retcode', cmd, *args, **kwargs)
+        status, container, 'cmd.retcode', cmd)
 
 
 def get_container_root(container):
@@ -2049,7 +2054,8 @@ def _script(status,
             run_func_=None,
             no_clean=False,
             saltenv='base',
-            **kwargs):
+            output_loglevel='info',
+            quiet=False):
     try:
         if not run_func_:
             run_func_ = run_all
@@ -2086,9 +2092,8 @@ def _script(status,
                            command,
                            cwd=cwd,
                            stdin=stdin,
-                           output_loglevel=kwargs.get('output_loglevel',
-                                                      'info'),
-                           quiet=kwargs.get('quiet', False),
+                           output_loglevel=output_loglevel,
+                           quiet=quiet,
                            runas=runas,
                            shell=shell,
                            umask=umask,
@@ -2114,9 +2119,7 @@ def script(container,
            timeout=None,
            reset_system_locale=True,
            no_clean=False,
-           saltenv='base',
-           *nargs,
-           **kwargs):
+           saltenv='base'):
     '''
     Same usage as cmd.script but running inside a container context
 
@@ -2161,8 +2164,7 @@ def script(container,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    no_clean=no_clean,
-                   saltenv=saltenv,
-                   **kwargs)
+                   saltenv=saltenv)
 
 
 def script_retcode(container,
@@ -2177,9 +2179,7 @@ def script_retcode(container,
                    timeout=None,
                    reset_system_locale=True,
                    no_clean=False,
-                   saltenv='base',
-                   *args,
-                   **kwargs):
+                   saltenv='base'):
     '''
     Same usage as cmd.script_retcode but running inside a container context
 
@@ -2222,5 +2222,4 @@ def script_retcode(container,
                    reset_system_locale=reset_system_locale,
                    run_func_=retcode,
                    no_clean=no_clean,
-                   saltenv=saltenv,
-                   **kwargs)
+                   saltenv=saltenv)
