@@ -140,7 +140,7 @@ def _format_host(host, data):
                 '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 '    {tcolor} Comment: {comment}{colors[ENDC]}',
                 '    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                '    {tcolor} Duration: {ret[duration]!s} ms{colors[ENDC]}'
+                '    {tcolor} Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
@@ -156,6 +156,8 @@ def _format_host(host, data):
                     '\n' + ' ' * 13)
             for detail in ['start_time', 'duration']:
                 ret.setdefault(detail, '')
+            if ret['duration'] != '':
+                ret['duration'] = '{0} ms'.format(ret['duration'])
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,
