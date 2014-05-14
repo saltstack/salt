@@ -42,7 +42,7 @@ def install(gems,           # pylint: disable=C0103
     gems
         The gems to install
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
     version : None
@@ -79,7 +79,7 @@ def uninstall(gems, ruby=None, runas=None):
     gems
         The gems to uninstall.
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
@@ -99,7 +99,7 @@ def update(gems, ruby=None, runas=None):
     gems
         The gems to update.
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
@@ -119,7 +119,7 @@ def update_system(version='', ruby=None, runas=None):
     version : (newest)
         The version of rubygems to install.
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
@@ -140,7 +140,7 @@ def list_(prefix='', ruby=None, runas=None):
     prefix :
         Only list gems when the name matches this prefix.
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
@@ -172,7 +172,7 @@ def sources_add(source_uri, ruby=None, runas=None):
     source_uri
         The source URI to add.
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
@@ -193,7 +193,7 @@ def sources_remove(source_uri, ruby=None, runas=None):
     source_uri
         The source URI to remove.
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
@@ -212,7 +212,7 @@ def sources_list(ruby=None, runas=None):
     List the configured gem sources.
 
     ruby : None
-        If RVM is installed, the ruby version and gemset to use.
+        If RVM or rbenv are installed, the ruby version and gemset to use.
     runas : None
         The user to run gem as.
 
