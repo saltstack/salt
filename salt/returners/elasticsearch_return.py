@@ -1,3 +1,35 @@
+#! -*- coding: utf-8 -*-
+'''
+Return data to an elasticsearch server for indexing.
+
+:maintainer:    Jurnell Cockhren <jurnell.cockhren@sophicware.com>
+:maturity:      New
+:depends:       elasticsearch-py
+:platform:      all
+
+To enable this returner the elasticsearch python client must be installed
+on the desired minions (all or some subset).
+
+The required configuration is as follows:
+    
+    elasticsearch:
+        host:
+        port:
+        number_of_shards: 1 (optional)
+        number_of_replicas: 0 (optional)
+
+The above configuration can be placed in a targeted pillar, minion or 
+master configurations. 
+
+To use the returner per salt call:
+
+    salt '*' test.ping --return elasticsearch
+
+In order to have the returner apply to all minions:
+    
+    ext_job_cache: elasticsearch
+'''
+
 import datetime
 
 __virtualname__ = 'elasticsearch'
