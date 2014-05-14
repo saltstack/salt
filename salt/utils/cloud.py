@@ -347,7 +347,10 @@ def bootstrap(vm_, opts):
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
-        )
+        ),
+        'known_hosts_file': salt.config.get_cloud_config_value(
+            'known_hosts_file', vm_, opts, default='/dev/null'
+        ),
     }
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -681,7 +684,8 @@ def validate_windows_cred(host, username='Administrator', password=None):
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
-                    trysleep=1, display_ssh_output=True, gateway=None):
+                    trysleep=1, display_ssh_output=True, gateway=None,
+                    known_hosts_file='/dev/null'):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -694,7 +698,8 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'username': username,
                       'password_retries': maxtries,
                       'timeout': ssh_timeout,
-                      'display_ssh_output': display_ssh_output}
+                      'display_ssh_output': display_ssh_output,
+                      'known_hosts_file': known_hosts_file}
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
@@ -940,6 +945,8 @@ def deploy_script(host,
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
 
+    known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+
     if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
@@ -947,7 +954,7 @@ def deploy_script(host,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
                            display_ssh_output=display_ssh_output,
-                           gateway=gateway):
+                           gateway=gateway, known_hosts_file=known_hosts_file):
 
             def remote_exists(path):
                 return not root_cmd('test -e \\"{0}\\"'.format(path),
@@ -1514,11 +1521,16 @@ def root_cmd(command, tty, sudo, **kwargs):
         # `requiretty` enforced.
         ssh_args.extend(['-t', '-t'])
 
+    known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+    host_key_checking = 'no'
+    if known_hosts_file != '/dev/null':
+        host_key_checking = 'yes'
+
     ssh_args.extend([
         # Don't add new hosts to the host key database
-        '-oStrictHostKeyChecking=no',
+        '-oStrictHostKeyChecking={0}'.format(host_key_checking),
         # Set hosts key database path to /dev/null, ie, non-existing
-        '-oUserKnownHostsFile=/dev/null',
+        '-oUserKnownHostsFile={0}'.format(known_hosts_file),
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
     ])
