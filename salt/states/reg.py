@@ -34,7 +34,9 @@ def present(name, value, vtype='REG_DWORD', reflection=True):
     ``HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Salt\version``
 
     Example:
-        .. code:: yaml
+
+    .. code-block:: yaml
+
         HKEY_CURRENT_USER\SOFTWARE\Salt\version:
           reg.present:
             - value: 0.15.3
