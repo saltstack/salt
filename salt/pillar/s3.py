@@ -244,8 +244,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
             # pull out the files for the environment
             for saltenv in environments:
                 # grab only files/dirs that match this saltenv.
-                env_files = filter(lambda k: k['Key'].startswith(saltenv),
-                                   files)
+                env_files = [k for k in files if k['Key'].startswith(saltenv)]
 
                 if saltenv not in metadata:
                     metadata[saltenv] = {}
