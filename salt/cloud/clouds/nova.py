@@ -111,6 +111,7 @@ import salt.client
 
 # Import salt.cloud libs
 import salt.utils.cloud
+import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.cloud.exceptions import (
@@ -497,6 +498,7 @@ def request_instance(vm_=None, call=None):
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
         return False, vm_
+    vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
 
@@ -551,6 +553,9 @@ def create(vm_):
                     __opts__
                 )
             )
+        if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
+            vm_['password'] = sup.secure_password()
+            conn.root_password(vm_['instance_id'], vm_['password'])
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
@@ -566,7 +571,7 @@ def create(vm_):
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
                     pprint.pformat(
-                        nodelist[vm_['name']].__dict__
+                        nodelist[vm_['name']]
                     )
                 )
             )
@@ -581,7 +586,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']].state == 'ACTIVE'
+        running = nodelist[vm_['name']]['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
@@ -598,7 +603,7 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = conn.server_show_libcloud(
-                nodelist[vm_['name']].id
+                nodelist[vm_['name']]['id']
             ).extra
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
@@ -608,8 +613,8 @@ def create(vm_):
                 return
 
         result = []
-        private = nodelist[vm_['name']].private_ips
-        public = nodelist[vm_['name']].public_ips
+        private = nodelist[vm_['name']]['private_ips']
+        public = nodelist[vm_['name']]['public_ips']
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
@@ -685,8 +690,8 @@ def create(vm_):
 
     ret.update(data.__dict__)
 
-    if 'password' in data.extra:
-        del data.extra['password']
+    if 'password' in ret['extra']:
+        del ret['extra']['password']
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
