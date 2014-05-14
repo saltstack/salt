@@ -359,7 +359,7 @@ def download_unittest_reports(options):
             options.vm_name,
             options.workspace
         )
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
@@ -413,7 +413,7 @@ def download_coverage_report(options):
             options.vm_name,
             options.workspace
         )
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
@@ -492,7 +492,7 @@ def download_remote_logs(options):
             options.vm_name,
             options.workspace
         )
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
@@ -560,7 +560,7 @@ def prepare_ssh_access(options):
     ])
 
     cmd = ' '.join(cmd)
-    print('Running CMD: {0}'.format(cmd))
+    print('Running CMD: {0!r}'.format(cmd))
     sys.stdout.flush()
 
     proc = NonBlockingPopen(
@@ -846,7 +846,7 @@ def main():
 
     cmd = ' '.join(cmd).format(**options.__dict__)
 
-    print('Running CMD: {0}'.format(cmd))
+    print('Running CMD: {0!r}'.format(cmd))
     sys.stdout.flush()
 
     proc = NonBlockingPopen(
@@ -895,7 +895,7 @@ def main():
                 cmd.append('test.version')
 
             cmd = ' '.join(cmd)
-            print('Running CMD: {0}'.format(cmd))
+            print('Running CMD: {0!r}'.format(cmd))
             sys.stdout.flush()
 
             proc = subprocess.Popen(
@@ -1047,7 +1047,7 @@ def main():
                 cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
         cmd.extend(['git.remote_get', '/testing'])
 
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
 
         sys.stdout.flush()
         proc = subprocess.Popen(
@@ -1111,7 +1111,7 @@ def main():
 
         cmd = ' '.join(cmd)
 
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
         proc = subprocess.Popen(
             cmd,
@@ -1160,13 +1160,13 @@ def main():
     time.sleep(3)
     cmd = []
     if options.ssh:
-        cmd.extend(build_ssh_command(options, get_minion_python_executable(options)))
         if options.sls:
             cmd.append('salt-call')
             if options.no_color:
                 cmd.append('--no-color')
             cmd.extend([
                 'state.sls',
+                options.sls,
                 'pillar="{0}"'.format(build_pillar_data(options))
             ])
         else:
@@ -1181,9 +1181,10 @@ def main():
             if options.no_color:
                 cmd.append('--no-color')
 
+        cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)), tty=True)
         cmd = ' '.join(cmd)
 
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
@@ -1215,7 +1216,7 @@ def main():
 
         cmd = ' '.join(cmd)
 
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
 
         proc = subprocess.Popen(
