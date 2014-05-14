@@ -98,4 +98,5 @@ will use the api to change the root password of the server so that it can be
 bootstrapped.
 
 .. code-block:: yaml
+
     change_password: True

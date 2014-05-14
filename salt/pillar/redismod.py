@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Read pillar data from a Redis backend
-==========================
+=====================================
 
 :depends:   - redis Python module (on master)
 
