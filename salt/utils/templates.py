@@ -13,6 +13,7 @@ import logging
 import tempfile
 import traceback
 import sys
+import collections
 
 # Import third party libs
 import jinja2
@@ -249,6 +250,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+
+    jinja_env.globals['OrderedDict'] = collections.OrderedDict
 
     unicode_context = {}
     for key, value in context.iteritems():
