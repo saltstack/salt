@@ -1666,12 +1666,18 @@ def wait_for_instance(
                 host=ip_address,
                 username=user,
                 ssh_timeout=config.get_cloud_config_value(
-                    'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
+                    'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60
+                ),
                 key_filename=vm_['key_filename'],
                 display_ssh_output=display_ssh_output,
                 gateway=ssh_gateway_config,
                 maxtries=config.get_cloud_config_value(
-                    'wait_for_passwd_maxtries', vm_, __opts__, default=15),
+                    'wait_for_passwd_maxtries', vm_, __opts__, default=15
+                ),
+                known_hosts_file=config.get_cloud_config_value(
+                    'known_hosts_file', vm_, __opts__,
+                    default='/dev/null'
+                ),
             ):
                 __opts__['ssh_username'] = user
                 vm_['ssh_username'] = user
@@ -2341,6 +2347,7 @@ def _get_node(name, location=None):
     if location is None:
         location = get_location()
 
+    log.debug(list_nodes_full(location)[name])
     attempts = 10
     while attempts >= 0:
         try:
@@ -2450,7 +2457,10 @@ def _list_nodes_full(location=None):
                 )
             )
 
-    provider = __opts__['function'][1]
+    provider = __active_provider_name__ or 'ec2'
+    if ':' in provider:
+        comps = provider.split(':')
+        provider = comps[0]
     salt.utils.cloud.cache_node_list(ret, provider, __opts__)
     return ret
 
@@ -3185,6 +3195,8 @@ def get_console_output(
     By default, returns decoded data, not the Base64-encoded data that is
     actually returned from the EC2 API.
     '''
+    log.debug('*******************')
+
     if call != 'action':
         raise SaltCloudSystemExit(
             'The create_attach_volumes action must be called with '
@@ -3193,6 +3205,8 @@ def get_console_output(
 
     if not instance_id:
         instance_id = _get_node(name)['instanceId']
+
+    log.debug('instance_id is {0}'.format(instance_id))
 
     if kwargs is None:
         kwargs = {}
