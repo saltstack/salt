@@ -1144,7 +1144,7 @@ def main():
             else:
                 revision_info = revision_info[options.vm_name]
 
-            if revision_info[7:] != options.test_git_commit[7:]:
+            if revision_info[:7] != options.test_git_commit[:7]:
                 print('The cloned repository commit is not the desired one:')
                 print(' {0!r} != {1!r}'.format(revision_info[:7], options.test_git_commit[:7]))
                 sys.stdout.flush()
