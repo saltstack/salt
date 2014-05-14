@@ -187,6 +187,9 @@ def get_minion_python_executable(options):
         'pythonexecutable'
     ])
 
+    cmd = ' '.join(cmd)
+    print('Running CMD: {0!r}'.format(cmd))
+
     proc = subprocess.Popen(
         cmd,
         shell=True,
