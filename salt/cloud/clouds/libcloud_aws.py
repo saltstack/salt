@@ -427,8 +427,14 @@ def create(vm_):
                     username=user,
                     ssh_timeout=config.get_cloud_config_value(
                         'wait_for_passwd_timeout', vm_, __opts__,
-                        default=1 * 60),
-                    key_filename=key_filename):
+                        default=1 * 60
+                    ),
+                    key_filename=key_filename,
+                    known_hosts_file=config.get_cloud_config_value(
+                        'known_hosts_file', vm_, __opts__,
+                        default='/dev/null'
+                    ),
+                ):
                 username = user
                 break
         else:

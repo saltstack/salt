@@ -249,3 +249,31 @@ salt/cloud/minionid/cache_node_diff
 One or more pieces of data in the cloud cachedir has changed on the cloud
 provider. A dict containing both the old and the new data will be contained in
 the event.
+
+
+SSH Known Hosts
+===============
+
+Normally when bootstrapping a VM, salt-cloud will ignore the SSH host key. This
+is because it does not know what the host key is before starting (because it
+doesn't exist yet). If strict host key checking is turned on without the key
+in the ``known_hosts`` file, then the host will never be available, and cannot
+be bootstrapped.
+
+If a provider is able to determine the host key before trying to bootstrap it,
+that provider's driver can add it to the ``known_hosts`` file, and then turn on
+strict host key checking. This can be set up in the main cloud configuration
+file (normally ``/etc/salt/cloud``) or in the provider-specific configuration
+file:
+
+.. code-block:: yaml
+
+    known_hosts_file: /path/to/.ssh/known_hosts
+
+If this is not set, it will default to ``/dev/null``, and strict host key
+checking will be turned off.
+
+It is highly recommended that this option is *not* set, unless the user has
+verified that the provider supports this functionality, and that the image
+being used is capable of providing the necessary information. At this time,
+only the EC2 driver supports this functionality.
