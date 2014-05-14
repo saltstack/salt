@@ -38,7 +38,7 @@ def present(name, zone, ttl, data, rdtype='A', **kwargs):
     rdtype
         DNS resource type. Default 'A'.
 
-    **kwargs
+    ``**kwargs``
         Additional arguments the ddns.update function may need (e.g. keyfile).
     '''
     ret = {'name': name,
@@ -89,7 +89,7 @@ def absent(name, zone, data=None, rdtype=None, **kwargs):
     rdtype
         DNS resource type. If omitted, all types will be purged.
 
-    **kwargs
+    ``**kwargs``
         Additional arguments the ddns.update function may need (e.g. keyfile).
     '''
     ret = {'name': name,
