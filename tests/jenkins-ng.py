@@ -1252,6 +1252,9 @@ def main():
         # Download coverage report
         download_coverage_report(options)
 
+    if options.download_remote_logs:
+        download_remote_logs(options)
+
     if options.clean:
         delete_vm(options)
     return proc.returncode
