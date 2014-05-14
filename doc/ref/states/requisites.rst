@@ -221,7 +221,7 @@ thread of states because of a failure.
 
 The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     primary_mount:
       mount:
