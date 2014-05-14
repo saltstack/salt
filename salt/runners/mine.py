@@ -4,11 +4,11 @@ A runner to access data from the salt mine
 '''
 
 # Import salt libs
-import salt.mine
+import salt.utils.minions
 import salt.output
 
 
-def get(tgt, fun, tgt_type='glob'):
+def get(tgt, fun, tgt_type='glob', output='yaml'):
     '''
     Gathers the data from the specified minions' mine, pass in the target,
     function to look up and the target type
@@ -17,6 +17,6 @@ def get(tgt, fun, tgt_type='glob'):
 
         salt-run mine.get '*' network.interfaces
     '''
-    ret = salt.mine.get(tgt, fun, tgt_type, __opts__)
-    salt.output.display_output(ret, 'yaml', __opts__)
+    ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
+    salt.output.display_output(ret, output, __opts__)
     return ret
