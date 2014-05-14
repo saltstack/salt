@@ -142,14 +142,14 @@ def get_minion_external_address(options):
     if retcode != 0:
         print('Failed to get the minion external IP. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean:
+        if options.delete_vm:
             delete_vm(options)
         sys.exit(retcode)
 
     if not stdout.strip():
         print('Failed to get the minion external IP(no output). Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean:
+        if options.delete_vm:
             delete_vm(options)
         sys.exit(retcode)
 
@@ -203,14 +203,14 @@ def get_minion_python_executable(options):
     if retcode != 0:
         print('Failed to get the minion python executable. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean:
+        if options.delete_vm:
             delete_vm(options)
         sys.exit(retcode)
 
     if not stdout.strip():
         print('Failed to get the minion python executable(no output). Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean:
+        if options.delete_vm:
             delete_vm(options)
         sys.exit(retcode)
 
@@ -657,6 +657,13 @@ def main():
 
     # Deployment Selection
     deployment_group = parser.add_argument_group('Deployment Selection')
+    deployment_group.add_argument(
+        '--pre-mortem',
+        action='store_true',
+        default=False,
+        help='Don\'t try to deploy an new VM. Consider a VM deployed and only '
+             'execute post test suite execution commands. Right before killing the VM'
+    )
     deployment_group_mutually_exclusive = deployment_group.add_mutually_exclusive_group()
     deployment_group_mutually_exclusive.add_argument(
         '--cloud',
@@ -714,13 +721,6 @@ def main():
         action='append',
         default=[],
         help='Match minions using compound matchers, the minion ID, plus the passed grain.'
-    )
-    vm_options_group.add_argument(
-        '--no-clean',
-        dest='clean',
-        default=True,
-        action='store_false',
-        help='Clean up the deployed VM'
     )
 
     vm_preparation_group = parser.add_argument_group(
@@ -818,6 +818,28 @@ def main():
         echo_parseable_environment(options)
         parser.exit()
 
+    if options.pre_mortem:
+        # Run any actions supposed to be executed right before killing the VM
+        if options.download_remote_reports:
+            # Download unittest reports
+            download_unittest_reports(options)
+            # Download coverage report
+            download_coverage_report(options)
+        else:
+            if options.download_unittest_reports:
+                download_unittest_reports(options)
+            if options.download_coverage_report:
+                download_coverage_report(options)
+
+        if options.download_remote_logs:
+            download_remote_logs(options)
+
+        if options.delete_vm:
+            delete_vm(options)
+
+        parser.exit()
+
+    # Regular execution
     if not options.ssh and not options.sls:
         options.sls = 'testrun-no-deps'
 
@@ -862,7 +884,7 @@ def main():
     if retcode != 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+        if options.delete_vm:
             delete_vm(options)
         sys.exit(retcode)
 
@@ -909,14 +931,14 @@ def main():
             if retcode != 0:
                 print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
                 sys.stdout.flush()
-                if options.clean:
+                if options.delete_vm:
                     delete_vm(options)
                 sys.exit(retcode)
 
             if not stdout.strip():
                 print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
                 sys.stdout.flush()
-                if options.clean:
+                if options.delete_vm:
                     delete_vm(options)
                 sys.exit(retcode)
 
@@ -932,7 +954,7 @@ def main():
                     print(' {0!r} does not contain {1!r}'.format(version_info, options.bootstrap_salt_commit[:7]))
                     print('\n\n')
                     sys.stdout.flush()
-                    #if options.clean:
+                    #if options.delete_vm:
                     #    delete_vm(options)
                     #sys.exit(retcode)
                 else:
@@ -980,7 +1002,7 @@ def main():
     if proc.returncode != 0:
         print('Failed to execute the preparation SLS file. Exit code: {0}'.format(proc.returncode))
         sys.stdout.flush()
-        if options.clean:
+        if options.delete_vm:
             delete_vm(options)
         sys.exit(proc.returncode)
 
@@ -1026,7 +1048,7 @@ def main():
         if proc.returncode != 0:
             print('Failed to execute the 2nd preparation SLS file. Exit code: {0}'.format(proc.returncode))
             sys.stdout.flush()
-            if options.clean:
+            if options.delete_vm:
                 delete_vm(options)
             sys.exit(proc.returncode)
 
@@ -1062,14 +1084,14 @@ def main():
         if retcode != 0:
             print('Failed to get the cloned repository remote. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean:
+            if options.delete_vm:
                 delete_vm(options)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean:
+            if options.delete_vm:
                 delete_vm(options)
             sys.exit(retcode)
 
@@ -1085,7 +1107,7 @@ def main():
                 print('The cloned repository remote is not the desired one:')
                 print(' {0!r} is not in {1}'.format(options.test_git_url, remotes_info))
                 sys.stdout.flush()
-                if options.clean:
+                if options.delete_vm:
                     delete_vm(options)
                 sys.exit(retcode)
             print('matches!')
@@ -1125,14 +1147,14 @@ def main():
         if retcode != 0:
             print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean:
+            if options.delete_vm:
                 delete_vm(options)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean:
+            if options.delete_vm:
                 delete_vm(options)
             sys.exit(retcode)
 
@@ -1147,7 +1169,7 @@ def main():
                 print('The cloned repository commit is not the desired one:')
                 print(' {0!r} != {1!r}'.format(revision_info[:7], options.test_git_commit[:7]))
                 sys.stdout.flush()
-                if options.clean:
+                if options.delete_vm:
                     delete_vm(options)
                 sys.exit(retcode)
             print('matches!')
@@ -1255,7 +1277,7 @@ def main():
     if options.download_remote_logs:
         download_remote_logs(options)
 
-    if options.clean:
+    if options.delete_vm:
         delete_vm(options)
     return proc.returncode
 
