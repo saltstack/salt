@@ -744,6 +744,8 @@ def installed(
         for i in not_modified_hold:
             comment.append(i['comment'])
 
+    result = True
+
     if failed:
         if sources:
             summary = ', '.join(failed)
@@ -752,6 +754,7 @@ def installed(
                                  for x in failed])
         comment.insert(0, 'The following packages failed to '
                           'install/update: {0}.'.format(summary))
+        result = False
 
     if failed_hold:
         for i in failed_hold:
@@ -764,7 +767,7 @@ def installed(
     else:
         return {'name': name,
                 'changes': changes,
-                'result': True,
+                'result': result,
                 'comment': ' '.join(comment)}
 
 
