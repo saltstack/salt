@@ -1192,6 +1192,7 @@ def main():
             ])
         else:
             cmd.extend([
+                get_minion_python_executable(options),
                 '/testing/tests/runtests.py',
                 '-v',
                 '--run-destructive',
