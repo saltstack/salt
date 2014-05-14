@@ -15,7 +15,9 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
     '''
     Configure the DNS server list in the specified interface
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         config_dns_servers:
           win_dns_client.dns_exists:
