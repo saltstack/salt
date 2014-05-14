@@ -82,6 +82,7 @@ import urllib
 import requests
 
 # Import salt libs
+import salt.utils
 from salt._compat import ElementTree as ET
 
 # Import salt.cloud libs
@@ -1661,17 +1662,57 @@ def wait_for_instance(
                                         timeout=ssh_connect_timeout,
                                         gateway=ssh_gateway_config
                                         ):
+        # If a known_hosts_file is configured, this instance will not be
+        # accessable until it has a host key. Since this is provided on
+        # supported instances by cloud-init, and viewable to us only from the
+        # console output (which may take several minutes to become available,
+        # we have some more waiting to do here.
+        known_hosts_file = config.get_cloud_config_value(
+            'known_hosts_file', vm_, __opts__, default=None
+        )
+        if known_hosts_file:
+            console = {}
+            while not 'output_decoded' in console:
+                console = get_console_output(
+                    instance_id=vm_['instance_id'],
+                    call='action',
+                )
+                pprint.pprint(console)
+                time.sleep(5)
+            output = console['output_decoded']
+            comps = output.split('-----BEGIN SSH HOST KEY KEYS-----')
+            if len(comps) < 2:
+                # Fail; there are no host keys
+                return False
+
+            comps = comps[1].split('-----END SSH HOST KEY KEYS-----')
+            keys = ''
+            for line in comps[0].splitlines():
+                if not line:
+                    continue
+                keys += '\n{0} {1}'.format(ip_address, line)
+
+            with salt.utils.fopen(known_hosts_file, 'a') as fp_:
+                fp_.write(keys)
+            fp_.close()
+
         for user in vm_['usernames']:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
                 username=user,
                 ssh_timeout=config.get_cloud_config_value(
-                    'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60),
+                    'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60
+                ),
                 key_filename=vm_['key_filename'],
                 display_ssh_output=display_ssh_output,
                 gateway=ssh_gateway_config,
                 maxtries=config.get_cloud_config_value(
-                    'wait_for_passwd_maxtries', vm_, __opts__, default=15),
+                    'wait_for_passwd_maxtries', vm_, __opts__, default=15
+                ),
+                known_hosts_file=config.get_cloud_config_value(
+                    'known_hosts_file', vm_, __opts__,
+                    default='/dev/null'
+                ),
             ):
                 __opts__['ssh_username'] = user
                 vm_['ssh_username'] = user
@@ -2456,7 +2497,10 @@ def _list_nodes_full(location=None):
                 )
             )
 
-    provider = __opts__['function'][1]
+    provider = __active_provider_name__ or 'ec2'
+    if ':' in provider:
+        comps = provider.split(':')
+        provider = comps[0]
     salt.utils.cloud.cache_node_list(ret, provider, __opts__)
     return ret
 
@@ -3205,7 +3249,7 @@ def get_console_output(
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The create_attach_volumes action must be called with '
+            'The get_console_output action must be called with '
             '-a or --action.'
         )
 
@@ -3223,15 +3267,12 @@ def get_console_output(
     params = {'Action': 'GetConsoleOutput',
               'InstanceId': instance_id}
 
-    ret = []
+    ret = {}
     data = query(params, return_root=True)
     for item in data:
-        pprint.pprint(item.keys())
         if item.keys()[0] == 'output':
-            ret.append(
-                {'output_decoded': binascii.a2b_base64(item.values()[0])}
-            )
+            ret['output_decoded'] = binascii.a2b_base64(item.values()[0])
         else:
-            ret.append(item)
+            ret[item.keys()[0]] = item.values()[0]
 
     return ret
