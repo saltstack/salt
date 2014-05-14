@@ -465,6 +465,8 @@ def list_nodes_full(conn=None, call=None):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']
+
+    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
