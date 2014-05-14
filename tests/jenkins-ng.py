@@ -944,20 +944,16 @@ def main():
     # Run preparation SLS
     time.sleep(3)
     cmd = []
-    if options.ssh:
-        cmd.extend(build_ssh_command(options, 'salt-call'))
+    if options.peer or options.ssh:
+        cmd.append('salt-call')
         if options.no_color:
             cmd.append('--no-color')
-    else:
         if options.peer:
-            cmd.append('salt-call')
-            if options.no_color:
-                cmd.append('--no-color')
             cmd.append('publish.publish')
-        else:
-            cmd.extend(['salt', '-t', '1800'])
-            if options.no_color:
-                cmd.append('--no-color')
+    else:
+        cmd.extend(['salt', '-t', '1800'])
+        if options.no_color:
+            cmd.append('--no-color')
 
     if not options.ssh and not options.peer:
         cmd.append(build_minion_target(options))
@@ -966,8 +962,11 @@ def main():
         'state.sls', options.prep_sls, 'pillar="{0}"'.format(build_pillar_data(options))
     ])
 
+    if options.ssh:
+        cmd = build_ssh_command(options, '<<EOF\n{0}\nEOF'.format(' '.join(cmd)))
+
     cmd = ' '.join(cmd)
-    print('Running CMD: {0}'.format(cmd))
+    print('Running CMD: {0!r}'.format(cmd))
     sys.stdout.flush()
 
     proc = NonBlockingPopen(
@@ -991,20 +990,16 @@ def main():
 
         # Run the 2nd preparation SLS
         cmd = []
-        if options.ssh:
-            cmd.extend(build_ssh_command(options, 'salt-call'))
+        if options.peer or options.ssh:
+            cmd.append('salt-call')
             if options.no_color:
                 cmd.append('--no-color')
-        else:
             if options.peer:
-                cmd.append('salt-call')
-                if options.no_color:
-                    cmd.append('--no-color')
                 cmd.append('publish.publish')
-            else:
-                cmd.extend(['salt', '-t', '1800'])
-                if options.no_color:
-                    cmd.append('--no-color')
+        else:
+            cmd.extend(['salt', '-t', '1800'])
+            if options.no_color:
+                cmd.append('--no-color')
 
         if not options.ssh and not options.peer:
             cmd.append(build_minion_target(options))
@@ -1013,8 +1008,11 @@ def main():
             'state.sls', options.prep_sls_2, 'pillar="{0}"'.format(build_pillar_data(options))
         ])
 
+        if options.ssh:
+            cmd = build_ssh_command(options, '<<EOF\n{0}\nEOF'.format(' '.join(cmd)))
+
         cmd = ' '.join(cmd)
-        print('Running CMD: {0}'.format(cmd))
+        print('Running CMD: {0!r}'.format(cmd))
         sys.stdout.flush()
 
         proc = NonBlockingPopen(
