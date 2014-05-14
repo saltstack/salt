@@ -636,8 +636,11 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
-        ret = json.dumps(self.wfuncs[self.fun](*self.args, **self.kwargs))
-        return ret, '', None
+        result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+        # Mimic the json data-structure that "salt-call --local" will
+        # emit (as seen in ssh_py_shim.py)
+        ret = json.dumps({'local': result})
+        return ret
 
     def _cmd_str(self):
         '''
