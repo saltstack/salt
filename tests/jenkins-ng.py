@@ -580,15 +580,13 @@ def prepare_ssh_access(options):
         )
 
 
-def build_ssh_command(options, *arguments, **parameters):
+def build_ssh_command(options, *arguments):
     '''
     Build the SSH command with the required options
     '''
-    tty = parameters.get('tty', False)
-    cmd = ['ssh']
-    if tty:
-        cmd.append('-tt')
-    cmd.extend([
+    return [
+        'ssh',
+        '-tt',
         '-i',
         os.path.join(options.workspace, 'jenkins_ssh_key_test'),
         # Don't add new hosts to the host key database
@@ -598,8 +596,7 @@ def build_ssh_command(options, *arguments, **parameters):
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none',
         'root@{0}'.format(get_minion_external_address(options))
-    ])
-    return cmd + list(arguments)
+    ] + list(arguments)
 
 
 def build_scp_command(options, *arguments):
@@ -904,16 +901,16 @@ def main():
             # information
             print('Grabbing bootstrapped minion version information ... ')
             cmd = []
-            if options.ssh:
-                cmd.extend(
-                    build_ssh_command(options, 'salt-call', '--out=json', 'test.version')
-                )
-            else:
+            if options.peer or options.ssh:
+                cmd.extend(['salt-call', '--out=json'])
                 if options.peer:
-                    cmd.extend(['salt-call', '--out=json', 'publish.publish'])
-                else:
-                    cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
-                cmd.append('test.version')
+                    cmd.append('publish.publish')
+            else:
+                cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
+            cmd.append('test.version')
+
+            if options.ssh:
+                cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
 
             cmd = ' '.join(cmd)
             print('Running CMD: {0!r}'.format(cmd))
@@ -993,7 +990,7 @@ def main():
     ])
 
     if options.ssh:
-        cmd = build_ssh_command(options, '<<EOF\n{0}\nEOF'.format(' '.join(cmd)))
+        cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
 
     cmd = ' '.join(cmd)
     print('Running CMD: {0!r}'.format(cmd))
@@ -1039,7 +1036,7 @@ def main():
         ])
 
         if options.ssh:
-            cmd = build_ssh_command(options, '<<EOF\n{0}\nEOF'.format(' '.join(cmd)))
+            cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
 
         cmd = ' '.join(cmd)
         print('Running CMD: {0!r}'.format(cmd))
@@ -1068,14 +1065,16 @@ def main():
         # desired repository
         print('Grabbing the cloned repository remotes information ... ')
         cmd = []
-        if options.ssh:
-            cmd.extend(build_ssh_command(options, 'salt-call', '--out=json'))
-        else:
+        if options.peer or options.ssh:
+            cmd.extend(['salt-call', '--out=json'])
             if options.peer:
-                cmd.extend(['salt-call', '--out=json', 'publish.publish'])
-            else:
-                cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
+                cmd.append('publish.publish')
+        else:
+            cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
         cmd.extend(['git.remote_get', '/testing'])
+
+        if options.ssh:
+            cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
 
         print('Running CMD: {0!r}'.format(cmd))
 
@@ -1130,14 +1129,16 @@ def main():
         # commit
         print('Grabbing the cloned repository commit information ... ')
         cmd = []
-        if options.ssh:
-            cmd.extend(build_ssh_command(options, 'salt-call', '--out=json'))
-        else:
+        if options.peer or options.ssh:
+            cmd.extend(['salt-call', '--out=json'])
             if options.peer:
-                cmd.extend(['salt-call', '--out=json', 'publish.publish'])
-            else:
-                cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
+                cmd.append('publish.publish')
+        else:
+            cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
         cmd.extend(['git.revision', '/testing'])
+
+        if options.ssh:
+            cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
 
         cmd = ' '.join(cmd)
 
@@ -1212,7 +1213,7 @@ def main():
             if options.no_color:
                 cmd.append('--no-color')
 
-        cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)), tty=True)
+        cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
         cmd = ' '.join(cmd)
 
         print('Running CMD: {0!r}'.format(cmd))
