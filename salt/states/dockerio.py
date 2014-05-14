@@ -31,7 +31,7 @@ Available Functions
 
       corp/mysuperdocker_img:
         docker.built:
-          - path: /path/to/dir/container/Dockerfile
+          - path: /path/to/dir/container
 
 - pulled
 
