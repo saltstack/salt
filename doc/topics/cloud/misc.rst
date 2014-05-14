@@ -273,4 +273,7 @@ file:
 If this is not set, it will default to ``/dev/null``, and strict host key
 checking will be turned off.
 
-At this time, only the EC2 driver supports this functionality.
+It is highly recommended that this option is *not* set, unless the user has
+verified that the provider supports this functionality, and that the image
+being used is capable of providing the necessary information. At this time,
+only the EC2 driver supports this functionality.
