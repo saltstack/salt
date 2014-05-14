@@ -15,7 +15,6 @@
 # Import python libs
 from __future__ import print_function
 import os
-import requests
 import re
 import sys
 import json
@@ -24,6 +23,7 @@ import random
 import shutil
 import hashlib
 import argparse
+import requests
 import subprocess
 
 # Import Salt libs
