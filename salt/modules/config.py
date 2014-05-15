@@ -197,7 +197,7 @@ def get(key, default=''):
     '''
     .. versionadded: 0.14.0
 
-    Attempt to retrieve the named value from opts, pillar, grains of the master
+    Attempt to retrieve the named value from opts, pillar, grains or the master
     config, if the named value is not available return the passed default.
     The default return is an empty string.
 
