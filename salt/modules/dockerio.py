@@ -2056,7 +2056,6 @@ def _script(status,
             saltenv='base',
             output_loglevel='info',
             quiet=False,
-            *args,
             **kwargs):
     try:
         if not run_func_:
