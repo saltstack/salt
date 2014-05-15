@@ -656,10 +656,8 @@ class SaltNova(object):
                 'user_id': item.user_id,
             }
 
-            if hasattr(item.__dict__, 'progress'):
-                ret[item.name]['progress'] = item.progress
-            else:
-                ret[item.name]['progress'] = '0'
+            ret[item.name]['progress'] = getattr(item, 'progress', '0')
+
             if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
                 ret[item.name]['OS-DCF'] = {
                     'diskConfig': item.__dict__['OS-DCF:diskConfig']
