@@ -26,6 +26,7 @@ from salt.exceptions import (
 from salt.utils.jinja import ensure_sequence_filter
 from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
+from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
 from salt._compat import string_types
 
@@ -251,6 +252,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+
+    jinja_env.globals['odict'] = OrderedDict
 
     unicode_context = {}
     for key, value in context.iteritems():
