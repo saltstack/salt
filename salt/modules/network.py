@@ -544,41 +544,48 @@ def mod_hostname(hostname):
     if hostname is None:
         return False
 
-    #1.use shell command hostname
-    hostname = hostname
-    cmd1 = 'hostname {0}'.format(hostname)
+    hostname_cmd = salt.utils.which('hostname')
 
-    __salt__['cmd.run'](cmd1)
+    '''
+    Grab the old hostname so we know which hostname to change and then
+    change the hostname using the hostname command
+    '''
+    o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
 
-    #2.modify /etc/hosts hostname
-    f = open('/etc/hosts', 'r')
-    str_hosts = f.read()
-    f.close()
-    list_hosts = str_hosts.splitlines()
-    cmd2 = '127.0.0.1\t\tlocalhost.localdomain\t\tlocalhost\t\t{0}'.format(hostname)
-    #list_hosts[0]=cmd2
+    __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
 
-    for k in list_hosts:
-        if k.startswith('127.0.0.1'):
-            num = list_hosts.index(k)
-            list_hosts[num] = cmd2
+    '''
+    Modify the /etc/hosts file to replace the old hostname with the
+    new hostname
+    '''
+    host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
 
-    hostfile = '\n'.join(list_hosts)
-    f = open('/etc/hosts', 'w')
-    f.write(hostfile)
-    f.close()
+    with salt.utils.fopen('/etc/hosts', 'w') as fh:
+        for host in host_c:
+            host = host.split()
 
-    #3.modify /etc/sysconfig/network
-    f = open('/etc/sysconfig/network', 'r')
-    str_network = f.read()
-    list_network = str_network.splitlines()
-    cmd = 'HOSTNAME={0}'.format(hostname)
-    for k in list_network:
-        if k.startswith('HOSTNAME'):
-            num = list_network.index(k)
-            list_network[num] = cmd
-    networkfile = '\n'.join(list_network)
-    f = open('/etc/sysconfig/network', 'w')
-    f.write(networkfile)
-    f.close()
+            try:
+                host[host.index(o_hostname)] = hostname
+            except ValueError:
+                pass
+
+            fh.write('\t'.join(host) + '\n')
+
+    '''
+    Modify the /etc/sysconfig/network configuration file to set the
+    new hostname
+    '''
+    if __grains__['os_family'] == 'RedHat':
+        network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
+
+        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh:
+            for i in network_c:
+                if i.startswith('HOSTNAME'):
+                    fh.write('HOSTNAME={0}\n'.format(hostname))
+                else:
+                    fh.write(i)
+    elif __grains__['os_family'] == 'Debian':
+        with salt.utils.fopen('/etc/hostname', 'w') as fh:
+            fh.write(hostname + '\n')
+
     return True
