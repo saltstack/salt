@@ -242,13 +242,23 @@ class Master(SMaster):
                             if not os.path.isfile(jid_file):
                                 # No jid file means corrupted cache entry,
                                 # scrub it
-                                shutil.rmtree(f_path)
+                                try:
+                                    shutil.rmtree(f_path)
+                                except (os.error, IOError) as exc:
+                                    log.critical('Error while attempting to '
+                                                 'remove an entry from the '
+                                                 'job cache!  {0}'.format(exc))
                             else:
                                 with salt.utils.fopen(jid_file, 'r') as fn_:
                                     jid = fn_.read()
                                 if len(jid) < 18:
                                     # Invalid jid, scrub the dir
-                                    shutil.rmtree(f_path)
+                                    try:
+                                        shutil.rmtree(f_path)
+                                    except (os.error, IOError) as exc:
+                                        log.critical('Error while attempting to '
+                                                     'remove an entry from the '
+                                                     'job cache!  {0}'.format(exc))
                                 else:
                                     # Parse the jid into a proper datetime
                                     # object. We only parse down to the minute,
@@ -262,11 +272,21 @@ class Master(SMaster):
                                                                     int(jid[10:12]))
                                     except ValueError as e:
                                         # Invalid jid, scrub the dir
-                                        shutil.rmtree(f_path)
+                                        try:
+                                            shutil.rmtree(f_path)
+                                        except (os.error, IOError) as exc:
+                                            log.critical('Error while attempting to '
+                                                         'remove an entry from the '
+                                                         'job cache!  {0}'.format(exc))
                                     difference = cur - jidtime
                                     hours_difference = difference.seconds / 3600.0
                                     if hours_difference > self.opts['keep_jobs']:
-                                        shutil.rmtree(f_path)
+                                        try:
+                                            shutil.rmtree(f_path)
+                                        except (os.error, IOError) as exc:
+                                            log.critical('Error while attempting to '
+                                                         'remove an entry from the '
+                                                         'job cache!  {0}'.format(exc))
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
