@@ -46,15 +46,9 @@ A common pattern for fetching the ``opts`` dictionary is to defer to
 environment variables if they exist or otherwise fetch the config from the
 default location.
 
-.. code-block:: python
+.. autofunction:: salt.config.client_config
 
-    import salt.config
-
-    master_opts = salt.config.master_config(
-        os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
-
-    minion_opts = salt.config.minion_config(
-        os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion'))
+.. autofunction:: salt.config.minion_config
 
 Salt's Loader Interface
 =======================

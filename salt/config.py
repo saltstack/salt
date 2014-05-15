@@ -748,6 +748,15 @@ def minion_config(path,
                   minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
+
+    This is useful for Minion-side operations, such as the
+    :py:class:`~salt.client.Caller` class, and manually running the loader
+    interface.
+
+    .. code-block:: python
+
+        import salt.client
+        minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
     if check_dns is not None:
         # All use of the `check_dns` arg was removed in `598d715`. The keyword
@@ -1851,6 +1860,10 @@ def apply_minion_config(overrides=None,
 def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     '''
     Reads in the master configuration file and sets up default options
+
+    This is useful for running the actual master daemon. For running
+    Master-side client interfaces that need the master opts see
+    :py:func:`salt.client.client_config`.
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
@@ -1971,9 +1984,22 @@ def apply_master_config(overrides=None, defaults=None):
 
 def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     '''
-    Load in the configuration data needed for the LocalClient. This function
-    searches for client specific configurations and adds them to the data from
-    the master configuration.
+    Load Master configuration data
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.config
+        master_opts = salt.config.client_config('/etc/salt/master')
+
+    Returns a dictionary of the Salt Master configuration file with necessary
+    options needed to communicate with a locally-running Salt Master daemon.
+    This function searches for client specific configurations and adds them to
+    the data from the master configuration.
+
+    This is useful for master-side operations like
+    :py:class:`~salt.client.LocalClient`.
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
