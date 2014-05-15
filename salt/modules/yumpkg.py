@@ -165,6 +165,31 @@ def _check_32(arch):
     return all(x in __ARCHES_32 for x in (__grains__['osarch'], arch))
 
 
+def _in_pkg_dict(name, pkgdict):
+    '''
+    Searches for name in a dictionary of {'<package_name>': '<version>'}
+    name can be "<package_name>-<version>" or
+    "<path>/<package_name>-<version>.rpm"
+    name will be split into a package name and version and compared to
+    the items in pkgdict after trimming any path, arch or file extension
+    '''
+    if name[-4:] == ".rpm":
+        name = name[:-4]
+    pos = name.rfind("/", 0, len(name))
+    if pos > 0:
+        name = name[pos + 1:]
+    name = normalize_name(name)
+    pos = name.rfind("-", 0, len(name))
+    while pos > 0:
+        if name[:pos] in pkgdict.keys():
+            if name[pos+1:] == pkgdict.get(name[:pos]):
+                return [name[:pos], name[pos+1:]]
+            else:
+                return []
+        pos = name.rfind("-", 0, pos - 1)
+    return []
+
+
 def normalize_name(name):
     '''
     Strips the architecture from the specified package name, if necessary.
@@ -661,6 +686,17 @@ def install(name=None,
     refresh
         Whether or not to update the yum database before executing.
 
+    reinstall
+        Specifying reinstall=True will use ``yum reinstall`` rather than
+        ``yum install`` for requested packages that are already installed.
+
+        If a version is specified with the requested package, then
+        ``yum reinstall`` will only be used if the installed version
+        matches the requested version.
+
+        Works with sources when the file name in the source can be
+        matched to the name and version of the installed package.
+
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
 
@@ -748,12 +784,18 @@ def install(name=None,
     exclude_arg = _get_excludes_option(**kwargs)
 
     old = list_pkgs()
+    targets = []
     downgrade = []
+    reinstall = []
+    use_reinstall = kwargs.get('reinstall', False)
     if pkg_type == 'repository':
-        targets = []
         for pkgname, version_num in pkg_params.iteritems():
             if version_num is None:
-                targets.append(pkgname)
+                if (use_reinstall and pkgname in old.keys() or
+                                      _in_pkg_dict(pkgname, old)):
+                    reinstall.append(pkgname)
+                else:
+                    targets.append(pkgname)
             else:
                 cver = old.get(pkgname, '')
                 arch = ''
@@ -767,14 +809,23 @@ def install(name=None,
                         pkgname = namepart
 
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if not cver or salt.utils.compare_versions(ver1=version_num,
+                if use_reinstall and cver and salt.utils.compare_versions(
+                                                           ver1=version_num,
+                                                           oper='==',
+                                                           ver2=cver):
+                    reinstall.append(pkgstr)
+                elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                            oper='>=',
                                                            ver2=cver):
                     targets.append(pkgstr)
                 else:
                     downgrade.append(pkgstr)
     else:
-        targets = pkg_params
+        for pkgname in pkg_params:
+            if use_reinstall and _in_pkg_dict(pkgname, old):
+                reinstall.append(pkgname)
+            else:
+                targets.append(pkgname)
 
     if targets:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} install {pkg}'.format(
@@ -794,9 +845,29 @@ def install(name=None,
         )
         __salt__['cmd.run'](cmd, output_loglevel='debug')
 
+    if reinstall:
+        cmd = 'yum -y {repo} {exclude} {gpgcheck} reinstall {pkg}'.format(
+            repo=repo_arg,
+            exclude=exclude_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(reinstall),
+        )
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
+    if reinstall:
+        for pkgname in reinstall:
+            if not pkgname in old.keys():
+                pkglist = _in_pkg_dict(pkgname, old)
+                if len(pkglist) > 0 and not pkglist[0] in ret.keys():
+                    ret.update({pkglist[0]: {'old': old.get(pkglist[0]),
+                                          'new': new.get(pkglist[0])}})
+            else:
+                if not pkgname in ret.keys():
+                    ret.update({pkgname: {'old': old.get(pkgname),
+                                          'new': new.get(pkgname)}})
     if ret:
         __context__.pop('pkg._avail', None)
     return ret
