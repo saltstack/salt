@@ -25,7 +25,7 @@ def enabled(name):
         ret['changes'] = {'enabled rdp': True}
 
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = stat
         return ret
 
     ret['result'] = __salt__['rdp.enable']()
@@ -46,6 +46,7 @@ def disabled(name):
         ret['changes'] = {'disable rdp': True}
 
     if __opts__['test']:
+        ret['result'] = stat
         return ret
 
     ret['result'] = __salt__['rdp.disable']()
