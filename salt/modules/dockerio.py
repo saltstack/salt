@@ -1788,7 +1788,7 @@ def push(repo):
     return status
 
 
-def _run_wrapper(status, container, func, cmd):
+def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     '''
     Wrapper to a cmdmod function
 
@@ -2055,7 +2055,9 @@ def _script(status,
             no_clean=False,
             saltenv='base',
             output_loglevel='info',
-            quiet=False):
+            quiet=False,
+            *args,
+            **kwargs):
     try:
         if not run_func_:
             run_func_ = run_all
@@ -2210,7 +2212,10 @@ def script_retcode(container,
         # Backwards compatibility
         saltenv = env
 
-    return _script(container,
+    status = base_status.copy()
+
+    return _script(status,
+                   container,
                    source=source,
                    cwd=cwd,
                    stdin=stdin,
