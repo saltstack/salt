@@ -222,7 +222,7 @@ def function(
            'changes': {},
            'comment': '',
            'result': True}
-    cmd_kw = {'arg': []}
+    cmd_kw = {'arg': arg or []}
     if 'expr_form' in kwargs and not tgt_type:
         tgt_type = kwargs['expr_form']
     if not tgt_type:
