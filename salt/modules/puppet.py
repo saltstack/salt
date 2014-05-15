@@ -68,7 +68,7 @@ class _Puppet(object):
                 self.confdir = '/etc/puppetlabs/puppet'
             else:
                 self.vardir = '/var/lib/puppet'
-                self.confdir = '/etc/puppet'            
+                self.confdir = '/etc/puppet'
 
     def __repr__(self):
         '''
