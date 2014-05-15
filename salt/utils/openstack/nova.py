@@ -233,7 +233,7 @@ class SaltNova(object):
         '''
         Change server(uuid's) root password
         '''
-        nt_ks = self.compute.conn
+        nt_ks = self.compute_conn
         nt_ks.servers.change_password(server_id, password)
 
     def server_by_name(self, name):
@@ -650,13 +650,16 @@ class SaltNova(object):
                 'links': item.links,
                 'metadata': item.metadata,
                 'name': item.name,
-                'progress': item.progress,
                 'status': item.status,
                 'tenant_id': item.tenant_id,
                 'updated': item.updated,
                 'user_id': item.user_id,
             }
 
+            if hasattr(item.__dict__, 'progress'):
+                ret[item.name]['progress'] = item.progress
+            else:
+                ret[item.name]['progress'] = '0'
             if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
                 ret[item.name]['OS-DCF'] = {
                     'diskConfig': item.__dict__['OS-DCF:diskConfig']

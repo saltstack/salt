@@ -549,6 +549,7 @@ def create(vm_):
                     __opts__
                 )
             )
+        data = conn.server_show_libcloud(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
             vm_['password'] = sup.secure_password()
             conn.root_password(vm_['instance_id'], vm_['password'])
