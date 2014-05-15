@@ -778,7 +778,8 @@ def ip_addrs(interface=None, include_loopback=False):
         for ipv4 in ipv4_info.get('inet', []):
             if include_loopback \
                     or (not include_loopback
-                        and ipv4['address'] != '127.0.0.1'):
+                            and (ipv4['address'] != '127.0.0.1' and ipv4['label'] != 'lo')):
+                print(ipv4)
                 ret.add(ipv4['address'])
         for secondary in ipv4_info.get('secondary', []):
             addr = secondary.get('address')
