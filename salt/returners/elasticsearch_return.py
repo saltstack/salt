@@ -13,8 +13,8 @@ on the desired minions (all or some subset).
 The required configuration is as follows:
     
     elasticsearch:
-        host:
-        port:
+        host: 'somehost.example.com:9200'
+        index: 'salt'
         number_of_shards: 1 (optional)
         number_of_replicas: 0 (optional)
 
