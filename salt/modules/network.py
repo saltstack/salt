@@ -545,19 +545,14 @@ def mod_hostname(hostname):
         return False
 
     hostname_cmd = salt.utils.which('hostname')
-
-    '''
-    Grab the old hostname so we know which hostname to change and then
-    change the hostname using the hostname command
-    '''
+    # Grab the old hostname so we know which hostname to change and then
+    # change the hostname using the hostname command
     o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
 
     __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
 
-    '''
-    Modify the /etc/hosts file to replace the old hostname with the
-    new hostname
-    '''
+    # Modify the /etc/hosts file to replace the old hostname with the
+    # new hostname
     host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
 
     with salt.utils.fopen('/etc/hosts', 'w') as fh:
@@ -571,10 +566,8 @@ def mod_hostname(hostname):
 
             fh.write('\t'.join(host) + '\n')
 
-    '''
-    Modify the /etc/sysconfig/network configuration file to set the
-    new hostname
-    '''
+    # Modify the /etc/sysconfig/network configuration file to set the
+    # new hostname
     if __grains__['os_family'] == 'RedHat':
         network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
 
