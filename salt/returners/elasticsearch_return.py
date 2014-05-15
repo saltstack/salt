@@ -4,7 +4,7 @@ Return data to an elasticsearch server for indexing.
 
 :maintainer:    Jurnell Cockhren <jurnell.cockhren@sophicware.com>
 :maturity:      New
-:depends:       elasticsearch-py
+:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
 :platform:      all
 
 To enable this returner the elasticsearch python client must be installed
