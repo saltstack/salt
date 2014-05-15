@@ -1163,7 +1163,7 @@ def uptodate(name, refresh=False):
 
     if updated:
         ret['changes'] = updated
-        ret['comment'] = 'Upgrade successfull.'
+        ret['comment'] = 'Upgrade successful.'
         ret['result'] = True
     else:
         ret['comment'] = 'Upgrade failed.'
