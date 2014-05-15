@@ -75,6 +75,8 @@ def __write_aliases_file(lines):
             os.chown(out.name, 0, 0)
 
     for (line_alias, line_target, line_comment) in lines:
+        if isinstance(line_target, list):
+            line_target = ', '.join(line_target)
         if not line_comment:
             line_comment = ''
         if line_alias and line_target:
@@ -138,7 +140,12 @@ def has_target(alias, target):
         salt '*' aliases.has_target alias target
     '''
     aliases = list_aliases()
-    return alias in aliases and target == aliases[alias]
+    if alias in aliases and isinstance(target, list):
+        for item in target:
+            if item not in aliases[alias]:
+                return False
+        target = ', '.join(target)
+    return alias in aliases and target in aliases[alias]
 
 
 def set_target(alias, target):
