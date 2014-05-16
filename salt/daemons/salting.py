@@ -109,7 +109,7 @@ class SaltSafe(object):
         data = odict([
                         ('sighex', local.signer.keyhex),
                         ('prihex', local.priver.keyhex),
-                        ('auto', self.auto), 
+                        ('auto', self.auto),
                     ])
         if self.verifyLocalData(data):
             self.dumpLocalData(data)
@@ -155,7 +155,7 @@ class SaltSafe(object):
         Clear the remote estate file
         Override this in sub class to change uid
         '''
-        mid = remote.eid
+        mid = str(remote.eid)
         self.saltRaetKey.delete_key(mid)
 
     def statusRemote(self, remote, verhex, pubhex, main=True):
