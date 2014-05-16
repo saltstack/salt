@@ -9,7 +9,7 @@ from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, mock_open, patch, NO_MOCK, NO_MOCK_REASON
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
