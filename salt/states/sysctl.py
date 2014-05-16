@@ -65,7 +65,7 @@ def present(name, value, config=None):
             else:
                 ret['result'] = None
                 ret['comment'] = 'Sysctl value is currently set on the running system but not in a config file.\n'\
-                'Sysctl option {0} set to be changed to {1} in config file.'.format(name,value)
+                'Sysctl option {0} set to be changed to {1} in config file.'.format(name, value)
                 return ret
         elif name in configured and name not in current:
             ret['result'] = None
