@@ -41,21 +41,37 @@ def ssds():
                 continue
 
             model_file = os.path.join('/sys/block', device, 'device/model')
-            with salt.utils.fopen(model_file) as model_fp:
-                model = model_fp.readline().rstrip()
-                if model:
-                    ssd_devices[device]['model'] = model
+            try:
+                with salt.utils.fopen(model_file) as model_fp:
+                    model = model_fp.readline().rstrip()
+                    if model:
+                        ssd_devices[device]['model'] = model
+            except IOError:
+                log.trace('Model of device {0} can not be determined'.format(device))
+                pass
 
             revision_file = os.path.join('/sys/block', device, 'device/rev')
-            with salt.utils.fopen(revision_file) as revision_fp:
-                revision = revision_fp.readline().rstrip()
-                if revision:
-                    ssd_devices[device]['revision'] = revision
+            try:
+                with salt.utils.fopen(revision_file) as revision_fp:
+                    revision = revision_fp.readline().rstrip()
+                    if revision:
+                        ssd_devices[device]['revision'] = revision
+            except IOError:
+                log.trace('Revision of device {0} can not be determined'.format(device))
+                pass
 
-            size_file = os.path.join('/sys/block', device, 'device/size')
-            with salt.utils.fopen(size_file) as size_fp:
-                size = size_fp.readline().rstrip()
-                if size:
-                    ssd_devices[device]['size'] = size
+            size_file = os.path.join('/sys/block', device, 'size')
+            try:
+                with salt.utils.fopen(size_file) as size_fp:
+                    size = int(size_fp.readline().rstrip())
+                    if size:
+                        blocksize_file = os.path.join('/sys/block', device, 'queue/physical_block_size')
+                        with salt.utils.fopen(blocksize_file) as blocksize_fp:
+                            blocksize = int(blocksize_fp.readline().rstrip())
+                            if blocksize:
+                                ssd_devices[device]['size'] = size * blocksize
+            except IOError:
+                log.trace('Size of device {0} can not be determined'.format(device))
+                pass
 
     return {'ssds': ssd_devices}
