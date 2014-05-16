@@ -155,7 +155,8 @@ class SaltSafe(object):
         Clear the remote estate file
         Override this in sub class to change uid
         '''
-        mid = str(remote.eid)
+        #mid = str(remote.eid)
+        mid = remote.name
         self.saltRaetKey.delete_key(mid)
 
     def statusRemote(self, remote, verhex, pubhex, main=True):

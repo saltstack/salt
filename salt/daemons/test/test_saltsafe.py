@@ -223,22 +223,29 @@ class BasicTestCase(unittest.TestCase):
                                                          'main': True,
                                                          'sid': 0})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
-                                                     'sighex': dataMain['sighex']})
+                                                     'sighex': dataMain['sighex'],
+                                                     'auto': True})
 
 
         data1 = self.createRoadData(name='remote1', base=self.baseDirpath)
-        main.addRemote(estating.RemoteEstate(eid=3,
-                                        name=data1['name'],
-                                        ha=('127.0.0.1', 7532),
-                                        verkey=data1['verhex'],
-                                        pubkey=data1['pubhex']))
+        main.addRemote(estating.RemoteEstate(stack=main,
+                                             eid=3,
+                                             name=data1['name'],
+                                             ha=('127.0.0.1', 7532),
+                                             verkey=data1['verhex'],
+                                             pubkey=data1['pubhex'],
+                                             period=main.period,
+                                             offset=main.offset, ))
 
         data2 = self.createRoadData(name='remote2', base=self.baseDirpath)
-        main.addRemote(estating.RemoteEstate(eid=4,
-                                        name=data2['name'],
-                                        ha=('127.0.0.1', 7533),
-                                        verkey=data2['verhex'],
-                                        pubkey=data2['pubhex']))
+        main.addRemote(estating.RemoteEstate(stack=main,
+                                             eid=4,
+                                             name=data2['name'],
+                                             ha=('127.0.0.1', 7533),
+                                             verkey=data2['verhex'],
+                                             pubkey=data2['pubhex'],
+                                             period=main.period,
+                                             offset=main.offset,))
 
         main.dumpRemotes()
 
@@ -301,21 +308,28 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
 
         self.assertDictEqual(other.safe.loadLocalData(), {'prihex': dataOther['prihex'],
-                                                        'sighex': dataOther['sighex']})
+                                                        'sighex': dataOther['sighex'],
+                                                        'auto': True,})
 
         data3 = self.createRoadData(name='remote3', base=self.baseDirpath)
-        other.addRemote(estating.RemoteEstate(eid=3,
-                                        name=data3['name'],
-                                        ha=('127.0.0.1', 7534),
-                                        verkey=data3['verhex'],
-                                        pubkey=data3['pubhex']))
+        other.addRemote(estating.RemoteEstate(stack=other,
+                                              eid=3,
+                                              name=data3['name'],
+                                              ha=('127.0.0.1', 7534),
+                                              verkey=data3['verhex'],
+                                              pubkey=data3['pubhex'],
+                                              period=main.period,
+                                              offset=main.offset,))
 
         data4 = self.createRoadData(name='remote4', base=self.baseDirpath)
-        other.addRemote(estating.RemoteEstate(eid=4,
-                                        name=data4['name'],
-                                        ha=('127.0.0.1', 7535),
-                                        verkey=data4['verhex'],
-                                        pubkey=data4['pubhex']))
+        other.addRemote(estating.RemoteEstate(stack=other,
+                                              eid=4,
+                                              name=data4['name'],
+                                              ha=('127.0.0.1', 7535),
+                                              verkey=data4['verhex'],
+                                              pubkey=data4['pubhex'],
+                                             period=main.period,
+                                             offset=main.offset,))
 
         other.dumpRemotes()
         self.assertDictEqual(other.safe.loadAllRemoteData(),
@@ -376,7 +390,8 @@ class BasicTestCase(unittest.TestCase):
                                                          'main': True,
                                                          'sid': 0})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
-                                                     'sighex': dataMain['sighex']})
+                                                     'sighex': dataMain['sighex'],
+                                                     'auto': True,})
 
         self.assertEqual(self.otherSafe.loadLocalData(), None)
         self.assertEqual(self.otherSafe.loadAllRemoteData(), {})
@@ -396,7 +411,8 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(other.safe.auto)
 
         self.assertDictEqual(other.safe.loadLocalData(), {'prihex': dataOther['prihex'],
-                                                        'sighex': dataOther['sighex']})
+                                                        'sighex': dataOther['sighex'],
+                                                        'auto': True,})
 
         self.join(other, main)
         self.assertEqual(len(main.transactions), 0)
