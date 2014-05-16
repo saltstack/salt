@@ -765,7 +765,6 @@ def ip_addrs(interface=None, include_loopback=False):
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     '''
-    import wingdbstub
     ret = set()
     ifaces = interfaces()
     if interface is None:
