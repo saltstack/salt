@@ -2499,10 +2499,102 @@ def append(name,
            defaults=None,
            context=None):
     '''
-    Ensure that some text appears at the end of a file
+    Ensure that some text appears at the end of a file.
 
-    The text will not be appended again if it already exists in the file. You
-    may specify a single line of text or a list of lines to append.
+    The text will not be appended if it already exists in the file.
+    A single string of text or a list of strings may be appended.
+
+    name
+        The location of the file to append to.
+
+    text
+        The text to be appended, which can be a single string or a list
+        of strings.
+
+    makedirs
+        If the file is located in a path without a parent directory,
+        then the state will fail. If makedirs is set to True, then
+        the parent directories will be created to facilitate the
+        creation of the named file. Defaults to False.
+
+    source
+        A single source file to append. This source file can be hosted on either
+        the salt master server, or on an HTTP or FTP server. Both HTTPS and
+        HTTP are supported as well as downloading directly from Amazon S3
+        compatible URLs with both pre-configured and automatic IAM credentials
+        (see s3.get state documentation). File retrieval from Openstack Swift
+        object storage is supported via swift://container/object_path URLs
+        (see swift.get documentation).
+
+        For files hosted on the salt file server, if the file is located on
+        the master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs.
+
+        If the file is hosted on an HTTP or FTP server, the source_hash argument
+        is also required.
+
+    source_hash
+        This can be one of the following:
+            1. a source hash string
+            2. the URI of a file that contains source hash strings
+
+        The function accepts the first encountered long unbroken alphanumeric
+        string of correct length as a valid hash, in order from most secure to
+        least secure::
+
+            Type    Length
+            ======  ======
+            sha512     128
+            sha384      96
+            sha256      64
+            sha224      56
+            sha1        40
+            md5         32
+
+        The file can contain several checksums for several files. Each line
+        must contain both the file name and the hash.  If no file name is
+        matched, the first hash encountered will be used, otherwise the most
+        secure hash with the correct source file name will be used.
+
+        Debian file type ``*.dsc`` is supported.
+
+        Examples::
+
+            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+            ead48423703509d37c4a90e6a0d53e143b6fc268
+
+        Known issues:
+            If the remote server URL has the hash file as an apparent
+            sub-directory of the source file, the module will discover that it
+            has already cached a directory where a file should be cached. For
+            example:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz/+md5
+
+    template : ``jinja``
+        The named templating engine will be used to render the appended-to
+        file. Defaults to jinja.
+
+    sources
+        A list of source files to append. If the files are hosted on an HTTP or
+        FTP server, the source_hashes argument is also required.
+
+    source_hashes
+        A list of source_hashes corresponding to the sources list specified in
+        the sources argument.
+
+    defaults
+        Default context passed to the template.
+
+    context
+        Overrides default context variables passed to the template.
 
     Multi-line example::
 
