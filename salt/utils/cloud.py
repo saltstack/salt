@@ -762,7 +762,6 @@ def deploy_windows(host,
                    username='Administrator',
                    password=None,
                    name=None,
-                   pub_key=None,
                    sock_dir=None,
                    conf_file=None,
                    start_action=None,
@@ -904,7 +903,6 @@ def deploy_script(host,
                   key_filename=None,
                   script=None,
                   name=None,
-                  pub_key=None,
                   sock_dir=None,
                   provider=None,
                   conf_file=None,
@@ -1144,7 +1142,7 @@ def deploy_script(host,
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
                     target=check_auth, kwargs=dict(
-                        name=name, pub_key=pub_key, sock_dir=sock_dir,
+                        name=name, sock_dir=sock_dir,
                         timeout=newtimeout, queue=queue
                     )
                 )
@@ -1602,7 +1600,7 @@ def root_cmd(command, tty, sudo, **kwargs):
     return retcode
 
 
-def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
+def check_auth(name, sock_dir=None, queue=None, timeout=300):
     '''
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
