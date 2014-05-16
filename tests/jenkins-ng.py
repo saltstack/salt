@@ -805,6 +805,9 @@ def main():
         help='The testing git commit to track')
 
     options = parser.parse_args()
+
+    if options.ssh:
+        parser.error('Please do not use --ssh. Process is not matured enough.')
     if not options.vm_source and not options.vm_name:
         parser.error('Unable to get VM name from environ nor generate it without --vm-source')
 
