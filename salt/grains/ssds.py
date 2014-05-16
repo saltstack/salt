@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    Detect SSDs
+    Detect SSDs (Solid State Drives)
 '''
 
 # Import python libs
@@ -52,4 +52,4 @@ def ssds():
                 if revision:
                     ssd_devices[device]['revision'] = revision
 
-    return {'SSDs': ssd_devices}
+    return {'ssds': ssd_devices}
