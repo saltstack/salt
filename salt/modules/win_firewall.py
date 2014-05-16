@@ -63,7 +63,7 @@ def disable():
             ) == 'Ok.'
 
 
- def get_rule(name="all"):
+def get_rule(name="all"):
     '''
     Get firewall rule(s) info
 
