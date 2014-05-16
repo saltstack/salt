@@ -85,6 +85,7 @@ VALID_OPTS = {
     'grains_dirs': list,
     'render_dirs': list,
     'outputter_dirs': list,
+    'utils_dirs': list,
     'providers': dict,
     'clean_dynamic_modules': bool,
     'open_mode': bool,
@@ -279,6 +280,7 @@ DEFAULT_MINION_OPTS = {
     'states_dirs': [],
     'render_dirs': [],
     'outputter_dirs': [],
+    'utils_dirs': [],
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
@@ -739,6 +741,20 @@ def prepend_root_dir(opts, path_options):
                 root_dir,
                 opts[path_option]
             )
+
+
+def insert_system_path(opts, paths):
+    '''
+    Inserts path into python path taking into consideration 'root_dir' option.
+    '''
+    if isinstance(paths, str):
+        paths = [paths]
+    for path in paths:
+        path_options = {'path': path, 'root_dir': opts['root_dir']}
+        prepend_root_dir(path_options, path_options)
+        if (os.path.isdir(path_options['path'])
+                and path_options['path'] not in sys.path):
+            sys.path.insert(0, path_options['path'])
 
 
 def minion_config(path,
@@ -1830,6 +1846,15 @@ def apply_minion_config(overrides=None,
         opts.get('extension_modules') or
         os.path.join(opts['cachedir'], 'extmods')
     )
+
+    # Set up the utils_dirs location from the extension_modules location
+    opts['utils_dirs'] = (
+        opts.get('utils_dirs') or
+        [os.path.join(opts['extension_modules'], 'utils')]
+    )
+
+    # Insert all 'utils_dirs' directories to the system path
+    insert_system_path(opts, opts['utils_dirs'])
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [

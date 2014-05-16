@@ -319,6 +319,25 @@ def sync_outputters(saltenv=None, refresh=True):
     return ret
 
 
+def sync_utils(saltenv=None, refresh=True):
+    '''
+    Sync utility source files from the _utils directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _utils directory, base is the default
+    environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_utils
+    '''
+    ret = _sync('utils', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
@@ -338,6 +357,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
     ret['outputters'] = sync_outputters(saltenv, False)
+    ret['utils'] = sync_utils(saltenv, False)
     if refresh:
         refresh_modules()
     return ret
