@@ -99,6 +99,10 @@ def state(
     fail_minions
         An optional list of targeted minions where failure is an option
 
+    allow_fail
+        Pass in the number of minions to allow for failure before setting
+        the result of the execution to False
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -112,6 +116,13 @@ def state(
            'changes': {},
            'comment': '',
            'result': True}
+
+    try:
+        allow_fail = int(allow_fail)
+    except ValueError:
+        ret['result'] = False
+        ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
+        return ret
 
     if env is not None:
         msg = (
@@ -214,7 +225,7 @@ def state(
 
     if changes:
         ret['changes'] = {'out': 'highstate', 'ret': changes}
-    if fail:
+    if len(fail) > allow_fail:
         ret['result'] = False
         ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
     else:

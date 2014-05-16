@@ -165,6 +165,33 @@ def _check_32(arch):
     return all(x in __ARCHES_32 for x in (__grains__['osarch'], arch))
 
 
+def _rpm_pkginfo(name):
+    '''
+    Parses RPM metadata and returns a pkginfo namedtuple
+    '''
+    # REPOID is not a valid tag for the rpm command. Remove it and replace it
+    # witn "none"
+    queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
+    output = __salt__['cmd.run_stdout'](
+        'rpm -qp --queryformat {0!r} {1}'.format(queryformat, name),
+        output_loglevel='debug',
+        ignore_retcode=True
+    )
+    return _parse_pkginfo(output)
+
+
+def _rpm_installed(name):
+    '''
+    Parses RPM metadata to determine if the RPM target is already installed.
+    Returns the name of the installed package if found, otherwise None.
+    '''
+    pkg = _rpm_pkginfo(name)
+    try:
+        return pkg.name if pkg.name in list_pkgs() else None
+    except AttributeError:
+        return None
+
+
 def normalize_name(name):
     '''
     Strips the architecture from the specified package name, if necessary.
@@ -636,6 +663,7 @@ def install(name=None,
             skip_verify=False,
             pkgs=None,
             sources=None,
+            reinstall=False,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
@@ -660,6 +688,19 @@ def install(name=None,
 
     refresh
         Whether or not to update the yum database before executing.
+
+    reinstall
+        Specifying reinstall=True will use ``yum reinstall`` rather than
+        ``yum install`` for requested packages that are already installed.
+
+        If a version is specified with the requested package, then
+        ``yum reinstall`` will only be used if the installed version
+        matches the requested version.
+
+        Works with sources when the file name in the source can be
+        matched to the name and version of the installed package.
+
+        .. versionadded:: Helium
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
@@ -724,6 +765,7 @@ def install(name=None,
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
+    reinstall = salt.utils.is_true(reinstall)
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -748,12 +790,16 @@ def install(name=None,
     exclude_arg = _get_excludes_option(**kwargs)
 
     old = list_pkgs()
+    targets = []
     downgrade = []
+    to_reinstall = []
     if pkg_type == 'repository':
-        targets = []
         for pkgname, version_num in pkg_params.iteritems():
             if version_num is None:
-                targets.append(pkgname)
+                if reinstall and pkgname in old:
+                    to_reinstall.append(pkgname)
+                else:
+                    targets.append(pkgname)
             else:
                 cver = old.get(pkgname, '')
                 arch = ''
@@ -767,14 +813,23 @@ def install(name=None,
                         pkgname = namepart
 
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if not cver or salt.utils.compare_versions(ver1=version_num,
-                                                           oper='>=',
-                                                           ver2=cver):
+                if reinstall and cver \
+                        and salt.utils.compare_versions(ver1=version_num,
+                                                        oper='==',
+                                                        ver2=cver):
+                    to_reinstall.append(pkgstr)
+                elif not cver or salt.utils.compare_versions(ver1=version_num,
+                                                             oper='>=',
+                                                             ver2=cver):
                     targets.append(pkgstr)
                 else:
                     downgrade.append(pkgstr)
     else:
-        targets = pkg_params
+        for pkgname in pkg_params:
+            if reinstall and _rpm_installed(pkgname):
+                to_reinstall.append(pkgname)
+            else:
+                targets.append(pkgname)
 
     if targets:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} install {pkg}'.format(
@@ -794,17 +849,41 @@ def install(name=None,
         )
         __salt__['cmd.run'](cmd, output_loglevel='debug')
 
+    if to_reinstall:
+        cmd = 'yum -y {repo} {exclude} {gpgcheck} reinstall {pkg}'.format(
+            repo=repo_arg,
+            exclude=exclude_arg,
+            gpgcheck='--nogpgcheck' if skip_verify else '',
+            pkg=' '.join(to_reinstall),
+        )
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
+    for pkgname in to_reinstall:
+        if pkg_type != 'repository':
+            try:
+                pkgname = _rpm_pkginfo(pkgname).name
+            except AttributeError:
+                continue
+        if not pkgname in old:
+            ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                  'new': new.get(pkgname, '')}})
+        else:
+            if not pkgname in ret:
+                ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                      'new': new.get(pkgname, '')}})
     if ret:
         __context__.pop('pkg._avail', None)
     return ret
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
+
+    .. versionchanged:: Helium
 
     Return a dict containing the new package names and versions::
 
@@ -816,11 +895,39 @@ def upgrade(refresh=True):
     .. code-block:: bash
 
         salt '*' pkg.upgrade
+
+    Repository Options:
+
+    fromrepo
+        Specify a package repository (or repositories) from which to install.
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+    disableexcludes
+        Disable exclude from main, for a repo or for everything.
+        (e.g., ``yum --disableexcludes='main'``)
+
+        .. versionadded:: Helium
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
+
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    exclude_arg = _get_excludes_option(**kwargs)
+
     old = list_pkgs()
-    cmd = 'yum -q -y upgrade'
+    cmd = 'yum -q -y {repo} {exclude} {gpgcheck} upgrade'.format(
+        repo=repo_arg,
+        exclude=exclude_arg,
+        gpgcheck='--nogpgcheck' if skip_verify else '')
+
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

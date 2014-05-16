@@ -162,7 +162,9 @@ def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a enable_term_protect mymachine
     '''
@@ -178,7 +180,9 @@ def disable_term_protect(name, call=None):
     '''
     Disable termination protection on a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a disable_term_protect mymachine
     '''

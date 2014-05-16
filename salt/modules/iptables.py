@@ -154,7 +154,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             kwargs['of'] = re.sub(bang_not_pat, '', kwargs['of'])
             rule += '! '
 
-        rule += '-i {0} '.format(kwargs['of'])
+        rule += '-o {0} '.format(kwargs['of'])
         del kwargs['of']
 
     if 'proto' in kwargs:

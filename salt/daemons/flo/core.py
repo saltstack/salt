@@ -341,7 +341,7 @@ class Setup(ioflo.base.deeding.Deed):
         '''
         self.uxd_stack.value = LaneStack(
                 name='yard',
-                lanename=self.opts.value['id'],
+                lanename=self.opts.value.get('id', 'master'),
                 yid=0,
                 sockdirpath=self.opts.value['sock_dir'],
                 dirpath=self.opts.value['cachedir'])

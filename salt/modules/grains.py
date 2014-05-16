@@ -270,9 +270,9 @@ def append(key, val, convert=False):
     val
         The value to append to the grain key
 
-    :param convert: If convert is True, convert non-list contents into a
-    list. If convert is False and the grain contains non-list contents, an
-    error is given. Defaults to False.
+    :param convert: If convert is True, convert non-list contents into a list.
+        If convert is False and the grain contains non-list contents, an error
+        is given. Defaults to False.
 
     CLI Example:
 

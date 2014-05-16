@@ -5,38 +5,29 @@
 Python client API
 =================
 
-There are several ways to access Salt programmatically.
-
-Calling Salt from shell scripts
-===============================
-
-Salt CLI tools can, of course, be called from shell scripts. Reference the help
-output to see what structured :ref:`output formats <all-salt.output>` are
-supported. For example:
-
-.. code-block:: bash
-
-    salt '*' disk.usage --out=json
-
-Calling Salt via a REST API
-===========================
-
-Salt provides a REST API, currently as a separate sister-project. It will be
-merged into Salt core.
-
-https://github.com/saltstack/salt-api
-
-This API utilizes Salt's Python interface documented below. It is also useful
-as a reference implementation.
-
-Calling Salt from a Python application
-======================================
-
 Salt provides several entry points for interfacing with Python applications.
-These entry points are often referred to as ``*Client()`` APIs.
+These entry points are often referred to as ``*Client()`` APIs. Each client
+accesses different parts of Salt, either from the master or from a minion. Each
+client is detailed below.
 
-``opts``
---------
+.. seealso:: There are many ways to access Salt programmatically.
+
+    Salt can be used from CLI scripts as well as via a REST interface.
+
+    See Salt's :ref:`outputter system <all-salt.output>` to retrive structured
+    data from Salt as JSON, or as shell-friendly text, or many other formats.
+
+    See the :py:func:`state.event <salt.runners.state.event>` runner to utilize
+    Salt's event bus from shell scripts.
+
+    See the `salt-api`_ project to access Salt externally via a REST interface.
+    It uses Salt's Python interface documented below and is also useful as a
+    reference implementation.
+
+.. _`salt-api`: https://github.com/saltstack/salt-api
+
+Salt's ``opts`` dictionary
+==========================
 
 Some clients require access to Salt's ``opts`` dictionary. (The dictionary
 representation of the :ref:`master <configuration-salt-master>` or
@@ -46,15 +37,9 @@ A common pattern for fetching the ``opts`` dictionary is to defer to
 environment variables if they exist or otherwise fetch the config from the
 default location.
 
-.. code-block:: python
+.. autofunction:: salt.config.client_config
 
-    import salt.config
-
-    master_opts = salt.config.master_config(
-        os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
-
-    minion_opts = salt.config.minion_config(
-        os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion'))
+.. autofunction:: salt.config.minion_config
 
 Salt's Loader Interface
 =======================
@@ -74,8 +59,8 @@ Each module type has a corresponding loader function.
 
 .. autofunction:: salt.loader.grains
 
-Salt's Python interface
-=======================
+Salt's Client Interfaces
+========================
 
 LocalClient
 -----------

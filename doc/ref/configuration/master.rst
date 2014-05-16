@@ -395,6 +395,23 @@ public keys from minions.
 
     auto_accept: False
 
+.. conf_master:: autosign_timeout
+
+``autosign_timeout``
+--------------------
+
+.. versionadded:: Helium
+
+Default: ``120``
+
+Time in minutes that a incoming public key with a matching name found in
+pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
+are removed when the master checks the minion_autosign directory. This method
+to auto accept minions can be safer than an autosign_file because the
+keyid record can expire and is limited to being an exact name match.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion id.
+
 .. conf_master:: autosign_file
 
 ``autosign_file``
@@ -404,8 +421,9 @@ Default: ``not defined``
 
 If the ``autosign_file`` is specified incoming keys specified in the autosign_file
 will be automatically accepted. Matches will be searched for first by string
-comparison, then by globbing, then by full-string regex matching. This is
-insecure!
+comparison, then by globbing, then by full-string regex matching.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion id.
 
 .. conf_master:: autoreject_file
 

@@ -52,6 +52,8 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'require',
     'require_in',
     'onfail',
+    'onchanges',
+    'use',
     'fail_hard',
     'reload_modules',
     'saltenv',
@@ -1038,8 +1040,12 @@ class State(object):
                         name = id_
                     else:
                         errors.append(
-                            'Cannot extend ID {0} in \'{1}:{2}\'. It is not '
-                            'part of the high state.'.format(
+                            'Cannot extend ID \'{0}\' in \'{1}:{2}\'. It is not '
+                            'part of the high state.\n'
+                            'This is likely due to a missing include statement '
+                            'or an incorrectly typed ID.\nEnsure that a '
+                            'state with an ID of \'{0}\' is available\nin '
+                            'environment \'{1}\' and to SLS \'{2}\''.format(
                                 name,
                                 body.get('__env__', 'base'),
                                 body.get('__sls__', 'base'))

@@ -73,6 +73,8 @@ class Master(parsers.MasterOptionParser):
                         os.path.join(self.config['pki_dir'], 'minions_pre'),
                         os.path.join(self.config['pki_dir'], 'minions_denied'),
                         os.path.join(self.config['pki_dir'],
+                                     'minions_autosign'),
+                        os.path.join(self.config['pki_dir'],
                                      'minions_rejected'),
                         self.config['cachedir'],
                         os.path.join(self.config['cachedir'], 'jobs'),

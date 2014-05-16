@@ -291,6 +291,13 @@ def bootstrap(vm_, opts):
             'system for the password.'
         )
 
+    if key_filename is None and ('password' not in vm_ or not vm_['password']):
+        raise SaltCloudSystemExit(
+            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
+            'is not set and there is no password set for the vm. '
+            'Check your provider for the \'change_password\' option.'
+        )
+
     ret = {}
 
     deploy_script_code = os_script(
@@ -347,7 +354,10 @@ def bootstrap(vm_, opts):
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
-        )
+        ),
+        'known_hosts_file': salt.config.get_cloud_config_value(
+            'known_hosts_file', vm_, opts, default='/dev/null'
+        ),
     }
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -681,7 +691,8 @@ def validate_windows_cred(host, username='Administrator', password=None):
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
-                    trysleep=1, display_ssh_output=True, gateway=None):
+                    trysleep=1, display_ssh_output=True, gateway=None,
+                    known_hosts_file='/dev/null'):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -694,7 +705,8 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'username': username,
                       'password_retries': maxtries,
                       'timeout': ssh_timeout,
-                      'display_ssh_output': display_ssh_output}
+                      'display_ssh_output': display_ssh_output,
+                      'known_hosts_file': known_hosts_file}
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
@@ -750,7 +762,6 @@ def deploy_windows(host,
                    username='Administrator',
                    password=None,
                    name=None,
-                   pub_key=None,
                    sock_dir=None,
                    conf_file=None,
                    start_action=None,
@@ -892,7 +903,6 @@ def deploy_script(host,
                   key_filename=None,
                   script=None,
                   name=None,
-                  pub_key=None,
                   sock_dir=None,
                   provider=None,
                   conf_file=None,
@@ -940,6 +950,8 @@ def deploy_script(host,
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1}'.format(host, starttime))
 
+    known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+
     if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
@@ -947,7 +959,7 @@ def deploy_script(host,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
                            display_ssh_output=display_ssh_output,
-                           gateway=gateway):
+                           gateway=gateway, known_hosts_file=known_hosts_file):
 
             def remote_exists(path):
                 return not root_cmd('test -e \\"{0}\\"'.format(path),
@@ -1130,7 +1142,7 @@ def deploy_script(host,
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
                     target=check_auth, kwargs=dict(
-                        name=name, pub_key=pub_key, sock_dir=sock_dir,
+                        name=name, sock_dir=sock_dir,
                         timeout=newtimeout, queue=queue
                     )
                 )
@@ -1514,11 +1526,16 @@ def root_cmd(command, tty, sudo, **kwargs):
         # `requiretty` enforced.
         ssh_args.extend(['-t', '-t'])
 
+    known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+    host_key_checking = 'no'
+    if known_hosts_file != '/dev/null':
+        host_key_checking = 'yes'
+
     ssh_args.extend([
         # Don't add new hosts to the host key database
-        '-oStrictHostKeyChecking=no',
+        '-oStrictHostKeyChecking={0}'.format(host_key_checking),
         # Set hosts key database path to /dev/null, ie, non-existing
-        '-oUserKnownHostsFile=/dev/null',
+        '-oUserKnownHostsFile={0}'.format(known_hosts_file),
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
     ])
@@ -1583,7 +1600,7 @@ def root_cmd(command, tty, sudo, **kwargs):
     return retcode
 
 
-def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
+def check_auth(name, sock_dir=None, queue=None, timeout=300):
     '''
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
@@ -1820,6 +1837,8 @@ def init_cachedir(base=None):
             os.makedirs(dir_)
         os.chmod(base, 0755)
 
+    return base
+
 
 def request_minion_cachedir(
         minion_id,
@@ -2035,6 +2054,138 @@ def update_bootstrap(config):
     return {'Success': {'Files updated': finished_full}}
 
 
+def cache_node_list(nodes, provider, opts):
+    '''
+    If configured to do so, update the cloud cachedir with the current list of
+    nodes. Also fires configured events pertaining to the node list.
+
+    .. versionadded:: Helium
+    '''
+    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+        return
+
+    base = os.path.join(init_cachedir(), 'active')
+    driver = opts['providers'][provider].keys()[0]
+    prov_dir = os.path.join(base, driver, provider)
+    if not os.path.exists(prov_dir):
+        os.makedirs(prov_dir)
+
+    # Check to see if any nodes in the cache are not in the new list
+    missing_node_cache(prov_dir, nodes.keys(), opts)
+
+    for node in nodes:
+        diff_node_cache(prov_dir, node, nodes[node], opts)
+        path = os.path.join(prov_dir, '{0}.json'.format(node))
+        with salt.utils.fopen(path, 'w') as fh_:
+            json.dump(nodes[node], fh_)
+
+
+def missing_node_cache(prov_dir, node_list, opts):
+    '''
+    Check list of nodes to see if any nodes which were previously known about
+    in the cache have been removed from the node list.
+
+    This function will only run if configured to do so in the main Salt Cloud
+    configuration file (normally /etc/salt/cloud).
+
+    .. code-block:: yaml
+
+        diff_cache_events: True
+
+    .. versionadded:: Helium
+    '''
+    cached_nodes = []
+    for node in os.listdir(prov_dir):
+        cached_nodes.append(node.replace('.json', ''))
+
+    log.debug(sorted(cached_nodes))
+    log.debug(sorted(node_list))
+    for node in cached_nodes:
+        if node not in node_list:
+            fire_event(
+                'event',
+                'cached node missing from provider',
+                'salt/cloud/{0}/cache_node_missing'.format(node),
+                {'missing node': node},
+                transport=opts.get('transport', 'zeromq')
+            )
+
+
+def diff_node_cache(prov_dir, node, new_data, opts):
+    '''
+    Check new node data against current cache. If data differ, fire an event
+    which consists of the new node data.
+
+    This function will only run if configured to do so in the main Salt Cloud
+    configuration file (normally /etc/salt/cloud).
+
+    .. code-block:: yaml
+
+        diff_cache_events: True
+
+    .. versionadded:: Helium
+    '''
+    if not 'diff_cache_events' in opts or not opts['diff_cache_events']:
+        return
+
+    path = os.path.join(prov_dir, node)
+    path = '{0}.json'.format(path)
+
+    if not os.path.exists(path):
+        event_data = _strip_cache_events(new_data, opts)
+
+        fire_event(
+            'event',
+            'new node found',
+            'salt/cloud/{0}/cache_node_new'.format(node),
+            {'new_data': event_data},
+            transport=opts.get('transport', 'zeromq')
+        )
+        return
+
+    with salt.utils.fopen(path, 'r') as fh_:
+        cache_data = json.load(fh_)
+
+    # Perform a simple diff between the old and the new data, and if it differs,
+    # return both dicts.
+    # TODO: Return an actual diff
+    diff = cmp(new_data, cache_data)
+    if diff != 0:
+        fire_event(
+            'event',
+            'node data differs',
+            'salt/cloud/{0}/cache_node_diff'.format(node),
+            {
+                'new_data': _strip_cache_events(new_data, opts),
+                'cache_data': _strip_cache_events(cache_data, opts),
+            },
+            transport=opts.get('transport', 'zeromq')
+        )
+
+
+def _strip_cache_events(data, opts):
+    '''
+    Strip out user-configured sensitive event data. The fields to be stripped
+    are configured in the main Salt Cloud configuration file, usually
+    ``/etc/salt/cloud``.
+
+    .. code-block: yaml
+
+        cache_event_strip_fields:
+          - password
+          - priv_key
+
+    .. versionadded:: Helium
+    '''
+    event_data = copy.deepcopy(data)
+    strip_fields = opts.get('cache_event_strip_fields', [])
+    for field in strip_fields:
+        if field in event_data:
+            del event_data[field]
+
+    return event_data
+
+
 def _salt_cloud_force_ascii(exc):
     '''
     Helper method to try its best to convert any Unicode text into ASCII
@@ -2112,3 +2263,39 @@ def store_password_in_keyring(credential_id, username, password=None):
     except ImportError:
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
+
+
+def _unwrap_dict(dictionary, index_string):
+    '''
+    Accepts index in form of a string
+    Returns final value
+    Example: dictionary = {'a': {'b': {'c': 'foobar'}}}
+             index_string = 'a,b,c'
+             returns 'foobar'
+    '''
+    index = index_string.split(',')
+    for k in index:
+        dictionary = dictionary[k]
+    return dictionary
+
+
+def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=None, required_argument_response=None):
+    '''
+    Waits until the function retrieves some required argument.
+    NOTE: Tested with ec2 describe_volumes and describe_snapshots only.
+    '''
+    status = None
+    while status != required_argument_response:
+        f_result = fun(kwargs, call=fun_call)
+        r_set = {}
+        for d in f_result:
+            for k, v in d.items():
+                r_set[k] = v
+        result = r_set.get('item')
+        status = _unwrap_dict(result, argument_being_watched)
+        log.debug('Function: {0}, Watched arg: {1}, Response: {2}'.format(str(fun).split(' ')[1],
+                                                                          argument_being_watched,
+                                                                          status))
+        time.sleep(5)
+
+    return True

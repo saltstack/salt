@@ -241,8 +241,11 @@ def _find_install_targets(name=None,
                 # Change it to "==" so that the version comparison works
                 if comparison in ['=', '']:
                     comparison = '=='
+                if 'allow_updates' in kwargs:
+                    if kwargs['allow_updates']:
+                        comparison = '>='
                 if not _fulfills_version_spec(cver, comparison, verstr):
-                    # Current version did not match desired, add to targets
+                    log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver, comparison, verstr))
                     targets[pkgname] = pkgver
 
         if problems:
@@ -337,6 +340,7 @@ def installed(
         skip_suggestions=False,
         pkgs=None,
         sources=None,
+        allow_updates=False,
         **kwargs):
     '''
     Verify that the package is installed, and that it is the correct version
@@ -425,6 +429,13 @@ def installed(
     hold
         Force the package to be held at the current installed version.
         Currently works with YUM & APT based systems.
+
+        .. versionadded:: Helium
+
+    allow_updates
+        Allow the package to be updated outside Salt's control (e.g. auto updates on Windows).
+        This means a package on the Minion can have a newer version than the latest available
+        in the repository without enforcing a re-installation of the package.
 
         .. versionadded:: Helium
 
@@ -546,6 +557,7 @@ def installed(
     if not isinstance(version, string_types) and version is not None:
         version = str(version)
 
+    kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
@@ -732,6 +744,8 @@ def installed(
         for i in not_modified_hold:
             comment.append(i['comment'])
 
+    result = True
+
     if failed:
         if sources:
             summary = ', '.join(failed)
@@ -740,6 +754,7 @@ def installed(
                                  for x in failed])
         comment.insert(0, 'The following packages failed to '
                           'install/update: {0}.'.format(summary))
+        result = False
 
     if failed_hold:
         for i in failed_hold:
@@ -752,7 +767,7 @@ def installed(
     else:
         return {'name': name,
                 'changes': changes,
-                'result': True,
+                'result': result,
                 'comment': ' '.join(comment)}
 
 
@@ -1148,7 +1163,7 @@ def uptodate(name, refresh=False):
 
     if updated:
         ret['changes'] = updated
-        ret['comment'] = 'Upgrade successfull.'
+        ret['comment'] = 'Upgrade successful.'
         ret['result'] = True
     else:
         ret['comment'] = 'Upgrade failed.'

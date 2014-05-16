@@ -146,6 +146,12 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+# Time in minutes that a incomming public key with a matching name found in
+# pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
+# are removed when the master checks the minion_autosign directory.
+# 0 equals no timeout
+# autosign_timeout: 120
+
 # If the autosign_file is specified, incoming keys specified in the
 # autosign_file will be automatically accepted. This is insecure.  Regular
 # expressions as well as globing lines are supported.

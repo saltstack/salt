@@ -229,6 +229,13 @@ class SaltNova(object):
         '''
         return self.server_list().get(name, {})
 
+    def root_password(self, server_id, password):
+        '''
+        Change server(uuid's) root password
+        '''
+        nt_ks = self.compute_conn
+        nt_ks.servers.change_password(server_id, password)
+
     def server_by_name(self, name):
         '''
         Find a server by its name
@@ -643,12 +650,13 @@ class SaltNova(object):
                 'links': item.links,
                 'metadata': item.metadata,
                 'name': item.name,
-                'progress': item.progress,
                 'status': item.status,
                 'tenant_id': item.tenant_id,
                 'updated': item.updated,
                 'user_id': item.user_id,
             }
+
+            ret[item.name]['progress'] = getattr(item, 'progress', '0')
 
             if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
                 ret[item.name]['OS-DCF'] = {
@@ -744,7 +752,7 @@ class SaltNova(object):
         for net in network_lst:
             if net.label == name:
                 return net.__dict__
-        return False
+        return {}
 
     def network_show(self, name):
         '''
@@ -806,7 +814,9 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         serverid = self._server_uuid_from_name(name)
-        networkid = self.network_show(net_name).get('id', '')
+        networkid = self.network_show(net_name).get('id', None)
+        if networkid is None:
+            return {net_name: False}
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 

@@ -155,7 +155,6 @@
 
 # Import python libs
 import os
-import zmq
 import json
 import logging
 import logging.handlers

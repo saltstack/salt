@@ -96,6 +96,7 @@ Full list of builtin state modules
     rabbitmq_vhost
     rbenv
     rdp
+    redismod
     reg
     rvm
     saltmod

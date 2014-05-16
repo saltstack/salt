@@ -1232,6 +1232,15 @@ def pythonpath():
     return {'pythonpath': sys.path}
 
 
+def pythonexecutable():
+    '''
+    Return the python executable in use
+    '''
+    # Provides:
+    #   pythonexecutable
+    return {'pythonexecutable': sys.executable}
+
+
 def saltpath():
     '''
     Return the path of the salt module

@@ -94,13 +94,13 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         '''
         #import wingdbstub
         self.uxd_stack.value = LaneStack(
-                lanename=self.opts.value['id'],
+                lanename=self.opts.value.get('id', 'master'),
                 yid=self.yid.value,
                 sockdirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
                 yid=0,
-                lanename=self.opts.value['id'],
+                lanename=self.opts.value.get('id', 'master'),
                 dirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.addRemote(manor_yard)
         self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)

@@ -41,7 +41,9 @@ def isportopen(host, port):
     '''
     Return status of a port
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.isportopen 127.0.0.1 22
     '''
@@ -59,7 +61,9 @@ def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.host_to_ip example.com
     '''
@@ -253,7 +257,9 @@ def generate_minion_id():
     Returns a minion id after checking multiple sources for a FQDN.
     If no FQDN is found you may get an ip address
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.generate_minion_id
     '''
@@ -281,7 +287,9 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_fqhostname
     '''
@@ -312,7 +320,9 @@ def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.ip_to_host 8.8.8.8
     '''
@@ -768,7 +778,7 @@ def ip_addrs(interface=None, include_loopback=False):
         for ipv4 in ipv4_info.get('inet', []):
             if include_loopback \
                     or (not include_loopback
-                        and ipv4['address'] != '127.0.0.1'):
+                            and (ipv4['address'] != '127.0.0.1' and ipv4['label'] != 'lo')):
                 ret.add(ipv4['address'])
         for secondary in ipv4_info.get('secondary', []):
             addr = secondary.get('address')

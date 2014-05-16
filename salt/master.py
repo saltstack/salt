@@ -157,8 +157,10 @@ class Master(SMaster):
         fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
         runners = salt.loader.runner(self.opts)
+        # Load Returners
+        returners = salt.loader.returners(self.opts, {})
         # Init Scheduler
-        schedule = salt.utils.schedule.Schedule(self.opts, runners)
+        schedule = salt.utils.schedule.Schedule(self.opts, runners, returners=returners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
@@ -1676,6 +1678,30 @@ class ClearFuncs(object):
                         return True
         return False
 
+    def __check_autosign_dir(self, keyid):
+        '''
+        Check a keyid for membership in a autosign directory.
+        '''
+        autosign_dir = os.path.join(self.opts['pki_dir'], 'minions_autosign')
+
+        # cleanup expired files
+        expire_minutes = self.opts.get('autosign_expire_minutes', 10)
+        if expire_minutes > 0:
+            min_time = time.time() - (60 * int(expire_minutes))
+            for root, dirs, filenames in os.walk(autosign_dir):
+                for f in filenames:
+                    stub_file = os.path.join(autosign_dir, f)
+                    mtime = os.path.getmtime(stub_file)
+                    if mtime < min_time:
+                        log.warn('Autosign keyid expired {0}'.format(stub_file))
+                        os.remove(stub_file)
+
+        stub_file = os.path.join(autosign_dir, keyid)
+        if not os.path.exists(stub_file):
+            return False
+        os.remove(stub_file)
+        return True
+
     def __check_autoreject(self, keyid):
         '''
         Checks if the specified keyid should automatically be rejected.
@@ -1691,10 +1717,11 @@ class ClearFuncs(object):
         '''
         if self.opts['auto_accept']:
             return True
-        return self.__check_signing_file(
-            keyid,
-            self.opts.get('autosign_file', None)
-        )
+        if self.__check_signing_file(keyid, self.opts.get('autosign_file', None)):
+            return True
+        if self.__check_autosign_dir(keyid):
+            return True
+        return False
 
     def _auth(self, load):
         '''

@@ -228,6 +228,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                     os.chown(dir_, uid, gid)
             for subdir in [a for a in os.listdir(dir_) if 'jobs' not in a]:
                 fsubdir = os.path.join(dir_, subdir)
+                if '{0}jobs'.format(os.path.sep) in fsubdir:
+                    continue
                 for root, dirs, files in os.walk(fsubdir):
                     for name in files:
                         if name.startswith('.'):

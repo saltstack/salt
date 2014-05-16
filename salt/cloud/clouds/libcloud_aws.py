@@ -427,8 +427,14 @@ def create(vm_):
                     username=user,
                     ssh_timeout=config.get_cloud_config_value(
                         'wait_for_passwd_timeout', vm_, __opts__,
-                        default=1 * 60),
-                    key_filename=key_filename):
+                        default=1 * 60
+                    ),
+                    key_filename=key_filename,
+                    known_hosts_file=config.get_cloud_config_value(
+                        'known_hosts_file', vm_, __opts__,
+                        default='/dev/null'
+                    ),
+                ):
                 username = user
                 break
         else:
@@ -615,7 +621,9 @@ def set_tags(name, tags, call=None):
     '''
     Set tags for a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
@@ -670,7 +678,9 @@ def del_tags(name, kwargs, call=None):
     '''
     Delete tags for a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
@@ -707,7 +717,9 @@ def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''

@@ -175,9 +175,8 @@ def absent(name, destructive=False):
     name
         The grain name
 
-    :param destructive: If destructive is True, delete the entire grain.
-    If destructive is False, set the grain's value to None. Defaults
-    to False.
+    :param destructive: If destructive is True, delete the entire grain. If
+        destructive is False, set the grain's value to None. Defaults to False.
 
     .. code-block:: yaml
 
@@ -227,9 +226,9 @@ def append(name, value, convert=False):
     value
         The value to append
 
-    :param convert: If convert is True, convert non-list contents
-    into a list. If convert is False and the grain contains non-list
-    contents, an error is given. Defaults to False.
+    :param convert: If convert is True, convert non-list contents into a list.
+        If convert is False and the grain contains non-list contents, an error
+        is given. Defaults to False.
 
     .. code-block:: yaml
 

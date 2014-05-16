@@ -5,10 +5,12 @@ Module to provide redis functionality to Salt
 :configuration: This module requires the redis python module and uses the
     following defaults which may be overridden in the minion configuration:
 
-        redis.host: 'localhost'
-        redis.port: 6379
-        redis.db: 0
-        redis.password: None
+.. code-block:: yaml
+
+    redis.host: 'localhost'
+    redis.port: 6379
+    redis.db: 0
+    redis.password: None
 '''
 
 # Import third party libs
@@ -118,6 +120,68 @@ def dbsize(host=None, port=None, db=None, password=None):
     return server.dbsize()
 
 
+def delete(*keys, **connection_args):
+    '''
+    Deletes the keys from redis, returns number of keys deleted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.delete foo
+    '''
+    # Get connection args from keywords if set
+    conn_args = {}
+    for arg in ['host', 'port', 'db', 'password']:
+        if arg in connection_args:
+            conn_args[arg] = connection_args[arg]
+
+    server = _connect(**conn_args)
+    return server.delete(*keys)
+
+
+def exists(key, host=None, port=None, db=None, password=None):
+    '''
+    Return true if the key exists in redis
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.exists foo
+    '''
+    server = _connect(host, port, db, password)
+    return server.exists(key)
+
+
+def expire(key, seconds, host=None, port=None, db=None, password=None):
+    '''
+    Set a keys time to live in seconds
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.expire foo 300
+    '''
+    server = _connect(host, port, db, password)
+    return server.expire(key, seconds)
+
+
+def expireat(key, timestamp, host=None, port=None, db=None, password=None):
+    '''
+    Set a keys expire at given UNIX time
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.expireat foo 1400000000
+    '''
+    server = _connect(host, port, db, password)
+    return server.expireat(key, timestamp)
+
+
 def flushall(host=None, port=None, db=None, password=None):
     '''
     Remove all keys from all databases
@@ -160,6 +224,34 @@ def get_key(key, host=None, port=None, db=None, password=None):
     return server.get(key)
 
 
+def hget(key, field, host=None, port=None, db=None, password=None):
+    '''
+    Get specific field value from a redis hash, returns dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.hget foo_hash bar_field
+    '''
+    server = _connect(host, port, db, password)
+    return server.hget(key, field)
+
+
+def hgetall(key, host=None, port=None, db=None, password=None):
+    '''
+    Get all fields and values from a redis hash, returns dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.hgetall foo_hash
+    '''
+    server = _connect(host, port, db, password)
+    return server.hgetall(key)
+
+
 def info(host=None, port=None, db=None, password=None):
     '''
     Get information and statistics about the server
@@ -174,9 +266,38 @@ def info(host=None, port=None, db=None, password=None):
     return server.info()
 
 
+def keys(pattern='*', host=None, port=None, db=None, password=None):
+    '''
+    Get redis keys, supports glob style patterns
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.keys
+        salt '*' redis.keys test*
+    '''
+    server = _connect(host, port, db, password)
+    return server.keys(pattern)
+
+
+def key_type(key, host=None, port=None, db=None, password=None):
+    '''
+    Get redis key type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.type foo
+    '''
+    server = _connect(host, port, db, password)
+    return server.type(key)
+
+
 def lastsave(host=None, port=None, db=None, password=None):
     '''
-    Get the UNIX time stamp of the last successful save to disk
+    Get the UNIX time in seconds of the last successful save to disk
 
     CLI Example:
 
@@ -185,7 +306,35 @@ def lastsave(host=None, port=None, db=None, password=None):
         salt '*' redis.lastsave
     '''
     server = _connect(host, port, db, password)
-    return str(server.lastsave())
+    return int(server.lastsave().strftime("%s"))
+
+
+def llen(key, host=None, port=None, db=None, password=None):
+    '''
+    Get the length of a list in Redis
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.llen foo_list
+    '''
+    server = _connect(host, port, db, password)
+    return server.llen(key)
+
+
+def lrange(key, start, stop, host=None, port=None, db=None, password=None):
+    '''
+    Get a range of values from a list in Redis
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.lrange foo_list 0 10
+    '''
+    server = _connect(host, port, db, password)
+    return server.lrange(key, start, stop)
 
 
 def ping(host=None, port=None, db=None, password=None):
@@ -259,13 +408,15 @@ def shutdown(host=None, port=None, db=None, password=None):
     return False
 
 
-def slaveof(master_host=None, master_port=None, host=None, port=None, db=None, password=None):
+def slaveof(master_host=None, master_port=None, host=None, port=None, db=None,
+            password=None):
     '''
     Make the server a slave of another instance, or promote it as master
 
     CLI Example:
 
     .. code-block:: bash
+
         # Become slave of redis-n01.example.com:6379
         salt '*' redis.slaveof redis-n01.example.com 6379
         salt '*' redis.slaveof redis-n01.example.com
@@ -278,9 +429,23 @@ def slaveof(master_host=None, master_port=None, host=None, port=None, db=None, p
     return server.slaveof(master_host, master_port)
 
 
+def smembers(key, host=None, port=None, db=None, password=None):
+    '''
+    Get members in a Redis set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.smembers foo_set
+    '''
+    server = _connect(host, port, db, password)
+    return list(server.smembers(key))
+
+
 def time(host=None, port=None, db=None, password=None):
     '''
-    Return the current server time
+    Return the current server UNIX time in seconds
 
     CLI Example:
 
@@ -290,3 +455,31 @@ def time(host=None, port=None, db=None, password=None):
     '''
     server = _connect(host, port, db, password)
     return server.time()[0]
+
+
+def zcard(key, host=None, port=None, db=None, password=None):
+    '''
+    Get the length of a sorted set in Redis
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.zcard foo_sorted
+    '''
+    server = _connect(host, port, db, password)
+    return server.zcard(key)
+
+
+def zrange(key, start, stop, host=None, port=None, db=None, password=None):
+    '''
+    Get a range of values from a sorted set in Redis by index
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.zrange foo_sorted 0 10
+    '''
+    server = _connect(host, port, db, password)
+    return server.zrange(key, start, stop)

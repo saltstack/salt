@@ -14,7 +14,9 @@ install certain updates. default is all available updates.
 In the example below, will install all Security and Critical Updates,
 and download but not install standard updates.
 
-Example::
+Example:
+
+.. code-block:: yaml
     updates:
         win_update.installed:
             - categories:
@@ -38,7 +40,9 @@ features/states of updates available for configuring:
     'driver' - driver updates, skipped by default
 
 This example installs all driver updates that don't require a reboot:
-Example::
+Example:
+
+.. code-block:: yaml
     gryffindor:
         win_update.install:
             - includes:

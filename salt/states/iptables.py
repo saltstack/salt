@@ -348,7 +348,11 @@ def append(name, family='ipv4', **kwargs):
             family)
         if 'save' in kwargs:
             if kwargs['save']:
-                __salt__['iptables.save'](filename=None, family=family)
+                if kwargs['save'] is not True:
+                    filename = kwargs['save']
+                else:
+                    filename = None
+                __salt__['iptables.save'](filename, family=family)
                 ret['comment'] = ('Set and Saved iptables rule for {0} to: '
                                   '{1} for {2}'.format(name, command.strip(), family))
         return ret

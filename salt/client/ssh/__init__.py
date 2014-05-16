@@ -36,6 +36,12 @@ import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
 
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
+
 # The directory where salt thin is deployed
 DEFAULT_THIN_DIR = '/tmp/.salt'
 
@@ -155,10 +161,8 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.verify_env()
-        if salt.utils.verify.verify_socket(
-                opts['interface'],
-                opts['publish_port'],
-                opts['ret_port']):
+        pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
+        if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
@@ -213,7 +217,7 @@ class SSH(object):
             ),
         }
         self.serial = salt.payload.Serial(opts)
-        self.mminion = salt.minion.MasterMinion(self.opts)
+        self.returners = salt.loader.returners(self.opts, {})
 
     def verify_env(self):
         '''
@@ -401,7 +405,7 @@ class SSH(object):
         '''
         Cache the job information
         '''
-        self.mminion.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid,
+        self.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid,
                                                                                       'id': id_,
                                                                                       'return': ret})
 
@@ -410,7 +414,7 @@ class SSH(object):
         Execute the overall routine
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.mminion.returners[fstr]()
+        jid = self.returners[fstr]()
 
         # Save the invocation information
         argv = self.opts['argv']
@@ -432,7 +436,7 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.mminion.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)
@@ -638,8 +642,11 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
         wrapper.wfuncs = self.wfuncs
-        ret = json.dumps(self.wfuncs[self.fun](*self.args, **self.kwargs))
-        return ret, '', None
+        result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+        # Mimic the json data-structure that "salt-call --local" will
+        # emit (as seen in ssh_py_shim.py)
+        ret = json.dumps({'local': result})
+        return ret
 
     def _cmd_str(self):
         '''

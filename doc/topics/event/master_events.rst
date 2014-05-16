@@ -52,7 +52,7 @@ Job events
     :var jid: The job ID.
     :var retcode: The return code for the job.
     :var fun: The function the minion ran. E.g., ``test.ping``.
-    :var return The data returned from the execution module.
+    :var return: The data returned from the execution module.
 
 Presence events
 ===============
