@@ -350,8 +350,11 @@ class Key(object):
         if not os.path.isdir(m_cache):
             return
         keys = self.list_keys()
+        minions = []
+        for key, val in keys.items():
+            minions.extend(val)
         for minion in os.listdir(m_cache):
-            if minion not in keys['minions']:
+            if minion not in minions:
                 shutil.rmtree(os.path.join(m_cache, minion))
 
     def check_master(self):
