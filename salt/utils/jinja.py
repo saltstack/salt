@@ -188,9 +188,11 @@ def ensure_sequence_filter(data):
         return [data]
     return data
 
+
 @jinja2.contextfunction
 def show_full_context(c):
     return c
+
 
 class SerializerExtension(Extension, object):
     '''
