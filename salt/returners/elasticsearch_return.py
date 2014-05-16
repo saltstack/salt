@@ -11,22 +11,22 @@ To enable this returner the elasticsearch python client must be installed
 on the desired minions (all or some subset).
 
 The required configuration is as follows:
-    
+
     elasticsearch:
         host: 'somehost.example.com:9200'
         index: 'salt'
         number_of_shards: 1 (optional)
         number_of_replicas: 0 (optional)
 
-The above configuration can be placed in a targeted pillar, minion or 
-master configurations. 
+The above configuration can be placed in a targeted pillar, minion or
+master configurations.
 
 To use the returner per salt call:
 
     salt '*' test.ping --return elasticsearch
 
 In order to have the returner apply to all minions:
-    
+
     ext_job_cache: elasticsearch
 '''
 
