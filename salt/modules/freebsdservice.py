@@ -160,6 +160,9 @@ def _switch(name,                   # pylint: disable=C0103
                 nlines.append('{0}="{1}"{2}'.format(rcvar, val, rest))
                 edited = True
     if not edited:
+        # Ensure that the file ends in a \n
+        if nlines[-1][-1] != '\n':
+            nlines[-1] = '{0}\n'.format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
     with salt.utils.fopen(config, 'w') as ofile:
