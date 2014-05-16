@@ -2502,14 +2502,14 @@ def append(name,
     Ensure that some text appears at the end of a file.
 
     The text will not be appended if it already exists in the file.
-    A single line of text or a list of lines may be appended.
+    A single string of text or a list of strings may be appended.
 
     name
         The location of the file to append to.
 
     text
-        The text to be appended, which can be a single line or a list
-        of lines.
+        The text to be appended, which can be a single string or a list
+        of strings.
 
     makedirs
         If the file is located in a path without a parent directory,
