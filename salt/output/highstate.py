@@ -150,10 +150,17 @@ def _format_host(host, data):
                 comment = ret['comment'].strip().replace(
                     '\n',
                     '\n' + ' ' * 14)
-            except AttributeError:
-                comment = ret['comment'].join(' ').replace(
-                    '\n',
-                    '\n' + ' ' * 13)
+            except AttributeError:  # Assume comment is a list
+                try:
+                    comment = ret['comment'].join(' ').replace(
+                        '\n',
+                        '\n' + ' ' * 13)
+                except AttributeError:
+                    # Comment isn't a list either, just convert to string
+                    comment = str(ret['comment'])
+                    comment = comment.strip().replace(
+                        '\n',
+                        '\n' + ' ' * 14)
             for detail in ['start_time', 'duration']:
                 ret.setdefault(detail, '')
             if ret['duration'] != '':
