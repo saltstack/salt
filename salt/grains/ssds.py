@@ -52,4 +52,10 @@ def ssds():
                 if revision:
                     ssd_devices[device]['revision'] = revision
 
+            size_file = os.path.join('/sys/block', device, 'device/size')
+            with salt.utils.fopen(size_file) as size_fp:
+                size = size_fp.readline().rstrip()
+                if size:
+                    ssd_devices[device]['size'] = size
+
     return {'ssds': ssd_devices}
