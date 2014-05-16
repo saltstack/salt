@@ -23,7 +23,7 @@ class SaltSafe(object):
     '''
     Interface between Salt Key management and RAET keep key management
     '''
-    LocalFields = ['sighex', 'prihex']
+    LocalFields = ['sighex', 'prihex', 'auto']
     RemoteFields = ['uid', 'name', 'acceptance', 'verhex', 'pubhex']
 
     def __init__(self, opts, **kwa):
@@ -53,7 +53,7 @@ class SaltSafe(object):
         data = self.saltRaetKey.read_local()
         if not data:
             return None
-        return (odict(sighex=data['sign'], prihex=data['priv']))
+        return (odict(sighex=data['sign'], prihex=data['priv'], auto=self.auto))
 
     def clearLocalData(self):
         '''
@@ -109,6 +109,7 @@ class SaltSafe(object):
         data = odict([
                         ('sighex', local.signer.keyhex),
                         ('prihex', local.priver.keyhex),
+                        ('auto', self.auto), 
                     ])
         if self.verifyLocalData(data):
             self.dumpLocalData(data)
