@@ -44,21 +44,21 @@ def disabled(name):
     return ret
 
 
-def add_rule(name, localport, protocol = "tcp", action = "allow", dir = "in"):
+def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
     '''
     Add a new firewall rule (Windows only)
     '''
-    ret = { 'name': name,
-            'result': True,
-            'changes': {},
-            'comment': ''}
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
 
     # Check if rule exists
     commit = False
     current_rules = __salt__['firewall.get_rule'](name)
     if not current_rules:
         commit = True
-        ret['changes'] = { 'new rule': name }
+        ret['changes'] = {'new rule': name}
 
     if __opts__['test']:
         ret['result'] = None
