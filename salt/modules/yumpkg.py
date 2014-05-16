@@ -108,7 +108,7 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     cmd = 'repoquery --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     return out.splitlines()
 
 
@@ -174,7 +174,7 @@ def _rpm_pkginfo(name):
     queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
         'rpm -qp --queryformat {0!r} {1}'.format(queryformat, name),
-        output_loglevel='debug',
+        output_loglevel='trace',
         ignore_retcode=True
     )
     return _parse_pkginfo(output)
@@ -541,9 +541,7 @@ def refresh_db():
     }
 
     cmd = 'yum -q clean expire-cache && yum -q check-update'
-    ret = __salt__['cmd.retcode'](cmd,
-                                  output_loglevel='debug',
-                                  ignore_retcode=True)
+    ret = __salt__['cmd.retcode'](cmd, ignore_retcode=True)
     return retcodes.get(ret, False)
 
 
@@ -838,7 +836,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if downgrade:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} downgrade {pkg}'.format(
@@ -847,7 +845,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if to_reinstall:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} reinstall {pkg}'.format(
@@ -856,7 +854,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(to_reinstall),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -928,7 +926,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         exclude=exclude_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '')
 
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -974,7 +972,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
     cmd = 'yum -q -y remove "{0}"'.format('" "'.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -1214,7 +1212,7 @@ def group_list():
     '''
     ret = {'installed': [], 'available': [], 'available languages': {}}
     cmd = 'yum grouplist'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug').splitlines()
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
     for idx in xrange(len(out)):
         if out[idx] == 'Installed Groups:':
@@ -1268,7 +1266,7 @@ def group_info(name):
     cmd_template = 'repoquery --group --grouppkgs={0} --list {1!r}'
 
     cmd = cmd_template.format('all', name)
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     all_pkgs = set(out.splitlines())
 
     if not all_pkgs:
@@ -1278,7 +1276,7 @@ def group_info(name):
         cmd = cmd_template.format(pkgtype, name)
         packages = set(
             __salt__['cmd.run_stdout'](
-                cmd, output_loglevel='debug'
+                cmd, output_loglevel='trace'
             ).splitlines()
         )
         ret['{0} packages'.format(pkgtype)].extend(sorted(packages))
@@ -1290,7 +1288,7 @@ def group_info(name):
     ret['conditional packages'] = sorted(all_pkgs)
 
     cmd = 'repoquery --group --info {0!r}'.format(name)
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     if out:
         ret['description'] = '\n'.join(out.splitlines()[1:]).strip()
 
@@ -1667,7 +1665,7 @@ def owner(*paths):
     cmd = 'rpm -qf --queryformat "%{NAME}" {0!r}'
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='debug')
+                                               output_loglevel='trace')
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
