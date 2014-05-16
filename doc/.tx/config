@@ -4274,3 +4274,21 @@ source_file = _build/locale/topics/releases/2014.1.4.pot
 source_lang = en
 source_name = topics/releases/2014.1.4.rst
 
+[salt.ref--modules--all--salt_modules_redismod]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.redismod.po
+source_file = _build/locale/ref/modules/all/salt.modules.redismod.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.redismod.rst
+
+[salt.ref--pillar--all--salt_pillar_redismod]
+file_filter = locale/<lang>/LC_MESSAGES/ref/pillar/all/salt.pillar.redismod.po
+source_file = _build/locale/ref/pillar/all/salt.pillar.redismod.pot
+source_lang = en
+source_name = ref/pillar/all/salt.pillar.redismod.rst
+
+[salt.ref--states--all--salt_states_redismod]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.redismod.po
+source_file = _build/locale/ref/states/all/salt.states.redismod.pot
+source_lang = en
+source_name = ref/states/all/salt.states.redismod.rst
+
