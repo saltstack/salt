@@ -12,6 +12,7 @@ import tempfile
 # Import salt libs
 import salt.utils
 from salt.utils import which as _which
+from salt.exceptions import SaltInvocationError
 
 
 __outputter__ = {
@@ -75,6 +76,8 @@ def __write_aliases_file(lines):
             os.chown(out.name, 0, 0)
 
     for (line_alias, line_target, line_comment) in lines:
+        if isinstance(line_target, list):
+            line_target = ', '.join(line_target)
         if not line_comment:
             line_comment = ''
         if line_alias and line_target:
@@ -137,8 +140,15 @@ def has_target(alias, target):
 
         salt '*' aliases.has_target alias target
     '''
+    if target == '':
+        raise SaltInvocationError('target can not be an empty string')
     aliases = list_aliases()
-    return alias in aliases and target == aliases[alias]
+    if alias in aliases and isinstance(target, list):
+        for item in target:
+            if item not in aliases[alias]:
+                return False
+        target = ', '.join(target)
+    return alias in aliases and target in aliases[alias]
 
 
 def set_target(alias, target):
@@ -153,6 +163,12 @@ def set_target(alias, target):
 
         salt '*' aliases.set_target alias target
     '''
+
+    if alias == '':
+        raise SaltInvocationError('alias can not be an empty string')
+
+    if target == '':
+        raise SaltInvocationError('target can not be an empty string')
 
     if get_target(alias) == target:
         return True
