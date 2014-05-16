@@ -120,8 +120,8 @@ def mounted(name,
     if real_name in active:
         device_list.append(active[real_name]['device'])
         device_list.append(os.path.realpath(device_list[0]))
-        alt_device = active[real_name]['alt_device']
-        uuid_device = active[real_name]['device_uuid']
+        alt_device = active[real_name]['alt_device'] if 'alt_device' in active[real_name] else None
+        uuid_device = active[real_name]['device_uuid'] if 'device_uuid' in active[real_name] else None
         if alt_device and alt_device not in device_list:
             device_list.append(alt_device)
         if uuid_device and uuid_device not in device_list:
