@@ -63,7 +63,7 @@ def disable():
             ) == 'Ok.'
 
 
- def get_rule(name = "all"):
+ def get_rule(name="all"):
     '''
     Get firewall rule(s) info
 
@@ -83,7 +83,7 @@ def disable():
     return ret
 
 
-def add_rule(name, localport, protocol = "tcp", action = "allow", dir = "in"):
+def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
     '''
     Add a new firewall rule
 
