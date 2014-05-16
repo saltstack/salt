@@ -222,17 +222,9 @@ class BasicTestCase(unittest.TestCase):
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
         self.assertDictEqual(remotekeys, {})
-        #self.assertDictEqual(remotekeys, {   'device_id': 2,
-                                             #'minion_id': 'other1',
-                                             #'pub': other1['pubhex'],
-                                             #'verify': other1['verhex']} )
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
         self.assertDictEqual(remotekeys, {})
-        #self.assertDictEqual(remotekeys, {   'device_id': 3,
-                                               #'minion_id': 'other2',
-                                               #'pub': other2['pubhex'],
-                                               #'verify': other2['verhex']} )
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': [],
@@ -263,14 +255,12 @@ class BasicTestCase(unittest.TestCase):
                                 'rejected': []} )
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        #self.assertDictEqual(remotekeys, {})
         self.assertDictEqual(remotekeys, {   'device_id': 2,
                                              'minion_id': 'other1',
                                              'pub': other1['pubhex'],
                                              'verify': other1['verhex']} )
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        #self.assertDictEqual(remotekeys, {})
         self.assertDictEqual(remotekeys, {   'device_id': 3,
                                                'minion_id': 'other2',
                                                'pub': other2['pubhex'],

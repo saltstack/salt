@@ -217,41 +217,47 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.safe.dirpath.endswith('pki'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.safe.auto)
-        self.assertDictEqual(main.keep.loadLocalData(), {'eid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': 'main',
+                                                         'ha': ['0.0.0.0', 7530],
                                                          'main': True,
-                                                         'host': '0.0.0.0',
-                                                         'port': 7530,
                                                          'sid': 0})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
-                                                     'sighex': dataMain['sighex']})
+                                                     'sighex': dataMain['sighex'],
+                                                     'auto': True})
 
 
         data1 = self.createRoadData(name='remote1', base=self.baseDirpath)
-        main.addRemote(estating.RemoteEstate(eid=3,
-                                        name=data1['name'],
-                                        ha=('127.0.0.1', 7532),
-                                        verkey=data1['verhex'],
-                                        pubkey=data1['pubhex']))
+        main.addRemote(estating.RemoteEstate(stack=main,
+                                             eid=3,
+                                             name=data1['name'],
+                                             ha=('127.0.0.1', 7532),
+                                             verkey=data1['verhex'],
+                                             pubkey=data1['pubhex'],
+                                             period=main.period,
+                                             offset=main.offset, ))
 
         data2 = self.createRoadData(name='remote2', base=self.baseDirpath)
-        main.addRemote(estating.RemoteEstate(eid=4,
-                                        name=data2['name'],
-                                        ha=('127.0.0.1', 7533),
-                                        verkey=data2['verhex'],
-                                        pubkey=data2['pubhex']))
+        main.addRemote(estating.RemoteEstate(stack=main,
+                                             eid=4,
+                                             name=data2['name'],
+                                             ha=('127.0.0.1', 7533),
+                                             verkey=data2['verhex'],
+                                             pubkey=data2['pubhex'],
+                                             period=main.period,
+                                             offset=main.offset,))
 
         main.dumpRemotes()
 
         self.assertDictEqual(main.safe.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': data1['name'],
                  'acceptance': 1,
                  'verhex': data1['verhex'],
                  'pubhex': data1['pubhex']},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': data2['name'],
                  'acceptance': 1,
                  'verhex': data2['verhex'],
@@ -259,17 +265,15 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': 'remote1',
-                 'host': '127.0.0.1',
-                 'port': 7532,
+                 'ha': ['127.0.0.1', 7532],
                  'sid': 0,
                  'rsid': 0},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': 'remote2',
-                 'host': '127.0.0.1',
-                 'port': 7533,
+                 'ha': ['127.0.0.1', 7533],
                  'sid': 0,
                  'rsid': 0}})
 
@@ -304,32 +308,39 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
 
         self.assertDictEqual(other.safe.loadLocalData(), {'prihex': dataOther['prihex'],
-                                                        'sighex': dataOther['sighex']})
+                                                        'sighex': dataOther['sighex'],
+                                                        'auto': True,})
 
         data3 = self.createRoadData(name='remote3', base=self.baseDirpath)
-        other.addRemote(estating.RemoteEstate(eid=3,
-                                        name=data3['name'],
-                                        ha=('127.0.0.1', 7534),
-                                        verkey=data3['verhex'],
-                                        pubkey=data3['pubhex']))
+        other.addRemote(estating.RemoteEstate(stack=other,
+                                              eid=3,
+                                              name=data3['name'],
+                                              ha=('127.0.0.1', 7534),
+                                              verkey=data3['verhex'],
+                                              pubkey=data3['pubhex'],
+                                              period=main.period,
+                                              offset=main.offset,))
 
         data4 = self.createRoadData(name='remote4', base=self.baseDirpath)
-        other.addRemote(estating.RemoteEstate(eid=4,
-                                        name=data4['name'],
-                                        ha=('127.0.0.1', 7535),
-                                        verkey=data4['verhex'],
-                                        pubkey=data4['pubhex']))
+        other.addRemote(estating.RemoteEstate(stack=other,
+                                              eid=4,
+                                              name=data4['name'],
+                                              ha=('127.0.0.1', 7535),
+                                              verkey=data4['verhex'],
+                                              pubkey=data4['pubhex'],
+                                             period=main.period,
+                                             offset=main.offset,))
 
         other.dumpRemotes()
         self.assertDictEqual(other.safe.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': data3['name'],
                  'acceptance': 1,
                  'verhex': data3['verhex'],
                  'pubhex': data3['pubhex']},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': data4['name'],
                  'acceptance': 1,
                  'verhex': data4['verhex'],
@@ -338,17 +349,15 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(other.keep.loadAllRemoteData(),
             {'3':
-                {'eid': 3,
+                {'uid': 3,
                  'name': 'remote3',
-                 'host': '127.0.0.1',
-                 'port': 7534,
+                 'ha': ['127.0.0.1', 7534],
                  'sid': 0,
                  'rsid': 0},
             '4':
-                {'eid': 4,
+                {'uid': 4,
                  'name': 'remote4',
-                 'host': '127.0.0.1',
-                 'port': 7535,
+                 'ha': ['127.0.0.1', 7535],
                  'sid': 0,
                  'rsid': 0}})
 
@@ -375,14 +384,14 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.safe.dirpath.endswith('pki'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.safe.auto)
-        self.assertDictEqual(main.keep.loadLocalData(), {'eid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': 'main',
+                                                         'ha': ['0.0.0.0', 7530],
                                                          'main': True,
-                                                         'host': '0.0.0.0',
-                                                         'port': 7530,
                                                          'sid': 0})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
-                                                     'sighex': dataMain['sighex']})
+                                                     'sighex': dataMain['sighex'],
+                                                     'auto': True,})
 
         self.assertEqual(self.otherSafe.loadLocalData(), None)
         self.assertEqual(self.otherSafe.loadAllRemoteData(), {})
@@ -402,7 +411,8 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(other.safe.auto)
 
         self.assertDictEqual(other.safe.loadLocalData(), {'prihex': dataOther['prihex'],
-                                                        'sighex': dataOther['sighex']})
+                                                        'sighex': dataOther['sighex'],
+                                                        'auto': True,})
 
         self.join(other, main)
         self.assertEqual(len(main.transactions), 0)
