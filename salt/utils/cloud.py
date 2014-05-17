@@ -1929,11 +1929,15 @@ def activate_minion_cachedir(minion_id, base=None):
     shutil.move(src, dst)
 
 
-def delete_minion_cachedir(minion_id, base=None):
+def delete_minion_cachedir(minion_id, opts, base=None):
     '''
     Deletes a minion's entry from the cloud cachedir. It will search through
     all cachedirs to find the minion's cache file.
+    Needs `update_cachedir` set to True.
     '''
+    if opts.get('update_cachedir', False) is False:
+        return
+
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 

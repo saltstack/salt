@@ -860,6 +860,8 @@ def destroy(name, call=None):
             {'name': name},
             transport=__opts__['transport']
         )
+        if __opts__.get('update_cachedir', False) is True:
+            salt.utils.cloud.delete_minion_cachedir(name, __opts__)
 
         return {'Destroyed': '{0} was destroyed.'.format(name)}
 
