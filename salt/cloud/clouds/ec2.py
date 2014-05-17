@@ -2333,7 +2333,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name)
+        salt.utils.cloud.delete_minion_cachedir(name, __opts__)
 
     return ret
 
