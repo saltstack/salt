@@ -126,6 +126,7 @@ def prep_trans_tar(opts, chunks, file_refs):
             ['salt://_renderers'],
             ['salt://_returners'],
             ['salt://_outputters'],
+            ['salt://_utils'],
             ]
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
