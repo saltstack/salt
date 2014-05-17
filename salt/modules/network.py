@@ -48,7 +48,7 @@ def _netstat_linux():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         comps = line.split()
         if line.startswith('tcp'):
@@ -84,7 +84,7 @@ def _netinfo_openbsd():
         r'internet(6)? (?:stream tcp 0x\S+ (\S+)|dgram udp (\S+))'
         r'(?: [<>=-]+ (\S+))?$'
     )
-    out = __salt__['cmd.run']('fstat', output_loglevel='debug')
+    out = __salt__['cmd.run']('fstat')
     for line in out.splitlines():
         try:
             user, cmd, pid, _, details = line.split(None, 4)
@@ -131,8 +131,7 @@ def _netinfo_freebsd_netbsd():
     out = __salt__['cmd.run'](
         'sockstat -46 {0} | tail -n+2'.format(
             '-n' if __grains__['kernel'] == 'NetBSD' else ''
-        ),
-        output_loglevel='debug'
+        )
     )
     for line in out.splitlines():
         user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
@@ -153,7 +152,7 @@ def _ppid():
     '''
     ret = {}
     cmd = 'ps -ax -o pid,ppid | tail -n+2'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         pid, ppid = line.split()
         ret[pid] = ppid
@@ -168,7 +167,7 @@ def _netstat_bsd():
     if __grains__['kernel'] == 'NetBSD':
         for addr_family in ('inet', 'inet6'):
             cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
-            out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+            out = __salt__['cmd.run'](cmd)
             for line in out.splitlines():
                 comps = line.split()
                 entry = {
@@ -184,7 +183,7 @@ def _netstat_bsd():
     else:
         # Lookup TCP connections
         cmd = 'netstat -p tcp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -196,7 +195,7 @@ def _netstat_bsd():
                 'state': comps[5]})
         # Lookup UDP connections
         cmd = 'netstat -p udp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
