@@ -384,7 +384,7 @@ def destroy(name, conn=None, call=None):
             transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
-            salt.utils.cloud.remove_sshkey(node.public_ips[0])
+            salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
         return True
 
     log.error('Failed to Destroy VM: {0}'.format(name))
