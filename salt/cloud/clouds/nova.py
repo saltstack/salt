@@ -777,9 +777,12 @@ def list_nodes_full(call=None, **kwargs):
     if not server_list:
         return {}
     for server in server_list.keys():
-        ret[server] = conn.server_show_libcloud(
-            server_list[server]['id']
-        ).__dict__
+        try:
+            ret[server] = conn.server_show_libcloud(
+                server_list[server]['id']
+            ).__dict__
+        except IndexError as exc:
+            ret = {}
 
     salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
