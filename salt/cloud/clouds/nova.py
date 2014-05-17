@@ -235,7 +235,7 @@ def show_instance(name, call=None):
         )
 
     conn = get_conn()
-    return conn.show_instance(name)
+    return conn.show_instance(name).__dict__
 
 
 def get_size(conn, vm_):
@@ -565,13 +565,11 @@ def create(vm_):
 
     def __query_node_data(vm_, data):
         try:
-            node = show_instance(vm_['name'])
+            node = show_instance(vm_['name'], 'action')
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
-                    pprint.pformat(
-                        nodelist[vm_['name']]
-                    )
+                    pprint.pformat(node)
                 )
             )
         except Exception as err:
@@ -585,7 +583,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = node['state'] == 'ACTIVE'
+        running = node['status'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
@@ -751,7 +749,7 @@ def list_nodes(call=None, **kwargs):
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
-            'state': server_tmp['status'],
+            'status': server_tmp['status'],
             'private_ips': [addrs['addr'] for addrs in server_tmp['addresses']['private']],
             'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
         }
