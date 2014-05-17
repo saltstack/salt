@@ -583,7 +583,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = node['status'] == 'ACTIVE'
+        running = node['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
@@ -749,7 +749,7 @@ def list_nodes(call=None, **kwargs):
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
-            'status': server_tmp['status'],
+            'state': server_tmp['state'],
             'private_ips': [addrs['addr'] for addrs in server_tmp['addresses']['private']],
             'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
         }
