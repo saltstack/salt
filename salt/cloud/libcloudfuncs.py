@@ -390,7 +390,6 @@ def destroy(name, conn=None, call=None):
 
         return True
 
-
     log.error('Failed to Destroy VM: {0}'.format(name))
     return False
 
