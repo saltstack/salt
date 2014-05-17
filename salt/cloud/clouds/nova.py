@@ -565,7 +565,7 @@ def create(vm_):
 
     def __query_node_data(vm_, data):
         try:
-            nodelist = list_nodes_full()
+            node = show_instance(vm_['name'])
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
@@ -585,13 +585,13 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == 'ACTIVE'
+        running = node['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
 
         if rackconnect(vm_) is True:
-            extra = nodelist[vm_['name']].get('extra', {})
+            extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
             access_ip = extra.get('access_ip', '')
@@ -602,7 +602,7 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = conn.server_show_libcloud(
-                nodelist[vm_['name']]['id']
+                node['id']
             ).extra
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
@@ -612,8 +612,8 @@ def create(vm_):
                 return
 
         result = []
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
+        private = node['private_ips']
+        public = node['public_ips']
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
