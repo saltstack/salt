@@ -2071,7 +2071,7 @@ def cache_node_list(nodes, provider, opts):
         os.makedirs(prov_dir)
 
     # Check to see if any nodes in the cache are not in the new list
-    missing_node_cache(prov_dir, nodes.keys(), opts)
+    missing_node_cache(prov_dir, nodes, opts)
 
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
@@ -2101,14 +2101,16 @@ def missing_node_cache(prov_dir, node_list, opts):
     log.debug(sorted(cached_nodes))
     log.debug(sorted(node_list))
     for node in cached_nodes:
-        if node not in node_list:
-            fire_event(
-                'event',
-                'cached node missing from provider',
-                'salt/cloud/{0}/cache_node_missing'.format(node),
-                {'missing node': node},
-                transport=opts.get('transport', 'zeromq')
-            )
+        if not node_list.has_key(node):
+            delete_minion_cachedir(node)
+            if 'diff_cache_events' in opts and opts['diff_cache_events']:
+                fire_event(
+                    'event',
+                    'cached node missing from provider',
+                    'salt/cloud/{0}/cache_node_missing'.format(node),
+                    {'missing node': node},
+                    transport=opts.get('transport', 'zeromq')
+                )
 
 
 def diff_node_cache(prov_dir, node, new_data, opts):
