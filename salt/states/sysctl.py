@@ -53,8 +53,9 @@ def present(name, value, config=None):
             config = '/etc/sysctl.conf'
 
     current = __salt__['sysctl.show']()
+    configured = __salt__['sysctl.show'](config_file=True)
     if __opts__['test']:
-        if name in current:
+        if name in current and name not in configured:
             if re.sub(' +|\t+', ' ', current[name]) != re.sub(' +|\t+', ' ', str(value)):
                 ret['result'] = None
                 ret['comment'] = (
@@ -62,8 +63,19 @@ def present(name, value, config=None):
                         ).format(name, value)
                 return ret
             else:
-                ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(name, value)
+                ret['result'] = None
+                ret['comment'] = 'Sysctl value is currently set on the running system but not in a config file.\n'\
+                'Sysctl option {0} set to be changed to {1} in config file.'.format(name, value)
                 return ret
+        elif name in configured and name not in current:
+            ret['result'] = None
+            ret['comment'] = 'Sysctl value {0} is present in configuration file but is not present in the running config.\n'\
+                    'The value {0} is set to be changed to {1} '
+            return ret
+        elif name not in configured and name not in current:
+            ret['result'] = None
+            ret['comment'] = 'Sysctl option {0}  set to be changed to {1}'.format(name, value)
+            return ret
         else:
             ret['result'] = False
             ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name, value)

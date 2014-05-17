@@ -257,7 +257,7 @@ def _run(cmd,
     if not _is_valid_shell(shell):
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
-            'Check to ensure that she shell <{0}> is valid for this user.'
+            'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
 
     # Set the default working directory to the home directory of the user

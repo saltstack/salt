@@ -66,9 +66,12 @@ def default_config():
     return '/etc/sysctl.conf'
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
+
+    config: Pull the data from the system configuration file
+        instead of the live data.
 
     CLI Example:
 
@@ -76,14 +79,25 @@ def show():
 
         salt '*' sysctl.show
     '''
-    cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
-        if not line or ' = ' not in line:
-            continue
-        comps = line.split(' = ', 1)
-        ret[comps[0]] = comps[1]
+    if config_file:
+        config_file_path = default_config()
+        try:
+            for line in salt.utils.fopen(config_file_path):
+                if not line.startswith('#') and '=' in line:
+                    key, value = line.split(' = ', 1)
+                    ret[key] = value
+        except OSError:
+            log.error('Could not open sysctl file')
+            return None
+    else:
+        cmd = 'sysctl -a'
+        out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+        for line in out.splitlines():
+            if not line or ' = ' not in line:
+                continue
+            comps = line.split(' = ', 1)
+            ret[comps[0]] = comps[1]
     return ret
 
 
