@@ -130,6 +130,7 @@ except ImportError:
 
 # Get logging started
 log = logging.getLogger(__name__)
+request_log = logging.getLogger('requests')
 
 
 # Some of the libcloud functions need to be in the same namespace as the
@@ -144,6 +145,7 @@ def __virtual__():
     '''
     Check for Nova configurations
     '''
+    request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
     return nova.HAS_NOVA
 
 
