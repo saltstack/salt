@@ -491,18 +491,13 @@ class LocalClient(object):
         :param kwarg: A dictionary with keyword arguments for the function.
 
         :param kwargs: Optional keyword arguments.
-
             Authentication credentials may be passed when using
             :conf_master:`external_auth`.
 
-            * ``eauth`` - the external_auth backend
-            * ``username`` and ``password``
-            * ``token``
-
-            .. code-block:: python
-
-                >>> local.cmd('*', 'test.ping',
-                        username='saltdev', password='saltdev', eauth='pam')
+            For example: ``local.cmd('*', 'test.ping', username='saltdev',
+            password='saltdev', eauth='pam')``.
+            Or: ``local.cmd('*', 'test.ping',
+            token='5871821ea51754fdcea8153c1c745433')``
 
         :returns: A dictionary with the result of the execution, keyed by
             minion ID. A compound command will return a sub-dictionary keyed by
