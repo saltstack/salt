@@ -2105,8 +2105,8 @@ def missing_node_cache(prov_dir, node_list, opts):
     log.debug(sorted(cached_nodes))
     log.debug(sorted(node_list))
     for node in cached_nodes:
-        if not node_list.has_key(node):
-            delete_minion_cachedir(node)
+        if node not in node_list:
+            delete_minion_cachedir(node, opts)
             if 'diff_cache_events' in opts and opts['diff_cache_events']:
                 fire_event(
                     'event',
