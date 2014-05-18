@@ -263,6 +263,12 @@ def sync_minion(options):
         setattr(options, 'salt_minion_synced', 'yes')
 
 
+def to_cli_yaml(data):
+    '''
+    Return a YAML string for CLI usage
+    '''
+    return yaml.dump(data, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
+
 def build_pillar_data(options):
     '''
     Build a YAML formatted string to properly pass pillar data
@@ -278,7 +284,7 @@ def build_pillar_data(options):
         pillar['bootstrap_salt_commit'] = options.bootstrap_salt_commit
     if options.pillar:
         pillar.update(dict(options.pillar))
-    return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
+    return to_cli_yaml(pillar)
 
 
 def build_minion_target(options):
@@ -788,6 +794,9 @@ def main():
     if not options.vm_source and not options.vm_name:
         parser.error('Unable to get VM name from environ nor generate it without --vm-source')
 
+    if options.lxc:
+        options.cloud = False
+
     if not options.vm_name:
         options.vm_name = get_vm_name(options)
 
@@ -829,9 +838,27 @@ def main():
         cmd.append('salt-run')
 
     if options.lxc:
-        cmd.extend(['lxc.init', options.vm_name, 'template={0}'.format(options.vm_source)])
+        cmd.append('lxc.init')
+        if options.peer:
+            cmd.append(
+                'arg={0}'.format(
+                    to_cli_yaml([
+                        options.vm_name, 'image={0}'.format(options.vm_source)
+                    ])
+                )
+            )
+        else:
+            cmd.extend([options.vm_name, 'image={0}'.format(options.vm_source)])
     else:
-        cmd.extend(['cloud.profile', options.vm_source, options.vm_name])
+        cmd.append('cloud.profile')
+        if options.peer:
+            cmd.append(
+                'arg={0}'.format(
+                    to_cli_yaml([options.vm_source, options.vm_name])
+                )
+            )
+        else:
+            cmd.extend([options.vm_source, options.vm_name])
 
     if options.cloud:
         if options.bootstrap_salt_commit is not None:
