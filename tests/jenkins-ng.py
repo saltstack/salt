@@ -841,7 +841,7 @@ def main():
         cmd.append('lxc.init')
         if options.peer:
             cmd.append(
-                'arg={0}'.format(
+                'arg="{0}"'.format(
                     to_cli_yaml([
                         options.vm_name, 'image={0}'.format(options.vm_source)
                     ])
@@ -853,7 +853,7 @@ def main():
         cmd.append('cloud.profile')
         if options.peer:
             cmd.append(
-                'arg={0}'.format(
+                'arg="{0}"'.format(
                     to_cli_yaml([options.vm_source, options.vm_name])
                 )
             )
