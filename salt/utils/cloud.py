@@ -2150,7 +2150,11 @@ def diff_node_cache(prov_dir, node, new_data, opts):
         return
 
     with salt.utils.fopen(path, 'r') as fh_:
-        cache_data = json.load(fh_)
+        try:
+            cache_data = json.load(fh_)
+        except ValueError as exc:
+            log.warning('Cache for {0} was corrupt: Deleting'.format(node))
+            cache_data = {}
 
     # Perform a simple diff between the old and the new data, and if it differs,
     # return both dicts.
