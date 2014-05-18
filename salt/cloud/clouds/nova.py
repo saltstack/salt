@@ -443,7 +443,7 @@ def request_instance(vm_=None, call=None):
     )
     if security_groups is not None:
         vm_groups = security_groups.split(',')
-        avail_groups = conn.ex_list_security_groups()
+        avail_groups = conn.list_security_groups()
         group_list = []
 
         for vmg in vm_groups:
@@ -454,7 +454,7 @@ def request_instance(vm_=None, call=None):
                     'No such security group: \'{0}\''.format(vmg)
                 )
 
-        kwargs['ex_security_groups'] = [
+        kwargs['security_groups'] = [
             g for g in avail_groups if g.name in group_list
         ]
 
@@ -476,7 +476,7 @@ def request_instance(vm_=None, call=None):
 
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
-            kwargs['ex_userdata'] = fp.read()
+            kwargs['userdata'] = fp.read()
 
     salt.utils.cloud.fire_event(
         'event',
