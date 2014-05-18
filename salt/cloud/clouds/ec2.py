@@ -2384,7 +2384,9 @@ def show_instance(name, call=None):
             'The show_instance action must be called with -a or --action.'
         )
 
-    return _get_node(name)
+    node = _get_node(name)
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def _get_node(name, location=None):

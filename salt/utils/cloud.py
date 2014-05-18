@@ -2084,6 +2084,23 @@ def cache_node_list(nodes, provider, opts):
             json.dump(nodes[node], fh_)
 
 
+def cache_node(node, provider, opts):
+    '''
+    Cache node individually
+
+    .. versionadded:: Helium
+    '''
+    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+        return
+
+    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+    provider, driver = provider.split(':')
+    prov_dir = os.path.join(base, driver, provider)
+    path = os.path.join(prov_dir, '{0}.json'.format(node['name']))
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(node, fh_)
+
+
 def missing_node_cache(prov_dir, node_list, opts):
     '''
     Check list of nodes to see if any nodes which were previously known about

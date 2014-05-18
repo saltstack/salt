@@ -237,7 +237,9 @@ def show_instance(name, call=None):
         )
 
     conn = get_conn()
-    return conn.show_instance(name).__dict__
+    node = conn.show_instance(name).__dict__
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def get_size(conn, vm_):
