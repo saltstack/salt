@@ -386,7 +386,7 @@ def destroy(name, conn=None, call=None):
         if __opts__['delete_sshkeys'] is True:
             salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
         if __opts__.get('update_cachedir', False) is True:
-            salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0],  __opts__)
+            salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
         return True
 
