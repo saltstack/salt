@@ -281,6 +281,7 @@ def show_instance(name, call=None):
     if not call:
         call = 'action'
     nodes = list_nodes_full(call=call)
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
