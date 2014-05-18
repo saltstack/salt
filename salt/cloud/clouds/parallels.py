@@ -592,6 +592,8 @@ def show_instance(name, call=None):
             children = item._children
             for child in children:
                 ret[item.tag][child.tag] = child.attrib
+
+    salt.utils.cloud.cache_node(item, __active_provider_name__, __opts__)
     return ret
 
 

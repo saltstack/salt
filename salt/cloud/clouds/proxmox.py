@@ -756,6 +756,7 @@ def show_instance(name, call=None, instance_type=None):
         )
 
     nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 

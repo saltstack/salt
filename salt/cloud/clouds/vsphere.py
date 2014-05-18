@@ -474,6 +474,7 @@ def show_instance(name, call=None):
     ret = instance.get_properties()
     ret['status'] = instance.get_status()
     ret['tools_status'] = instance.get_tools_status()
+    salt.utils.cloud.cache_node(ret, __active_provider_name__, __opts__)
     return ret
 
 
