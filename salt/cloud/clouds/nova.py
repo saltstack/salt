@@ -468,8 +468,12 @@ def request_instance(vm_=None, call=None):
     if files:
         kwargs['files'] = {}
         for src_path in files:
-            with salt.utils.fopen(files[src_path], 'r') as fp_:
-                kwargs['files'][src_path] = fp_.read()
+            if os.path.exists(files[src_path]):
+                with salt.utils.fopen(files[src_path], 'r') as fp_:
+                    kwargs['files'][src_path] = fp_.read()
+            else:
+                kwargs['files'][src_path] = files[src_path]
+
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False
     )
