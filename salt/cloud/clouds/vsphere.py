@@ -512,7 +512,7 @@ def destroy(name, call=None):  # pylint: disable=W0613
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __opts__)
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0],  __opts__)
 
     return True
 

@@ -354,7 +354,7 @@ def destroy(vm_, call=None):
                 transport=__opts__['transport']
             )
             if __opts__.get('update_cachedir', False) is True:
-                salt.utils.cloud.delete_minion_cachedir(vm_, __opts__)
+                salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0],  __opts__)
     return ret
 
 
