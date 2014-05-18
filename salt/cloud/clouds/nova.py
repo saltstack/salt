@@ -130,6 +130,7 @@ except ImportError:
 
 # Get logging started
 log = logging.getLogger(__name__)
+request_log = logging.getLogger('requests')
 
 
 # Some of the libcloud functions need to be in the same namespace as the
@@ -144,6 +145,7 @@ def __virtual__():
     '''
     Check for Nova configurations
     '''
+    request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
     return nova.HAS_NOVA
 
 
@@ -235,7 +237,7 @@ def show_instance(name, call=None):
         )
 
     conn = get_conn()
-    return conn.show_instance(name)
+    return conn.show_instance(name).__dict__
 
 
 def get_size(conn, vm_):
@@ -565,13 +567,11 @@ def create(vm_):
 
     def __query_node_data(vm_, data):
         try:
-            nodelist = list_nodes_full()
+            node = show_instance(vm_['name'], 'action')
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
-                    pprint.pformat(
-                        nodelist[vm_['name']]
-                    )
+                    pprint.pformat(node)
                 )
             )
         except Exception as err:
@@ -585,13 +585,13 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == 'ACTIVE'
+        running = node['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
 
         if rackconnect(vm_) is True:
-            extra = nodelist[vm_['name']].get('extra', {})
+            extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
             access_ip = extra.get('access_ip', '')
@@ -602,7 +602,7 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = conn.server_show_libcloud(
-                nodelist[vm_['name']]['id']
+                node['id']
             ).extra
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
@@ -612,8 +612,8 @@ def create(vm_):
                 return
 
         result = []
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
+        private = node['private_ips']
+        public = node['public_ips']
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
@@ -751,7 +751,7 @@ def list_nodes(call=None, **kwargs):
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
-            'state': server_tmp['status'],
+            'state': server_tmp['state'],
             'private_ips': [addrs['addr'] for addrs in server_tmp['addresses']['private']],
             'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
         }
@@ -777,9 +777,12 @@ def list_nodes_full(call=None, **kwargs):
     if not server_list:
         return {}
     for server in server_list.keys():
-        ret[server] = conn.server_show_libcloud(
-            server_list[server]['id']
-        ).__dict__
+        try:
+            ret[server] = conn.server_show_libcloud(
+                server_list[server]['id']
+            ).__dict__
+        except IndexError as exc:
+            ret = {}
 
     salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
