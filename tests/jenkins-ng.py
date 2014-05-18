@@ -795,6 +795,9 @@ def main():
         echo_parseable_environment(options)
         parser.exit()
 
+    if options.lxc:
+        options.cloud = False
+
     if options.pre_mortem:
         # Run any actions supposed to be executed right before killing the VM
         if options.download_remote_reports:
