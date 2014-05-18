@@ -592,6 +592,8 @@ def show_instance(name, call=None):
             children = item._children
             for child in children:
                 ret[item.tag][child.tag] = child.attrib
+
+    salt.utils.cloud.cache_node(item, __active_provider_name__, __opts__)
     return ret
 
 
@@ -658,7 +660,7 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __opts__)
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return {'Destroyed': '{0} was destroyed.'.format(name)}
 

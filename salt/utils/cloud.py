@@ -1929,7 +1929,7 @@ def activate_minion_cachedir(minion_id, base=None):
     shutil.move(src, dst)
 
 
-def delete_minion_cachedir(minion_id, opts, base=None):
+def delete_minion_cachedir(minion_id, provider, opts, base=None):
     '''
     Deletes a minion's entry from the cloud cachedir. It will search through
     all cachedirs to find the minion's cache file.
@@ -1941,9 +1941,11 @@ def delete_minion_cachedir(minion_id, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
+    driver = opts['providers'][provider].keys()[0]
     fname = '{0}.json'.format(minion_id)
     for cachedir in ('requested', 'active'):
-        path = os.path.join(base, cachedir, fname)
+        path = os.path.join(base, cachedir, driver, provider, fname)
+        log.debug('path: {0}'.format(path))
         if os.path.exists(path):
             os.remove(path)
 
@@ -2075,7 +2077,7 @@ def cache_node_list(nodes, provider, opts):
         os.makedirs(prov_dir)
 
     # Check to see if any nodes in the cache are not in the new list
-    missing_node_cache(prov_dir, nodes, opts)
+    missing_node_cache(prov_dir, nodes, provider, opts)
 
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
@@ -2084,7 +2086,24 @@ def cache_node_list(nodes, provider, opts):
             json.dump(nodes[node], fh_)
 
 
-def missing_node_cache(prov_dir, node_list, opts):
+def cache_node(node, provider, opts):
+    '''
+    Cache node individually
+
+    .. versionadded:: Helium
+    '''
+    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+        return
+
+    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+    provider, driver = provider.split(':')
+    prov_dir = os.path.join(base, driver, provider)
+    path = os.path.join(prov_dir, '{0}.json'.format(node['name']))
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(node, fh_)
+
+
+def missing_node_cache(prov_dir, node_list, provider, opts):
     '''
     Check list of nodes to see if any nodes which were previously known about
     in the cache have been removed from the node list.
@@ -2106,7 +2125,7 @@ def missing_node_cache(prov_dir, node_list, opts):
     log.debug(sorted(node_list))
     for node in cached_nodes:
         if node not in node_list:
-            delete_minion_cachedir(node, opts)
+            delete_minion_cachedir(node, provider, opts)
             if 'diff_cache_events' in opts and opts['diff_cache_events']:
                 fire_event(
                     'event',

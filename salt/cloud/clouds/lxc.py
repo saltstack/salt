@@ -281,6 +281,7 @@ def show_instance(name, call=None):
     if not call:
         call = 'action'
     nodes = list_nodes_full(call=call)
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -354,7 +355,7 @@ def destroy(vm_, call=None):
                 transport=__opts__['transport']
             )
             if __opts__.get('update_cachedir', False) is True:
-                salt.utils.cloud.delete_minion_cachedir(vm_, __opts__)
+                salt.utils.cloud.delete_minion_cachedir(vm_, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
