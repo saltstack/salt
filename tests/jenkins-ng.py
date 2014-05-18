@@ -288,8 +288,8 @@ def build_minion_target(options):
     target = options.vm_name
     for grain in options.grain_target:
         target += ' and G@{0}'.format(grain)
-    if options.grain_target:
-        return '-C "{0}"'.format(target)
+    if options.grain_target and not options.peer:
+        target = '-C "{0}"'.format(target)
     return target
 
 
@@ -333,7 +333,7 @@ def download_unittest_reports(options):
     if os.path.isdir(xml_reports_path):
         shutil.rmtree(xml_reports_path)
 
-    if options.ssh:
+    if options.scp:
         cmds = (
             ' '.join(build_scp_command(options,
                                        '-r',
@@ -390,7 +390,7 @@ def download_coverage_report(options):
     if os.path.isfile(os.path.join(options.workspace, 'coverage.xml')):
         os.unlink(os.path.join(options.workspace, 'coverage.xml'))
 
-    if options.ssh:
+    if options.scp:
         cmds = (
             ' '.join(build_scp_command(options,
                                        'root@{0}:/tmp/coverage.xml'.format(
@@ -453,7 +453,7 @@ def download_remote_logs(options):
 
     cmds = []
 
-    if options.ssh:
+    if options.scp:
         for remote_log in options.remote_log_path:
             cmds.append(
                 ' '.join(build_scp_command(options,
@@ -580,25 +580,6 @@ def prepare_ssh_access(options):
         )
 
 
-def build_ssh_command(options, *arguments):
-    '''
-    Build the SSH command with the required options
-    '''
-    return [
-        'ssh',
-        '-tt',
-        '-i',
-        os.path.join(options.workspace, 'jenkins_ssh_key_test'),
-        # Don't add new hosts to the host key database
-        '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
-        '-oUserKnownHostsFile=/dev/null',
-        # Don't re-use the SSH connection. Less failures.
-        '-oControlPath=none',
-        'root@{0}'.format(get_minion_external_address(options))
-    ] + list(arguments)
-
-
 def build_scp_command(options, *arguments):
     '''
     Build the SCP command with the required options
@@ -681,9 +662,8 @@ def main():
         '--peer', action='store_true', default=False, help='Run salt commands through the peer system'
     )
     execution_group.add_argument(
-        '--ssh', action='store_true', default=False,
-        help='Run all possible commands using SSH(real-time results display). If no --sls is passed, the command '
-             'executed is the one see on https://github.com/saltstack/salt-jenkins/blob/master/testrun-no-deps.sls'
+        '--scp', action='store_true', default=False,
+        help='Download logs and reports using SCP'
     )
 
     bootstrap_script_options = parser.add_argument_group(
@@ -737,9 +717,8 @@ def main():
     )
     vm_preparation_group.add_argument(
         '--sls',
-        default=None,
-        help='The final sls file to execute. If no SLS name is passed and --ssh is used, the command executed is '
-             'the one see on https://github.com/saltstack/salt-jenkins/blob/master/testrun-no-deps.sls'
+        default='testrun-no-deps',
+        help='The final sls file to execute.'
     )
     vm_preparation_group.add_argument(
         '--pillar',
@@ -806,8 +785,6 @@ def main():
 
     options = parser.parse_args()
 
-    if options.ssh:
-        parser.error('Please do not use --ssh. Process is not matured enough.')
     if not options.vm_source and not options.vm_name:
         parser.error('Unable to get VM name from environ nor generate it without --vm-source')
 
@@ -839,12 +816,10 @@ def main():
 
         parser.exit()
 
-    # Regular execution
-    if not options.ssh and not options.sls:
-        options.sls = 'testrun-no-deps'
-
     # RUN IT!!!
     cmd = []
+    minion_target = build_minion_target(options)
+
     if options.peer:
         cmd.extend(['salt-call', 'publish.runner'])
     else:
@@ -895,7 +870,7 @@ def main():
     sys.stdout.flush()
     time.sleep(5)
 
-    if options.ssh:
+    if options.scp:
         prepare_ssh_access(options)
 
     if options.cloud:
@@ -904,16 +879,14 @@ def main():
             # information
             print('Grabbing bootstrapped minion version information ... ')
             cmd = []
-            if options.peer or options.ssh:
-                cmd.extend(['salt-call', '--out=json'])
-                if options.peer:
-                    cmd.append('publish.publish')
+            if options.peer:
+                cmd.extend(['salt-call', '--out=json', 'publish.publish'])
             else:
-                cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
-            cmd.append('test.version')
+                cmd.extend(['salt', '-t', '100', '--out=json'])
+            cmd.extend([minion_target, 'test.version'])
 
-            if options.ssh:
-                cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
+            if options.peer and ' ' in minion_target:
+                cmd.append('expr_form="compound"')
 
             cmd = ' '.join(cmd)
             print('Running CMD: {0!r}'.format(cmd))
@@ -944,7 +917,7 @@ def main():
 
             try:
                 version_info = json.loads(stdout.strip())
-                if options.peer or options.ssh:
+                if options.peer:
                     version_info = version_info['local']
                 else:
                     version_info = version_info[options.vm_name]
@@ -974,26 +947,22 @@ def main():
     # Run preparation SLS
     time.sleep(3)
     cmd = []
-    if options.peer or options.ssh:
+    if options.peer:
         cmd.append('salt-call')
         if options.no_color:
             cmd.append('--no-color')
-        if options.peer:
-            cmd.append('publish.publish')
+        cmd.append('publish.publish')
     else:
         cmd.extend(['salt', '-t', '1800'])
         if options.no_color:
             cmd.append('--no-color')
 
-    if not options.ssh and not options.peer:
-        cmd.append(build_minion_target(options))
-
     cmd.extend([
-        'state.sls', options.prep_sls, 'pillar="{0}"'.format(build_pillar_data(options))
+        minion_target, 'state.sls', options.prep_sls, 'pillar="{0}"'.format(build_pillar_data(options))
     ])
 
-    if options.ssh:
-        cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
+    if options.peer and ' ' in minion_target:
+        cmd.append('expr_form="compound"')
 
     cmd = ' '.join(cmd)
     print('Running CMD: {0!r}'.format(cmd))
@@ -1020,7 +989,7 @@ def main():
 
         # Run the 2nd preparation SLS
         cmd = []
-        if options.peer or options.ssh:
+        if options.peer:
             cmd.append('salt-call')
             if options.no_color:
                 cmd.append('--no-color')
@@ -1031,15 +1000,12 @@ def main():
             if options.no_color:
                 cmd.append('--no-color')
 
-        if not options.ssh and not options.peer:
-            cmd.append(build_minion_target(options))
-
         cmd.extend([
-            'state.sls', options.prep_sls_2, 'pillar="{0}"'.format(build_pillar_data(options))
+            minion_target, 'state.sls', options.prep_sls_2, 'pillar="{0}"'.format(build_pillar_data(options))
         ])
 
-        if options.ssh:
-            cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
+        if options.peer and ' ' in minion_target:
+            cmd.append('expr_form="compound"')
 
         cmd = ' '.join(cmd)
         print('Running CMD: {0!r}'.format(cmd))
@@ -1068,16 +1034,15 @@ def main():
         # desired repository
         print('Grabbing the cloned repository remotes information ... ')
         cmd = []
-        if options.peer or options.ssh:
-            cmd.extend(['salt-call', '--out=json'])
-            if options.peer:
-                cmd.append('publish.publish')
+        if options.peer:
+            cmd.extend(['salt-call', '--out=json', 'publish.publish'])
         else:
-            cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
-        cmd.extend(['git.remote_get', '/testing'])
+            cmd.extend(['salt', '-t', '100', '--out=json'])
 
-        if options.ssh:
-            cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
+        cmd.extend([minion_target, 'git.remote_get', '/testing'])
+
+        if options.peer and ' ' in minion_target:
+            cmd.append('expr_form="compound"')
 
         print('Running CMD: {0!r}'.format(cmd))
 
@@ -1109,7 +1074,7 @@ def main():
         try:
             remotes_info = json.loads(stdout.strip())
             if remotes_info is not None:
-                if options.peer or options.ssh:
+                if options.peer:
                     remotes_info = remotes_info['local']
                 else:
                     remotes_info = remotes_info[options.vm_name]
@@ -1132,16 +1097,15 @@ def main():
         # commit
         print('Grabbing the cloned repository commit information ... ')
         cmd = []
-        if options.peer or options.ssh:
-            cmd.extend(['salt-call', '--out=json'])
-            if options.peer:
-                cmd.append('publish.publish')
+        if options.peer:
+            cmd.extend(['salt-call', '--out=json', 'publish.publish'])
         else:
-            cmd.extend(['salt', '-t', '100', '--out=json', build_minion_target(options)])
-        cmd.extend(['git.revision', '/testing'])
+            cmd.extend(['salt', '-t', '100', '--out=json'])
 
-        if options.ssh:
-            cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
+        cmd.extend([minion_target, 'git.revision', '/testing'])
+
+        if options.peer and ' ' in minion_target:
+            cmd.append('expr_form="compound"')
 
         cmd = ' '.join(cmd)
 
@@ -1173,7 +1137,7 @@ def main():
 
         try:
             revision_info = json.loads(stdout.strip())
-            if options.peer or options.ssh:
+            if options.peer:
                 revision_info = revision_info['local']
             else:
                 revision_info = revision_info[options.vm_name]
@@ -1193,94 +1157,58 @@ def main():
 
     time.sleep(3)
     cmd = []
-    if options.ssh:
-        if options.sls:
-            cmd.append('salt-call')
-            if options.no_color:
-                cmd.append('--no-color')
-            cmd.extend([
-                'state.sls',
-                options.sls,
-                'pillar="{0}"'.format(build_pillar_data(options))
-            ])
-        else:
-            cmd.extend([
-                get_minion_python_executable(options),
-                '/testing/tests/runtests.py',
-                '-v',
-                '--run-destructive',
-                '--sysinfo',
-                '--xml=/tmp/xml-unitests-output',
-                '--coverage-xml=/tmp/coverage.xml'
-            ])
-            if options.no_color:
-                cmd.append('--no-color')
-
-        cmd = build_ssh_command(options, '<<EOF\n{0}; exit $?\nEOF'.format(' '.join(cmd)))
-        cmd = ' '.join(cmd)
-
-        print('Running CMD: {0!r}'.format(cmd))
-        sys.stdout.flush()
-
-        proc = NonBlockingPopen(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stream_stds=True
-        )
-        proc.poll_and_read_until_finish()
-        proc.communicate()
+    if options.peer:
+        cmd.append('salt-call')
+        if options.no_color:
+            cmd.append('--no-color')
+        cmd.append('publish.publish')
     else:
-        if options.peer:
-            cmd.append('salt-call')
-            if options.no_color:
-                cmd.append('--no-color')
-            cmd.append('publish.publish')
-        else:
-            cmd.extend(['salt', '-t', '1800'])
-            if options.no_color:
-                cmd.append('--no-color')
-            cmd.append(build_minion_target(options))
+        cmd.extend(['salt', '-t', '1800'])
+        if options.no_color:
+            cmd.append('--no-color')
 
-        cmd.extend([
-            'state.sls',
-            options.sls,
-            'pillar="{0}"'.format(build_pillar_data(options))
-        ])
+    cmd.extend([
+        minion_target,
+        'state.sls',
+        options.sls,
+        'pillar="{0}"'.format(build_pillar_data(options))
+    ])
 
-        cmd = ' '.join(cmd)
+    if options.peer and ' ' in minion_target:
+        cmd.append('expr_form="compound"')
 
-        print('Running CMD: {0!r}'.format(cmd))
-        sys.stdout.flush()
+    cmd = ' '.join(cmd)
 
-        proc = subprocess.Popen(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        stdout, _ = proc.communicate()
+    print('Running CMD: {0!r}'.format(cmd))
+    sys.stdout.flush()
 
+    proc = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout, _ = proc.communicate()
+
+    if stdout:
+        print(stdout)
+    sys.stdout.flush()
+
+    try:
+        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
+        retcode = int(match.group('exitcode'))
+    except AttributeError:
+        # No regex matching
+        retcode = 1
+    except ValueError:
+        # Not a number!?
+        retcode = 1
+    except TypeError:
+        # No output!?
+        retcode = 1
         if stdout:
-            print(stdout)
-        sys.stdout.flush()
-
-        try:
-            match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
-            retcode = int(match.group('exitcode'))
-        except AttributeError:
-            # No regex matching
-            retcode = 1
-        except ValueError:
-            # Not a number!?
-            retcode = 1
-        except TypeError:
-            # No output!?
-            retcode = 1
-            if stdout:
-                # Anything else, raise the exception
-                raise
+            # Anything else, raise the exception
+            raise
 
     if options.download_remote_reports:
         # Download unittest reports
