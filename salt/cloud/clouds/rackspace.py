@@ -246,12 +246,12 @@ def create(vm_):
 
     def __query_node_data(vm_, data):
         try:
-            nodelist = show_instance(vm_['name'], 'action')
+            node = show_instance(vm_['name'], 'action')
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
                     pprint.pformat(
-                        nodelist[vm_['name']]
+                        node['name']
                     )
                 )
             )
@@ -266,15 +266,15 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == node_state(
+        running = node['name']['state'] == node_state(
             NodeState.RUNNING
         )
         if not running:
             # Still not running, trigger another iteration
             return
 
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
+        private = node['name']['private_ips']
+        public = node['name']['public_ips']
 
         if private and not public:
             log.warn(
