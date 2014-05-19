@@ -246,7 +246,7 @@ def create(vm_):
 
     def __query_node_data(vm_, data):
         try:
-            nodelist = list_nodes()
+            nodelist = show_instance(vm_['name'], 'action')
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],

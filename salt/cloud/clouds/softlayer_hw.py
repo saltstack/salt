@@ -700,6 +700,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
 
     for node in response:
         ret[node['hostname']] = node
+    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 

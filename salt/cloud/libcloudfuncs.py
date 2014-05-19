@@ -111,6 +111,7 @@ def get_node(conn, name):
     nodes = conn.list_nodes()
     for node in nodes:
         if node.name == name:
+            salt.utils.cloud.cache_node(node, __active_provider_name__.split(':')[0], __opts__)
             return node
 
 
@@ -495,7 +496,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    salt.utils.cloud.cache_node(node, __active_provider_name__.split(':')[0], __opts__)
     return nodes[name]
 
 
