@@ -34,6 +34,12 @@ REST URI Reference
 .. autoclass:: Events
     :members: GET
 
+.. autoclass:: WebsocketEndpoint
+    :members: GET
+
+.. autoclass:: AllEvents
+    :members: GET
+
 .. autoclass:: Webhook
     :members: POST
 
