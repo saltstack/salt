@@ -459,7 +459,7 @@ def check_hash(path, file_hash):
     return get_hash(path, hash_form) == hash_value
 
 
-def find(path, **kwargs):
+def find(path, opts):
     '''
     Approximate the Unix ``find(1)`` command and return a list of paths that
     meet the specified criteria.
@@ -553,7 +553,7 @@ def find(path, **kwargs):
         salt '*' file.find /var/log name=\\*.[0-9] mtime=+30d size=+10m delete
     '''
     try:
-        finder = salt.utils.find.Finder(kwargs)
+        finder = salt.utils.find.Finder(opts)
     except ValueError as ex:
         return 'error: {0}'.format(ex)
 
