@@ -335,6 +335,8 @@ For example:
 
 import imp
 from salt.utils import pydsl
+from salt.utils.pydsl import PyDslError
+from salt.exceptions import SaltRenderError
 
 __all__ = ['render']
 
@@ -375,5 +377,8 @@ def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, *
 def _wrap_sls(method):
     def _sls_method(*args, **kws):
         sls = pydsl.Sls.get_render_stack()[-1]
-        return getattr(sls, method.__name__)(*args, **kws)
+        try:
+            return getattr(sls, method.__name__)(*args, **kws)
+        except PyDslError as exc:
+            raise SaltRenderError(exc)
     return _sls_method
