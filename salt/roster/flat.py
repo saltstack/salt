@@ -28,7 +28,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
     else:
         template = os.path.join(__opts__['conf_file'], 'roster')
     rend = salt.loader.render(__opts__, {})
-    raw = compile_template(template, rend, __opts__['renderer'], **kwargs)
+    raw = compile_template(template, rend, __opts__['renderer'])
     rmatcher = RosterMatcher(raw, tgt, tgt_type, 'ipv4')
     return rmatcher.targets()
 

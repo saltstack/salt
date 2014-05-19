@@ -121,11 +121,20 @@ def decrypt_object(o, gpg):
         return o
 
 
-def render(data, saltenv='base', sls='', argline='', **kwargs):
+def render(data,
+           saltenv='base',
+           sls='',
+           argline='',
+           tmplpath='',
+           renderers=None,
+           env='base',
+           rendered_sls=None):
     '''
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
     '''
+    if not renderers:
+        renderers = {}
     if not HAS_GPG:
         raise SaltRenderError('GPG unavailable')
     if isinstance(__salt__, dict):
