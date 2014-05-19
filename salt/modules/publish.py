@@ -210,7 +210,7 @@ def runner(fun, arg=None, timeout=5):
     arg = _normalize_arg(arg)
 
     if 'master_uri' not in __opts__:
-        return('No access to master. If using salt-call with --local, please remove.')
+        return 'No access to master. If using salt-call with --local, please remove.'
     log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
