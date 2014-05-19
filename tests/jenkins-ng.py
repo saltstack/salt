@@ -661,6 +661,11 @@ def main():
         default=False,
         help='Salt LXC Deployment'
     )
+    deployment_group.add_argument(
+        '--lxc-host',
+        default=None,
+        help='The host where to deploy the LXC VM'
+    )
 
     # Execution Selections
     execution_group = parser.add_argument_group('Execution Selection')
@@ -795,6 +800,8 @@ def main():
         parser.error('Unable to get VM name from environ nor generate it without --vm-source')
 
     if options.lxc:
+        if not options.lxc_host:
+            parser.error('Need to provide where to deploy the LXC VM by passing it to --lxc-host')
         options.cloud = False
 
     if not options.vm_name:
@@ -843,12 +850,16 @@ def main():
             cmd.append(
                 'arg="{0}"'.format(
                     to_cli_yaml([
-                        options.vm_name, 'image={0}'.format(options.vm_source)
+                        options.vm_name,
+                        'host={0}'.format(options.lxc_host),
+                        'image={0}'.format(options.vm_source)
                     ])
                 )
             )
         else:
-            cmd.extend([options.vm_name, 'image={0}'.format(options.vm_source)])
+            cmd.extend([options.vm_name,
+                        'host={0}'.format(options.lxc_host),
+                        'image={0}'.format(options.vm_source)])
     else:
         cmd.append('cloud.profile')
         if options.peer:
