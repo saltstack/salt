@@ -101,8 +101,8 @@ def retcode(plugin, args='', key_name=None):
 
     .. code-block:: bash
 
-    salt '*' nagios.run check_apt
-    salt '*' nagios.run check_icmp '8.8.8.8'
+        salt '*' nagios.run check_apt
+        salt '*' nagios.run check_icmp '8.8.8.8'
     '''
     data = {}
 

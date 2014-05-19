@@ -700,6 +700,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
 
     for node in response:
         ret[node['hostname']] = node
+    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
@@ -752,6 +753,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -798,6 +800,8 @@ def destroy(name, call=None):
         {'name': name},
         transport=__opts__['transport']
     )
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return response
 

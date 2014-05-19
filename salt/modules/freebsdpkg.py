@@ -506,7 +506,7 @@ def file_dict(*packages):
     else:
         cmd = 'pkg_info -QLa'
 
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     for line in ret['stderr'].splitlines():
         errors.append(line)
