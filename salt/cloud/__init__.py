@@ -197,6 +197,23 @@ class CloudClient(object):
         if 'kwargs' in kwargs:
             opts.update(kwargs['kwargs'])
         opts.update(kwargs)
+        profile = opts.get('profile', None)
+        # filter other profiles if one is specified
+        if profile:
+            for _profile in [a for a in opts.get('profiles', {})]:
+                if not _profile == profile:
+                    opts['profiles'].pop(_profile)
+            # if profile is specified and we have enougth info about providers
+            # also filter them to speedup methods like
+            # __filter_non_working_providers
+            providers = [a.get('provider', '').split(':')[0]
+                         for a in opts['profiles'].values()
+                         if a.get('provider', '')]
+            if providers:
+                _providers = opts.get('providers', {})
+                for p in [a for a in _providers]:
+                    if p not in providers:
+                        _providers.pop(p)
         return opts
 
     def low(self, fun, low):
@@ -271,6 +288,7 @@ class CloudClient(object):
         '''
         if not vm_overrides:
             vm_overrides = {}
+        kwargs['profile'] = profile
         mapper = salt.cloud.Map(self._opts_defaults(**kwargs))
         if isinstance(names, str):
             names = names.split(',')

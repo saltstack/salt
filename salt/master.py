@@ -157,8 +157,10 @@ class Master(SMaster):
         fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
         runners = salt.loader.runner(self.opts)
+        # Load Returners
+        returners = salt.loader.returners(self.opts, {})
         # Init Scheduler
-        schedule = salt.utils.schedule.Schedule(self.opts, runners)
+        schedule = salt.utils.schedule.Schedule(self.opts, runners, returners=returners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])

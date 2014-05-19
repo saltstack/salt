@@ -762,7 +762,6 @@ def deploy_windows(host,
                    username='Administrator',
                    password=None,
                    name=None,
-                   pub_key=None,
                    sock_dir=None,
                    conf_file=None,
                    start_action=None,
@@ -904,7 +903,6 @@ def deploy_script(host,
                   key_filename=None,
                   script=None,
                   name=None,
-                  pub_key=None,
                   sock_dir=None,
                   provider=None,
                   conf_file=None,
@@ -1144,7 +1142,7 @@ def deploy_script(host,
                 queue = multiprocessing.Queue()
                 process = multiprocessing.Process(
                     target=check_auth, kwargs=dict(
-                        name=name, pub_key=pub_key, sock_dir=sock_dir,
+                        name=name, sock_dir=sock_dir,
                         timeout=newtimeout, queue=queue
                     )
                 )
@@ -1602,7 +1600,7 @@ def root_cmd(command, tty, sudo, **kwargs):
     return retcode
 
 
-def check_auth(name, pub_key=None, sock_dir=None, queue=None, timeout=300):
+def check_auth(name, sock_dir=None, queue=None, timeout=300):
     '''
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
@@ -1931,17 +1929,23 @@ def activate_minion_cachedir(minion_id, base=None):
     shutil.move(src, dst)
 
 
-def delete_minion_cachedir(minion_id, base=None):
+def delete_minion_cachedir(minion_id, provider, opts, base=None):
     '''
     Deletes a minion's entry from the cloud cachedir. It will search through
     all cachedirs to find the minion's cache file.
+    Needs `update_cachedir` set to True.
     '''
+    if opts.get('update_cachedir', False) is False:
+        return
+
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
+    driver = opts['providers'][provider].keys()[0]
     fname = '{0}.json'.format(minion_id)
     for cachedir in ('requested', 'active'):
-        path = os.path.join(base, cachedir, fname)
+        path = os.path.join(base, cachedir, driver, provider, fname)
+        log.debug('path: {0}'.format(path))
         if os.path.exists(path):
             os.remove(path)
 
@@ -2073,7 +2077,7 @@ def cache_node_list(nodes, provider, opts):
         os.makedirs(prov_dir)
 
     # Check to see if any nodes in the cache are not in the new list
-    missing_node_cache(prov_dir, nodes.keys(), opts)
+    missing_node_cache(prov_dir, nodes, provider, opts)
 
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
@@ -2082,7 +2086,24 @@ def cache_node_list(nodes, provider, opts):
             json.dump(nodes[node], fh_)
 
 
-def missing_node_cache(prov_dir, node_list, opts):
+def cache_node(node, provider, opts):
+    '''
+    Cache node individually
+
+    .. versionadded:: Helium
+    '''
+    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+        return
+
+    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+    provider, driver = provider.split(':')
+    prov_dir = os.path.join(base, driver, provider)
+    path = os.path.join(prov_dir, '{0}.json'.format(node['name']))
+    with salt.utils.fopen(path, 'w') as fh_:
+        json.dump(node, fh_)
+
+
+def missing_node_cache(prov_dir, node_list, provider, opts):
     '''
     Check list of nodes to see if any nodes which were previously known about
     in the cache have been removed from the node list.
@@ -2104,13 +2125,15 @@ def missing_node_cache(prov_dir, node_list, opts):
     log.debug(sorted(node_list))
     for node in cached_nodes:
         if node not in node_list:
-            fire_event(
-                'event',
-                'cached node missing from provider',
-                'salt/cloud/{0}/cache_node_missing'.format(node),
-                {'missing node': node},
-                transport=opts.get('transport', 'zeromq')
-            )
+            delete_minion_cachedir(node, provider, opts)
+            if 'diff_cache_events' in opts and opts['diff_cache_events']:
+                fire_event(
+                    'event',
+                    'cached node missing from provider',
+                    'salt/cloud/{0}/cache_node_missing'.format(node),
+                    {'missing node': node},
+                    transport=opts.get('transport', 'zeromq')
+                )
 
 
 def diff_node_cache(prov_dir, node, new_data, opts):
@@ -2146,7 +2169,11 @@ def diff_node_cache(prov_dir, node, new_data, opts):
         return
 
     with salt.utils.fopen(path, 'r') as fh_:
-        cache_data = json.load(fh_)
+        try:
+            cache_data = json.load(fh_)
+        except ValueError as exc:
+            log.warning('Cache for {0} was corrupt: Deleting'.format(node))
+            cache_data = {}
 
     # Perform a simple diff between the old and the new data, and if it differs,
     # return both dicts.

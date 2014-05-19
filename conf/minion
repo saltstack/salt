@@ -296,6 +296,7 @@
 #returner_dirs: []
 #states_dirs: []
 #render_dirs: []
+#utils_dirs: []
 #
 # A module provider can be statically overwritten or extended for the minion
 # via the providers option, in this case the default module will be

@@ -179,6 +179,16 @@ external template file.
     starting with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
+
+Debugging
+=========
+
+The ``show_full_context`` function can be used to output all variables present
+in the current Jinja context.
+
+.. code-block:: yaml
+
+    Context is: {{ show_full_context }}
 '''
 
 from __future__ import absolute_import

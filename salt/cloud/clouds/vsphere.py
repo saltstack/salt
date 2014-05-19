@@ -474,6 +474,7 @@ def show_instance(name, call=None):
     ret = instance.get_properties()
     ret['status'] = instance.get_status()
     ret['tools_status'] = instance.get_tools_status()
+    salt.utils.cloud.cache_node(ret, __active_provider_name__, __opts__)
     return ret
 
 
@@ -511,6 +512,8 @@ def destroy(name, call=None):  # pylint: disable=W0613
         {'name': name},
         transport=__opts__['transport']
     )
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return True
 

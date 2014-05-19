@@ -392,13 +392,15 @@ def installed(name,
     out = create(*a, **kw)
     # if container has been created, even if not started, we mark
     # it as installed
+    changes = 'Container created'
     try:
         cid = out['out']['info']['id']
     except Exception:
         pass
     else:
-        out['comment'] = 'Container {0} created'.format(cid)
-    ret = _ret_status(out, name)
+        changes = 'Container {0} created'.format(cid)
+        out['comment'] = changes
+    ret = _ret_status(out, name, changes=changes)
     return ret
 
 

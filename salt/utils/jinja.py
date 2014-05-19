@@ -15,6 +15,7 @@ from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
+import jinja2
 import yaml
 
 # Import salt libs
@@ -186,6 +187,11 @@ def ensure_sequence_filter(data):
     if not isinstance(data, (list, tuple, set, dict)):
         return [data]
     return data
+
+
+@jinja2.contextfunction
+def show_full_context(c):
+    return c
 
 
 class SerializerExtension(Extension, object):

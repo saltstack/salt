@@ -417,6 +417,13 @@ def request_instance(vm_=None, call=None):
             )
         )
 
+    # Note: This currently requires libcloud trunk
+    avz = config.get_cloud_config_value(
+        'availability_zone', vm_, __opts__, default=None, search_global=False
+    )
+    if avz is not None:
+        kwargs['ex_availability_zone'] = avz
+
     kwargs['ex_keyname'] = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
     )
@@ -621,13 +628,11 @@ def create(vm_):
 
     def __query_node_data(vm_, data, floating):
         try:
-            nodelist = list_nodes_full()
+            node = show_instance(vm_['name'], 'action')
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
-                    pprint.pformat(
-                        nodelist[vm_['name']]
-                    )
+                    pprint.pformat(node)
                 )
             )
         except Exception as err:
@@ -641,14 +646,14 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == NodeState.RUNNING
+        running = node['state'] == NodeState.RUNNING
         if not running:
             # Still not running, trigger another iteration
             return
 
         if rackconnect(vm_) is True:
             check_libcloud_version((0, 14, 0), why='rackconnect: True')
-            extra = nodelist[vm_['name']].get('extra')
+            extra = node.get('extra')
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
             access_ip = extra.get('access_ip', '')
@@ -658,7 +663,7 @@ def create(vm_):
                 return
 
         if managedcloud(vm_) is True:
-            extra = nodelist[vm_['name']].get('extra')
+            extra = node.get('extra')
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
 
@@ -683,8 +688,8 @@ def create(vm_):
                 pass
 
         result = []
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
+        private = node['private_ips']
+        public = node['public_ips']
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '

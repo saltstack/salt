@@ -157,7 +157,7 @@ class Schedule(object):
         if isinstance(returners, dict):
             self.returners = returners
         else:
-            self.returners = {}
+            self.returners = returners.loader.gen_functions()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint

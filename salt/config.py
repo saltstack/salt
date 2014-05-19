@@ -85,6 +85,7 @@ VALID_OPTS = {
     'grains_dirs': list,
     'render_dirs': list,
     'outputter_dirs': list,
+    'utils_dirs': list,
     'providers': dict,
     'clean_dynamic_modules': bool,
     'open_mode': bool,
@@ -279,6 +280,7 @@ DEFAULT_MINION_OPTS = {
     'states_dirs': [],
     'render_dirs': [],
     'outputter_dirs': [],
+    'utils_dirs': [],
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
@@ -741,6 +743,20 @@ def prepend_root_dir(opts, path_options):
             )
 
 
+def insert_system_path(opts, paths):
+    '''
+    Inserts path into python path taking into consideration 'root_dir' option.
+    '''
+    if isinstance(paths, str):
+        paths = [paths]
+    for path in paths:
+        path_options = {'path': path, 'root_dir': opts['root_dir']}
+        prepend_root_dir(path_options, path_options)
+        if (os.path.isdir(path_options['path'])
+                and path_options['path'] not in sys.path):
+            sys.path.insert(0, path_options['path'])
+
+
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
@@ -748,6 +764,15 @@ def minion_config(path,
                   minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
+
+    This is useful for Minion-side operations, such as the
+    :py:class:`~salt.client.Caller` class, and manually running the loader
+    interface.
+
+    .. code-block:: python
+
+        import salt.client
+        minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
     if check_dns is not None:
         # All use of the `check_dns` arg was removed in `598d715`. The keyword
@@ -1822,6 +1847,15 @@ def apply_minion_config(overrides=None,
         os.path.join(opts['cachedir'], 'extmods')
     )
 
+    # Set up the utils_dirs location from the extension_modules location
+    opts['utils_dirs'] = (
+        opts.get('utils_dirs') or
+        [os.path.join(opts['extension_modules'], 'utils')]
+    )
+
+    # Insert all 'utils_dirs' directories to the system path
+    insert_system_path(opts, opts['utils_dirs'])
+
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'cachedir', 'sock_dir', 'extension_modules', 'pidfile',
@@ -1851,6 +1885,10 @@ def apply_minion_config(overrides=None,
 def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     '''
     Reads in the master configuration file and sets up default options
+
+    This is useful for running the actual master daemon. For running
+    Master-side client interfaces that need the master opts see
+    :py:func:`salt.client.client_config`.
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
@@ -1971,9 +2009,22 @@ def apply_master_config(overrides=None, defaults=None):
 
 def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     '''
-    Load in the configuration data needed for the LocalClient. This function
-    searches for client specific configurations and adds them to the data from
-    the master configuration.
+    Load Master configuration data
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.config
+        master_opts = salt.config.client_config('/etc/salt/master')
+
+    Returns a dictionary of the Salt Master configuration file with necessary
+    options needed to communicate with a locally-running Salt Master daemon.
+    This function searches for client specific configurations and adds them to
+    the data from the master configuration.
+
+    This is useful for master-side operations like
+    :py:class:`~salt.client.LocalClient`.
     '''
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS

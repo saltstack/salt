@@ -343,7 +343,7 @@ def create(vm_):
         return False
 
     def __query_node_data(vm_name):
-        data = _get_node(vm_name)
+        data = show_instance(vm_name, call='action')
         if not data:
             # Trigger an error in the wait_for_ip function
             return False
@@ -522,8 +522,9 @@ def show_instance(name, call=None):
         raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-
-    return _get_node(name)
+    node = _get_node(name)
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def _get_node(name):
@@ -578,5 +579,8 @@ def destroy(name, call=None):
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
     )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return node

@@ -108,7 +108,7 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     cmd = 'repoquery --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     return out.splitlines()
 
 
@@ -165,29 +165,31 @@ def _check_32(arch):
     return all(x in __ARCHES_32 for x in (__grains__['osarch'], arch))
 
 
-def _in_pkg_dict(name, pkgdict):
+def _rpm_pkginfo(name):
     '''
-    Searches for name in a dictionary of {'<package_name>': '<version>'}
-    name can be "<package_name>-<version>" or
-    "<path>/<package_name>-<version>.rpm"
-    name will be split into a package name and version and compared to
-    the items in pkgdict after trimming any path, arch or file extension
+    Parses RPM metadata and returns a pkginfo namedtuple
     '''
-    if name[-4:] == ".rpm":
-        name = name[:-4]
-    pos = name.rfind("/", 0, len(name))
-    if pos > 0:
-        name = name[pos + 1:]
-    name = normalize_name(name)
-    pos = name.rfind("-", 0, len(name))
-    while pos > 0:
-        if name[:pos] in pkgdict.keys():
-            if name[pos+1:] == pkgdict.get(name[:pos]):
-                return [name[:pos], name[pos+1:]]
-            else:
-                return []
-        pos = name.rfind("-", 0, pos - 1)
-    return []
+    # REPOID is not a valid tag for the rpm command. Remove it and replace it
+    # witn "none"
+    queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
+    output = __salt__['cmd.run_stdout'](
+        'rpm -qp --queryformat {0!r} {1}'.format(queryformat, name),
+        output_loglevel='trace',
+        ignore_retcode=True
+    )
+    return _parse_pkginfo(output)
+
+
+def _rpm_installed(name):
+    '''
+    Parses RPM metadata to determine if the RPM target is already installed.
+    Returns the name of the installed package if found, otherwise None.
+    '''
+    pkg = _rpm_pkginfo(name)
+    try:
+        return pkg.name if pkg.name in list_pkgs() else None
+    except AttributeError:
+        return None
 
 
 def normalize_name(name):
@@ -539,9 +541,7 @@ def refresh_db():
     }
 
     cmd = 'yum -q clean expire-cache && yum -q check-update'
-    ret = __salt__['cmd.retcode'](cmd,
-                                  output_loglevel='debug',
-                                  ignore_retcode=True)
+    ret = __salt__['cmd.retcode'](cmd, ignore_retcode=True)
     return retcodes.get(ret, False)
 
 
@@ -661,6 +661,7 @@ def install(name=None,
             skip_verify=False,
             pkgs=None,
             sources=None,
+            reinstall=False,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
@@ -696,6 +697,8 @@ def install(name=None,
 
         Works with sources when the file name in the source can be
         matched to the name and version of the installed package.
+
+        .. versionadded:: Helium
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
@@ -760,6 +763,7 @@ def install(name=None,
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
+    reinstall = salt.utils.is_true(reinstall)
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -786,14 +790,12 @@ def install(name=None,
     old = list_pkgs()
     targets = []
     downgrade = []
-    reinstall = []
-    use_reinstall = kwargs.get('reinstall', False)
+    to_reinstall = []
     if pkg_type == 'repository':
         for pkgname, version_num in pkg_params.iteritems():
             if version_num is None:
-                if (use_reinstall and pkgname in old.keys() or
-                                      _in_pkg_dict(pkgname, old)):
-                    reinstall.append(pkgname)
+                if reinstall and pkgname in old:
+                    to_reinstall.append(pkgname)
                 else:
                     targets.append(pkgname)
             else:
@@ -809,21 +811,21 @@ def install(name=None,
                         pkgname = namepart
 
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if use_reinstall and cver and salt.utils.compare_versions(
-                                                           ver1=version_num,
-                                                           oper='==',
-                                                           ver2=cver):
-                    reinstall.append(pkgstr)
+                if reinstall and cver \
+                        and salt.utils.compare_versions(ver1=version_num,
+                                                        oper='==',
+                                                        ver2=cver):
+                    to_reinstall.append(pkgstr)
                 elif not cver or salt.utils.compare_versions(ver1=version_num,
-                                                           oper='>=',
-                                                           ver2=cver):
+                                                             oper='>=',
+                                                             ver2=cver):
                     targets.append(pkgstr)
                 else:
                     downgrade.append(pkgstr)
     else:
         for pkgname in pkg_params:
-            if use_reinstall and _in_pkg_dict(pkgname, old):
-                reinstall.append(pkgname)
+            if reinstall and _rpm_installed(pkgname):
+                to_reinstall.append(pkgname)
             else:
                 targets.append(pkgname)
 
@@ -834,7 +836,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if downgrade:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} downgrade {pkg}'.format(
@@ -843,31 +845,33 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
-    if reinstall:
+    if to_reinstall:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} reinstall {pkg}'.format(
             repo=repo_arg,
             exclude=exclude_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(reinstall),
+            pkg=' '.join(to_reinstall),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
-    if reinstall:
-        for pkgname in reinstall:
-            if not pkgname in old.keys():
-                pkglist = _in_pkg_dict(pkgname, old)
-                if len(pkglist) > 0 and not pkglist[0] in ret.keys():
-                    ret.update({pkglist[0]: {'old': old.get(pkglist[0]),
-                                          'new': new.get(pkglist[0])}})
-            else:
-                if not pkgname in ret.keys():
-                    ret.update({pkgname: {'old': old.get(pkgname),
-                                          'new': new.get(pkgname)}})
+    for pkgname in to_reinstall:
+        if pkg_type != 'repository':
+            try:
+                pkgname = _rpm_pkginfo(pkgname).name
+            except AttributeError:
+                continue
+        if not pkgname in old:
+            ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                  'new': new.get(pkgname, '')}})
+        else:
+            if not pkgname in ret:
+                ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                      'new': new.get(pkgname, '')}})
     if ret:
         __context__.pop('pkg._avail', None)
     return ret
@@ -922,7 +926,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         exclude=exclude_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '')
 
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -968,7 +972,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
     cmd = 'yum -q -y remove "{0}"'.format('" "'.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -1208,7 +1212,7 @@ def group_list():
     '''
     ret = {'installed': [], 'available': [], 'available languages': {}}
     cmd = 'yum grouplist'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug').splitlines()
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
     for idx in xrange(len(out)):
         if out[idx] == 'Installed Groups:':
@@ -1262,7 +1266,7 @@ def group_info(name):
     cmd_template = 'repoquery --group --grouppkgs={0} --list {1!r}'
 
     cmd = cmd_template.format('all', name)
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     all_pkgs = set(out.splitlines())
 
     if not all_pkgs:
@@ -1272,7 +1276,7 @@ def group_info(name):
         cmd = cmd_template.format(pkgtype, name)
         packages = set(
             __salt__['cmd.run_stdout'](
-                cmd, output_loglevel='debug'
+                cmd, output_loglevel='trace'
             ).splitlines()
         )
         ret['{0} packages'.format(pkgtype)].extend(sorted(packages))
@@ -1284,7 +1288,7 @@ def group_info(name):
     ret['conditional packages'] = sorted(all_pkgs)
 
     cmd = 'repoquery --group --info {0!r}'.format(name)
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     if out:
         ret['description'] = '\n'.join(out.splitlines()[1:]).strip()
 
@@ -1661,7 +1665,7 @@ def owner(*paths):
     cmd = 'rpm -qf --queryformat "%{NAME}" {0!r}'
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='debug')
+                                               output_loglevel='trace')
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:

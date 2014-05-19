@@ -48,7 +48,7 @@ def _netstat_linux():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         comps = line.split()
         if line.startswith('tcp'):
@@ -84,7 +84,7 @@ def _netinfo_openbsd():
         r'internet(6)? (?:stream tcp 0x\S+ (\S+)|dgram udp (\S+))'
         r'(?: [<>=-]+ (\S+))?$'
     )
-    out = __salt__['cmd.run']('fstat', output_loglevel='debug')
+    out = __salt__['cmd.run']('fstat')
     for line in out.splitlines():
         try:
             user, cmd, pid, _, details = line.split(None, 4)
@@ -131,8 +131,7 @@ def _netinfo_freebsd_netbsd():
     out = __salt__['cmd.run'](
         'sockstat -46 {0} | tail -n+2'.format(
             '-n' if __grains__['kernel'] == 'NetBSD' else ''
-        ),
-        output_loglevel='debug'
+        )
     )
     for line in out.splitlines():
         user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
@@ -153,7 +152,7 @@ def _ppid():
     '''
     ret = {}
     cmd = 'ps -ax -o pid,ppid | tail -n+2'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         pid, ppid = line.split()
         ret[pid] = ppid
@@ -168,7 +167,7 @@ def _netstat_bsd():
     if __grains__['kernel'] == 'NetBSD':
         for addr_family in ('inet', 'inet6'):
             cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
-            out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+            out = __salt__['cmd.run'](cmd)
             for line in out.splitlines():
                 comps = line.split()
                 entry = {
@@ -184,7 +183,7 @@ def _netstat_bsd():
     else:
         # Lookup TCP connections
         cmd = 'netstat -p tcp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -196,7 +195,7 @@ def _netstat_bsd():
                 'state': comps[5]})
         # Lookup UDP connections
         cmd = 'netstat -p udp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -544,41 +543,41 @@ def mod_hostname(hostname):
     if hostname is None:
         return False
 
-    #1.use shell command hostname
-    hostname = hostname
-    cmd1 = 'hostname {0}'.format(hostname)
+    hostname_cmd = salt.utils.which('hostname')
+    # Grab the old hostname so we know which hostname to change and then
+    # change the hostname using the hostname command
+    o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
 
-    __salt__['cmd.run'](cmd1)
+    __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
 
-    #2.modify /etc/hosts hostname
-    f = open('/etc/hosts', 'r')
-    str_hosts = f.read()
-    f.close()
-    list_hosts = str_hosts.splitlines()
-    cmd2 = '127.0.0.1\t\tlocalhost.localdomain\t\tlocalhost\t\t{0}'.format(hostname)
-    #list_hosts[0]=cmd2
+    # Modify the /etc/hosts file to replace the old hostname with the
+    # new hostname
+    host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
 
-    for k in list_hosts:
-        if k.startswith('127.0.0.1'):
-            num = list_hosts.index(k)
-            list_hosts[num] = cmd2
+    with salt.utils.fopen('/etc/hosts', 'w') as fh:
+        for host in host_c:
+            host = host.split()
 
-    hostfile = '\n'.join(list_hosts)
-    f = open('/etc/hosts', 'w')
-    f.write(hostfile)
-    f.close()
+            try:
+                host[host.index(o_hostname)] = hostname
+            except ValueError:
+                pass
 
-    #3.modify /etc/sysconfig/network
-    f = open('/etc/sysconfig/network', 'r')
-    str_network = f.read()
-    list_network = str_network.splitlines()
-    cmd = 'HOSTNAME={0}'.format(hostname)
-    for k in list_network:
-        if k.startswith('HOSTNAME'):
-            num = list_network.index(k)
-            list_network[num] = cmd
-    networkfile = '\n'.join(list_network)
-    f = open('/etc/sysconfig/network', 'w')
-    f.write(networkfile)
-    f.close()
+            fh.write('\t'.join(host) + '\n')
+
+    # Modify the /etc/sysconfig/network configuration file to set the
+    # new hostname
+    if __grains__['os_family'] == 'RedHat':
+        network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
+
+        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh:
+            for i in network_c:
+                if i.startswith('HOSTNAME'):
+                    fh.write('HOSTNAME={0}\n'.format(hostname))
+                else:
+                    fh.write(i)
+    elif __grains__['os_family'] == 'Debian':
+        with salt.utils.fopen('/etc/hostname', 'w') as fh:
+            fh.write(hostname + '\n')
+
     return True

@@ -199,7 +199,7 @@ def SPF(domain, record='SPF', nameserver=None):
     if nameserver is not None:
         cmd.append('@{0}'.format(nameserver))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), output_loglevel='debug')
+    result = __salt__['cmd.run_all'](' '.join(cmd))
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warn(

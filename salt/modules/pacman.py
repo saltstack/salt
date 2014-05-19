@@ -551,8 +551,7 @@ def owner(*paths):
     ret = {}
     cmd = 'pacman -Qqo {0!r}'
     for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='debug')
+        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path))
     if len(ret) == 1:
         return ret.values()[0]
     return ret

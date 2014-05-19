@@ -61,3 +61,37 @@ def disable():
     return __salt__['cmd.run'](
             'netsh advfirewall set allprofiles state off'
             ) == 'Ok.'
+
+
+def get_rule(name="all"):
+    '''
+    Get firewall rule(s) info
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewall.get_rule "MyAppPort"
+    '''
+    ret = {}
+    cmd = 'netsh advfirewall firewall show rule name="{0}"'.format(name)
+    ret[name] = __salt__['cmd.run'](cmd)
+
+    if ret[name].strip() == "No rules match the specified criteria.":
+        ret = False
+
+    return ret
+
+
+def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
+    '''
+    Add a new firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewall.add_rule "test" "tcp" "8080"
+    '''
+    cmd = 'netsh advfirewall firewall add rule name="{0}" protocol={1} dir={2} localport={3} action={4}'.format(name, protocol, dir, localport, action)
+    return __salt__['cmd.run'](cmd) == 'Ok.'

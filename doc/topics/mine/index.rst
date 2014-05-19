@@ -65,6 +65,10 @@ to add them to the pool of load balanced servers.
     mine_functions:
       network.ip_addrs: [eth0]
 
+:file:`/etc/salt/minion.d/mine.conf`:
+
+.. code-block:: yaml
+
     mine_interval: 5
 
 :file:`/srv/salt/haproxy.sls`:

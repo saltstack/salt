@@ -13,7 +13,8 @@ def __virtual__():
 
 def enabled(name):
     '''
-    Enable RDP the service on the server
+    Enable the RDP service and make sure access to the RDP
+    port is allowed in the firewall configuration
     '''
     ret = {'name': name,
            'result': True,
@@ -21,20 +22,24 @@ def enabled(name):
            'comment': ''}
 
     stat = __salt__['rdp.status']()
-    if not stat:
-        ret['changes'] = {'enabled rdp': True}
 
-    if __opts__['test']:
-        ret['result'] = None
+    if not stat:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'RDP will be enabled'
+            return ret
+
+        ret['result'] = __salt__['rdp.enable']()
+        ret['changes'] = {'RDP was enabled': True}
         return ret
 
-    ret['result'] = __salt__['rdp.enable']()
+    ret['comment'] = 'RDP is enabled'
     return ret
 
 
 def disabled(name):
     '''
-    Disable RDP the service on the server
+    Disable the RDP service
     '''
     ret = {'name': name,
            'result': True,
@@ -42,11 +47,16 @@ def disabled(name):
            'comment': ''}
 
     stat = __salt__['rdp.status']()
-    if stat:
-        ret['changes'] = {'disable rdp': True}
 
-    if __opts__['test']:
+    if stat:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'RDP will be disabled'
+            return ret
+
+        ret['result'] = __salt__['rdp.disable']()
+        ret['changes'] = {'RDP was disabled': True}
         return ret
 
-    ret['result'] = __salt__['rdp.disable']()
+    ret['comment'] = 'RDP is disabled'
     return ret

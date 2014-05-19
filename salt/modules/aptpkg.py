@@ -442,8 +442,7 @@ def install(name=None,
         cmd.append('install')
         cmd.extend(targets)
 
-    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-                        output_loglevel='debug')
+    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -472,7 +471,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         cmd,
         env=kwargs.get('env'),
         python_shell=False,
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -568,7 +567,7 @@ def upgrade(refresh=True, **kwargs):
     old = list_pkgs()
     cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
            '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -901,7 +900,7 @@ def version_cmp(pkg1, pkg2):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
                   '{2!r}'.format(pkg1, oper, pkg2)
             retcode = __salt__['cmd.retcode'](
-                cmd, output_loglevel='debug', ignore_retcode=True
+                cmd, output_loglevel='trace', ignore_retcode=True
             )
             if retcode == 0:
                 return ret
@@ -1202,9 +1201,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:
                         cmd = 'apt-add-repository -y {0}'.format(repo)
-                    out = __salt__['cmd.run_stdout'](
-                        cmd, output_loglevel='debug', **kwargs
-                    )
+                    out = __salt__['cmd.run_stdout'](cmd, **kwargs)
                     # explicit refresh when a repo is modified.
                     refresh_db()
                     return {repo: out}
@@ -1314,17 +1311,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
         cmd = 'apt-key export {0}'.format(keyid)
-        output = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='debug', **kwargs
-        )
+        output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
         if ks:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](
-                    cmd.format(ks, keyid), output_loglevel='debug', **kwargs
-                )
+                ret = __salt__['cmd.run_all'](cmd.format(ks, keyid), **kwargs)
                 if ret['retcode'] != 0:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
@@ -1335,9 +1328,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
         cmd = 'apt-key add {0}'.format(fn_)
-        out = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='debug', **kwargs
-        )
+        out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
             raise CommandExecutionError(
                 'Error: key retrieval failed: {0}'.format(cmd.format(key_url))
@@ -1570,7 +1561,7 @@ def get_selections(pattern=None, state=None):
         cmd += ' {0!r}'.format(pattern)
     else:
         cmd += ' "*"'
-    stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     ret = _parse_selections(stdout)
     if state:
         return {state: ret.get(state, [])}
@@ -1657,7 +1648,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
         if clear:
             cmd = 'dpkg --clear-selections'
             if not __opts__['test']:
-                result = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+                result = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
                 if result['retcode'] != 0:
                     err = ('Running dpkg --clear-selections failed: '
                            '{0}'.format(result['stderr']))
@@ -1677,9 +1668,8 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                     _state
                     )
                 if not __opts__['test']:
-                    result = __salt__['cmd.run_all'](
-                        cmd, output_loglevel='debug'
-                    )
+                    result = __salt__['cmd.run_all'](cmd,
+                                                     output_loglevel='trace')
                     if result['retcode'] != 0:
                         log.error(
                             'failed to set state {0} for package '
@@ -1716,8 +1706,7 @@ def _resolve_deps(name, pkgs, **kwargs):
         ret = __salt__['cmd.retcode'](
             cmd,
             env=kwargs.get('env'),
-            python_shell=False,
-            output_loglevel='debug'
+            python_shell=False
         )
 
         if ret != 0:
@@ -1727,8 +1716,11 @@ def _resolve_deps(name, pkgs, **kwargs):
         else:
             try:
                 cmd = ['apt-mark', 'auto'] + missing_deps
-                __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-                        output_loglevel='debug')
+                __salt__['cmd.run'](
+                    cmd,
+                    env=kwargs.get('env'),
+                    python_shell=False
+                )
             except MinionError as exc:
                 raise CommandExecutionError(exc)
     return
@@ -1757,7 +1749,7 @@ def owner(*paths):
     cmd = 'dpkg -S {0!r} | cut -f1 -d:'
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='debug')
+                                               output_loglevel='trace')
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
