@@ -9234,7 +9234,7 @@ Or just type
 .sp
 .nf
 .ft C
-ruby \-e "$(curl \-fsSL https://raw.githubusercontent.com/mxcl/homebrew/go)"
+ruby \-e "$(curl \-fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
 .ft P
 .fi
 .UNINDENT
@@ -33555,7 +33555,7 @@ how to configure authenticated access.
 .B Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBrepo\fP (\fI\%string\fP) \-\- 
+\fBrepo\fP (\fI\%string\fP) \-\-
 .sp
 The repository to pull.         [registryurl://]REPOSITORY_NAME_image
 eg:
@@ -40327,7 +40327,7 @@ values for non\-standard package names such as when using a different
 Python version from the default Python version provided by the OS
 (e.g., \fBpython26\-mysql\fP instead of \fBpython\-mysql\fP).
 .IP \(bu 2
-\fBdefault\fP \-\- 
+\fBdefault\fP \-\-
 .sp
 default lookup_dict\(aqs key used if the grain does not exists
 or if the grain value has no match on lookup_dict.
@@ -91625,7 +91625,7 @@ used if no arguments are required.
 \fBtgt\fP (\fIstring or list\fP) \-\- Which minions to target for the execution. Default is shell
 glob. Modified by the \fBexpr_form\fP option.
 .IP \(bu 2
-\fBfun\fP (\fIstring or list of strings\fP) \-\- 
+\fBfun\fP (\fIstring or list of strings\fP) \-\-
 .sp
 The module and function to call on the specified minions of
 the form \fBmodule.function\fP\&. For example \fBtest.ping\fP or
@@ -91651,7 +91651,7 @@ executing a compound command.
 \fBtimeout\fP \-\- Seconds to wait after the last minion returns but
 before all minions return.
 .IP \(bu 2
-\fBexpr_form\fP \-\- 
+\fBexpr_form\fP \-\-
 .sp
 The type of \fBtgt\fP\&. Allowed values:
 .INDENT 2.0
@@ -91682,7 +91682,7 @@ on the minions
 .IP \(bu 2
 \fBkwarg\fP \-\- A dictionary with keyword arguments for the function.
 .IP \(bu 2
-\fBkwargs\fP \-\- 
+\fBkwargs\fP \-\-
 .sp
 Optional keyword arguments.
 .sp
