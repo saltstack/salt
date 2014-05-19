@@ -1461,11 +1461,11 @@ def mod_repo(repo, basedir=None, **kwargs):
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
         salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
     '''
-    # Filter out '__pub' arguments
-    repo_opts = dict((x, kwargs[x]) for x in kwargs if not x.startswith('__'))
-
-    if 'saltenv' in repo_opts:
-        del repo_opts['saltenv']
+    # Filter out '__pub' arguments, as well as saltenv
+    repo_opts = dict(
+        (x, kwargs[x]) for x in kwargs
+        if not x.startswith('__') and x not in ('saltenv',)
+    )
 
     if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):
         raise SaltInvocationError(
