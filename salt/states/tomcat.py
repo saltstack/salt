@@ -53,7 +53,7 @@ def __virtual__():
 # Functions
 def war_deployed(name,
                  war,
-                 force,
+                 force=False,
                  url='http://localhost:8080/manager',
                  timeout=180,
                  temp_war_location=None):
@@ -69,8 +69,8 @@ def war_deployed(name,
     war
         absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_url function
-	force: 
-		force deploy even if version strings are the same, False by default.	
+    force: 
+        force deploy even if version strings are the same, False by default.	
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     timeout : 180
@@ -150,7 +150,7 @@ def war_deployed(name,
     # Deploy
     deploy_res = __salt__['tomcat.deploy_war'](war,
                                                name,
-                                               force,
+                                               'yes',
                                                url,
                                                __env__,
                                                timeout,
