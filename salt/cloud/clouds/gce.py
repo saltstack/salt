@@ -1898,7 +1898,7 @@ def create(vm_=None, call=None):
         )
         return False
 
-    node_dict = show_instance(node_data['name'])
+    node_dict = show_instance(node_data['name'], 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)

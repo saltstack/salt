@@ -321,7 +321,7 @@ def create(vm_):
         return False
 
     def __query_node_data(vm_name):
-        data = show_instance(vm_name)
+        data = show_instance(vm_name, 'action')
         if not data:
             # Trigger an error in the wait_for_ip function
             return False
