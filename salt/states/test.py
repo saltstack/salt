@@ -57,7 +57,7 @@ def succeed_without_changes(name):
         'comment': 'Success!'
     }
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = True
         ret['comment'] = 'If we weren\'t testing, this would be a success!'
     return ret
 
@@ -79,7 +79,7 @@ def fail_without_changes(name):
     }
 
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'If we weren\'t testing, this would be a failure!'
 
     return ret
