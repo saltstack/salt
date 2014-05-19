@@ -2066,7 +2066,7 @@ def cache_node_list(nodes, provider, opts):
     if not 'update_cachedir' in opts or not opts['update_cachedir']:
         return
 
-    base = os.path.join(init_cachedir(), 'active')
+    base = os.path.join(init_cachedir(opts['cachedir']), 'active')
     driver = opts['providers'][provider].keys()[0]
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
