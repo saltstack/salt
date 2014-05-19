@@ -54,15 +54,11 @@ def succeed_without_changes(name):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Success!'
     }
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['comment'] = 'If we weren\'t testing, this would be a success!'
     return ret
 
 
@@ -79,16 +75,12 @@ def fail_without_changes(name):
         'name': name,
         'changes': {},
         'result': False,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Failure!'
     }
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['comment'] = 'If we weren\'t testing, this would be a failure!'
 
     return ret
 
@@ -106,25 +98,22 @@ def succeed_with_changes(name):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Success!'
     }
 
     # Following the docs as written here
     # http://docs.saltstack.com/ref/states/writing.html#return-data
     ret['changes'] = {
         'testing': {
-            'old': 'Nothing has changed yet',
-            'new': 'Were pretending really hard that we changed something'
+            'old': 'Unchanged',
+            'new': 'Something pretended to change'
         }
     }
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['comment'] = ('If we weren\'t testing, this would be successful '
+                          'with changes')
 
     return ret
 
@@ -142,25 +131,22 @@ def fail_with_changes(name):
         'name': name,
         'changes': {},
         'result': False,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Failure!'
     }
 
     # Following the docs as written here
     # http://docs.saltstack.com/ref/states/writing.html#return-data
     ret['changes'] = {
         'testing': {
-            'old': 'Nothing has changed yet',
-            'new': 'Were pretending really hard that we changed something'
+            'old': 'Unchanged',
+            'new': 'Something pretended to change'
         }
     }
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['comment'] = ('If we weren\'t testing, this would be failed with '
+                          'changes')
 
     return ret
 
@@ -198,9 +184,9 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
             # Following the docs as written here
             # http://docs.saltstack.com/ref/states/writing.html#return-data
             ret['changes'] = {
-            'testing': {
-                'old': 'Nothing has changed yet',
-                'new': 'Were pretending really hard that we changed something'
+                'testing': {
+                    'old': 'Unchanged',
+                    'new': 'Something pretended to change'
                 }
             }
     elif changes == True:  # pylint: disable=E8712
@@ -208,9 +194,9 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         # Following the docs as written here
         # http://docs.saltstack.com/ref/states/writing.html#return-data
         ret['changes'] = {
-        'testing': {
-            'old': 'Nothing has changed yet',
-            'new': 'Were pretending really hard that we changed something'
+            'testing': {
+                'old': 'Unchanged',
+                'new': 'Something pretended to change'
             }
         }
     elif changes == False:  # pylint: disable=E8712
@@ -229,13 +215,13 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     elif result == False:  # pylint: disable=E8712
         ret['result'] = False
     else:
-        raise SaltInvocationError('You have specified the state option \'Result\' with invalid arguments. '
-                                  'It must be either \'True\', \'False\', or \'Random\'')
+        raise SaltInvocationError('You have specified the state option '
+                                  '\'Result\' with invalid arguments. It must '
+                                  'be either \'True\', \'False\', or '
+                                  '\'Random\'')
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests, so I put tests in your tests, so you can test while you test.'
-        )
+        ret['comment'] = 'This is a test'
 
     return ret
