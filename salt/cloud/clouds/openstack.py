@@ -417,6 +417,12 @@ def request_instance(vm_=None, call=None):
             )
         )
 
+    avz = config.get_cloud_config_value(
+        'availability_zone', vm_, __opts__, default=None, search_global=False
+    )
+    if avz is not None:
+        kwargs['ex_availability_zone'] = avz
+
     kwargs['ex_keyname'] = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
     )
