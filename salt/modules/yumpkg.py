@@ -1464,6 +1464,9 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Filter out '__pub' arguments
     repo_opts = dict((x, kwargs[x]) for x in kwargs if not x.startswith('__'))
 
+    if 'saltenv' in repo_opts:
+        del repo_opts['saltenv']
+
     if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):
         raise SaltInvocationError(
             'Only one of \'mirrorlist\' and \'baseurl\' can be specified'
