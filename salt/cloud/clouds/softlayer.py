@@ -540,6 +540,7 @@ def list_nodes_full(mask='mask[id]', call=None):
     response = conn.getVirtualGuests()
     for node_id in response:
         ret[node_id['hostname']] = node_id
+    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
