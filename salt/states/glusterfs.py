@@ -28,17 +28,19 @@ def peered(name):
     name
         The remote host with which to peer.
 
-    peer-cluster:
-      glusterfs.peered:
-        - name: two
+    .. code-block:: yaml
 
-    peer-clusters:
-      glusterfs.peered:
-        - names:
-          - one
-          - two
-          - three
-          - four
+        peer-cluster:
+          glusterfs.peered:
+            - name: two
+
+        peer-clusters:
+          glusterfs.peered:
+            - names:
+              - one
+              - two
+              - three
+              - four
     '''
     ret = {'name': name,
            'changes': {},
@@ -82,19 +84,21 @@ def created(name, peers=None, **kwargs):
     name
         name of the volume
 
-    gluster-cluster:
-      glusterfs.created:
-        - name: mycluster
-        - brick: /srv/gluster/drive1
-        - replica: True
-        - count: 2
-        - short: True
-        - start: True
-        - peers:
-          - one
-          - two
-          - three
-          - four
+    .. code-block:: yaml
+
+        gluster-cluster:
+          glusterfs.created:
+            - name: mycluster
+            - brick: /srv/gluster/drive1
+            - replica: True
+            - count: 2
+            - short: True
+            - start: True
+            - peers:
+              - one
+              - two
+              - three
+              - four
     '''
     ret = {'name': name,
            'changes': {},
@@ -135,9 +139,12 @@ def started(name, **kwargs):
 
     name
         name of the volume
-    gluster-started:
-      glusterfs.started:
-        - name: mycluster
+
+    .. code-block:: yaml
+
+        gluster-started:
+          glusterfs.started:
+            - name: mycluster
     '''
     ret = {'name': name,
            'changes': {},
