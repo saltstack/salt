@@ -417,6 +417,7 @@ def request_instance(vm_=None, call=None):
             )
         )
 
+    # Note: This currently requires libcloud trunk
     avz = config.get_cloud_config_value(
         'availability_zone', vm_, __opts__, default=None, search_global=False
     )
