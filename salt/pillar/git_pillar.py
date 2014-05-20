@@ -150,8 +150,7 @@ class GitPillar(object):
                         # write.
                         # This should place a lock down.
                         pass
-
-            break # why are we even in a loop
+            break
 
 
     def update(self):
