@@ -201,6 +201,62 @@ cloud provider alias. If the provider alias only has a single entry, use
 
 
 
+Pillar Configuration
+====================
+
+It is possible to configure cloud providers using pillars.  This is only used
+when inside the cloud module.  You can setup a variable called ``clouds`` that
+contains your profile and provider to pass that information to the cloud
+servers instead of having to copy the full configuration to every minion.
+
+In your pillar file, you would use something like this.
+
+.. code-block:: yaml
+
+    clouds:
+      ssh_key_name: saltstack
+      ssh_key_file: /root/.ssh/id_rsa
+      update_cachedir: True
+      diff_cache_events: True
+      change_password: True
+      providers:
+        my-nova:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/
+          compute_region: IAD
+          user: myuser
+          api_key: apikey
+          tenant: 123456
+          provider: nova
+
+        my-openstack:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/tokens
+          user: user2
+          apikey: apikey2
+          tenant: 654321
+          compute_region: DFW
+          provider: openstack
+          compute_name: cloudServersOpenStack
+
+      profiles:
+        ubuntu-nova:
+          provider: my-nova
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+          flush_mine_on_destroy: True
+
+        ubuntu-openstack:
+          provider: my-openstack
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+          flush_mine_on_destroy: True
+
+**NOTE**: This is only valid in the cloud module, so also in the cloud state.
+This does not work with the salt-cloud binary.
+
+
+
 Cloud Configurations
 ====================
 
