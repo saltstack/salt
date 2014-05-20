@@ -202,10 +202,32 @@ class Master(SMaster):
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
         pillargitfs = []
+        git_pillars = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                br, loc = opts_dict['git'].strip().split()
-                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
+                git_pillars.append(opts_dict)
+
+        for idx, opts_dict in enumerate(git_pillars):
+
+            if 'git' in opts_dict:
+                parts = opts_dict['git'].strip().split()
+                br, loc = parts[0], parts[1]
+                if len(parts) > 2:
+                    key, _dir = parts[2].split('=')
+
+                    if key != 'root':
+                        log.error("malformed params, got: %s. Ignoring.", key)
+                        continue
+
+                    working_dir = os.path.join(self.opts['cachedir'],
+                                               'pillar_gitfs', str(idx))
+                    pillar_dir = os.path.normpath(os.path.join(
+                        working_dir, _dir))
+
+                    self.opts['pillar_roots'][br] = pillar_dir
+
+                p = git_pillar.GitPillar(br, loc, self.opts)
+                pillargitfs.append(p)
 
         # Clear remote fileserver backend env cache so it gets recreated during
         # the first loop_interval
