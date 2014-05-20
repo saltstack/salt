@@ -24,8 +24,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 
 # Import python libs
-import os
-import copy
 import time
 import json
 import pprint
@@ -42,7 +40,6 @@ from hashlib import sha1
 import salt.utils.cloud
 import salt.config as config
 from salt.cloud.exceptions import (
-    SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -365,9 +362,12 @@ def get_image(vm_):
     vm_image = str(config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     ))
-    for image in images:
-        if vm_image in (images[image]['ImageId'], images[image]['ImageName']):
-            return images[image]['ImageId']
+
+    if not vm_image:
+        raise SaltCloudNotFound('No image specified for this VM.')
+
+    if vm_image and str(vm_image) in images.keys():
+        return images[vm_image]['ImageId']
     raise SaltCloudNotFound(
         'The specified image, {0!r}, could not be found.'.format(vm_image)
     )
@@ -381,9 +381,12 @@ def get_securitygroup(vm_):
     securitygroup = config.get_cloud_config_value(
         'securitygroup', vm_, __opts__, search_global=False
     )
-    for sg in sgs:
-        if securitygroup in (sgs[sg]['SecurityGroupId']):
-            return sgs[sg]['SecurityGroupId']
+
+    if not securitygroup:
+        raise SaltCloudNotFound('No securitygroup ID specified for this VM.')
+
+    if securitygroup and str(securitygroup) in sgs.keys():
+        return sgs[securitygroup]['SecurityGroupId']
     raise SaltCloudNotFound(
         'The specified security group, {0!r}, could not be found.'.format(
             securitygroup)
@@ -398,9 +401,13 @@ def get_size(vm_):
     vm_size = str(config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
     ))
-    for size in sizes:
-        if vm_size in (sizes[size]['InstanceTypeId']):
-            return sizes[size]['InstanceTypeId']
+
+    if not vm_size:
+        raise SaltCloudNotFound('No size specified for this VM.')
+
+    if vm_size and str(vm_size) in sizes.keys():
+        return sizes[vm_size]['InstanceTypeId']
+
     raise SaltCloudNotFound(
         'The specified size, {0!r}, could not be found.'.format(vm_size)
     )
@@ -415,9 +422,11 @@ def __get_location(vm_):
         'location', vm_, __opts__, search_global=False
     ))
 
-    for location in locations:
-        if vm_location in (locations[location]['RegionId']):
-            return locations[location]['RegionId']
+    if not vm_location:
+        raise SaltCloudNotFound('No location specified for this VM.')
+
+    if vm_location and str(vm_location) in locations.keys():
+        return locations[vm_location]['RegionId']
     raise SaltCloudNotFound(
         'The specified location, {0!r}, could not be found.'.format(
             vm_location
@@ -505,7 +514,6 @@ def create_node(kwargs):
     '''
     Convenience function to make the rest api call for node creation.
     '''
-    print kwargs
     if type(kwargs) is not dict:
         kwargs = {}
 
