@@ -129,6 +129,55 @@ def set_mindays(name, mindays):
     return False
 
 
+def generate_password(password, crypt_salt=None, hash_algorithm='sha512'):
+    '''
+    Generate hashed password
+
+    password
+        Clear text password
+
+    crypt_salt
+        Crpytographic salt. If not given, will generate random 8-characters
+
+    hash_algorithm
+        Hashing algorithm. Support ``md5``, ``blowfish``, ``sha256``, ``sha512``(default).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.generate_password 'I_am_password'
+        salt '*' shadow.generate_password 'I_am_password' 'I_am_salt' sha256
+    '''
+    hash_algorithm = hash_algorithm.lower()
+    hash_algorithms = {'md5':'$1$', 'blowfish':'$2a$', 'sha256':'$5$', 'sha512':'$6$'}
+
+    ret = {}
+
+    try:
+        import crypt
+    except ImportError:
+        ret['error'] = 'Should installed crypt module'
+        return ret
+
+    # check hashing algorithm
+    if hash_algorithm not in hash_algorithms:
+        ret['error'] = 'Not support {0} hash algorithm'.format(hash_algorithm)
+        return ret
+
+    # generate crypt_salt
+    if not crypt_salt:
+        import random, string
+        crypt_salt = ''.join(random.sample(string.ascii_letters+string.digits, 8))
+    ret['salt'] = crypt_salt
+
+    crypt_salt = hash_algorithms[hash_algorithm] + crypt_salt
+    ret['hash_algorithm'] = hash_algorithm
+    ret['password'] = password
+    ret['hashed_password'] = crypt.crypt(password, crypt_salt)
+    return ret
+
+
 def set_password(name, password, use_usermod=False):
     '''
     Set the password for a named user. The password must be a properly defined
