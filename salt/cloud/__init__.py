@@ -171,11 +171,15 @@ class CloudClient(object):
     '''
     The client class to wrap cloud interactions
     '''
-    def __init__(self, path=None, opts=None, config_dir=None):
+    def __init__(self, path=None, opts=None, config_dir=None, pillars=None):
         if opts:
             self.opts = opts
         else:
             self.opts = salt.config.cloud_config(path)
+
+        if pillars:
+            self.opts['profiles'].update(pillars.get('profiles', {}))
+            self.opts['providers'].update(pillars.get('providers', {}))
 
     def _opts_defaults(self, **kwargs):
         '''
