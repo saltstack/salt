@@ -47,7 +47,7 @@ def _check_servers(servers):
 
 def _get_servers():
     try:
-        return set(__salt__['w32tm.get_servers']())
+        return set(__salt__['win_ntp.get_servers']())
     except TypeError:
         return set([False])
 
