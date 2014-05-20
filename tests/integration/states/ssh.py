@@ -13,14 +13,10 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_user
+    with_system_user,
+    skip_if_binaries_missing
 )
 ensure_in_syspath('../../')
-
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 # Import salt libs
 import integration

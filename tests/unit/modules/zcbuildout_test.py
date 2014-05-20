@@ -12,13 +12,9 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
+    skip_if_binaries_missing
 )
 ensure_in_syspath('../../')
-
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 # Import Salt libs
 import integration
