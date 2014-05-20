@@ -12,6 +12,7 @@ except ImportError:
     HAS_RANDOM = False
 import crypt
 import re
+import salt.exceptions
 
 
 def secure_password(length=20):
@@ -26,15 +27,20 @@ def secure_password(length=20):
     return pw
 
 
-def gen_hash(salt=None, password=None):
+def gen_hash(salt=None, password=None, algorithm='sha512'):
     '''
     Generate /etc/shadow hash
     '''
+    hash_algorithms = {'md5':'$1$', 'blowfish':'$2a$', 'sha256':'$5$', 'sha512':'$6$'}
+    if algorithm not in hash_algorithms:
+        raise salt.exceptions.SaltInvocationError('Not support {0} algorithm'.format(algorithm))
 
     if password is None:
         password = secure_password()
 
     if salt is None:
-        salt = '$6' + secure_password(8)
+        salt = secure_password(8)
+
+    salt = hash_algorithms[algorithm] + salt
 
     return crypt.crypt(password, salt)
