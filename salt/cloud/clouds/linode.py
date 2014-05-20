@@ -171,7 +171,7 @@ def create(vm_):
         'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
         'ex_swap': get_swap(vm_)
     }
-    
+
     if 'libcloud_args' in vm_:
         kwargs.update(vm_['libcloud_args'])
 
