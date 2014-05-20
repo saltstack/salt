@@ -213,7 +213,7 @@ In your pillar file, you would use something like this.
 
 .. code-block:: yaml
 
-    clouds:
+    cloud:
       ssh_key_name: saltstack
       ssh_key_file: /root/.ssh/id_rsa
       update_cachedir: True
