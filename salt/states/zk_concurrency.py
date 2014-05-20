@@ -46,6 +46,18 @@ def lock(zk_hosts,
          timeout=None):
     '''
     Block state execution until you are able to get the lock (or hit the timeout)
+
+    TODO: not poll, use watches
+
+    /path
+        /slots (where the people processing are)
+        /queue (queue of things that want a slot)
+
+    Try to get a slot, if its too many release and go to queue
+
+    when you create a queue entry, create an ephemeral sequential node, and the lowest one down gets to go
+        all children in the queue should watch the one in front of them (its FIFO)
+        and the one at the head of the line should watch /slots for a delete
     '''
     SLEEP_TIME = 0.2
     ret = {'name': path,
