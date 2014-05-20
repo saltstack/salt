@@ -219,6 +219,7 @@ In your pillar file, you would use something like this.
       update_cachedir: True
       diff_cache_events: True
       change_password: True
+
       providers:
         my-nova:
           identity_url: https://identity.api.rackspacecloud.com/v2.0/
