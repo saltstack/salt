@@ -38,6 +38,7 @@ SALT_LIBS = os.path.dirname(CODE_DIR)
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.case import ShellTestCase
+from salttesting.helpers import skip_if_binaries_missing
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
@@ -73,31 +74,6 @@ TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 
 log = logging.getLogger(__name__)
-
-
-def skip_if_binaries_missing(binaries, check_all=False):
-    # While there's no new release of salt-testing
-    def _id(obj):
-        return obj
-
-    if sys.version_info < (2, 7):
-        from unittest2 import skip  # pylint: disable=F0401
-    else:
-        from unittest import skip  # pylint: disable=E0611
-
-    if check_all:
-        for binary in binaries:
-            if salt.utils.which(binary) is None:
-                return skip(
-                    'The {0!r} binary was not found'
-                )
-    elif salt.utils.which_bin(binaries) is None:
-        return skip(
-            'None of the following binaries was found: {0}'.format(
-                ', '.join(binaries)
-            )
-        )
-    return _id
 
 
 def run_tests(*test_cases, **kwargs):
