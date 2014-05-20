@@ -31,7 +31,7 @@ def secure_password(length=20):
     return pw
 
 
-def gen_hash(salt=None, password=None, algorithm='sha512'):
+def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):
     '''
     Generate /etc/shadow hash
     '''
@@ -42,9 +42,9 @@ def gen_hash(salt=None, password=None, algorithm='sha512'):
     if password is None:
         password = secure_password()
 
-    if salt is None:
-        salt = secure_password(8)
+    if crypt_salt is None:
+        crypt_salt = secure_password(8)
 
-    salt = hash_algorithms[algorithm] + salt
+    crypt_salt = hash_algorithms[algorithm] + crypt_salt
 
-    return crypt.crypt(password, salt)
+    return crypt.crypt(password, crypt_salt)
