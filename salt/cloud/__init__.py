@@ -178,8 +178,9 @@ class CloudClient(object):
             self.opts = salt.config.cloud_config(path)
 
         if pillars:
-            self.opts['profiles'].update(pillars.get('profiles', {}))
-            self.opts['providers'].update(pillars.get('providers', {}))
+            self.opts['profiles'].update(pillars.pop('profiles', {}))
+            self.opts['providers'].update(pillars.pop('providers', {}))
+            slef.opts.update(pillars)
 
     def _opts_defaults(self, **kwargs):
         '''
