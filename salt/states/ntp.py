@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Management of NTP servers
+Management of Windows Time Service's upstream time servers
 =========================
 
 .. versionadded:: 2014.1.0 (Hydrogen)
 
-This state is used to manage NTP servers. Currently only Windows is supported.
+This state is used to manage w32tm upstream NTP servers on Windows.
 
 .. code-block:: yaml
 
@@ -47,14 +47,14 @@ def _check_servers(servers):
 
 def _get_servers():
     try:
-        return set(__salt__['ntp.get_servers']())
+        return set(__salt__['w32tm.get_servers']())
     except TypeError:
         return set([False])
 
 
 def managed(name, servers=None):
     '''
-    Manage NTP servers
+    Manage w32tm NTP servers
 
     servers
         A list of NTP servers
