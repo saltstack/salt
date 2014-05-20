@@ -5,7 +5,7 @@ correct cloud modules
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import print_function, generators
 import copy
 import os
 import traceback
@@ -179,8 +179,9 @@ class CloudClient(object):
 
         if pillars:
             self.opts['profiles'].update(pillars.pop('profiles', {}))
-            self.opts['providers'].update(pillars.pop('providers', {}))
-            slef.opts.update(pillars)
+            for name, provider in pillars.pop('providers', {}).items():
+                self.opts['providers'].update({name: {provider['provider']: provider}})
+            self.opts.update(pillars)
 
     def _opts_defaults(self, **kwargs):
         '''
