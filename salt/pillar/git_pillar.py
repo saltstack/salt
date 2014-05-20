@@ -69,7 +69,7 @@ def __virtual__():
     Only load if gitpython is available
     '''
     ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
-    print
+
     if not any(['git' in x for x in ext_pillar_sources]):
         return False
     if not HAS_GIT:
