@@ -26,6 +26,12 @@ Full list of builtin execution modules
     aws_sqs
     blockdev
     bluez
+    boto_asg
+    boto_elb
+    boto_iam
+    boto_route53
+    boto_secgroup
+    boto_sqs
     brew
     bridge
     bsd_shadow
