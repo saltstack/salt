@@ -179,11 +179,11 @@ class CloudClient(object):
 
         if pillars:
             cloud_args = pillars.copy()
-            for name, provider in cloud_args.get('providers', {}).items():
+            for name, provider in cloud_args.pop('providers', {}).items():
                 driver = provider['provider']
                 provider['profiles'] = {}
                 self.opts['providers'].update({name: {driver: provider}})
-            for name, profile in cloud_args.get('profiles', {}).items():
+            for name, profile in cloud_args.pop('profiles', {}).items():
                 provider = profile['provider'].split(':')[0]
                 driver = self.opts['providers'][provider].keys()[0]
                 profile['provider'] = '{0}:{1}'.format(provider, driver)
