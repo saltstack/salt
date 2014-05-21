@@ -13,7 +13,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-import salt.utils.pycrypt
+import salt.utils.pycrypto
 
 
 def __virtual__():
@@ -150,7 +150,7 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
         salt '*' shadow.gen_password 'I_am_password'
         salt '*' shadow.gen_password 'I_am_password' 'I_am_salt' sha256
     '''
-    return salt.utils.pycrypt.gen_hash(crypt_salt, password, algorithm)
+    return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
 
 
 def set_password(name, password, use_usermod=False):
