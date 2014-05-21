@@ -782,9 +782,7 @@ def ip_addrs(interface=None, include_loopback=False):
         for secondary in ipv4_info.get('secondary', []):
             addr = secondary.get('address')
             if addr and secondary.get('type') == 'inet':
-                if include_loopback \
-                        or (not include_loopback
-                            and addr != '127.0.0.1'):
+                if include_loopback or addr != '127.0.0.1':
                     ret.add(addr)
     return sorted(list(ret))
 
@@ -806,14 +804,12 @@ def ip_addrs6(interface=None, include_loopback=False):
             log.error('Interface {0} not found.'.format(interface))
     for ipv6_info in target_ifaces.values():
         for ipv6 in ipv6_info.get('inet6', []):
-            if include_loopback \
-                    or (not include_loopback and ipv6['address'] != '::1'):
+            if include_loopback or ipv6['address'] != '::1':
                 ret.add(ipv6['address'])
         for secondary in ipv6_info.get('secondary', []):
             addr = secondary.get('address')
             if addr and secondary.get('type') == 'inet6':
-                if include_loopback \
-                        or (not include_loopback and addr != '::1'):
+                if include_loopback or addr != '::1':
                     ret.add(addr)
     return sorted(list(ret))
 
