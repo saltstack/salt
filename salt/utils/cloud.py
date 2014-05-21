@@ -2095,9 +2095,14 @@ def cache_node(node, provider, opts):
     if not 'update_cachedir' in opts or not opts['update_cachedir']:
         return
 
+    if not os.path.exists(os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')):
+        init_cachedir()
+
     base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
     provider, driver = provider.split(':')
     prov_dir = os.path.join(base, driver, provider)
+    if not os.path.exists(prov_dir):
+        os.makedirs(prov_dir)
     path = os.path.join(prov_dir, '{0}.json'.format(node['name']))
     with salt.utils.fopen(path, 'w') as fh_:
         json.dump(node, fh_)
