@@ -1,12 +1,21 @@
 # -*- coding: utf-8 -*-
 '''
 Support for the Amazon Simple Queue Service.
+
+:configuration: This module uses the awscli tool provided by Amazon. Install
+    awscli on the minion executing these commands through pip. The awscli
+    documentation contains the configuration instructions.
 '''
 import logging
 import json
 
 # Import salt libs
 import salt.utils
+from salt.utils import aws
+
+
+def __virtual__():
+    return aws.installed()
 
 log = logging.getLogger(__name__)
 
@@ -159,9 +168,14 @@ def list_queues(region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_sqs.list_queues eu-west-1
     '''
-    out = _run_aws('list-queues', region, opts, user)
+    out = aws.cli('sqs', 'list-queues', region, opts, user)
 
     ret = {
         'retcode': 0,
@@ -184,12 +198,17 @@ def create_queue(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' aws_sqs.create_queue myqueue eu-west-1
     '''
 
     create = {'queue-name': name}
-    out = _run_aws(
-        'create-queue', region=region, opts=opts,
+    out = aws.cli(
+        'sqs', 'create-queue', region=region, opts=opts,
         user=user, **create)
 
     ret = {
@@ -206,6 +225,7 @@ def delete_queue(name, region, opts=None, user=None):
 
     name
         Name of the SQS queue to deletes
+
     region
         Name of the region to delete the queue from
 
@@ -213,7 +233,13 @@ def delete_queue(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.delete_queue myqueue eu-west-1
     '''
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
@@ -223,7 +249,8 @@ def delete_queue(name, region, opts=None, user=None):
     if name in url_map:
         delete = {'queue-url': url_map[name]}
 
-        rtn = _run_aws(
+        rtn = aws.cli(
+            'sqs',
             'delete-queue',
             region=region,
             opts=opts,
@@ -260,7 +287,13 @@ def queue_exists(name, region, opts=None, user=None):
         Any additional options to add to the command line
 
     user : None
-        Run hg as a user other than what the minion runs as
+        Run awscli as a different user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.queue_exists myqueue eu-west-1
     '''
     output = list_queues(region, opts, user)
 
