@@ -4292,3 +4292,81 @@ source_file = _build/locale/ref/states/all/salt.states.redismod.pot
 source_lang = en
 source_name = ref/states/all/salt.states.redismod.rst
 
+[salt.ref--modules--all--salt_modules_boto_asg]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_asg.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_asg.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_asg.rst
+
+[salt.ref--modules--all--salt_modules_boto_elb]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_elb.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_elb.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_elb.rst
+
+[salt.ref--modules--all--salt_modules_boto_iam]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_iam.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_iam.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_iam.rst
+
+[salt.ref--modules--all--salt_modules_boto_route53]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_route53.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_route53.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_route53.rst
+
+[salt.ref--modules--all--salt_modules_boto_secgroup]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_secgroup.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_secgroup.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_secgroup.rst
+
+[salt.ref--modules--all--salt_modules_boto_sqs]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_sqs.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_sqs.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_sqs.rst
+
+[salt.ref--states--all--salt_states_boto_asg]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_asg.po
+source_file = _build/locale/ref/states/all/salt.states.boto_asg.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_asg.rst
+
+[salt.ref--states--all--salt_states_boto_elb]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_elb.po
+source_file = _build/locale/ref/states/all/salt.states.boto_elb.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_elb.rst
+
+[salt.ref--states--all--salt_states_boto_iam_role]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_iam_role.po
+source_file = _build/locale/ref/states/all/salt.states.boto_iam_role.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_iam_role.rst
+
+[salt.ref--states--all--salt_states_boto_lc]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_lc.po
+source_file = _build/locale/ref/states/all/salt.states.boto_lc.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_lc.rst
+
+[salt.ref--states--all--salt_states_boto_route53]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_route53.po
+source_file = _build/locale/ref/states/all/salt.states.boto_route53.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_route53.rst
+
+[salt.ref--states--all--salt_states_boto_secgroup]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_secgroup.po
+source_file = _build/locale/ref/states/all/salt.states.boto_secgroup.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_secgroup.rst
+
+[salt.ref--states--all--salt_states_boto_sqs]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_sqs.po
+source_file = _build/locale/ref/states/all/salt.states.boto_sqs.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_sqs.rst
+
