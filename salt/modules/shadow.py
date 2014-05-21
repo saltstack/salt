@@ -13,6 +13,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.pycrypt
 
 
 def __virtual__():
@@ -127,6 +128,29 @@ def set_mindays(name, mindays):
     if post_info['min'] != pre_info['min']:
         return post_info['min'] == mindays
     return False
+
+
+def gen_password(password, crypt_salt=None, algorithm='sha512'):
+    '''
+    Generate hashed password
+
+    password
+        Clear text password
+
+    crypt_salt
+        Crpytographic salt. If not given, will generate random 8-characters
+
+    algorithm
+        Hashing algorithm. Support ``md5``, ``blowfish``, ``sha256``, ``sha512``(default).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.gen_password 'I_am_password'
+        salt '*' shadow.gen_password 'I_am_password' 'I_am_salt' sha256
+    '''
+    return salt.utils.pycrypt.gen_hash(crypt_salt, password, algorithm)
 
 
 def set_password(name, password, use_usermod=False):
