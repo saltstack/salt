@@ -16,7 +16,7 @@ import string
 import random
 
 # Import salt libs
-import salt.exceptions
+from salt.exceptions import SaltInvocationError
 
 def secure_password(length=20):
     '''
@@ -35,9 +35,13 @@ def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):
     '''
     Generate /etc/shadow hash
     '''
-    hash_algorithms = {'md5':'$1$', 'blowfish':'$2a$', 'sha256':'$5$', 'sha512':'$6$'}
+    hash_algorithms = dict(
+        md5='$1$', blowfish='$2a$', sha256='$5$', sha512='$6$'
+    )
     if algorithm not in hash_algorithms:
-        raise salt.exceptions.SaltInvocationError('Not support {0} algorithm'.format(algorithm))
+        raise SaltInvocationError(
+            'Algorithm {0!r} is not supported'.format(algorithm)
+        )
 
     if password is None:
         password = secure_password()
