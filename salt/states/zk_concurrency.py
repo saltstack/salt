@@ -111,7 +111,7 @@ def lock(zk_hosts,
     if path not in SEMAPHORE_MAP:
         SEMAPHORE_MAP[path] = Semaphore(zk,
                                         path,
-                                        __grains__['fqdn'],
+                                        __grains__['id'],
                                         max_leases=max_concurrency,
                                         ephemeral_lease=ephemeral_lease)
     # block waiting for lock acquisition
