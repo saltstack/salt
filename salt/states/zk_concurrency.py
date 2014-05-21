@@ -49,8 +49,6 @@ try:
     from kazoo.client import KazooClient
 
     from kazoo.retry import (
-        KazooRetry,
-        RetryFailedError,
         ForceRetryError
     )
     import kazoo.recipe.lock
@@ -95,21 +93,9 @@ def lock(zk_hosts,
          max_concurrency,
          timeout=None,
          ephemeral_lease=False):
-    global SEMAPHORE_MAP
     '''
     Block state execution until you are able to get the lock (or hit the timeout)
 
-    TODO: not poll, use watches
-
-    /path
-        /slots (where the people processing are)
-        /queue (queue of things that want a slot)
-
-    Try to get a slot, if its too many release and go to queue
-
-    when you create a queue entry, create an ephemeral sequential node, and the lowest one down gets to go
-        all children in the queue should watch the one in front of them (its FIFO)
-        and the one at the head of the line should watch /slots for a delete
     '''
     ret = {'name': path,
            'changes': {},
@@ -149,7 +135,6 @@ def unlock(zk_hosts, path):
     '''
     Remove lease from semaphore
     '''
-    global SEMAPHORE_MAP
     ret = {'name': path,
            'changes': {},
            'result': False,
@@ -180,10 +165,11 @@ class Semaphore(kazoo.recipe.lock.Semaphore):
                  max_leases=1,
                  ephemeral_lease=True,
                  ):
-        super(Semaphore, self).__init__(client,
-                                        path,
-                                        identifier=identifier,
-                                        max_leases=max_leases)
+        kazoo.recipe.lock.Semaphore.__init__(self,
+                                             client,
+                                             path,
+                                             identifier=identifier,
+                                             max_leases=max_leases)
 
         self.ephemeral_lease = ephemeral_lease
 
