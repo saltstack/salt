@@ -882,13 +882,17 @@ For more information on GitFS remotes, see the :ref:`GitFS Backend Walkthrough
 
 .. versionadded:: Helium
 
-Gitfs can be provided by one of two python modules: `GitPython`_ or `pygit2`_.
-If using pygit2, both libgit2 and git itself must also be installed. More
-information can be found in the :mod:`gitfs backend documentation
-<salt.fileserver.gitfs>`.
+Default: ``gitpython``
+
+GitFS defaults to using GitPython_, but this parameter allows for either
+pygit2_ or dulwich_ to be used instead. If using pygit2, both libgit2 and git
+itself must also be installed. More information can be found in the :mod:`GitFS
+backend documentation <salt.fileserver.gitfs>` and the :doc:`GitFS walkthrough
+</topics/tutorials/gitfs>`.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
+.. _dulwich: https://www.samba.org/~jelmer/dulwich/
 
 .. code-block:: yaml
 
