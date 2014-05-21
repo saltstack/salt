@@ -6,6 +6,7 @@ Salt-specific interface for calling Salt Cloud directly
 # Import python libs
 import os
 import logging
+import copy
 
 # Import salt libs
 try:
