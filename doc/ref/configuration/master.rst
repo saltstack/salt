@@ -872,8 +872,8 @@ translated into salt environments.
           - https://foo.com/baz.git:
             - root: salt/states
 
-    For more information on GitFS remotes, see the
-    :ref:`GitFS Backend Walkthrough <tutorial-gitfs>`.
+For more information on GitFS remotes, see the :ref:`GitFS Backend Walkthrough
+<tutorial-gitfs>`.
 
 .. conf_master:: gitfs_provider
 
