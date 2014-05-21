@@ -410,7 +410,7 @@ class BuildoutOnlineTestCase(Base):
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_st)
         self.assertTrue(ret['status'])
         ret = buildout.run_buildout(b_dir,
-                                    parts=['a', 'b'], python=self.py_st)
+                                    parts=['a', 'b'])
         out = ret['out']
         self.assertTrue('Installing a' in out)
         self.assertTrue('Installing b' in out)
