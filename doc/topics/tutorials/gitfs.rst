@@ -76,6 +76,7 @@ master:
     to the git repository. In a standalone minion configuration, files from
     each GitFS remote are cached by the minion.
 
+
 Multiple Remotes
 ================
 
@@ -141,33 +142,38 @@ is executed. For example:
 * A request for :strong:`salt://haproxy/haproxy.conf` will be pulled from the
   :strong:`file:///root/third` repo.
 
+
 Serving from a Subdirectory
 ===========================
 
-The ``gitfs_root`` option gives the ability to serve files from a subdirectory
-within the repository. The path is defined relative to the root of the
-repository.
+The :conf_master:`gitfs_root` parameter allows files to be served from a
+subdirectory within the repository. This allows for only part of a repository
+to be exposed to the Salt fileserver.
 
-With this repository structure:
+Assume the below layout::
 
-.. code-block:: yaml
+    .gitignore
+    README.txt
+    foo/
+    foo/bar/
+    foo/bar/one.txt
+    foo/bar/two.txt
+    foo/bar/three.txt
+    foo/baz/
+    foo/baz/top.sls
+    foo/baz/edit/vim.sls
+    foo/baz/edit/vimrc
+    foo/baz/nginx/init.sls
 
-    repository.git:
-        somefolder
-            otherfolder
-                top.sls
-                edit/vim.sls
-                edit/vimrc
-                nginx/init.sls
-
-Configuration and files can be accessed normally with:
+The below configuration would serve only the files from ``foo/baz``, ignoring
+the other files in the repository:
 
 .. code-block:: yaml
 
     gitfs_remotes:
-      - file:///repository.git
-        - root: gitfs_root: somefolder/otherfolder
+      - git://mydomain.com/stuff.git
 
+    gitfs_root: foo/baz
 
 
 Multiple Backends
@@ -190,17 +196,18 @@ Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
 
-Branches, environments and top.sls files
-========================================
 
-When using the ``gitfs`` backend, branches will be mapped
-to environments using the branch name as an identifier.
+Branches, Environments and Top Files
+====================================
 
-There is an exception to this rule: the ``master`` branch is implicitly
-mapped to the ``base`` environment.
+When using the ``gitfs`` backend, branches and tags will be mapped to
+environments using the branch/tag name as an identifier.
 
-So, for a typical ``base``, ``qa``, ``dev`` setup, you'd create
-a branch for each environment:
+There is one exception to this rule: the ``master`` branch is implicitly mapped
+to the ``base`` environment.
+
+So, for a typical ``base``, ``qa``, ``dev`` setup, the following branches could
+be used:
 
 .. code-block:: yaml
 
@@ -208,16 +215,17 @@ a branch for each environment:
     qa
     dev
 
-Also, ``top.sls`` files from different branches will be merged into one
-at runtime. Since this can lead to overly complex configurations,
-the recommended setup is to have the ``top.sls`` file only in the master
-branch and use environment-specific branches for state definitions.
+``top.sls`` files from different branches will be merged into one at runtime.
+Since this can lead to overly complex configurations, the recommended setup is
+to have the ``top.sls`` file only in the master branch and use
+environment-specific branches for state definitions.
 
-For more information on configuring environment branches, see
-:conf_master:`gitfs_remotes`, :conf_master:`gitfs_base`,
-:conf_master:`gitfs_env_whitelist`, and :conf_master:`gitfs_env_blacklist`.
-Per-remote versions of these configuration settings are available in the
-**Helium** release or newer.
+To map a branch other than ``master`` as the ``base`` environment, use the
+:conf_master:`gitfs_base` parameter.
+
+.. code-block:: yaml
+
+    gitfs_base: salt-base
 
 
 GitFS Remotes over SSH
@@ -234,14 +242,45 @@ To configure a ``gitfs_remotes`` repository over SSH transport, use the
 The private key used to connect to the repository must be located in
 ``~/.ssh/id_rsa`` for the user running the salt-master.
 
+
+Upcoming Features
+=================
+
+The upcoming feature release will bring a number of new features to gitfs:
+
+1. **Environment Blacklist/Whitelist**
+
+   Two new configuration parameters, :conf_master:`gitfs_env_whitelist` and
+   :conf_master:`gitfs_env_blacklist`, allow greater control over which
+   branches/tags are exposed as fileserver environments.
+
+2. **Mountpoint**
+
+   Prior to the addition of this feature, to serve a file from the URI
+   ``salt://webapps/foo/files/foo.conf``, it was necessary to ensure that the
+   git repository contained the parent directories (i.e.
+   ``webapps/foo/files/``). The :conf_master:`gitfs_mountpoint` parameter
+   will prepend the specified path to the files served from gitfs, allowing you
+   to use an existing repository rather than reorganizing it to fit your Salt
+   fileserver layout.
+
+3. **Per-remote Configuration Parameters**
+
+   :conf_master:`gitfs_base`, :conf_master:`gitfs_root`, and
+   :conf_master:`gitfs_mountpoint` are all global parameters. That is, they
+   affect *all* of your gitfs remotes. The upcoming feature release allows for
+   these parameters to be overridden on a per-remote basis. This allows for a
+   tremendous amount of customization. See :conf_master:`here <gitfs_remotes>`
+   for an example of how use per-remote configuration.
+
+
 Using Git as an External Pillar Source
 ======================================
 
-Git repositories can also be used to provide
-:doc:`Pillar </topics/pillar/index>` data, using the
-:doc:`External Pillar </topics/development/external_pillars>` system.
-To define a git external pillar, add a section like the
-following to the salt master config file:
+Git repositories can also be used to provide :doc:`Pillar
+</topics/pillar/index>` data, using the :doc:`External Pillar
+</topics/development/external_pillars>` system. To define a git external
+pillar, add a section like the following to the salt master config file:
 
 .. code-block:: yaml
 
