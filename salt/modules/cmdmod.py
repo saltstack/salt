@@ -576,6 +576,15 @@ def run(cmd,
     .. code-block:: bash
 
         salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
     ret = _run(cmd,
                runas=runas,
