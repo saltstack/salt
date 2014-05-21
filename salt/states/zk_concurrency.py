@@ -1,10 +1,49 @@
+# -*- coding: utf-8 -*-
 '''
-This state module is intended soely for controlling concurrency of the state
-execution. It maintains no other state
+Control concurrency of steps within state execution using zookeeper
+=========================================================================
+
+This module allows you to "wrap" a state's execution with concurrency control.
+This is useful to protect against all hosts executing highstate simultaneously
+if your services don't all HUP restart. The common way of protecting against this
+is to run in batch mode, but that doesn't protect from another person running
+the same batch command (and thereby having 2x the number of nodes deploying at once).
+
+This module will bock while acquiring a slot, meaning that however the command gets
+called it will coordinate with zookeeper to ensure that no more than max_concurrency
+steps are executing with a single path.
+
+.. code-block:: yaml
+
+    acquire_lock:
+      zk_concurrency.lock:
+        - zk_hosts: 'zookeeper:2181'
+        - path: /trafficserver
+        - max_concurrency: 4
+        - prereq:
+            - service: trafficserver
+
+    trafficserver:
+      service.running:
+        - watch:
+          - file: /etc/trafficserver/records.config
+
+    /etc/trafficserver/records.config:
+      file.managed:
+        - source: salt://records.config
+
+    release_lock:
+      zk_concurrency.unlock:
+        - zk_hosts: 'zookeeper:2181'
+        - path: /trafficserver
+        - require:
+            - service: trafficserver
+
+This example would allow the file state to change, but would limit the
+concurrency of the trafficserver service restart to 4.
 '''
 
 import logging
-import time
 
 try:
     from kazoo.client import KazooClient
@@ -91,8 +130,10 @@ def lock(zk_hosts,
                                         ephemeral_lease=ephemeral_lease)
     # block waiting for lock acquisition
     if timeout:
+        logging.info('Acquiring lock with timeout={0}'.format(timeout))
         SEMAPHORE_MAP[path].acquire(timeout=timeout)
     else:
+        logging.info('Acquiring lock with no timeout')
         SEMAPHORE_MAP[path].acquire()
 
     if SEMAPHORE_MAP[path].is_acquired:
