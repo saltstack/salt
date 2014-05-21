@@ -273,6 +273,18 @@ The upcoming feature release will bring a number of new features to gitfs:
    tremendous amount of customization. See :conf_master:`here <gitfs_remotes>`
    for an example of how use per-remote configuration.
 
+4. **Support for pygit2 and dulwich**
+
+   GitPython_ is no longer being actively developed, so support has been added
+   for both pygit2_ and dulwich_ as a Python interface for git. Neither is yet
+   as full-featured as GitPython, for instance authentication via public key
+   is not yet supported. Salt will default to using GitPython, but the
+   :conf_master:`gitfs_provider` parameter can be used to specify one of the
+   other providers.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+.. _dulwich: https://www.samba.org/~jelmer/dulwich/
 
 Using Git as an External Pillar Source
 ======================================
