@@ -5,7 +5,7 @@ correct cloud modules
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import print_function, generators
 import copy
 import os
 import traceback
@@ -171,11 +171,26 @@ class CloudClient(object):
     '''
     The client class to wrap cloud interactions
     '''
-    def __init__(self, path=None, opts=None, config_dir=None):
+    def __init__(self, path=None, opts=None, config_dir=None, pillars=None):
         if opts:
             self.opts = opts
         else:
             self.opts = salt.config.cloud_config(path)
+
+        if pillars:
+            cloud_args = pillars.copy()
+            for name, provider in cloud_args.pop('providers', {}).items():
+                driver = provider['provider']
+                provider['profiles'] = {}
+                self.opts['providers'].update({name: {driver: provider}})
+            for name, profile in cloud_args.pop('profiles', {}).items():
+                provider = profile['provider'].split(':')[0]
+                driver = self.opts['providers'][provider].keys()[0]
+                profile['provider'] = '{0}:{1}'.format(provider, driver)
+                profile['profile'] = name
+                self.opts['profiles'].update({name: profile})
+                self.opts['providers'][provider][driver]['profiles'].update({name: profile})
+            self.opts.update(cloud_args)
 
     def _opts_defaults(self, **kwargs):
         '''
