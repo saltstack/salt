@@ -178,19 +178,18 @@ class CloudClient(object):
             self.opts = salt.config.cloud_config(path)
 
         if pillars:
-            cloud_args = pillars.copy()
-            for name, provider in cloud_args.pop('providers', {}).items():
+            for name, provider in pillars.pop('providers', {}).items():
                 driver = provider['provider']
                 provider['profiles'] = {}
                 self.opts['providers'].update({name: {driver: provider}})
-            for name, profile in cloud_args.pop('profiles', {}).items():
+            for name, profile in pillars.pop('profiles', {}).items():
                 provider = profile['provider'].split(':')[0]
                 driver = self.opts['providers'][provider].keys()[0]
                 profile['provider'] = '{0}:{1}'.format(provider, driver)
                 profile['profile'] = name
                 self.opts['profiles'].update({name: profile})
                 self.opts['providers'][provider][driver]['profiles'].update({name: profile})
-            self.opts.update(cloud_args)
+            self.opts.update(pillars)
 
     def _opts_defaults(self, **kwargs):
         '''
