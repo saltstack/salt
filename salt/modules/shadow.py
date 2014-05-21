@@ -135,20 +135,26 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
     Generate hashed password
 
     password
-        Clear text password
+        Plaintext password to be hashed.
 
     crypt_salt
-        Crpytographic salt. If not given, will generate random 8-characters
+        Crpytographic salt. If not given, a random 8-character salt will be
+        generated.
 
     algorithm
-        Hashing algorithm. Support ``md5``, ``blowfish``, ``sha256``, ``sha512``(default).
+        The following hash algorithms are supported:
+
+        * md5
+        * blowfish (not in mainline glibc, only available in distros that add it)
+        * sha256
+        * sha512 (default)
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' shadow.gen_password 'I_am_password'
-        salt '*' shadow.gen_password 'I_am_password' 'I_am_salt' sha256
+        salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
     '''
     return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
 
