@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
 '''
 
 # Import Salt Testing libs
