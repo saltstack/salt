@@ -35,6 +35,7 @@ _HASHES = dict(
     ),
 )
 
+
 @skipIf(not is_linux(), 'minion is not Linux')
 class LinuxShadowTest(TestCase):
 
