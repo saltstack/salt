@@ -992,6 +992,15 @@ def replace(path,
 
     :rtype: bool or str
 
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' file.replace /path/to/file pattern='=' repl=':'
+
     CLI Example:
 
     .. code-block:: bash
