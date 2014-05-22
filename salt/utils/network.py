@@ -776,13 +776,13 @@ def ip_addrs(interface=None, include_loopback=False):
             log.error('Interface {0} not found.'.format(interface))
     for ipv4_info in target_ifaces.values():
         for ipv4 in ipv4_info.get('inet', []):
-            loopback = ipv4.get('address') == '127.0.0.1' or ipv4.get('label') == 'lo'
+            loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
             if not loopback or include_loopback:
                 ret.add(ipv4['address'])
         for secondary in ipv4_info.get('secondary', []):
             addr = secondary.get('address')
             if addr and secondary.get('type') == 'inet':
-                if include_loopback or addr != '127.0.0.1':
+                if include_loopback or (not include_loopback and not in_subnet('127.0.0.0/8', [addr])):
                     ret.add(addr)
     return sorted(list(ret))
 
