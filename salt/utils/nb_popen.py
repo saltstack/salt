@@ -124,7 +124,7 @@ class NonBlockingPopen(subprocess.Popen):
             except ValueError:
                 return self._close('stdin')
             except (subprocess.pywintypes.error, Exception) as why:
-                if why[0] in (109, errno.ESHUTDOWN):
+                if why.args[0] in (109, errno.ESHUTDOWN):
                     return self._close('stdin')
                 raise
 
@@ -145,7 +145,7 @@ class NonBlockingPopen(subprocess.Popen):
             except ValueError:
                 return self._close(which)
             except (subprocess.pywintypes.error, Exception) as why:
-                if why[0] in (109, errno.ESHUTDOWN):
+                if why.args[0] in (109, errno.ESHUTDOWN):
                     return self._close(which)
                 raise
 
@@ -171,7 +171,7 @@ class NonBlockingPopen(subprocess.Popen):
                 written = os.write(self.stdin.fileno(), input)
                 #self._stdin_logger.debug(input.rstrip())
             except OSError as why:
-                if why[0] == errno.EPIPE:  # broken pipe
+                if why.args[0] == errno.EPIPE:  # broken pipe
                     return self._close('stdin')
                 raise
 
