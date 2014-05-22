@@ -53,6 +53,53 @@ try:
     )
     import kazoo.recipe.lock
     from kazoo.exceptions import CancelledError
+
+
+# TODO: use the kazoo one, waiting for pull req: https://github.com/python-zk/kazoo/pull/206
+class Semaphore(kazoo.recipe.lock.Semaphore):
+    def __init__(self,
+                 client,
+                 path,
+                 identifier=None,
+                 max_leases=1,
+                 ephemeral_lease=True,
+                 ):
+        kazoo.recipe.lock.Semaphore.__init__(self,
+                                             client,
+                                             path,
+                                             identifier=identifier,
+                                             max_leases=max_leases)
+
+        self.ephemeral_lease = ephemeral_lease
+
+    def _get_lease(self, data=None):
+        # Make sure the session is still valid
+        if self._session_expired:
+            raise ForceRetryError("Retry on session loss at top")
+
+        # Make sure that the request hasn't been canceled
+        if self.cancelled:
+            raise CancelledError("Semaphore cancelled")
+
+        # Get a list of the current potential lock holders. If they change,
+        # notify our wake_event object. This is used to unblock a blocking
+        # self._inner_acquire call.
+        children = self.client.get_children(self.path,
+                                            self._watch_lease_change)
+
+        # If there are leases available, acquire one
+        if len(children) < self.max_leases:
+            self.client.create(self.create_path, self.data, ephemeral=self.ephemeral_lease)
+
+        # Check if our acquisition was successful or not. Update our state.
+        if self.client.exists(self.create_path):
+            self.is_acquired = True
+        else:
+            self.is_acquired = False
+
+        # Return current state
+        return self.is_acquired
+
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
@@ -154,49 +201,3 @@ def unlock(zk_hosts, path):
 
     ret['result'] = True
     return ret
-
-
-# TODO: use the kazoo one, waiting for pull req: https://github.com/python-zk/kazoo/pull/206
-class Semaphore(kazoo.recipe.lock.Semaphore):
-    def __init__(self,
-                 client,
-                 path,
-                 identifier=None,
-                 max_leases=1,
-                 ephemeral_lease=True,
-                 ):
-        kazoo.recipe.lock.Semaphore.__init__(self,
-                                             client,
-                                             path,
-                                             identifier=identifier,
-                                             max_leases=max_leases)
-
-        self.ephemeral_lease = ephemeral_lease
-
-    def _get_lease(self, data=None):
-        # Make sure the session is still valid
-        if self._session_expired:
-            raise ForceRetryError("Retry on session loss at top")
-
-        # Make sure that the request hasn't been canceled
-        if self.cancelled:
-            raise CancelledError("Semaphore cancelled")
-
-        # Get a list of the current potential lock holders. If they change,
-        # notify our wake_event object. This is used to unblock a blocking
-        # self._inner_acquire call.
-        children = self.client.get_children(self.path,
-                                            self._watch_lease_change)
-
-        # If there are leases available, acquire one
-        if len(children) < self.max_leases:
-            self.client.create(self.create_path, self.data, ephemeral=self.ephemeral_lease)
-
-        # Check if our acquisition was successful or not. Update our state.
-        if self.client.exists(self.create_path):
-            self.is_acquired = True
-        else:
-            self.is_acquired = False
-
-        # Return current state
-        return self.is_acquired
