@@ -318,6 +318,22 @@ def _clean_dir(root, keep, exclude_pat):
                     break
 
     for roots, dirs, files in os.walk(root):
+        for name in dirs:
+            nfn = os.path.join(roots, name)
+            if os.path.islink(nfn):
+                # the "directory" is in fact a symlink and cannot be
+                # removed by shutil.rmtree
+                files.append(nfn)
+                continue
+            if nfn not in real_keep:
+                # -- check if this is a part of exclude_pat(only). No need to
+                # check include_pat
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
+                    continue
+                removed.add(nfn)
+                if not __opts__['test']:
+                    shutil.rmtree(nfn)
         for name in files:
             nfn = os.path.join(roots, name)
             if nfn not in real_keep:
@@ -329,17 +345,6 @@ def _clean_dir(root, keep, exclude_pat):
                 removed.add(nfn)
                 if not __opts__['test']:
                     os.remove(nfn)
-        for name in dirs:
-            nfn = os.path.join(roots, name)
-            if nfn not in real_keep:
-                # -- check if this is a part of exclude_pat(only). No need to
-                # check include_pat
-                if not salt.utils.check_include_exclude(
-                        nfn[len(root) + 1:], None, exclude_pat):
-                    continue
-                removed.add(nfn)
-                if not __opts__['test']:
-                    shutil.rmtree(nfn)
     return list(removed)
 
 
