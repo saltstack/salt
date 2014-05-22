@@ -18,6 +18,7 @@ import random
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 
+
 def secure_password(length=20):
     '''
     Generate a secure password.
