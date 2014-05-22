@@ -943,6 +943,7 @@ def securitygroupid(vm_):
         'securitygroupid', vm_, __opts__, search_global=False
     )
 
+
 def get_placementgroup(vm_):
     '''
     Returns the PlacementGroup to use
@@ -950,6 +951,7 @@ def get_placementgroup(vm_):
     return config.get_cloud_config_value(
         'placementgroup', vm_, __opts__, search_global=False
     )
+
 
 def get_spot_config(vm_):
     '''
