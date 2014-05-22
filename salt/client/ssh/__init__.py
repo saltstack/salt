@@ -35,6 +35,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
+from salt.utils import is_windows
 
 try:
     import zmq
@@ -149,8 +150,9 @@ EOF'''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
-with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
-    SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
+if not is_windows():
+    with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
+        SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
 
 log = logging.getLogger(__name__)
 
