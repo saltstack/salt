@@ -528,7 +528,7 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
