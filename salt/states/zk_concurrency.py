@@ -54,8 +54,8 @@ try:
     import kazoo.recipe.lock
     from kazoo.exceptions import CancelledError
 
-
-    # TODO: use the kazoo one, waiting for pull req: https://github.com/python-zk/kazoo/pull/206
+    # TODO: use the kazoo one, waiting for pull req:
+    # https://github.com/python-zk/kazoo/pull/206
     class Semaphore(kazoo.recipe.lock.Semaphore):
         def __init__(self,
                     client,
