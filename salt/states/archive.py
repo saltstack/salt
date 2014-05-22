@@ -80,7 +80,7 @@ def extracted(name,
         Using this option means that the tar executable on the target will
         be used, which is less platform independent.
         Main operators like -x, --extract, --get, -c, etc. and -f/--file are
-        **not allowed** here.
+        **shoult not be used** here.
         If this option is not set, then the Python tarfile module is used.
         The tarfile module supports gzip and bz2 in Python 2.
     '''
