@@ -186,7 +186,7 @@ def save_load(jid, clear_load):
                 salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
                 )
         except IOError:
-            pass
+            log.warning('Could not write job cache file for minions: {0}'.format(minions))
 
     # Save the invocation information
     try:
@@ -195,7 +195,7 @@ def save_load(jid, clear_load):
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
             )
     except IOError:
-        pass
+        log.warning('Could not write job cache file for minions: {0}'.format(minions))
 
 
 def get_load(jid):
