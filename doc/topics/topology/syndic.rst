@@ -67,9 +67,11 @@ Topology and Caveats
 ====================
 
 It's important to understand that ``salt-syndic`` is nothing more than an event
-forwarder. It attaches to ``salt-master`` on your Master of Masters and listens
-for events. The ``salt-syndic`` process will take the event from the Master of
-Masters and bring them to the master process running on the syndic.
+forwarder. It attaches to ``salt-master`` on your lower level masters and
+listens for events. The ``salt-syndic`` process will take the event from the
+lower level masters and forward them to the master of masters.  It also does
+some job management, informing the master of masters of the list of minions
+which match the target of a given job.
 
 Most situations will call for a Master of Masters running ``salt-master`` and
 optionally ``salt-minion``. The ``salt-syndic`` process should not be running on
@@ -78,7 +80,7 @@ the salt-minion. The Salt syndic will be running ``salt-master``,
 
 If one minion is connected to multiple syndics and a a command is issued from
 the Master of Masters targeted for that minion, each syndic will react to the
-event. Each syndic will create a job to send to the minion connected to it which
+job. Each syndic will create a job to send to the minion connected to it which
 will cause the minion to receive one job for each syndic it's connected to. In
 some cases, the syndics will create the same job ID and it will be treated as
 one job. In other cases the syndics will create diffrent job IDs and the minion
