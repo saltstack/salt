@@ -53,6 +53,7 @@ def __virtual__():
 # Functions
 def war_deployed(name,
                  war,
+                 force=False,
                  url='http://localhost:8080/manager',
                  timeout=180,
                  temp_war_location=None):
@@ -68,6 +69,8 @@ def war_deployed(name,
     war
         absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_url function
+    force: 
+        force deploy even if version strings are the same, False by default.	
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     timeout : 180
@@ -102,7 +105,7 @@ def war_deployed(name,
 
     # Determine what to do
     try:
-        if version != webapps[name]['version']:
+        if (version != webapps[name]['version']) or force:
             deploy = True
             undeploy = True
             ret['changes']['undeploy'] = ('undeployed {0} in version {1}'.
@@ -151,12 +154,12 @@ def war_deployed(name,
                                                url,
                                                __env__,
                                                timeout,
-                                               temp_war_location=temp_war_location)
+                                               temp_war_location)
 
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = __salt__['tomcat.ls'](url, timeout)[name]
+        ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
         ret['changes']['deploy'] = 'deployed {0} in version {1}'.format(name,
                 version)
     else:
