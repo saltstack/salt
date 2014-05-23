@@ -100,7 +100,7 @@ _REV_ETHTOOL_CONFIG_OPTS = {
 
 _DEB_CONFIG_OPTS = [
     'domain', 'peerdns', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'mtu', 'static-routes', 'gateway', 'broadcast'
 ]
 _DEB_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval', 'slaves',
@@ -953,7 +953,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'ipaddr' in opts:
         adapters[iface]['data']['inet']['address'] = opts['ipaddr']
 
-    for opt in ['gateway', 'mtu', 'netmask', 'network']:
+    for opt in ['gateway', 'mtu', 'netmask', 'network', 'broadcast']:
         if opt in opts:
             adapters[iface]['data']['inet'][opt] = opts[opt]
 

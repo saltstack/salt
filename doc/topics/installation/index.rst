@@ -52,7 +52,12 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
 * `MarkupSafe`_ - Implements a XML/HTML/XHTML Markup safe string for Python
-* `apache-libcloud`_ - Python lib for interacting with many of the popular cloud service providers using a unified API
+* `apache-libcloud`_ - Python lib for interacting with many of the popular
+  cloud service providers using a unified API
+
+The upcoming feature release will include a new dependency:
+
+* `Requests`_ - HTTP library
 
 Optional Dependencies
 ---------------------
@@ -73,6 +78,7 @@ Optional Dependencies
 .. _`mako`: http://www.makotemplates.org/
 .. _`Cython`: http://cython.org/
 .. _`apache-libcloud`: http://libcloud.apache.org
+.. _`Requests`: http://docs.python-requests.org/en/latest
 
 
 Upgrading Salt

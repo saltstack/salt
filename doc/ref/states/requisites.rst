@@ -242,6 +242,8 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 Onchanges
 ---------
 
+.. versionadded:: Helium
+
 The ``onchanges`` requisite makes a state only apply if the required states
 generate changes. This can be a useful way to execute a post hook after
 changing aspects of a system.

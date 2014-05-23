@@ -6,6 +6,7 @@ Salt-specific interface for calling Salt Cloud directly
 # Import python libs
 import os
 import logging
+import copy
 
 # Import salt libs
 try:
@@ -37,7 +38,8 @@ def _get_client():
     Return a cloud client
     '''
     client = salt.cloud.CloudClient(
-        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud'),
+        pillars=copy.deepcopy(__pillar__.get('cloud', {}))
     )
     return client
 

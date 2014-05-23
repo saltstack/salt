@@ -229,7 +229,7 @@ def _run(cmd,
          stdin=None,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
-         output_loglevel='info',
+         output_loglevel='debug',
          quiet=False,
          runas=None,
          shell=DEFAULT_SHELL,
@@ -257,7 +257,7 @@ def _run(cmd,
     if not _is_valid_shell(shell):
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
-            'Check to ensure that she shell <{0}> is valid for this user.'
+            'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
 
     # Set the default working directory to the home directory of the user
@@ -536,7 +536,7 @@ def run(cmd,
         template=None,
         rstrip=True,
         umask=None,
-        output_loglevel='info',
+        output_loglevel='debug',
         quiet=False,
         timeout=None,
         reset_system_locale=True,
@@ -576,6 +576,15 @@ def run(cmd,
     .. code-block:: bash
 
         salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
     ret = _run(cmd,
                runas=runas,
@@ -636,7 +645,7 @@ def run_stdout(cmd,
                template=None,
                rstrip=True,
                umask=None,
-               output_loglevel='info',
+               output_loglevel='debug',
                quiet=False,
                timeout=None,
                reset_system_locale=True,
@@ -717,7 +726,7 @@ def run_stderr(cmd,
                template=None,
                rstrip=True,
                umask=None,
-               output_loglevel='info',
+               output_loglevel='debug',
                quiet=False,
                timeout=None,
                reset_system_locale=True,
@@ -798,7 +807,7 @@ def run_all(cmd,
             template=None,
             rstrip=True,
             umask=None,
-            output_loglevel='info',
+            output_loglevel='debug',
             quiet=False,
             timeout=None,
             reset_system_locale=True,
@@ -878,7 +887,7 @@ def retcode(cmd,
             clean_env=False,
             template=None,
             umask=None,
-            output_loglevel='info',
+            output_loglevel='debug',
             quiet=False,
             timeout=None,
             reset_system_locale=True,
@@ -992,7 +1001,7 @@ def script(source,
            env=None,
            template='jinja',
            umask=None,
-           output_loglevel='info',
+           output_loglevel='debug',
            quiet=False,
            timeout=None,
            reset_system_locale=True,

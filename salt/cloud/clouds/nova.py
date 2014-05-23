@@ -130,6 +130,7 @@ except ImportError:
 
 # Get logging started
 log = logging.getLogger(__name__)
+request_log = logging.getLogger('requests')
 
 
 # Some of the libcloud functions need to be in the same namespace as the
@@ -144,6 +145,7 @@ def __virtual__():
     '''
     Check for Nova configurations
     '''
+    request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
     return nova.HAS_NOVA
 
 
@@ -235,7 +237,9 @@ def show_instance(name, call=None):
         )
 
     conn = get_conn()
-    return conn.show_instance(name)
+    node = conn.show_instance(name).__dict__
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def get_size(conn, vm_):
@@ -382,8 +386,10 @@ def destroy(name, conn=None, call=None):
             {'name': name},
             transport=__opts__['transport']
         )
-        if __opts__['delete_sshkeys'] is True:
+        if __opts__.get('delete_sshkeys', False) is True:
             salt.utils.cloud.remove_sshkey(node.public_ips[0])
+        if __opts__.get('update_cachedir', False) is True:
+            salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
         return True
 
     log.error('Failed to Destroy VM: {0}'.format(name))
@@ -439,7 +445,7 @@ def request_instance(vm_=None, call=None):
     )
     if security_groups is not None:
         vm_groups = security_groups.split(',')
-        avail_groups = conn.ex_list_security_groups()
+        avail_groups = conn.list_security_groups()
         group_list = []
 
         for vmg in vm_groups:
@@ -450,7 +456,7 @@ def request_instance(vm_=None, call=None):
                     'No such security group: \'{0}\''.format(vmg)
                 )
 
-        kwargs['ex_security_groups'] = [
+        kwargs['security_groups'] = [
             g for g in avail_groups if g.name in group_list
         ]
 
@@ -464,15 +470,19 @@ def request_instance(vm_=None, call=None):
     if files:
         kwargs['files'] = {}
         for src_path in files:
-            with salt.utils.fopen(files[src_path], 'r') as fp_:
-                kwargs['files'][src_path] = fp_.read()
+            if os.path.exists(files[src_path]):
+                with salt.utils.fopen(files[src_path], 'r') as fp_:
+                    kwargs['files'][src_path] = fp_.read()
+            else:
+                kwargs['files'][src_path] = files[src_path]
+
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False
     )
 
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
-            kwargs['ex_userdata'] = fp.read()
+            kwargs['userdata'] = fp.read()
 
     salt.utils.cloud.fire_event(
         'event',
@@ -563,13 +573,11 @@ def create(vm_):
 
     def __query_node_data(vm_, data):
         try:
-            nodelist = list_nodes_full()
+            node = show_instance(vm_['name'], 'action')
             log.debug(
                 'Loaded node data for {0}:\n{1}'.format(
                     vm_['name'],
-                    pprint.pformat(
-                        nodelist[vm_['name']]
-                    )
+                    pprint.pformat(node)
                 )
             )
         except Exception as err:
@@ -583,13 +591,13 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = nodelist[vm_['name']]['state'] == 'ACTIVE'
+        running = node['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
             return
 
         if rackconnect(vm_) is True:
-            extra = nodelist[vm_['name']].get('extra', {})
+            extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
             access_ip = extra.get('access_ip', '')
@@ -600,7 +608,7 @@ def create(vm_):
 
         if managedcloud(vm_) is True:
             extra = conn.server_show_libcloud(
-                nodelist[vm_['name']]['id']
+                node['id']
             ).extra
             mc_status = extra.get('metadata', {}).get(
                 'rax_service_level_automation', '')
@@ -610,8 +618,8 @@ def create(vm_):
                 return
 
         result = []
-        private = nodelist[vm_['name']]['private_ips']
-        public = nodelist[vm_['name']]['public_ips']
+        private = node['private_ips']
+        public = node['public_ips']
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
@@ -749,7 +757,7 @@ def list_nodes(call=None, **kwargs):
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
-            'state': server_tmp['status'],
+            'state': server_tmp['state'],
             'private_ips': [addrs['addr'] for addrs in server_tmp['addresses']['private']],
             'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
         }
@@ -775,9 +783,12 @@ def list_nodes_full(call=None, **kwargs):
     if not server_list:
         return {}
     for server in server_list.keys():
-        ret[server] = conn.server_show_libcloud(
-            server_list[server]['id']
-        ).__dict__
+        try:
+            ret[server] = conn.server_show_libcloud(
+                server_list[server]['id']
+            ).__dict__
+        except IndexError as exc:
+            ret = {}
 
     salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret

@@ -25,7 +25,9 @@ import salt.client
 import salt.utils
 import salt.utils.process
 import salt.transport
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import (
+    SaltReqTimeoutError, SaltRenderError, CommandExecutionError
+)
 from salt._compat import string_types
 
 __proxyenabled__ = ['*']
@@ -47,12 +49,17 @@ def _sync(form, saltenv=None):
     if saltenv is None:
         # No environment passed, detect them based on gathering the top files
         # from the master
-        st_ = salt.state.HighState(__opts__)
-        top = st_.get_top()
-        if top:
-            saltenv = st_.top_matches(top).keys()
-        if not saltenv:
-            saltenv = 'base'
+        try:
+            st_ = salt.state.HighState(__opts__)
+            top = st_.get_top()
+            if top:
+                saltenv = st_.top_matches(top).keys()
+            if not saltenv:
+                saltenv = 'base'
+        except SaltRenderError as exc:
+            raise CommandExecutionError(
+                'Unable to render top file(s): {0}'.format(exc)
+            )
     if isinstance(saltenv, string_types):
         saltenv = saltenv.split(',')
     ret = []
@@ -319,6 +326,25 @@ def sync_outputters(saltenv=None, refresh=True):
     return ret
 
 
+def sync_utils(saltenv=None, refresh=True):
+    '''
+    Sync utility source files from the _utils directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _utils directory, base is the default
+    environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_utils
+    '''
+    ret = _sync('utils', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
@@ -338,6 +364,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
     ret['outputters'] = sync_outputters(saltenv, False)
+    ret['utils'] = sync_utils(saltenv, False)
     if refresh:
         refresh_modules()
     return ret

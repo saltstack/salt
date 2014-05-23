@@ -27,6 +27,12 @@ def extracted(name,
     The downloaded archive is erased if successfully extracted.
     The archive is downloaded only if necessary.
 
+    .. note::
+
+        If ``if_missing`` is not defined, this state will check for ``name``
+        instead.  If ``name`` exists, it will assume the archive was previously
+        extracted successfully and will not extract it again.
+
     .. code-block:: yaml
 
         graylog2-server:

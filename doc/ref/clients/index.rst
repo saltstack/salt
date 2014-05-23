@@ -49,6 +49,15 @@ system. This allows modules to have conditional requirements (OS, OS version,
 installed libraries, etc) and allows Salt to inject special variables
 (``__salt__``, ``__opts``, etc).
 
+Most modules can be manually loaded. This is often useful in third-party Python
+apps or when writing tests. However some modules require and expect a full,
+running Salt system underneath. Notably modules that facilitate
+master-to-minion communication such as the :py:mod:`~salt.modules.mine`,
+:py:mod:`~salt.modules.publish`, and :py:mod:`~salt.modules.peer` execution
+modules. The error ``KeyError: 'master_uri'`` is a likely indicator for this
+situation. In those instances use the :py:class:`~salt.client.Caller` class
+to execute those modules instead.
+
 Each module type has a corresponding loader function.
 
 .. autofunction:: salt.loader.minion_mods

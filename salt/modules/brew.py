@@ -212,7 +212,7 @@ def refresh_db():
     cmd = 'brew update'
     user = __salt__['file.get_user'](_homebrew_bin())
 
-    if __salt__['cmd.retcode'](cmd, runas=user, output_loglevel='debug'):
+    if __salt__['cmd.retcode'](cmd, runas=user):
         log.error('Failed to update')
         return False
 

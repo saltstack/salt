@@ -50,7 +50,7 @@ def active():
     return ret
 
 
-def lookup_jid(jid, ext_source=None, output=True):
+def lookup_jid(jid, ext_source=None):
     '''
     Return the printout from a previously executed job
 
