@@ -5,9 +5,9 @@ Port 2827
 ListenAddress 127.0.0.1
 Protocol 2
 # HostKeys for protocol version 2
-HostKey /etc/ssh/ssh_host_rsa_key
-HostKey /etc/ssh/ssh_host_dsa_key
-HostKey /etc/ssh/ssh_host_ecdsa_key
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_dsa_key
+#HostKey /etc/ssh/ssh_host_ecdsa_key
 UsePrivilegeSeparation yes
 # Turn strict modes off so that we can operate in /tmp
 StrictModes no

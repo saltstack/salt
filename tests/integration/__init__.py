@@ -337,6 +337,7 @@ class TestDaemon(object):
         if not os.path.exists(TMP_CONF_DIR):
             os.makedirs(TMP_CONF_DIR)
 
+        # Generate client key
         pub_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
         priv_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test')
         if os.path.exists(pub_key_test_file):
@@ -351,8 +352,8 @@ class TestDaemon(object):
                      '-C',
                      '"$(whoami)@$(hostname)-$(date -I)"',
                      '-f',
-                     'key_test'
-                     '-P'
+                     'key_test',
+                     '-P',
                      ''],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -365,8 +366,93 @@ class TestDaemon(object):
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, TMP_CONF_DIR)
         auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+
+        # Generate server key
+        server_key_dir = os.path.join(TMP_CONF_DIR, 'server')
+        if not os.path.exists(server_key_dir):
+            os.makedirs(server_key_dir)
+        server_dsa_priv_key_file = os.path.join(server_key_dir, 'ssh_host_dsa_key')
+        server_dsa_pub_key_file = os.path.join(server_key_dir, 'ssh_host_dsa_key.pub')
+        server_ecdsa_priv_key_file = os.path.join(server_key_dir, 'ssh_host_ecdsa_key')
+        server_ecdsa_pub_key_file = os.path.join(server_key_dir, 'ssh_host_ecdsa_key.pub')
+        server_ed25519_priv_key_file = os.path.join(server_key_dir, 'ssh_host_ed25519_key')
+        server_ed25519_pub_key_file = os.path.join(server_key_dir, 'ssh_host.ed25519_key.pub')
+
+        for server_key_file in (server_dsa_priv_key_file,
+                                server_dsa_pub_key_file,
+                                server_ecdsa_priv_key_file,
+                                server_ecdsa_pub_key_file,
+                                server_ed25519_priv_key_file,
+                                server_ed25519_pub_key_file):
+            if os.path.exists(server_key_file):
+                os.remove(server_key_file)
+
+        keygen_process_dsa = subprocess.Popen(
+            [keygen, '-t',
+                     'dsa',
+                     '-b',
+                     '1024',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'ssh_host_dsa_key',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=server_key_dir
+        )
+        _, keygen_dsa_err = keygen_process_dsa.communicate()
+        if keygen_dsa_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_dsa_err))
+
+        keygen_process_ecdsa = subprocess.Popen(
+            [keygen, '-t',
+                     'ecdsa',
+                     '-b',
+                     '521',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'ssh_host_ecdsa_key',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=server_key_dir
+        )
+        _, keygen_escda_err = keygen_process_ecdsa.communicate()
+        if keygen_escda_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_escda_err))
+
+        keygen_process_ed25519 = subprocess.Popen(
+            [keygen, '-t',
+                     'ed25519',
+                     '-b',
+                     '521',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'ssh_host_ed25519_key',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=server_key_dir
+        )
+        _, keygen_ed25519_err = keygen_process_ed25519.communicate()
+        if keygen_ed25519_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
+
+
         with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
+            ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
+            ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
+            ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
         self.sshd_process = subprocess.Popen(
             [sshd, '-f', 'sshd_config'],
             stdout=subprocess.PIPE,
@@ -938,7 +1024,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '--roster-file {0} localhost {1} --out=json'.format(os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-c {0} --priv {1} --roster-file {2} localhost {3} --out=json'.format(TMP_CONF_DIR, os.path.join(TMP_CONF_DIR, 'test_key'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
