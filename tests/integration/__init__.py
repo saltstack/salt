@@ -1024,7 +1024,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} --priv {1} --roster-file {2} localhost {3} --out=json'.format(TMP_CONF_DIR, os.path.join(TMP_CONF_DIR, 'test_key'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-i --priv {0} --roster-file {1} localhost {2} --out=json'.format(os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
