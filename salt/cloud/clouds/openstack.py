@@ -517,7 +517,7 @@ def create(vm_):
             return
 
         if rackconnect(vm_) is True:
-            check_libcloud_version((0, 14, 0), why='rackconnect: True')
+            check_libcloud_version('0.14.0', why='rackconnect: True')
             extra = nodelist[vm_['name']].get('extra')
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
