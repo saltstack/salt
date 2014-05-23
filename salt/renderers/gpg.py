@@ -131,7 +131,7 @@ def render(data, saltenv='base', sls='', argline='', **kwargs):
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
     '''
-    if not HAS_GPG:
+    if not HAS_GNUPG:
         raise SaltRenderError('GPG unavailable')
     if isinstance(__salt__, dict):
         if 'config.get' in __salt__:
