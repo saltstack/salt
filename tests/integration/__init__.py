@@ -447,7 +447,6 @@ class TestDaemon(object):
         if keygen_ed25519_err:
             print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
 
-
         with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
