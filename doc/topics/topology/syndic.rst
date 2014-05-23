@@ -83,16 +83,3 @@ Nodes on the lowest points of the hierarchy (minions which do not propogate
 data to another level) will only have the ``salt-minion`` daemon running. There
 is no need for either ``salt-master`` or ``salt-syndic`` to be running on a
 standard minion.
-
-Care should be taken to ensure that no single minion is concurrently connected
-to more than one syndic. Each syndic will generate its own job ID for commands
-received from upper-level masters. Collisions resulting from a minion receiving
-multiple jobs with the same job ID (from different syndics) will result in a
-race condition, in which the first job received is performed, and the second
-job received is thrown away.
-
-To clarify, when a minion received a job for a job ID which it has already
-processed, it will ignore the second job request. This is necessary, in order
-to prevent replay attacks. This situation can be avoided by configuring the
-hierarchy so that there is never more than one path a message can take both
-from the master to the minion, and from the minion back to the master.
