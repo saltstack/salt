@@ -222,3 +222,27 @@ For Windows machines:
         - name: salt-minion
         - require:
             - cmd: schedule-start
+
+Salting the Salt Master
+-----------------------
+
+In order to configure a master server via states, the Salt master can also be
+"salted" in order to enforce state on the Salt master as well as the Salt
+minions. Salting the Salt master requires a Salt minion to be installed on
+the same machine as the Salt master. Once the Salt minion is installed, the
+minion configuration file must be pointed to the local Salt master:
+
+.. code-block:: yaml
+
+    master: 127.0.0.1
+
+Once the Salt master has been "salted" with a Salt minion, it can be targeted
+just like any other minion. If the minion on the salted master is running, the
+minion can be targeted via any usual ``salt`` command. Additionally, the
+``salt-call`` command can execute operations to enforce state on the salted
+master without requiring the minion to be running.
+
+More information about salting the Salt master can be found in the salt-formula
+for salt itself:
+
+https://github.com/saltstack-formulas/salt-formula
