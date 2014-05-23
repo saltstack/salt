@@ -79,6 +79,8 @@ def extracted(name,
         this archive, such as 'J' for LZMA.
         Using this option means that the tar executable on the target will
         be used, which is less platform independent.
+        Main operators like -x, --extract, --get, -c, etc. and -f/--file are
+        **shoult not be used** here.
         If this option is not set, then the Python tarfile module is used.
         The tarfile module supports gzip and bz2 in Python 2.
     '''
@@ -154,14 +156,8 @@ def extracted(name,
                 files = tar.getnames()
                 tar.extractall(name)
         else:
-            # this is needed until merging PR 2651
             log.debug('Untar {0} in {1}'.format(filename, name))
-            for opt in ['x']:
-                if not opt in tar_options:
-                    tar_options = '-{0} {1}'.format(opt, tar_options)
-            # Want to ensure -f is the last argument before the filename
-            if 'f' in tar_options:
-                tar_options = tar_options.replace('f', '')
+
             results = __salt__['cmd.run_all']('tar {0} -f "{1}"'.format(
                 tar_options, filename), cwd=name)
             if results['retcode'] != 0:
