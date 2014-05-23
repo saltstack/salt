@@ -1054,7 +1054,7 @@ def replace(path,
                 result = re.search(cpattern, line)
 
                 if result:
-                    return True # `finally` block handles file closure
+                    return True  # `finally` block handles file closure
             else:
                 result, nrepl = re.subn(cpattern, repl, line, count)
 
