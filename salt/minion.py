@@ -297,7 +297,9 @@ class MinionBase(object):
         self._init_context_and_poller()
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        id_hash = hash_type(self.opts['id']).hexdigest()[:10]
+        id_hash = hash_type(self.opts['id']).hexdigest()
+        if self.opts.get('hash_type', 'md5') == 'sha256':
+            id_hash = id_hash[:10]
         epub_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)
