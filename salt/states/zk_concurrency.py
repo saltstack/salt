@@ -56,7 +56,7 @@ try:
 
     # TODO: use the kazoo one, waiting for pull req:
     # https://github.com/python-zk/kazoo/pull/206
-    class Semaphore(kazoo.recipe.lock.Semaphore):
+    class _Semaphore(kazoo.recipe.lock.Semaphore):
         def __init__(self,
                     client,
                     path,
@@ -156,7 +156,7 @@ def lock(zk_hosts,
 
     zk = _get_zk_conn(zk_hosts)
     if path not in SEMAPHORE_MAP:
-        SEMAPHORE_MAP[path] = Semaphore(zk,
+        SEMAPHORE_MAP[path] = _Semaphore(zk,
                                         path,
                                         __grains__['id'],
                                         max_leases=max_concurrency,
