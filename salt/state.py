@@ -2173,9 +2173,11 @@ class BaseHighState(object):
         if not self.opts['autoload_dynamic_modules']:
             return
         if self.opts.get('local', False):
-            syncd = self.state.functions['saltutil.sync_all'](list(matches), refresh=False)
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         else:
-            syncd = self.state.functions['saltutil.sync_all'](list(matches))
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()
@@ -2582,7 +2584,6 @@ class BaseHighState(object):
         err = []
         try:
             top = self.get_top()
-            self.state.functions['saltutil.sync_all'](saltenv=top.keys())
         except SaltRenderError as err:
             ret[tag_name]['comment'] = err.error
             return ret
