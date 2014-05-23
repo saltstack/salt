@@ -180,16 +180,22 @@ def save_load(jid, clear_load):
                 clear_load.get('tgt_type', 'glob')
                 )
         # save the minions to a cache so we can see in the UI
-        serial.dump(
-            minions,
-            salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
-            )
+        try:
+            serial.dump(
+                minions,
+                salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
+                )
+        except IOError:
+            log.warning('Could not write job cache file for minions: {0}'.format(minions))
 
     # Save the invocation information
-    serial.dump(
-        clear_load,
-        salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
-        )
+    try:
+        serial.dump(
+            clear_load,
+            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
+            )
+    except IOError:
+        log.warning('Could not write job cache file for minions: {0}'.format(minions))
 
 
 def get_load(jid):
