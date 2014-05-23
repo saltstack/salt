@@ -2559,7 +2559,7 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
-        #Check that top file exists
+        # Check that top file exists
         tag_name = 'no_|-states_|-states_|-None'
         ret = {tag_name: {
                 'result': False,
@@ -2578,10 +2578,11 @@ class BaseHighState(object):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high)
-        #File exists so continue
+        # File exists so continue
         err = []
         try:
             top = self.get_top()
+            self.state.functions['saltutil.sync_all'](saltenv=top.keys())
         except SaltRenderError as err:
             ret[tag_name]['comment'] = err.error
             return ret
