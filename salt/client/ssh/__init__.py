@@ -576,7 +576,7 @@ class Single(object):
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         elif self.fun in self.wfuncs:
-            stdout, stderr, retcode = self.run_wfunc()
+            stdout = self.run_wfunc()
 
         else:
             stdout, stderr, retcode = self.cmd_block()
