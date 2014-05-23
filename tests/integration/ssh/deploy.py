@@ -6,7 +6,7 @@ import integration
 from salttesting import skipIf
 
 
-#@skipIf(True, 'Not ready for production')
+@skipIf(True, 'Not ready for production')
 class SSHTest(integration.SSHCase):
     '''
     Test general salt-ssh functionality
