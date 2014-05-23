@@ -27,7 +27,7 @@ def _get_rvm_location(runas=None):
     return '/usr/local/rvm/bin/rvm'
 
 
-def _rvm(command, arguments=None, runas=None):
+def _rvm(command, arguments=None, runas=None, cwd=None):
     if runas is None:
         runas = __salt__['config.option']('rvm.runas')
     if not is_installed(runas):
@@ -37,17 +37,17 @@ def _rvm(command, arguments=None, runas=None):
     if arguments:
         cmd.append(arguments)
 
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=runas)
+    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
 
     if ret['retcode'] == 0:
         return ret['stdout']
     return False
 
 
-def _rvm_do(ruby, command, runas=None):
+def _rvm_do(ruby, command, runas=None, cwd=None):
     return _rvm('{ruby} do {command}'.
                 format(ruby=ruby or 'default', command=command),
-                runas=runas)
+                runas=runas, cwd=cwd)
 
 
 def is_installed(runas=None):
@@ -394,7 +394,7 @@ def gemset_list_all(runas=None):
     return gemsets
 
 
-def do(ruby, command, runas=None):  # pylint: disable=C0103
+def do(ruby, command, runas=None, cwd=None):  # pylint: disable=C0103
     '''
     Execute a command in an RVM controlled environment.
 
@@ -404,6 +404,8 @@ def do(ruby, command, runas=None):  # pylint: disable=C0103
         The command to execute.
     runas : None
         The user to run rvm as.
+    cwd : None
+        The current working directory.
 
     CLI Example:
 
@@ -411,4 +413,4 @@ def do(ruby, command, runas=None):  # pylint: disable=C0103
 
         salt '*' rvm.do 2.0.0 <command>
     '''
-    return _rvm_do(ruby, command, runas=runas)
+    return _rvm_do(ruby, command, runas=runas, cwd=cwd)
