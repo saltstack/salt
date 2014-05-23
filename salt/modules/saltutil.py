@@ -56,6 +56,8 @@ def _get_top_file_envs():
             top = st_.get_top()
             if top:
                 envs = st_.top_matches(top).keys() or 'base'
+            else:
+                envs = 'base'
         except SaltRenderError as exc:
             raise CommandExecutionError(
                 'Unable to render top file(s): {0}'.format(exc)
