@@ -62,3 +62,25 @@ starting the other Salt daemons.
     to return their events.  If you think this is the case, you can set the
     :conf_master:`syndic_wait` value in the upper master config.  The default
     value is ``1``, and should work for the majority of deployments.
+
+Topology and Caveats
+====================
+
+It's important to understand that ``salt-syndic`` is nothing more than an event
+forwarder. It attaches to ``salt-master`` on your Master of Masters and listens
+for events. The ``salt-syndic`` process will take the event from the Master of
+Masters and bring them to the master process running on the syndic.
+
+In general, you will likely want ``salt-minion``, ``salt-master``, and
+``salt-syndic`` running on a syndication server. Of course, this depends on your
+specific needs.
+
+You should not run ``salt-syndic`` on the Master of Masters. You should run
+``salt-master`` on the syndics, otherwise the events are meaningless.
+
+If you have one minion connected to multiple syndics and issue a command
+targeted for that minion from the Master of Masters, each syndic will react to
+that event and each master will create a job to send to the minion connect to it
+which will cause the minion to be given two identical jobs. In some cases, the
+syndics will create the exact same job id and you will only see one response,
+other times, you will see multiple responses.
