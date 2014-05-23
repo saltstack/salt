@@ -71,6 +71,7 @@ Now you can include your ciphers in your pillar data like so:
 '''
 
 import re
+import sys
 try:
     # gnupg broke python 2.6 compat https://github.com/isislovecruft/python-gnupg/issues/39
     if sys.version_info >= (2, 7):
