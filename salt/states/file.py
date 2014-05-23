@@ -970,6 +970,7 @@ def managed(name,
             contents_pillar=None,
             contents_pillar_newline=True,
             follow_symlinks=True,
+            check_cmd=None,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1152,6 +1153,11 @@ def managed(name,
         If the desired path is a symlink follow it and make changes to the
         file to which the symlink points.
 
+    check_cmd
+        .. versionadded:: Helium
+
+        Do run the state only if the check_cmd succeeds
+
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1291,6 +1297,59 @@ def managed(name,
         ret['changes'] = {}
         log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
+
+    if check_cmd:
+        tmp_filename = salt.utils.mkstemp()
+
+        # if exists copy existing file to tmp to compare
+        if __salt__['file.file_exists'](name):
+            try:
+                __salt__['file.copy'](name, tmp_filename)
+            except Exception as exc:
+                return _error(ret, 'Unable to copy file {0} to {1}: {2}'.format(name, tmp_filename, exc))
+
+        try:
+            ret = __salt__['file.manage_file'](
+                tmp_filename,
+                sfn,
+                ret,
+                source,
+                source_sum,
+                user,
+                group,
+                mode,
+                __env__,
+                backup,
+                makedirs,
+                template,
+                show_diff,
+                contents,
+                dir_mode,
+                follow_symlinks)
+        except Exception as exc:
+            ret['changes'] = {}
+            log.debug(traceback.format_exc())
+            return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
+
+        # file being updated to verify using check_cmd
+        if ret['changes']:
+            # Reset ret
+            ret = {'changes': {},
+                   'comment': '',
+                   'name': name,
+                   'result': True}
+
+            cret = mod_run_check_cmd(
+                check_cmd, tmp_filename
+            )
+            if isinstance(cret, dict):
+                ret.update(cret)
+                return ret
+        else:
+            ret = {'changes': {},
+                   'comment': '',
+                   'name': name,
+                   'result': True}
 
     if comment_ and contents is None:
         return _error(ret, comment_)
@@ -3795,3 +3854,21 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         )
 
     return ret
+
+
+def mod_run_check_cmd(cmd, filename):
+    '''
+    Execute the check_cmd logic
+    Return a result dict if:
+    * check_cmd succeeded (check_cmd == 0)
+    else return True
+    '''
+
+    log.debug('running our check_cmd')
+    _cmd = '{0} {1}'.format(cmd, filename)
+    if __salt__['cmd.retcode'](_cmd) != 0:
+        return {'comment': 'check_cmd execution failed',
+                'result': True}
+
+    # No reason to stop, return True
+    return True
