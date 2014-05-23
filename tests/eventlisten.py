@@ -70,8 +70,7 @@ def listen(opts):
     '''
     event = salt.utils.event.SaltEvent(
             opts['node'],
-            opts['sock_dir'],
-            opts
+            opts['sock_dir']
             )
     print(event.puburi)
     jid_counter = 0
