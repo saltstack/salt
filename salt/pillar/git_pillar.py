@@ -119,8 +119,8 @@ class GitPillar(object):
                           opts_dict.get('git', None))
                 break
 
-            rp_= os.path.join(self.opts['cachedir'],
-                              'pillar_gitfs', str(idx))
+            rp_ = os.path.join(self.opts['cachedir'],
+                               'pillar_gitfs', str(idx))
 
             if not os.path.isdir(rp_):
                 os.makedirs(rp_)
@@ -129,9 +129,9 @@ class GitPillar(object):
                 self.repo = git.Repo.init(rp_)
             except (git.exc.NoSuchPathError,
                     git.exc.InvalidGitRepositoryError) as exc:
-                    log.error('GitPython exception caught while '
-                              'initializing the repo: {0}. Maybe '
-                              'git is not available.'.format(exc))
+                log.error('GitPython exception caught while '
+                          'initializing the repo: {0}. Maybe '
+                          'git is not available.'.format(exc))
 
             self.working_dir = rp_
             if isinstance(self.repo, git.Repo):
@@ -151,7 +151,6 @@ class GitPillar(object):
                         # This should place a lock down.
                         pass
             break
-
 
     def update(self):
         '''
