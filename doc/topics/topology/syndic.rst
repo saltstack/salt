@@ -71,16 +71,15 @@ forwarder. It attaches to ``salt-master`` on your Master of Masters and listens
 for events. The ``salt-syndic`` process will take the event from the Master of
 Masters and bring them to the master process running on the syndic.
 
-In general, you will likely want ``salt-minion``, ``salt-master``, and
-``salt-syndic`` running on a syndication server. Of course, this depends on your
-specific needs.
+Most situations will call for a Master of Masters running ``salt-master`` and
+optionally ``salt-minion``. The ``salt-syndic`` process should not be running on
+the salt-minion. The Salt syndic will be running ``salt-master``,
+``salt-syndic``, and optionally ``salt-minion``.
 
-You should not run ``salt-syndic`` on the Master of Masters. You should run
-``salt-master`` on the syndics, otherwise the events are meaningless.
-
-If you have one minion connected to multiple syndics and issue a command
-targeted for that minion from the Master of Masters, each syndic will react to
-that event and each master will create a job to send to the minion connect to it
-which will cause the minion to be given two identical jobs. In some cases, the
-syndics will create the exact same job id and you will only see one response,
-other times, you will see multiple responses.
+If one minion is connected to multiple syndics and a a command is issued from
+the Master of Masters targeted for that minion, each syndic will react to the
+event. Each syndic will create a job to send to the minion connected to it which
+will cause the minion to receive one job for each syndic it's connected to. In
+some cases, the syndics will create the same job ID and it will be treated as
+one job. In other cases the syndics will create diffrent job IDs and the minion
+will get multiple jobs to respond to.
