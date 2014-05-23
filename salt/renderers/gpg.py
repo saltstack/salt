@@ -72,10 +72,14 @@ Now you can include your ciphers in your pillar data like so:
 
 import re
 try:
-    import gnupg
-    HAS_GPG = True
+    # gnupg broke python 2.6 compat https://github.com/isislovecruft/python-gnupg/issues/39
+    if sys.version_info >= (2, 7):
+        import gnupg
+        HAS_GNUPG = True
+    else:
+        HAS_GNUPG = False
 except ImportError:
-    HAS_GPG = False
+    HAS_GNUPG = False
 import logging
 
 from salt.exceptions import SaltRenderError
