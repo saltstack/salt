@@ -69,8 +69,8 @@ def war_deployed(name,
     war
         absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_url function
-    force: 
-        force deploy even if version strings are the same, False by default.	
+    force
+        force deploy even if version strings are the same, False by default.
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     timeout : 180
@@ -90,7 +90,6 @@ def war_deployed(name,
             - require:
               - service: application-service
     '''
-
     # Prepare
     ret = {'name': name,
        'result': True,
@@ -154,7 +153,7 @@ def war_deployed(name,
                                                url,
                                                __env__,
                                                timeout,
-                                               temp_war_location)
+                                               temp_war_location=temp_war_location)
 
     # Return
     if deploy_res.startswith('OK'):
