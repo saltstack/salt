@@ -47,11 +47,16 @@ import os
 import pprint
 import logging
 import smtplib
+import sys
 from email.utils import formatdate
 
 try:
-    import gnupg
-    HAS_GNUPG = True
+    # gnupg broke python 2.6 compat https://github.com/isislovecruft/python-gnupg/issues/39
+    if sys.version_info >= (2, 7):
+        import gnupg
+        HAS_GNUPG = True
+    else:
+        HAS_GNUPG = False
 except ImportError:
     HAS_GNUPG = False
 
