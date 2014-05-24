@@ -3032,6 +3032,12 @@ source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.digital_ocean.pot
 source_lang = en
 source_name = ref/clouds/all/salt.cloud.clouds.digital_ocean.rst
 
+[salt.ref--clouds--all--salt_cloud_clouds_aliyun]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.aliyun.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.aliyun.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.aliyun.rst
+
 [salt.ref--clouds--all--salt_cloud_clouds_ec2]
 file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.ec2.po
 source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.ec2.pot
