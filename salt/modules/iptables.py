@@ -785,11 +785,13 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             args = shlex.split(line)
             index = 0
             while index + 1 < len(args):
-                if args[index] == '!' and args[index + 1].startswith('-'):
+                swap = args[index] == '!' and args[index + 1].startswith('-')
+                if swap:
                     args[index], args[index + 1] = args[index + 1], args[index]
                 if args[index].startswith('-'):
                     index += 1
-                    if args[index].startswith('-'):
+                    if args[index].startswith('-') or (args[index] == '!' and
+                                                       not swap):
                         args.insert(index, '')
                     else:
                         while (index + 1 < len(args) and
