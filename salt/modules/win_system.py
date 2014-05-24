@@ -234,36 +234,85 @@ def get_computer_desc():
 get_computer_description = get_computer_desc
 
 
-def join_domain(domain, username, passwd, ou=None, acct_exists=False,):
+def join_domain(
+        domain=None,
+        username=None,
+        password=None,
+        account_ou=None,
+        account_exists=False
+    ):
     '''
-    Join a computer the an Active Directory domain
+    Join a computer to an Active Directory domain
+
+    domain
+        The domain to which the computer should be joined, e.g.
+        `my-company.com`
+
+    username
+        Username of an account which is authorized to join computers to the
+        specified domain. Need to be either fully qualified like
+        `user@domain.tld` or simply `user`
+
+    password
+        Password of the specified user
+
+    account_ou : None
+        The DN of the OU below which the account for this computer should be
+        created when joining the domain, e.g.
+        `ou=computers,ou=departm_432,dc=my-company,dc=com`
+
+    account_exists : False
+        Needs to be set to `True` to allow re-using an existing account
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt 'minion-id' system.join_domain 'mydomain.local' 'myusername' \
-             'mysecretpasswd' 'OU=MyClients;OU=MyOrg;DC=myDom;DC=local'
+        salt 'minion-id' system.join_domain domain='domain.tld' \
+             username='joinuser' password='joinpassword' \
+             account_ou='ou=clients,ou=org,dc=domain,dc=tld' \
+             account_exists=False
     '''
-    # remove any escape characters
-    if isinstance(ou, str):
-        ou = ou.split('\\')
-        ou = ''.join(ou)
 
-    FJoinOptions = 3
-    if acct_exists:
-        FJoinOptions = 1
+    if not '@' in username:
+        username = '{0}@{1}'.format(username, domain)
+
+    # remove any escape characters
+    if isinstance(account_ou, str):
+        account_ou = account_ou.split('\\')
+        account_ou = ''.join(account_ou)
+
+    join_options = 3
+    if account_exists:
+        join_options = 1
     cmd = ('wmic /interactive:off ComputerSystem Where '
            'name="%computername%" call JoinDomainOrWorkgroup FJoinOptions={0} '
-           'Name="{1}" UserName="{2}" Password="{3}" '
-           ).format(FJoinOptions, domain, username, passwd)
-    if ou:
-        add_ou = 'AccountOU="{4}"'.format(ou)
+           'Name="{1}" UserName="{2}" Password="{3}"'
+           ).format(join_options, domain, username, password)
+    if account_ou:
+        # contrary to RFC#2253, 2.1, 'wmic' requires a ; as a RDN separator
+        # for the DN
+        account_ou = account_ou.replace(',', ';')
+        add_ou = ' AccountOU="{0}"'.format(account_ou)
         cmd = cmd + add_ou
 
     ret = __salt__['cmd.run'](cmd)
     if 'ReturnValue = 0;' in ret:
         return {'Domain': domain}
+    return_values = {
+        5:    'Access is denied',
+        87:   'The parameter is incorrect',
+        110:  'The system cannot open the specified object',
+        1323: 'Unable to update the password',
+        1326: 'Logon failure: unknown username or bad password',
+        1355: 'The specified domain either does not exist or could not be contacted',
+        2224: 'The account already exists',
+        2691: 'The machine is already joined to the domain',
+        2692: 'The machine is not currently joined to a domain',
+    }
+    for value in return_values:
+        if 'ReturnValue = {0};'.format(value) in ret:
+            log.error(return_values[value])
     return False
 
 
