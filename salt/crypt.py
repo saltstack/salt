@@ -517,6 +517,11 @@ class SAuth(Auth):
         in, signing in can occur as often as needed to keep up with the
         revolving master aes key.
         '''
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
+
         while True:
             creds = self.sign_in(
                 self.opts.get('auth_timeout', 60),
@@ -528,7 +533,12 @@ class SAuth(Auth):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
                     sys.exit(2)
-                time.sleep(self.opts['acceptance_wait_time'])
+                if acceptance_wait_time:
+                    log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
+                    time.sleep(acceptance_wait_time)
+                if acceptance_wait_time < acceptance_wait_time_max:
+                    acceptance_wait_time += acceptance_wait_time
+                    log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
         return Crypticle(self.opts, creds['aes'])
