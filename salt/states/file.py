@@ -1151,6 +1151,18 @@ def managed(name,
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
+    # If no source is specified, set replace to False, as there is nothing 
+    # to replace the file with.
+    src_defined = source or contents or contents_pillar
+    if not src_defined and replace:
+        replace = False
+        log.warning(
+            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' '
+            'was defined, yet \'replace\' was set to \'True\'. As there is '
+            'no source to replace the file with, \'replace\' has been set '
+            'to \'False\' to avoid reading the file unnecessarily'.format(name)
+        )
+
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
