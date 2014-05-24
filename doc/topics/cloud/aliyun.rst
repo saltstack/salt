@@ -28,9 +28,9 @@ under "My Service" tab.
 
     my-aliyun-config:
       # aliyun Access Key ID
-      id: wDGEwGregeqw3435gDgxd
+      id: wDGEwGregedg3435gDgxd
       # aliyun Access Key Secret
-      key: GDd45t43RDBTrkilg43934t34qT43t4dgegerGEgg
+      key: GDd45t43RDBTrkkkg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
       provider: aliyun
 

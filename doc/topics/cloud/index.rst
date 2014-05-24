@@ -56,6 +56,7 @@ Cloud Provider Specifics
         Getting Started With HP Cloud <hpcloud>
         Getting Started With SoftLayer <softlayer>
         Getting Started With Vexxhost <vexxhost>
+        Getting Started With Aliyun <aliyun>
 
 Miscellaneous Options
 =====================
