@@ -71,11 +71,16 @@ Now you can include your ciphers in your pillar data like so:
 '''
 
 import re
+import sys
 try:
-    import gnupg
-    HAS_GPG = True
+    # gnupg broke python 2.6 compat https://github.com/isislovecruft/python-gnupg/issues/39
+    if sys.version_info >= (2, 7):
+        import gnupg
+        HAS_GNUPG = True
+    else:
+        HAS_GNUPG = False
 except ImportError:
-    HAS_GPG = False
+    HAS_GNUPG = False
 import logging
 
 from salt.exceptions import SaltRenderError
@@ -126,7 +131,7 @@ def render(data, saltenv='base', sls='', argline='', **kwargs):
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
     '''
-    if not HAS_GPG:
+    if not HAS_GNUPG:
         raise SaltRenderError('GPG unavailable')
     if isinstance(__salt__, dict):
         if 'config.get' in __salt__:
