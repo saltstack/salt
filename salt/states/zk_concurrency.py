@@ -34,7 +34,6 @@ steps are executing with a single path.
 
     release_lock:
       zk_concurrency.unlock:
-        - zk_hosts: 'zookeeper:2181'
         - path: /trafficserver
         - require:
             - service: trafficserver
@@ -69,8 +68,19 @@ try:
                                                 path,
                                                 identifier=identifier,
                                                 max_leases=max_leases)
-
             self.ephemeral_lease = ephemeral_lease
+
+            # if its not ephemeral, make sure we didn't already grab it
+            if not self.ephemeral_lease:
+                for child in self.client.get_children(self.path):
+                    try:
+                        data, stat = self.client.get(self.path + "/" + child)
+                        if identifier == data.decode('utf-8'):
+                            self.create_path = self.path + "/" + child
+                            self.is_acquired = True
+                            break
+                    except NoNodeError:  # pragma: nocover
+                        pass
 
         def _get_lease(self, data=None):
             # Make sure the session is still valid
@@ -178,7 +188,7 @@ def lock(zk_hosts,
     return ret
 
 
-def unlock(zk_hosts, path):
+def unlock(path):
     '''
     Remove lease from semaphore
     '''
