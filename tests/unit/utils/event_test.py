@@ -107,7 +107,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
-        id_hash = hashlib.md5(opts['id']).hexdigest()
+        id_hash = hashlib.md5(opts['id']).hexdigest()[:10]
         me = event.MinionEvent(opts)
         self.assertEqual(
             me.puburi,
@@ -134,7 +134,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_no_id(self):
         me = event.MinionEvent(dict(sock_dir=SOCK_DIR))
-        id_hash = hashlib.md5('').hexdigest()
+        id_hash = hashlib.md5('').hexdigest()[:10]
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(

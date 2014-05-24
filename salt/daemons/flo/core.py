@@ -91,6 +91,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
         local = LocalEstate(
                 eid=eid,
                 name=name,
+                main=main,
                 ha=ha,
                 sigkey=sigkey,
                 prikey=prikey)

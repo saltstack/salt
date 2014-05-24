@@ -543,6 +543,7 @@ FREEZER_INCLUDES = [
     'Cookie',
     'asyncore',
     'fileinput',
+    'sqlite3',
     'email',
     'email.mime.*',
 ]

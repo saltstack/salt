@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
     :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 '''

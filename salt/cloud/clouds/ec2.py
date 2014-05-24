@@ -944,6 +944,15 @@ def securitygroupid(vm_):
     )
 
 
+def get_placementgroup(vm_):
+    '''
+    Returns the PlacementGroup to use
+    '''
+    return config.get_cloud_config_value(
+        'placementgroup', vm_, __opts__, search_global=False
+    )
+
+
 def get_spot_config(vm_):
     '''
     Returns the spot instance configuration for the provided vm
@@ -1248,6 +1257,10 @@ def request_instance(vm_=None, call=None):
                 params[
                     spot_prefix + 'SecurityGroupId.{0}'.format(counter)
                 ] = sg_
+
+    placementgroup_ = get_placementgroup(vm_)
+    if placementgroup_ is not None:
+        params[spot_prefix + 'Placement.GroupName'] = placementgroup_
 
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
@@ -2332,6 +2345,9 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return ret
 
 
@@ -2381,7 +2397,9 @@ def show_instance(name, call=None):
             'The show_instance action must be called with -a or --action.'
         )
 
-    return _get_node(name)
+    node = _get_node(name)
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def _get_node(name, location=None):

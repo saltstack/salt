@@ -512,8 +512,14 @@ def _virtual(osdata):
     if osdata['kernel'] in choices:
         if os.path.isfile('/proc/1/cgroup'):
             try:
-                if ':/lxc/' in salt.utils.fopen('/proc/1/cgroup', 'r').read():
+                if ':/lxc/' in salt.utils.fopen(
+                    '/proc/1/cgroup', 'r'
+                ).read():
                     grains['virtual_subtype'] = 'LXC'
+                if ':/docker/' in salt.utils.fopen(
+                    '/proc/1/cgroup', 'r'
+                ).read():
+                    grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
         if isdir('/proc/vz'):

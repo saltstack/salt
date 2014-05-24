@@ -528,7 +528,7 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
@@ -783,4 +783,8 @@ def destroy(name):
                 name
             )
         )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return ret

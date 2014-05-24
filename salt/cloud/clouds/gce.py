@@ -334,7 +334,9 @@ def show_instance(vm_name, call=None):
             'The show_instance action must be called with -a or --action.'
         )
     conn = get_conn()
-    return _expand_node(conn.ex_get_node(vm_name))
+    node = _expand_node(conn.ex_get_node(vm_name))
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def avail_sizes(conn=None):
@@ -1834,6 +1836,9 @@ def destroy(vm_name, call=None):
             transport=__opts__['transport']
         )
 
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return inst_deleted
 
 
@@ -1893,7 +1898,7 @@ def create(vm_=None, call=None):
         )
         return False
 
-    node_dict = _expand_node(node_data)
+    node_dict = show_instance(node_data['name'], 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)

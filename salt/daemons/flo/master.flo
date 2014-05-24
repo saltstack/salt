@@ -2,7 +2,7 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1
+init .raet.udp.stack.local to eid 1 main true
 
 framer masterudpstack be active first setup
     frame setup

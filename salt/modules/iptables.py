@@ -290,7 +290,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['reject-with']
 
     for item in kwargs:
-        if kwargs[item].startswith('!') or kwargs[item].startswith('not'):
+        if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
             kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
             rule += '! '
 

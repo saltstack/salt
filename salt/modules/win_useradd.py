@@ -302,11 +302,28 @@ def info(name):
     ret['active'] = items['Account active']
     ret['logonscript'] = items['Logon script']
     ret['profile'] = items['User profile']
+    if not ret['profile']:
+        ret['profile'] = _get_userprofile_from_registry(name)
     ret['home'] = items['Home directory']
     ret['groups'] = grouplist
     ret['gid'] = ''
 
     return ret
+
+
+def _get_userprofile_from_registry(user):
+    '''
+    In case net user doesn't return the userprofile
+    we can get it from the registry
+    '''
+    sid = __salt__['cmd.run']('wmic useraccount where name="{0}" get sid'.format(user)).splitlines()[2]
+    sid = sid.strip()
+    profile_dir = __salt__['reg.read_key'](
+        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'ProfileImagePath'
+    )
+    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    return profile_dir
 
 
 def list_groups(name):

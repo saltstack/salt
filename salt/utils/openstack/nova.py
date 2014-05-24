@@ -40,7 +40,7 @@ class NovaServer(object):
         self.id = server['id']
         self.image = server['image']['id']
         self.size = server['flavor']['id']
-        self.state = server['status']
+        self.state = server['state']
         self._uuid = None
         self.extra = {
             'metadata': server['metadata'],
@@ -227,7 +227,7 @@ class SaltNova(object):
         '''
         Find a server by its name (libcloud)
         '''
-        return self.server_list().get(name, {})
+        return self.server_by_name(name)
 
     def root_password(self, server_id, password):
         '''
@@ -616,7 +616,7 @@ class SaltNova(object):
             ret[item.name] = {
                 'id': item.id,
                 'name': item.name,
-                'status': item.status,
+                'state': item.status,
                 'accessIPv4': item.accessIPv4,
                 'accessIPv6': item.accessIPv6,
                 'flavor': {'id': item.flavor['id'],
@@ -650,7 +650,7 @@ class SaltNova(object):
                 'links': item.links,
                 'metadata': item.metadata,
                 'name': item.name,
-                'status': item.status,
+                'state': item.status,
                 'tenant_id': item.tenant_id,
                 'updated': item.updated,
                 'user_id': item.user_id,

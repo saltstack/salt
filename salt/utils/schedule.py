@@ -307,7 +307,7 @@ class Schedule(object):
             if func not in self.functions:
                 log.info(
                     'Invalid function: {0} in job {1}. Ignoring.'.format(
-                        job, func
+                        func, job
                     )
                 )
                 continue
