@@ -172,6 +172,9 @@ def create(vm_):
         'ex_swap': get_swap(vm_)
     }
 
+    if 'libcloud_args' in vm_:
+        kwargs.update(vm_['libcloud_args'])
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',

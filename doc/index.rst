@@ -18,7 +18,6 @@ for orchestration, remote execution, configuration management and much more.
 
     * `PDF`_
     * `ePub`_
-    * `Dash Docset`_
 
     See documentation for past Salt releases at http://salt.readthedocs.org.
     Download offline copies on the `ReadTheDocs download page`_.
@@ -28,7 +27,6 @@ for orchestration, remote execution, configuration management and much more.
 
 .. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
 .. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
-.. _`Dash Docset`: dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml
 .. _`ReadTheDocs download page`: https://readthedocs.org/projects/salt/downloads/
 .. _`SaltStack YouTube channel`: http://www.youtube.com/saltstack
 

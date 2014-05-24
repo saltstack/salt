@@ -35,6 +35,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 from salt._compat import string_types
+from salt.utils import is_windows
 
 try:
     import zmq
@@ -149,8 +150,9 @@ EOF'''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
-with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
-    SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
+if not is_windows():
+    with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
+        SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
 
 log = logging.getLogger(__name__)
 
@@ -574,7 +576,7 @@ class Single(object):
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         elif self.fun in self.wfuncs:
-            stdout, stderr, retcode = self.run_wfunc()
+            stdout = self.run_wfunc()
 
         else:
             stdout, stderr, retcode = self.cmd_block()
@@ -733,7 +735,7 @@ class Single(object):
         else:
             # RSTR was found in stdout but not stderr - which means there
             # is a SHIM command for the master.
-            shim_command = re.split(r'\r?\n', stdout, 1)[1].strip()
+            shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
             if 'deploy' == shim_command and retcode == salt.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)

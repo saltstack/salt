@@ -19,6 +19,13 @@ Full list of builtin state modules
     augeas
     aws_sqs
     blockdev
+    boto_asg
+    boto_elb
+    boto_iam_role
+    boto_lc
+    boto_route53
+    boto_secgroup
+    boto_sqs
     cloud
     cmd
     composer

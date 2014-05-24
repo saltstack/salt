@@ -89,11 +89,11 @@ def installed(name,          # pylint: disable=C0103
         runas = None
 
     gems = __salt__['gem.list'](name, ruby, runas=user)
-    if name in gems and version and version in gems[name]:
+    if name in gems and version is not None and version in gems[name]:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
-    elif name in gems:
+    elif name in gems and version is None:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret

@@ -12,13 +12,9 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     requires_network,
+    skip_if_binaries_missing
 )
 ensure_in_syspath('../../')
-
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 # Import Salt libs
 import integration
@@ -414,7 +410,7 @@ class BuildoutOnlineTestCase(Base):
         ret = buildout.bootstrap(b_dir, buildout_ver=2, python=self.py_st)
         self.assertTrue(ret['status'])
         ret = buildout.run_buildout(b_dir,
-                                    parts=['a', 'b'], python=self.py_st)
+                                    parts=['a', 'b'])
         out = ret['out']
         self.assertTrue('Installing a' in out)
         self.assertTrue('Installing b' in out)

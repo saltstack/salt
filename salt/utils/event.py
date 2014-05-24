@@ -159,12 +159,9 @@ class SaltEvent(object):
         use for firing and listening to events
         '''
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        # Substr the first 10 chars off, because some algorithms produce
-        # longer hashes than others, and may exceed the IPC maximum length
-        # for UNIX sockets.
-        id_hash = hash_type(self.opts.get('id', '')).hexdigest()
-        if self.opts.get('hash_type', 'md5') == 'sha256':
-            id_hash = id_hash[:10]
+        # Only use the first 10 chars to keep longer hashes from exceeding the
+        # max socket path length.
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,

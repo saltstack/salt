@@ -738,8 +738,7 @@ def run_buildout(directory='.',
                  runas=None,
                  env=(),
                  verbose=False,
-                 debug=False,
-                 python=sys.executable):
+                 debug=False):
     '''
     Run a buildout in a directory.
 

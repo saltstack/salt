@@ -250,12 +250,6 @@ backwards compatible as possible.
 Debugging the Master and Minion
 ===============================
 
-.. toctree::
-    master
-    minion
-
-Debugging YAML
-==============
-
-.. toctree::
-    yaml_idiosyncrasies
+A list of common :doc:`master</topics/troubleshooting/master>` and
+:doc:`minion</topics/troubleshooting/minion>` troubleshooting steps provide a
+starting point for resolving issues you may encounter.
