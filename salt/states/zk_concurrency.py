@@ -52,6 +52,7 @@ try:
     )
     import kazoo.recipe.lock
     from kazoo.exceptions import CancelledError
+    from kazoo.exceptions import NoNodeError
 
     # TODO: use the kazoo one, waiting for pull req:
     # https://github.com/python-zk/kazoo/pull/206
