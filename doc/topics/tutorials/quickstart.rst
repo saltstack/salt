@@ -6,7 +6,7 @@ Salt Masterless Quickstart
 .. _`salty-vagrant`: https://github.com/saltstack/salty-vagrant
 .. _`salt-bootstrap`: https://github.com/saltstack/salt-bootstrap
 
-Running a master-less salt-minion lets you use Salt's configuration management
+Running a masterless salt-minion lets you use Salt's configuration management
 for a single machine without calling out to a Salt master on another machine.
 
 Since the Salt minion contains such extensive functionality it can be useful
