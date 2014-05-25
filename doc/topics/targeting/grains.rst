@@ -109,20 +109,20 @@ the following configuration:
 .. code-block:: yaml
 
     'node_type:web':
-        - match: grain
-        - webserver
+      - match: grain
+      - webserver
 
     'node_type:postgres':
-        - match: grain
-        - database
+      - match: grain
+      - database
 
     'node_type:redis':
-        - match: grain
-        - redis
+      - match: grain
+      - redis
 
     'node_type:lb':
-        - match: grain
-        - lb
+      - match: grain
+      - lb
         
 For this example to work, you would need to have defined the grain
 ``node_type`` for the minions you wish to match. This simple example is nice,
@@ -134,9 +134,9 @@ can be used to simplify the the :term:`top file`.
     {% set node_type = salt['grains.get']('node_type', '') %}
 
     {% if node_type %}
-        'node_type:{{ self }}':
-            - match: grain
-            - {{ self }}
+      'node_type:{{ self }}':
+        - match: grain
+        - {{ self }}
     {% endif %}
 
 Using Jinja templating, only one match entry needs to be defined.

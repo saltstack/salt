@@ -28,8 +28,8 @@ Orchestration can be accomplished in two distinct ways:
 The OverState System
 --------------------
 
-Often servers need to be set up and configured in a specific order, and systems
-should only be set up if systems earlier in the sequence has been set up
+Often, servers need to be set up and configured in a specific order, and systems
+should only be set up if systems earlier in the sequence have been set up
 without any issues.
 
 The OverState system can be used to orchestrate deployment in a smooth and
@@ -44,7 +44,7 @@ in the root of a Salt fileserver environment.
 The overstate.sls configures an unordered list of stages, each stage defines
 the minions on which to execute the state, and can define what sls files to
 run, execute a :mod:`state.highstate <salt.modules.state.highstate>`, or
-execute a function. Here's a sample overstate.sls:
+execute a function. Here's a sample ``overstate.sls``:
 
 .. code-block:: yaml
 

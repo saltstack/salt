@@ -20,8 +20,8 @@ development code and the test system from GitHub:
 .. note::
 
     The develop branch often has failing tests and should always be considered
-    a staging area. For a checkout that tests should be running perfectly on
-    please checkout from a specific release tag.
+    a staging area. For a checkout that tests should be running perfectly on,
+    please check out a specific release tag (such as v2014.1.4).
 
 .. code-block:: bash
 
@@ -33,7 +33,7 @@ Now that a fresh checkout is available run the test suite
 Destructive vs Non-destructive
 ==============================
 
-Since Salt is used to change the settings and behavior of systems often the
+Since Salt is used to change the settings and behavior of systems, often, the
 best approach to run tests is to make actual changes to an underlying system.
 This is where the concept of destructive integration tests comes into play.
 Tests can be written to alter the system they are running on. This capability
