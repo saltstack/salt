@@ -1156,7 +1156,7 @@ def managed(name,
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
-    # If no source is specified, set replace to False, as there is nothing 
+    # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
     src_defined = source or contents or contents_pillar
     if not src_defined and replace:
