@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-The Saltutil module is used to manage the state of the salt minion itself. It is used to manage minion modules as well as automate updates to the salt minion.
+The Saltutil module is used to manage the state of the salt minion itself. It
+is used to manage minion modules as well as automate updates to the salt
+minion.
 
 :depends:   - esky Python module for update functionality
 '''
@@ -42,24 +44,34 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def _get_top_file_envs():
+    '''
+    Get all environments from the top file
+    '''
+    try:
+        return __context__['saltutil._top_file_envs']
+    except KeyError:
+        try:
+            st_ = salt.state.HighState(__opts__)
+            top = st_.get_top()
+            if top:
+                envs = st_.top_matches(top).keys() or 'base'
+            else:
+                envs = 'base'
+        except SaltRenderError as exc:
+            raise CommandExecutionError(
+                'Unable to render top file(s): {0}'.format(exc)
+            )
+        __context__['saltutil._top_file_envs'] = envs
+        return envs
+
+
 def _sync(form, saltenv=None):
     '''
     Sync the given directory in the given environment
     '''
     if saltenv is None:
-        # No environment passed, detect them based on gathering the top files
-        # from the master
-        try:
-            st_ = salt.state.HighState(__opts__)
-            top = st_.get_top()
-            if top:
-                saltenv = st_.top_matches(top).keys()
-            if not saltenv:
-                saltenv = 'base'
-        except SaltRenderError as exc:
-            raise CommandExecutionError(
-                'Unable to render top file(s): {0}'.format(exc)
-            )
+        saltenv = _get_top_file_envs()
     if isinstance(saltenv, string_types):
         saltenv = saltenv.split(',')
     ret = []
@@ -135,7 +147,7 @@ def _sync(form, saltenv=None):
             if os.path.isfile(full):
                 touched = True
                 os.remove(full)
-        #cleanup empty dirs
+        # Cleanup empty dirs
         while True:
             emptydirs = _list_emptydirs(mod_dir)
             if not emptydirs:
@@ -143,7 +155,7 @@ def _sync(form, saltenv=None):
             for emptydir in emptydirs:
                 touched = True
                 os.rmdir(emptydir)
-    #dest mod_dir is touched? trigger reload if requested
+    # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:

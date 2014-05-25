@@ -2173,9 +2173,11 @@ class BaseHighState(object):
         if not self.opts['autoload_dynamic_modules']:
             return
         if self.opts.get('local', False):
-            syncd = self.state.functions['saltutil.sync_all'](list(matches), refresh=False)
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         else:
-            syncd = self.state.functions['saltutil.sync_all'](list(matches))
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()
@@ -2559,7 +2561,7 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
-        #Check that top file exists
+        # Check that top file exists
         tag_name = 'no_|-states_|-states_|-None'
         ret = {tag_name: {
                 'result': False,
@@ -2578,7 +2580,7 @@ class BaseHighState(object):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high)
-        #File exists so continue
+        # File exists so continue
         err = []
         try:
             top = self.get_top()
