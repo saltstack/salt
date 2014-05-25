@@ -239,3 +239,24 @@ def absent(name, runas=None, user=None):
         return ret
     else:
         return _check_and_uninstall_python(ret, name, user=user)
+
+def install_pyenv(name, user=None):
+    '''
+    Install pyenv if not installed. Allows you to require pyenv be installed
+    prior to installing the plugins. Useful if you want to install pyenv
+    plugins via the git or file modules and need them installed before
+    installing any rubies.
+
+    Use the pyenv.root configuration option to set the path for pyenv if you
+    want a system wide install that is not in a user home dir.
+
+    user: None
+        The user to run pyenv as.
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if __opts__['test']:
+        ret['comment'] = 'pyenv is set to be installed'
+        return ret
+
+    return _check_and_install_pyenv(ret, user)
