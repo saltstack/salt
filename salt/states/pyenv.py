@@ -23,18 +23,22 @@ This is how a state configuration could look like:
     pyenv-deps:
       pkg.installed:
         - pkgs:
-          - bash
-          - git
-          - openssl
-          - gmake
+          - make
+          - build-essential
+          - libssl-dev
+          - zlib1g-dev
+          - libbz2-dev
+          - libreadline-dev
+          - libsqlite3-dev
+          - wget 
           - curl
-
-    python-1.9.3-p392:
+          - llvm
+    python-2.6:
       pyenv.absent:
         - require:
           - pkg: pyenv-deps
 
-    python-1.9.3-p429:
+    python-2.7.6:
       pyenv.installed:
         - default: True
         - require:
