@@ -98,6 +98,24 @@ dictionary with the date strings using the dateutil format.
 
     ... versionadded:: Helium
 
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        range:
+            invert: True
+            start: 8:00am
+            end: 5:00pm
+
+Using the invert option for range, this will schedule the command: state.sls httpd
+test=True every 3600 seconds (every hour) until the current time is between the hours
+of 8am and 5pm.  The range parameter must be a dictionary with the date strings using
+the dateutil format.
+
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.
@@ -455,10 +473,16 @@ class Schedule(object):
                                 log.info('Invalid date string for end.  Ignoring job {0}.'.format(job))
                                 continue
                             if end > start:
-                                if now >= start and now <= end:
-                                    run = True
+                                if 'invert' in data['range'] and data['range']['invert']:
+                                    if now <= start or now >= end:
+                                        run = True
+                                    else:
+                                        run = False
                                 else:
-                                    run = False
+                                    if now >= start and now <= end:
+                                        run = True
+                                    else:
+                                        run = False
                             else:
                                 log.info('schedule.handle_func: Invalid range, end must be larger than start. Ignoring job {0}.'.format(job))
                                 continue
