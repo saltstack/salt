@@ -612,7 +612,7 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0:
-                    ret.update({ 'comment': 'onlyif execution failed', 'result': True})
+                    ret.update({'comment': 'onlyif execution failed', 'result': True})
                     return ret
 
         if 'unless' in low_data:
