@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+from salt.master import clean_proc
 from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
@@ -46,8 +47,7 @@ def eventpublisher_process():
             time.sleep(2)
         yield
     finally:
-        proc.terminate()
-        proc.join()
+        clean_proc(proc)
 
 
 class EventSender(Process):
@@ -58,7 +58,7 @@ class EventSender(Process):
         self.wait = wait
 
     def run(self):
-        me = event.MasterEvent(sock_dir=SOCK_DIR)
+        me = event.MasterEvent(SOCK_DIR)
         time.sleep(self.wait)
         me.fire_event(self.data, self.tag)
         # Wait a few seconds before tearing down the zmq context
@@ -76,8 +76,7 @@ def eventsender_process(data, tag, wait=0):
     try:
         yield
     finally:
-        proc.terminate()
-        proc.join()
+        clean_proc(proc)
 
 
 @skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
@@ -88,9 +87,9 @@ class TestSaltEvent(TestCase):
 
     def assertGotEvent(self, evt, data, msg=None):
         self.assertIsNotNone(evt, msg)
-        for k, v in data.items():
-            self.assertIn(k, evt, msg)
-            self.assertEqual(data[k], evt[k], msg)
+        for key in data:
+            self.assertIn(key, evt, msg)
+            self.assertEqual(data[key], evt[key], msg)
 
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR)
@@ -108,8 +107,8 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
-        id_hash = hashlib.md5(opts['id']).hexdigest()
-        me = event.MinionEvent(**opts)
+        id_hash = hashlib.md5(opts['id']).hexdigest()[:10]
+        me = event.MinionEvent(opts)
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
@@ -129,13 +128,13 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_tcp_ipc_mode(self):
         opts = dict(id='foo', ipc_mode='tcp')
-        me = event.MinionEvent(**opts)
+        me = event.MinionEvent(opts)
         self.assertEqual(me.puburi, 'tcp://127.0.0.1:4510')
         self.assertEqual(me.pulluri, 'tcp://127.0.0.1:4511')
 
     def test_minion_event_no_id(self):
-        me = event.MinionEvent(sock_dir=SOCK_DIR)
-        id_hash = hashlib.md5('').hexdigest()
+        me = event.MinionEvent(dict(sock_dir=SOCK_DIR))
+        id_hash = hashlib.md5('').hexdigest()[:10]
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(
@@ -156,7 +155,7 @@ class TestSaltEvent(TestCase):
     def test_event_subscription(self):
         '''Test a single event is received'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
@@ -165,7 +164,7 @@ class TestSaltEvent(TestCase):
     def test_event_timeout(self):
         '''Test no event is received if the timeout is reached'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
@@ -176,7 +175,7 @@ class TestSaltEvent(TestCase):
     def test_event_subscription_matching(self):
         '''Test a subscription startswith matching'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
@@ -185,7 +184,7 @@ class TestSaltEvent(TestCase):
     def test_event_subscription_matching_all(self):
         '''Test a subscription matching'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='')
@@ -194,7 +193,7 @@ class TestSaltEvent(TestCase):
     def test_event_not_subscribed(self):
         '''Test get event ignores non-subscribed events'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             with eventsender_process({'data': 'foo1'}, 'evt1', 5):
                 me.fire_event({'data': 'foo1'}, 'evt2')
@@ -204,7 +203,7 @@ class TestSaltEvent(TestCase):
     def test_event_multiple_subscriptions(self):
         '''Test multiple subscriptions do not interfere'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             with eventsender_process({'data': 'foo1'}, 'evt1', 5):
                 me.fire_event({'data': 'foo1'}, 'evt2')
@@ -214,9 +213,9 @@ class TestSaltEvent(TestCase):
     def test_event_multiple_clients(self):
         '''Test event is received by multiple clients'''
         with eventpublisher_process():
-            me1 = event.MasterEvent(sock_dir=SOCK_DIR)
+            me1 = event.MasterEvent(SOCK_DIR)
             me1.subscribe()
-            me2 = event.MasterEvent(sock_dir=SOCK_DIR)
+            me2 = event.MasterEvent(SOCK_DIR)
             me2.subscribe()
             me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
@@ -229,21 +228,34 @@ class TestSaltEvent(TestCase):
     def test_event_nested_subs(self):
         '''Test nested event subscriptions do not drop events, issue #8580'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
+            # Since we now drop unrelated events to avoid memory leaks, see http://goo.gl/2n3L09 commit bcbc5340ef, the
+            # calls below will return None and will drop the unrelated events
             evt2 = me.get_event(tag='evt2')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt2, {'data': 'foo2'})
-            self.assertGotEvent(evt1, {'data': 'foo1'})
+            # This one will be None because we're dripping unrelated events
+            self.assertIsNone(evt1)
+
+            # Fire events again
+            me.fire_event({'data': 'foo3'}, 'evt3')
+            me.fire_event({'data': 'foo4'}, 'evt4')
+            # We not force unrelated pending events not to be dropped, so both of the event bellow work and are not
+            # None
+            evt2 = me.get_event(tag='evt4', use_pending=True)
+            evt1 = me.get_event(tag='evt3', use_pending=True)
+            self.assertGotEvent(evt2, {'data': 'foo4'})
+            self.assertGotEvent(evt1, {'data': 'foo3'})
 
     @expectedFailure
     def test_event_nested_sub_all(self):
         '''Test nested event subscriptions do not drop events, get event for all tags'''
         # Show why not to call get_event(tag='')
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
@@ -255,7 +267,7 @@ class TestSaltEvent(TestCase):
     def test_event_many(self):
         '''Test a large number of events, one at a time'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             for i in xrange(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
@@ -265,7 +277,7 @@ class TestSaltEvent(TestCase):
     def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process():
-            me = event.MasterEvent(sock_dir=SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             # Must not exceed zmq HWM
             for i in xrange(500):

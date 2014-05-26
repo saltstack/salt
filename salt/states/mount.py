@@ -14,10 +14,21 @@ Mount any type of mountable filesystem with the mounted function:
         - mkmnt: True
         - opts:
           - defaults
+
+    /srv/bigdata:
+      mount.mounted:
+        - device: UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
+        - fstype: xfs
+        - opts: nobootwait,noatime,nodiratime,nobarrier,logbufs=8
+        - dump: 0
+        - pass_num: 2
+        - persist: True
+        - mkmnt: True
 '''
 
 # Import python libs
 import os.path
+import re
 
 # Import salt libs
 from salt._compat import string_types
@@ -40,6 +51,7 @@ def mounted(name,
 
     device
         The device name, typically the device node, such as /dev/sdb1
+        or UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
 
     fstype
         The filesystem type, this will be xfs, ext2/3/4 in the case of classic
@@ -61,10 +73,6 @@ def mounted(name,
     config
         Set an alternative location for the fstab, default to /etc/fstab
 
-    remount
-        Set if the file system can be remounted with the remount option,
-        default to True
-
     persist
         Set if the mount should be saved in the fstab, default to True
     '''
@@ -81,21 +89,56 @@ def mounted(name,
         opts = ['defaults']
 
     # remove possible trailing slash
-    name = name.rstrip("/")
+    if not name == '/':
+        name = name.rstrip('/')
 
     # Get the active data
     active = __salt__['mount.active']()
     real_name = os.path.realpath(name)
-    if device[0:1] == "/":
+    if device.startswith('/'):
         real_device = os.path.realpath(device)
+    elif device.upper().startswith('UUID='):
+        real_device = device.split('=')[1].strip('"').lower()
     else:
         real_device = device
+
+    # LVS devices have 2 names under /dev:
+    # /dev/mapper/vg--name-lv--name and /dev/vg-name/lv-name
+    # No matter what name is used for mounting,
+    # mount always displays the device as /dev/mapper/vg--name-lv--name
+    # Note the double-dash escaping.
+    # So, let's call that the canonical device name
+    # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
+    lvs_match = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
+    if lvs_match:
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in lvs_match.groupdict().iteritems())
+        mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
+        if os.path.exists(mapper_device):
+            real_device = mapper_device
+
     device_list = []
     if real_name in active:
         device_list.append(active[real_name]['device'])
         device_list.append(os.path.realpath(device_list[0]))
-        if active[real_name]['alt_device'] not in device_list:
-            device_list.append(active[real_name]['alt_device'])
+        alt_device = active[real_name]['alt_device'] if 'alt_device' in active[real_name] else None
+        uuid_device = active[real_name]['device_uuid'] if 'device_uuid' in active[real_name] else None
+        if alt_device and alt_device not in device_list:
+            device_list.append(alt_device)
+        if uuid_device and uuid_device not in device_list:
+            device_list.append(uuid_device)
+        if opts:
+            for opt in opts:
+                if opt not in active[real_name]['opts']:
+                    if __opts__['test']:
+                        ret['result'] = None
+                        ret['comment'] = "Remount would be forced because options changed"
+                        return ret
+                    else:
+                        ret['changes']['umount'] = "Forced remount because " \
+                                                    + "options changed"
+                        remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                        ret['result'] = remount_result
+                        return ret
         if real_device not in device_list:
             # name matches but device doesn't - need to umount
             ret['changes']['umount'] = "Forced unmount because devices " \
@@ -229,7 +272,8 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name and fstab_data['none']['fstype'] != 'swap':
+            if fstab_data['none']['device'] == name and \
+               fstab_data['none']['fstype'] != 'swap':
                 return ret
 
         # present, new, change, bad config
@@ -304,25 +348,47 @@ def unmounted(name,
             ret['changes']['umount'] = True
 
     if persist:
-        if __opts__['test']:
-            fstab_data = __salt__['mount.fstab'](config)
-            if name in fstab_data:
+        fstab_data = __salt__['mount.fstab'](config)
+        if name not in fstab_data:
+            ret['comment'] += '. fstab entry not found'
+        else:
+            if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is unmounted but needs to '
                                   'be purged from {1} to be made '
                                   'persistent').format(name, config)
                 return ret
+            else:
+                out = __salt__['mount.rm_fstab'](name, config)
+                if out is not True:
+                    ret['result'] = False
+                    ret['comment'] += '. Failed to persist purge'
+                else:
+                    ret['changes']['persist'] = 'purged'
 
-        if ret['changes'].get('umount', False):
-            out = __salt__['mount.rm_fstab'](name, config)
+    return ret
+
+
+def mod_watch(name, **kwargs):
+    '''
+    The mounted watcher, called to invoke the watch command.
+
+    name
+        The name of the mount point
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if kwargs['sfun'] == 'mounted':
+        out = __salt__['mount.remount'](name, kwargs['device'], False, kwargs['fstype'], kwargs['opts'])
+        if out:
+            ret['comment'] = '{0} remounted'.format(name)
         else:
-            out = 'bad mount'
-
-        if out is True:
-            ret['changes']['persist'] = 'purged'
-            return ret
-        if out == 'bad mount':
             ret['result'] = False
-            ret['comment'] += '. Unfortunately the mount could not be purged'
-
+            ret['comment'] = '{0} failed to remount: {1}'.format(name, out)
+    else:
+        ret['comment'] = 'Watch not supported in {1} at this time'.format(kwargs['sfun'])
     return ret

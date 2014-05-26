@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
 # Import Python libs
@@ -9,7 +9,7 @@ import os
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, DEFAULT, MagicMock
+from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 ensure_in_syspath('../')
 
 # Import Salt libs
@@ -84,3 +84,8 @@ class LocalClientTestCase(TestCase,
                 self.assertRaises(SaltInvocationError,
                                   self.local_client.pub,
                                   'non_existant_group', 'test.ping', expr_form='nodegroup')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(LocalClientTestCase, needs_daemon=False)

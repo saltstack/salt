@@ -1,16 +1,10 @@
-================
-Salt Scheduling
-================
 
-In Salt versions greater than 0.12.0, the scheduling system allows incremental 
+In Salt versions greater than 0.12.0, the scheduling system allows incremental
 executions on minions or the master. The schedule system exposes the execution 
 of any execution function on minions or any runner on the master.
 
-To set up the scheduler on the master add the schedule option to the master
-config file. 
-
-To set up the scheduler on the minion add the schedule option to
-the minion config file or to the minion's pillar.
+Scheduling is enabled via the ``schedule`` option on either the master or minion 
+config files, or via a minion's pillar data.
 
 .. note::
 
@@ -18,8 +12,151 @@ the minion config file or to the minion's pillar.
     running on the master the functions reference runner functions, when
     running on the minion the functions specify execution functions.
 
-The schedule option defines jobs which execute at certain intervals. To set up a highstate
-to run on a minion every 60 minutes set this in the minion config or pillar:
+Specify ``maxrunning`` to ensure that there are no more than N copies of
+a particular routine running.  Use this for jobs that may be long-running
+and could step on each other or otherwise double execute.  The default for 
+``maxrunning`` is 1.
+
+States are executed on the minion, as all states are. You can pass positional
+arguments and provide a yaml dict of named arguments.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour)
+ 
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        splay: 15
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour) splaying the time between 0 and 15 seconds
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        splay:
+          start: 10
+          end: 15
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour) splaying the time between 10 and 15 seconds
+
+.. versionadded:: Helium
+
+Frequency of jobs can also be specified using date strings supported by
+the python dateutil library.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        args:
+          - httpd
+        kwargs:
+          test: True
+        when: 5:00pm
+
+This will schedule the command: state.sls httpd test=True at 5:00pm minion
+localtime.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        args:
+          - httpd
+        kwargs:
+          test: True
+        when:
+            - Monday 5:00pm
+            - Tuesday 3:00pm
+            - Wednesday 5:00pm
+            - Thursday 3:00pm
+            - Friday 5:00pm
+
+This will schedule the command: state.sls httpd test=True at 5pm on Monday, Wednesday
+and Friday, and 3pm on Tuesday and Thursday.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        args:
+          - httpd
+        kwargs:
+          test: True
+        range:
+            start: 8:00am
+            end: 5:00pm
+
+This will schedule the command: state.sls httpd test=True every 3600 seconds
+(every hour) between the hours of 8am and 5pm.  The range parameter must be a
+dictionary with the date strings using the dateutil format.
+
+.. versionadded:: Helium
+
+The scheduler also supports ensuring that there are no more than N copies of
+a particular routine running.  Use this for jobs that may be long-running
+and could step on each other or pile up in case of infrastructure outage.
+
+The default for maxrunning is 1.
+
+.. code-block:: yaml
+
+    schedule:
+      long_running_job:
+          function: big_file_transfer
+          jid_include: True
+
+States
+======
+
+.. code-block:: yaml
+
+    schedule:
+      log-loadavg:
+        function: cmd.run
+        seconds: 3660
+        args:
+          - 'logger -t salt < /proc/loadavg'
+        kwargs:
+          stateful: False
+          shell: True
+
+Highstates
+==========
+
+To set up a highstate to run on a minion every 60 minutes set this in the
+minion config or pillar:
 
 .. code-block:: yaml
 
@@ -28,9 +165,13 @@ to run on a minion every 60 minutes set this in the minion config or pillar:
         function: state.highstate
         minutes: 60
 
-Time intervals can be specified as seconds, minutes, hours, or days. Runner
-executions can also be specified on the master within the master configuration
-file:
+Time intervals can be specified as seconds, minutes, hours, or days. 
+
+Runners
+=======
+
+Runner executions can also be specified on the master within the master 
+configuration file:
 
 .. code-block:: yaml
 
@@ -48,7 +189,7 @@ Scheduler With Returner
 =======================
 
 The scheduler is also useful for tasks like gathering monitoring data about
-a minion, this schedule option will gather status data and send it to a mysql
+a minion, this schedule option will gather status data and send it to a MySQL
 returner database:
 
 .. code-block:: yaml
@@ -64,5 +205,5 @@ returner database:
         returner: mysql
       
 Since specifying the returner repeatedly can be tiresome, the
-`schedule_returner` option is available to specify one or a list of global
+``schedule_returner`` option is available to specify one or a list of global
 returners to be used by the minions when scheduling.

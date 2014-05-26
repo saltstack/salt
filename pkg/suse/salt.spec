@@ -17,32 +17,28 @@
 
 
 Name:           salt
-Version:        0.17.5
+Version:        2014.1.4
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
 Group:          System/Monitoring
 Url:            http://saltstack.org/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
-Source1:        %{name}-master
-Source2:        %{name}-syndic
-Source3:        %{name}-minion
-Source4:        %{name}-master.service
-Source5:        %{name}-syndic.service
-Source6:        %{name}-minion.service
-Source7:        %{name}.logrotate
-Source8:        %{name}.SuSEfirewall2
 
 #for building
+BuildRequires:  fdupes
 BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
-BuildRequires:  python-apache-libcloud >= 0.12.1
+BuildRequires:  python-yaml
 BuildRequires:  python-devel
 BuildRequires:  python-msgpack-python
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq
+BuildRequires:  python-psutil
+BuildRequires:  python-requests
+BuildRequires:  python-apache-libcloud >= 0.14.0
 
 %if 0%{?sles_version}
 BuildRequires:  python
@@ -59,15 +55,23 @@ BuildRequires:  python-pip
 BuildRequires:  python-salt-testing
 BuildRequires:  python-unittest2
 BuildRequires:  python-xml
+%if 0%{?suse_version} >= 1210
+BuildRequires:  python-pssh
+%{?systemd_requires}
+%endif
 
 #for docs
 BuildRequires:  python-sphinx
 
 Requires:       logrotate
 Requires:       python-Jinja2
+Requires:       python-yaml
 Requires:       python-PyYAML
+Requires:       python-yaml
 Requires:       python-apache-libcloud
 Requires:       python-xml
+Requires:       python-psutil
+Requires:       python-requests
 Requires(pre): %fillup_prereq
 %if 0%{?suse_version} < 1210
 Requires(pre): %insserv_prereq
@@ -83,6 +87,7 @@ BuildArch:      noarch
 Recommends:     python-botocore
 Recommends:     python-netaddr
 
+
 %description
 Salt is a distributed remote execution system used to execute commands and
 query data. It was developed in order to bring the best solutions found in
@@ -90,6 +95,21 @@ the world of remote execution together and make them better, faster and more
 malleable. Salt accomplishes this via its ability to handle larger loads of
 information, and not just dozens, but hundreds or even thousands of individual
 servers, handle them quickly and through a simple and manageable interface.
+
+%package cloud
+Summary:        Salt Cloud is a generic cloud provisioning tool
+Group:          System/Monitoring
+Requires:       %{name} = %{version}
+Requires:       python-PyYAML
+Requires:       python-apache-libcloud
+Recommends:     sshpass
+Recommends:     python-botocore
+Recommends:     python-netaddr
+
+%description cloud
+public cloud VM management system
+provision virtual machines on various public clouds via a cleanly
+controlled profile and mapping system.
 
 %package doc
 Summary:        Documentation for salt, a parallel remote execution system
@@ -184,17 +204,23 @@ it enables the management of minions over a ssh connection.
 python setup.py build
 
 ## documentation
-cd doc && make html && rm _build/html/.buildinfo && cd _build/html && chmod -R -x+X *
+cd doc && make html && rm _build/html/.buildinfo && rm _build/html/_images/proxy_minions.png && cd _build/html && chmod -R -x+X *
 
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
+%fdupes %{buildroot}%{_prefix}
 
 ## create missing directories
 mkdir -p %{buildroot}%{_sysconfdir}/salt/master.d
 mkdir -p %{buildroot}%{_sysconfdir}/salt/minion.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/cloud.maps.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/cloud.profiles.d
+mkdir -p %{buildroot}%{_sysconfdir}/salt/cloud.providers.d
+
 %if 0%{?suse_version} < 1210
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
 %endif
+
 mkdir -p %{buildroot}%{_localstatedir}/log/salt
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
 mkdir -p %{buildroot}%{_sbindir}
@@ -203,15 +229,19 @@ mkdir -p %{buildroot}/srv/salt
 mkdir -p %{buildroot}/srv/pillar
 mkdir -p %{buildroot}%{_docdir}/salt
 #
-## install init scripts
+## install init and systemd scripts
 %if 0%{?_unitdir:1}
-install -Dpm 0644  %{SOURCE4} %{buildroot}%_unitdir/salt-master.service
-install -Dpm 0644  %{SOURCE5} %{buildroot}%_unitdir/salt-syndic.service
-install -Dpm 0644  %{SOURCE6} %{buildroot}%_unitdir/salt-minion.service
+install -Dpm 0644 pkg/salt-master.service %{buildroot}%_unitdir/salt-master.service
+install -Dpm 0644 pkg/salt-minion.service %{buildroot}%_unitdir/salt-minion.service
+install -Dpm 0644 pkg/salt-syndic.service %{buildroot}%_unitdir/salt-syndic.service
+ln -s service %{buildroot}%{_sbindir}/rcsalt-master
+ln -s service %{buildroot}%{_sbindir}/rcsalt-syndic
+ln -s service %{buildroot}%{_sbindir}/rcsalt-minion
 %else
-install -Dpm 0755 %{SOURCE1} %{buildroot}%{_initddir}/salt-master
-install -Dpm 0755 %{SOURCE2} %{buildroot}%{_initddir}/salt-syndic
-install -Dpm 0755 %{SOURCE3} %{buildroot}%{_initddir}/salt-minion
+## install init scripts
+install -Dpm 0755 pkg/suse/salt-master %{buildroot}%{_initddir}/salt-master
+install -Dpm 0755 pkg/suse/salt-syndic %{buildroot}%{_initddir}/salt-syndic
+install -Dpm 0755 pkg/suse/salt-minion %{buildroot}%{_initddir}/salt-minion
 ln -sf %{_initddir}/salt-master %{buildroot}%{_sbindir}/rcsalt-master
 ln -sf %{_initddir}/salt-syndic %{buildroot}%{_sbindir}/rcsalt-syndic
 ln -sf %{_initddir}/salt-minion %{buildroot}%{_sbindir}/rcsalt-minion
@@ -221,15 +251,22 @@ ln -sf %{_initddir}/salt-minion %{buildroot}%{_sbindir}/rcsalt-minion
 ## install config files
 install -Dpm 0644 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
 install -Dpm 0644 conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -Dpm 0644 conf/roster %{buildroot}%{_sysconfdir}/salt/roster
+install -Dpm 0644 conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
+install -Dpm 0644 conf/cloud.profiles %{buildroot}%{_sysconfdir}/salt/cloud.profiles
+install -Dpm 0644 conf/cloud.providers %{buildroot}%{_sysconfdir}/salt/cloud.providers
 #
 ## install logrotate file
-install -Dpm 0644  %{SOURCE7} %{buildroot}%{_sysconfdir}/logrotate.d/salt
+install -Dpm 0644  pkg/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/salt
 #
 ## install SuSEfirewall2 rules
-install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
+install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 
 %check
+# don't test on factory because of ssl2 method deprication
+#%%if 0%{?suse_version} < 1310
 %{__python} setup.py test --runtests-opts=-u
+#%%endif
 
 %preun syndic
 %if 0%{?_unitdir:1}
@@ -300,6 +337,17 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %restart_on_update salt-minion
 %endif
 
+%files cloud
+%defattr(-,root,root)
+%{_bindir}/salt-cloud
+%{_sysconfdir}/salt/cloud.maps.d
+%{_sysconfdir}/salt/cloud.profiles.d
+%{_sysconfdir}/salt/cloud.providers.d
+%attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/cloud
+%attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/cloud.profiles
+%attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/cloud.providers
+%{_mandir}/man1/salt-cloud.1.*
+
 %files ssh
 %defattr(-,root,root)
 %{_bindir}/salt-ssh
@@ -309,10 +357,10 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %defattr(-,root,root)
 %{_bindir}/salt-syndic
 %{_mandir}/man1/salt-syndic.1.gz
+%{_sbindir}/rcsalt-syndic
 %if 0%{?_unitdir:1}
 %_unitdir/salt-syndic.service
 %else
-%{_sbindir}/rcsalt-syndic
 %{_sysconfdir}/init.d/salt-syndic
 %endif
 
@@ -322,10 +370,10 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %{_mandir}/man1/salt-minion.1.gz
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/minion
 %{_sysconfdir}/salt/minion.d
+%{_sbindir}/rcsalt-minion
 %if 0%{?_unitdir:1}
 %_unitdir/salt-minion.service
 %else
-%{_sbindir}/rcsalt-minion
 %config(noreplace) %{_sysconfdir}/init.d/salt-minion
 %endif
 
@@ -343,13 +391,14 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %{_mandir}/man1/salt-run.1.gz
 %config(noreplace) %{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/master
+%attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/roster
 %{_sysconfdir}/salt/master.d
 %dir /srv/salt
 %dir /srv/pillar
+%{_sbindir}/rcsalt-master
 %if 0%{?_unitdir:1}
 %_unitdir/salt-master.service
 %else
-%{_sbindir}/rcsalt-master
 %config(noreplace) %{_sysconfdir}/init.d/salt-master
 %endif
 
@@ -365,6 +414,7 @@ install -Dpm 0644  %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2
 %{_mandir}/man1/salt-call.1.gz
 %{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
+%attr(755,root,root)%{python_sitelib}/salt/cloud/deploy/*.sh
 %{python_sitelib}/*
 %doc LICENSE AUTHORS README.rst HACKING.rst 
 

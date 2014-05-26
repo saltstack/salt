@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
-This module contains the function calls to execute command line scipts
+This module contains the function calls to execute command line scripts
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
+import time
 
 # Import salt libs
 import salt
+import salt.exceptions
 import salt.cli
 try:
     import salt.cloud.cli
+    HAS_SALTCLOUD = True
 except ImportError:
     # No salt cloud on Windows
-    pass
+    HAS_SALTCLOUD = False
 
 
 def salt_master():
@@ -31,8 +35,18 @@ def salt_minion():
     '''
     if '' in sys.path:
         sys.path.remove('')
-    minion = salt.Minion()
-    minion.start()
+
+    reconnect = True
+    while reconnect:
+        reconnect = False
+        minion = salt.Minion()
+        ret = minion.start()
+        if ret == 'reconnect':
+            del minion
+            minion = None
+            # give extra time for resources like ZMQ to close.
+            time.sleep(10)
+            reconnect = True
 
 
 def salt_syndic():
@@ -108,6 +122,8 @@ def salt_ssh():
         client.run()
     except KeyboardInterrupt:
         raise SystemExit('\nExiting gracefully on Ctrl-c')
+    except salt.exceptions.SaltClientError as err:
+        raise SystemExit(err)
 
 
 def salt_cloud():
@@ -116,6 +132,11 @@ def salt_cloud():
     '''
     if '' in sys.path:
         sys.path.remove('')
+
+    if not HAS_SALTCLOUD:
+        print('salt-cloud is not available in this system')
+        sys.exit(os.EX_UNAVAILABLE)
+
     try:
         cloud = salt.cloud.cli.SaltCloud()
         cloud.run()
@@ -131,6 +152,7 @@ def salt_main():
     if '' in sys.path:
         sys.path.remove('')
     try:
+        #import wingdbstub
         client = salt.cli.SaltCMD()
         client.run()
     except KeyboardInterrupt:

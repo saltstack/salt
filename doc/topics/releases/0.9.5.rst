@@ -254,7 +254,7 @@ FreeBSD
 
 Salt on FreeBSD? There a port for that:
 
-http://www.freebsd.org/cgi/cvsweb.cgi/ports/sysutils/salt/pkg-descr
+http://svnweb.freebsd.org/ports/head/sysutils/py-salt/
 
 This port was developed and added by Christer Edwards. This also marks the
 first time Salt has been included in an upstream packaging system!

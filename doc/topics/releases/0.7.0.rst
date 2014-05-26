@@ -56,6 +56,6 @@ Source Tarball:
 
 Arch Linux Package:
 
-https://aur.archlinux.org/packages.php?ID=47512
+https://aur.archlinux.org/packages/salt-git/
 
 Please enjoy the latest Salt release!

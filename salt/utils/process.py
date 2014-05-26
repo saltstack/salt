@@ -50,7 +50,7 @@ def set_pidfile(pidfile, user):
                 user
             )
         )
-        sys.exit(2)
+        sys.exit(os.EX_NOUSER)
 
     if os.getuid() == uid:
         # The current user already owns the pidfile. Return!

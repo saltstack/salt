@@ -1,12 +1,8 @@
+.. _targeting-nodegroups:
+
 ===========
 Node groups
 ===========
-
-.. glossary::
-
-    Node group
-        A predefined group of minions declared in the master configuration file
-        :conf_master:`nodegroups` setting as a compound target.
 
 Nodegroups are declared using a compound target specification. The compound
 target documentation can be found :doc:`here <compound>`.
@@ -23,9 +19,9 @@ nodegroups. Here's an example nodegroup configuration within
 
 .. note::
 
-    The 'L' within group1 is matching a list of minions, while the 'G' in
-    group2 is matching specific grains. See the
-    :doc:`compound matchers <compound>` documentation for more details.
+    The ``L`` within group1 is matching a list of minions, while the ``G`` in
+    group2 is matching specific grains. See the :doc:`compound matchers
+    <compound>` documentation for more details.
 
 To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
@@ -33,8 +29,8 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
     salt -N group1 test.ping
 
-To match in your :term:`top file`, make sure to put ``- match: nodegroup`` on
-the line directly following the nodegroup name.
+To match a nodegroup in your :term:`top file`, make sure to put ``- match:
+nodegroup`` on the line directly following the nodegroup name.
 
 .. code-block:: yaml
 
@@ -42,3 +38,11 @@ the line directly following the nodegroup name.
       group1:
         - match: nodegroup
         - webserver
+
+.. note::
+
+    When adding or modifying nodegroups to a master configuration file, the master must be restarted
+    for those changes to be fully recognized. 
+
+    A limited amount of functionality, such as targeting with -N from the command-line may be
+    available without a restart.

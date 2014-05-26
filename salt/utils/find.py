@@ -81,6 +81,7 @@ the following:
 '''
 
 # Import python libs
+from __future__ import print_function
 import hashlib
 import logging
 import os
@@ -589,7 +590,7 @@ def find(path, options):
 def _main():
     if len(sys.argv) < 2:
         sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
-        sys.exit(1)
+        sys.exit(os.EX_USAGE)
 
     path = sys.argv[1]
     criteria = {}
@@ -601,7 +602,7 @@ def _main():
         finder = Finder(criteria)
     except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
-        sys.exit(1)
+        sys.exit(salt.exitcodes.EX_GENERIC)
 
     for result in finder.find(path):
         print(result)

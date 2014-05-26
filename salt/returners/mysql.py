@@ -55,7 +55,13 @@ Use the following mysql database schema::
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 Required python modules: MySQLdb
+
+  To use the mysql returner, append '--return mysql' to the salt command. ex:
+
+    salt '*' test.ping --return mysql
 '''
+# Let's not allow PyLint complain about string substitution
+# pylint: disable=W1321,E1321
 
 # Import python libs
 from contextlib import contextmanager
@@ -76,7 +82,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not HAS_MYSQL:
         return False
-    return 'mysql'
+    return True
 
 
 def _get_options():

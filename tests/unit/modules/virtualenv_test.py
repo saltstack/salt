@@ -11,7 +11,7 @@
 
 # Import python libraries
 import warnings
-import os
+import sys
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -285,7 +285,7 @@ class VirtualenvTestCase(TestCase):
                 )
             # <---- virtualenv binary present but > 0 exit code --------------
 
-            # ----- virtualenv binary returns 1.9.1 as it's version --------->
+            # ----- virtualenv binary returns 1.9.1 as its version --------->
             mock = MagicMock(side_effect=[
                 {'retcode': 0, 'stdout': '1.9.1'},
                 {'retcode': 0, 'stdout': ''}
@@ -298,9 +298,9 @@ class VirtualenvTestCase(TestCase):
                     'virtualenv --never-download /tmp/foo',
                     runas=None
                 )
-            # <---- virtualenv binary returns 1.9.1 as it's version ----------
+            # <---- virtualenv binary returns 1.9.1 as its version ----------
 
-            # ----- virtualenv binary returns 1.10rc1 as it's version ------->
+            # ----- virtualenv binary returns 1.10rc1 as its version ------->
             mock = MagicMock(side_effect=[
                 {'retcode': 0, 'stdout': '1.10rc1'},
                 {'retcode': 0, 'stdout': ''}
@@ -313,20 +313,17 @@ class VirtualenvTestCase(TestCase):
                     'virtualenv /tmp/foo',
                     runas=None
                 )
-            # <---- virtualenv binary returns 1.10rc1 as it's version --------
+            # <---- virtualenv binary returns 1.10rc1 as its version --------
 
     def test_python_argument(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        if os.path.isfile('/usr/bin/python2.7'):
-            python = '/usr/bin/python2.7'
-        elif os.path.isfile('/usr/bin/python2.6'):
-            python = '/usr/bin/python2.6'
+
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create(
-                '/tmp/foo', python=python,
+                '/tmp/foo', python=sys.executable,
             )
             mock.assert_called_once_with(
-                'virtualenv --python={0} /tmp/foo'.format(python),
+                'virtualenv --python={0} /tmp/foo'.format(sys.executable),
                 runas=None
             )
 

@@ -7,6 +7,8 @@ Module for running arbitrary tests
 import os
 import sys
 import time
+import traceback
+import hashlib
 import random
 
 # Import Salt libs
@@ -420,3 +422,45 @@ def tty(device, echo=None):
                 teletype,
                 ret['retcode'])
         }
+
+
+def rand_str(size=9999999999):
+    '''
+    Return a random string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.rand_str
+    '''
+    hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+    return hasher(str(random.randint(0, size))).hexdigest()
+
+
+def exception(message='Test Exception'):
+    '''
+    Raise an exception
+
+    Optionally provide an error message or output the full stack.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.exception 'Oh noes!'
+    '''
+    raise Exception(message)
+
+
+def stack():
+    '''
+    Return the current stack trace
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.stack
+    '''
+    return ''.join(traceback.format_stack())

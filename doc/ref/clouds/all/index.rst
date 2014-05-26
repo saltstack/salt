@@ -16,14 +16,18 @@ Full list of Salt Cloud modules
     ec2
     gce
     gogrid
-    ibmsce
     joyent
     libcloud_aws
     linode
+    lxc
     msazure
     nova
+    opennebula
     openstack
     parallels
+    proxmox
     rackspace
     saltify
     softlayer
+    softlayer_hw
+    vsphere

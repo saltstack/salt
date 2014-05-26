@@ -20,9 +20,10 @@
 # The tcp port used by the publisher
 #publish_port: 4505
 
-# The user to run the salt-master as. Salt will update all permissions to
-# allow the specified user to run the master. If the modified files cause
-# conflicts set verify_env to False.
+# The user under which the salt master will run. Salt will update all
+# permissions to allow the specified user to run the master. The exception is
+# the job cache, which must be deleted if this user is changed.  If the
+# modified files cause conflicts set verify_env to False.
 #user: root
 
 # Max open files
@@ -66,6 +67,11 @@
 # Directory to store job and cache data
 #cachedir: /var/cache/salt/master
 
+# Directory for custom modules. This directory can contain subdirectories for
+# each of Salt's module types such as "runners", "output", "wheel", "modules",
+# "states", "returners", etc.
+#extension_modules: <no default>
+
 # Verify and set permissions on configuration directories at startup
 #verify_env: True
 
@@ -76,7 +82,7 @@
 # seconds
 #timeout: 5
 
-# The loop_interval option controls the seconds for the master's maintinance
+# The loop_interval option controls the seconds for the master's maintenance
 # process check cycle. This process updates file server backends, cleans the
 # job cache and executes the scheduler.
 #loop_interval: 60
@@ -107,6 +113,11 @@
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
 
+# Passing very large events can cause the minion to consume large amounts of
+# memory. This value tunes the maximum size of a message allowed onto the
+# master event bus. The value is expressed in bytes.
+#max_event_size: 1048576
+
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
@@ -134,6 +145,12 @@
 # Enable auto_accept, this setting will automatically accept all incoming
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
+
+# Time in minutes that a incomming public key with a matching name found in
+# pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
+# are removed when the master checks the minion_autosign directory.
+# 0 equals no timeout
+# autosign_timeout: 120
 
 # If the autosign_file is specified, incoming keys specified in the
 # autosign_file will be automatically accepted. This is insecure.  Regular
@@ -280,6 +297,7 @@
 # output for each changed state if set to 'full', but if set to 'terse'
 # the output will be shortened to a single line.  If set to 'mixed', the output
 # will be terse unless a state failed, in which case that output will be full.
+# If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
 
@@ -311,6 +329,10 @@
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
+#
+# Prior to changing this value, the master should be stopped and all Salt 
+# caches should be cleared.
+#
 #hash_type: md5
 
 # The buffer size in the file server can be adjusted here:
@@ -530,7 +552,7 @@
 #
 # mine_get:
 #   foo.example.com:
-#     - network.inetrfaces
+#     - network.interfaces
 #   web.*:
 #     - network.*
 #     - disk.*

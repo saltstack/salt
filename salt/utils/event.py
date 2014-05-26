@@ -38,11 +38,11 @@ When the tag is exactly 20 characters no padded is done.
 The get_event method intelligently figures out if the tag is longer than 20 characters.
 
 
-The convention for namespacing is to use dot characters "." as the name space delimeter.
+The convention for namespacing is to use dot characters "." as the name space delimiter.
 The name space "salt" is reserved by SaltStack for internal events.
 
 For example:
-Namspaced tag
+Namespaced tag
     'salt.runner.manage.status.start'
 
 '''
@@ -73,6 +73,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils
+import salt.utils.cache
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -83,8 +84,8 @@ SUB_EVENT = set([
             'state.sls',
             ])
 
-TAGEND = '\n\n'  # long tag delimeter
-TAGPARTER = '/'  # name spaced tag delimeter
+TAGEND = '\n\n'  # long tag delimiter
+TAGPARTER = '/'  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
@@ -97,13 +98,27 @@ TAGS = {
     'wheel': 'wheel',  # prefix for all salt/wheel events
     'cloud': 'cloud',  # prefix for all salt/cloud events
     'fileserver': 'fileserver',  # prefix for all salt/fileserver events
+    'queue': 'queue',  # prefix for all salt/queue events
 }
+
+
+def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
+    '''
+    Return an event object suitable for the named transport
+    '''
+    if transport == 'zeromq':
+        if node == 'master':
+            return MasterEvent(sock_dir or opts.get('sock_dir', None))
+        return SaltEvent(node, sock_dir, opts)
+    elif transport == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.SaltEvent(node, sock_dir, listen)
 
 
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
-    from joinning with the TABPART character the base, prefix and suffix
+    from joining with the TABPART character the base, prefix and suffix
 
     If string prefix is a valid key in TAGS Then use the value of key prefix
     Else use prefix string
@@ -124,21 +139,29 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, **kwargs):
+    def __init__(self, node, sock_dir=None, opts=None):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.cpub = False
         self.cpush = False
-        self.puburi, self.pulluri = self.__load_uri(sock_dir, node, **kwargs)
+        if opts is None:
+            opts = {}
+        self.opts = opts
+        if sock_dir is None:
+            sock_dir = opts.get('sock_dir', None)
+        self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_events = []
 
-    def __load_uri(self, sock_dir, node, **kwargs):
+    def __load_uri(self, sock_dir, node):
         '''
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
+        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        # Only use the first 10 chars to keep longer hashes from exceeding the
+        # max socket path length.
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -151,12 +174,12 @@ class SaltEvent(object):
                     ))
             salt.utils.check_ipc_path_max_len(pulluri)
         else:
-            if kwargs.get('ipc_mode', '') == 'tcp':
+            if self.opts.get('ipc_mode', '') == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
-                        kwargs.get('tcp_pub_port', 4510)
+                        self.opts.get('tcp_pub_port', 4510)
                         )
                 pulluri = 'tcp://127.0.0.1:{0}'.format(
-                        kwargs.get('tcp_pull_port', 4511)
+                        self.opts.get('tcp_pull_port', 4511)
                         )
             else:
                 puburi = 'ipc://{0}'.format(os.path.join(
@@ -209,7 +232,7 @@ class SaltEvent(object):
         '''
         self.push = self.context.socket(zmq.PUSH)
         try:
-            # bug in 0MQ default send timeout of -1 (inifinite) is not infinite
+            # bug in 0MQ default send timeout of -1 (infinite) is not infinite
             self.push.setsockopt(zmq.SNDTIMEO, timeout)
         except AttributeError:
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
@@ -232,43 +255,64 @@ class SaltEvent(object):
         data = serial.loads(mdata)
         return mtag, data
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', full=False, use_pending=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
+
+        use_pending
+            Defines whether to keep all unconsumed events in a pending_events
+            list, or to discard events that don't match the requested tag.  If
+            set to True, MAY CAUSE MEMORY LEAKS.
         '''
         self.subscribe()
 
-        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
-            self.pending_events.remove(evt)
-            if full:
-                return evt
-            else:
-                return evt['data']
+        if use_pending:
+            for evt in [x for x in self.pending_events
+                        if x['tag'].startswith(tag)]:
+                self.pending_events.remove(evt)
+                if full:
+                    return evt
+                else:
+                    return evt['data']
 
-        start = int(time.time())
-        while not wait or int(time.time()) <= start + wait:
-            socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
-            if self.sub in socks and socks[self.sub] == zmq.POLLIN:
-                raw = self.sub.recv()
-            else:
-                continue
-            mtag, data = self.unpack(raw, self.serial)
-
-            ret = {'data': data,
-                    'tag': mtag}
-
-            if not mtag.startswith(tag):  # tag not match
-                self.pending_events.append(ret)
+        start = time.time()
+        timeout_at = start + wait
+        while not wait or time.time() <= timeout_at:
+            # convert to milliseconds
+            socks = dict(self.poller.poll(wait * 1000))
+            if socks.get(self.sub) != zmq.POLLIN:
                 continue
 
+            try:
+                ret = self.get_event_noblock()
+            except zmq.ZMQError as ex:
+                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                    continue
+                else:
+                    raise
+
+            if not ret['tag'].startswith(tag):  # tag not match
+                if use_pending:
+                    self.pending_events.append(ret)
+                wait = timeout_at - time.time()
+                continue
+
+            log.trace('get_event() received = {0}'.format(ret))
             if full:
                 return ret
-            return data
+            return ret['data']
         return None
+
+    def get_event_noblock(self):
+        '''Get the raw event without blocking or any other niceties
+        '''
+        raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
 
     def iter_events(self, tag='', full=False):
         '''
@@ -282,7 +326,7 @@ class SaltEvent(object):
 
     def fire_event(self, data, tag, timeout=1000):
         '''
-        Send a single event into the publisher with paylod dict "data" and event
+        Send a single event into the publisher with payload dict "data" and event
         identifier "tag"
 
         Supports new style long tags.
@@ -299,15 +343,19 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull(timeout=timeout)
 
-        data['_stamp'] = datetime.datetime.now().isoformat('_')
+        data['_stamp'] = datetime.datetime.now().isoformat()
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
             tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
         else:  # new style longer than 20 chars
             tagend = TAGEND
-
-        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
+        serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
+                self.opts.get('max_event_size', 1048576),
+                is_msgpacked=True
+                )
+        log.debug('Sending event - data = {0}'.format(data))
+        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
             self.push.send(event)
         except Exception as ex:
@@ -407,8 +455,8 @@ class MinionEvent(SaltEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, **kwargs):
-        super(MinionEvent, self).__init__('minion', **kwargs)
+    def __init__(self, opts):
+        super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
 class EventPublisher(Process):
@@ -432,29 +480,27 @@ class EventPublisher(Process):
         epub_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
                 )
+        salt.utils.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
-        # Start the master event publisher
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        pub_mode = 448
-        if self.opts.get('client_acl') or self.opts.get('external_auth'):
-            pub_mode = 511
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pub.ipc'),
-                pub_mode
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pull.ipc'),
-                448
-                )
+        salt.utils.check_ipc_path_max_len(epull_uri)
 
+        # Start the master event publisher
+        old_umask = os.umask(0177)
+        try:
+            self.epull_sock.bind(epull_uri)
+            self.epub_sock.bind(epub_uri)
+            if self.opts.get('client_acl') or self.opts.get('external_auth'):
+                os.chmod(
+                        os.path.join(self.opts['sock_dir'],
+                            'master_event_pub.ipc'),
+                        0666
+                        )
+        finally:
+            os.umask(old_umask)
         try:
             while True:
                 # Catch and handle EINTR from when this process is sent
@@ -512,7 +558,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         log.debug('Gathering reactors for tag {0}'.format(tag))
         reactors = []
-        if isinstance(self.opts['reactor'], basestring):
+        if isinstance(self.opts['reactor'], string_types):
             try:
                 with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
@@ -585,8 +631,13 @@ class ReactWrap(object):
     '''
     Create a wrapper that executes low data for the reaction system
     '''
+    # class-wide cache of clients
+    client_cache = None
+
     def __init__(self, opts):
         self.opts = opts
+        if ReactWrap.client_cache is None:
+            ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
     def run(self, low):
         '''
@@ -609,22 +660,25 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
-        return local.cmd_async(*args, **kwargs)
+        if 'local' not in self.client_cache:
+            self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
+        return self.client_cache['local'].cmd_async(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        runner = salt.runner.RunnerClient(self.opts)
-        return runner.low(fun, kwargs)
+        if 'runner' not in self.client_cache:
+            self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
+        return self.client_cache['runner'].low(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        wheel = salt.wheel.Wheel(self.opts)
-        return wheel.call_func(fun, **kwargs)
+        if 'wheel' not in self.client_cache:
+            self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
+        return self.client_cache['wheel'].call_func(fun, **kwargs)
 
 
 class StateFire(object):
@@ -645,7 +699,9 @@ class StateFire(object):
         '''
         Fire an event off on the master server
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''

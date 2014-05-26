@@ -154,11 +154,18 @@ Specify the location of the master pidfile
 Default: :file:`/`
 
 The system root directory to operate from, change this to make Salt run from
-an alternative root
+an alternative root.
 
 .. code-block:: yaml
 
     root_dir: /
+
+.. note::
+
+    This directory is prepended to the following options:
+    :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
+    :conf_master:`log_file`, :conf_master:`autosign_file`,
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
 
 .. conf_master:: pki_dir
 
@@ -172,6 +179,19 @@ The directory to store the pki authentication keys.
 .. code-block:: yaml
 
     pki_dir: /etc/salt/pki
+
+.. conf_master:: extension_modules
+
+``extension_modules``
+---------------------
+
+Directory for custom modules. This directory can contain subdirectories for
+each of Salt's module types such as "runners", "output", "wheel", "modules",
+"states", "returners", etc. This path is appended to :conf_master:`root_dir`.
+
+.. code-block:: yaml
+
+    extension_modules: srv/modules
 
 .. conf_master:: cachedir
 
@@ -225,7 +245,7 @@ Set the default timeout for the salt command and api.
 
 Default: ``60``
 
-The loop_interval option controls the seconds for the master's maintinance
+The loop_interval option controls the seconds for the master's maintenance
 process check cycle. This process updates file server backends, cleans the
 job cache and executes the scheduler.
 
@@ -375,6 +395,23 @@ public keys from minions.
 
     auto_accept: False
 
+.. conf_master:: autosign_timeout
+
+``autosign_timeout``
+--------------------
+
+.. versionadded:: Helium
+
+Default: ``120``
+
+Time in minutes that a incoming public key with a matching name found in
+pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
+are removed when the master checks the minion_autosign directory. This method
+to auto accept minions can be safer than an autosign_file because the
+keyid record can expire and is limited to being an exact name match.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion id.
+
 .. conf_master:: autosign_file
 
 ``autosign_file``
@@ -384,8 +421,11 @@ Default: ``not defined``
 
 If the ``autosign_file`` is specified incoming keys specified in the autosign_file
 will be automatically accepted. Matches will be searched for first by string
-comparison, then by globbing, then by full-string regex matching. This is
-insecure!
+comparison, then by globbing, then by full-string regex matching.
+This should still be considered a less than secure option, due to the fact
+that trust is based on just the requesting minion id.
+
+.. conf_master:: autoreject_file
 
 ``autoreject_file``
 -------------------
@@ -504,7 +544,7 @@ Set additional directories to search for runner modules
 
 Default: ``False``
 
-Set to true to enable cython modules (.pyx files) to be compiled on the fly on
+Set to true to enable Cython modules (.pyx files) to be compiled on the fly on
 the Salt master
 
 .. code-block:: yaml
@@ -538,7 +578,7 @@ root of the base environment
 Default: ``{}``
 
 The master_tops option replaces the external_nodes option by creating
-a plugable system for the generation of external top data. The external_nodes
+a pluggable system for the generation of external top data. The external_nodes
 option is deprecated by the master_tops option.
 To gain the capabilities of the classic external_nodes system, use the
 following configuration:
@@ -597,16 +637,16 @@ at the moment a single state fails
 ``state_verbose``
 -----------------
 
-Default: ``False``
+Default: ``True``
 
-state_verbose allows for the data returned from the minion to be more
-verbose. Normally only states that fail or states that have changes are
-returned, but setting state_verbose to ``True`` will return all states that
-were checked
+Controls the verbosity of state runs. By default, the results of all states are
+returned, but setting this value to ``False`` will cause salt to only display
+output for states which either failed, or succeeded without making any changes
+to the minion.
 
 .. code-block:: yaml
 
-    state_verbose: True
+    state_verbose: False
 
 .. conf_master:: state_output
 
@@ -655,39 +695,32 @@ or just post what changes are going to be made
 Master File Server Settings
 ===========================
 
-.. conf_master:: file_roots
+.. conf_master:: fileserver_backend
 
-``file_roots``
---------------
+``fileserver_backend``
+----------------------
 
 Default:
 
 .. code-block:: yaml
 
-    base:
-      - /srv/salt
+    fileserver_backend:
+      - roots
 
-Salt runs a lightweight file server written in ZeroMQ to deliver files to
-minions. This file server is built into the master daemon and does not
-require a dedicated port.
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend ``roots``, which is configured using
+the :conf_master:`file_roots` option.
 
-The file server works on environments passed to the master. Each environment
-can have multiple root directories. The subdirectories in the multiple file
-roots cannot match, otherwise the downloaded files will not be able to be
-reliably ensured. A base environment is required to house the top file.
 Example:
 
 .. code-block:: yaml
 
-    file_roots:
-      base:
-        - /srv/salt
-      dev:
-        - /srv/salt/dev/services
-        - /srv/salt/dev/states
-      prod:
-        - /srv/salt/prod/services
-        - /srv/salt/prod/states
+    fileserver_backend:
+      - roots
+      - git
 
 .. conf_master:: hash_type
 
@@ -756,66 +789,59 @@ nothing is ignored.
       - '\*/somefolder/\*.bak'
       - '\*.swp'
 
-.. conf_master:: fileserver_backend
+roots: Master's Local File Server
+---------------------------------
 
-``fileserver_backend``
-----------------------
+.. conf_master:: file_roots
+
+``file_roots``
+**************
 
 Default:
 
 .. code-block:: yaml
 
-    fileserver_backend:
-      - roots
+    base:
+      - /srv/salt
 
-Salt supports a modular fileserver backend system, this system allows the salt
-master to link directly to third party systems to gather and manage the files
-available to minions. Multiple backends can be configured and will be searched
-for the requested file in the order in which they are defined here. The default
-setting only enables the standard backend ``roots``, which is configured using
-the :conf_master:`file_roots` option.
+Salt runs a lightweight file server written in ZeroMQ to deliver files to
+minions. This file server is built into the master daemon and does not
+require a dedicated port.
 
+The file server works on environments passed to the master. Each environment
+can have multiple root directories. The subdirectories in the multiple file
+roots cannot match, otherwise the downloaded files will not be able to be
+reliably ensured. A base environment is required to house the top file.
 Example:
 
 .. code-block:: yaml
 
-    fileserver_backend:
-      - roots
-      - git
+    file_roots:
+      base:
+        - /srv/salt
+      dev:
+        - /srv/salt/dev/services
+        - /srv/salt/dev/states
+      prod:
+        - /srv/salt/prod/services
+        - /srv/salt/prod/states
 
-.. conf_master:: gitfs_provider
-
-``gitfs_provider``
-------------------
-
-.. versionadded:: Helium
-
-Gitfs can be provided by one of two python modules: `GitPython`_ or `pygit2`_.
-If using pygit2, both libgit2 and git itself must also be installed. More
-information can be found in the :mod:`gitfs backend documentation
-<salt.fileserver.gitfs>`.
-
-.. _GitPython: https://github.com/gitpython-developers/GitPython
-.. _pygit2: https://github.com/libgit2/pygit2
-
-.. code-block:: yaml
-
-    gitfs_provider: pygit2
+git: Git Remote File Server Backend
+-----------------------------------
 
 .. conf_master:: gitfs_remotes
 
 ``gitfs_remotes``
------------------
+*****************
 
 Default: ``[]``
 
-When using the git fileserver backend at least one git remote needs to be
+When using the ``git`` fileserver backend at least one git remote needs to be
 defined. The user running the salt master will need read access to the repo.
 
-The repos will be searched in order to find the file requested by a client
-and the first repo to have the file will return it.
-When using the git backend branches and tags are translated into salt
-environments.
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and tags are
+translated into salt environments.
 
 .. code-block:: yaml
 
@@ -824,17 +850,62 @@ environments.
       - file:///var/git/saltmaster
 
 .. note::
+
     ``file://`` repos will be treated as a remote, so refs you want used must
     exist in that repo as *local* refs.
+
+.. note::
+
+    As of the upcoming **Helium** release (and right now in the development
+    branch), it is possible to have per-repo versions of the
+    :conf_master:`gitfs_base`, :conf_master:`gitfs_root`, and
+    :conf_master:`gitfs_mountpoint` parameters. For example:
+
+    .. code-block:: yaml
+
+        gitfs_remotes:
+          - https://foo.com/foo.git
+          - https://foo.com/bar.git:
+            - root: salt
+            - mountpoint: salt://foo/bar/baz
+            - base: salt-base
+          - https://foo.com/baz.git:
+            - root: salt/states
+
+For more information on GitFS remotes, see the :ref:`GitFS Backend Walkthrough
+<tutorial-gitfs>`.
+
+.. conf_master:: gitfs_provider
+
+``gitfs_provider``
+******************
+
+.. versionadded:: Helium
+
+Default: ``gitpython``
+
+GitFS defaults to using GitPython_, but this parameter allows for either
+pygit2_ or dulwich_ to be used instead. If using pygit2, both libgit2 and git
+itself must also be installed. More information can be found in the :mod:`GitFS
+backend documentation <salt.fileserver.gitfs>` and the :doc:`GitFS walkthrough
+</topics/tutorials/gitfs>`.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+.. _dulwich: https://www.samba.org/~jelmer/dulwich/
+
+.. code-block:: yaml
+
+    gitfs_provider: pygit2
 
 .. conf_master:: gitfs_ssl_verify
 
 ``gitfs_ssl_verify``
---------------------
+********************
 
 Default: ``[]``
 
-The ``gitfs_ssl_verify`` option specifies whether to ignore ssl certificate
+The ``gitfs_ssl_verify`` option specifies whether to ignore SSL certificate
 errors when contacting the gitfs backend. You might want to set this to
 false if you're using a git backend that uses a self-signed certificate but
 keep in mind that setting this flag to anything other than the default of True
@@ -844,20 +915,609 @@ is a security concern, you may want to try using the ssh transport.
 
     gitfs_ssl_verify: True
 
-.. conf_master:: gitfs_root
+.. conf_master:: gitfs_mountpoint
 
-``gitfs_root``
---------------
+``gitfs_mountpoint``
+********************
+
+.. versionadded:: Helium
 
 Default: ``''``
 
-The ``gitfs_root`` option gives the ability to serve files from a subdirectory
-within the repository. The path is defined relative to the root of the
-repository and defaults to the repository root.
+Specifies a path on the salt fileserver from which gitfs remotes are served.
+Can be used in conjunction with :conf_master:`gitfs_root`. Can also be
+configured on a per-remote basis, see :conf_master:`here <gitfs_remotes>` for
+more info.
+
+.. code-block:: yaml
+
+    gitfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: gitfs_root
+
+``gitfs_root``
+**************
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver. Can be used in conjunction with
+:conf_master:`gitfs_mountpoint`.
 
 .. code-block:: yaml
 
     gitfs_root: somefolder/otherfolder
+
+.. versionchanged:: Helium
+
+   Ability to specify gitfs roots on a per-remote basis was added. See
+   :conf_master:`here <gitfs_remotes>` for more info.
+
+.. conf_master:: gitfs_base
+
+``gitfs_base``
+**************
+
+Default: ``master``
+
+Defines which branch/tag should be used as the ``base`` environment.
+
+.. versionchanged:: Helium
+    Can also be configured on a per-remote basis, see :conf_master:`here
+    <gitfs_remotes>` for more info.
+
+.. code-block:: yaml
+
+    gitfs_base: salt
+
+.. conf_master:: gitfs_env_whitelist
+
+``gitfs_env_whitelist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your gitfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, only branches/tags/SHAs which match one of the specified expressions
+will be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`gitfs_env_blacklist`, then the subset
+of branches/tags/SHAs which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    gitfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: gitfs_env_blacklist
+
+``gitfs_env_blacklist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your gitfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, branches/tags/SHAs which match one of the specified expressions will
+*not* be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`gitfs_env_whitelist`, then the subset
+of branches/tags/SHAs which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    gitfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+hg: Mercurial Remote File Server Backend
+----------------------------------------
+
+.. conf_master:: hgfs_remotes
+
+``hgfs_remotes``
+****************
+
+.. versionadded:: 0.17.0
+
+Default: ``[]``
+
+When using the ``hg`` fileserver backend at least one mercurial remote needs to
+be defined. The user running the salt master will need read access to the repo.
+
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and/or bookmarks are
+translated into salt environments, as defined by the
+:conf_master:`hgfs_branch_method` parameter.
+
+.. code-block:: yaml
+
+    hgfs_remotes:
+      - https://username@bitbucket.org/username/reponame
+
+.. note::
+
+    As of the upcoming **Helium** release (and right now in the development
+    branch), it is possible to have per-repo versions of the
+    :conf_master:`hgfs_root`, :conf_master:`hgfs_mountpoint`,
+    :conf_master:`hgfs_base`, and :conf_master:`hgfs_branch_method` parameters.
+    For example:
+
+    .. code-block:: yaml
+
+        hgfs_remotes:
+          - https://username@bitbucket.org/username/repo1
+            - base: saltstates
+          - https://username@bitbucket.org/username/repo2:
+            - root: salt
+            - mountpoint: salt://foo/bar/baz
+          - https://username@bitbucket.org/username/repo3:
+            - root: salt/states
+            - branch_method: mixed
+
+.. conf_master:: hgfs_branch_method
+
+``hgfs_branch_method``
+**********************
+
+.. versionadded:: 0.17.0
+
+Default: ``branches``
+
+Defines the objects that will be used as fileserver environments.
+
+* ``branches`` - Only branches and tags will be used
+* ``bookmarks`` - Only bookmarks and tags will be used
+* ``mixed`` - Branches, bookmarks, and tags will be used
+
+.. code-block:: yaml
+
+    hgfs_branch_method: mixed
+
+.. note::
+
+    Starting in version 2014.1.0 (Hydrogen), the value of the
+    :conf_master:`hgfs_base` parameter defines which branch is used as the
+    ``base`` environment, allowing for a ``base`` environment to be used with
+    an :conf_master:`hgfs_branch_method` of ``bookmarks``.
+
+    Prior to this release, the ``default`` branch will be used as the ``base``
+    environment.
+
+.. conf_master:: hgfs_mountpoint
+
+``hgfs_mountpoint``
+*******************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which hgfs remotes are served.
+Can be used in conjunction with :conf_master:`hgfs_root`. Can also be
+configured on a per-remote basis, see :conf_master:`here <hgfs_remotes>` for
+more info.
+
+.. code-block:: yaml
+
+    hgfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: hgfs_root
+
+``hgfs_root``
+*************
+
+.. versionadded:: 0.17.0
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver. Can be used in conjunction with
+:conf_master:`hgfs_mountpoint`.
+
+.. code-block:: yaml
+
+    hgfs_root: somefolder/otherfolder
+
+.. versionchanged:: Helium
+
+   Ability to specify hgfs roots on a per-remote basis was added. See
+   :conf_master:`here <hgfs_remotes>` for more info.
+
+.. conf_master:: hgfs_base
+
+``hgfs_base``
+*************
+
+.. versionadded:: 2014.1.0 (Hydrogen)
+
+Default: ``default``
+
+Defines which branch should be used as the ``base`` environment. Change this if
+:conf_master:`hgfs_branch_method` is set to ``bookmarks`` to specify which
+bookmark should be used as the ``base`` environment.
+
+.. code-block:: yaml
+
+    hgfs_base: salt
+
+.. conf_master:: hgfs_env_whitelist
+
+``hgfs_env_whitelist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your hgfs remotes contain many branches/bookmarks/tags. Full names, globs,
+and regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, only branches/bookmarks/tags which match one of the specified
+expressions will be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`hgfs_env_blacklist`, then the subset
+of branches/bookmarks/tags which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    hgfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: hgfs_env_blacklist
+
+``hgfs_env_blacklist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your hgfs remotes contain many branches/bookmarks/tags. Full names, globs,
+and regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, branches/bookmarks/tags which match one of the specified expressions
+will *not* be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`hgfs_env_whitelist`, then the subset
+of branches/bookmarks/tags which match the whitelist but do *not* match the
+blacklist will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    hgfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+svn: Subversion Remote File Server Backend
+------------------------------------------
+
+.. conf_master:: svnfs_remotes
+
+``svnfs_remotes``
+*****************
+
+.. versionadded:: 0.17.0
+
+Default: ``[]``
+
+When using the ``svn`` fileserver backend at least one subversion remote needs
+to be defined. The user running the salt master will need read access to the
+repo.
+
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. The trunk, branches, and tags
+become environments, with the trunk being the ``base`` environment.
+
+.. code-block:: yaml
+
+    svnfs_remotes:
+      - svn://foo.com/svn/myproject
+
+.. note::
+
+    As of the upcoming **Helium** release (and right now in the development
+    branch), it is possible to have per-repo versions of the following
+    configuration parameters:
+
+    * :conf_master:`svnfs_root`
+    * :conf_master:`svnfs_mountpoint`
+    * :conf_master:`svnfs_trunk`
+    * :conf_master:`svnfs_branches`
+    * :conf_master:`svnfs_tags`
+
+    For example:
+
+    .. code-block:: yaml
+
+        svnfs_remotes:
+          - svn://foo.com/svn/project1
+          - svn://foo.com/svn/project2:
+            - root: salt
+            - mountpoint: salt://foo/bar/baz
+          - svn//foo.com/svn/project3:
+            - root: salt/states
+            - branches: branch
+            - tags: tag
+
+.. conf_master:: svnfs_mountpoint
+
+``svnfs_mountpoint``
+********************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which svnfs remotes are served.
+Can be used in conjunction with :conf_master:`svnfs_root`. Can also be
+configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>` for
+more info.
+
+.. code-block:: yaml
+
+    svnfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: svnfs_root
+
+``svnfs_root``
+**************
+
+.. versionadded:: 0.17.0
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver. Can be used in conjunction with
+:conf_master:`svnfs_mountpoint`.
+
+.. code-block:: yaml
+
+    svnfs_root: somefolder/otherfolder
+
+.. versionchanged:: Helium
+
+   Ability to specify svnfs roots on a per-remote basis was added. See
+   :conf_master:`here <svnfs_remotes>` for more info.
+
+.. conf_master:: svnfs_trunk
+
+``svnfs_trunk``
+***************
+
+.. versionadded:: Helium
+
+Default: ``trunk``
+
+Path relative to the root of the repository where the trunk is located. Can
+also be configured on a per-remote basis, see :conf_master:`here
+<svnfs_remotes>` for more info.
+
+.. code-block:: yaml
+
+    svnfs_trunk: trunk
+
+.. conf_master:: svnfs_branches
+
+``svnfs_branches``
+******************
+
+.. versionadded:: Helium
+
+Default: ``branches``
+
+Path relative to the root of the repository where the branches are located. Can
+also be configured on a per-remote basis, see :conf_master:`here
+<svnfs_remotes>` for more info.
+
+.. code-block:: yaml
+
+    svnfs_branches: branches
+
+.. conf_master:: svnfs_tags
+
+``svnfs_tags``
+**************
+
+.. versionadded:: Helium
+
+Default: ``tags``
+
+Path relative to the root of the repository where the tags is located. Can also
+be configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>`
+for more info.
+
+.. code-block:: yaml
+
+    svnfs_tags: tags
+
+.. conf_master:: svnfs_env_whitelist
+
+``svnfs_env_whitelist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your svnfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the expression
+must match the entire minion ID.
+
+If used, only branches/tags which match one of the specified expressions will
+be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`svnfs_env_blacklist`, then the subset
+of branches/tags which match the whitelist but do *not* match the blacklist
+will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    svnfs_env_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: svnfs_env_blacklist
+
+``svnfs_env_blacklist``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which environments are made available. Can speed up state runs
+if your svnfs remotes contain many branches/tags. Full names, globs, and
+regular expressions are supported. If using a regular expression, the
+expression must match the entire minion ID.
+
+If used, branches/tags which match one of the specified expressions will *not*
+be exposed as fileserver environments.
+
+If used in conjunction with :conf_master:`svnfs_env_whitelist`, then the subset
+of branches/tags which match the whitelist but do *not* match the blacklist
+will be exposed as fileserver environments.
+
+.. code-block:: yaml
+
+    svnfs_env_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+minion: MinionFS Remote File Server Backend
+-------------------------------------------
+
+.. conf_master:: minionfs_env
+
+``minionfs_env``
+****************
+
+.. versionadded:: Helium
+
+Default: ``base``
+
+Environment from which MinionFS files are made available.
+
+.. code-block:: yaml
+
+    minionfs_env: minionfs
+
+.. conf_master:: minionfs_mountpoint
+
+``minionfs_mountpoint``
+***********************
+
+.. versionadded:: Helium
+
+Default: ``''``
+
+Specifies a path on the salt fileserver from which minionfs files are served.
+
+.. code-block:: yaml
+
+    minionfs_mountpoint: salt://foo/bar
+
+.. note::
+
+    The ``salt://`` protocol designation can be left off (in other words,
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+
+.. conf_master:: minionfs_whitelist
+
+``minionfs_whitelist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which minions' pushed files are exposed via minionfs. If using
+a regular expression, the expression must match the entire minion ID.
+
+If used, only the pushed files from minions which match one of the specified
+expressions will be exposed.
+
+If used in conjunction with :conf_master:`minionfs_blacklist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed.
+
+.. code-block:: yaml
+
+    minionfs_whitelist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
+
+.. conf_master:: minionfs_blacklist
+
+``minionfs_blacklist``
+**********************
+
+.. versionadded:: Helium
+
+Default: ``[]``
+
+Used to restrict which minions' pushed files are exposed via minionfs. If using
+a regular expression, the expression must match the entire minion ID.
+
+If used, only the pushed files from minions which match one of the specified
+expressions will *not* be exposed.
+
+If used in conjunction with :conf_master:`minionfs_whitelist`, then the subset
+of hosts which match the whitelist but do *not* match the blacklist will be
+exposed.
+
+.. code-block:: yaml
+
+    minionfs_blacklist:
+      - base
+      - v1.*
+      - 'mybranch\d+'
 
 
 .. _pillar-configuration:
@@ -1290,7 +1950,7 @@ option then the master will log a warning message.
 
 
 Windows Software Repo Settings
-------------------------------
+==============================
 
 .. conf_master:: win_repo
 

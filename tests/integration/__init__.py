@@ -5,7 +5,9 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
+from __future__ import print_function
 import os
+import re
 import sys
 import time
 import errno
@@ -15,6 +17,7 @@ import logging
 import tempfile
 import subprocess
 import multiprocessing
+import json
 from hashlib import md5
 from datetime import datetime, timedelta
 try:
@@ -23,6 +26,10 @@ except ImportError:
     pass
 
 
+STATE_FUNCTION_RUNNING_RE = re.compile(
+    r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
+    r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
+)
 INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -32,6 +39,7 @@ SALT_LIBS = os.path.dirname(CODE_DIR)
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.case import ShellTestCase
+from salttesting.helpers import skip_if_binaries_missing
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
@@ -69,31 +77,6 @@ TMP_CONF_DIR = os.path.join(TMP, 'config')
 log = logging.getLogger(__name__)
 
 
-def skip_if_binaries_missing(binaries, check_all=False):
-    # While there's no new release of salt-testing
-    def _id(obj):
-        return obj
-
-    if sys.version_info < (2, 7):
-        from unittest2 import skip
-    else:
-        from unittest import skip  # pylint: disable=E0611
-
-    if check_all:
-        for binary in binaries:
-            if salt.utils.which(binary) is None:
-                return skip(
-                    'The {0!r} binary was not found'
-                )
-    elif salt.utils.which_bin(binaries) is None:
-        return skip(
-            'None of the following binaries was found: {0}'.format(
-                ', '.join(binaries)
-            )
-        )
-    return _id
-
-
 def run_tests(*test_cases, **kwargs):
     '''
     Run integration tests for the chosen test cases.
@@ -126,7 +109,7 @@ def run_tests(*test_cases, **kwargs):
 
         def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
             if needs_daemon:
-                print('Setting up Salt daemons to execute tests')
+                print(' * Setting up Salt daemons to execute tests')
                 with TestDaemon(self):
                     return SaltTestcaseParser.run_testcase(self, testcase)
             return SaltTestcaseParser.run_testcase(self, testcase)
@@ -299,6 +282,9 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
+        if self.parser.options.ssh:
+            self.prep_ssh()
+
         if self.parser.options.sysinfo:
             try:
                 print_header(
@@ -337,13 +323,157 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
+    def prep_ssh(self):
+        '''
+        Generate keys and start an ssh daemon on an alternate port
+        '''
+        print(' * Initializing SSH subsystem')
+        keygen = salt.utils.which('ssh-keygen')
+        sshd = salt.utils.which('sshd')
+
+        if not (keygen and sshd):
+            print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
+            return
+        if not os.path.exists(TMP_CONF_DIR):
+            os.makedirs(TMP_CONF_DIR)
+
+        # Generate client key
+        pub_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+        priv_key_test_file = os.path.join(TMP_CONF_DIR, 'key_test')
+        if os.path.exists(pub_key_test_file):
+            os.remove(pub_key_test_file)
+        if os.path.exists(priv_key_test_file):
+            os.remove(priv_key_test_file)
+        keygen_process = subprocess.Popen(
+            [keygen, '-t',
+                     'ecdsa',
+                     '-b',
+                     '521',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'key_test',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=TMP_CONF_DIR
+        )
+        _, keygen_err = keygen_process.communicate()
+        if keygen_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_err))
+        sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
+        shutil.copy(sshd_config_path, TMP_CONF_DIR)
+        auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
+
+        # Generate server key
+        server_key_dir = os.path.join(TMP_CONF_DIR, 'server')
+        if not os.path.exists(server_key_dir):
+            os.makedirs(server_key_dir)
+        server_dsa_priv_key_file = os.path.join(server_key_dir, 'ssh_host_dsa_key')
+        server_dsa_pub_key_file = os.path.join(server_key_dir, 'ssh_host_dsa_key.pub')
+        server_ecdsa_priv_key_file = os.path.join(server_key_dir, 'ssh_host_ecdsa_key')
+        server_ecdsa_pub_key_file = os.path.join(server_key_dir, 'ssh_host_ecdsa_key.pub')
+        server_ed25519_priv_key_file = os.path.join(server_key_dir, 'ssh_host_ed25519_key')
+        server_ed25519_pub_key_file = os.path.join(server_key_dir, 'ssh_host.ed25519_key.pub')
+
+        for server_key_file in (server_dsa_priv_key_file,
+                                server_dsa_pub_key_file,
+                                server_ecdsa_priv_key_file,
+                                server_ecdsa_pub_key_file,
+                                server_ed25519_priv_key_file,
+                                server_ed25519_pub_key_file):
+            if os.path.exists(server_key_file):
+                os.remove(server_key_file)
+
+        keygen_process_dsa = subprocess.Popen(
+            [keygen, '-t',
+                     'dsa',
+                     '-b',
+                     '1024',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'ssh_host_dsa_key',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=server_key_dir
+        )
+        _, keygen_dsa_err = keygen_process_dsa.communicate()
+        if keygen_dsa_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_dsa_err))
+
+        keygen_process_ecdsa = subprocess.Popen(
+            [keygen, '-t',
+                     'ecdsa',
+                     '-b',
+                     '521',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'ssh_host_ecdsa_key',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=server_key_dir
+        )
+        _, keygen_escda_err = keygen_process_ecdsa.communicate()
+        if keygen_escda_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_escda_err))
+
+        keygen_process_ed25519 = subprocess.Popen(
+            [keygen, '-t',
+                     'ed25519',
+                     '-b',
+                     '521',
+                     '-C',
+                     '"$(whoami)@$(hostname)-$(date -I)"',
+                     '-f',
+                     'ssh_host_ed25519_key',
+                     '-P',
+                     ''],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=server_key_dir
+        )
+        _, keygen_ed25519_err = keygen_process_ed25519.communicate()
+        if keygen_ed25519_err:
+            print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
+
+        with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+            ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
+            ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
+            ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
+            ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+        self.sshd_process = subprocess.Popen(
+            [sshd, '-f', 'sshd_config'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=TMP_CONF_DIR
+        )
+        _, sshd_err = self.sshd_process.communicate()
+        if sshd_err:
+            print('sshd had errors on startup: {0}'.format(sshd_err))
+        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        shutil.copy(roster_path, TMP_CONF_DIR)
+        with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+
     @property
     def client(self):
         '''
         Return a local client which will be used for example to ping and sync
         the test minions.
 
-        This client is defined as a class attribute because it's creation needs
+        This client is defined as a class attribute because its creation needs
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
@@ -355,19 +485,18 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        import integration
-        integration.SYNDIC = None
-        self.sub_minion_process.terminate()
+        salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
-        self.minion_process.terminate()
+        salt.master.clean_proc(self.minion_process, wait_for_kill=50)
         self.minion_process.join()
-        self.master_process.terminate()
+        salt.master.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
-        self.syndic_process.terminate()
+        salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
         self.syndic_process.join()
-        self.smaster_process.terminate()
+        salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
         self.smaster_process.join()
         self._exit_mockbin()
+        self._exit_ssh()
         self._clean()
 
     def pre_setup_minions(self):
@@ -387,7 +516,7 @@ class TestDaemon(object):
         if wait_minion_connections.exitcode > 0:
             print(
                 '\n {RED_BOLD}*{ENDC} ERROR: Minions failed to connect'.format(
-                **self.colors
+                    **self.colors
                 )
             )
             return False
@@ -427,16 +556,18 @@ class TestDaemon(object):
 
         if sync_needed:
             # Wait for minions to "sync_all"
-            sync_minions = multiprocessing.Process(
-                target=self.sync_minion_modules,
-                args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
-            )
-            sync_minions.start()
-            sync_minions.join()
-            if sync_minions.exitcode > 0:
-                return False
-            sync_minions.terminate()
-            del sync_minions
+            for target in [self.sync_minion_modules,
+                           self.sync_minion_states]:
+                sync_minions = multiprocessing.Process(
+                    target=target,
+                    args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
+                )
+                sync_minions.start()
+                sync_minions.join()
+                if sync_minions.exitcode > 0:
+                    return False
+                sync_minions.terminate()
+                del sync_minions
 
         return True
 
@@ -451,6 +582,13 @@ class TestDaemon(object):
         if MOCKBIN not in path_items:
             path_items.insert(0, MOCKBIN)
         os.environ['PATH'] = os.pathsep.join(path_items)
+
+    def _exit_ssh(self):
+        if hasattr(self, 'sshd_process'):
+            try:
+                self.sshd_process.kill()
+            except OSError:
+                pass
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')
@@ -596,26 +734,30 @@ class TestDaemon(object):
                 print_header('=', sep='=', inline=True)
             raise SystemExit()
 
-    def sync_minion_modules(self, targets, timeout=120):
+    def sync_minion_modules_(self, modules_kind, targets, timeout=None):
+        if not timeout:
+            timeout = 120
         # Let's sync all connected minions
         print(
-            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s modules '
-            '(saltutil.sync_modules)'.format(
+            ' {LIGHT_BLUE}*{ENDC} Syncing minion\'s {1} '
+            '(saltutil.sync_{1})'.format(
                 ', '.join(targets),
+                modules_kind,
                 **self.colors
             )
         )
         syncing = set(targets)
         jid_info = self.client.run_job(
-            list(targets), 'saltutil.sync_modules',
+            list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
             timeout=9999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync modules. '
-                'Tests requiring these modules WILL fail'.format(**self.colors)
+                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync {0}. '
+                'Tests requiring these {0} WILL fail'.format(
+                    modules_kind, **self.colors)
             )
             raise SystemExit()
 
@@ -631,15 +773,20 @@ class TestDaemon(object):
                     if isinstance(output['ret'], salt._compat.string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed so sync modules: '
-                            '{1}'.format(name, output['ret'], **self.colors)
+                            ' {RED_BOLD}*{ENDC} {0} Failed so sync {2}: '
+                            '{1}'.format(
+                                name, output['ret'],
+                                modules_kind,
+                                **self.colors)
                         )
                         return False
 
                     print(
-                        '   {LIGHT_GREEN}*{ENDC} Synced {0} modules: '
+                        '   {LIGHT_GREEN}*{ENDC} Synced {0} {2}: '
                         '{1}'.format(
-                            name, ', '.join(output['ret']), **self.colors
+                            name,
+                            ', '.join(output['ret']),
+                            modules_kind, **self.colors
                         )
                     )
                     # Synced!
@@ -651,6 +798,12 @@ class TestDaemon(object):
                             '{1}'.format(name, output, **self.colors)
                         )
         return True
+
+    def sync_minion_states(self, targets, timeout=None):
+        self.sync_minion_modules_('states', targets, timeout=timeout)
+
+    def sync_minion_modules(self, targets, timeout=None):
+        self.sync_minion_modules_('modules', targets, timeout=timeout)
 
 
 class AdaptedConfigurationTestCaseMixIn(object):
@@ -665,10 +818,14 @@ class AdaptedConfigurationTestCaseMixIn(object):
             # Running as root, the running user does not need to be updated
             return integration_config_dir
 
-        for fname in os.listdir(integration_config_dir):
-            if fname.startswith(('.', '_')):
+        for triplet in os.walk(integration_config_dir):
+            partial = triplet[0].replace(integration_config_dir, "")[1:]
+            if partial.startswith('_'):
                 continue
-            self.get_config_file_path(fname)
+            for fname in triplet[2]:
+                if fname.startswith(('.', '_')):
+                    continue
+                self.get_config_file_path(os.path.join(partial, fname))
         return TMP_CONF_DIR
 
     def get_config_file_path(self, filename):
@@ -679,10 +836,11 @@ class AdaptedConfigurationTestCaseMixIn(object):
             # Running as root, the running user does not need to be updated
             return integration_config_file
 
-        if not os.path.isdir(TMP_CONF_DIR):
-            os.makedirs(TMP_CONF_DIR)
-
         updated_config_path = os.path.join(TMP_CONF_DIR, filename)
+        partial = os.path.dirname(updated_config_path)
+        if not os.path.isdir(partial):
+            os.makedirs(partial)
+
         if not os.path.isfile(updated_config_path):
             self.__update_config(integration_config_file, updated_config_path)
         return updated_config_path
@@ -746,13 +904,20 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                     function, minion_tgt, orig
                 )
             )
+
+        # Try to match stalled state functions
+        orig[minion_tgt] = self._check_state_return(
+            orig[minion_tgt], func=function
+        )
+
         return orig[minion_tgt]
 
     def run_state(self, function, **kwargs):
         '''
         Run the state.single command and return the state return structure
         '''
-        return self.run_function('state.single', [function], **kwargs)
+        ret = self.run_function('state.single', [function], **kwargs)
+        return self._check_state_return(ret)
 
     @property
     def minion_opts(self):
@@ -780,6 +945,42 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         return salt.config.master_config(
             self.get_config_file_path('master')
         )
+
+    def _check_state_return(self, ret, func='state.single'):
+        if isinstance(ret, dict):
+            # This is the supposed return format for state calls
+            return ret
+
+        if isinstance(ret, list):
+            jids = []
+            # These are usually errors
+            for item in ret[:]:
+                if not isinstance(item, salt._compat.string_types):
+                    # We don't know how to handle this
+                    continue
+                match = STATE_FUNCTION_RUNNING_RE.match(item)
+                if not match:
+                    # We don't know how to handle this
+                    continue
+                jid = match.group('jid')
+                if jid in jids:
+                    continue
+
+                jids.append(jid)
+
+                job_data = self.run_function(
+                    'saltutil.find_job', [jid]
+                )
+                job_kill = self.run_function('saltutil.kill_job', [jid])
+                msg = (
+                    'A running state.single was found causing a state lock. '
+                    'Job details: {0!r}  Killing Job Returned: {1!r}'.format(
+                        job_data, job_kill
+                    )
+                )
+                ret.append('[TEST SUITE ENFORCED]{0}'
+                           '[/TEST SUITE ENFORCED]'.format(msg))
+        return ret
 
 
 class SyndicCase(TestCase, SaltClientTestCaseMixIn):
@@ -811,28 +1012,35 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
-    def run_salt(self, arg_str, with_retcode=False):
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_run(self, arg_str, with_retcode=False):
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-ssh
+        '''
+        arg_str = '-c {0} -i --priv {1} --roster-file {2} localhost {3} --out=json'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
+
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-run
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-run', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_run_plus(self, fun, options='', *arg):
+    def run_run_plus(self, fun, options='', *arg, **kwargs):
         '''
         Execute Salt run and the salt run function and return the data from
         each in a dict
         '''
         ret = {}
         ret['out'] = self.run_run(
-            '{0} {1} {2}'.format(options, fun, ' '.join(arg))
+            '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
         )
         opts = salt.config.master_config(
             self.get_config_file_path('master')
@@ -855,16 +1063,16 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
             with_retcode=with_retcode
         )
 
-    def run_cp(self, arg_str, with_retcode=False):
+    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-cp
         '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode)
+        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''
@@ -924,6 +1132,21 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
             )
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
         self.assertIn(parsed_version.string, out)
+
+
+class SSHCase(ShellCase):
+    '''
+    Execute a command via salt-ssh
+    '''
+    def _arg_str(self, function, arg):
+        return '{0} {1}'.format(function, ' '.join(arg))
+
+    def run_function(self, function, arg=(), timeout=25, **kwargs):
+        ret = self.run_ssh(self._arg_str(function, arg))
+        try:
+            return json.loads(ret)['localhost']
+        except Exception:
+            return ret
 
 
 class SaltReturnAssertsMixIn(object):

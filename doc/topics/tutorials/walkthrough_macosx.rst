@@ -1,12 +1,16 @@
 The MacOS X (Maverick) Developer Step By Step Guide To Salt Installation
 ========================================================================
 
-This document provides a step by step guide to installing a salt cluster
-(one master, and one minion running on a local VM) on Mac OS X to start
-playing with salt. It is aimed at developers, so it may be a little too slow
-for experienced admins. At the end of it, you will have installed a bare Nginx
-server on a minion using the master. The official (Linux) walkthrough can be
-found `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+This document provides a step-by-step guide to installing a Salt cluster
+consisting of  one master, and one minion running on a local VM hosted on Mac OS X.
+
+
+.. note::
+    This guide is aimed at developers who wish to run Salt in a virtual machine.
+    The official (Linux) walkthrough can be found
+    `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+
+
 
 The 5 Cent Salt Intro
 ---------------------
@@ -29,7 +33,7 @@ Here's a brief overview of a Salt cluster:
   , **on the master server**), and one for minions (default is
   /etc/salt/minion or /etc/salt/minion.conf, **on the minion servers**). Those
   files are used to determine things like the Salt Master IP, port, Salt
-  folder locations, etc.. If these are configured incorrectly, your minions 
+  folder locations, etc.. If these are configured incorrectly, your minions
   will probably be unable to receive orders from the master, or the master
   will not know which software a given minion should install.
 
@@ -40,7 +44,7 @@ Here's a brief overview of a Salt cluster:
   installed. These files should be created in the /srv/salt folder by default,
   but their location can be changed using ... /etc/salt/master configuration file!
 
-.. note:: 
+.. note::
 
     This tutorial contains a third important configuration file, not to
     be confused with the previous two: the virtual machine provisioning
@@ -49,7 +53,7 @@ Here's a brief overview of a Salt cluster:
     note that all configuration files are YAML files. So indentation matters.
 
 .. [#]
-       
+
     Salt also works with "masterless" configuration where a minion is
     autonomous (in which case salt can be seen as a local configuration tool),
     or in "multiple master" configuration. See the documentation for more on
@@ -88,19 +92,19 @@ have to do it all over again. It also lets you *uninstall* things easily.
 .. note::
 
     Brew is a Ruby program (Ruby is installed by default with your Mac). Brew
-    downloads, compile and links software. The linking phase is when compiled
+    downloads, compiles and links software. The linking phase is when compiled
     software is deployed on your machine. It may conflict with manually
-    installed software, especially in the /usr/local directory. It's ok, 
+    installed software, especially in the /usr/local directory. It's ok,
     remove the manually installed version then refresh the link by typing
     ``brew link 'packageName'``. Brew has a ``brew doctor`` command that can
     help you troubleshoot. It's a great command, use it often. Brew requires
-    xcode command line tools. When you run brew the first time it asks you to 
+    xcode command line tools. When you run brew the first time it asks you to
     install them if they're not already on your system. Brew installs
     software in /usr/local/bin (system bins are in /usr/bin). In order to use
     those bins you need your $PATH to search there first. Brew tells you if
     your $PATH needs to be fixed.
 
-.. tip:: 
+.. tip::
 
     Use the keyboard shortcut ``cmd + shift + period`` in the "open" Mac OS X
     dialog box to display hidden files and folders, such as .profile.
@@ -113,11 +117,11 @@ Or just type
 
 .. code-block:: bash
 
-    ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
+    ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
 
 
-Now type the following commands in your terminal (you may want to type brew
-doctor after each to make sure everything's fine):
+Now type the following commands in your terminal (you may want to type ``brew
+doctor`` after each to make sure everything's fine):
 
 .. code-block:: bash
 
@@ -125,7 +129,7 @@ doctor after each to make sure everything's fine):
     brew install swig
     brew install zmq
 
-.. note:: 
+.. note::
 
     zmq is ZeroMQ. It's a fantastic library used for server to server network
     communication and is at the core of Salt efficiency.
@@ -133,17 +137,17 @@ doctor after each to make sure everything's fine):
 Install Salt
 ------------
 
-you should now have everything ready to launch this command:
+You should now have everything ready to launch this command:
 
 .. code-block:: bash
 
     pip install salt
 
-.. note:: 
+.. note::
 
     There should be no need for ``sudo pip install salt``. Brew installed
     Python for your user, so you should have all the access. In case you
-    would like to check, type ``which python`` to ensure that it's 
+    would like to check, type ``which python`` to ensure that it's
     /usr/local/bin/python, and ``which pip`` which should be
     /usr/local/bin/pip.
 
@@ -157,8 +161,8 @@ If the default /etc/salt/master configuration file was not created,
 copy-paste it from here:
 http://docs.saltstack.com/ref/configuration/examples.html#configuration-examples-master
 
-.. note:: 
-       
+.. note::
+
     ``/etc/salt/master`` is a file, not a folder.
 
 Salt Master configuration changes. The Salt master needs a few customization
@@ -179,7 +183,7 @@ You should now be able to launch the Salt master:
 
 There should be no errors when running the above command.
 
-.. note:: 
+.. note::
 
     This command is supposed to be a daemon, but for toying around, we'll keep
     it running on a terminal to monitor the activity.
@@ -215,7 +219,7 @@ Install Vagrant
 ---------------
 
 Go get it here: http://downloads.vagrantup.com/ and choose the latest version
-(1.3.5 at time of writing), then the .dmg file. double-click to install it.
+(1.3.5 at time of writing), then the .dmg file. Double-click to install it.
 Make sure the ``vagrant`` command is found when run in the terminal. Type
 ``vagrant``. It should display a list of commands.
 
@@ -250,7 +254,7 @@ Import Precise64 Ubuntu Box
 
     vagrant box add precise64 http://files.vagrantup.com/precise64.box
 
-.. note:: 
+.. note::
 
     This box is added at the global Vagrant level. You only need to do it
     once as each VM will use this same file.
@@ -294,14 +298,14 @@ to the terminal:
 
 The VM should respond to your ping request.
 
-Now log inside the VM in ssh using Vagrant again:
+Now log into the VM in ssh using Vagrant again:
 
 .. code-block:: bash
 
     vagrant ssh
 
-You should see the shell prompt changing to something similar to 
-``vagrant@precise64:~$`` meaning you're inside the VM. From there enter the
+You should see the shell prompt change to something similar to
+``vagrant@precise64:~$`` meaning you're inside the VM. From there, enter the
 following:
 
 .. code-block:: bash
@@ -309,7 +313,7 @@ following:
     ping 10.0.2.2
 
 .. note::
-       
+
     That ip is the ip of your VM host (the Mac OS X OS). The number is a
     VirtualBox default and is displayed in the log after the Vagrant ssh
     command. We'll use that IP to tell the minion where the Salt master is.
@@ -333,9 +337,9 @@ following lines, giving the ID for this minion, and the IP of the master:
     file_client: remote
 
 Minions authenticate with the master using keys. Keys are generated
-automatically if you don't provide one, and you can accept them later on. But
-this requires you to accept the minion key every time you destroy and recreate
-a minion (which could be quite often). A better way is to create those keys in
+automatically if you don't provide one and can accept them later on. However,
+this requires accepting the minion key every time the minion is destroyed or
+created (which could be quite often). A better way is to create those keys in
 advance, feed them to the minion, and authorize them once.
 
 Preseed minion keys
@@ -348,7 +352,7 @@ From the minion folder on your Mac run:
     sudo salt-key --gen-keys=minion1
 
 This should create two files: minion1.pem, and minion1.pub.
-Since those files have been created by sudo, but will be used by vagrant,
+Since those files have been created using sudo, but will be used by vagrant,
 you need to change ownership:
 
 .. code-block:: bash
@@ -375,7 +379,7 @@ indentation level as the other properties):
     # salt-vagrant config
     config.vm.provision :salt do |salt|
         salt.run_highstate = true
-        salt.minion_config = "./minion.conf"
+        salt.minion_config = "/etc/salt/minion"
         salt.minion_key = "./minion1.pem"
         salt.minion_pub = "./minion1.pub"
     end

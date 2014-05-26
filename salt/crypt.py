@@ -13,6 +13,7 @@ import hmac
 import shutil
 import hashlib
 import logging
+import traceback
 
 # Import third party libs
 try:
@@ -27,6 +28,7 @@ import salt.utils
 import salt.payload
 import salt.utils.verify
 import salt.version
+import salt.minion
 from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError
 )
@@ -77,10 +79,10 @@ def dropfile(cachedir, user=None):
             import pwd
             uid = pwd.getpwnam(user).pw_uid
             os.chown(dfnt, uid, -1)
-            shutil.move(dfnt, dfn)
         except (KeyError, ImportError, OSError, IOError):
             pass
 
+    shutil.move(dfnt, dfn)
     os.umask(mask)
 
 
@@ -237,9 +239,6 @@ class Auth(object):
         public key to encrypt the AES key sent back form the master.
         '''
         payload = {}
-        key = self.get_keys()
-        tmp_pub = salt.utils.mkstemp()
-        key.save_pub_key(tmp_pub)
         payload['enc'] = 'clear'
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
@@ -251,9 +250,8 @@ class Auth(object):
             payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
         except Exception:
             pass
-        with salt.utils.fopen(tmp_pub, 'r') as fp_:
+        with salt.utils.fopen(self.pub_path, 'r') as fp_:
             payload['load']['pub'] = fp_.read()
-        os.remove(tmp_pub)
         return payload
 
     def decrypt_aes(self, payload, master_pub=True):
@@ -265,7 +263,14 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        log.debug('Decrypting the current master AES key')
+        if self.opts.get('auth_trb', False):
+            log.warning(
+                    'Auth Called: {0}'.format(
+                        ''.join(traceback.format_stack())
+                        )
+                    )
+        else:
+            log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         key_str = key.private_decrypt(payload['aes'], RSA.pkcs1_oaep_padding)
         if 'sig' in payload:
@@ -322,7 +327,7 @@ class Auth(object):
             aes, token = self.decrypt_aes(payload, False)
             return aes
 
-    def sign_in(self, timeout=60, safe=True):
+    def sign_in(self, timeout=60, safe=True, tries=1):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -330,48 +335,43 @@ class Auth(object):
         '''
         auth = {}
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        try:
-            self.opts['master_ip'] = salt.utils.dns_check(
-                self.opts['master'],
-                True,
-                self.opts['ipv6']
-            )
-        except SaltClientError as e:
-            if safe:
-                log.warning('SaltClientError: {0}'.format(e))
-                return 'retry'
-            raise SaltClientError
-
-        if self.opts['master_ip'] not in self.opts['master_uri']:
-            self.opts['master_uri'] = (self.opts['master_uri'].replace(
-                self.opts['master_uri'].split(':')[1][2:],
-                self.opts['master_ip']))
 
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
+
         try:
             payload = sreq.send_auto(
                 self.minion_sign_in_payload(),
+                tries=tries,
                 timeout=timeout
             )
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
-            raise SaltClientError
+            raise SaltClientError('Failed sign in')
 
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
-                    log.critical(
-                        'The Salt Master has rejected this minion\'s public '
-                        'key!\nTo repair this issue, delete the public key '
-                        'for this minion on the Salt Master and restart this '
-                        'minion.\nOr restart the Salt Master in open mode to '
-                        'clean out the keys. The Salt Minion will now exit.'
-                    )
-                    sys.exit(0)
+                    if self.opts['rejected_retry']:
+                        log.error(
+                            'The Salt Master has rejected this minion\'s public '
+                            'key.\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master.\nThe Salt '
+                            'Minion will attempt to to re-authenicate.'
+                        )
+                        return 'retry'
+                    else:
+                        log.critical(
+                            'The Salt Master has rejected this minion\'s public '
+                            'key!\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master and restart this '
+                            'minion.\nOr restart the Salt Master in open mode to '
+                            'clean out the keys. The Salt Minion will now exit.'
+                        )
+                        sys.exit(os.EX_OK)
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
@@ -393,22 +393,31 @@ class Auth(object):
                 'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
             sys.exit(42)
-        if self.opts.get('master_finger', False):
-            if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
-                log.critical(
-                    'The specified fingerprint in the master configuration '
-                    'file:\n{0}\nDoes not match the authenticating master\'s '
-                    'key:\n{1}\nVerify that the configured fingerprint '
-                    'matches the fingerprint of the correct master and that '
-                    'this minion is not subject to a man in the middle attack'
-                    .format(
-                        self.opts['master_finger'],
-                        salt.utils.pem_finger(m_pub_fn)
-                    )
-                )
-                sys.exit(42)
+        if self.opts.get('syndic_master', False):  # Is syndic
+            syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
+            if syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
+                    self._finger_fail(syndic_finger, m_pub_fn)
+        else:
+            if self.opts.get('master_finger', False):
+                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                    self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
         return auth
+
+    def _finger_fail(self, finger, master_key):
+        log.critical(
+            'The specified fingerprint in the master configuration '
+            'file:\n{0}\nDoes not match the authenticating master\'s '
+            'key:\n{1}\nVerify that the configured fingerprint '
+            'matches the fingerprint of the correct master and that '
+            'this minion is not subject to a man-in-the-middle attack.'
+            .format(
+                finger,
+                salt.utils.pem_finger(master_key)
+            )
+        )
+        sys.exit(42)
 
 
 class Crypticle(object):
@@ -508,17 +517,28 @@ class SAuth(Auth):
         in, signing in can occur as often as needed to keep up with the
         revolving master aes key.
         '''
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
+
         while True:
             creds = self.sign_in(
-                self.opts.get('_auth_timeout', 60),
-                self.opts.get('_safe_auth', True)
+                self.opts.get('auth_timeout', 60),
+                self.opts.get('auth_safemode', self.opts.get('_safe_auth', True)),
+                self.opts.get('auth_tries', 1)
             )
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
                           'has the minion key been accepted?')
                     sys.exit(2)
-                time.sleep(self.opts['acceptance_wait_time'])
+                if acceptance_wait_time:
+                    log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
+                    time.sleep(acceptance_wait_time)
+                if acceptance_wait_time < acceptance_wait_time_max:
+                    acceptance_wait_time += acceptance_wait_time
+                    log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
         return Crypticle(self.opts, creds['aes'])

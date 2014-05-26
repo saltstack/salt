@@ -1,8 +1,8 @@
 .. _pillar:
 
-==============
-Pillar of Salt
-==============
+=================================
+Storing Static Data in the Pillar
+=================================
 
 Pillar is an interface for Salt designed to offer global values that can be
 distributed to all minions. Pillar data is managed in a similar way as
@@ -38,8 +38,9 @@ is identical in behavior and function as :conf_master:`file_roots`:
         - /srv/pillar
 
 This example configuration declares that the base environment will be located
-in the ``/srv/pillar`` directory. The top file used matches the name of the top
-file used for States, and has the same structure:
+in the ``/srv/pillar`` directory. It must not be in a subdirectory of the
+state tree. The top file used matches the name of the top file used for States,
+and has the same structure:
 
 ``/srv/pillar/top.sls``
 
@@ -216,7 +217,7 @@ This makes handling nested structures much easier.
     It should be noted that within templating, the ``pillar`` variable is just
     a dictionary.  This means that calling ``pillar.get()`` inside of a
     template will just use the default dictionary ``.get()`` function which
-    does not include the extra ``:`` delimeter functionality.  It must be
+    does not include the extra ``:`` delimiter functionality.  It must be
     called using the above syntax (``salt['pillar.get']('foo:bar:baz',
     'qux')``) to get the salt function, instead of the default dictionary
     behavior.

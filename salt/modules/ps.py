@@ -9,6 +9,11 @@ See http://code.google.com/p/psutil.
 
 # Import python libs
 import time
+import datetime
+
+# Import salt libs
+import salt.utils
+from salt.exceptions import SaltInvocationError
 
 # Import third party libs
 try:
@@ -16,9 +21,6 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-
-# Define the module's virtual name
-__virtualname__ = 'ps'
 
 
 def __virtual__():
@@ -33,7 +35,7 @@ def __virtual__():
     # most distributions have already moved to later versions (for example,
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
-        return __virtualname__
+        return True
     return False
 
 
@@ -82,11 +84,14 @@ def top(num_processes=5, interval=3):
                 'user': process.username,
                 'status': process.status,
                 'pid': process.pid,
-                'create_time': process.create_time}
+                'create_time': process.create_time,
+                'cpu': {},
+                'mem': {},
+                }
         for key, value in process.get_cpu_times()._asdict().items():
-            info['cpu.{0}'.format(key)] = value
+            info['cpu'][key] = value
         for key, value in process.get_memory_info()._asdict().items():
-            info['mem.{0}'.format(key)] = value
+            info['mem'][key] = value
         result.append(info)
 
     return result
@@ -281,8 +286,41 @@ def cpu_times(per_cpu=False):
     return result
 
 
+def virtual_memory():
+    '''
+    .. versionadded:: Helium
+
+    Return a dict that describes statistics about system memory usage.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.virtual_memory
+    '''
+    return dict(psutil.virtual_memory()._asdict())
+
+
+def swap_memory():
+    '''
+    .. versionadded:: Helium
+
+    Return a dict that describes swap memory statistics.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.swap_memory
+    '''
+    return dict(psutil.swap_memory()._asdict())
+
+
 def physical_memory_usage():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return a dict that describes free and available physical memory.
 
     CLI Examples:
@@ -291,11 +329,20 @@ def physical_memory_usage():
 
         salt '*' ps.physical_memory_usage
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.physical_memory_usage\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return dict(psutil.phymem_usage()._asdict())
 
 
 def virtual_memory_usage():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return a dict that describes free and available memory, both physical
     and virtual.
 
@@ -305,11 +352,20 @@ def virtual_memory_usage():
 
         salt '*' ps.virtual_memory_usage
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.virtual_memory_usage\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return dict(psutil.virtmem_usage()._asdict())
 
 
 def cached_physical_memory():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return the amount cached memory.
 
     CLI Example:
@@ -318,11 +374,20 @@ def cached_physical_memory():
 
         salt '*' ps.cached_physical_memory
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.cached_physical_memory\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return psutil.cached_phymem()
 
 
 def physical_memory_buffers():
     '''
+    .. deprecated:: Helium
+        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
+
     Return the amount of physical memory buffers.
 
     CLI Example:
@@ -331,6 +396,12 @@ def physical_memory_buffers():
 
         salt '*' ps.physical_memory_buffers
     '''
+    salt.utils.warn_until(
+        'Helium',
+        '\'ps.physical_memory_buffers\' is deprecated.  Please use'
+        '\'ps.virtual_memory\' instead.  This functionality will'
+        'be removed in Salt {version}.'
+    )
     return psutil.phymem_buffers()
 
 
@@ -395,7 +466,12 @@ def total_physical_memory():
 
         salt '*' ps.total_physical_memory
     '''
-    return psutil.TOTAL_PHYMEM
+    try:
+        return psutil.virtual_memory().total
+    except AttributeError:
+        # TOTAL_PHYMEM is deprecated but with older psutil versions this is
+        # needed as a fallback.
+        return psutil.TOTAL_PHYMEM
 
 
 def num_cpus():
@@ -408,23 +484,50 @@ def num_cpus():
 
         salt '*' ps.num_cpus
     '''
-    return psutil.NUM_CPUS
+    try:
+        return psutil.cpu_count()
+    except AttributeError:
+        # NUM_CPUS is deprecated but with older psutil versions this is needed
+        # as a fallback.
+        return psutil.NUM_CPUS
 
 
-def boot_time():
+def boot_time(time_format=None):
     '''
     Return the boot time in number of seconds since the epoch began.
 
     CLI Example:
 
+    time_format
+        Optionally specify a `strftime`_ format string. Use
+        ``time_format='%c'`` to get a nicely-formatted locale specific date and
+        time (i.e. ``Fri May  2 19:08:32 2014``).
+
+        .. _strftime: https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior
+
+        .. versionadded:: 2014.1.4
+
     .. code-block:: bash
 
         salt '*' ps.boot_time
     '''
-    return psutil.BOOT_TIME
+    try:
+        b_time = int(psutil.boot_time())
+    except AttributeError:
+        # get_boot_time() has been removed in newer psutil versions, and has
+        # been replaced by boot_time() which provides the same information.
+        b_time = int(psutil.get_boot_time())
+    if time_format:
+        # Load epoch timestamp as a datetime.datetime object
+        b_time = datetime.datetime.fromtimestamp(b_time)
+        try:
+            return b_time.strftime(time_format)
+        except TypeError as exc:
+            raise SaltInvocationError('Invalid format string: {0}'.format(exc))
+    return b_time
 
 
-def network_io_counters():
+def network_io_counters(interface=None):
     '''
     Return network I/O statisitics.
 
@@ -433,11 +536,20 @@ def network_io_counters():
     .. code-block:: bash
 
         salt '*' ps.network_io_counters
+
+        salt '*' ps.network_io_counters interface=eth0
     '''
-    return dict(psutil.network_io_counters()._asdict())
+    if not interface:
+        return dict(psutil.network_io_counters()._asdict())
+    else:
+        stats = psutil.network_io_counters(pernic=True)
+        if interface in stats:
+            return dict(stats[interface]._asdict())
+        else:
+            return False
 
 
-def disk_io_counters():
+def disk_io_counters(device=None):
     '''
     Return disk I/O statisitics.
 
@@ -446,8 +558,17 @@ def disk_io_counters():
     .. code-block:: bash
 
         salt '*' ps.disk_io_counters
+
+        salt '*' ps.disk_io_counters device=sda1
     '''
-    return dict(psutil.disk_io_counters()._asdict())
+    if not device:
+        return dict(psutil.disk_io_counters()._asdict())
+    else:
+        stats = psutil.disk_io_counters(perdisk=True)
+        if device in stats:
+            return dict(stats[device]._asdict())
+        else:
+            return False
 
 
 def get_users():

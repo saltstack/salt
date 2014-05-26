@@ -2,45 +2,106 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+import time
 
+# Import Salt Libs
 import salt.payload
 import salt.auth
+import salt.utils
+try:
+    from raet import raeting
+    from raet.road.stacking import RoadStack
+    from raet.lane.stacking import LaneStack
+    from raet.lane import yarding
+
+except ImportError:
+    # Don't die on missing transport libs since only one transport is required
+    pass
 
 
 class Channel(object):
-
     @staticmethod
     def factory(opts, **kwargs):
-
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
-        if 'transport_type' in opts:
-            ttype = opts['transport_type']
-        elif 'transport_type' in opts.get('pillar', {}).get('master', {}):
-            ttype = opts['pillar']['master']['transport_type']
+        if 'transport' in opts:
+            ttype = opts['transport']
+        elif 'transport' in opts.get('pillar', {}).get('master', {}):
+            ttype = opts['pillar']['master']['transport']
 
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
+        if ttype == 'raet':
+            return RAETChannel(opts, **kwargs)
         else:
-            raise Exception("Channels are only defined for ZeroMQ")
+            raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
 
-class ZeroMQChannel(Channel):
+class RAETChannel(Channel):
+    '''
+    Build the communication framework to communicate over the local process
+    uxd socket and send messages forwarded to the master. then wait for the
+    relative return message.
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.ttype = 'raet'
+        self.__prep_stack()
 
+    def __prep_stack(self):
+        '''
+        Prepare the stack objects
+        '''
+        self.stack = LaneStack(
+                lanename=self.opts['id'],
+                yid=salt.utils.gen_jid(),
+                dirpath=self.opts['cachedir'],
+                sockdirpath=self.opts['sock_dir'])
+        self.stack.Pk = raeting.packKinds.pack
+        self.router_yard = yarding.RemoteYard(
+                yid=0,
+                lanename=self.opts['id'],
+                dirpath=self.opts['sock_dir'])
+        self.stack.addRemote(self.router_yard)
+        src = (self.opts['id'], self.stack.local.name, None)
+        dst = ('master', None, 'remote_cmd')
+        self.route = {'src': src, 'dst': dst}
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        '''
+        We don't need to do the crypted_transfer_decode_dictentry routine for
+        raet, just wrap send.
+        '''
+        return self.send(load, tries, timeout)
+
+    def send(self, load, tries=3, timeout=60):
+        '''
+        Send a message load and wait for a relative reply
+        '''
+        msg = {'route': self.route, 'load': load}
+        self.stack.transmit(msg, self.stack.uids['yard0'])
+        while True:
+            time.sleep(0.01)
+            self.stack.serviceAll()
+            if self.stack.rxMsgs:
+                for msg in self.stack.rxMsgs:
+                    return msg.get('return', {})
+
+
+class ZeroMQChannel(Channel):
     '''
     Encapsulate sending routines to ZeroMQ.
 
     ZMQ Channels default to 'crypt=aes'
     '''
-
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
 
         # crypt defaults to 'aes'
-        self.crypt = kwargs['crypt'] if 'crypt' in kwargs else 'aes'
+        self.crypt = kwargs.get('crypt', 'aes')
 
         self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':
@@ -70,12 +131,18 @@ class ZeroMQChannel(Channel):
         minion state execution call
         '''
         def _do_transfer():
-            return self.auth.crypticle.loads(
-                self.sreq.send(self.crypt,
-                               self.auth.crypticle.dumps(load),
-                               tries,
-                               timeout)
-            )
+            data = self.sreq.send(
+                self.crypt,
+                self.auth.crypticle.dumps(load),
+                tries,
+                timeout)
+            # we may not have always data
+            # as for example for saltcall ret submission, this is a blind
+            # communication, we do not subscribe to return events, we just
+            # upload the results to the master
+            if data:
+                data = self.auth.crypticle.loads(data)
+            return data
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:

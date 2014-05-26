@@ -54,11 +54,14 @@ class APIClient(object):
                 )
             )
         self.opts = opts
-        self.localClient = salt.client.LocalClient(self.opts['conf_file'])
+        self.localClient = salt.client.get_local_client(self.opts['conf_file'])
         self.runnerClient = salt.runner.RunnerClient(self.opts)
         self.wheelClient = salt.wheel.Wheel(self.opts)
         self.resolver = salt.auth.Resolver(self.opts)
-        self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'])
 
     def run(self, cmd):
         '''

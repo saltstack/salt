@@ -3,20 +3,29 @@
 Extract the pillar data for this minion
 '''
 
+# Import python libs
+import collections
+
 # Import third party libs
 import yaml
 
 # Import salt libs
 import salt.pillar
 import salt.utils
+from salt._compat import string_types
+
+__proxyenabled__ = ['*']
 
 
-def get(key, default=''):
+def get(key, default='', merge=False, delim=':'):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
+
+    If the merge parameter is set to ``True``, the default will be recursively
+    merged into the returned pillar data.
 
     The value can also represent a value in a nested dict using a ":" delimiter
     for the dict. This means that if a dict in pillar looks like this::
@@ -28,13 +37,30 @@ def get(key, default=''):
 
         pkg:apache
 
+    merge
+        Specify whether or not the retrieved values should be recursively
+        merged into the passed default.
+
+        .. versionadded:: Helium
+
+    delim
+        Specify an alternate delimiter to use when traversing a nested dict
+
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__pillar__, key, default)
+    if merge:
+        ret = salt.utils.traverse_dict(__pillar__, key, {}, delim)
+        if isinstance(ret, collections.Mapping) and \
+                isinstance(default, collections.Mapping):
+            return salt.utils.dictupdate.update(default, ret)
+
+    return salt.utils.traverse_dict(__pillar__, key, default, delim)
 
 
 def items(*args):
@@ -126,7 +152,7 @@ def ext(external):
 
         salt '*' pillar.ext '{libvirt: _}'
     '''
-    if isinstance(external, basestring):
+    if isinstance(external, string_types):
         external = yaml.safe_load(external)
     pillar = salt.pillar.get_pillar(
         __opts__,

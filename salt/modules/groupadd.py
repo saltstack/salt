@@ -126,3 +126,63 @@ def chgid(name, gid):
     if post_gid != pre_gid:
         return post_gid == gid
     return False
+
+
+def adduser(name, username):
+    '''
+    Add a user in the group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.adduser foo bar
+
+    Verifies if a valid username 'bar' as a member of an existing group 'foo',
+    if not then adds it.
+    '''
+    retcode = __salt__['cmd.retcode']('gpasswd --add {0} {1}'.format(username,
+                                                                     name))
+    return not retcode
+
+
+def deluser(name, username):
+    '''
+    Remove a user from the group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.deluser foo bar
+
+    Removes a member user 'bar' from a group 'foo'. If group is not present
+    then returns True.
+    '''
+    grp_info = __salt__['group.info'](name)
+    try:
+        if username in grp_info['members']:
+            print username
+            retcode = __salt__['cmd.retcode']('gpasswd --del {0} {1}'.format(
+                username, name))
+            return not retcode
+        else:
+            return True
+    except Exception:
+        return True
+
+
+def members(name, members_list):
+    '''
+    Replaces members of the group with a provided list.
+
+    CLI Example:
+
+        salt '*' group.members foo 'user1,user2,user3,...'
+
+    Replaces a membership list for a local group 'foo'.
+        foo:x:1234:user1,user2,user3,...
+    '''
+    retcode = __salt__['cmd.retcode']('gpasswd --members {0} {1}'.format(
+        members_list, name))
+    return not retcode

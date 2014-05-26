@@ -37,6 +37,7 @@ from cStringIO import StringIO
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
+from salt._compat import string_types
 
 __all__ = ['render']
 
@@ -201,7 +202,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
         except IndexError:
             raise INVALID_USAGE_ERROR
 
-        if isinstance(input, basestring):
+        if isinstance(input, string_types):
             with salt.utils.fopen(input, 'r') as ifile:
                 sls_templ = ifile.read()
         else:  # assume file-like
@@ -256,7 +257,7 @@ def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
         state.func: []
     '''
     for sid, states in data.items():
-        if isinstance(states, basestring):
+        if isinstance(states, string_types):
             data[sid] = {states: []}
 
 
@@ -381,8 +382,9 @@ def rename_state_ids(data, sls, is_extend=False):
                 for arg in args:
                     if isinstance(arg, dict) and iter(arg).next() == 'name':
                         break
-                else:  # then no '- name: ...' is defined in the state args
-                       # add the sid without the leading dot as the name.
+                else:
+                    # then no '- name: ...' is defined in the state args
+                    # add the sid without the leading dot as the name.
                     args.insert(0, dict(name=sid[1:]))
             data[newsid] = data[sid]
             del data[sid]

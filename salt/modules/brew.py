@@ -29,10 +29,10 @@ def __virtual__():
 
 def _list_taps():
     '''
-    List currently
+    List currently installed brew taps
     '''
     cmd = 'brew tap'
-    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
 
 
 def _tap(tap, runas=None):
@@ -55,7 +55,7 @@ def _homebrew_bin():
     '''
     Returns the full path to the homebrew binary in the PATH
     '''
-    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='debug')
+    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='trace')
     ret += '/bin/brew'
     return ret
 
@@ -73,8 +73,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -85,15 +86,18 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    ret = {}
     cmd = 'brew list --versions'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    ret = {}
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         try:
-            name, version_num = line.split(' ')[0:2]
+            name_and_versions = line.split(' ')
+            name = name_and_versions[0]
+            installed_versions = name_and_versions[1:]
+            newest_version = sorted(installed_versions, cmp=salt.utils.version_cmp).pop()
         except ValueError:
             continue
-        __salt__['pkg_resource.add_pkg'](ret, name, version_num)
+        __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
@@ -189,7 +193,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -208,7 +212,7 @@ def refresh_db():
     cmd = 'brew update'
     user = __salt__['file.get_user'](_homebrew_bin())
 
-    if __salt__['cmd.retcode'](cmd, runas=user, output_loglevel='debug'):
+    if __salt__['cmd.retcode'](cmd, runas=user):
         log.error('Failed to update')
         return False
 
@@ -312,7 +316,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     __salt__['cmd.run'](
         cmd,
         runas=user if user != __opts__['user'] else __opts__['user'],
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -331,7 +335,7 @@ def list_upgrades():
     '''
     cmd = 'brew outdated'
 
-    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
 
 
 def upgrade_available(pkg):
@@ -345,3 +349,39 @@ def upgrade_available(pkg):
         salt '*' pkg.upgrade_available <package name>
     '''
     return pkg in list_upgrades()
+
+
+def upgrade(refresh=True):
+    '''
+    Upgrade outdated, unpinned brews.
+
+    refresh
+        Fetch the newest version of Homebrew and all formulae from GitHub before installing.
+
+    Return a dict containing the new package names and versions::
+
+        {'<package>': {'old': '<old-version>',
+                       'new': '<new-version>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade
+    '''
+    old = list_pkgs()
+
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
+    cmd = 'brew upgrade'
+    user = __salt__['file.get_user'](_homebrew_bin())
+    __salt__['cmd.run'](
+        cmd,
+        runas=user if user != __opts__['user'] else __opts__['user'],
+        output_loglevel='trace'
+    )
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    return salt.utils.compare_dicts(old, new)

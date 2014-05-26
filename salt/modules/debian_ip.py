@@ -9,6 +9,7 @@ import os.path
 import os
 import re
 import StringIO
+import time
 
 # Import third party libs
 import jinja2
@@ -99,7 +100,7 @@ _REV_ETHTOOL_CONFIG_OPTS = {
 
 _DEB_CONFIG_OPTS = [
     'domain', 'peerdns', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'mtu', 'static-routes', 'gateway', 'broadcast'
 ]
 _DEB_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval', 'slaves',
@@ -248,14 +249,14 @@ def _parse_current_network_settings():
     '''
 
     opts = {}
+    opts['networking'] = 'no'
 
-    #_read_file('/etc/default/networking'):
     if os.path.isfile('/etc/default/networking'):
         contents = open('/etc/default/networking')
 
         for line in contents:
             if line.startswith('#'):
-                pass
+                continue
             elif line.startswith('CONFIGURE_INTERFACES'):
                 sline = line.split('=')
                 if line.endswith('\n'):
@@ -363,6 +364,7 @@ def _parse_interfaces():
                             adapters[iface_name]['data'][context]['bridgeing'][opt] = value
 
                         if sline[0].startswith('dns-nameservers'):
+                            ud = sline.pop(0)
                             if not 'dns' in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['dns'] = []
                             adapters[iface_name]['data'][context]['dns'] = sline
@@ -370,7 +372,7 @@ def _parse_interfaces():
                         if sline[0] in ['up', 'down', 'pre-up', 'post-up', 'pre-down', 'post-down']:
                             ud = sline.pop(0)
                             cmd = ' '.join(sline)
-                            cmd_key = '%s_cmds' % (re.sub('-', '_', ud))
+                            cmd_key = '{0}_cmds'.format(re.sub('-', '_', ud))
                             if not cmd_key in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context][cmd_key] = []
                             adapters[iface_name]['data'][context][cmd_key].append(cmd)
@@ -876,9 +878,13 @@ def _parse_bridge_opts(opts, iface):
             config.update({'waitport': opts['waitport']})
         else:
             values = opts['waitport'].split()
-            time = values.pop(0)
-            if time.isdigit() and values:
-                config.update({'waitport': '{0} {1}'.format(time, ' '.join(values))})
+            waitport_time = values.pop(0)
+            if waitport_time.isdigit() and values:
+                config.update({
+                    'waitport': '{0} {1}'.format(
+                        waitport_time, ' '.join(values)
+                    )
+                })
             else:
                 _raise_error_iface(iface, opt, ['integer [interfaces]'])
 
@@ -947,7 +953,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'ipaddr' in opts:
         adapters[iface]['data']['inet']['address'] = opts['ipaddr']
 
-    for opt in ['gateway', 'mtu', 'netmask', 'network']:
+    for opt in ['gateway', 'mtu', 'netmask', 'network', 'broadcast']:
         if opt in opts:
             adapters[iface]['data']['inet'][opt] = opts[opt]
 
@@ -997,12 +1003,14 @@ def _parse_network_settings(opts, current):
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    if not 'networking' in opts:
+    if not 'enabled' in opts:
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
         except ValueError:
             _raise_error_network('networking', valid)
+    else:
+        opts['networking'] = opts['enabled']
 
     if opts['networking'] in valid:
         if opts['networking'] in _CONFIG_TRUE:
@@ -1091,12 +1099,15 @@ def _write_file_routes(iface, data, folder, pattern):
     return filename
 
 
-def _write_file_network(data, filename):
+def _write_file_network(data, filename, create=False):
     '''
     Writes a file to disk
+    If file does not exist, only create if create
+    argument is True
     '''
-    if not os.path.exists(filename):
-        msg = '{0} cannot be written. {0} does not exist'
+    if not os.path.exists(filename) and not create:
+        msg = '{0} cannot be written. {0} does not exist\
+                and create is set to False'
         msg = msg.format(filename)
         log.error(msg)
         raise AttributeError(msg)
@@ -1261,7 +1272,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
 
-    if settings['test']:
+    if 'test' in settings and settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
     ifcfg = _write_file_ifaces(iface, opts[iface])
@@ -1289,9 +1300,9 @@ def build_routes(iface, **settings):
         log.error('Could not load template route_eth.jinja')
         return ''
 
-    add_routecfg = template.render(route_type='add', routes=opts['routes'])
+    add_routecfg = template.render(route_type='add', routes=opts['routes'], iface=iface)
 
-    del_routecfg = template.render(route_type='del', routes=opts['routes'])
+    del_routecfg = template.render(route_type='del', routes=opts['routes'], iface=iface)
 
     if 'test' in settings and settings['test']:
         return _read_temp(add_routecfg + del_routecfg)
@@ -1392,9 +1403,9 @@ def get_network_settings():
     settings = _parse_current_network_settings()
 
     try:
-        template = JINJA.get_template('display-network.jinja')
+        template = JINJA.get_template('network.jinja')
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template display-network.jinja')
+        log.error('Could not load template network.jinja')
         return ''
 
     network = template.render(settings)
@@ -1441,7 +1452,9 @@ def apply_network_settings(**settings):
         )
         return True
     else:
-        return __salt__['service.restart']('networking')
+        stop = __salt__['service.stop']('networking')
+        time.sleep(2)
+        return stop and __salt__['service.start']('networking')
 
 
 def build_network_settings(**settings):
@@ -1469,12 +1482,31 @@ def build_network_settings(**settings):
     if settings['test']:
         return _read_temp(network)
 
-    # Write settings
-    _write_file_network(network, _DEB_NETWORKING_FILE)
+    # Ubuntu has moved away from /etc/default/networking
+    # beginning with the 12.04 release so we disable or enable
+    # the networking related services on boot
+    if __grains__['osfullname'] == 'Ubuntu':
+        osmajor = __grains__['osrelease'].split('.')[0]
+        if int(osmajor) >= 12:
+            if opts['networking'] == 'yes':
+                service_cmd = 'service.enable'
+            else:
+                service_cmd = 'service.disable'
 
-    sline = opts['hostname'].split('.', 1)
+            if __salt__['service.available']("NetworkManager"):
+                __salt__[service_cmd]("NetworkManager")
+
+            if __salt__['service.available']("networking"):
+                __salt__[service_cmd]("networking")
+        else:
+            # Write settings
+            _write_file_network(network, _DEB_NETWORKING_FILE, True)
+    else:
+        # Write settings
+        _write_file_network(network, _DEB_NETWORKING_FILE, True)
 
     # Write hostname to /etc/hostname
+    sline = opts['hostname'].split('.', 1)
     hostname = "{0}\n" . format(sline[0])
     _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
@@ -1504,9 +1536,9 @@ def build_network_settings(**settings):
         _write_file_network(new_resolv, _DEB_RESOLV_FILE)
 
     try:
-        template = JINJA.get_template('display-network.jinja')
+        template = JINJA.get_template('network.jinja')
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template display-network.jinja')
+        log.error('Could not load template network.jinja')
         return ''
 
     network = template.render(opts)

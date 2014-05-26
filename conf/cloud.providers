@@ -65,6 +65,12 @@
 #  password: xyzzy
 #  url: https://api.cloud.xmission.com:4465/paci/v1.0/
 
+#my-proxmox-config:
+#  provider: proxmox
+#  user: saltcloud@pve
+#  password: xyzzy
+#  url: your.proxmox.host
+
 #my-openstack-rackspace-config:
 #  provider: openstack
 #  identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'

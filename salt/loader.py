@@ -12,11 +12,20 @@ import logging
 import tempfile
 import time
 
+from collections import MutableMapping
+
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
+# Solve the Chicken and egg problem where grains need to run before any
+# of the modules are loaded and are generally available for any usage.
+import salt.modules.cmdmod
+
+__salt__ = {
+    'cmd.run': salt.modules.cmdmod._run_quiet
+}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.dirname(salt.__file__)
@@ -29,6 +38,7 @@ LOADED_BASE_NAME = 'salt.loaded'
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'parallels.avail_sizes',
     'parallels.avail_locations',
+    'proxmox.avail_sizes',
     'saltify.destroy',
     'saltify.avail_sizes',
     'saltify.avail_images',
@@ -101,7 +111,19 @@ def _create_loader(
 
 def minion_mods(opts, context=None, whitelist=None):
     '''
-    Returns the minion modules
+    Load execution modules
+
+    Returns a dictionary of execution modules appropriate for the current
+    system by evaluating the __virtual__() function in each module.
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
+        __salt__ = salt.loader.minion_mods(__opts__)
+        __salt__['test.ping']()
     '''
     load = _create_loader(opts, 'modules', 'module')
     if context is None:
@@ -123,6 +145,15 @@ def minion_mods(opts, context=None, whitelist=None):
 def raw_mod(opts, name, functions):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
+        testmod = salt.loader.raw_mod(__opts__, 'test', None)
+        testmod['test.ping']()
     '''
     load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
@@ -145,7 +176,11 @@ def returners(opts, functions, whitelist=None):
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack, whitelist=whitelist)
+    return LazyLoader(load,
+                      functions,
+                      pack,
+                      whitelist=whitelist,
+                      )
 
 
 def pillars(opts, functions):
@@ -162,7 +197,7 @@ def tops(opts):
     '''
     Returns the tops modules
     '''
-    if not 'master_tops' in opts:
+    if 'master_tops' not in opts:
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
@@ -202,8 +237,7 @@ def fileserver(opts, backends):
     Returns the file server modules
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
-    ret = load.gen_functions(whitelist=backends)
-    return ret
+    return load.gen_functions(whitelist=backends)
 
 
 def roster(opts, whitelist=None):
@@ -211,13 +245,20 @@ def roster(opts, whitelist=None):
     Returns the roster modules
     '''
     load = _create_loader(opts, 'roster', 'roster')
-    ret = load.gen_functions(whitelist=whitelist)
-    return ret
+    return load.gen_functions(whitelist=whitelist)
 
 
 def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        statemods = salt.loader.states(__opts__, None)
     '''
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
@@ -232,7 +273,7 @@ def search(opts, returners, whitelist=None):
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
-    return load.gen_functions(pack, whitelist=whitelist)
+    return LazyLoader(load, pack=pack, whitelist=whitelist)
 
 
 def log_handlers(opts):
@@ -268,15 +309,20 @@ def ssh_wrapper(opts, functions=None):
     return load.gen_functions(pack)
 
 
-def render(opts, functions):
+def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
     load = _create_loader(
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+             'value': functions},
+            {'name': '__pillar__',
+             'value': opts.get('pillar', {})}]
+
+    if states:
+        pack.append({'name': '__states__', 'value': states})
     rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
@@ -290,6 +336,15 @@ def grains(opts):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.loader
+
+        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __grains__ = salt.loader.grains(__opts__)
+        print __grains__['id']
     '''
     if opts.get('skip_grains', False):
         return {}
@@ -316,7 +371,7 @@ def grains(opts):
     else:
         opts['grains'] = {}
 
-    load = _create_loader(opts, 'grains', 'grain', ext_dirs=False)
+    load = _create_loader(opts, 'grains', 'grain')
     grains_info = load.gen_grains()
     grains_info.update(opts['grains'])
     return grains_info
@@ -339,6 +394,16 @@ def runner(opts):
     '''
     load = _create_loader(
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
+    )
+    return load.gen_functions()
+
+
+def queues(opts):
+    '''
+    Directly call a function inside a loader directory
+    '''
+    load = _create_loader(
+        opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
     )
     return load.gen_functions()
 
@@ -498,11 +563,15 @@ class Loader(object):
             fn_ = os.path.join(mod_dir, name)
             if os.path.isdir(fn_):
                 full = fn_
+                break
             else:
                 for ext in ('.py', '.pyo', '.pyc', '.so'):
                     full_test = '{0}{1}'.format(fn_, ext)
                     if os.path.isfile(full_test):
                         full = full_test
+                        break
+                if full:
+                    break
         if not full:
             return None
 
@@ -607,7 +676,7 @@ class Loader(object):
             context = sys.modules[
                 functions[functions.keys()[0]].__module__
             ].__context__
-        except AttributeError:
+        except (AttributeError, IndexError):
             context = {}
         mod.__context__ = context
         return funcs
@@ -617,10 +686,114 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
+        funcs = {}
+        self.load_modules()
+        for mod in self.modules:
+            # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
+            # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
+            # containing the names of the proxy types that the module supports.
+            if not hasattr(mod, 'render') and 'proxy' in self.opts:
+                if not hasattr(mod, '__proxyenabled__'):
+                    # This is a proxy minion but this module doesn't support proxy
+                    # minions at all
+                    continue
+                if not self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
+                        '*' in mod.__proxyenabled__:
+                    # This is a proxy minion, this module supports proxy
+                    # minions, but not this particular minion
+                    log.debug(mod)
+                    continue
+
+            if hasattr(mod, '__opts__'):
+                mod.__opts__.update(self.opts)
+            else:
+                mod.__opts__ = self.opts
+
+            mod.__grains__ = self.grains
+            mod.__pillar__ = self.pillar
+
+            if pack:
+                if isinstance(pack, list):
+                    for chunk in pack:
+                        if not isinstance(chunk, dict):
+                            continue
+                        try:
+                            setattr(mod, chunk['name'], chunk['value'])
+                        except KeyError:
+                            pass
+                else:
+                    setattr(mod, pack['name'], pack['value'])
+
+            # Call a module's initialization method if it exists
+            if hasattr(mod, '__init__'):
+                if callable(mod.__init__):
+                    try:
+                        mod.__init__(self.opts)
+                    except TypeError:
+                        pass
+
+            # Trim the full pathname to just the module
+            # this will be the short name that other salt modules and state
+            # will refer to it as.
+            module_name = mod.__name__.rsplit('.', 1)[-1]
+
+            if virtual_enable:
+                # if virtual modules are enabled, we need to look for the
+                # __virtual__() function inside that module and run it.
+                (virtual_ret, virtual_name) = self.process_virtual(mod,
+                                                                   module_name)
+
+                # if process_virtual returned a non-True value then we are
+                # supposed to not process this module
+                if virtual_ret is not True:
+                    continue
+
+                # update our module name to reflect the virtual name
+                module_name = virtual_name
+
+            if whitelist:
+                # If a whitelist is defined then only load the module if it is
+                # in the whitelist
+                if module_name not in whitelist:
+                    continue
+
+            # load the functions from the module and update our dict
+            funcs.update(self.load_functions(mod, module_name))
+
+        # Handle provider overrides
+        if provider_overrides and self.opts.get('providers', False):
+            if isinstance(self.opts['providers'], dict):
+                for mod, provider in self.opts['providers'].items():
+                    newfuncs = raw_mod(self.opts, provider, funcs)
+                    if newfuncs:
+                        for newfunc in newfuncs:
+                            f_key = '{0}{1}'.format(
+                                mod, newfunc[newfunc.rindex('.'):]
+                            )
+                            funcs[f_key] = newfuncs[newfunc]
+
+        # now that all the functions have been collected, iterate back over
+        # the available modules and inject the special __salt__ namespace that
+        # contains these functions.
+        for mod in self.modules:
+            if not hasattr(mod, '__salt__') or (
+                not in_pack(pack, '__salt__') and
+                not str(mod.__name__).startswith('salt.loaded.int.grain')
+            ):
+                mod.__salt__ = funcs
+            elif not in_pack(pack, '__salt__') and \
+                    str(mod.__name__).startswith('salt.loaded.int.grain'):
+                mod.__salt__.update(funcs)
+        return funcs
+
+    def load_modules(self):
+        '''
+        Loads all of the modules from module_dirs and returns a list of them
+        '''
+        self.modules = []
+
         log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
-        modules = []
-        funcs = {}
         disable = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
         cython_enabled = False
@@ -740,219 +913,204 @@ class Loader(object):
                     exc_info=True
                 )
                 continue
-            modules.append(mod)
-        for mod in modules:
-            virtual = ''
+            self.modules.append(mod)
 
-            # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
-            # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
-            # containing the names of the proxy types that the module supports.
-            if 'proxytype' in self.opts:
-                if not hasattr(mod, '__proxyenabled__'):
-                    # This is a proxy minion but this module doesn't support proxy
-                    # minions at all
-                    continue
-                if not (self.opts['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
-                    # This is a proxy minion, this module supports proxy
-                    # minions, but not this particular minion
-                    continue
+    def load_functions(self, mod, module_name):
+        '''
+        Load functions returns a dict of all the functions from a module
+        '''
+        funcs = {}
 
-            if hasattr(mod, '__opts__'):
-                mod.__opts__.update(self.opts)
-            else:
-                mod.__opts__ = self.opts
-
-            mod.__grains__ = self.grains
-            mod.__pillar__ = self.pillar
-
-            if pack:
-                if isinstance(pack, list):
-                    for chunk in pack:
-                        if not isinstance(chunk, dict):
-                            continue
-                        try:
-                            setattr(mod, chunk['name'], chunk['value'])
-                        except KeyError:
-                            pass
-                else:
-                    setattr(mod, pack['name'], pack['value'])
-
-            # Call a module's initialization method if it exists
-            if hasattr(mod, '__init__'):
-                if callable(mod.__init__):
-                    try:
-                        mod.__init__(self.opts)
-                    except TypeError:
-                        pass
-
-            # Trim the full pathname to just the module
-            # this will be the short name that other salt modules and state
-            # will refer to it as.
-            module_name = mod.__name__.rsplit('.', 1)[-1]
-
-            if virtual_enable:
-                # if virtual modules are enabled, we need to look for the
-                # __virtual__() function inside that module and run it.
-                # This function will return either a new name for the module,
-                # an empty string(won't be loaded but you just need to check
-                # against the same python type, a string) or False.
-                # This allows us to have things like the pkg module working on
-                # all platforms under the name 'pkg'. It also allows for
-                # modules like augeas_cfg to be referred to as 'augeas', which
-                # would otherwise have namespace collisions. And finally it
-                # allows modules to return False if they are not intended to
-                # run on the given platform or are missing dependencies.
-                try:
-                    if hasattr(mod, '__virtual__'):
-                        if callable(mod.__virtual__):
-                            virtual = mod.__virtual__()
-                            if not virtual:
-                                # if __virtual__() evaluates to false then the
-                                # module wasn't meant for this platform or it's
-                                # not supposed to load for some other reason.
-                                # Some modules might accidentally return None
-                                # and are improperly loaded
-                                if virtual is None:
-                                    log.warning(
-                                        '{0}.__virtual__() is wrongly '
-                                        'returning `None`. It should either '
-                                        'return `True`, `False` or a new '
-                                        'name. If you\'re the developer '
-                                        'of the module {1!r}, please fix '
-                                        'this.'.format(
-                                            mod.__name__,
-                                            module_name
-                                        )
-                                    )
-                                continue
-
-                            if virtual is not True and module_name != virtual:
-                                # If __virtual__ returned True the module will
-                                # be loaded with the same name, if it returned
-                                # other value than `True`, it should be a new
-                                # name for the module.
-                                # Update the module name with the new name
-                                log.debug(
-                                    'Loaded {0} as virtual {1}'.format(
-                                        module_name, virtual
-                                    )
-                                )
-
-                                if not hasattr(mod, '__virtualname__'):
-                                    salt.utils.warn_until(
-                                        'Hydrogen',
-                                        'The {0!r} module is renaming itself '
-                                        'in it\'s __virtual__() function ({1} '
-                                        '=> {2}). Please set it\'s virtual '
-                                        'name as the \'__virtualname__\' '
-                                        'module attribute. Example: '
-                                        '"__virtualname__ = {2!r}"'.format(
-                                            mod.__name__,
-                                            module_name,
-                                            virtual
-                                        )
-                                    )
-                                module_name = virtual
-
-                            elif virtual and hasattr(mod, '__virtualname__'):
-                                module_name = mod.__virtualname__
-
-                except KeyError:
-                    # Key errors come out of the virtual function when passing
-                    # in incomplete grains sets, these can be safely ignored
-                    # and logged to debug, still, it includes the traceback to
-                    # help debugging.
-                    log.debug(
-                        'KeyError when loading {0}'.format(module_name),
-                        exc_info=True
-                    )
-
-                except Exception:
-                    # If the module throws an exception during __virtual__()
-                    # then log the information and continue to the next.
-                    log.error(
-                        'Failed to read the virtual function for '
-                        '{0}: {1}'.format(
-                            self.tag, module_name
-                        ),
-                        exc_info=True
-                    )
-                    continue
-
-            if whitelist:
-                # If a whitelist is defined then only load the module if it is
-                # in the whitelist
-                if module_name not in whitelist:
-                    continue
-
-            if getattr(mod, '__load__', False) is not False:
-                log.info(
-                    'The functions from module {0!r} are being loaded from '
-                    'the provided __load__ attribute'.format(
-                        module_name
-                    )
+        if getattr(mod, '__load__', False) is not False:
+            log.info(
+                'The functions from module {0!r} are being loaded from '
+                'the provided __load__ attribute'.format(
+                    module_name
                 )
-            for attr in getattr(mod, '__load__', dir(mod)):
+            )
 
-                if attr.startswith('_'):
-                    # skip private attributes
-                    # log messages omitted for obviousness
-                    continue
+        for attr in getattr(mod, '__load__', dir(mod)):
+            if attr.startswith('_'):
+                # skip private attributes
+                # log messages omitted for obviousness
+                continue
 
-                if callable(getattr(mod, attr)):
-                    # check to make sure this is callable
-                    func = getattr(mod, attr)
-                    if isinstance(func, type):
-                        # skip callables that might be exceptions
-                        if any(['Error' in func.__name__,
-                                'Exception' in func.__name__]):
-                            continue
-                    # now that callable passes all the checks, add it to the
-                    # library of available functions of this type
+            if callable(getattr(mod, attr)):
+                # check to make sure this is callable
+                func = getattr(mod, attr)
+                if isinstance(func, type):
+                    # skip callables that might be exceptions
+                    if any(['Error' in func.__name__,
+                            'Exception' in func.__name__]):
+                        continue
 
-                    # Let's get the function name.
-                    # If the module has the __func_alias__ attribute, it must
-                    # be a dictionary mapping in the form of(key -> value):
-                    #   <real-func-name> -> <desired-func-name>
-                    #
-                    # It default's of course to the found callable attribute
-                    # name if no alias is defined.
-                    funcname = getattr(mod, '__func_alias__', {}).get(
-                        attr, attr
-                    )
+                # now that callable passes all the checks, add it to the
+                # library of available functions of this type
 
-                    # functions are namespaced with their module name
+                # Let's get the function name.
+                # If the module has the __func_alias__ attribute, it must
+                # be a dictionary mapping in the form of(key -> value):
+                #   <real-func-name> -> <desired-func-name>
+                #
+                # It default's of course to the found callable attribute
+                # name if no alias is defined.
+                funcname = getattr(mod, '__func_alias__', {}).get(
+                    attr, attr
+                )
+
+                # functions are namespaced with their module name, unless
+                # the module_name is None (this is a special case added for
+                # pyobjects), in which case just the function name is used
+                if module_name is None:
+                    module_func_name = funcname
+                else:
                     module_func_name = '{0}.{1}'.format(module_name, funcname)
-                    funcs[module_func_name] = func
-                    log.trace(
-                        'Added {0} to {1}'.format(module_func_name, self.tag)
-                    )
-                    self._apply_outputter(func, mod)
 
-        # Handle provider overrides
-        if provider_overrides and self.opts.get('providers', False):
-            if isinstance(self.opts['providers'], dict):
-                for mod, provider in self.opts['providers'].items():
-                    newfuncs = raw_mod(self.opts, provider, funcs)
-                    if newfuncs:
-                        for newfunc in newfuncs:
-                            f_key = '{0}{1}'.format(
-                                mod, newfunc[newfunc.rindex('.'):]
-                            )
-                            funcs[f_key] = newfuncs[newfunc]
-
-        # now that all the functions have been collected, iterate back over
-        # the available modules and inject the special __salt__ namespace that
-        # contains these functions.
-        for mod in modules:
-            if not hasattr(mod, '__salt__') or (
-                not in_pack(pack, '__salt__') and
-                not str(mod.__name__).startswith('salt.loaded.int.grain')
-            ):
-                mod.__salt__ = funcs
-            elif not in_pack(pack, '__salt__') and str(mod.__name__).startswith('salt.loaded.int.grain'):
-                mod.__salt__.update(funcs)
+                funcs[module_func_name] = func
+                log.trace(
+                    'Added {0} to {1}'.format(module_func_name, self.tag)
+                )
+                self._apply_outputter(func, mod)
         return funcs
+
+    def process_virtual(self, mod, module_name):
+        '''
+        Given a loaded module and its default name determine its virtual name
+
+        This function returns a tuple. The first value will be either True or
+        False and will indicate if the module should be loaded or not (ie. if
+        it threw and exception while processing its __virtual__ function). The
+        second value is the determined virtual name, which may be the same as
+        the value provided.
+
+        The default name can be calculated as follows::
+
+            module_name = mod.__name__.rsplit('.', 1)[-1]
+        '''
+
+        # The __virtual__ function will return either a True or False value.
+        # If it returns a True value it can also set a module level attribute
+        # named __virtualname__ with the name that the module should be
+        # referred to as.
+        #
+        # This allows us to have things like the pkg module working on all
+        # platforms under the name 'pkg'. It also allows for modules like
+        # augeas_cfg to be referred to as 'augeas', which would otherwise have
+        # namespace collisions. And finally it allows modules to return False
+        # if they are not intended to run on the given platform or are missing
+        # dependencies.
+        try:
+            if hasattr(mod, '__virtual__') and callable(mod.__virtual__):
+                if self.opts.get('virtual_timer', False):
+                    start = time.time()
+                    virtual = mod.__virtual__()
+                    end = time.time() - start
+                    msg = 'Virtual function took {0} seconds for {1}'.format(
+                            end, module_name)
+                    log.warning(msg)
+                else:
+                    virtual = mod.__virtual__()
+                if not virtual:
+                    # if __virtual__() evaluates to False then the module
+                    # wasn't meant for this platform or it's not supposed to
+                    # load for some other reason.
+
+                    # Some modules might accidentally return None and are
+                    # improperly loaded
+                    if virtual is None:
+                        log.warning(
+                            '{0}.__virtual__() is wrongly returning `None`. '
+                            'It should either return `True`, `False` or a new '
+                            'name. If you\'re the developer of the module '
+                            '{1!r}, please fix this.'.format(
+                                mod.__name__,
+                                module_name
+                            )
+                        )
+
+                    return (False, module_name)
+
+                # At this point, __virtual__ did not return a
+                # boolean value, let's check for deprecated usage
+                # or module renames
+                if virtual is not True and module_name == virtual:
+                    # The module was not renamed, it should
+                    # have returned True instead
+                    #salt.utils.warn_until(
+                    #    'Helium',
+                    #    'The {0!r} module is NOT renaming itself and is '
+                    #    'returning a string. In this case the __virtual__() '
+                    #    'function should simply return `True`. This usage will '
+                    #    'become an error in Salt Helium'.format(
+                    #        mod.__name__,
+                    #    )
+                    #)
+                    pass
+
+                elif virtual is not True and module_name != virtual:
+                    # The module is renaming itself. Updating the module name
+                    # with the new name
+                    log.debug('Loaded {0} as virtual {1}'.format(
+                        module_name, virtual
+                    ))
+
+                    if not hasattr(mod, '__virtualname__'):
+                        salt.utils.warn_until(
+                            'Hydrogen',
+                            'The {0!r} module is renaming itself in it\'s '
+                            '__virtual__() function ({1} => {2}). Please '
+                            'set it\'s virtual name as the '
+                            '\'__virtualname__\' module attribute. '
+                            'Example: "__virtualname__ = {2!r}"'.format(
+                                mod.__name__,
+                                module_name,
+                                virtual
+                            )
+                        )
+
+                    # Get the module's virtual name
+                    virtualname = getattr(mod, '__virtualname__', virtual)
+
+                    if virtualname != virtual:
+                        # The __virtualname__ attribute does not match what's
+                        # being returned by the __virtual__() function. This
+                        # should be considered an error.
+                        log.error(
+                            'The module {0!r} is showing some bad usage. It\'s '
+                            '__virtualname__ attribute is set to {1!r} yet the '
+                            '__virtual__() function is returning {2!r}. These '
+                            'values should match!'.format(
+                                mod.__name__,
+                                virtualname,
+                                virtual
+                            )
+                        )
+
+                    module_name = virtualname
+
+        except KeyError:
+            # Key errors come out of the virtual function when passing
+            # in incomplete grains sets, these can be safely ignored
+            # and logged to debug, still, it includes the traceback to
+            # help debugging.
+            log.debug(
+                'KeyError when loading {0}'.format(module_name),
+                exc_info=True
+            )
+
+        except Exception:
+            # If the module throws an exception during __virtual__()
+            # then log the information and continue to the next.
+            log.error(
+                'Failed to read the virtual function for '
+                '{0}: {1}'.format(
+                    self.tag, module_name
+                ),
+                exc_info=True
+            )
+            return (False, module_name)
+
+        return (True, module_name)
 
     def _apply_outputter(self, func, mod):
         '''
@@ -969,11 +1127,9 @@ class Loader(object):
         the returners for the salt minion
         '''
         funcs = {}
-        if pack:
-            gen = self.gen_functions(pack, whitelist=whitelist)
-        else:
-            gen = self.gen_functions(whitelist=whitelist)
+        gen = self.gen_functions(pack=pack, whitelist=whitelist)
         for key, fun in gen.items():
+            # if the name (after '.') is "name", then rename to mod_name: fun
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
         return funcs
@@ -996,24 +1152,27 @@ class Loader(object):
         '''
         if self.opts.get('grains_cache', False):
             cfn = os.path.join(
-            self.opts['cachedir'],
-            '{0}.cache.p'.format('grains')
+                self.opts['cachedir'],
+                '{0}.cache.p'.format('grains')
             )
             if os.path.isfile(cfn):
                 grains_cache_age = int(time.time() - os.path.getmtime(cfn))
                 if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
-                    self.opts.get('refresh_grains_cache', False):
+                        self.opts.get('refresh_grains_cache', False):
                     log.debug('Retrieving grains from cache')
                     try:
-                        with salt.utils.fopen(cfn, 'r') as fp_:
+                        with salt.utils.fopen(cfn, 'rb') as fp_:
                             cached_grains = self.serial.load(fp_)
                         return cached_grains
                     except (IOError, OSError):
                         pass
                 else:
-                    log.debug('Grains cache last modified {0} seconds ago and cache expiration is set to {1}. '
-                         'Grains cache expired. Refreshing.'.format(
-                    grains_cache_age, self.opts.get('grains_cache_expiration', 300)))
+                    log.debug('Grains cache last modified {0} seconds ago and '
+                              'cache expiration is set to {1}. '
+                              'Grains cache expired. Refreshing.'.format(
+                                  grains_cache_age,
+                                  self.opts.get('grains_cache_expiration', 300)
+                              ))
             else:
                 log.debug('Grains cache file does not exist.')
         grains_data = {}
@@ -1044,12 +1203,12 @@ class Loader(object):
             grains_data.update(ret)
         # Write cache if enabled
         if self.opts.get('grains_cache', False):
-            cumask = os.umask(191)
+            cumask = os.umask(077)
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
-                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
-                with salt.utils.fopen(cfn, 'w+') as fp_:
+                    __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
+                with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)
                     except TypeError:
@@ -1060,3 +1219,148 @@ class Loader(object):
                 log.error(msg.format(cfn))
             os.umask(cumask)
         return grains_data
+
+
+class LazyLoader(MutableMapping):
+    '''
+    Lazily load things modules. If anyone asks for len or attempts to iterate this
+    will load them all.
+
+    TODO: negative caching? If you ask for 'foo.bar' and it doesn't exist it will
+    look EVERY time unless someone calls load_all()
+    '''
+    def __init__(self,
+                 loader,
+                 functions=None,
+                 pack=None,
+                 whitelist=None):
+        # create a dict to store module functions in
+        self._dict = {}
+
+        self.loader = loader
+        if not functions:
+            self.functions = {}
+        else:
+            self.functions = functions
+        self.pack = pack
+        self.whitelist = whitelist
+
+        # have we already loded everything?
+        self.loaded = False
+
+    def _load(self, key):
+        '''
+        Load a single item if you have it
+        '''
+        # if the key doesn't have a '.' then it isn't valid for this mod dict
+        if '.' not in key:
+            raise KeyError
+        mod_key = key.split('.', 1)[0]
+        if self.whitelist:
+            # if the modulename isn't in the whitelist, don't bother
+            if mod_key not in self.whitelist:
+                raise KeyError
+        mod_funcs = self.loader.gen_module(mod_key,
+                                           self.functions,
+                                           pack=self.pack,
+                                           )
+        # if you loaded nothing, then we don't have it
+        if mod_funcs is None:
+            # if we couldn't find it, then it could be a virtual or we don't have it
+            # until we have a better way, we have to load them all to know
+            # TODO: maybe do a load until, with some glob match first?
+            self.load_all()
+            return self._dict[key]
+        else:
+            patched = []
+            # be sure that the global __salt__ dict is able of loading
+            # new functions from inside execution functions
+            for func in mod_funcs.values():
+                mod = sys.modules.get(func.__module__, None)
+                if mod and mod not in patched:
+                    patched.append(mod)
+                    mod.__salt__ = self
+        self._dict.update(mod_funcs)
+
+    def load_all(self):
+        '''
+        Load all of them
+        '''
+        self._dict.update(self.loader.gen_functions(pack=self.pack,
+                                                    whitelist=self.whitelist))
+        self.loaded = True
+
+    def __setitem__(self, key, val):
+        self._dict[key] = val
+
+    def __delitem__(self, key):
+        del self._dict[key]
+
+    def __getitem__(self, key):
+        '''
+        Check if the key is ttld out, then do the get
+        '''
+        if key not in self._dict and not self.loaded:
+            # load the item
+            self._load(key)
+            log.debug('LazyLoaded {0}'.format(key))
+        return self._dict[key]
+
+    def __len__(self):
+        # if not loaded,
+        if not self.loaded:
+            self.load_all()
+        return len(self._dict)
+
+    def __iter__(self):
+        if not self.loaded:
+            self.load_all()
+        return iter(self._dict)
+
+
+class LazyFilterLoader(LazyLoader):
+    '''
+    Subclass of LazyLoader which filters the module names (for things such as ext_pillar)
+    which have all modules with a single function that we care about
+    '''
+    def __init__(self,
+                 loader,
+                 name,
+                 functions=None,
+                 pack=None,
+                 whitelist=None):
+        self.name = name
+        LazyLoader.__init__(self,
+                            loader,
+                            functions=functions,
+                            pack=pack,
+                            whitelist=whitelist)
+
+    def _load(self, key):
+        if self.whitelist:
+            # if the modulename isn't in the whitelist, don't bother
+            if key not in self.whitelist:
+                raise KeyError
+        mod_funcs = self.loader.gen_module(key,
+                                           self.functions,
+                                           pack=self.pack,
+                                           )
+        # if you loaded nothing, then we don't have it
+        if mod_funcs is None:
+            # if we couldn't find it, then it could be a virtual or we don't have it
+            # until we have a better way, we have to load them all to know
+            # TODO: maybe do a load until, with some glob match first?
+            self.load_all()
+            return self._dict[key]
+
+        # if we got one, now lets check if we have the function name we want
+        for mod_key, mod_fun in mod_funcs.iteritems():
+            # if the name (after '.') is "name", then rename to mod_name: fun
+            if mod_key[mod_key.index('.') + 1:] == self.name:
+                self._dict[mod_key[:mod_key.index('.')]] = mod_fun
+
+    def load_all(self):
+        filtered_funcs = self.loader.filter_func(self.name,
+                                                 pack=self.pack,
+                                                 whitelist=self.whitelist)
+        self._dict.update(filtered_funcs)

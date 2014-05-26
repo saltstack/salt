@@ -41,9 +41,10 @@ def get_dns_servers(interface='Local Area Connection'):
 
     with salt.utils.winapi.Com():
         c = wmi.WMI()
-        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
-            if interface == iface.Description:
-                return list(iface.DNSServerSearchOrder)
+        for iface in c.Win32_NetworkAdapter(NetEnabled=True):
+            if interface == iface.NetConnectionID:
+                iface_config = c.Win32_NetworkAdapterConfiguration(Index=iface.Index).pop()
+                return list(iface_config.DNSServerSearchOrder)
     log.debug('Interface "{0}" not found'.format(interface))
     return False
 
@@ -79,6 +80,10 @@ def add_dns(ip, interface='Local Area Connection', index=1):
         salt '*' win_dns_client.add_dns <interface> <index>
     '''
     servers = get_dns_servers(interface)
+
+    # Return False if could not find the interface
+    if servers is False:
+        return False
 
     # Return true if configured
     try:

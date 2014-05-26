@@ -59,11 +59,16 @@ class _Puppet(object):
         self.kwargs = {'color': 'false'}       # eg. --tags=apache::server
         self.args = []         # eg. --noop
 
-        self.vardir = '/var/lib/puppet'
-        self.confdir = '/etc/puppet'
-        if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
-            self.vardir = '/var/opt/lib/pe-puppet'
-            self.confdir = '/etc/puppetlabs/puppet'
+        if salt.utils.is_windows():
+            self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var\\lib\\puppet'
+            self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
+        else:
+            if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
+                self.vardir = '/var/opt/lib/pe-puppet'
+                self.confdir = '/etc/puppetlabs/puppet'
+            else:
+                self.vardir = '/var/lib/puppet'
+                self.confdir = '/etc/puppet'
 
     def __repr__(self):
         '''
@@ -117,7 +122,7 @@ def run(*args, **kwargs):
     subcommand. Following positional arguments should be ordered with arguments
     required by the subcommand first, followed by non-keyvalue pair options.
     Tags are specified by a tag keyword and comma separated list of values. --
-    http://projects.puppetlabs.com/projects/1/wiki/Using_Tags
+    http://docs.puppetlabs.com/puppet/latest/reference/lang_tags.html
 
     CLI Examples:
 

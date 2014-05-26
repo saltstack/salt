@@ -24,10 +24,9 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_plugin'
-    if not __salt__['cmd.has_exec']('rabbitmqctl'):
-        name = False
-    return name
+    if __salt__['cmd.has_exec']('rabbitmqctl'):
+        return True
+    return False
 
 
 def enabled(name, runas=None):

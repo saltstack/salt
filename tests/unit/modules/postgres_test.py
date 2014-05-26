@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -197,7 +200,7 @@ class PostgresTestCase(TestCase):
             "/usr/bin/pgsql --no-align --no-readline --username testuser "
             "--host testhost --port testport "
             "--dbname maint_db -c 'DROP ROLE testgroup'",
-            host='testhost',  user='testuser',
+            host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
@@ -378,10 +381,10 @@ class PostgresTestCase(TestCase):
             re.match(
                 '/usr/bin/pgsql --no-align --no-readline --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
-                'UNENCRYPTED PASSWORD \'"\'"\'test_role_pass\'"\'"\';'
-                ' GRANT test_groups TO test_username\'',
+                'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
+                ' GRANT test_groups TO test_username[\'"]{0,1}',
                 postgres._run_psql.call_args[0][0])
         )
 
@@ -474,11 +477,11 @@ class PostgresTestCase(TestCase):
             re.match(
                 '/usr/bin/pgsql --no-align --no-readline --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
                 'ENCRYPTED PASSWORD '
-                '\'"\'"\'md531c27e68d3771c392b52102c01be1da1\'"\'"\''
-                '; GRANT test_groups TO test_username\'',
+                '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
+                '; GRANT test_groups TO test_username[\'"]{0,1}',
                 postgres._run_psql.call_args[0][0])
         )
 
@@ -548,11 +551,11 @@ class PostgresTestCase(TestCase):
         self.assertEqual(postgres.drop_extension('foo'), False)
 
     @patch('salt.modules.postgres.installed_extensions',
-           Mock(return_value=
-               {'foo': {'extversion': '0.8',
-                        'extrelocatable': 't',
-                        'schema_name': 'foo',
-                        'extname': 'foo'}},
+           Mock(return_value={
+               'foo': {'extversion': '0.8',
+                       'extrelocatable': 't',
+                       'schema_name': 'foo',
+                       'extname': 'foo'}},
            ))
     @patch('salt.modules.postgres.available_extensions',
            Mock(return_value={'foo': {'default_version': '1.4',
@@ -618,30 +621,30 @@ class PostgresTestCase(TestCase):
         '''
         self.assertTrue(postgres.create_extension('foo'))
         self.assertTrue(re.match(
-            'CREATE EXTENSION IF NOT EXISTS foo ;',
+            'CREATE EXTENSION IF NOT EXISTS "foo" ;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertTrue(postgres.create_extension(
             'foo', schema='a', ext_version='b', from_version='c'))
         self.assertTrue(re.match(
-            'CREATE EXTENSION IF NOT EXISTS foo '
+            'CREATE EXTENSION IF NOT EXISTS "foo" '
             'WITH SCHEMA a VERSION b FROM c ;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertFalse(postgres.create_extension('foo'))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION foo SET SCHEMA b;'
-            ' ALTER EXTENSION foo UPDATE TO a;',
+            'ALTER EXTENSION "foo" SET SCHEMA b;'
+            ' ALTER EXTENSION "foo" UPDATE TO a;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION foo SET SCHEMA b;',
+            'ALTER EXTENSION "foo" SET SCHEMA b;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION foo UPDATE TO a;',
+            'ALTER EXTENSION "foo" UPDATE TO a;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertFalse(postgres.create_extension(
             'foo', ext_version='a', schema='b'))

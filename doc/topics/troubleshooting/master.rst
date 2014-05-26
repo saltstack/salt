@@ -180,7 +180,13 @@ Commands Time Out or Do Not Return Output
 
 Depending on your OS (this is most common on Ubuntu due to apt-get) you may
 sometimes encounter times where your highstate, or other long running commands
-do not return output. This is most commonly due to the timeout being reached.
+do not return output. 
+
+.. note::
+    A number of timing issues were resolved in the 2014.1 release of Salt.
+    Upgrading to at least this version is strongly recommended if timeouts
+    persist.
+
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.
@@ -190,7 +196,7 @@ Passing the -c Option to Salt Returns a Permissions Error
 =========================================================
 
 Using the ``-c`` option with the Salt command modifies the configuration
-directory. When the configuratio file is read it will still base data off of
+directory. When the configuration file is read it will still base data off of
 the ``root_dir`` setting. This can result in unintended behavior if you are
 expecting files such as ``/etc/salt/pki`` to be pulled from the location
 specified with ``-c``. Modify the ``root_dir`` setting to address this

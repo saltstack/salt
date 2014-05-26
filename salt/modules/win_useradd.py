@@ -8,6 +8,9 @@ NOTE: This currently only works with local user accounts, not domain accounts
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     import win32net
@@ -96,7 +99,9 @@ def setpassword(name, password):
 
         salt '*' user.setpassword name password
     '''
-    ret = __salt__['cmd.run_all']('net user {0} {1}'.format(name, password))
+    ret = __salt__['cmd.run_all'](
+        'net user {0} {1}'.format(name, password), output_loglevel='quiet'
+    )
     return ret['retcode'] == 0
 
 
@@ -297,11 +302,28 @@ def info(name):
     ret['active'] = items['Account active']
     ret['logonscript'] = items['Logon script']
     ret['profile'] = items['User profile']
+    if not ret['profile']:
+        ret['profile'] = _get_userprofile_from_registry(name)
     ret['home'] = items['Home directory']
     ret['groups'] = grouplist
     ret['gid'] = ''
 
     return ret
+
+
+def _get_userprofile_from_registry(user):
+    '''
+    In case net user doesn't return the userprofile
+    we can get it from the registry
+    '''
+    sid = __salt__['cmd.run']('wmic useraccount where name="{0}" get sid'.format(user)).splitlines()[2]
+    sid = sid.strip()
+    profile_dir = __salt__['reg.read_key'](
+        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'ProfileImagePath'
+    )
+    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    return profile_dir
 
 
 def list_groups(name):
@@ -351,7 +373,7 @@ def getent(refresh=False):
                 comps = line.split()
                 users += comps
                 ##if not len(comps) > 1:
-                    #continue
+                #   continue
                 #items[comps[0].strip()] = comps[1].strip()
     #return users
     for user in users:
@@ -377,11 +399,13 @@ def list_users():
     '''
     Return a list of users on Windows
     '''
-    res = 1
+    res = 0
     users = []
     user_list = []
+    dowhile = True
     try:
-        while res:
+        while res or dowhile:
+            dowhile = False
             (users, _, res) = win32net.NetUserEnum(
                 'localhost',
                 3,
@@ -391,6 +415,7 @@ def list_users():
             )
             for user in users:
                 user_list.append(user['name'])
+                log.debug('User: {0}'.format(str(user)))
         return user_list
     except win32net.error:
         pass

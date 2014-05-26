@@ -16,6 +16,9 @@ Module to provide Postgres compatibility to salt.
     be left at the default setting.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
+
+:note: This module uses MD5 hashing which may not be compliant with certain
+    security audits.
 '''
 
 # Import python libs
@@ -26,11 +29,16 @@ import StringIO
 import hashlib
 import os
 import tempfile
-import csv
-import pipes
+try:
+    import pipes
+    import csv
+    HAS_ALL_IMPORTS = True
+except ImportError:
+    HAS_ALL_IMPORTS = False
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -52,8 +60,8 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if salt.utils.which('psql'):
-        return 'postgres'
+    if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
+        return True
     return False
 
 
@@ -64,7 +72,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
     makes this too much code to be repeated in each function below
     '''
     kwargs = {
-        'reset_system_locale': False
+        'reset_system_locale': False,
+        'clean_env': True,
     }
     if runas is None:
         if not host:
@@ -97,6 +106,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
 
     ret = __salt__[run_cmd](cmd, **kwargs)
 
+    if ret.get('retcode', 0) != 0:
+        log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
 
@@ -150,7 +161,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     if psql_version:
         return distutils.version.LooseVersion(psql_version)
     else:
-        log.warning('Attempt to parse version of Postgres server failed.'
+        log.warning('Attempt to parse version of Postgres server failed. '
                     'Is the server responding?')
         return None
 
@@ -249,7 +260,6 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                                    host=host, user=user, port=port,
                                    maintenance_db=maintenance_db,
                                    password=password)
-
     if cmdret['retcode'] > 0:
         return ret
 
@@ -460,10 +470,14 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           maintenance_db=maintenance_db,
                           password=password,
                           runas=runas)
-    if ver >= distutils.version.LooseVersion('9.1'):
-        replication_column = 'rolreplication'
+    if ver:
+        if ver >= distutils.version.LooseVersion('9.1'):
+            replication_column = 'pg_roles.rolreplication'
+        else:
+            replication_column = 'NULL'
     else:
-        replication_column = 'NULL'
+        log.error('Could not retrieve Postgres version. Is Postgresql server running?')
+        return False
 
     query = (
         'SELECT '
@@ -474,7 +488,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolcreatedb as "can create databases", '
         'pg_roles.rolcatupdate as "can update system catalogs", '
         'pg_roles.rolcanlogin as "can login", '
-        'pg_roles.{0} as "replication", '
+        '{0} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables", '
@@ -544,7 +558,11 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas,
                           return_password=return_password)
-    return all_users.get(name, None)
+    try:
+        return all_users.get(name, None)
+    except AttributeError:
+        log.error('Could not retrieve Postgres role. Is Postgres running?')
+        return False
 
 
 def user_exists(name,
@@ -636,14 +654,14 @@ def _role_cmd_args(name,
         # first is passwd set
         # second is for handling NOPASSWD
         and (
-            isinstance(rolepassword, basestring) and bool(rolepassword)
+            isinstance(rolepassword, string_types) and bool(rolepassword)
         )
         or (
             isinstance(rolepassword, bool)
         )
     ):
         skip_passwd = True
-    if isinstance(rolepassword, basestring) and bool(rolepassword):
+    if isinstance(rolepassword, string_types) and bool(rolepassword):
         escaped_password = '{0!r}'.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
@@ -799,7 +817,7 @@ def _role_update(name,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db, password,
                        runas=runas):
-        log.info('{0} {1!r} does not exist'.format(typ_.capitalize(), name))
+        log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
@@ -1229,7 +1247,7 @@ def create_extension(name,
             args = ['CREATE EXTENSION']
             if if_not_exists:
                 args.append('IF NOT EXISTS')
-            args.append(name)
+            args.append('"{0}"'.format(name))
             sargs = []
             if schema:
                 sargs.append('SCHEMA {0}'.format(schema))
@@ -1245,10 +1263,10 @@ def create_extension(name,
         else:
             args = []
             if schema and _EXTENSION_TO_MOVE in mtdata:
-                args.append('ALTER EXTENSION {0} SET SCHEMA {1};'.format(
+                args.append('ALTER EXTENSION "{0}" SET SCHEMA {1};'.format(
                     name, schema))
             if ext_version and _EXTENSION_TO_UPGRADE in mtdata:
-                args.append('ALTER EXTENSION {0} UPDATE TO {1};'.format(
+                args.append('ALTER EXTENSION "{0}" UPDATE TO {1};'.format(
                     name, ext_version))
             cmd = ' '.join(args).strip()
         if cmd:

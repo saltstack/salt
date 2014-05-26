@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Manage launchd plist files
+'''
+
 # Import python libs
 import os
 import sys
@@ -14,7 +18,7 @@ def write_launchd_plist(program):
 
         salt-run launchd.write_launchd_plist salt-master
     '''
-    plist_sample_text = """
+    plist_sample_text = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -32,12 +36,12 @@ def write_launchd_plist(program):
     <true/>
 </dict>
 </plist>
-    """.strip()
+    '''.strip()
 
     supported_programs = ['salt-master', 'salt-minion']
 
     if program not in supported_programs:
-        sys.stderr.write("Supported programs: %r\n" % supported_programs)
+        sys.stderr.write('Supported programs: {0!r}\n'.format(supported_programs))
         sys.exit(-1)
 
     sys.stdout.write(

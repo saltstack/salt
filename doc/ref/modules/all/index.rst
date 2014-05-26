@@ -19,16 +19,24 @@ Full list of builtin execution modules
     aliases
     alternatives
     apache
-    apt
+    aptpkg
     archive
     at
     augeas_cfg
     aws_sqs
+    blockdev
     bluez
+    boto_asg
+    boto_elb
+    boto_iam
+    boto_route53
+    boto_secgroup
+    boto_sqs
     brew
     bridge
     bsd_shadow
     cassandra
+    chef
     chocolatey
     cloud
     cmdmod
@@ -40,9 +48,11 @@ Full list of builtin execution modules
     darwin_sysctl
     data
     ddns
+    deb_apache
     debconfmod
     debian_ip
     debian_service
+    defaults
     dig
     disk
     djangomod
@@ -52,7 +62,9 @@ Full list of builtin execution modules
     dpkg
     ebuild
     eix
+    environ
     eselect
+    etcd_mod
     event
     extfs
     file
@@ -63,20 +75,30 @@ Full list of builtin execution modules
     freebsdports
     freebsdservice
     gem
+    genesis
     gentoo_service
     gentoolkitmod
     git
     glance
+    glusterfs
     gnomedesktop
     grains
     groupadd
     grub_legacy
     guestfs
+    hadoop
+    haproxyconn
     hg
     hosts
     htpasswd
     img
+    incron
+    influx
+    ini_manage
+    introspect
+    ipset
     iptables
+    junos
     key
     keyboard
     keystone
@@ -94,6 +116,7 @@ Full list of builtin execution modules
     lxc
     mac_group
     mac_user
+    macports
     makeconf
     match
     mdadm
@@ -106,10 +129,12 @@ Full list of builtin execution modules
     mount
     munin
     mysql
+    nagios
     netbsd_sysctl
     netbsdservice
     network
     nfs3
+    nftables
     nginx
     nova
     npm
@@ -145,11 +170,16 @@ Full list of builtin execution modules
     rbenv
     rdp
     reg
+    redismod
+    rest_package
+    rest_sample
+    rest_service
     ret
     rh_ip
     rh_service
     riak
     rpm
+    rsync
     rvm
     s3
     saltcloudmod
@@ -161,6 +191,8 @@ Full list of builtin execution modules
     smartos_imgadm
     smartos_vmadm
     smf
+    smtp
+    softwareupdate
     solaris_group
     solaris_shadow
     solaris_user
@@ -172,6 +204,7 @@ Full list of builtin execution modules
     status
     supervisord
     svn
+    swift
     sysbench
     sysmod
     system
@@ -182,6 +215,7 @@ Full list of builtin execution modules
     tomcat
     upstart
     useradd
+    uwsgi
     virt
     virtualenv_mod
     win_autoruns
@@ -208,5 +242,6 @@ Full list of builtin execution modules
     yumpkg
     zcbuildout
     zfs
+    znc
     zpool
     zypper

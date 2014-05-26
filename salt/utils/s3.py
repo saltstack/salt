@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Connection library for Amazon S3
+
+:depends: requests
 '''
 
 # Import Python libs
@@ -8,95 +10,23 @@ import binascii
 import datetime
 import hashlib
 import hmac
-import json
 import logging
-import time
 import urllib
-import urllib2
+import requests
 
 # Import Salt libs
 import salt.utils
 import salt.utils.xmlutil as xml
+import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
 
 
-def _retry_get_url(url, num_retries=10, timeout=5):
-    '''
-    Retry grabbing a URL.
-    Based heavily on boto.utils.retry_url
-    '''
-    for i in range(0, num_retries):
-        try:
-            # disable any environmental proxy settings
-            proxy_handler = urllib2.ProxyHandler({})
-            opener = urllib2.build_opener(proxy_handler)
-
-            req = urllib2.Request(url)
-
-            # timeout only in > 2.6
-            r = opener.open(req, timeout=timeout)
-            return r.read()
-        except urllib2.HTTPError:
-            return ''
-        except urllib2.URLError:
-            pass
-        except Exception:
-            pass
-
-        log.warning('Caught exception reading from URL. Retry no. {0}'.format(i))
-        time.sleep(2 ** i)
-    log.error('Failed to read from URL for {0} times. Giving up.'.format(num_retries))
-    return ''
-
-
-def _convert_key_to_str(key):
-    '''
-    Stolen completely from boto.providers
-    '''
-    if isinstance(key, unicode):
-        # the secret key must be bytes and not unicode to work
-        #  properly with hmac.new (see http://bugs.python.org/issue5285)
-        return str(key)
-    return key
-
-
-def get_iam_metadata(version='latest', url='http://169.254.169.254',
-        timeout=None, num_retries=5):
-    '''
-    Grabs the first IAM role from this instances metadata if it exists.
-    '''
-    iam_url = '{0}/{1}/meta-data/iam/security-credentials/'.format(url, version)
-    roles = _retry_get_url(iam_url, num_retries, timeout).splitlines()
-
-    credentials = {
-                'access_key': None,
-                'secret_key': None,
-                'expires_at': None,
-                'security_token': None
-            }
-
-    try:
-        data = _retry_get_url(iam_url + roles[0], num_retries, timeout)
-        meta = json.loads(data)
-
-    except (ValueError, TypeError, IndexError):
-        # JSON failed to decode, so just pass no credentials back
-        log.error('Failed to read metadata. Giving up on IAM credentials.')
-
-    else:
-        credentials['access_key'] = meta['AccessKeyId']
-        credentials['secret_key'] = _convert_key_to_str(meta['SecretAccessKey'])
-        credentials['expires_at'] = meta['Expiration']
-        credentials['security_token'] = meta['Token']
-
-    return credentials
-
-
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
-          path=None, return_bin=False, action=None, local_file=None):
+          path=None, return_bin=False, action=None, local_file=None,
+          verify_ssl=True):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -116,6 +46,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     The service_url will form the basis for the final endpoint that is used to
     query the service.
+
+    SSL verification may also be turned off in the configuration:
+
+    s3.verify_ssl: False
+
+    This is required if using S3 bucket names that contain a period, as
+    these will not match Amazon's S3 wildcard certificates. Certificate
+    verification is enabled by default.
     '''
     if not headers:
         headers = {}
@@ -137,7 +75,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     token = None
     if not key or not keyid:
-        iam_creds = get_iam_metadata()
+        iam_creds = iam.get_iam_metadata()
         key = iam_creds['secret_key']
         keyid = iam_creds['access_key']
         token = iam_creds['security_token']
@@ -201,40 +139,27 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if querystring:
             requesturl += '?{0}'.format(querystring)
 
-    req = urllib2.Request(url=requesturl)
     if method == 'PUT':
         if local_file:
             with salt.utils.fopen(local_file, 'r') as ifile:
                 data = ifile.read()
-            req = urllib2.Request(url=requesturl, data=data)
-        req.get_method = lambda: 'PUT'
-    elif method == 'HEAD':
-        req.get_method = lambda: 'HEAD'
-    elif method == 'DELETE':
-        req.get_method = lambda: 'DELETE'
 
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
-    for header in sorted(headers.keys()):
-        if header == 'Authorization':
-            continue
-        req.add_header(header, headers[header])
-        log.debug('    {0}: {1}'.format(header, headers[header]))
     log.debug('    Authorization: {0}'.format(headers['Authorization']))
-    req.add_header('Authorization', headers['Authorization'])
 
     try:
-        result = urllib2.urlopen(req)
-        response = result.read()
-    except Exception as exc:
+        result = requests.request(method, requesturl, headers=headers,
+                                  verify=verify_ssl)
+        response = result.content
+    except requests.exceptions.HTTPError as exc:
         log.error('There was an error::')
         if hasattr(exc, 'code') and hasattr(exc, 'msg'):
             log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
         log.error('    Content: \n{0}'.format(exc.read()))
         return False
 
-    log.debug('S3 Response Status Code: {0}'.format(result.getcode()))
-    result.close()
+    log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 
     if method == 'PUT':
         if result.getcode() == 200:

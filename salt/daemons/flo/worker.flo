@@ -1,0 +1,12 @@
+# Salt Master Worker Floscript, this controlls a single worker proc,
+# many are started based on the value in worker_threads
+
+house worker
+
+framer uxdrouter be active first setup
+   frame setup
+      enter
+         do worker setup
+      go start
+   frame start
+      do worker router

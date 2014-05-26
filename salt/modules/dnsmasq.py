@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing dnqmasq
+Module for managing dnsmasq
 '''
 
 # Import salt libs
@@ -15,16 +15,16 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work on POSIX-like systems.
     '''
     if salt.utils.is_windows():
         return False
-    return 'dnsmasq'
+    return True
 
 
 def version():
     '''
-    Shows installed version of dnsmasq
+    Shows installed version of dnsmasq.
 
     CLI Example:
 
@@ -40,7 +40,7 @@ def version():
 
 def fullversion():
     '''
-    Shows installed version of dnsmasq, and compile options
+    Shows installed version of dnsmasq and compile options.
 
     CLI Example:
 
@@ -109,7 +109,7 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
 
 def get_config(config_file='/etc/dnsmasq.conf'):
     '''
-    Dumps all options from the config file
+    Dumps all options from the config file.
 
     CLI Examples:
 
@@ -134,7 +134,7 @@ def get_config(config_file='/etc/dnsmasq.conf'):
 
 def _parse_dnamasq(filename):
     '''
-    Generic function for parsing dnsmasq files, including includes
+    Generic function for parsing dnsmasq files including includes.
     '''
     fileopts = {}
     with salt.utils.fopen(filename, 'r') as fp_:

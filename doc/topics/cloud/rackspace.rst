@@ -5,9 +5,11 @@ Getting Started With Rackspace
 Rackspace is a major public cloud platform which may be configured using either
 the `rackspace` or the `openstack` driver, depending on your needs.
 
-Please note that the `rackspace` driver is only intended for "the old cloud" at
-Rackspace. Unless you explicitly have a reason to use it, it is highly
-recommended that you use the `openstack` driver instead.
+Please note that the `rackspace` driver is only intended for 1st gen instances,
+aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
+will *not* work with OpenStack-based instances. Unless you explicitly have a
+reason to use it, it is highly recommended that you use the `openstack` driver
+instead.
 
 To use the `openstack` driver (recommended), set up the cloud configuration at 
   ``/etc/salt/cloud.providers`` or 
@@ -71,7 +73,7 @@ Rackspace currently has six compute regions which may be used:
     IAD -> Northern Virginia
     HKG -> Hong Kong
 
-Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions
+Note: Currently the LON region is only available with a UK account, and UK accounts cannot access other regions
 
 Authentication
 ==============

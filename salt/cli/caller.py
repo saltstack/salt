@@ -5,6 +5,7 @@ minion modules.
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 import logging
@@ -12,10 +13,13 @@ import datetime
 import traceback
 
 # Import salt libs
+import salt.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
+import salt.transport
+import salt.utils.args
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 
@@ -24,6 +28,7 @@ from salt.exceptions import (
     SaltClientError,
     CommandNotFoundError,
     CommandExecutionError,
+    SaltInvocationError,
 )
 
 
@@ -62,22 +67,41 @@ class Caller(object):
             sys.exit(-1)
         try:
             sdata = {
-                    'fun': fun,
-                    'pid': os.getpid(),
-                    'jid': ret['jid'],
-                    'tgt': 'salt-call'}
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                self.minion.functions[fun], self.opts['arg'], data=sdata)
+                'fun': fun,
+                'pid': os.getpid(),
+                'jid': ret['jid'],
+                'tgt': 'salt-call'}
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.minion.functions[fun],
+                salt.utils.args.parse_input(self.opts['arg']),
+                data=sdata)
             try:
-                with salt.utils.fopen(proc_fn, 'w+') as fp_:
+                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local
                 pass
+            except IOError:
+                sys.stderr.write(
+                    'Cannot write to process directory. '
+                    'Do you have permissions to '
+                    'write to {0} ?\n'.format(proc_fn))
             func = self.minion.functions[fun]
-            ret['return'] = func(*args, **kwargs)
-            ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                    'retcode', 0)
+            try:
+                ret['return'] = func(*args, **kwargs)
+            except TypeError as exc:
+                trace = traceback.format_exc()
+                sys.stderr.write('Passed invalid arguments: {0}\n'.format(exc))
+                active_level = LOG_LEVELS.get(
+                    self.opts['log_level'].lower(), logging.ERROR)
+                if active_level <= logging.DEBUG:
+                    sys.stderr.write(trace)
+                sys.exit(salt.exitcodes.EX_GENERIC)
+            try:
+                ret['retcode'] = sys.modules[
+                    func.__module__].__context__.get('retcode', 0)
+            except AttributeError:
+                ret['retcode'] = 1
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
@@ -85,11 +109,11 @@ class Caller(object):
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(1)
+            sys.exit(salt.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(1)
+            sys.exit(salt.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
         except (IOError, OSError):
@@ -98,17 +122,41 @@ class Caller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
-        if self.opts.get('return', ''):
+        is_local = self.opts['local'] or self.opts.get(
+            'file_client', False) == 'local'
+        returners = self.opts.get('return', '').split(',')
+        if (not is_local) or returners:
             ret['id'] = self.opts['id']
             ret['fun'] = fun
             ret['fun_args'] = self.opts['arg']
-            for returner in self.opts['return'].split(','):
-                try:
-                    ret['success'] = True
-                    self.minion.returners['{0}.returner'.format(returner)](ret)
-                except Exception:
-                    pass
+
+        for returner in returners:
+            try:
+                ret['success'] = True
+                self.minion.returners['{0}.returner'.format(returner)](ret)
+            except Exception:
+                pass
+
+        # return the job infos back up to the respective minion's master
+
+        if not is_local:
+            try:
+                mret = ret.copy()
+                mret['jid'] = 'req'
+                self.return_pub(mret)
+            except Exception:
+                pass
         return ret
+
+    def return_pub(self, ret):
+        '''
+        Return the data up to the master
+        '''
+        channel = salt.transport.Channel.factory(self.opts)
+        load = {'cmd': '_return', 'id': self.opts['id']}
+        for key, value in ret.items():
+            load[key] = value
+        channel.send(load)
 
     def print_docs(self):
         '''
@@ -134,10 +182,13 @@ class Caller(object):
         '''
         Execute the salt call logic
         '''
-        ret = self.call()
-        salt.output.display_output(
-                {'local': ret.get('return', {})},
-                ret.get('out', 'nested'),
-                self.opts)
-        if self.opts.get('retcode_passthrough', False):
-            sys.exit(ret['retcode'])
+        try:
+            ret = self.call()
+            salt.output.display_output(
+                    {'local': ret.get('return', {})},
+                    ret.get('out', 'nested'),
+                    self.opts)
+            if self.opts.get('retcode_passthrough', False):
+                sys.exit(ret['retcode'])
+        except SaltInvocationError as err:
+            raise SystemExit(err)

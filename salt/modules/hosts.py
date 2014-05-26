@@ -208,7 +208,14 @@ def add_host(ip, alias):
         return True
 
     hosts = _list_hosts()
-    hosts.setdefault(ip, []).append(alias)
+    inserted = False
+    for i, h in hosts.items():
+        for j in range(len(h)):
+            if h[j].startswith('#') and i == ip:
+                h.insert(j, alias)
+                inserted = True
+    if not inserted:
+        hosts.setdefault(ip, []).append(alias)
     _write_hosts(hosts)
     return True
 

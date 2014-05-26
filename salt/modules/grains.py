@@ -4,12 +4,14 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
+from __future__ import print_function
 import collections
 import math
 import operator
 import os
 import random
 import yaml
+import logging
 
 # Import salt libs
 import salt.utils
@@ -30,6 +32,8 @@ __outputter__ = {
 
 # http://stackoverflow.com/a/12414913/127816
 _infinitedict = lambda: collections.defaultdict(_infinitedict)
+
+log = logging.getLogger(__name__)
 
 
 def _serial_sanitizer(instr):
@@ -57,7 +61,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default=''):
+def get(key, default='', delim=':'):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -72,13 +76,19 @@ def get(key, default=''):
 
         pkg:apache
 
+
+    delim
+        Specify an alternate delimiter to use when traversing a nested dict
+
+        .. versionadded:: Helium
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__grains__, key, default)
+    return salt.utils.traverse_dict(__grains__, key, default, delim)
 
 
 def has_value(key):
@@ -158,9 +168,9 @@ def item(*args, **kwargs):
     return ret
 
 
-def setval(key, val, destructive=False):
+def setvals(grains, destructive=False):
     '''
-    Set a grains value in the grains config file
+    Set new grains values in the grains config file
 
     :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
 
@@ -168,9 +178,11 @@ def setval(key, val, destructive=False):
 
     .. code-block:: bash
 
-        salt '*' grains.setval key val
-        salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
+        salt '*' grains.setvals "{'key1': 'val1', 'key2': 'val2'}"
     '''
+    new_grains = grains
+    if not isinstance(new_grains, collections.Mapping):
+        raise SaltException('setvals grains must be a dictionary.')
     grains = {}
     if os.path.isfile(__opts__['conf_file']):
         gfn = os.path.join(
@@ -196,32 +208,71 @@ def setval(key, val, destructive=False):
                 return 'Unable to read existing grains file: {0}'.format(e)
         if not isinstance(grains, dict):
             grains = {}
-    if val is None and destructive is True:
-        print('SETVAL DESTRUCTIVE ')
-        if key in grains:
-            del grains[key]
-    else:
-        grains[key] = val
+    for key, val in new_grains.items():
+        if val is None and destructive is True:
+            if key in grains:
+                del grains[key]
+                if key in __grains__:
+                    del __grains__[key]
+        else:
+            grains[key] = val
+            __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
-    with salt.utils.fopen(gfn, 'w+') as fp_:
-        fp_.write(cstr)
+    try:
+        with salt.utils.fopen(gfn, 'w+') as fp_:
+            fp_.write(cstr)
+    except (IOError, OSError):
+        msg = 'Unable to write to grains file at {0}. Check permissions.'
+        log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
-    with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write('')
+    try:
+        with salt.utils.fopen(fn_, 'w+') as fp_:
+            fp_.write('')
+    except (IOError, OSError):
+        msg = 'Unable to write to cache file {0}. Check permissions.'
+        log.error(msg.format(fn_))
     # Sync the grains
     __salt__['saltutil.sync_grains']()
-    # Return the grain we just set to confirm everything was OK
-    return {key: val}
+    # Return the grains we just set to confirm everything was OK
+    return new_grains
 
 
-def append(key, val):
+def setval(key, val, destructive=False):
+    '''
+    Set a grains value in the grains config file
+
+    :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.setval key val
+        salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
+    '''
+    return setvals({key: val}, destructive)
+
+
+def append(key, val, convert=False):
     '''
     .. versionadded:: 0.17.0
 
-    Append a value to a list in the grains config file
+    Append a value to a list in the grains config file. If the grain doesn't
+    exist, the grain key is added and the value is appended to the new grain
+    as a list item.
+
+    key
+        The grain key to be appended to
+
+    val
+        The value to append to the grain key
+
+    :param convert: If convert is True, convert non-list contents into a list.
+        If convert is False and the grain contains non-list contents, an error
+        is given. Defaults to False.
 
     CLI Example:
 
@@ -229,7 +280,9 @@ def append(key, val):
 
         salt '*' grains.append key val
     '''
-    grains = get(key, [])
+    grains = get(key)
+    if not isinstance(grains, list) and convert is True:
+        grains = [grains]
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val in grains:
@@ -306,7 +359,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
-            'default': {'pkg': 'apache', 'srv': 'apache'},
+            'default': 'Debian',
         }) %}
 
         myapache:

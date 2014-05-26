@@ -48,7 +48,8 @@ def mount(location, access='rw'):
     while True:
         if os.listdir(root):
             # Stuf is in there, don't use it
-            rand = hashlib.md5(str(random.randint(1, 1000000))).hexdigest()
+            hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+            rand = hash_type(str(random.randint(1, 1000000))).hexdigest()
             root = os.path.join(
                 tempfile.gettempdir(),
                 'guest',

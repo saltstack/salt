@@ -88,6 +88,15 @@ def profile(prof, names, **kwargs):
     return info
 
 
+def map_run(path, **kwargs):
+    '''
+    Execute a salt cloud map file
+    '''
+    client = _get_client()
+    info = client.map_run(path, **kwargs)
+    return info
+
+
 def destroy(names):
     '''
     Destroy the named vm(s)
@@ -109,4 +118,25 @@ def action(
     '''
     client = _get_client()
     info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    return info
+
+
+def create(provider, instances, **kwargs):
+    '''
+    Create an instance using Salt Cloud
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.create my-ec2-config myinstance \
+            image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
+            securitygroup=default delvol_on_destroy=True
+    '''
+    create_kwargs = {}
+    for kwarg in kwargs:
+        if not kwarg.startswith('__'):
+            create_kwargs[kwarg] = kwargs[kwarg]
+    client = _get_client()
+    info = client.create(provider, instances, **create_kwargs)
     return info

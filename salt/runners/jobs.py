@@ -26,7 +26,7 @@ def active():
         salt-run jobs.active
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     for minion, data in active_.items():
         if not isinstance(data, list):
@@ -34,22 +34,19 @@ def active():
         for job in data:
             if not job['jid'] in ret:
                 ret[job['jid']] = _format_job_instance(job)
-                ret[job['jid']].update({'Running': [], 'Returned': []})
+                ret[job['jid']].update({'Running': [{minion: job.get('pid', None)}], 'Returned': []})
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
+
+    mminion = salt.minion.MasterMinion(__opts__)
     for jid in ret:
-        jid_dir = salt.utils.jid_dir(
-                jid,
-                __opts__['cachedir'],
-                __opts__['hash_type'])
-        if not os.path.isdir(jid_dir):
-            continue
-        for minion in os.listdir(jid_dir):
-            if minion.startswith('.'):
-                continue
-            if os.path.exists(os.path.join(jid_dir, minion)):
+        returner = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_cache']))
+        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+        for minion in data:
+            if minion not in ret[jid]['Returned']:
                 ret[jid]['Returned'].append(minion)
-    salt.output.display_output(ret, 'yaml', __opts__)
+
+    salt.output.display_output(ret, opts=__opts__)
     return ret
 
 
@@ -64,35 +61,22 @@ def lookup_jid(jid, ext_source=None):
         salt-run jobs.lookup_jid 20130916125524463507
     '''
     ret = {}
-    if __opts__['ext_job_cache'] or ext_source:
-        out = 'nested'
-        returner = ext_source if ext_source else __opts__['ext_job_cache']
-        mminion = salt.minion.MasterMinion(__opts__)
-        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        for minion in data:
-            if u'return' in data[minion]:
-                ret[minion] = data[minion].get(u'return')
-            else:
-                ret[minion] = data[minion].get('return')
-            if 'out' in data[minion]:
-                out = data[minion]['out']
-        salt.output.display_output(ret, out, __opts__)
-        return ret
+    mminion = salt.minion.MasterMinion(__opts__)
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
 
-    # Fall back to the local job cache
-    client = salt.client.LocalClient(__opts__['conf_file'])
-
-    for mid, data in client.get_full_returns(jid, [], 0).items():
-        ret[mid] = data.get('ret')
-        salt.output.display_output(
-                {mid: ret[mid]},
-                data.get('out', None),
-                __opts__)
-
+    data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    for minion in data:
+        if u'return' in data[minion]:
+            ret[minion] = data[minion].get(u'return')
+        else:
+            ret[minion] = data[minion].get('return')
+        if 'out' in data[minion]:
+            out = data[minion]['out']
+    salt.output.display_output(ret, opts=__opts__)
     return ret
 
 
-def list_job(jid):
+def list_job(jid, ext_source=None):
     '''
     List a specific job given by its jid
 
@@ -102,25 +86,18 @@ def list_job(jid):
 
         salt-run jobs.list_job 20130916125524463507
     '''
-    serial = salt.payload.Serial(__opts__)
-    ret = {}
-    jid_dir = salt.utils.jid_dir(jid, __opts__['cachedir'], __opts__['hash_type'])
-    load_path = os.path.join(jid_dir, '.load.p')
-    minions_path = os.path.join(jid_dir, '.minions.p')
-    if os.path.isfile(load_path):
-        load = serial.load(salt.utils.fopen(load_path, 'rb'))
-        jid = load['jid']
-        ret = _format_jid_instance(jid, load)
-        ret.update({'jid': jid})
-        if os.path.isfile(minions_path):
-            minions = serial.load(salt.utils.fopen(minions_path, 'rb'))
-            ret['Minions'] = minions
+    ret = {'jid': jid}
+    mminion = salt.minion.MasterMinion(__opts__)
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
 
-    salt.output.display_output(ret, 'yaml', __opts__)
+    job = mminion.returners['{0}.get_load'.format(returner)](jid)
+    ret.update(_format_jid_instance(jid, job))
+    ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    salt.output.display_output(ret, opts=__opts__)
     return ret
 
 
-def list_jobs():
+def list_jobs(ext_source=None):
     '''
     List all detectable jobs and associated functions
 
@@ -130,15 +107,16 @@ def list_jobs():
 
         salt-run jobs.list_jobs
     '''
-    ret = {}
-    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, job, t_path, final in _walk_through(job_dir):
-        ret[jid] = _format_jid_instance(jid, job)
-    salt.output.display_output(ret, 'yaml', __opts__)
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    mminion = salt.minion.MasterMinion(__opts__)
+
+    ret = mminion.returners['{0}.get_jids'.format(returner)]()
+    salt.output.display_output(ret, opts=__opts__)
+
     return ret
 
 
-def print_job(job_id):
+def print_job(jid, ext_source=None):
     '''
     Print job available details, including return data.
 
@@ -148,36 +126,39 @@ def print_job(job_id):
 
         salt-run jobs.print_job
     '''
-    serial = salt.payload.Serial(__opts__)
     ret = {}
-    job_dir = os.path.join(__opts__['cachedir'], 'jobs')
-    for jid, job, t_path, final in _walk_through(job_dir):
-        if job_id == jid:
-            hosts_path = os.path.join(t_path, final)
-            hosts_return = {}
-            for host in os.listdir(hosts_path):
-                host_path = os.path.join(hosts_path, host)
-                if os.path.isdir(host_path):
-                    return_file = os.path.join(host_path, 'return.p')
-                    if not os.path.isfile(return_file):
-                        continue
-                    return_data = serial.load(
-                        salt.utils.fopen(return_file, 'rb')
-                    )
-                    hosts_return[host] = return_data
-                    ret[jid] = _format_jid_instance(jid, job)
-                    ret[jid].update({'Result': hosts_return})
 
-    salt.output.display_output(ret, 'yaml', __opts__)
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    mminion = salt.minion.MasterMinion(__opts__)
+
+    job = mminion.returners['{0}.get_load'.format(returner)](jid)
+    ret[jid] = _format_jid_instance(jid, job)
+    ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    salt.output.display_output(ret, opts=__opts__)
+
     return ret
 
 
+def _get_returner(returner_types):
+    '''
+    Helper to iterate over retuerner_types and pick the first one
+    '''
+    for returner in returner_types:
+        if returner:
+            return returner
+
+
 def _format_job_instance(job):
-    return {'Function': job['fun'],
-            'Arguments': list(job['arg']),
-            'Target': job['tgt'],
-            'Target-type': job['tgt_type'],
-            'User': job.get('user', 'root')}
+    ret = {'Function': job.get('fun', 'unknown-function'),
+           'Arguments': list(job.get('arg', [])),
+           # unlikely but safeguard from invalid returns
+           'Target': job.get('tgt', 'unknown-target'),
+           'Target-type': job.get('tgt_type', []),
+           'User': job.get('user', 'root')}
+
+    if 'Minions' in job:
+        ret['Minions'] = job['Minions']
+    return ret
 
 
 def _format_jid_instance(jid, job):
@@ -194,6 +175,7 @@ def _walk_through(job_dir):
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
+            job = serial.load(salt.utils.fopen(load_path, 'rb'))
 
             if not os.path.isfile(load_path):
                 continue

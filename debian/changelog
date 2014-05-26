@@ -1,14 +1,8 @@
-salt (0.17.0-1.1-he+3) unstable; urgency=low
+salt (2014.1.0-1) unstable; urgency=low
 
-  * local changes for HE
-  * removed upstart skript
-  * removed doc-package
+  * New upstream version
 
- -- Volker Schwicking <vs@hosteurope.de>  Mon, 16 Dec 2013 10:29:15 +0000
-
-salt (0.17.0-1.1-he+1) unstable; urgency=low
-
- -- Volker Schwicking <vs@hosteurope.de>  Fri, 29 Nov 2013 10:45:18 +0000
+ -- Bret Palsson <bretep@gmail.com>  Thu, 20 Mar 2014 14:00:54 -0700
 
 salt (0.17.0-1) unstable; urgency=low
 

@@ -1,0 +1,43 @@
+# Salt Master Floscript
+
+house master
+
+init .raet.udp.stack.local to eid 1 main true
+
+framer masterudpstack be active first setup
+    frame setup
+        enter
+            do setup
+#        go spawnmaint
+#    frame spawnmaint
+#        enter
+#            do fork maint
+        go spawnworkers
+    frame spawnworkers
+        enter
+            do worker fork
+        go start
+    frame start
+        do salt raet road stack per inode ".raet.udp.stack"
+        exit
+            do salt raet road stack closer per inode ".raet.udp.stack."
+
+framer inbound be active first start
+    frame start
+        do rx
+
+framer uxdrouter be active first start
+    frame start
+        do router
+
+framer events be active first start
+    frame start
+        do eventer
+
+framer publish be active first start
+    frame start
+        do publisher
+
+framer outbound be active first start
+    frame start
+        do tx

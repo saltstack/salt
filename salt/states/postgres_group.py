@@ -28,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_group' if (
-        'postgres.group_create' in __salt__
-    ) else False
+    return 'postgres.group_create' in __salt__
 
 
 def present(name,
@@ -126,7 +124,7 @@ def present(name,
            'comment': 'Group {0} is already present'.format(name)}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -278,7 +276,7 @@ def absent(name,
            'comment': ''}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

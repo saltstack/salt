@@ -25,9 +25,9 @@ Download
 
 Salt Cloud can be downloaded and install via pypi or github:
 
-http://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz
+https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz
 
-https://github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz
+https://cloud.github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz
 
 Packages are not yet available, Salt Cloud requires three dependencies, the
 salt libs, libcloud, and paramiko.

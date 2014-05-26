@@ -21,6 +21,10 @@ Options
 
     Execute a raw shell command.
 
+.. option:: --priv
+
+    Specify the SSH private key file to be used for authentication.
+
 .. option:: --roster
 
     Define which roster system to use, this defines if a database backend,
@@ -46,10 +50,15 @@ Options
     defines how many processes are opened up at a time to manage connections,
     the more running process the faster communication should be, default
     is 25.
+    
+.. option:: -i, --ignore-host-keys
+
+    Ignore the ssh host keys which by default are honored and connections
+    would ask for approval.
 
 .. option:: --passwd
 
-    Set te default password to attempt to use when authenticating.
+    Set the default password to attempt to use when authenticating.
 
 .. option:: --key-deploy
 

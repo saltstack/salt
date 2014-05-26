@@ -5,6 +5,7 @@ Manage the shadow file
 
 # Import python libs
 import os
+import datetime
 try:
     import spwd
 except ImportError:
@@ -12,10 +13,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.pycrypto
 
 
 def __virtual__():
-    return 'shadow' if __grains__.get('kernel', '') == 'Linux' else False
+    return __grains__.get('kernel', '') == 'Linux'
 
 
 def default_hash():
@@ -128,6 +130,35 @@ def set_mindays(name, mindays):
     return False
 
 
+def gen_password(password, crypt_salt=None, algorithm='sha512'):
+    '''
+    Generate hashed password
+
+    password
+        Plaintext password to be hashed.
+
+    crypt_salt
+        Crpytographic salt. If not given, a random 8-character salt will be
+        generated.
+
+    algorithm
+        The following hash algorithms are supported:
+
+        * md5
+        * blowfish (not in mainline glibc, only available in distros that add it)
+        * sha256
+        * sha512 (default)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.gen_password 'I_am_password'
+        salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
+    '''
+    return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
+
+
 def set_password(name, password, use_usermod=False):
     '''
     Set the password for a named user. The password must be a properly defined
@@ -166,7 +197,9 @@ def set_password(name, password, use_usermod=False):
                 if comps[0] != name:
                     lines.append(line)
                     continue
+                changed_date = datetime.datetime.today() - datetime.datetime(1970, 1, 1)
                 comps[1] = password
+                comps[2] = str(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
         with salt.utils.fopen(s_file, 'w+') as fp_:
@@ -176,7 +209,7 @@ def set_password(name, password, use_usermod=False):
     else:
         # Use usermod -p (less secure, but more feature-complete)
         cmd = 'usermod -p {0} {1}'.format(name, password)
-        __salt__['cmd.run'](cmd)
+        __salt__['cmd.run'](cmd, output_loglevel='quiet')
         uinfo = info(name)
         return uinfo['passwd'] == password
 
@@ -205,8 +238,8 @@ def set_warndays(name, warndays):
 
 def set_date(name, date):
     '''
-    sets the value for the date the password was last changed to the epoch
-    (January 1, 1970). See man chage.
+    Sets the value for the date the password was last changed to days since the
+    epoch (January 1, 1970). See man chage.
 
     CLI Example:
 
@@ -215,4 +248,22 @@ def set_date(name, date):
         salt '*' shadow.set_date username 0
     '''
     cmd = 'chage -d {0} {1}'.format(date, name)
+    __salt__['cmd.run'](cmd)
+
+
+def set_expire(name, expire):
+    '''
+    .. versionchanged:: Helium
+
+    Sets the value for the date the account expires as days since the epoch
+    (January 1, 1970). Using a value of -1 will clear expiration. See man
+    chage.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_expire username -1
+    '''
+    cmd = 'chage -E {0} {1}'.format(expire, name)
     __salt__['cmd.run'](cmd)

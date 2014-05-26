@@ -28,6 +28,18 @@ Salt SSH is very easy to use, simply set up a basic `roster` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
+.. note::
+
+    The Salt SSH eventually is supposed to support the same set of commands and 
+    functionality as standard ``salt`` command. 
+    
+    At the moment fileserver operations must be wrapped to ensure that the 
+    relevant files are delivered with the ``salt-ssh`` commands. 
+    The state module is an exception, which compiles the state run on the 
+    master, and in the process finds all the references to ``salt://`` paths and 
+    copies those files down in the same tarball as the state run. 
+    However, needed fileserver wrappers are still under development.
+
 Salt SSH Roster
 ===============
 
@@ -101,6 +113,14 @@ Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
 
+Configuring Salt SSH
+====================
+
+Salt SSH takes its configuration from a master configuration file. Normally, this
+file is in ``/etc/salt/master``. If one wishes to use a customized configuration file,
+the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a 
+configuration file named ``master``.
+
 Running Salt SSH as non-root user
 =================================
 
@@ -111,4 +131,24 @@ and ``cachedir``. Those should point to a full path writable for the user.
 
 It's recommed not to modify /etc/salt for this purpose. Create a private copy
 of /etc/salt for the user and run the command with ``-c /new/config/path``.
+
+Define CLI Options with Saltfile
+================================
+
+If you are commonly passing in CLI options to ``salt-ssh``, you can create
+a ``Saltfile`` to automatically use these options. This is common if you're
+managing several different salt projects on the same server.
+
+So if you ``cd`` into a directory with a Saltfile with the following
+contents:
+
+.. code-block:: yaml
+
+    salt-ssh:
+      config_dir: path/to/config/dir
+      max_prox: 30
+
+Instead of having to call
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 \* test.ping`` you
+can call ``salt-ssh \* test.ping``.
 

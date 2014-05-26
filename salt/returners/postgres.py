@@ -55,7 +55,13 @@ correctly::
     EOF
 
 Required python modules: psycopg2
+
+  To use the postgres returner, append '--return postgres' to the salt command. ex:
+
+    salt '*' test.ping --return postgres
 '''
+# Let's not allow PyLint complain about string substitution
+# pylint: disable=W1321,E1321
 
 # Import python libs
 import json

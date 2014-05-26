@@ -10,13 +10,6 @@ option.
 import os
 import logging
 
-try:
-    import fcntl
-    HAS_FCNTL = True
-except ImportError:
-    # fcntl is not available on windows
-    HAS_FCNTL = False
-
 # Import salt libs
 import salt.fileserver
 import salt.utils
@@ -148,7 +141,11 @@ def update():
 
     if __opts__.get('fileserver_events', False):
         # if there is a change, fire an event
-        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
         event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
 
@@ -201,7 +198,7 @@ def file_hash(load, fnd):
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
-        except os.error:  # Can't use Python select() because we need Windows support
+        except (os.error, IOError):  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
             try:
@@ -217,15 +214,10 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    if HAS_FCNTL:
-        with salt.utils.flopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-            fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
-        return ret
-    else:
-        with salt.utils.fopen(cache_path, 'w') as fp_:
-            fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
-        return ret
+    cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
+    with salt.utils.flopen(cache_path, 'w') as fp_:
+        fp_.write(cache_object)
+    return ret
 
 
 def _file_lists(load, form):

@@ -12,7 +12,7 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.3
+%define _salttesting_ver 2014.4.24
 
 Name: salt
 Version: %{salt_version}
@@ -69,6 +69,8 @@ BuildRequires: python-unittest2
 # https://github.com/saltstack/salt/issues/3749
 BuildRequires: python-mock
 BuildRequires: git
+
+Requires: python-libcloud
 %endif
 
 BuildRequires: m2crypto
@@ -199,6 +201,7 @@ rm -rf $RPM_BUILD_ROOT
 %files -n salt-master
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt.1.*
+%doc %{_mandir}/man1/salt-cloud.1.*
 %doc %{_mandir}/man1/salt-cp.1.*
 %doc %{_mandir}/man1/salt-key.1.*
 %doc %{_mandir}/man1/salt-master.1.*
@@ -206,6 +209,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man1/salt-ssh.1.*
 %doc %{_mandir}/man1/salt-syndic.1.*
 %{_bindir}/salt
+%{_bindir}/salt-cloud
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-master
@@ -318,6 +322,18 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Tue May 6 2014 Erik Johnson <erik@saltstack.com> - 2014.1.4-1
+- Update to bugfix release 2014.1.4
+
+* Fri Apr 18 2014 Erik Johnson <erik@saltstack.com> - 2014.1.3-1
+- Update to bugfix release 2014.1.3
+
+* Fri Mar 21 2014 Erik Johnson <erik@saltstack.com> - 2014.1.1-1
+- Update to bugfix release 2014.1.1
+
+* Thu Feb 20 2014 Erik Johnson <erik@saltstack.com> - 2014.1.0-1
+- Update to feature release 2014.1.0
+
 * Mon Jan 27 2014 Erik Johnson <erik@saltstack.com> - 0.17.5-1
 - Update to bugfix release 0.17.5
 

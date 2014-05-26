@@ -21,7 +21,7 @@ __opts__ = {}
 def __virtual__():
     if salt.utils.is_windows():
         return False
-    return 'status'
+    return True
 
 
 def _number(text):
@@ -102,7 +102,7 @@ def custom():
     conf = __salt__['config.dot_vals']('status')
     for key, val in conf.items():
         func = '{0}()'.format(key.split('.')[1])
-        vals = eval(func)
+        vals = eval(func)  # pylint: disable=W0123
 
         for item in val:
             ret[item] = vals[item]
@@ -180,7 +180,7 @@ def cpustats():
 
 def meminfo():
     '''
-    Return the CPU stats for this minion
+    Return the memory info for this minion
 
     CLI Example:
 
@@ -350,6 +350,24 @@ def vmstats():
             continue
         comps = line.split()
         ret[comps[0]] = _number(comps[1])
+    return ret
+
+
+def nproc():
+    '''
+    Return the number of processing units availabe on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.nproc
+    '''
+    data = __salt__['cmd.run']('nproc')
+    try:
+        ret = int(data.strip())
+    except Exception:
+        return 0
     return ret
 
 

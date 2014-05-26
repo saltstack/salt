@@ -8,7 +8,11 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import re
 import logging
-import getpass
+try:
+    import pwd
+except ImportError:
+    # In case a non-master needs to import this module
+    pass
 
 
 # Import salt libs
@@ -30,12 +34,148 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+from salt.pillar import git_pillar
 from salt.utils.event import tagify
+from salt.exceptions import SaltMasterError
 
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
 # only accept valid minion ids
+
+
+def init_git_pillar(opts):
+    '''
+    Clear out the ext pillar caches, used when the master starts
+    '''
+    pillargitfs = []
+    for opts_dict in [x for x in opts.get('ext_pillar', [])]:
+        if 'git' in opts_dict:
+            parts = opts_dict['git'].strip().split()
+            try:
+                br = parts[0]
+                loc = parts[1]
+            except IndexError:
+                log.critical(
+                    'Unable to extract external pillar data: {0}'
+                    .format(opts_dict['git'])
+                )
+            else:
+                pillargitfs.append(
+                    git_pillar.GitPillar(
+                        br,
+                        loc,
+                        opts
+                    )
+                )
+    return pillargitfs
+
+
+def clean_fsbackend(opts):
+    '''
+    Clean ou the old fileserver backends
+    '''
+    # Clear remote fileserver backend env cache so it gets recreated
+    for backend in ('git', 'hg', 'svn'):
+        if backend in opts['fileserver_backend']:
+            env_cache = os.path.join(
+                opts['cachedir'],
+                '{0}fs'.format(backend),
+                'envs.p'
+            )
+            if os.path.isfile(env_cache):
+                log.debug('Clearing {0}fs env cache'.format(backend))
+                try:
+                    os.remove(env_cache)
+                except (IOError, OSError) as exc:
+                    log.critical(
+                        'Unable to clear env cache file {0}: {1}'
+                        .format(env_cache, exc)
+                    )
+
+
+def clean_old_jobs(opts):
+    '''
+    Clean out the old jobs from the job cache
+    '''
+    # TODO: better way to not require creating the masterminion every time?
+    mminion = salt.minion.MasterMinion(
+                opts,
+                states=False,
+                rend=False,
+                )
+    # If the master job cache has a clean_old_jobs, call it
+    fstr = '{0}.clean_old_jobs'.format(opts['master_job_cache'])
+    if fstr in mminion.returners:
+        mminion.returners[fstr]()
+
+
+def access_keys(opts):
+    '''
+    A key needs to be placed in the filesystem with permissions 0400 so
+    clients are required to run as root.
+    '''
+    users = []
+    keys = {}
+    acl_users = set(opts['client_acl'].keys())
+    if opts.get('user'):
+        acl_users.add(opts['user'])
+    acl_users.add(salt.utils.get_user())
+    for user in pwd.getpwall():
+        users.append(user.pw_name)
+    for user in acl_users:
+        log.info(
+            'Preparing the {0} key for local communication'.format(
+                user
+            )
+        )
+
+        if user not in users:
+            try:
+                user = pwd.getpwnam(user).pw_name
+            except KeyError:
+                log.error('ACL user {0} is not available'.format(user))
+                continue
+        keyfile = os.path.join(
+            opts['cachedir'], '.{0}_key'.format(user)
+        )
+
+        if os.path.exists(keyfile):
+            log.debug('Removing stale keyfile: {0}'.format(keyfile))
+            os.unlink(keyfile)
+
+        key = salt.crypt.Crypticle.generate_key_string()
+        cumask = os.umask(191)
+        with salt.utils.fopen(keyfile, 'w+') as fp_:
+            fp_.write(key)
+        os.umask(cumask)
+        os.chmod(keyfile, 256)
+        try:
+            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+        except OSError:
+            # The master is not being run as root and can therefore not
+            # chown the key file
+            pass
+        keys[user] = key
+    return keys
+
+
+def fileserver_update(fileserver):
+    '''
+    Update the fileserver backends, requires that a built fileserver object
+    be passed in
+    '''
+    try:
+        if not fileserver.servers:
+            log.error('No fileservers loaded, the master will not be'
+                      'able to serve files to minions')
+            raise SaltMasterError('No fileserver backends available')
+        fileserver.update()
+    except Exception as exc:
+        log.error(
+            'Exception {0} occurred in file server update'.format(exc),
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
 
 
 class RemoteFuncs(object):
@@ -45,13 +185,17 @@ class RemoteFuncs(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(mopts=self.opts)
         # Create the master minion to access the external job cache
         self.mminion = salt.minion.MasterMinion(
                 self.opts,
@@ -164,7 +308,7 @@ class RemoteFuncs(object):
                     minion,
                     'mine.p')
             try:
-                with salt.utils.fopen(mine) as fp_:
+                with salt.utils.fopen(mine, 'rb') as fp_:
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
@@ -185,12 +329,12 @@ class RemoteFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if not load.get('clear', False):
                 if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         new = self.serial.load(fp_)
                     if isinstance(new, dict):
                         new.update(load['data'])
                         load['data'] = new
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
@@ -207,11 +351,11 @@ class RemoteFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         mine_data = self.serial.load(fp_)
                     if isinstance(mine_data, dict):
                         if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+') as fp_:
+                            with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                 except OSError:
                     return False
@@ -296,7 +440,7 @@ class RemoteFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
@@ -331,65 +475,22 @@ class RemoteFuncs(object):
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
         if load['jid'] == 'req':
-        # The minion is returning a standalone job, request a jobid
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+            # The minion is returning a standalone job, request a jobid
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[prep_fstr](nocache=load.get('nocache', False))
+
+            # save the load, since we don't have it
+            saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
-        if self.opts['master_ext_job_cache']:
-            fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
-            self.mminion.returners[fstr](load)
-            return
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: {jid}'.format(**load)
-            )
-            return False
-        if os.path.exists(os.path.join(jid_dir, 'nocache')):
-            return
-        hn_dir = os.path.join(jid_dir, load['id'])
-        if not os.path.isdir(hn_dir):
-            os.makedirs(hn_dir)
-        # Otherwise the minion has already returned this jid and it should
-        # be dropped
-        else:
-            log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    load['id']
-                )
-            )
-            return False
 
-        self.serial.dump(
-            load['return'],
-            # Use atomic open here to avoid the file being read before it's
-            # completely written to. Refs #1935
-            salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+'
-            )
-        )
-        if 'out' in load:
-            self.serial.dump(
-                load['out'],
-                # Use atomic open here to avoid the file being read before
-                # it's completely written to. Refs #1935
-                salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+'
-                )
-            )
+        fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
         '''
@@ -399,29 +500,10 @@ class RemoteFuncs(object):
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
             return None
-        # set the write flag
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
-            if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
-                    self.serial.dump(load['load'], fp_)
-        wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
-        try:
-            with salt.utils.fopen(wtag, 'w+') as fp_:
-                fp_.write('')
-        except (IOError, OSError):
-            log.error(
-                'Failed to commit the write tag for the syndic return, are '
-                'permissions correct in the cache dir: {0}?'.format(
-                    self.opts['cachedir']
-                )
-            )
-            return False
+        # if we have a load, save it
+        if 'load' in load:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
         for key, item in load['return'].items():
@@ -431,8 +513,6 @@ class RemoteFuncs(object):
             if 'out' in load:
                 ret['out'] = load['out']
             self._return(ret)
-        if os.path.isfile(wtag):
-            os.remove(wtag)
 
     def minion_runner(self, load):
         '''
@@ -631,15 +711,18 @@ class LocalFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key, master_key):
+    def __init__(self, opts, key):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.key = key
-        self.master_key = master_key
         # Create the event manager
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(mopts=self.opts)
         # Make an minion checker object
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
@@ -1088,7 +1171,7 @@ class LocalFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif load['user'] == getpass.getuser():
+            elif load['user'] == salt.utils.get_user():
                 if load.pop('key') != self.key.get(load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
@@ -1126,7 +1209,7 @@ class LocalFuncs(object):
                     )
                     return ''
         else:
-            if load.pop('key') != self.key[getpass.getuser()]:
+            if load.pop('key') != self.key[salt.utils.get_user()]:
                 log.warning(
                     'Authentication failure of type "other" occurred.'
                 )
@@ -1150,17 +1233,9 @@ class LocalFuncs(object):
                 }
         # Retrieve the jid
         if not load['jid']:
-            load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    extra.get('nocache', False)
-                    )
+            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
         self.event.fire_event({'minions': minions}, load['jid'])
-        jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
 
         new_job_load = {
                 'jid': load['jid'],
@@ -1176,19 +1251,7 @@ class LocalFuncs(object):
         self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([load['jid'], 'new'], 'job'))
 
-        # Verify the jid dir
-        if not os.path.isdir(jid_dir):
-            os.makedirs(jid_dir)
         # Save the invocation information
-        self.serial.dump(
-                load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
-                )
-        # save the minions to a cache so we can see in the UI
-        self.serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
-                )
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
@@ -1205,6 +1268,23 @@ class LocalFuncs(object):
                     'The specified returner threw a stack trace:\n',
                     exc_info=True
                 )
+
+        # always write out to the master job cache
+        try:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[fstr](load['jid'], load)
+        except KeyError:
+            log.critical(
+                'The specified returner used for the master job cache '
+                '"{0}" does not have a save_load function!'.format(
+                    self.opts['master_job_cache']
+                )
+            )
+        except Exception:
+            log.critical(
+                'The specified returner threw a stack trace:\n',
+                exc_info=True
+            )
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
@@ -1245,10 +1325,9 @@ class LocalFuncs(object):
             )
         log.debug('Published command details {0}'.format(pub_load))
 
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': load['jid'],
-                'minions': minions
-            }
-        }
+        return {'ret': {
+                    'jid': load['jid'],
+                    'minions': minions
+                    },
+                'pub': pub_load
+                }

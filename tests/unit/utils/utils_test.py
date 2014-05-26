@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
 # Import Salt Testing libs
@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt import utils
+from salt.utils import args
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
 
 # Import Python libraries
@@ -26,7 +27,7 @@ from collections import namedtuple
 
 # Import 3rd-party libs
 try:
-    import timelib
+    import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -147,7 +148,6 @@ class UtilsTestCase(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
     def test_format_call(self, arg_lookup, get_function_argspec):
-    # def test_format_call(self):
         def dummy_func(first=None, second=None, third=None):
             pass
 
@@ -223,14 +223,10 @@ class UtilsTestCase(TestCase):
         self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
 
     def test_check_state_result(self):
-        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
-        self.assertFalse(utils.check_state_result({'host1': []}),
-                         "Failed to handle an invalid data structure for a host")
+        self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
         self.assertFalse(utils.check_state_result({}), "Failed to handle an empty dictionary.")
         self.assertFalse(utils.check_state_result({'host1': []}), "Failed to handle an invalid host data structure.")
-
-        self.assertTrue(utils.check_state_result({'    _|-': {}}))
 
         test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
         self.assertTrue(utils.check_state_result(test_valid_state))
@@ -252,6 +248,14 @@ class UtilsTestCase(TestCase):
         self.assertTrue(utils.test_mode(Test=True))
         self.assertTrue(utils.test_mode(tEsT=True))
 
+    def test_option(self):
+        test_two_level_dict = {'foo': {'bar': 'baz'}}
+
+        self.assertDictEqual({'not_found': 'nope'}, utils.option('foo:bar', {'not_found': 'nope'}))
+        self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, opts=test_two_level_dict))
+        self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar={'master': test_two_level_dict}))
+        self.assertEqual('baz', utils.option('foo:bar', {'not_found': 'nope'}, pillar=test_two_level_dict))
+
     def test_parse_docstring(self):
         test_keystone_str = '''Management of Keystone users
                                 ============================
@@ -272,10 +276,10 @@ class UtilsTestCase(TestCase):
         self.assertRaises(ValueError, utils.get_hash, '/tmp/foo/', form='INVALID')
 
     def test_parse_kwarg(self):
-        ret = utils.parse_kwarg('foo=bar')
+        ret = args.parse_kwarg('foo=bar')
         self.assertEqual(ret, ('foo', 'bar'))
 
-        ret = utils.parse_kwarg('foobar')
+        ret = args.parse_kwarg('foobar')
         self.assertEqual(ret, (None, None))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -506,3 +510,7 @@ class UtilsTestCase(TestCase):
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(UtilsTestCase, needs_daemon=False)

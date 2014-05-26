@@ -6,39 +6,67 @@ Salt Masterless Quickstart
 .. _`salty-vagrant`: https://github.com/saltstack/salty-vagrant
 .. _`salt-bootstrap`: https://github.com/saltstack/salt-bootstrap
 
-Running a masterless salt-minion lets you use salt's configuration management 
-for a single machine. It is also useful for testing out state trees before 
-deploying to a production setup.
+Running a masterless salt-minion lets you use Salt's configuration management
+for a single machine without calling out to a Salt master on another machine.
 
-The only real difference in using a standalone minion is that instead of issuing 
-commands with ``salt``, we use the ``salt-call`` command, like this:
+Since the Salt minion contains such extensive functionality it can be useful
+to run it standalone. A standalone minion can be used to do a number of
+things:
 
-.. code-block:: bash
+- Stand up a master server via States (Salting a Salt Master)
+- Use salt-call commands on a system without connectivity to a master
+- Masterless States, run states entirely from files local to the minion
 
-    salt-call --local state.highstate
+
+It is also useful for testing out state trees before deploying to a production setup.
+
 
 Bootstrap Salt Minion
 =====================
 
-First we need to install the salt minion. The `salt-bootstrap`_ script makes
-this incredibly easy for any OS with a Bourne shell. You can use it like this:
+The `salt-bootstrap`_ script makes bootstrapping a server with Salt simple
+for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    wget -O - http://bootstrap.saltstack.org | sudo sh
+    wget -O - https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh
 
-Or see the `salt-bootstrap`_ documentation for other one liners. Additionally, 
-if you are using `Vagrant`_ to test out salt, the `salty-vagrant`_ tool will 
-provision the VM for you.
+See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
+to test out salt, the `salty-vagrant`_ tool will  provision the VM for you.
+
+Telling Salt to Run Masterless
+===================================
+
+To instruct the minion to not look for a master when running
+the :conf_minion:`file_client` configuration option needs to be set.
+By default the :conf_minion:`file_client` is set to ``remote`` so that the
+minion knows that file server and pillar data are to be gathered from the
+master. When setting the :conf_minion:`file_client` option to ``local`` the
+minion is configured to not gather this data from the master.
+
+.. code-block:: yaml
+
+    file_client: local
+
+Now the salt minion will not look for a master and will assume that the local
+system has all of the file and pillar resources.
+
 
 Create State Tree
 =================
 
-Now we build an example state tree. This is where the configuration is defined.
-For more in depth directions, see the `tutorial
-<http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_. 
+Following the successful installation of a salt-minion, the next step is to create
+a state tree, which is where the SLS files that comprise the possible states of the
+minion are stored.
 
-1. Create the top.sls file:
+The following example walks through the steps necessary to create a state tree that
+ensures that the server has the Apache webserver installed.
+
+.. note:::
+    For a complete explanation on Salt States, see the `tutorial
+    <http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_.
+
+1. Create the ``top.sls`` file:
 
 ``/srv/salt/top.sls:``
 
@@ -48,7 +76,7 @@ For more in depth directions, see the `tutorial
       '*':
         - webserver
 
-2. Create our webserver state tree:
+2. Create the webserver state tree:
 
 ``/srv/salt/webserver.sls:``
 
@@ -58,15 +86,37 @@ For more in depth directions, see the `tutorial
       pkg:                # state declaration
         - installed       # function declaration
 
-The only thing left is to provision our minion using the highstate command.
-Salt-call also gives us an easy way to give us verbose output:
+The only thing left is to provision our minion using salt-call and the
+highstate command.
+
+Salt-call
+---------
+
+The salt-call command is used to run module functions locally on a minion
+instead of executing them from the master. Normally the salt-call command
+checks into the master to retrieve file server and pillar data, but when
+running standalone salt-call needs to be instructed to not check the master for
+this data:
+
+.. code-block:: bash
+
+    salt-call --local state.highstate
+
+The ``--local`` flag tells the salt-minion to look for the state tree in the
+local file system and not to contact a Salt Master for instructions.
+
+To provide verbose output, use ``-l debug``:
 
 .. code-block:: bash
 
     salt-call --local state.highstate -l debug
 
-The ``--local`` flag tells the salt-minion to look for the state tree in the
-local file system.  Normally the minion copies the state tree from the master
-and executes it from there.
+The minion first examines the ``top.sls`` file and determines that it is a part
+of the group matched by ``*`` glob and that the ``webserver`` SLS should be applied.
 
-That's it, good luck!
+It then examines the ``webserver.sls`` file and finds the ``apache`` state, which
+installs the Apache package.
+
+The minion should now have Apache installed, and the next step is to begin
+learning how to write
+:doc:`more complex states</topics/tutorials/states_pt1>`.

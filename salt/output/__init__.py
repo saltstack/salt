@@ -5,6 +5,7 @@ for managing outputters.
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 import errno
@@ -26,7 +27,7 @@ STATIC = (
 )
 
 
-def display_output(data, out, opts=None):
+def display_output(data, out=None, opts=None):
     '''
     Print the passed data using the desired output
     '''
@@ -38,6 +39,7 @@ def display_output(data, out, opts=None):
         display_data = get_printout('nested', opts)(data).rstrip()
 
     output_filename = opts.get('output_file', None)
+    log.trace('data = {0}'.format(data))
     try:
         if output_filename is not None:
             with salt.utils.fopen(output_filename, 'a') as ofh:
@@ -88,6 +90,7 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = True
 
     outputters = salt.loader.outputters(opts)
+    # TODO: raise an exception? This means if you do --out foobar you get nested
     if out not in outputters:
         return outputters['nested']
     return outputters[out]

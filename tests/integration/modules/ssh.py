@@ -8,18 +8,13 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 ensure_in_syspath('../../')
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 
 # Import salt libs
 import integration
 import salt.utils
-from salt.exceptions import CommandExecutionError
 
 SUBSALT_DIR = os.path.join(integration.TMP, 'subsalt')
 AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
@@ -27,7 +22,7 @@ KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
 GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
 
 
-#@skip_if_binaries_missing(['ssh', 'ssh-rsa', 'ssh-keygen'], check_all=True)
+@skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
 class SSHModuleTest(integration.ModuleCase):
     '''
     Test the ssh module

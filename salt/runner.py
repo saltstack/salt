@@ -4,22 +4,26 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-import multiprocessing
-import datetime
-import time
-import logging
+from __future__ import print_function
 import collections
+import datetime
+import logging
+import multiprocessing
+import time
 
 # Import salt libs
-import salt.loader
 import salt.exceptions
-import salt.utils
+import salt.loader
 import salt.minion
+import salt.utils
+import salt.utils.args
 import salt.utils.event
-from salt.utils.event import tagify
+from salt.output import display_output
+from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.error import raise_error
+from salt.utils.event import tagify
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class RunnerClient(object):
@@ -47,7 +51,11 @@ class RunnerClient(object):
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                listen=False)
         data = {'fun': 'runner.{0}'.format(fun),
                 'jid': jid,
                 'user': user,
@@ -67,8 +75,7 @@ class RunnerClient(object):
         data['user'] = user
         event.fire_event(data, tagify('ret', base=tag))
         # this is a workaround because process reaping is defeating 0MQ linger
-        time.sleep(2.0)  # delay so 0MQ event gets out before runner process
-                         # reaped
+        time.sleep(2.0)  # delay so 0MQ event gets out before runner process reaped
 
     def _verify_fun(self, fun):
         '''
@@ -78,16 +85,22 @@ class RunnerClient(object):
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)
 
-    def get_docs(self):
+    def get_docs(self, arg=None):
         '''
         Return a dictionary of functions and the inline documentation for each
         '''
-        ret = [(fun, self.functions[fun].__doc__)
-                for fun in sorted(self.functions)]
+        if arg:
+            target_mod = arg + '.' if not arg.endswith('.') else arg
+            docs = [(fun, self.functions[fun].__doc__)
+                    for fun in sorted(self.functions)
+                    if fun == arg or fun.startswith(target_mod)]
+        else:
+            docs = [(fun, self.functions[fun].__doc__)
+                    for fun in sorted(self.functions)]
+        docs = dict(docs)
+        return _strip_rst(docs)
 
-        return dict(ret)
-
-    def cmd(self, fun, arg, kwarg=None):
+    def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
         Execute a runner function
 
@@ -114,14 +127,52 @@ class RunnerClient(object):
                     'User': 'saltdev'
                 },
             }
+
         '''
-        if not isinstance(kwarg, dict):
+        if kwarg is None:
             kwarg = {}
+        if not isinstance(kwarg, dict):
+            raise salt.exceptions.SaltInvocationError(
+                'kwarg must be formatted as a dictionary'
+            )
+
+        if pub_data is None:
+            pub_data = {}
+        if not isinstance(pub_data, dict):
+            raise salt.exceptions.SaltInvocationError(
+                'pub_data must be formatted as a dictionary'
+            )
+
+        arglist = salt.utils.args.parse_input(arg)
+
+        def _append_kwarg(arglist, kwarg):
+            '''
+            Append the kwarg dict to the arglist
+            '''
+            kwarg['__kwarg__'] = True
+            arglist.append(kwarg)
+
+        if kwarg:
+            try:
+                if isinstance(arglist[-1], dict) \
+                        and '__kwarg__' in arglist[-1]:
+                    for key, val in kwarg.iteritems():
+                        if key in arglist[-1]:
+                            log.warning(
+                                'Overriding keyword argument {0!r}'.format(key)
+                            )
+                        arglist[-1][key] = val
+                else:
+                    # No kwargs yet present in arglist
+                    _append_kwarg(arglist, kwarg)
+            except IndexError:
+                # arglist is empty, just append
+                _append_kwarg(arglist, kwarg)
+
         self._verify_fun(fun)
-        args, kwargs = salt.minion.parse_args_and_kwargs(
-                self.functions[fun],
-                arg,
-                kwarg)
+        args, kwargs = salt.minion.load_args_and_kwargs(
+            self.functions[fun], arglist, pub_data
+        )
         return self.functions[fun](*args, **kwargs)
 
     def low(self, fun, low):
@@ -191,10 +242,11 @@ class Runner(RunnerClient):
         '''
         Print out the documentation!
         '''
-        ret = super(Runner, self).get_docs()
-
-        for fun in sorted(ret):
-            print('{0}:\n{1}\n'.format(fun, ret[fun]))
+        arg = self.opts.get('fun', None)
+        docs = super(Runner, self).get_docs(arg)
+        for fun in sorted(docs):
+            display_output('{0}:'.format(fun), 'text', self.opts)
+            print(docs[fun])
 
     def run(self):
         '''
@@ -208,5 +260,5 @@ class Runner(RunnerClient):
                         self.opts['fun'], self.opts['arg'], self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
-                print ret
+                print(ret)
                 return ret

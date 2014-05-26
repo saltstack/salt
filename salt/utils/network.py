@@ -41,7 +41,9 @@ def isportopen(host, port):
     '''
     Return status of a port
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.isportopen 127.0.0.1 22
     '''
@@ -59,22 +61,268 @@ def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.host_to_ip example.com
     '''
     try:
-        ip = socket.gethostbyname(host)
+        family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
+            host, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)[0]
+
+        if family == socket.AF_INET:
+            ip, port = sockaddr
+        elif family == socket.AF_INET6:
+            ip, port, flow_info, scope_id = sockaddr
+
     except Exception:
         ip = None
     return ip
+
+
+def _filter_localhost_names(name_list):
+    '''
+    Returns list without local hostnames and ip addresses.
+    '''
+    h = []
+    re_filters = [
+        'localhost.*',
+        'ip6-.*',
+        '127.*',
+        r'0\.0\.0\.0',
+        '::1.*',
+        'fe00::.*',
+        'fe02::.*',
+    ]
+    for name in name_list:
+        filtered = False
+        for f in re_filters:
+            if re.match(f, name):
+                filtered = True
+                break
+        if not filtered:
+            h.append(name)
+    return h
+
+
+def _sort_hostnames(hostname_list):
+    '''
+    sort minion ids favoring in order of:
+        - FQDN
+        - public ipaddress
+        - localhost alias
+        - private ipaddress
+    '''
+    # punish matches in order of preference
+    punish = [
+        'localhost.localdomain',
+        'localhost.my.domain',
+        'localhost4.localdomain4',
+        'localhost',
+        'ip6-localhost',
+        'ip6-loopback',
+        '127.0.2.1',
+        '127.0.1.1',
+        '127.0.0.1',
+        '0.0.0.0',
+        '::1',
+        'fe00::',
+        'fe02::',
+    ]
+
+    def _cmp_hostname(a, b):
+        # should never have a space in hostname
+        if ' ' in a:
+            return 1
+        if ' ' in b:
+            return -1
+
+        # punish localhost list
+        if a in punish:
+            if b in punish:
+                return punish.index(a) - punish.index(b)
+            return 1
+        if b in punish:
+            return -1
+
+        # punish ipv6
+        if ':' in a or ':' in b:
+            return a.count(':') - b.count(':')
+
+        # punish ipv4
+        a_is_ipv4 = a.count('.') == 3 and not any(c.isalpha() for c in a)
+        b_is_ipv4 = b.count('.') == 3 and not any(c.isalpha() for c in b)
+        if a_is_ipv4 and a.startswith('127.'):
+            return 1
+        if b_is_ipv4 and b.startswith('127.'):
+            return -1
+        if a_is_ipv4 and not b_is_ipv4:
+            return 1
+        if a_is_ipv4 and b_is_ipv4:
+            return 0
+        if not a_is_ipv4 and b_is_ipv4:
+            return -1
+
+        # favor hosts with more dots
+        diff = b.count('.') - a.count('.')
+        if diff != 0:
+            return diff
+
+        # favor longest fqdn
+        return len(b) - len(a)
+
+    return sorted(hostname_list, cmp=_cmp_hostname)
+
+
+def get_hostnames():
+    '''
+    Get list of hostnames using multiple strategies
+    '''
+    h = []
+    h.append(socket.gethostname())
+    h.append(socket.getfqdn())
+
+    # try socket.getaddrinfo
+    try:
+        addrinfo = socket.getaddrinfo(
+            socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+            socket.SOL_TCP, socket.AI_CANONNAME
+        )
+        for info in addrinfo:
+            # info struct [family, socktype, proto, canonname, sockaddr]
+            if len(info) >= 4:
+                h.append(info[3])
+    except socket.gaierror:
+        pass
+
+    # try /etc/hostname
+    try:
+        name = ''
+        with salt.utils.fopen('/etc/hostname') as hfl:
+            name = hfl.read()
+        h.append(name)
+    except (IOError, OSError):
+        pass
+
+    # try /etc/hosts
+    try:
+        with salt.utils.fopen('/etc/hosts') as hfl:
+            for line in hfl:
+                names = line.split()
+                try:
+                    ip = names.pop(0)
+                except IndexError:
+                    continue
+                if ip.startswith('127.') or ip == '::1':
+                    for name in names:
+                        h.append(name)
+    except (IOError, OSError):
+        pass
+
+    # try windows hosts
+    if salt.utils.is_windows():
+        try:
+            windir = os.getenv('WINDIR')
+            with salt.utils.fopen(windir + r'\system32\drivers\etc\hosts') as hfl:
+                for line in hfl:
+                    # skip commented or blank lines
+                    if line[0] == '#' or len(line) <= 1:
+                        continue
+                    # process lines looking for '127.' in first column
+                    try:
+                        entry = line.split()
+                        if entry[0].startswith('127.'):
+                            for name in entry[1:]:  # try each name in the row
+                                h.append(name)
+                    except IndexError:
+                        pass  # could not split line (malformed entry?)
+        except (IOError, OSError):
+            pass
+
+    # strip spaces and ignore empty strings
+    hosts = []
+    for name in h:
+        name = name.strip()
+        if len(name) > 0:
+            hosts.append(name)
+
+    # remove duplicates
+    hosts = list(set(hosts))
+    return hosts
+
+
+def generate_minion_id():
+    '''
+    Returns a minion id after checking multiple sources for a FQDN.
+    If no FQDN is found you may get an ip address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.generate_minion_id
+    '''
+    possible_ids = get_hostnames()
+
+    ip_addresses = [IPv4Address(addr) for addr
+                    in salt.utils.network.ip_addrs(include_loopback=True)
+                    if not addr.startswith('127.')]
+
+    # include public and private ipaddresses
+    for addr in ip_addresses:
+        possible_ids.append(str(addr))
+
+    possible_ids = _filter_localhost_names(possible_ids)
+
+    # if no minion id
+    if len(possible_ids) == 0:
+        return 'noname'
+
+    hosts = _sort_hostnames(possible_ids)
+    return hosts[0]
+
+
+def get_fqhostname():
+    '''
+    Returns the fully qualified hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.get_fqhostname
+    '''
+    l = []
+    l.append(socket.getfqdn())
+
+    # try socket.getaddrinfo
+    try:
+        addrinfo = socket.getaddrinfo(
+            socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
+            socket.SOL_TCP, socket.AI_CANONNAME
+        )
+        for info in addrinfo:
+            # info struct [family, socktype, proto, canonname, sockaddr]
+            if len(info) >= 4:
+                l.append(info[3])
+    except socket.gaierror:
+        pass
+
+    l = _sort_hostnames(l)
+    if len(l) > 0:
+        return l[0]
+
+    return None
 
 
 def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.ip_to_host 8.8.8.8
     '''
@@ -171,7 +419,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?([\w.]+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.\-]+)(?:@)?([\w.\-]+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):
@@ -528,16 +776,13 @@ def ip_addrs(interface=None, include_loopback=False):
             log.error('Interface {0} not found.'.format(interface))
     for ipv4_info in target_ifaces.values():
         for ipv4 in ipv4_info.get('inet', []):
-            if include_loopback \
-                    or (not include_loopback
-                        and ipv4['address'] != '127.0.0.1'):
+            loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
+            if not loopback or include_loopback:
                 ret.add(ipv4['address'])
         for secondary in ipv4_info.get('secondary', []):
             addr = secondary.get('address')
             if addr and secondary.get('type') == 'inet':
-                if include_loopback \
-                        or (not include_loopback
-                            and addr != '127.0.0.1'):
+                if include_loopback or (not include_loopback and not in_subnet('127.0.0.0/8', [addr])):
                     ret.add(addr)
     return sorted(list(ret))
 
@@ -559,14 +804,12 @@ def ip_addrs6(interface=None, include_loopback=False):
             log.error('Interface {0} not found.'.format(interface))
     for ipv6_info in target_ifaces.values():
         for ipv6 in ipv6_info.get('inet6', []):
-            if include_loopback \
-                    or (not include_loopback and ipv6['address'] != '::1'):
+            if include_loopback or ipv6['address'] != '::1':
                 ret.add(ipv6['address'])
         for secondary in ipv6_info.get('secondary', []):
             addr = secondary.get('address')
             if addr and secondary.get('type') == 'inet6':
-                if include_loopback \
-                        or (not include_loopback and addr != '::1'):
+                if include_loopback or addr != '::1':
                     ret.add(addr)
     return sorted(list(ret))
 

@@ -6,6 +6,7 @@ Minion side functions for salt-cp
 # Import python libs
 import os
 import logging
+import fnmatch
 
 # Import salt libs
 import salt.minion
@@ -171,9 +172,12 @@ def get_template(path,
                  template='jinja',
                  saltenv='base',
                  env=None,
+                 makedirs=False,
                  **kwargs):
     '''
-    Render a file as a template before setting it down
+    Render a file as a template before setting it down.
+    Warning, order is not the same as in fileclient.cp for
+    non breaking old API.
 
     CLI Example:
 
@@ -203,7 +207,7 @@ def get_template(path,
             path,
             dest,
             template,
-            False,
+            makedirs,
             saltenv,
             **kwargs)
 
@@ -307,6 +311,19 @@ def cache_file(path, saltenv='base', env=None):
     if path.startswith('salt://|'):
         # Strip pipe. Windows doesn't allow pipes in filenames
         path = 'salt://{0}'.format(path[8:])
+    env_splitter = '?saltenv='
+    if '?env=' in path:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using '
+            '\'saltenv\' not \'env\'. This functionality will be '
+            'removed in Salt Boron.'
+        )
+        env_splitter = '?env='
+    try:
+        path, saltenv = path.split(env_splitter)
+    except ValueError:
+        pass
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(
@@ -342,15 +359,38 @@ def cache_files(paths, saltenv='base', env=None):
     return __context__['cp.fileclient'].cache_files(paths, saltenv)
 
 
-def cache_dir(path, saltenv='base', include_empty=False, env=None):
+def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
+              exclude_pat=None, env=None):
     '''
     Download and cache everything under a directory from the master
 
-    CLI Example:
+
+    include_pat : None
+        Glob or regex to narrow down the files cached from the given path. If
+        matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. versionadded:: Helium
+
+    exclude_pat : None
+        Glob or regex to exclude certain files from being cached from the given
+        path. If matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. note::
+
+            If used with ``include_pat``, files matching this pattern will be
+            excluded from the subset of files defined by ``include_pat``.
+
+        .. versionadded:: Helium
+
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' cp.cache_dir salt://path/to/dir
+        salt '*' cp.cache_dir salt://path/to/dir include_pat='E@*.py$'
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -362,7 +402,9 @@ def cache_dir(path, saltenv='base', include_empty=False, env=None):
         saltenv = env
 
     _mk_client()
-    return __context__['cp.fileclient'].cache_dir(path, saltenv, include_empty)
+    return __context__['cp.fileclient'].cache_dir(
+        path, saltenv, include_empty, include_pat, exclude_pat
+    )
 
 
 def cache_master(saltenv='base', env=None):
@@ -621,3 +663,41 @@ def push(path):
             ret = sreq.send(load)
             if not ret:
                 return ret
+
+
+def push_dir(path, glob=None):
+    '''
+    Push a directory from the minion up to the master, the files will be saved
+    to the salt master in the master's minion files cachedir (defaults to
+    ``/var/cache/salt/master/minions/minion-id/files``).  It also has a glob
+    for matching specific files using globbing.
+
+    .. versionadded:: Helium
+
+    Since this feature allows a minion to push files up to the master server it
+    is disabled by default for security purposes. To enable, set ``file_recv``
+    to ``True`` in the master configuration file, and restart the master.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.push /usr/lib/mysql
+        salt '*' cp.push_dir /etc/modprobe.d/ glob='*.conf'
+    '''
+    if '../' in path or not os.path.isabs(path):
+        return False
+    path = os.path.realpath(path)
+    if os.path.isfile(path):
+        return push(path)
+    else:
+        filelist = []
+        for root, dirs, files in os.walk(path):
+            filelist += [os.path.join(root, tmpfile) for tmpfile in files]
+        if glob is not None:
+            filelist = filter(lambda fi: fnmatch.fnmatch(fi, glob), filelist)
+        for tmpfile in filelist:
+            ret = push(tmpfile)
+            if not ret:
+                return ret
+    return True

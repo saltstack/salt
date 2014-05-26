@@ -49,3 +49,19 @@ def is_writeable(path, check_parent=False):
     # Finally, return if we're allowed to write in the parent directory of the
     # provided path
     return os.access(parent_dir, os.W_OK)
+
+
+def is_readable(path):
+    '''
+    Check if a given path is readable by the current user.
+
+    :param path: The path to check
+    :returns: True or False
+    '''
+
+    if os.access(path, os.F_OK) and os.access(path, os.R_OK):
+        # The path exists and is readable
+        return True
+
+    # The path does not exist
+    return False

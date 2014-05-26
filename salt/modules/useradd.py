@@ -7,7 +7,6 @@ Manage users with the useradd command
 import re
 
 try:
-    import grp
     import pwd
 except ImportError:
     pass
@@ -326,7 +325,18 @@ def chgroups(name, groups, append=False):
     if append:
         cmd += '-a '
     cmd += '-G "{0}" {1}'.format(','.join(groups), name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmdret = __salt__['cmd.run_all'](cmd)
+    ret = not cmdret['retcode']
+    # try to fallback on gpasswd to add user to localgroups
+    # for old lib-pamldap support
+    if not ret and ('not found in' in cmdret['stderr']):
+        ret = True
+        for group in groups:
+            cmd = 'gpasswd -a {0} {1}'.format(name, group)
+            cmdret = __salt__['cmd.run_all'](cmd)
+            if cmdret['retcode']:
+                ret = False
+    return ret
 
 
 def chfullname(name, fullname):
@@ -484,24 +494,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    ugrp = set()
-
-    # Add the primary user's group
-    try:
-        ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
-    except KeyError:
-        # The user's applied default group is undefined on the system, so
-        # it does not exist
-        pass
-
-    groups = grp.getgrall()
-
-    # Now, all other groups the user belongs to
-    for group in groups:
-        if name in group.gr_mem:
-            ugrp.add(group.gr_name)
-
-    return sorted(list(ugrp))
+    return salt.utils.get_group_list(name)
 
 
 def list_users():

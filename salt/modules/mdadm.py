@@ -129,88 +129,144 @@ def destroy(device):
         for number in details['members']:
             __salt__['cmd.retcode'](zero_cmd.format(number['device']))
 
+    # Remove entry from config file:
+    if __grains__.get('os_family') == 'Debian':
+        cfg_file = '/etc/mdadm/mdadm.conf'
+    else:
+        cfg_file = '/etc/mdadm.conf'
+
+    __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
+
     if __salt__['raid.list']().get(device) is None:
         return True
     else:
         return False
 
 
-def create(*args):
+def create(name,
+           level,
+           devices,
+           raid_devices=None,
+           test_mode=False,
+           **kwargs):
     '''
     Create a RAID device.
+
+    .. versionchanged:: Helium
 
     .. warning::
         Use with CAUTION, as this function can be very destructive if not used
         properly!
 
-    Use this module just as a regular mdadm command.
-
-    For more info, read the ``mdadm(8)`` manpage
-
-    NOTE: It takes time to create a RAID array. You can check the progress in
-    "resync_status:" field of the results from the following command:
-
-    .. code-block:: bash
-
-        salt '*' raid.detail /dev/md0
-
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 raid_devices=2 ['/dev/xvdd', '/dev/xvde'] test_mode=True
 
-    .. note:: Test mode
+    .. note::
 
         Adding ``test_mode=True`` as an argument will print out the mdadm
         command that would have been run.
 
-    :param args: The arguments u pass to this function.
-    :param arguments:
-        arguments['new_array']: The name of the new RAID array that will be created.
-        arguments['opt_val']: Option with Value. Example: raid-devices=2
-        arguments['opt_raw']: Option without Value. Example: force
-        arguments['disks_to_array']: The disks that will be added to the new raid.
-    :return:
+    name
+        The name of the array to create.
+
+    level
+        The RAID level to use when creating the raid.
+
+    devices
+        A list of devices used to build the array.
+
+    raid_devices
+        The number of devices in the array.  If not specified, the number of devices will be counted.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
         test_mode=True:
             Prints out the full command.
         test_mode=False (Default):
             Executes command on remote the host(s) and
             Prints out the mdadm output.
+
+    .. note::
+
+        It takes time to create a RAID array. You can check the progress in
+        "resync_status:" field of the results from the following command:
+
+        .. code-block:: bash
+
+            salt '*' raid.detail /dev/md0
+
+    For more info, read the ``mdadm(8)`` manpage
     '''
-    test_mode = False
-    arguments = {'new_array': '', 'opt_val': {}, 'opt_raw': [], "disks_to_array": []}
+    cmd_args = {}
 
-    for arg in args:
-        if arg.startswith('test_mode'):
-            test_mode = bool(arg.split('=')[-1])
-        elif arg.startswith('/dev/') is True:
-            if arg.startswith('/dev/md') is True:
-                arguments['new_array'] = arg
+    cmd_args['name'] = name
+    cmd_args['level'] = level
+    cmd_args['devices'] = ' '.join(devices)
+
+    if raid_devices is None:
+        cmd_args['raid-devices'] = len(devices)
+
+    opts = ''
+    for key in kwargs:
+        if not key.startswith('__'):
+            if kwargs[key] is True:
+                opts += '--{0} '.format(key)
             else:
-                arguments['disks_to_array'].append(arg)
-        elif '=' in arg:
-            opt, val = arg.split('=')
-            arguments['opt_val'][opt] = val
-        elif str(arg) in ['readonly', 'run', 'force']:
-            arguments['opt_raw'].append(arg)
-        elif str(arg) in ['missing']:
-            arguments['disks_to_array'].append(arg)
-        else:
-            msg = "Invalid argument - {0} !"
-            raise CommandExecutionError(msg.format(arg))
+                opts += '--{0}={1} '.format(key, kwargs[key])
 
-    cmd = "echo y | mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}"
-    cmd = cmd.format(new_array=arguments['new_array'],
-                     opts_raw=(' --' + ' --'.join(arguments['opt_raw'])
-                               if len(arguments['opt_raw']) > 0
-                               else ''),
-                     opts_val=(' --' + ' --'.join(key + '=' + arguments['opt_val'][key] for key in arguments['opt_val'])
-                               if len(arguments['opt_val']) > 0
-                               else ''),
-                     disks_to_array=' '.join(arguments['disks_to_array']))
+    cmd_args['raw_args'] = opts
+
+    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(cmd_args['name'],
+            cmd_args['raw_args'],
+            cmd_args['level'],
+            cmd_args['raid-devices'],
+            cmd_args['devices'])
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
         return __salt__['cmd.run'](cmd)
+
+
+def save_config():
+    '''
+    Save RAID configuration to config file.
+
+    Same as:
+    mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+
+    Fixes this issue with Ubuntu
+    REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.save_config
+
+    '''
+    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
+    # Issue with mdadm and ubuntu
+    # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
+    if __grains__['os'] == 'Ubuntu':
+        buggy_ubuntu_tags = ['name', 'metadata']
+        for bad_tag in buggy_ubuntu_tags:
+            for i, elem in enumerate(scan):
+                if not elem.find(bad_tag):
+                    del scan[i]
+
+    scan = ' '.join(scan)
+    if __grains__.get('os_family') == 'Debian':
+        cfg_file = '/etc/mdadm/mdadm.conf'
+    else:
+        cfg_file = '/etc/mdadm.conf'
+
+    if not __salt__['file.search'](cfg_file, scan):
+        __salt__['file.append'](cfg_file, scan)
+
+    return __salt__['cmd.run']('update-initramfs -u')

@@ -78,8 +78,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -96,7 +97,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Package information returned two lines per package. On even-offset
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
-    lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    lines = __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
     for index, line in enumerate(lines):
         if index % 2 == 0:
             name = line.split()[0].strip()
@@ -281,9 +282,11 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         log.warning('\'refresh\' argument not implemented for solarispkg '
                     'module')
 
+    # pkgs is not supported, but must be passed here for API compatibility
+    pkgs = kwargs.pop('pkgs', None)
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, kwargs.get('pkgs'), sources, **kwargs
+            name, pkgs, sources, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -310,7 +313,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        __salt__['cmd.run'](temp_cmd, output_loglevel='debug')
+        __salt__['cmd.run'](temp_cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -423,7 +426,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
     # Remove the package
     cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile,
                                                  ' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     # Remove the temp adminfile
     if not 'admin_source' in kwargs:
         os.unlink(adminfile)

@@ -148,7 +148,7 @@ This is most likely a PATH issue. Did you custom-compile the software which the
 module requires? RHEL/CentOS/etc. in particular override the root user's path
 in ``/etc/init.d/functions``, setting it to ``/sbin:/usr/sbin:/bin:/usr/bin``,
 making software installed into ``/usr/local/bin`` unavailable to Salt when the
-Minion is started using the initscript. In version 0.18.0, Salt will have a
+Minion is started using the initscript. In version 2014.1.0, Salt will have a
 better solution for these sort of PATH-related issues, but recompiling the
 software to install it into a location within the PATH should resolve the
 issue in the meantime. Alternatively, you can create a symbolic link within the
@@ -163,11 +163,21 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
 
-As of release 0.17.1 backwards compatibility was broken (specifically for
-0.17.1 trying to interface with older releases) due to a protocol change for
-security purposes. The Salt team continues to emphasize backwards compatibility
-as an important feature and plans to support it to the best of our ability to
-do so.
+This depends on the versions.  In general, it is recommended that Master and
+Minion versions match.
+
+When upgrading Salt, the master(s) should always be upgraded first.  Backwards
+compatibility for minions running newer versions of salt than their masters is
+not guaranteed.
+
+Whenever possible, backwards compatibility between new masters
+and old minions will be preserved.  Generally, the only exception to this
+policy is in case of a security vulnerability.
+
+Recent examples of backwards compatibility breakage include the 0.17.1 release
+(where all backwards compatibility was broken due to a security fix), and the
+2014.1.0 release (which retained compatibility between 2014.1.0 masters and
+0.17 minions, but broke compatibility for 2014.1.0 minions and older masters).
 
 Does Salt support backing up managed files?
 -------------------------------------------
@@ -177,3 +187,62 @@ allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
+
+What is the best way to restart a Salt daemon using Salt?
+---------------------------------------------------------
+
+Restarting Salt using Salt without having the restart interrupt the whole
+process is a tricky problem to solve. We're still working on it but in the
+meantime a good way is to use the system scheduler with a short interval. The
+following example is a state that will always execute at the very end of a
+state run.
+
+For Unix machines:
+
+.. code-block:: yaml
+
+    salt-minion-reload:
+      cmd:
+        - run
+        - name: echo service salt-minion restart | at now + 1 minute
+        - order: last
+
+For Windows machines:
+
+.. code-block:: yaml
+
+    schedule-start:
+      cmd:
+        - run
+        - name: at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net start salt-minion"
+        - shell: powershell
+        - order: last
+      service:
+        - dead
+        - name: salt-minion
+        - require:
+            - cmd: schedule-start
+
+Salting the Salt Master
+-----------------------
+
+In order to configure a master server via states, the Salt master can also be
+"salted" in order to enforce state on the Salt master as well as the Salt
+minions. Salting the Salt master requires a Salt minion to be installed on
+the same machine as the Salt master. Once the Salt minion is installed, the
+minion configuration file must be pointed to the local Salt master:
+
+.. code-block:: yaml
+
+    master: 127.0.0.1
+
+Once the Salt master has been "salted" with a Salt minion, it can be targeted
+just like any other minion. If the minion on the salted master is running, the
+minion can be targeted via any usual ``salt`` command. Additionally, the
+``salt-call`` command can execute operations to enforce state on the salted
+master without requiring the minion to be running.
+
+More information about salting the Salt master can be found in the salt-formula
+for salt itself:
+
+https://github.com/saltstack-formulas/salt-formula

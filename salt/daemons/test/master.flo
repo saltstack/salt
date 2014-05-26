@@ -1,0 +1,21 @@
+# Raet Test FloScript
+
+house master
+
+init .raet.udp.stack.local to eid 1 name "master" host "" port 7530
+#init port in .raet.udp.stack.local from value in .salt.etc.raet_port
+
+
+framer masterudpstack be active first start
+   frame start
+      do raet road stack per inode ".raet.udp.stack"
+      exit
+         do raet road stack closer per inode ".raet.udp.stack."
+
+framer uxdrouter be active first start
+   frame start
+      do raet road stack printer per inode ".raet.udp.stack."
+      timeout 20
+
+   frame abort
+      bid stop all

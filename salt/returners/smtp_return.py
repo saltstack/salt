@@ -35,6 +35,11 @@ There are a few things to keep in mind:
   recommended not to use 'return', which contains the entire return data
   structure (which can be very large). Also note that the subject is always
   unencrypted.
+
+  To use the SMTP returner, append '--return smtp' to the salt command. ex:
+
+    salt '*' test.ping --return smtp
+
 '''
 
 # Import python libs
@@ -94,7 +99,8 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
     if HAS_GNUPG and gpgowner:
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~%s/.gnupg' % gpgowner), options=['--trust-model always'])
+        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                        options=['--trust-model always'])
         encrypted_data = gpg.encrypt(content, to_addrs)
         if encrypted_data.ok:
             log.debug('smtp_return: Encryption successful')

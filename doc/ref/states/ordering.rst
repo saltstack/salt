@@ -1,3 +1,5 @@
+.. _ordering:
+
 ===============
 Ordering States
 ===============
@@ -17,6 +19,8 @@ a finite order, which guarantees that states are always executed in the same
 order, and the states runtime is declarative, making Salt fully aware of
 dependencies via the `requisite` system.
 
+.. _ordering_auto_order:
+
 State Auto Ordering
 ===================
 
@@ -35,6 +39,8 @@ below will also override the order in which states are defined in sls files.
 
 If the classic ordering is preferred (lexicographic), then set
 ``state_auto_order`` to ``False`` in the master configuration file.
+
+.. _ordering_requisites:
 
 Requisite Statements
 ====================
@@ -282,12 +288,13 @@ earlier ``service.running`` example above,  the service can be set to
           - file: /etc/redis.conf
           - pkg: redis
 
+.. _ordering_order:
 
 The Order Option
 ================
 
 Before using the `order` option, remember that the majority of state ordering
-should be done with a :term:`requisite declaration`, and that a requisite
+should be done with a :ref:`requisite-declaration`, and that a requisite
 declaration will override an `order` option, so a state with order option
 should not require or required by other states.
 

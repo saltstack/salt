@@ -18,14 +18,13 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 from salt.modules import mysql as mysqlmod
 
 log = logging.getLogger(__name__)
 
 NO_MYSQL = False
 try:
-    import MySQLdb
+    import MySQLdb  # pylint: disable=W0611
 except ImportError:
     NO_MYSQL = True
 
@@ -328,12 +327,12 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_user=self.user,
             connection_pass=self.password,
         )
-        create_query = ('CREATE TABLE %(tblname)s ('
+        create_query = ('CREATE TABLE {tblname} ('
             ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
-            ' data VARCHAR(100)) ENGINE=%(engine)s;') % dict(
+            ' data VARCHAR(100)) ENGINE={engine};'.format(
             tblname=mysqlmod.quote_identifier(self.table1),
             engine='MYISAM',
-        )
+        ))
         log.info('Adding table {0!r}'.format(self.table1,))
         self.run_function(
             'mysql.query',
@@ -342,12 +341,12 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             connection_user=self.user,
             connection_pass=self.password
         )
-        create_query = ('CREATE TABLE %(tblname)s ('
+        create_query = ('CREATE TABLE {tblname} ('
             ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
-            ' data VARCHAR(100)) ENGINE=%(engine)s;') % dict(
+            ' data VARCHAR(100)) ENGINE={engine};'.format(
             tblname=mysqlmod.quote_identifier(self.table2),
             engine='MYISAM',
-        )
+        ))
         log.info('Adding table {0!r}'.format(self.table2,))
         self.run_function(
             'mysql.query',

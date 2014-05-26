@@ -100,12 +100,12 @@ def __get_conn():
         connection = __salt__['config.get']('libvirt:connection', 'esx')
         if connection.startswith('esx://'):
             return connection
-        return '%s' % connection
+        return connection
 
     def __esxi_auth():
         '''
         We rely on that the credentials is provided to libvirt through
-        it's built in mechanisms.
+        its built in mechanisms.
 
         Example libvirt `/etc/libvirt/auth.conf`:
 
@@ -127,11 +127,16 @@ def __get_conn():
         '''
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
+    if 'virt.connect' in __opts__:
+        conn_str = __opts__['virt.connect']
+    else:
+        conn_str = 'qemu:///system'
+
     conn_func = {
         'esxi': [libvirt.openAuth, [__esxi_uri(),
                                     __esxi_auth(),
                                     0]],
-        'qemu': [libvirt.open, ['qemu:///system']],
+        'qemu': [libvirt.open, [conn_str]],
         }
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
@@ -575,7 +580,7 @@ def init(name,
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
 
-            except os.error:
+            except (IOError, OSError):
                 return False
             seedable = True
         else:
@@ -606,12 +611,12 @@ def init(name,
 
     if kwargs.get('seed') and seedable:
         install = kwargs.get('install', True)
-        __salt__['seed.apply'](img_dest,
-                               id_=name,
-                               config=kwargs.get('config'),
-                               install=install)
-    elif kwargs.get('seed_cmd') and seedable:
-        __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
+        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
+
+        __salt__[seed_cmd](img_dest,
+                           id_=name,
+                           config=kwargs.get('config'),
+                           install=install)
     if start:
         create(name)
 
@@ -887,7 +892,7 @@ def get_disks(vm_):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
                     source.hasAttribute('name'):  # For rbd network
-                qemu_target = '%s:%s' % (
+                qemu_target = '{0}:{1}'.format(
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
@@ -1093,7 +1098,9 @@ def get_profiles(hypervisor=None):
      - nic
      - disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_profiles
         salt '*' virt.get_profiles hypervisor=esxi
@@ -1625,7 +1632,7 @@ def vm_cputime(vm_=None):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
                 'cputime': int(raw[4]),
-                'cputime_percent': int('%.0f' % cputime_percent)
+                'cputime_percent': int('{0:.0f}'.format(cputime_percent))
                }
     info = {}
     if vm_:

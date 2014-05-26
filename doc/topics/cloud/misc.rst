@@ -57,7 +57,7 @@ Setting up New Salt Masters
 It has become increasingly common for users to set up multi-hierarchal
 infrastructures using Salt Cloud. This sometimes involves setting up an
 instance to be a master in addition to a minion. With that in mind, you can
-now law down master configuration on a machine by specifying master options
+now lay down master configuration on a machine by specifying master options
 in the profile or map file.
 
 .. code-block:: yaml
@@ -173,6 +173,13 @@ The amount of time until an ssh connection can be established via password or
 ssh key. Default 15 seconds.
 
 
+wait_for_passwd_maxtries
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The number of attempts to connect to the VM until we abandon.
+Default 15 attempts
+
+
 wait_for_fun_timeout
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -186,3 +193,87 @@ wait_for_spot_timeout
 
 The amount of time Salt Cloud should wait before an EC2 Spot instance is 
 available. This setting is only available for the EC2 cloud driver.
+
+
+Salt Cloud Cache
+================
+
+Salt Cloud can maintain a cache of node data, for supported providers. The
+following options manage this functionality.
+
+
+update_cachedir
+~~~~~~~~~~~~~~~
+
+On supported cloud providers, whether or not to maintain a cache of nodes
+returned from a --full-query. The data will be stored in ``json`` format under
+``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.json``. This
+setting can be True or False.
+
+
+diff_cache_events
+~~~~~~~~~~~~~~~~~
+
+When the cloud cachedir is being managed, if differences are encountered
+between the data that is returned live from the cloud provider and the data in
+the cache, fire events which describe the changes. This setting can be True or
+False.
+
+Some of these events will contain data which describe a node. Because some of
+the fields returned may contain sensitive data, the ``cache_event_strip_fields``
+configuration option exists to strip those fields from the event return.
+
+.. code-block:: yaml
+
+    cache_event_strip_fields:
+      - password
+      - priv_key
+
+The following are events that can be fired based on this data.
+
+
+salt/cloud/minionid/cache_node_new
+**********************************
+A new node was found on the cloud provider which was not listed in the cloud
+cachedir. A dict describing the new node will be contained in the event.
+
+
+salt/cloud/minionid/cache_node_missing
+**************************************
+A node that was previously listed in the cloud cachedir is no longer available
+on the cloud provider.
+
+
+salt/cloud/minionid/cache_node_diff
+***********************************
+One or more pieces of data in the cloud cachedir has changed on the cloud
+provider. A dict containing both the old and the new data will be contained in
+the event.
+
+
+SSH Known Hosts
+===============
+
+Normally when bootstrapping a VM, salt-cloud will ignore the SSH host key. This
+is because it does not know what the host key is before starting (because it
+doesn't exist yet). If strict host key checking is turned on without the key
+in the ``known_hosts`` file, then the host will never be available, and cannot
+be bootstrapped.
+
+If a provider is able to determine the host key before trying to bootstrap it,
+that provider's driver can add it to the ``known_hosts`` file, and then turn on
+strict host key checking. This can be set up in the main cloud configuration
+file (normally ``/etc/salt/cloud``) or in the provider-specific configuration
+file:
+
+.. code-block:: yaml
+
+    known_hosts_file: /path/to/.ssh/known_hosts
+
+If this is not set, it will default to ``/dev/null``, and strict host key
+checking will be turned off.
+
+It is highly recommended that this option is *not* set, unless the user has
+verified that the provider supports this functionality, and that the image
+being used is capable of providing the necessary information. At this time,
+only the EC2 driver supports this functionality.

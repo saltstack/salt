@@ -29,7 +29,7 @@ warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388
-class CustomLoader(yaml.SafeLoader):
+class SaltYamlSafeLoader(yaml.SafeLoader, object):
     '''
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt
@@ -77,7 +77,7 @@ class CustomLoader(yaml.SafeLoader):
                 raise ConstructorError(err)
             value = self.construct_object(value_node, deep=deep)
             if key in mapping:
-                raise ConstructorError('Conflicting ID "{0}"'.format(key))
+                raise ConstructorError('Conflicting ID {0!r}'.format(key))
             mapping[key] = value
         return mapping
 
@@ -89,11 +89,10 @@ class CustomLoader(yaml.SafeLoader):
         if node.tag == 'tag:yaml.org,2002:int':
             if node.value == '0':
                 pass
-            elif node.value.startswith('0') \
-                    and not node.value.startswith(('0b', '0x')):
+            elif node.value.startswith('0') and not node.value.startswith(('0b', '0x')):
                 node.value = node.value.lstrip('0')
                 # If value was all zeros, node.value would have been reduced to
                 # an empty string. Change it to '0'.
                 if node.value == '':
                     node.value = '0'
-        return yaml.constructor.SafeConstructor.construct_scalar(self, node)
+        return super(SaltYamlSafeLoader, self).construct_scalar(node)

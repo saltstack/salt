@@ -13,6 +13,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.exceptions
+from salt._compat import string_types
 
 KNOWN_BINARY_NAMES = frozenset(
     ['virtualenv',
@@ -204,7 +205,7 @@ def create(path,
                 )
             cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
-            if isinstance(extra_search_dir, basestring) and \
+            if isinstance(extra_search_dir, string_types) and \
                     extra_search_dir.strip() != '':
                 extra_search_dir = [
                     e.strip() for e in extra_search_dir.split(',')
@@ -304,7 +305,7 @@ def create(path,
     # Install pip
     if pip and not os.path.exists(venv_pip):
         _ret = _install_script(
-            'https://raw.github.com/pypa/pip/master/contrib/get-pip.py',
+            'https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py',
             path, venv_python, user, saltenv=saltenv
         )
         # Let's update the return dictionary with the details from the pip

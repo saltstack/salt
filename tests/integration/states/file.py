@@ -8,10 +8,18 @@ Tests for the file state
 import os
 import glob
 import shutil
+import pwd
+import grp
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting import skipIf
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    with_system_user_and_group
+)
 ensure_in_syspath('../../')
+
 
 # Import salt libs
 import integration
@@ -114,6 +122,68 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_file_mode(self):
+        '''
+        file.managed, correct file permissions
+        '''
+        desired_mode = 504    # 0770 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode='0770', source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_replace(self):
+        '''
+        file.managed, existing file with replace=True, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_noreplace(self):
+        '''
+        file.managed, existing file with replace=False, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        ret = self.run_state(
+            'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -121,19 +191,23 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         desired_mode = 511  # 0777 in octal
         name = os.path.join(integration.TMP, 'a', 'managed_dir_mode_test_file')
+        desired_owner = 'nobody'
         ret = self.run_state(
             'file.managed',
             name=name,
             source='salt://grail/scene33',
             mode=600,
             makedirs=True,
+            user=desired_owner,
             dir_mode=oct(desired_mode)  # 0777
         )
         resulting_mode = stat.S_IMODE(
             os.stat(os.path.join(integration.TMP, 'a')).st_mode
         )
+        resulting_owner = pwd.getpwuid(os.stat(os.path.join(integration.TMP, 'a')).st_uid).pw_name
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
+        self.assertEqual(desired_owner, resulting_owner)
 
     def test_test_managed(self):
         '''
@@ -597,11 +671,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertFalse(os.path.exists(name))
         except AssertionError:
             os.remove(name)
-
-        ret = self.run_state('file.append', name=name, text='cheese')
-        # A non existing file is touched, the text is NOT appended.
-        self.assertSaltFalseReturn(ret)
-
         try:
             # Non existing file get's touched
             if os.path.isfile(name):
@@ -901,7 +970,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '    - show_changes: True',
             '']
         open(template_path, 'w').write(
-                '\n'.join(sls_template).format(testcase_filedest))
+            '\n'.join(sls_template).format(testcase_filedest))
         try:
             ret = self.run_function('state.sls', mods='issue-8343')
             for name, step in ret.items():
@@ -925,6 +994,68 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
                 os.unlink(filename)
 
+    def test_issue_11003_immutable_lazy_proxy_sum(self):
+        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
+        testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
+        sls_template = [
+            'a{0}:',
+            '  file.absent:',
+            '    - name: {0}',
+            '',
+            '{0}:',
+            '  file.managed:',
+            '    - contents: |',
+            '                #',
+            '',
+            'test-acc1:',
+            '  file.accumulated:',
+            '    - require_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            bar',
+            '',
+            'test-acc2:',
+            '  file.accumulated:',
+            '    - watch_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            baz',
+            '',
+            'final:',
+            '  file.blockreplace:',
+            '    - name: {0}',
+            '    - marker_start: "#-- start managed zone PLEASE, DO NOT EDIT"',
+            '    - marker_end: "#-- end managed zone"',
+            '    - content: \'\'',
+            '    - append_if_not_found: True',
+            '    - show_changes: True'
+        ]
+
+        open(template_path, 'w').write(
+            '\n'.join(sls_template).format(testcase_filedest))
+        try:
+            ret = self.run_function('state.sls', mods='issue-11003')
+            for name, step in ret.items():
+                self.assertSaltTrueReturn({name: step})
+            self.assertEqual(
+                ['#',
+                 '#-- start managed zone PLEASE, DO NOT EDIT',
+                 'bar',
+                 '',
+                 'baz',
+                 '',
+                 '#-- end managed zone',
+                 ''],
+                open(testcase_filedest).read().split('\n')
+            )
+        finally:
+            if os.path.isdir(testcase_filedest):
+                os.unlink(testcase_filedest)
+            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
+                os.unlink(filename)
+
     def test_issue_8947_utf8_sls(self):
         '''
         Test some file operation with utf-8 chararacters on the sls
@@ -932,7 +1063,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         This is more generic than just a file test. Feel free to move
         '''
         # Get a path to the temporary file
-         # 한국어 시험 (korean)
+        # 한국어 시험 (korean)
         # '\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98' (utf-8)
         # u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8' (unicode)
         korean_1 = '한국어 시험'
@@ -1074,6 +1205,94 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(test_file):
                 os.unlink(test_file)
                 os.unlink(template_path)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    def test_issue_12209_follow_symlinks(self, user, group):
+        '''
+        Ensure that symlinks are properly chowned when recursing (following
+        symlinks)
+        '''
+        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+
+        # Cleanup the path if it already exists
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        elif os.path.isfile(tmp_dir):
+            os.remove(tmp_dir)
+
+        # Make the directories for this test
+        onedir = os.path.join(tmp_dir, 'one')
+        twodir = os.path.join(tmp_dir, 'two')
+        os.makedirs(onedir)
+        os.symlink(onedir, twodir)
+
+        try:
+            # Run the state
+            ret = self.run_state(
+                'file.directory', name=tmp_dir, follow_symlinks=True,
+                user=user, group=group, recurse=['user', 'group']
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Double-check, in case state mis-reported a True result. Since we are
+            # following symlinks, we expect twodir to still be owned by root, but
+            # onedir should be owned by the 'issue12209' user.
+            onestats = os.stat(onedir)
+            twostats = os.lstat(twodir)
+            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
+            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    def test_issue_12209_no_follow_symlinks(self, user, group):
+        '''
+        Ensure that symlinks are properly chowned when recursing (not following
+        symlinks)
+        '''
+        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+
+        # Cleanup the path if it already exists
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        elif os.path.isfile(tmp_dir):
+            os.remove(tmp_dir)
+
+        # Make the directories for this test
+        onedir = os.path.join(tmp_dir, 'one')
+        twodir = os.path.join(tmp_dir, 'two')
+        os.makedirs(onedir)
+        os.symlink(onedir, twodir)
+
+        try:
+            # Run the state
+            ret = self.run_state(
+                'file.directory', name=tmp_dir, follow_symlinks=False,
+                user=user, group=group, recurse=['user', 'group']
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Double-check, in case state mis-reported a True result. Since we
+            # are not following symlinks, we expect twodir to now be owned by
+            # the 'issue12209' user, just link onedir.
+            onestats = os.stat(onedir)
+            twostats = os.lstat(twodir)
+            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
+            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
 
 if __name__ == '__main__':
     from integration import run_tests

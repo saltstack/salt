@@ -1,0 +1,13 @@
+<h4>SaltStack News</h4>
+<p><a href="http://www.saltstack.com/events">Upcoming SaltStack events,
+webinars and local meet ups and user groups.</a></p>
+
+{% if on_saltstack %}
+<h4>SaltStack training</h4>
+<img src="{{ pathto('_static/images/salt-training.png', 1) }}" alt="" style="padding-bottom: 1em;">
+
+<ul>
+    <li><a href="http://saltlondon.eventbrite.com/"> London, May 28-30</a></li>
+    <li><a href="http://saltslc.eventbrite.com/">Salt Lake City, June 11-13</a></li>
+</ul>
+{% endif %}

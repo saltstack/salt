@@ -5,7 +5,6 @@ Manage users on Mac OS 10.7+
 
 # Import python libs
 try:
-    import grp
     import pwd
 except ImportError:
     pass
@@ -338,7 +337,7 @@ def chgroups(name, groups, append=False):
     if isinstance(groups, string_types):
         groups = groups.split(',')
 
-    bad_groups = any(salt.utils.contains_whitespace(x) for x in groups)
+    bad_groups = [x for x in groups if salt.utils.contains_whitespace(x)]
     if bad_groups:
         raise SaltInvocationError(
             'Invalid group name(s): {0}'.format(', '.join(bad_groups))
@@ -408,24 +407,8 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    ugrp = set()
-
-    # Add the primary user's group
-    try:
-        ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
-    except KeyError:
-        # The user's applied default group is undefined on the system, so
-        # it does not exist
-        pass
-
-    groups = [x for x in grp.getgrall() if not x.gr_name.startswith('_')]
-
-    # Now, all other groups the user belongs to
-    for group in groups:
-        if name in group.gr_mem:
-            ugrp.add(group.gr_name)
-
-    return sorted(list(ugrp))
+    groups = [group for group in salt.utils.get_group_list(name) if not group.startswith('_')]
+    return groups
 
 
 def list_users():

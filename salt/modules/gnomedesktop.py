@@ -5,7 +5,7 @@ GNOME implementations
 
 try:
     import pwd
-    from gi.repository import Gio, GLib
+    from gi.repository import Gio, GLib  # pylint: disable=W0611
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False

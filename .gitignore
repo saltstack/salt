@@ -40,6 +40,8 @@ htmlcov/
 /.idea
 /.ropeproject
 /*.iml
+*.sublime-project
+*.sublime-workspace
 
 # ignore ctags file
 tags

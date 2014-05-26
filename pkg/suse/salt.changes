@@ -1,4 +1,122 @@
 -------------------------------------------------------------------
+Mon May  5 18:19:29 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.4
+  - Fix setup.py dependency issue (issue 12031)
+  - Fix handling for IOErrors under certain circumstances (issue 11783 and issue 11853)
+  - Fix fatal exception when `/proc/1/cgroup` is not readable (issue 11619)
+  - Fix os grains for OpenSolaris (issue 11907)
+  - Fix `lvs.zero` module argument pass-through (issue 9001)
+  - Fix bug in `debian_ip` interaction with `network.system` state (issue 11164)
+  - Remove bad binary package verification code (issue 12177)
+  - Fix traceback in solaris package installation (issue 12237)
+  - Fix `file.directory` state symlink handling (issue 12209)
+  - Remove `external_ip` grain
+  - Fix `file.managed` makedirs issues (issue 10446)
+  - Fix hang on non-existent Windows drive letter for `file` module (issue 9880)
+  - Fix salt minion caching all users on the server (issue 9743)
+
+-------------------------------------------------------------------
+Thu Apr 17 18:06:56 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.3
+  - Fix username detection when su'ed to root on FreeBSD (issue 11628)
+  - Fix minionfs backend for file.recurse states
+  - Fix 32-bit packages of different arches than the CPU arch, on 32-bit RHEL/CentOS (issue 11822)
+  - Fix bug with specifying alternate home dir on user creation (FreeBSD) (issue 11790)
+  - Don’t reload site module on module refresh for MacOS
+  - Fix regression with running execution functions in Pillar SLS (issue 11453)
+  - Fix some modules missing from Windows installer
+  - Don’t log an error for yum commands that return nonzero exit status on non-failure (issue 11645)
+  - Fix bug in rabbitmq state (issue 8703)
+  - Fix missing ssh config options (issue 10604)
+  - Fix top.sls ordering (issue 10810 and issue 11691)
+  - Fix salt-key --list all (issue 10982)
+  - Fix win_servermanager install/remove function (issue 11038)
+  - Fix interaction with tokens when running commands as root (issue 11223)
+  - Fix overstate bug with find_job and **kwargs (issue 10503)
+  - Fix saltenv for aptpkg.mod_repo from pkgrepo state
+  - Fix environment issue causing file caching problems (issue 11189)
+  - Fix bug in __parse_key in registry state (issue 11408)
+  - Add minion auth retry on rejection (issue 10763)
+  - Fix publish_session updating the encryption key (issue 11493)
+  - Fix for bad AssertionError raised by GitPython (issue 11473)
+  - Fix debian_ip to allow disabling and enabling networking on Ubuntu (issue 11164)
+  - Fix potential memory leak caused by saved (and unused) events (issue 11582)
+  - Fix exception handling in the MySQL module (issue 11616)
+  - Fix environment-related error (issue 11534)
+  - Include psutil on Windows
+  - Add file.replace and file.search to Windows (issue 11471)
+  - Add additional file module helpers to Windows (issue 11235)
+  - Add pid to netstat output on Windows (issue 10782)
+  - Fix Windows not caching new versions of installers in winrepo (issue 10597)
+  - Fix hardcoded md5 hashing
+  - Fix kwargs in salt-ssh (issue 11609)
+  - Fix file backup timestamps (issue 11745)
+  - Fix stacktrace on sys.doc with invalid eauth (issue 11293)
+  - Fix git.latest with test=True (issue 11595)
+  - Fix file.check_perms hardcoded follow_symlinks (issue 11387)
+  - Fix certain pkg states for RHEL5/Cent5 machines (issue 11719)
+- Packaging: 
+  - python-psutil depencies (more functional modules out of the box)
+  - python-yaml depencies (more functional modules out of the box)
+  - python-requests depencies (salt-cloud)
+  
+
+-------------------------------------------------------------------
+Wed Mar 19 19:29:13 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.1 Bug Fix release
+- temporarily disabled integration check after consult with Upstream
+-------------------------------------------------------------------
+Thu Feb 20 19:10:20 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.0 Major Release
+- features:
+  - 2014.1.0 is the first release to follow the new date-based release naming system.
+  - Salt Cloud Merged into Salt
+  - Google Compute Engine support is added to salt-cloud.
+  - Salt Virt released
+  - Docker Integration
+  - IPv6 Support for iptables State/Module
+  - GitFS Improvements
+  - MinionFS
+  - saltenv
+  - Grains Caching
+  - Improved Command Logging Control
+  - PagerDuty Support
+  - Virtual Terminal
+  - Proxy Minions
+- bugfixes:
+  - Fix mount.mounted leaving conflicting entries in fstab (:issue:`7079`)
+  - Fix mysql returner serialization to use json (:issue:`9590`)
+  - Fix ZMQError: Operation cannot be accomplished in current state errors (:issue:`6306`)
+  - Rbenv and ruby improvements
+  - Fix quoting issues with mysql port (:issue:`9568`)
+  - Update mount module/state to support multiple swap partitions (:issue:`9520`)
+  - Fix archive state to work with bsdtar
+  - Clarify logs for minion ID caching
+  - Add numeric revision support to git state (:issue:`9718`)
+  - Update master_uri with master_ip (:issue:`9694`)
+  - Add comment to Debian mod_repo (:issue:`9923`)
+  - Fix potential undefined loop variable in rabbitmq state (:issue:`8703`)
+  - Fix for salt-virt runner to delete key on VM deletion
+  - Fix for salt-run -d to limit results to specific runner or function (:issue:`9975`)
+  - Add tracebacks to jinja renderer when applicable (:issue:`10010`)
+  - Fix parsing in monit module (:issue:`10041`)
+  - Fix highstate output from syndic minions (:issue:`9732`)
+  - Quiet logging when dealing with passwords/hashes (:issue:`10000`)
+  - Fix for multiple remotes in git_pillar (:issue:`9932`)
+  - Fix npm installed command (:issue:`10109`)
+  - Add safeguards for utf8 errors in zcbuildout module
+  - Fix compound commands (:issue:`9746`)
+  - Add systemd notification when master is started
+  - Many doc improvements
+- packaging:
+  - source tarball includes all packaging files in pkg folder.
+  - fixed rpmlint errors about duplicates.
+  - fixed rpmlint errors about non executables scripts.
+-------------------------------------------------------------------
 Sat Jan 25 20:21:12 UTC 2014 - aboe76@gmail.com
 
 - Updated to 0.17.5 a bugfix release for 0.17.0:

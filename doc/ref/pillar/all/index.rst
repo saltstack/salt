@@ -14,11 +14,14 @@ Full list of builtin pillar modules
     cmd_yaml
     cobbler
     django_orm
+    etcd_pillar
     git_pillar
     hiera
     libvirt
     mongo
+    mysql
     pillar_ldap
     puppet
     reclass_adapter
+    redismod
     virtkey

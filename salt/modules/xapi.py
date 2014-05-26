@@ -13,7 +13,7 @@ Useful documentation:
 
 . http://downloads.xen.org/Wiki/XenAPI/xenapi-1.0.6.pdf
 . http://docs.vmd.citrix.com/XenServer/6.0.0/1.0/en_gb/api/
-. https://github.com/xen-org/xen-api/tree/master/scripts/examples/python
+. https://github.com/xapi-project/xen-api/tree/master/scripts/examples/python
 . http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 '''
 
@@ -828,7 +828,7 @@ def vm_cputime(vm_=None):
                 # Divide by vcpus to always return a number between 0 and 100
                 cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
             return {'cputime': int(cputime),
-                    'cputime_percent': int('%.0f' % cputime_percent)}
+                    'cputime_percent': int('{0:.0f}'.format(cputime_percent))}
         info = {}
         if vm_:
             info[vm_] = _info(vm_)

@@ -14,9 +14,11 @@ import logging
 
 
 try:
+    # pylint: disable=W0611
     import jnpr.junos
     import jnpr.junos.utils
     import jnpr.junos.cfg
+    # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
@@ -34,10 +36,10 @@ __proxyenabled__ = ['junos']
 def __virtual__():
     '''
     We need the Junos adapter libraries for this
-    module to work.  We also need a proxyconn object
+    module to work.  We also need a proxyobject object
     in the opts dictionary
     '''
-    if HAS_JUNOS and 'proxyconn' in __opts__:
+    if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
         return False
@@ -49,13 +51,13 @@ def facts_refresh():
     if the device configuration is changed by some other actor.
     '''
 
-    return __opts__['proxyconn'].refresh
+    return __opts__['proxyobject'].refresh
 
 
-def set_hostname(hostname=None, commit=True):
+def set_hostname(hostname=None, commit_change=True):
 
     ret = dict()
-    conn = __opts__['proxyconn']
+    conn = __opts__['proxyobject']
     if hostname is None:
         ret['out'] = False
         return ret
@@ -65,7 +67,7 @@ def set_hostname(hostname=None, commit=True):
     set_string = 'set system host-name {0}'.format(hostname)
 
     conn.cu.load(set_string, format='set')
-    if commit:
+    if commit_change:
         return commit()
     else:
         ret['out'] = True
@@ -76,7 +78,7 @@ def set_hostname(hostname=None, commit=True):
 
 def commit():
 
-    conn = __opts__['proxyconn']
+    conn = __opts__['proxyobject']
 
     ret = {}
     commit_ok = conn.cu.commit_check()
@@ -96,7 +98,7 @@ def commit():
 
 
 def rollback():
-    conn = __opts__['proxyconn']
+    conn = __opts__['proxyobject']
     ret = dict()
 
     ret['out'] = conn.cu.rollback(0)
@@ -112,7 +114,7 @@ def rollback():
 def diff():
 
     ret = dict()
-    conn = __opts__['proxyconn']
+    conn = __opts__['proxyobject']
     ret['out'] = True
     ret['message'] = conn.cu.diff()
 
@@ -122,6 +124,6 @@ def diff():
 def ping():
 
     ret = dict()
-    conn = __opts__['proxyconn']
+    conn = __opts__['proxyobject']
     ret['message'] = conn.cli('show system uptime')
     ret['out'] = True

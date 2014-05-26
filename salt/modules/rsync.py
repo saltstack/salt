@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide rsync files to Salt
+Wrapper for rsync
 
-    This data can also be passed into pillar. Options passed into opts will
-    overwrite options passed into pillar.
+.. versionadded:: 2014.1.0 (Hydrogen)
+
+This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
+Options passed into opts will overwrite options passed into pillar.
 '''
 
 # Import python libs
@@ -130,7 +132,7 @@ def config(confile='/etc/rsyncd.conf'):
     '''
 
     if not os.path.isfile(confile):
-        raise CommandExecutionError('ERROR: %s is not exists' % confile)
+        raise CommandExecutionError('{0!r} does not exit'.format(confile))
 
     cmd = (
           r'''cat {confile}'''

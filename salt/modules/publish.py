@@ -47,13 +47,11 @@ def _publish(
     '''
     if fun == 'publish.publish':
         log.info('Function name is \'publish.publish\'. Returning {}')
-        # Need to log something here
         return {}
 
     arg = _normalize_arg(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_pub',
@@ -70,8 +68,6 @@ def _publish(
     sreq = salt.transport.Channel.factory(__opts__)
     try:
         peer_data = sreq.send(load)
-        # peer_data = auth.crypticle.loads(
-        #     sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
@@ -83,8 +79,6 @@ def _publish(
             'tok': tok,
             'jid': peer_data['jid']}
     ret = sreq.send(load)
-    #  auth.crypticle.loads(
-    #         sreq.send('aes', auth.crypticle.dumps(load), 5))
     if form == 'clean':
         cret = {}
         for host in ret:
@@ -202,7 +196,7 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     form='full')
 
 
-def runner(fun, arg=None):
+def runner(fun, arg=None, timeout=5):
     '''
     Execute a runner on the master and return the data from the runner
     function
@@ -215,20 +209,20 @@ def runner(fun, arg=None):
     '''
     arg = _normalize_arg(arg)
 
+    if 'master_uri' not in __opts__:
+        return 'No access to master. If using salt-call with --local, please remove.'
     log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',
             'fun': fun,
             'arg': arg,
             'tok': tok,
+            'tmo': timeout,
             'id': __opts__['id']}
 
     sreq = salt.transport.Channel.factory(__opts__)
     try:
         return sreq.send(load)
-        # return auth.crypticle.loads(
-        #    sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)

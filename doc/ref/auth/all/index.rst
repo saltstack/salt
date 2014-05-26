@@ -14,4 +14,5 @@ Full list of builtin auth modules
     keystone
     ldap
     pam
+    pki
     stormpath_mod

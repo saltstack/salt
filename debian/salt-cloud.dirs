@@ -1,0 +1,5 @@
+/etc/salt/cloud.conf.d/
+/etc/salt/cloud.deploy.d/
+/etc/salt/cloud.maps.d/
+/etc/salt/cloud.profiles.d/
+/etc/salt/cloud.providers.d/

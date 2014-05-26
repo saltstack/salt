@@ -1,0 +1,4 @@
+localhost:
+  host: 127.0.0.1
+  user: root
+  port: 2827

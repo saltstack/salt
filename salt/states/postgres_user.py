@@ -28,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_user' if (
-        'postgres.user_exists' in __salt__
-    ) else False
+    return 'postgres.user_exists' in __salt__
 
 
 def present(name,
@@ -125,7 +123,7 @@ def present(name,
            'comment': 'User {0} is already present'.format(name)}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -227,6 +225,8 @@ def present(name,
         ret['comment'] = 'The user {0} has been {1}d'.format(name, mode)
         if update:
             ret['changes'][name] = update
+        else:
+            ret['changes'][name] = 'Present'
     elif cret is not None:
         ret['comment'] = 'Failed to create user {0}'.format(name)
         ret['result'] = False
@@ -278,7 +278,7 @@ def absent(name,
            'comment': ''}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

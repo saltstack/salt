@@ -1,14 +1,27 @@
+.. _events:
+
+.. index:: ! Event, event bus, event system
+    see: Reactor; Event
+
 =================
 Salt Event System
 =================
 
-Salt 0.9.10 introduced the Salt Event System. This system is used to fire
-off events enabling third party applications or external processes to react
-to behavior within Salt.
+The Salt Event System is used to fire off events enabling third party
+applications or external processes to react to behavior within Salt.
 
-The event system is comprised of a few components, the event sockets which
-publish events, and the event library which can listen to events and send
-events into the salt system.
+The event system is comprised of a two primary components:
+
+    * The event sockets which publishes events.
+    * The event library which can listen to events and send events into the salt system.
+
+Event types
+===========
+
+.. toctree::
+    :maxdepth: 2
+
+    master_events
 
 Listening for Events
 ====================
@@ -30,11 +43,14 @@ The following code will check for a single event:
 
     data = event.get_event()
 
-Events will also use a "tag". A "tag" allows for events to be filtered. By
-default all events will be returned, but if only authentication events are
-desired, then pass the tag "auth". Also, the get_event method has a default
-poll time assigned of 5 seconds, to change this time set the "wait" option.
-This example will only listen for auth events and will wait for 10 seconds
+Events will also use a "tag". Tags allow for events to be filtered. By
+default all events will be returned. If only authentication events are
+desired, then pass the tag "auth".
+
+The ``get_event`` method has a default poll time assigned of 5 seconds. To
+change this time set the "wait" option.
+
+The following example will only listen for auth events and will wait for 10 seconds
 instead of the default 5.
 
 .. code-block:: python
@@ -45,9 +61,10 @@ instead of the default 5.
 
     data = event.get_event(wait=10, tag='auth')
 
-Instead of looking for a single event, the iter_events method can be used to
-make a generator which will continually yield salt events. The iter_events
-method also accepts a tag, but not a wait time:
+Instead of looking for a single event, the ``iter_events`` method can be used to
+make a generator which will continually yield salt events.
+
+The iter_events method also accepts a tag but not a wait time:
 
 .. code-block:: python
 
@@ -62,9 +79,10 @@ method also accepts a tag, but not a wait time:
 Firing Events
 =============
 
-It is possible to fire events on either the minion's local bus, or to fire
-events intended for the master. To fire a local event from the minion, on the
-command line:
+It is possible to fire events on either the minion's local bus or to fire
+events intended for the master.
+
+To fire a local event from the minion, on the command line:
 
 .. code-block:: bash
 
@@ -129,8 +147,8 @@ So long as the salt-master process is running, the master socket can be used:
     sock_dir = '/var/run/salt/master'
 
 This allows 3rd party applications to harness the power of the Salt event bus
-programmatically, without having to make other calls to Salt. A 3rd party
-process can listen to the event bus on the master, and another 3rd party
+programmatically, without having to make other calls to Salt.
+
+A 3rd party process can listen to the event bus on the master and another 3rd party
 process can fire events to the process on the master, which Salt will happily
 pass along.
-

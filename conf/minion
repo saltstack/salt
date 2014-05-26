@@ -10,6 +10,13 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# If multiple masters are specified in the 'master' setting, the default behavior
+# is to always try to connect to them in the order they are listed. If random_master is
+# set to True, the order will be randomized instead. This can be helpful in distributing
+# the load of many minions executing salt-call requests, for example from a cron job.
+# If only one master is listed, this setting is ignored and a warning will be logged.
+#random_master: False
+
 # Set whether the minion should connect to the master via IPv6
 #ipv6: False
 
@@ -103,6 +110,10 @@
 # set to zero, the time between reconnection attempts will stay constant.
 #acceptance_wait_time_max: 0
 
+# If the master rejects the minion's public key, retry instead exiting. Rejected keys
+# # will be handled the same as waiting on acceptance.
+#rejected_retry: False
+
 # When the master key changes, the minion will try to re-auth itself to receive
 # the new master key. In larger environments this can cause a SYN flood on the
 # master because all minions try to re-auth immediately. To prevent this and
@@ -110,6 +121,38 @@
 # The wait-time will be a random number of seconds between
 # 0 and the defined value.
 #random_reauth_delay: 60
+
+# When waiting for a master to accept the minion's public key, salt will
+# continuously attempt to reconnect until successful. This is the timeout value,
+# in seconds, for each individual attempt. After this timeout expires, the minion
+# will wait for acceptance_wait_time seconds before trying again.
+# Unless your master is under unusually heavy load, this should be left at the default.
+#auth_timeout: 60
+
+
+# Number of consecutive SaltReqTimeoutError that are acceptable when trying to authenticate.
+#auth_tries: 1
+
+# If authentication failes due to SaltReqTimeoutError, continue without ending minion.
+#auth_safemode: True
+
+# If the minion hits an error that is recoverable, restart the minion.
+#restart_on_error: False
+
+# Ping Master to ensure connection is alive (minutes).
+# TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
+#ping_interval: 0
+
+# To auto recover Minions if Master changes IP address (DDNS)
+#
+#    auth_tries: 10
+#    auth_safemode: False
+#    ping_interval: 90
+#    restart_on_error: True
+#
+# Minions wont know master is missing untill a ping fails.  After the ping fail,
+# the minion will attempt authentication and likly fails out and cause a restart.
+# When the minion restarts it will resolve the Masters IP and attempt to reconnect.
 
 
 # If you don't have any problems with syn-floods, dont bother with the
@@ -217,6 +260,11 @@
 #tcp_pub_port: 4510
 #tcp_pull_port: 4511
 
+# Passing very large events can cause the minion to consume large amounts of
+# memory. This value tunes the maximum size of a message allowed onto the
+# minion event bus. The value is expressed in bytes.
+#max_event_size: 1048576
+
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
@@ -248,6 +296,7 @@
 #returner_dirs: []
 #states_dirs: []
 #render_dirs: []
+#utils_dirs: []
 #
 # A module provider can be statically overwritten or extended for the minion
 # via the providers option, in this case the default module will be
@@ -367,6 +416,10 @@
 # The hash_type is the hash to use when discovering the hash of a file in
 # the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
+#
+# Warning: Prior to changing this value, the minion should be stopped and all
+# Salt caches should be cleared.
+#
 #hash_type: md5
 
 # The Salt pillar is searched for locally if file_client is set to local. If

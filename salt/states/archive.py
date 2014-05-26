@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-
-"""
+'''
 Archive states.
 
 .. versionadded:: 2014.1.0 (Hydrogen)
-"""
+'''
 
 import logging
 import os
@@ -19,13 +18,20 @@ def extracted(name,
               archive_format,
               tar_options=None,
               source_hash=None,
-              if_missing=None):
+              if_missing=None,
+              keep=False):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     State that make sure an archive is extracted in a directory.
     The downloaded archive is erased if successfully extracted.
     The archive is downloaded only if necessary.
+
+    .. note::
+
+        If ``if_missing`` is not defined, this state will check for ``name``
+        instead.  If ``name`` exists, it will assume the archive was previously
+        extracted successfully and will not extract it again.
 
     .. code-block:: yaml
 
@@ -56,6 +62,10 @@ def extracted(name,
     source
         Archive source, same syntax as file.managed source argument.
 
+    source_hash
+        Hash of source file, or file with list of hash-to-file mappings.
+        It uses the same syntax as the file.managed source_hash argument.
+
     archive_format
         tar, zip or rar
 
@@ -69,6 +79,8 @@ def extracted(name,
         this archive, such as 'J' for LZMA.
         Using this option means that the tar executable on the target will
         be used, which is less platform independent.
+        Main operators like -x, --extract, --get, -c, etc. and -f/--file are
+        **shoult not be used** here.
         If this option is not set, then the Python tarfile module is used.
         The tarfile module supports gzip and bz2 in Python 2.
     '''
@@ -83,13 +95,15 @@ def extracted(name,
 
     if if_missing is None:
         if_missing = name
-    if (__salt__['file.directory_exists'](if_missing) or
-        __salt__['file.file_exists'](if_missing)):
+    if (
+        __salt__['file.directory_exists'](if_missing)
+        or __salt__['file.file_exists'](if_missing)
+    ):
         ret['result'] = True
         ret['comment'] = '{0} already exists'.format(if_missing)
         return ret
 
-    log.debug("Input seem valid so far")
+    log.debug('Input seem valid so far')
     filename = os.path.join(__opts__['cachedir'],
                             '{0}.{1}'.format(if_missing.replace('/', '_'),
                                              archive_format))
@@ -97,11 +111,11 @@ def extracted(name,
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(source,
-                                                                         name)
+                'Archive {0} would have been downloaded in cache'.format(
+                    source, name)
             return ret
 
-        log.debug("Archive file %s is not in cache, download it", source)
+        log.debug('Archive file {0} is not in cache, download it'.format(source))
         data = {
             filename: {
                 'file': [
@@ -109,19 +123,20 @@ def extracted(name,
                     {'name': filename},
                     {'source': source},
                     {'source_hash': source_hash},
-                    {'makedirs': True}
+                    {'makedirs': True},
+                    {'saltenv': __env__}
                 ]
             }
         }
         file_result = __salt__['state.high'](data)
-        log.debug("file.managed: %s", file_result)
+        log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         file_result = file_result[file_result.keys()[0]]
         if not file_result['result']:
-            log.debug("failed to download %s", source)
+            log.debug('failed to download {0}'.format(source))
             return file_result
     else:
-        log.debug("Archive file %s is already in cache", name)
+        log.debug('Archive file {0} is already in cache'.format(name))
 
     if __opts__['test']:
         ret['result'] = None
@@ -132,35 +147,40 @@ def extracted(name,
     __salt__['file.makedirs'](name)
 
     if archive_format in ('zip', 'rar'):
-        log.debug("Extract %s in %s", filename, name)
-        files = __salt__['archive.un{0}'.format(archive_format)](filename, name)
+        log.debug('Extract {0} in {1}'.format(filename, name))
+        files = __salt__['archive.un{0}'.format(archive_format)](filename,
+                                                                 name)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
                 files = tar.getnames()
                 tar.extractall(name)
         else:
-            # this is needed until merging PR 2651
-            log.debug("Untar %s in %s", filename, name)
-            results = __salt__['cmd.run_all']('tar -xv{0}f {1}'.format(tar_options,
-                                                                 filename),
-                                              cwd=name)
+            log.debug('Untar {0} in {1}'.format(filename, name))
+
+            results = __salt__['cmd.run_all']('tar {0} -f "{1}"'.format(
+                tar_options, filename), cwd=name)
             if results['retcode'] != 0:
-                return results
+                ret['result'] = False
+                ret['changes'] = results
+                return ret
             if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
                 files = results['stderr']
             else:
                 files = results['stdout']
+            if not files:
+                files = 'no tar output so far'
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
         if if_missing != name:
             ret['changes']['directories_created'].append(if_missing)
         ret['changes']['extracted_files'] = files
-        ret['comment'] = "{0} extracted in {1}".format(source, name)
-        os.unlink(filename)
+        ret['comment'] = '{0} extracted in {1}'.format(source, name)
+        if not keep:
+            os.unlink(filename)
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
-        ret['comment'] = "Can't extract content of {0}".format(source)
+        ret['comment'] = 'Can\'t extract content of {0}'.format(source)
     return ret

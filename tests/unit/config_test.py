@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
     :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
@@ -12,23 +10,89 @@
 '''
 
 # Import python libs
+import logging
 import os
 import shutil
 import tempfile
 import warnings
+from contextlib import contextmanager
 
 # Import Salt Testing libs
 from salttesting import TestCase
+from salttesting.mock import MagicMock, patch
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
+from salt.exceptions import CommandExecutionError
 
 ensure_in_syspath('../')
 
 # Import salt libs
 import salt.minion
 import salt.utils
+import salt.utils.network
 import integration
 from salt import config as sconfig, version as salt_version
 from salt.version import SaltStackVersion
+
+log = logging.getLogger(__name__)
+
+# mock hostname should be more complex than the systems FQDN
+MOCK_HOSTNAME = 'very.long.complex.fqdn.that.is.crazy.extra.long.example.com'
+
+MOCK_ETC_HOSTS = (
+    '##\n'
+    '# Host Database\n'
+    '#\n'
+    '# localhost is used to configure the loopback interface\n'
+    '# when the system is booting.  Do not change this entry.\n'
+    '##\n'
+    '\n'  # This empty line MUST STAY HERE, it factors into the tests
+    '127.0.0.1      localhost   ' + MOCK_HOSTNAME + '\n'
+    '10.0.0.100     ' + MOCK_HOSTNAME + '\n'
+    '200.200.200.2  other.host.alias.com\n'
+    '::1            ip6-localhost ip6-loopback\n'
+    'fe00::0        ip6-localnet\n'
+    'ff00::0        ip6-mcastprefix\n'
+)
+MOCK_ETC_HOSTNAME = '{0}\n'.format(MOCK_HOSTNAME)
+
+
+def _unhandled_mock_read(filename):
+    '''
+    Raise an error because we should not be calling salt.utils.fopen()
+    '''
+    raise CommandExecutionError('Unhandled mock read for {0}'.format(filename))
+
+
+@contextmanager
+def _fopen_side_effect_etc_hostname(filename):
+    '''
+    Mock reading from /etc/hostname
+    '''
+    log.debug('Mock-reading {0}'.format(filename))
+    if filename == '/etc/hostname':
+        mock_open = MagicMock()
+        mock_open.read.return_value = MOCK_ETC_HOSTNAME
+        yield mock_open
+    elif filename == '/etc/hosts':
+        raise IOError(2, "No such file or directory: '{0}'".format(filename))
+    else:
+        _unhandled_mock_read(filename)
+
+
+@contextmanager
+def _fopen_side_effect_etc_hosts(filename):
+    '''
+    Mock /etc/hostname not existing, and falling back to reading /etc/hosts
+    '''
+    log.debug('Mock-reading {0}'.format(filename))
+    if filename == '/etc/hostname':
+        raise IOError(2, "No such file or directory: '{0}'".format(filename))
+    elif filename == '/etc/hosts':
+        mock_open = MagicMock()
+        mock_open.__iter__.return_value = MOCK_ETC_HOSTS.splitlines()
+        yield mock_open
+    else:
+        _unhandled_mock_read(filename)
 
 
 class ConfigTestCase(TestCase):
@@ -386,6 +450,28 @@ class ConfigTestCase(TestCase):
         finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
+
+    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
+    def test_get_id_etc_hostname(self):
+        '''
+        Test calling salt.config.get_id() and falling back to looking at
+        /etc/hostname.
+        '''
+        with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
+            self.assertEqual(
+                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
+            )
+
+    @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
+    def test_get_id_etc_hosts(self):
+        '''
+        Test calling salt.config.get_id() and falling back all the way to
+        looking up data from /etc/hosts.
+        '''
+        with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
+            self.assertEqual(
+                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
+            )
 
 
 if __name__ == '__main__':

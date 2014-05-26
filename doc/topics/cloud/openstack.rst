@@ -6,8 +6,8 @@ OpenStack is one the most popular cloud projects. It's an open source project
 to build public and/or private clouds. You can use Salt Cloud to launch
 OpenStack instances.
 
-* Using the new format, set up the cloud configuration at 
-  ``/etc/salt/cloud.providers`` or 
+* Using the new format, set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/openstack.conf``:
 
 .. code-block:: yaml
@@ -34,6 +34,9 @@ OpenStack instances.
       tenant: myproject
 
       provider: openstack
+
+      # skip SSL certificate validation (default false)
+      insecure: false
 
 
 
@@ -87,3 +90,13 @@ Here is an example of a profile:
 
 ``image`` can be one of the options listed in the output of ``nova image-list``.
 
+
+change_password
+~~~~~~~~~~~~~~~
+If no ssh_key_file is provided, and the server already exists, change_password
+will use the api to change the root password of the server so that it can be
+bootstrapped.
+
+.. code-block:: yaml
+
+    change_password: True

@@ -5,10 +5,21 @@ Getting Started With AWS EC2
 Amazon EC2 is a very widely used public cloud platform and one of the core
 platforms Salt Cloud has been built to support.
 
-Previously, the suggested provider for AWS EC2 was the `aws` provider. This has
-been deprecated in favor of the `ec2` provider. Configuration using the old
-`aws` provider will still function, but that driver is no longer in active
-development.
+Previously, the suggested provider for AWS EC2 was the ``aws`` provider. This
+has been deprecated in favor of the ``ec2`` provider. Configuration using the
+old ``aws`` provider will still function, but that driver is no longer in
+active development.
+
+
+Dependencies
+============
+This driver requires the Python ``requests`` library to be installed.
+
+
+Configuration
+=============
+The following example illustrates some of the options that can be set. These
+parameters are discussed in more detail below.
 
 .. code-block:: yaml
 
@@ -173,13 +184,13 @@ is able to access AWS using the permissions associated with the IAM role.
 
 Scaffolding the profile is a 2-step configuration process:
 
- 1. Configure an IAM Role from the `IAM Management Console`_.
- 2. Attach this role to a new profile. It can be done with the `AWS CLI`_:
+1. Configure an IAM Role from the `IAM Management Console`_.
+2. Attach this role to a new profile. It can be done with the `AWS CLI`_:
 
     .. code-block:: bash
 
-      > aws iam create-instance-profile --instance-profile-name PROFILE_NAME
-      > aws iam add-role-to-instance-profile --instance-profile-name PROFILE_NAME --role-name ROLE_NAME
+        > aws iam create-instance-profile --instance-profile-name PROFILE_NAME
+        > aws iam add-role-to-instance-profile --instance-profile-name PROFILE_NAME --role-name ROLE_NAME
 
 Once the profile is created, you can use the **PROFILE_NAME** to configure
 your cloud profiles.
@@ -216,6 +227,34 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+      # optionally add tags to profile:
+      tag: {'Environment': 'production', 'Role': 'database'}
+      # force grains to sync after install
+      sync_after_install: grains
+
+    base_ec2_vpc:
+      provider: my-ec2-southeast-public-ips
+      image: ami-a73264ce
+      size: m1.xlarge
+      ssh_username: ec2-user
+      script:  /etc/salt/cloud.deploy.d/user_data.sh
+      network_interfaces:
+        - DeviceIndex: 0
+          PrivateIpAddresses:
+            - Primary: True
+          #auto assign public ip (not EIP)
+          AssociatePublicIpAddress: True
+          SubnetId: subnet-813d4bbf
+          SecurityGroupId:
+            - sg-750af413
+      volumes:
+        - { size: 10, device: /dev/sdf }
+        - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
+        - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+      del_root_vol_on_destroy: True
+      del_all_vol_on_destroy: True
+      tag: {'Environment': 'production', 'Role': 'database'}
+      sync_after_install: grains
 
 
 The profile can now be realized with a salt command:
@@ -344,10 +383,15 @@ instance size goes above your maximum bid.
 The following parameters may be set in the cloud configuration file to
 control various aspects of the spot instance launching:
 
-* ``wait_for_spot_timeout``: seconds to wait before giving up on spot instance launch (default=600)
-* ``wait_for_spot_interval``: seconds to wait in between polling requests to determine if a spot instance is available (default=30)
-* ``wait_for_spot_interval_multiplier``: a multiplier to add to the interval in between requests, which is useful if AWS is throttling your requests (default=1)
-* ``wait_for_spot_max_failures``: maximum number of failures before giving up on launching your spot instance (default=10)
+* ``wait_for_spot_timeout``: seconds to wait before giving up on spot instance
+  launch (default=600)
+* ``wait_for_spot_interval``: seconds to wait in between polling requests to
+  determine if a spot instance is available (default=30)
+* ``wait_for_spot_interval_multiplier``: a multiplier to add to the interval in
+  between requests, which is useful if AWS is throttling your requests
+  (default=1)
+* ``wait_for_spot_max_failures``: maximum number of failures before giving up
+  on launching your spot instance (default=10)
 
 If you find that you're being throttled by AWS while polling for spot
 instances, you can set the following in your core cloud configuration
@@ -363,10 +407,11 @@ See the `AWS Spot Instances`_ documentation for more information.
 
 Block device mappings enable you to specify additional EBS volumes or instance
 store volumes when the instance is launched. This setting is also available on
-each cloud profile. Note that the number of instance stores varies by instance type.
-If more mappings are provided than are supported by the instance type, mappings will be
-created in the order provided and additional mappings will be ignored. Consult the
-`AWS documentation`_ for a listing of the available instance stores, device names, and mount points.
+each cloud profile. Note that the number of instance stores varies by instance
+type.  If more mappings are provided than are supported by the instance type,
+mappings will be created in the order provided and additional mappings will be
+ignored. Consult the `AWS documentation`_ for a listing of the available
+instance stores, device names, and mount points.
 
 .. code-block:: yaml
 
@@ -415,10 +460,10 @@ Tags can be set once an instance has been launched.
     my-ec2-config:
         tag:
             tag0: value
-            tag2: value
+            tag1: value
 
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
-.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/spot-instances/
+.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
 
 Modify EC2 Tags
 ===============
@@ -431,6 +476,15 @@ as a tag called Name. Salt Cloud has the ability to manage these tags:
     salt-cloud -a get_tags mymachine
     salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     salt-cloud -a del_tags mymachine tag1,tag2,tag3
+
+It is possible to manage tags on any resource in EC2 with a Resource ID, not
+just instances:
+
+.. code-block:: bash
+
+    salt-cloud -f get_tags my_ec2 resource_id=af5467ba
+    salt-cloud -f set_tags my_ec2 resource_id=af5467ba tag1=somestuff
+    salt-cloud -f del_tags my_ec2 resource_id=af5467ba tag1,tag2,tag3
 
 
 Rename EC2 Instances
@@ -521,39 +575,35 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `Arch Linux`__
 
-  .. __: https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
+.. __: https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
 
 * `FreeBSD`__
 
-  .. __: http://www.daemonology.net/freebsd-on-ec2/
+.. __: http://www.daemonology.net/freebsd-on-ec2/
 
 * `Fedora`__
 
-  .. __: https://fedoraproject.org/wiki/Cloud_images
+.. __: https://fedoraproject.org/wiki/Cloud_images
 
 * `CentOS`__
 
-  .. __: http://wiki.centos.org/Cloud/AWS
+.. __: http://wiki.centos.org/Cloud/AWS
 
 * `Ubuntu`__
 
-  .. __: http://cloud-images.ubuntu.com/locator/ec2/
+.. __: http://cloud-images.ubuntu.com/locator/ec2/
 
 * `Debian`__
 
-  .. __: http://wiki.debian.org/Cloud/AmazonEC2Image
-
-* `Gentoo`__
-
-  .. __: https://aws.amazon.com/amis?platform=Gentoo&selection=platform
+.. __: https://wiki.debian.org/Cloud/AmazonEC2Image
 
 * `OmniOS`__
 
-  .. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
+.. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
 
 * `All Images on Amazon`__
 
-  .. __: https://aws.amazon.com/amis
+.. __: https://aws.amazon.com/marketplace
 
 
 show_image
