@@ -642,7 +642,6 @@ class State(object):
                 return ret
         return ret
 
-
     def load_modules(self, data=None):
         '''
         Load the modules into the state
@@ -1458,7 +1457,7 @@ class State(object):
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
             if ('unless' in low and '{0[state]}.run_check'.format(low) not in self.functions) or \
-                    ('onlyif' in low and '{0[state]}.run_check'.format(low) not in self.functions): 
+                    ('onlyif' in low and '{0[state]}.run_check'.format(low) not in self.functions):
                 ret.update(self._run_check(low))
 
             if 'saltenv' in low:
