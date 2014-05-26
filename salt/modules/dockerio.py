@@ -154,6 +154,7 @@ import os
 import re
 import traceback
 import shutil
+import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -1468,9 +1469,9 @@ def build(path=None,
                 message = json.loads(list(ret)[-1])
                 if 'stream' in message:
                     if 'Successfully built' in message['stream']:
-                        valid(status,out=message['stream'])
+                        valid(status, out=message['stream'])
                 if 'errorDetail' in message:
-                    invalid(status,out=message['errorDetail']['message'])
+                    invalid(status, out=message['errorDetail']['message'])
 
             elif isinstance(ret, tuple):
                 id, out = ret[0], ret[1]
@@ -1478,7 +1479,6 @@ def build(path=None,
                     valid(status, id=id, out=out, comment='Image built')
                 else:
                     invalid(status, id=id, out=out)
-
 
         except Exception:
             invalid(status,
