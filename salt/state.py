@@ -602,19 +602,14 @@ class State(object):
         '''
         Check that unless doesn't return 0, and that onlyif returns a 0.
         '''
-        ret = {
-            'name': low_data['name'],
-            'changes': None,
-            'result': False
-        }
-
+        ret = {'result': False}
         if 'onlyif' in low_data:
             for entry in low_data['onlyif']:
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
                 log.debug('Last command return code: {0}'.format(cmd))
-                if cmd != 0:
+                if cmd != 0 and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed', 'result': True})
-                else:
+                elif cmd == 0:
                     ret.update({'comment': 'onlyif execution succeeded', 'result': False})
                     return ret
             return ret
@@ -623,9 +618,9 @@ class State(object):
             for entry in low_data['unless']:
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
                 log.debug('Last command return code: {0}'.format(cmd))
-                if cmd == 0:
+                if cmd == 0 and ret['result'] is False:
                     ret.update({'comment': 'unless execution succeeded', 'result': True})
-                else:
+                elif cmd != 0:
                     ret.update({'comment': 'unless execution failed', 'result': False})
                     return ret
 
@@ -636,12 +631,13 @@ class State(object):
         '''
         Alter the way a successfull state run is determined
         '''
+        ret = {'result': False}
         for entry in low_data['check_cmd']:
             cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
             log.debug('Last command return code: {0}'.format(cmd))
-            if cmd == 0:
+            if cmd == 0 and ret['result'] is False:
                 ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
-            else:
+            elif cmd != 0:
                 ret.update({'comment': 'check_cmd determined the state failed', 'result': False})
                 return ret
         return ret
@@ -1420,7 +1416,7 @@ class State(object):
             self.check_refresh(low, ret)
             return ret
         else:
-            ret = {'result': False}
+            ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         if not low.get('__prereq__'):
             log.info(
@@ -1463,7 +1459,7 @@ class State(object):
             # not found we default to 'base'
             if ('unless' in low and '{0[state]}.run_check'.format(low) not in self.functions) or \
                     ('onlyif' in low and '{0[state]}.run_check'.format(low) not in self.functions): 
-                ret = self._run_check(low)
+                ret.update(self._run_check(low))
 
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
