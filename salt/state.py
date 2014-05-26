@@ -597,33 +597,34 @@ class State(object):
                     log.error('Failed to execute aggregate for state {0}'.format(low['state']))
         return low
 
-    def _run_check(low_data):
+    def _run_check(self, low_data):
         '''
-        Execute the onlyif and unless logic.
-        Return a result dict if:
-        * group is not available
-        * onlyif failed (onlyif != 0)
-        * unless succeeded (unless == 0)
-        else return True
+        Check that unless doesn't return 0, and that onlyif returns a 0.
         '''
-        if getattr(low, 'onlyif', None) not is None:
-            for entry in onlyif:
-                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+        ret = {
+            'name': low_data['name'],
+            'changes': None,
+            'result': False
+        }
+
+        if 'onlyif' in low_data:
+            for entry in low_data['onlyif']:
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0:
-                    return {'comment': 'onlyif execution failed',
-                        'result': True}
+                    ret.update({ 'comment': 'onlyif execution failed', 'result': True})
+                    return ret
 
-        if getattr(low, 'unless', None) not is None:
-            for entry in unless:
-                cmd = self['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+        if 'unless' in low_data:
+            for entry in low_data['unless']:
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0:
-                    return {'comment': 'unless execution succeeded',
-                            'result': True}
+                    ret.update({'comment': 'unless execution succeeded', 'result': True})
+                    return ret
 
         # No reason to stop, return True
-        return True
+        return ret
 
     def load_modules(self, data=None):
         '''
@@ -1397,6 +1398,8 @@ class State(object):
             format_log(ret)
             self.check_refresh(low, ret)
             return ret
+        else:
+            ret = {'result': False}
 
         if not low.get('__prereq__'):
             log.info(
@@ -1408,16 +1411,12 @@ class State(object):
         if 'provider' in low:
             self.load_modules(low)
 
-        if 'unless' in low or 'onlyif' in low:
-            check_cmd = self._run_check(low)
-
-        if check_cmd is True:
-            state_func_name = '{0[state]}.{0[fun]}'.format(low)
-            cdata = salt.utils.format_call(
-                self.states[state_func_name], low,
-                initial_ret={'full': state_func_name},
-                expected_extra_kws=STATE_INTERNAL_KEYWORDS
-            )
+        state_func_name = '{0[state]}.{0[fun]}'.format(low)
+        cdata = salt.utils.format_call(
+            self.states[state_func_name], low,
+            initial_ret={'full': state_func_name},
+            expected_extra_kws=STATE_INTERNAL_KEYWORDS
+        )
 
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
@@ -1441,6 +1440,9 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
+            if 'unless' in low or 'onlyif' in low:
+                ret = self._run_check(low)
+
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
             elif isinstance(cdata['kwargs'].get('env', None), string_types):
@@ -1458,11 +1460,12 @@ class State(object):
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
 
-            with context.func_globals_inject(self.states[cdata['full']],
-                                             **inject_globals):
-                ret = self.states[cdata['full']](*cdata['args'],
-                                                 **cdata['kwargs'])
-                self.verify_ret(ret)
+            if 'result' not in ret or ret['result'] is False:
+                with context.func_globals_inject(self.states[cdata['full']],
+                                                 **inject_globals):
+                    ret = self.states[cdata['full']](*cdata['args'],
+                                                     **cdata['kwargs'])
+            self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
