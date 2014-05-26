@@ -42,6 +42,7 @@ log = logging.getLogger(__name__)
 STATE_INTERNAL_KEYWORDS = frozenset([
     # These are keywords passed to state module functions which are to be used
     # by salt in this state module and not on the actual state module function
+    'check_cmd',
     'fail_hard',
     'fun',
     'onchanges',
@@ -613,7 +614,10 @@ class State(object):
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0:
                     ret.update({'comment': 'onlyif execution failed', 'result': True})
+                else:
+                    ret.update({'comment': 'onlyif execution succeeded', 'result': False})
                     return ret
+            return ret
 
         if 'unless' in low_data:
             for entry in low_data['unless']:
@@ -621,10 +625,27 @@ class State(object):
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0:
                     ret.update({'comment': 'unless execution succeeded', 'result': True})
+                else:
+                    ret.update({'comment': 'unless execution failed', 'result': False})
                     return ret
 
-        # No reason to stop, return True
+        # No reason to stop, return ret
         return ret
+
+    def _run_check_cmd(self, low_data):
+        '''
+        Alter the way a successfull state run is determined
+        '''
+        for entry in low_data['check_cmd']:
+            cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+            log.debug('Last command return code: {0}'.format(cmd))
+            if cmd == 0:
+                ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
+            else:
+                ret.update({'comment': 'check_cmd determined the state failed', 'result': False})
+                return ret
+        return ret
+
 
     def load_modules(self, data=None):
         '''
@@ -1440,7 +1461,8 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
-            if 'unless' in low or 'onlyif' in low:
+            if ('unless' in low and '{0[state]}.run_check'.format(low) not in self.functions) or \
+                    ('onlyif' in low and '{0[state]}.run_check'.format(low) not in self.functions): 
                 ret = self._run_check(low)
 
             if 'saltenv' in low:
@@ -1465,6 +1487,8 @@ class State(object):
                                                  **inject_globals):
                     ret = self.states[cdata['full']](*cdata['args'],
                                                      **cdata['kwargs'])
+            if 'check_cmd' in low and '{0[state]}.run_check_cmd'.format(low) not in self.functions:
+                ret.update(self._run_check_cmd(low))
             self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
