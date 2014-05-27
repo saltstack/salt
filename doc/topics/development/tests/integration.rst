@@ -38,9 +38,6 @@ state_result:
 run_state:
     Run the state.single command and return the state return structure
 
-
-
-
 SyndicCase
 ----------
 
@@ -212,3 +209,48 @@ This example verifies that the ``salt-key`` command executes and returns as
 expected by making use of the ``run_key`` method.
 
 All shell tests should be placed in the `tests/integraion/shell` directory.
+
+
+Destructive vs Non-Destructive Tests
+====================================
+
+Since Salt is used to change the settings and behavior of systems, one testing
+approach is to run tests that make actual changes to the underlying system. This
+is where the concept of destructive integration tests comes into play. Tests can
+be written to alter the system they are running on. This capability is what fills
+in the gap needed to properly test aspects of system management like package
+installation.
+
+Any test that changes the underlying system in any way, such as creating or
+deleting users, installing packages, or changing permissions should include the
+``@destructive`` decorator to signal system changes and should be written with
+care. System changes executed within a destructive test should also be restored
+once the related tests have completed. For example, if a new user is created to
+test a module, the same user should be removed after the test is completed to
+maintain system integrity.
+
+To write a destructive test, import and use the destructiveTest decorator for
+the test method:
+
+.. code-block:: python
+
+    import integration
+    from salttesting.helpers import destructiveTest
+
+
+    class DestructiveExampleModuleTest(integration.ModuleCase):
+        '''
+        Demonstrate a destructive test
+        '''
+
+        @destructiveTest
+        @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+        def test_user_not_present(self):
+            '''
+            This is a DESTRUCTIVE TEST it creates a new user on the minion.
+            And then destroys that user.
+            '''
+            ret = self.run_state('user.present', name='salt_test')
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('user.absent', name='salt_test')
+            self.assertSaltTrueReturn(ret)
