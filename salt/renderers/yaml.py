@@ -34,13 +34,22 @@ def get_yaml_loader(argline):
     return yaml_loader
 
 
-def render(yaml_data, saltenv='base', sls='', argline='', **kws):
+def render(yaml_data,
+           saltenv='base',
+           sls='',
+           argline='',
+           tmplpath='',
+           renderers=None,
+           env='base',
+           rendered_sls=None):
     '''
     Accepts YAML as a string or as a file object and runs it through the YAML
     parser.
 
     :rtype: A Python data structure
     '''
+    if not renderers:
+        renderers = {}
     if not isinstance(yaml_data, string_types):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:

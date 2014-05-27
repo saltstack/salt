@@ -36,14 +36,14 @@ def compile_template(template,
                      default,
                      saltenv='base',
                      sls='',
-                     **kwargs):
+                     rendered_sls=None
+                     ):
     '''
     Take the path to a template and return the high data structure
     derived from the template.
     '''
 
     # We "map" env to the same as saltenv until Boron is out in order to follow the same deprecation path
-    kwargs.setdefault('env', saltenv)
     salt.utils.warn_until(
         'Boron',
         'We are only supporting \'env\' in the templating context until Boron comes out. '
@@ -77,8 +77,9 @@ def compile_template(template,
             input_data.seek(0)
         except Exception:
             pass
+        render_kwargs = {}
+        render_kwargs.setdefault('env', saltenv)
         render_kwargs = dict(renderers=renderers, tmplpath=template)
-        render_kwargs.update(kwargs)
         if argline:
             render_kwargs['argline'] = argline
         ret = render(input_data, saltenv, sls, **render_kwargs)
