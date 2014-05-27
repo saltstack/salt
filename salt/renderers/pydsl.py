@@ -112,12 +112,12 @@ two examples `ls -la` is the `name` argument.
     state('example').cmd('run', 'ls -la', cwd='/')
 
 Finally, a :ref:`requisite-declaration` object with its
-:ref:`requisite-reference`'s can be created by invoking one of the requisite
-methods(``require``, ``watch``, ``use``, ``require_in``, ``watch_in``, and
-``use_in``) on either a :ref:`function-declaration` object or a
-:ref:`state-declaration` object. The return value of a requisite call is also a
-:ref:`function-declaration` object, so you can chain several requisite calls
-together.
+:ref:`requisite-reference`'s can be created by invoking one of the
+requisite methods (see :doc:`State Requisites
+</ref/states/requisites>`) on either a :ref:`function-declaration`
+object or a :ref:`state-declaration` object. The return value of a
+requisite call is also a :ref:`function-declaration` object, so you
+can chain several requisite calls together.
 
 Arguments to a requisite call can be a list of :ref:`state-declaration` objects
 and/or a set of keyword arguments whose names are state modules and values are
