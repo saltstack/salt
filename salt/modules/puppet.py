@@ -60,7 +60,7 @@ class _Puppet(object):
         self.args = []         # eg. --noop
 
         if salt.utils.is_windows():
-            self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var\\lib\\puppet'
+            self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
         else:
             if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
