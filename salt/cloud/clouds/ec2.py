@@ -1366,7 +1366,7 @@ def request_instance(vm_=None, call=None):
             else:
                 dev_index = len(dev_list)
                 params[
-                    '{0}BlockDeviceMapping.{1}.Ebs.DeviceName'.format(
+                    '{0}BlockDeviceMapping.{1}.DeviceName'.format(
                         spot_prefix, dev_index
                     )
                 ] = rd_name
