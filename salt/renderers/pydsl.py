@@ -78,18 +78,18 @@ state module available in Salt.
 Then, a :ref:`function-declaration` object can be created from a
 :ref:`state-declaration` object by one of the following two ways:
 
-1. by directly calling the attribute named for the :ref:`state-declaration`, and
+1. by calling a method named after the state function on the :ref:`state-declaration` object.
+
+.. code-block:: python
+
+       state('example').file.managed(...)
+
+2. by directly calling the attribute named for the :ref:`state-declaration`, and
    supplying the state function name as the first argument.
 
 .. code-block:: python
 
        state('example').file('managed', ...)
-
-2. by calling a method named after the state function on the :ref:`state-declaration` object.
-
-.. code-block:: python
-
-       state('example').file.managed(...)
 
 With either way of creating a :ref:`function-declaration` object, any
 :ref:`function-arg-declaration`'s can be passed as keyword arguments to the
@@ -101,13 +101,15 @@ declarations.
     state('example').file('managed', source='salt://webserver/index.html')
     state('example').file.managed(source='salt://webserver/index.html')
 
-As a shortcut, the special `name` argument can also be passed as the first(second if
-calling using the first way) positional argument.
+As a shortcut, the special `name` argument can also be passed as the
+first or second positional argument depending on the first or second
+way of calling the :ref:`state-declaration` object. In the following
+two examples `ls -la` is the `name` argument.
 
 .. code-block:: python
 
-    state('example').cmd('run', 'ls -la', cwd='/')
     state('example').cmd.run('ls -la', cwd='/')
+    state('example').cmd('run', 'ls -la', cwd='/')
 
 Finally, a :ref:`requisite-declaration` object with its
 :ref:`requisite-reference`'s can be created by invoking one of the requisite
