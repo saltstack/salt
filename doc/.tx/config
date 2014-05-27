@@ -4376,3 +4376,15 @@ source_file = _build/locale/ref/states/all/salt.states.boto_sqs.pot
 source_lang = en
 source_name = ref/states/all/salt.states.boto_sqs.rst
 
+[salt.topics--cloud--aliyun]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/aliyun.po
+source_file = _build/locale/topics/cloud/aliyun.pot
+source_lang = en
+source_name = topics/cloud/aliyun.rst
+
+[salt.topics--development--conventions--documentation]
+file_filter = locale/<lang>/LC_MESSAGES/topics/development/conventions/documentation.po
+source_file = _build/locale/topics/development/conventions/documentation.pot
+source_lang = en
+source_name = topics/development/conventions/documentation.rst
+
