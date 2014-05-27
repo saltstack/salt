@@ -154,6 +154,7 @@ import os
 import re
 import traceback
 import shutil
+import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -273,6 +274,11 @@ def _get_client(version=None, timeout=None):
         # make sure we override default timeout of docker-py
         # only if defined by user.
         kwargs['timeout'] = timeout
+
+    if not 'base_url' in kwargs and 'DOCKER_HOST' in os.environ:
+        #Check if the DOCKER_HOST environment variable has been set
+        kwargs['base_url'] = os.environ.get('DOCKER_HOST')
+
     client = docker.Client(**kwargs)
     if not version:
         # set version that match docker deamon
@@ -1457,21 +1463,29 @@ def build(path=None,
                                fileobj=fileobj,
                                rm=rm,
                                nocache=nocache)
-            if isinstance(ret, tuple):
-                image_id, out = ret[0], ret[1]
-                if image_id:
-                    valid(status, id=image_id, out=out, comment='Image built')
+
+            if isinstance(ret, types.GeneratorType):
+
+                message = json.loads(list(ret)[-1])
+                if 'stream' in message:
+                    if 'Successfully built' in message['stream']:
+                        valid(status, out=message['stream'])
+                if 'errorDetail' in message:
+                    invalid(status, out=message['errorDetail']['message'])
+
+            elif isinstance(ret, tuple):
+                id, out = ret[0], ret[1]
+                if id:
+                    valid(status, id=id, out=out, comment='Image built')
                 else:
-                    invalid(status, id=image_id, out=out)
-            else:
-                raise NotImplementedError(
-                    'Unknown response type for build() {0!r}'.format(ret))
+                    invalid(status, id=id, out=out)
+
         except Exception:
             invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
-    else:
-        invalid(status, comment='`path` or `fileobj` must be given')
+            return status
+
     return status
 
 
