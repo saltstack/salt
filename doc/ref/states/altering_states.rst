@@ -1,3 +1,5 @@
+.. _altering_states:
+
 ===============
 Altering States
 ===============
