@@ -3662,3 +3662,53 @@ def open_files(by_pid=False):
     if by_pid:
         return pids
     return files
+
+
+def pardir():
+    '''
+    Return the relative parent directory path symbol for underlying OS
+
+    .. versionadded:: Helium
+
+    This can be useful when constructing Salt Formulas.
+
+    .. code-block:: yaml
+
+        {% set pardir = salt['file.pardir']() %}
+        {% set final_path = salt['file.join']('subdir', pardir, 'confdir') %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.pardir
+    '''
+    return os.path.pardir
+
+
+def join(*args):
+    '''
+    Return a normalized file system path for the underlying OS
+
+    .. versionadded:: Helium
+
+    This can be useful at the CLI but is frequently useful when scripting
+    combining path variables:
+
+    .. code-block:: yaml
+
+        {% set www_root = '/var' %}
+        {% set app_dir = 'myapp' %}
+
+        myapp_config:
+          file:
+            - managed
+            - name: {{ salt['file.join'](www_root, app_dir, 'config.yaml') }}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.join '/' 'usr' 'local' 'bin'
+    '''
+    return os.path.join(*args)
