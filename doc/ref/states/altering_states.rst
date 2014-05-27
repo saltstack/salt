@@ -2,6 +2,11 @@
 Altering States
 ===============
 
+.. note::
+
+    The ``unless``, ``onlyif``, and ``check_cmd`` options will be supported
+    starting with the feature release codenamed Helium
+
 The state altering system is used to make sure that states are evaluated exactly
 as the user expects.  It can be used to double check that a state preformed
 exactly how it was expected to, or to make 100% sure that a state only runs
