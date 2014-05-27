@@ -148,7 +148,7 @@ def latest(name,
     run_check_cmd_kwargs = {'runas': user}
 
     # check if git.latest should be applied
-    cret = _run_check(
+    cret = mod_run_check(
         run_check_cmd_kwargs, onlyif, unless
     )
     if isinstance(cret, dict):
@@ -438,7 +438,7 @@ def _neutral_test(ret, comment):
     return ret
 
 
-def _run_check(cmd_kwargs, onlyif, unless):
+def mod_run_check(cmd_kwargs, onlyif, unless):
     '''
     Execute the onlyif and unless logic.
     Return a result dict if:

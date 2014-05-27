@@ -270,7 +270,7 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def _run_check(cmd_kwargs, onlyif, unless, group, creates):
+def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     '''
     Execute the onlyif and unless logic.
     Return a result dict if:
@@ -658,7 +658,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, group, creates)
+        cret = mod_run_check(cmd_kwargs, onlyif, unless, group, creates)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -832,7 +832,7 @@ def script(name,
         cmd_kwargs.update({'args': name.split(' ', 1)[1]})
 
     try:
-        cret = _run_check(
+        cret = mod_run_check(
             run_check_cmd_kwargs, onlyif, unless, group, creates
         )
         if isinstance(cret, dict):
@@ -922,7 +922,7 @@ def call(name,
     if HAS_GRP:
         pgid = os.getegid()
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, None, creates)
+        cret = mod_run_check(cmd_kwargs, onlyif, unless, None, creates)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
