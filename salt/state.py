@@ -1456,8 +1456,8 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
-            if ('unless' in low and '{0[state]}.run_check'.format(low) not in self.functions) or \
-                    ('onlyif' in low and '{0[state]}.run_check'.format(low) not in self.functions):
+            if ('unless' in low and '{0[state]}.mod_run_check'.format(low) not in self.functions) or \
+                    ('onlyif' in low and '{0[state]}.mod_run_check'.format(low) not in self.functions):
                 ret.update(self._run_check(low))
 
             if 'saltenv' in low:
@@ -1482,7 +1482,7 @@ class State(object):
                                                  **inject_globals):
                     ret = self.states[cdata['full']](*cdata['args'],
                                                      **cdata['kwargs'])
-            if 'check_cmd' in low and '{0[state]}.run_check_cmd'.format(low) not in self.functions:
+            if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.functions:
                 ret.update(self._run_check_cmd(low))
             self.verify_ret(ret)
         except Exception:
