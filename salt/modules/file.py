@@ -1221,7 +1221,7 @@ def blockreplace(path,
 
                         # Check for multi-line '\n' terminated content as split will
                         # introduce an unwanted additional new line.
-                        if content[-1] == '\n':
+                        if content and content[-1] == '\n':
                             content = content[:-1]
 
                         # push new block content in file
