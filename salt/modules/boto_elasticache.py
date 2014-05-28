@@ -180,9 +180,10 @@ def create(name, num_cache_nodes, engine, cache_node_type,
                 return True
             time.sleep(2)
         log.info('Created cache cluster {0}.'.format(name))
-    except boto.exception.BotoServerError:
+    except boto.exception.BotoServerError as e:
         msg = 'Failed to create cache cluster {0}.'.format(name)
         log.error(msg)
+        log.debug(e)
         return False
 
 
@@ -211,9 +212,10 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
             time.sleep(2)
         log.info('Deleted cache cluster {0}.'.format(name))
         return True
-    except boto.exception.BotoServerError:
+    except boto.exception.BotoServerError as e:
         msg = 'Failed to delete cache cluster {0}.'.format(name)
         log.error(msg)
+        log.debug(e)
         return False
 
 
