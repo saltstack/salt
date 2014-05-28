@@ -35,11 +35,12 @@ Default: ``salt``
 
     master: salt
 
-If you have more than one master and want the minion to choose one dynamically
-on startup, set this to the modules function name, that returns a valid FQDN 
-or IP of a saltmaster. If you want to use this, :conf_minion:`master_type`,
-must be set to 'func'. The module must exist before starting the minion with 
-this setting.
+The master is, by default, staticaly configured by the `master` setting, but
+if desired, the master can be dynamically configured. The `master` value can
+be set to a module function will will be executed and will assume that the
+returning value is the ip or hostname of the desired master. In addition to
+specifying the function to execute to detect the master the
+:conf_minion:`master_type`, option must be set to 'func'.
 
 .. code-block:: yaml
 
@@ -53,11 +54,12 @@ this setting.
 
 Default: ``str``
 
-The type of the :conf_minion:`master` variable. If you want the value of
-:conf_minion:`master` to be evaluated by a modules function call, set this 
-to 'func'. This can be used to manage your minions master setting from a
-module. You can simply change the algorithm in your module to return a new
-master ip/fqdn, restart your minion and they will connect to the new master.
+The type of the :conf_minion:`master` variable. If the master needs to be
+dynamically assigned by executing a function instead of reading in the static
+master value, set this  to 'func'. This can be used to manage the minion's
+master setting from an execution module. By simply changeing the algorithm
+in the module to return a new master ip/fqdn, restart the minion and it will
+connect to the new master.
 
 .. code-block:: yaml
 
