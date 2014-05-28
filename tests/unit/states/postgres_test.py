@@ -162,16 +162,16 @@ class PostgresUserTestCase(TestCase):
             self.assertEqual(
                 ret,
                 {'comment': 'User foo is already present',
-                 'changes': {}, 'name': 'foo', 'result': False}
+                 'changes': {}, 'name': 'foo', 'result': True}
             )
             self.assertEqual(SALT_STUB['postgres.user_update'].call_count, 0)
 
         # test=False
-        ret = postgres_user.present('foo', login=True, replication=False)
+        ret = postgres_user.present('foo', login=False, replication=False)
         self.assertEqual(
             ret,
             {'comment': 'User foo is already present',
-             'changes': {}, 'name': 'foo', 'result': False}
+             'changes': {}, 'name': 'foo', 'result': True}
         )
         self.assertEqual(SALT_STUB['postgres.user_update'].call_count, 0)
 
