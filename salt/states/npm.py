@@ -127,7 +127,8 @@ def installed(name,
         call = __salt__['npm.install'](
             pkg=name,
             dir=dir,
-            runas=user
+            runas=user,
+            registry=registry
         )
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
