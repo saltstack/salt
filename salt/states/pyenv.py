@@ -30,7 +30,7 @@ This is how a state configuration could look like:
           - libbz2-dev
           - libreadline-dev
           - libsqlite3-dev
-          - wget 
+          - wget
           - curl
           - llvm
     python-2.6:
@@ -240,6 +240,7 @@ def absent(name, runas=None, user=None):
     else:
         return _check_and_uninstall_python(ret, name, user=user)
 
+
 def install_pyenv(name, user=None):
     '''
     Install pyenv if not installed. Allows you to require pyenv be installed
@@ -259,4 +260,4 @@ def install_pyenv(name, user=None):
         ret['comment'] = 'pyenv is set to be installed'
         return ret
 
-    return _check_and_install_pyenv(ret, user)
+    return _check_and_install_python(ret, user)
