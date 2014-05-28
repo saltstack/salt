@@ -176,6 +176,136 @@ class PostgresUserTestCase(TestCase):
         self.assertEqual(SALT_STUB['postgres.user_update'].call_count, 0)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch.multiple(postgres_group,
+                __grains__={'os_family': 'Linux'},
+                __salt__=SALT_STUB)
+@patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+class PostgresGroupTestCase(TestCase):
+
+    @patch.dict(SALT_STUB, {
+        'postgres.role_get': Mock(return_value=None),
+        'postgres.group_create': MagicMock(),
+    })
+    def test_present__creation(self):
+        # test=True
+        with patch.dict(OPTS, {'test': True}):
+            ret = postgres_group.present('foo')
+            self.assertEqual(
+                ret,
+                {'comment': 'Group foo is set to be created',
+                 'changes': {}, 'name': 'foo', 'result': None}
+            )
+            self.assertEqual(SALT_STUB['postgres.group_create'].call_count, 0)
+
+        # test=False
+        ret = postgres_group.present('foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'The group foo has been created',
+             'changes': {}, 'name': 'foo', 'result': True}
+        )
+        SALT_STUB['postgres.group_create'].assert_called_once_with(superuser=None,
+                                                                   replication=None,
+                                                                   encrypted=True,
+                                                                   runas=None,
+                                                                   inherit=None,
+                                                                   rolepassword=None,
+                                                                   port=None,
+                                                                   groupname='foo',
+                                                                   host=None,
+                                                                   createroles=None,
+                                                                   user=None,
+                                                                   groups=None,
+                                                                   maintenance_db=None,
+                                                                   login=None,
+                                                                   password=None,
+                                                                   createdb=None)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.role_get': Mock(return_value={
+            'can create databases': False,
+            'can create roles': False,
+            'can login': False,
+            'can update system catalogs': False,
+            'connections': None,
+            'defaults variables': {},
+            'expiry time': None,
+            'inherits privileges': True,
+            'replication': False,
+            'superuser': False,
+        }),
+        'postgres.group_update': MagicMock(),
+    })
+    def test_present__update(self):
+        # test=True
+        with patch.dict(OPTS, {'test': True}):
+            ret = postgres_group.present('foo', login=True, replication=False)
+            self.assertEqual(
+                ret,
+                {'comment': 'Group foo is set to be updated',
+                 'changes': {'foo': {'login': True}}, 'name': 'foo', 'result': None}
+            )
+            self.assertEqual(SALT_STUB['postgres.group_update'].call_count, 0)
+
+        # test=False
+        ret = postgres_group.present('foo', login=True, replication=False)
+        self.assertEqual(
+            ret,
+            {'comment': 'The group foo has been updated',
+             'changes': {'foo': {'login': True}}, 'name': 'foo', 'result': True}
+        )
+        SALT_STUB['postgres.group_update'].assert_called_once_with(superuser=None,
+                                                                   replication=False,
+                                                                   encrypted=True,
+                                                                   runas=None,
+                                                                   inherit=None,
+                                                                   rolepassword=None,
+                                                                   port=None,
+                                                                   groupname='foo',
+                                                                   host=None,
+                                                                   createroles=None,
+                                                                   user=None,
+                                                                   groups=None,
+                                                                   maintenance_db=None,
+                                                                   login=True,
+                                                                   password=None,
+                                                                   createdb=None)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.role_get': Mock(return_value={
+            'can create databases': False,
+            'can create roles': False,
+            'can login': False,
+            'can update system catalogs': False,
+            'connections': None,
+            'defaults variables': {},
+            'expiry time': None,
+            'inherits privileges': True,
+            'replication': False,
+            'superuser': False,
+        }),
+        'postgres.group_update': MagicMock(),
+    })
+    def test_present__no_update(self):
+        # test=True
+        with patch.dict(OPTS, {'test': True}):
+            ret = postgres_group.present('foo', login=False, replication=False)
+            self.assertEqual(
+                ret,
+                {'comment': 'Group foo is already present',
+                 'changes': {}, 'name': 'foo', 'result': True}
+            )
+            self.assertEqual(SALT_STUB['postgres.group_update'].call_count, 0)
+
+        # test=False
+        ret = postgres_group.present('foo', login=False, replication=False)
+        self.assertEqual(
+            ret,
+            {'comment': 'Group foo is already present',
+             'changes': {}, 'name': 'foo', 'result': True}
+        )
+        self.assertEqual(SALT_STUB['postgres.group_update'].call_count, 0)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
