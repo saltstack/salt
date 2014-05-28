@@ -173,10 +173,6 @@ def present(name,
         mode = 'update'
 
     # The user is not present, make it!
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Group {0} is set to be {1}d'.format(name, mode)
-        return ret
     cret = None
     update = {}
     if mode == 'update':
@@ -207,6 +203,12 @@ def present(name,
         if password is not None and group_attr['password'] != password:
             update['password'] = True
     if mode == 'create' or (mode == 'update' and update):
+        if __opts__['test']:
+            if update:
+                ret['changes'][name] = update
+            ret['result'] = None
+            ret['comment'] = 'Group {0} is set to be {1}d'.format(name, mode)
+            return ret
         cret = __salt__['postgres.group_{0}'.format(mode)](
             groupname=name,
             createdb=createdb,
