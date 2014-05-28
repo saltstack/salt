@@ -12,12 +12,16 @@ import shlex
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
+HAS_CHECK=False
 
 
 def __virtual__():
     '''
     Only load the module if iptables is installed
     '''
+    global HAS_CHECK
+    if __salt__['cmd.run']('iptables --help').find('--check'):
+        HAS_CHECK=True
     if salt.utils.which('iptables'):
         return 'iptables'
     return False
@@ -376,7 +380,8 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    if __grains__['os_family'] == 'RedHat':
+    global HAS_CHECK
+    if not HAS_CHECK:
         cmd = '{0}-save' . format(_iptables_cmd(family))
         out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
             table,
