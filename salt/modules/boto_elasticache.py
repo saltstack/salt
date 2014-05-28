@@ -36,6 +36,7 @@ Connection module for Amazon Elasticache
 
 # Import Python libs
 import logging
+import time
 
 log = logging.getLogger(__name__)
 
@@ -108,54 +109,84 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
              'preferred_availability_zone', 'security_groups',
              'cache_subnet_group_name', 'engine_version', 'cache_node_type',
              'notification_configuration', 'preferred_maintenance_window',
-             'cache_nodes']
+             'configuration_endpoint', 'cache_nodes', 'cache_cluster_status']
     for key, val in cc.iteritems():
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
             continue
         if _key == 'cache_parameter_group':
-            ret[_key] = val['CacheParameterGroupName']
+            if val:
+                ret[_key] = val['CacheParameterGroupName']
+            else:
+                ret[_key] = None
         elif _key == 'cache_security_groups':
-            ret[_key] = [k['CacheSecurityGroupName'] for k in val]
+            if val:
+                ret[_key] = [k['CacheSecurityGroupName'] for k in val]
+            else:
+                ret[_key] = []
+        elif _key == 'configuration_endpoint':
+            if val:
+                ret['port'] = val['Port']
+                ret['address'] = val['Address']
+            else:
+                ret['port'] = None
+                ret['address'] = None
+        elif _key == 'notification_configuration':
+            if val:
+                ret['notification_topic_arn'] = val['TopicArn']
+            else:
+                ret['notification_topic_arn'] = None
         else:
             ret[_key] = val
     return ret
 
 
-def create(name, num_cache_nodes=None, cache_node_type=None, engine=None,
+def create(name, num_cache_nodes, engine, cache_node_type,
            replication_group_id=None, engine_version=None,
            cache_parameter_group_name=None, cache_subnet_group_name=None,
            cache_security_group_names=None, security_group_ids=None,
            snapshot_arns=None, preferred_availability_zone=None,
            preferred_maintenance_window=None, port=None,
            notification_topic_arn=None, auto_minor_version_upgrade=True,
-           region=None, key=None, keyid=None, profile=None):
+           wait=False, region=None, key=None, keyid=None, profile=None):
     '''
     Create a cache cluster.
 
     CLI example::
 
-        salt myminion boto_elasticache.create myelasticache 1 redis cache_security_group_names='["myelasticachesg"]'
+        salt myminion boto_elasticache.create myelasticache 1 redis cache.t1.micro cache_security_group_names='["myelasticachesg"]'
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    created = conn.create_cache_cluster(
-        name, num_cache_nodes, cache_node_type, engine, replication_group_id,
-        engine_version, cache_parameter_group_name, cache_subnet_group_name,
-        cache_security_group_names, security_group_ids, snapshot_arns,
-        preferred_availability_zone, preferred_maintenance_window, port,
-        notification_topic_arn, auto_minor_version_upgrade)
-    if created:
+    try:
+        conn.create_cache_cluster(
+            name, num_cache_nodes, cache_node_type, engine,
+            replication_group_id, engine_version, cache_parameter_group_name,
+            cache_subnet_group_name, cache_security_group_names,
+            security_group_ids, snapshot_arns, preferred_availability_zone,
+            preferred_maintenance_window, port, notification_topic_arn,
+            auto_minor_version_upgrade)
+        if not wait:
+            log.info('Created cache cluster {0}.'.format(name))
+            return True
+        while True:
+            config = get_config(name, region, key, keyid, profile)
+            if not config:
+                return True
+            if config['cache_cluster_status'] == 'creating':
+                return True
+            if config['cache_cluster_status'] == 'available':
+                return True
+            time.sleep(2)
         log.info('Created cache cluster {0}.'.format(name))
-        return True
-    else:
+    except boto.exception.BotoServerError:
         msg = 'Failed to create cache cluster {0}.'.format(name)
         log.error(msg)
         return False
 
 
-def delete(name, region=None, key=None, keyid=None, profile=None):
+def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a cache cluster.
 
@@ -166,11 +197,21 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    deleted = conn.delete_cache_cluster(name)
-    if deleted:
+    try:
+        conn.delete_cache_cluster(name)
+        if not wait:
+            log.info('Deleted cache cluster {0}.'.format(name))
+            return True
+        while True:
+            config = get_config(name, region, key, keyid, profile)
+            if not config:
+                return True
+            if config['cache_cluster_status'] == 'deleting':
+                return True
+            time.sleep(2)
         log.info('Deleted cache cluster {0}.'.format(name))
         return True
-    else:
+    except boto.exception.BotoServerError:
         msg = 'Failed to delete cache cluster {0}.'.format(name)
         log.error(msg)
         return False
