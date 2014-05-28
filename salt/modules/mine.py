@@ -343,11 +343,11 @@ def get_docker(interfaces=None, cidrs=None):
                     # If port is 0.0.0.0, then we must get the docker host IP
                     if dock_port['IP'] == '0.0.0.0':
                         for ip_ in host_ips:
-                            proxy_lists[container['Image']].setdefault('ipv4', []).append(
+                            proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                                 '{0}:{1}'.format(ip_, dock_port['PublicPort']))
-                            proxy_lists[container['Image']]['ipv4'] = list(set(proxy_lists[container['Image']]['ipv4']))
+                            proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
                     elif dock_port['IP']:
-                        proxy_lists[container['Image']].setdefault('ipv4', []).append(
+                        proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                             '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
-                        proxy_lists[container['Image']]['ipv4'] = list(set(proxy_lists[container['Image']]['ipv4']))
+                        proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
     return proxy_lists
