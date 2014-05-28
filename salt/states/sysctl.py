@@ -77,8 +77,15 @@ def present(name, value, config=None):
             ret['comment'] = 'Sysctl option {0}  set to be changed to {1}'.format(name, value)
             return ret
         else:
-            ret['result'] = False
-            ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name, value)
+            if str(value) == __salt__['sysctl.get'](name):
+                ret['result'] = True
+                ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(
+                        name,
+                        value
+                        )
+            else:
+                ret['result'] = None
+                ret['comment'] = 'Sysctl option {0}  set to be changed to {1}'.format(name, value)
             return ret
 
     update = __salt__['sysctl.persist'](name, value, config)
