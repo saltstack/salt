@@ -574,6 +574,32 @@ class Minion(MinionBase):
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
+
+        # if master_type was changed, we might want to load our
+        # master-variable from a user defined modules function
+        if opts['master_type'] != 'str':
+            # check for a valid keyword
+            if opts['master_type'] == 'func':
+                # split module and function and try loading the module
+                mod, fun = opts['master'].split('.')
+                try: 
+                    master_mod = salt.loader.raw_mod(opts, mod, fun)
+                    if not master_mod:
+                        raise TypeError
+                    # we take whatever the module returns as master address
+                    opts['master'] = master_mod[mod + '.' + fun]()
+                except TypeError:
+                        msg = ('Failed to evaluate master address from '
+                               'module \'{0}\''.format(opts['master']))
+                        log.error(msg)
+                        sys.exit(1)
+                log.info('Evaluated master from module: {0}'.format(opts['master']))
+            else:
+                msg = ('Invalid keyword \'{0}\' for variable '
+                       '\'master_type\''.format(opts['master_type']))
+                log.error(msg)
+                sys.exit(1)
+
         opts.update(resolve_dns(opts))
         super(Minion, self).__init__(opts)
         self.authenticate(timeout, safe)
