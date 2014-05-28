@@ -342,7 +342,7 @@ def get_pgid(path, follow_symlinks=True):
     # SAMBA shares, or VirtualBox's shared folders.  If we 
     # can't load a file descriptor for the file, we default
     # to "Everyone" - http://support.microsoft.com/kb/243330
-    except MemoryError as e:
+    except MemoryError:
         return 'S-1-1-0'
     group_sid = secdesc.GetSecurityDescriptorGroup()
     return win32security.ConvertSidToStringSid(group_sid)
