@@ -156,6 +156,21 @@ unit tests.
 
 Salt uses the python standard library unittest2 system for testing.
 
+Naming Conventions
+==================
+
+Any function in either integration test files or unit test files that is
+doing the actual testing, such as functions containing assertions, must
+start with ``test_``:
+
+.. code-block:: python
+
+    def test_user_present(self):
+
+When functions in test files are not prepended with ``test_``,
+the function acts as a normal, helper function and is not run as a test
+by the test suite.
+
 Integration Tests
 =================
 
