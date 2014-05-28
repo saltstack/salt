@@ -44,11 +44,11 @@ else:
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch.multiple(postgres,
+@patch.multiple(postgres_extension,
                 __grains__={'os_family': 'Linux'},
                 __salt__=SALT_STUB)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
-class PostgresTestCase(TestCase):
+class PostgresExtensionTestCase(TestCase):
 
     @patch.dict(SALT_STUB, {
         'postgres.create_metadata': Mock(side_effect=[
@@ -221,4 +221,4 @@ class PostgresTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(PostgresTestCase, needs_daemon=False)
+    run_tests(PostgresExtensionTestCase, needs_daemon=False)
