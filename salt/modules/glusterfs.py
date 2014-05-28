@@ -113,7 +113,7 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     # Validate bricks syntax
     for brick in bricks:
         try:
-            peer, path = brick.split(':')
+            peer_name, path = brick.split(':')
             if not path.startswith('/'):
                 return 'Error: Brick paths must start with /'
         except ValueError:
