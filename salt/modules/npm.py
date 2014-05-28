@@ -197,7 +197,7 @@ def list_(pkg=None, dir=None):
     if pkg:
         cmd += ' "{0}"'.format(pkg)
 
-    result = __salt__['cmd.run_all'](cmd, cwd=dir)
+    result = __salt__['cmd.run_all'](cmd, cwd=dir, ignore_retcode=True)
 
     # npm will return error code 1 for both no packages found and an actual
     # error. The only difference between the two cases are if stderr is empty
