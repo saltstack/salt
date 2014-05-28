@@ -333,9 +333,17 @@ def get_pgid(path, follow_symlinks=True):
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    secdesc = win32security.GetFileSecurity(
-        path, win32security.GROUP_SECURITY_INFORMATION
-    )
+    try:
+        secdesc = win32security.GetFileSecurity(
+            path, win32security.GROUP_SECURITY_INFORMATION
+        )
+    # Not all filesystems mountable within windows 
+    # have SecurityDescriptor's.  For instance, some mounted
+    # SAMBA shares, or VirtualBox's shared folders.  If we 
+    # can't load a file descriptor for the file, we default
+    # to "Everyone" - http://support.microsoft.com/kb/243330
+    except MemoryError as e:
+        return 'S-1-1-0'
     group_sid = secdesc.GetSecurityDescriptorGroup()
     return win32security.ConvertSidToStringSid(group_sid)
 
@@ -520,10 +528,12 @@ def get_uid(path, follow_symlinks=True):
     # supported on Windows Vista or later.
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
-
-    secdesc = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION
-    )
+    try:
+        secdesc = win32security.GetFileSecurity(
+            path, win32security.OWNER_SECURITY_INFORMATION
+        )
+    except MemoryError:
+        return 'S-1-1-0'
     owner_sid = secdesc.GetSecurityDescriptorOwner()
     return win32security.ConvertSidToStringSid(owner_sid)
 
