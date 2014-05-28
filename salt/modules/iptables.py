@@ -13,7 +13,7 @@ import shlex
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
-HAS_CHECK=False
+HAS_CHECK = False
 
 
 def __virtual__():
@@ -22,7 +22,7 @@ def __virtual__():
     '''
     global HAS_CHECK
     if __salt__['cmd.run']('iptables --help').find('--check'):
-        HAS_CHECK=True
+        HAS_CHECK = True
 
     if salt.utils.which('iptables'):
         return True
@@ -483,8 +483,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    global HAS_CHECK
-    if not HAS_CHECK:
+    if HAS_CHECK is False:
         cmd = '{0}-save' . format(_iptables_cmd(family))
         out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
             table,
