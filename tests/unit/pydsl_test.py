@@ -476,7 +476,7 @@ class PyDSLRendererTestCase(TestCase):
                 modtest = include('e')
                 modtest.success
                 '''))
-            write_to(os.path.join(dirpath, 'd.sls'), textwrap.dedent( '''\
+            write_to(os.path.join(dirpath, 'd.sls'), textwrap.dedent('''\
                 #!pydsl
                 modtest = include('e')
                 modtest.success

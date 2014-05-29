@@ -66,6 +66,7 @@ IGNORE_PATHS = [
     '.ropeproject',
 ]
 
+
 @skipIf(True, 'Need to adjust perms')
 class GitPermTestCase(TestCase):
     def test_perms(self):
