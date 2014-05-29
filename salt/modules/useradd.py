@@ -16,7 +16,8 @@ import copy
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
-
+from salt.utils import get_group_list
+ 
 log = logging.getLogger(__name__)
 
 RETCODE_12_ERROR_REGEX = re.compile(
