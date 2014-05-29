@@ -139,7 +139,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'match' in kwargs:
         if not isinstance(kwargs['match'], list):
             kwargs['match'] = kwargs['match'].split(',')
-        for match in kwargs['match']
+        for match in kwargs['match']:
             rule += '-m {0} '.format(match)
         del kwargs['match']
 
