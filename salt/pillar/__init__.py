@@ -291,11 +291,13 @@ class Pillar(object):
         Returns the sorted high data from the merged top files
         '''
         sorted_top = collections.defaultdict(OrderedDict)
+        # pylint: disable=cell-var-from-loop
         for saltenv, targets in top.items():
             sorted_targets = sorted(targets.keys(),
                     key=lambda target: orders[saltenv][target])
             for target in sorted_targets:
                 sorted_top[saltenv][target] = targets[target]
+        # pylint: enable=cell-var-from-loop
         return sorted_top
 
     def get_top(self):
