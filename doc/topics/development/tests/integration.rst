@@ -28,14 +28,14 @@ In order for Salt's test suite to recognize tests within the newly
 created directory, options to run the new integration tests must be added to
 ``tests/runtests.py``. Examples of the necessary options that must be added
 can be found here: :blob:`tests/runtests.py`. The functions that need to be
-edited are `setup_additional_options`, `validate_options`, and
-`run_integration_tests`.
+edited are ``setup_additional_options``, ``validate_options``, and
+``run_integration_tests``.
 
 
 Integration Classes
 ===================
 
-The integration classes are located in tests/integration/__init__.py and
+The integration classes are located in ``tests/integration/__init__.py`` and
 can be extended therein. There are three classes available to extend:
 
 ModuleCase
