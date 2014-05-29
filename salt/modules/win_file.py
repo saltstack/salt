@@ -337,9 +337,9 @@ def get_pgid(path, follow_symlinks=True):
         secdesc = win32security.GetFileSecurity(
             path, win32security.GROUP_SECURITY_INFORMATION
         )
-    # Not all filesystems mountable within windows 
+    # Not all filesystems mountable within windows
     # have SecurityDescriptor's.  For instance, some mounted
-    # SAMBA shares, or VirtualBox's shared folders.  If we 
+    # SAMBA shares, or VirtualBox's shared folders.  If we
     # can't load a file descriptor for the file, we default
     # to "Everyone" - http://support.microsoft.com/kb/243330
     except MemoryError:
