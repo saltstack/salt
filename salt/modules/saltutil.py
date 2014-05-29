@@ -502,37 +502,6 @@ def clear_cache():
     return True
 
 
-def cached():
-    '''
-    Return the data on all cached salt jobs on the minion
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltutil.cached
-    '''
-    ret = []
-    serial = salt.payload.Serial(__opts__)
-    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
-    if not os.path.isdir(proc_dir):
-        return []
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_, 'return.p')
-        with salt.utils.fopen(path, 'rb') as fp_:
-            buf = fp_.read()
-            fp_.close()
-            if buf:
-                data = serial.loads(buf)
-            else:
-                continue
-        if not isinstance(data, dict):
-            # Invalid serial object
-            continue
-        ret.append(data)
-    return ret
-
-
 def find_job(jid):
     '''
     Return the data for a specific job id
@@ -559,11 +528,24 @@ def find_cached_job(jid):
 
         salt '*' saltutil.find_cached_job <job id>
     '''
-    for data in cached():
-        if data['jid'] == jid:
-            return data
-    return {}
-
+    serial = salt.payload.Serial(__opts__)
+    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
+    job_dir = os.path.join(proc_dir, str(jid))
+    if not os.path.isdir(job_dir):
+        return
+    path = os.path.join(job_dir, 'return.p')
+    with salt.utils.fopen(path, 'rb') as fp_:
+        buf = fp_.read()
+        fp_.close()
+        if buf:
+            data = serial.loads(buf)
+        else:
+            return
+    if not isinstance(data, dict):
+        # Invalid serial object
+        return
+    return data
+ 
 
 def signal_job(jid, sig):
     '''
