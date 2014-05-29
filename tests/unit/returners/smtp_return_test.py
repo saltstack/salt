@@ -21,9 +21,10 @@ smtp.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.returners.smtp_return.gnupg')
 @patch('salt.returners.smtp_return.smtplib.SMTP')
 class SMTPReturnerTestCase(TestCase):
-    def test_returner(self, mocked_smtplib):
+    def test_returner(self, mocked_smtplib, mocked_gpg):
         '''
         Test to see if the SMTP returner sends a message
         '''
