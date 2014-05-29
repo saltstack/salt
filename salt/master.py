@@ -301,7 +301,7 @@ class Master(SMaster):
                                                          'remove an entry from the '
                                                          'job cache!  {0}'.format(exc))
                                     difference = cur - jidtime
-                                    hours_difference = difference.seconds / 3600.0
+                                    hours_difference = difference.total_seconds() / 3600.0
                                     if hours_difference > self.opts['keep_jobs']:
                                         try:
                                             shutil.rmtree(f_path)
