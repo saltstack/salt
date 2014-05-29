@@ -1747,7 +1747,8 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
-        minions = salt.utils.minions.CkMinions(self.opts)
+        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+        print minions
 
         if not len(minions) < self.opts['max_minions']:
             msg = ('Too many minions connected. Rejecting connection '
