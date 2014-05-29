@@ -1747,6 +1747,14 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
+        minions = salt.utils.minions.CkMinions(opts)
+
+        if not len(minions) < self.opts['max_minions']:
+            msg = ('Too many minions connected. Rejecting connection '
+                   ' from id {0}'.format(load['id']))
+            log.debug(msg)
+
+
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.__check_autoreject(load['id'])
         auto_sign = self.__check_autosign(load['id'])

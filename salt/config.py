@@ -234,6 +234,7 @@ VALID_OPTS = {
     'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
+    'max_minion': int,
 }
 
 # default configurations
@@ -500,6 +501,7 @@ DEFAULT_MASTER_OPTS = {
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
+    'max_minions': 0,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
