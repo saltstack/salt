@@ -13,6 +13,7 @@ import shlex
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
+import salt.modules.cmdmod as salt_cmd
 HAS_CHECK = False
 
 
@@ -21,7 +22,7 @@ def __virtual__():
     Only load the module if iptables is installed
     '''
     global HAS_CHECK
-    if __salt__['cmd.run']('iptables --help').find('--check'):
+    if salt_cmd.run('iptables --help').find('--check'):
         HAS_CHECK = True
 
     if salt.utils.which('iptables'):
