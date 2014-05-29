@@ -1858,14 +1858,6 @@ class Matcher(object):
             comps[1],
         ))
 
-    def exsel_match(self, tgt):
-        '''
-        Runs a function and return the exit code
-        '''
-        if tgt not in self.functions:
-            return False
-        return self.functions[tgt]()
-
     def pillar_match(self, tgt, delim=':'):
         '''
         Reads in the pillar glob match
