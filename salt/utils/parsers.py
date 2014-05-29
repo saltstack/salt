@@ -889,13 +889,6 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   '\'G@os:RedHat and webser* or E@database.*\'')
         )
         group.add_option(
-            '-X', '--exsel',
-            default=False,
-            action='store_true',
-            help=('Instead of using shell globs use the return code of '
-                  'a function.')
-        )
-        group.add_option(
             '-I', '--pillar',
             default=False,
             action='store_true',
