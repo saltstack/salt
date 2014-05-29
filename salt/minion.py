@@ -1216,7 +1216,10 @@ class Minion(MinionBase):
         safe = self.opts.get('auth_safemode', safe)
         while True:
             creds = auth.sign_in(timeout, safe, tries)
-            if creds != 'retry':
+            if creds == 'full':
+                log.debug('master full, exit')
+                sys.exit(1)
+            elif creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
