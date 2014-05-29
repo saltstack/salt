@@ -31,7 +31,6 @@ _target_options=(
     '(-N --nodegroup)'{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
     '(-R --range)'{-R,--range}'[use a range expression to identify targets.]:Range:'
     '(-C --compound)'{-C,--compound}'[Use multiple targeting options.]:Compound:'
-    '(-X --exsel)'{-X,--exsel}'[Use the return code of a function.]'
     '(-I --pillar)'{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
     '(-S --ipcidr)'{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
 )
