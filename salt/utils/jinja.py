@@ -102,6 +102,8 @@ class SaltCacheLoader(BaseLoader):
             raise TemplateNotFound(template)
 
         self.check_cache(template)
+
+        # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
             filepath = path.join(spath, template)
             try:
@@ -118,6 +120,8 @@ class SaltCacheLoader(BaseLoader):
             except IOError:
                 # there is no file under current path
                 continue
+        # pylint: enable=cell-var-from-loop
+
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
 

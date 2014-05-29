@@ -2049,6 +2049,7 @@ class BaseHighState(object):
         {'saltenv': ['state1', 'state2', ...]}
         '''
         matches = {}
+        # pylint: disable=cell-var-from-loop
         for saltenv, body in top.items():
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
