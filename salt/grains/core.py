@@ -813,8 +813,11 @@ def os_data():
     # Ubuntu 10.04
     # ('Linux', 'MINIONNAME', '2.6.32-38-server',
     # '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
+
+    # pylint: disable=unpacking-non-sequence
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+    # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_windows():
         grains['osrelease'] = grains['kernelrelease']
