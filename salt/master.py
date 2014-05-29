@@ -264,7 +264,7 @@ class Master(SMaster):
                                         # Invalid jid, scrub the dir
                                         shutil.rmtree(f_path)
                                     difference = cur - jidtime
-                                    hours_difference = difference.seconds / 3600.0
+                                    hours_difference = difference.total_seconds() / 3600.0
                                     if hours_difference > self.opts['keep_jobs']:
                                         shutil.rmtree(f_path)
 
