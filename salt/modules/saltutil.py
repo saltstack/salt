@@ -562,7 +562,7 @@ def find_cached_job(jid):
         # Invalid serial object
         return
     return data
- 
+
 
 def signal_job(jid, sig):
     '''
