@@ -374,8 +374,6 @@ class Auth(object):
                         sys.exit(os.EX_OK)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
-                        msg = ('master {0} is full, trying next master'.format(self.opts['master']))
-                        log.info(msg)
                         return 'full'
                 else:
                     log.error(
