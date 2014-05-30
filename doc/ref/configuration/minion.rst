@@ -37,7 +37,7 @@ Default: ``salt``
 
 The master is, by default, staticaly configured by the `master` setting, but
 if desired, the master can be dynamically configured. The `master` value can
-be set to a module function will will be executed and will assume that the
+be set to a module function which will be executed and will assume that the
 returning value is the ip or hostname of the desired master. In addition to
 specifying the function to execute to detect the master the
 :conf_minion:`master_type`, option must be set to 'func'.
@@ -45,6 +45,19 @@ specifying the function to execute to detect the master the
 .. code-block:: yaml
 
     master: module.function
+
+The `master` can also be a list of masters the minion should try to connect
+to. If the first master fails or rejects the minions connection (for example
+when too many minions are already connected), the minion will try the next
+master in the given list. For this to work, :conf_minion:`master_type` must
+be set to 'failover'. If `master_type` is not set, the minion will be in
+multimaster mode: :ref:`multi master <topics-tutorials-multimaster>`
+
+.. code-block:: yaml
+
+    master: 
+        - address1
+        - address2
 
 
 .. conf_minion:: master_type
@@ -54,16 +67,26 @@ specifying the function to execute to detect the master the
 
 Default: ``str``
 
-The type of the :conf_minion:`master` variable. If the master needs to be
-dynamically assigned by executing a function instead of reading in the static
-master value, set this  to 'func'. This can be used to manage the minion's
-master setting from an execution module. By simply changeing the algorithm
-in the module to return a new master ip/fqdn, restart the minion and it will
-connect to the new master.
+The type of the :conf_minion:`master` variable. Can be either 'func' or
+'failover'.
+
+If the master needs to be dynamically assigned by executing a function 
+instead of reading in the static master value, set this  to 'func'. 
+This can be used to manage the minion's master setting from an execution 
+module. By simply changing the algorithm in the module to return a new 
+master ip/fqdn, restart the minion and it will connect to the new master.
 
 .. code-block:: yaml
 
-    master_type: str
+    master_type: 'func'
+
+If it is set to 'failover', :conf_minion:`master` has to be a list of master
+addresses. The minion will then try one master after the other, until it 
+successfully connects.
+
+.. code-block:: yaml
+
+    master_type: 'failover'
 
 .. conf_minion:: master_port
 
