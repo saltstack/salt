@@ -62,6 +62,47 @@ def doc(*args):
     return _strip_rst(docs)
 
 
+def state_doc(*args):
+    '''
+    .. versionadded:: Helium
+
+    Return the docstrings for all states. Optionally, specify a state or a
+    function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple states/functions can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.state_doc
+        salt '*' sys.state_doc service
+        salt '*' sys.state_doc service.running
+        salt '*' sys.state_doc service.running ipables.append
+    '''
+    st_ = salt.state.State(__opts__)
+    docs = {}
+    if not args:
+        for fun in st_.states:
+            docs[fun] = st_.states[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            target_mod = module + '.' if not module.endswith('.') else module
+        else:
+            target_mod = ''
+        for fun in st_.states:
+            if fun == module or fun.startswith(target_mod):
+                docs[fun] = st_.states[fun].__doc__
+    return _strip_rst(docs)
+
+
 def list_functions(*args, **kwargs):
     '''
     List the functions for all modules. Optionally, specify a module or modules
