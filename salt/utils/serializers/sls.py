@@ -5,8 +5,10 @@
 
     SLS is a format that allows to make things like sls file more intuitive.
 
-    It's an extension of YAML that implements all the salt magic.
-    For example it implies omap for any dict like.
+    It's an extension of YAML that implements all the salt magic:
+    - it implies omap for any dict like.
+    - it implies that string like data are str, not unicode
+    - ...
 
     For example, the file `states.sls` has this contents:
 
@@ -228,9 +230,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
 
     def construct_sls_str(self, node):
         '''
-        Build the SLSString
+        Build the SLSString.
         '''
-        obj = self.construct_yaml_str(node)
+
+        # Ensure obj must be str not unicode
+        obj = self.construct_scalar(node).encode('utf-8')
         return SLSString(obj)
 
     def construct_sls_int(self, node):
@@ -387,10 +391,10 @@ Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
 
 
-def merge_recursive(obj_a, obj_b):
+def merge_recursive(obj_a, obj_b, level=False):
     '''
     Merge obj_b into obj_a.
     '''
-    return aggregate(obj_a, obj_b,
+    return aggregate(obj_a, obj_b, level,
                      map_class=AggregatedMap,
                      sequence_class=AggregatedSequence)
