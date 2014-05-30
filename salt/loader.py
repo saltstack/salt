@@ -1270,7 +1270,10 @@ class LazyLoader(MutableMapping):
             # until we have a better way, we have to load them all to know
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
-            return self._dict[key]
+            if key in self._dict:
+                return self._dict[key]
+            elif key in self.functions:
+                return self.functions[key]
         else:
             patched = []
             # be sure that the global __salt__ dict is able of loading
@@ -1304,6 +1307,11 @@ class LazyLoader(MutableMapping):
             # load the item
             self._load(key)
             log.debug('LazyLoaded {0}'.format(key))
+            if key in self._dict:
+                return self._dict[key]
+            elif key in self.functions:
+                log.debug('Could not LazyLoad {0}. Using stored function'.format(key))
+                return self.functions[key]
         return self._dict[key]
 
     def __len__(self):
