@@ -3714,14 +3714,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
            'result': False}
 
     if ntype == 'c':
-        #  check for file existence
+        # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
                 'File exists and is not a character device {0}. Cowardly '
                 'refusing to continue'.format(name)
             )
 
-        #if it is a character device
+        # Check if it is a character device
         elif not __salt__['file.is_chrdev'](name):
             if __opts__['test']:
                 ret['comment'] = (
@@ -3737,7 +3737,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                              group,
                                              mode)
 
-        #  check the major/minor
+        # Check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
@@ -3746,7 +3746,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                     'major/minor {1}/{2}. Cowardly refusing to continue'
                     .format(name, devmaj, devmin)
                 )
-            #check the perms
+            # Check the perms
             else:
                 ret = __salt__['file.check_perms'](name,
                                                    None,
@@ -3761,14 +3761,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                     )
 
     elif ntype == 'b':
-        #  check for file existence
+        # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
                 'File exists and is not a block device {0}. Cowardly '
                 'refusing to continue'.format(name)
             )
 
-        #  if it is a block device
+        # Check if it is a block device
         elif not __salt__['file.is_blkdev'](name):
             if __opts__['test']:
                 ret['comment'] = (
@@ -3784,7 +3784,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                              group,
                                              mode)
 
-        #  check the major/minor
+        # Check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
@@ -3794,7 +3794,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                         name, devmaj, devmin
                     )
                 )
-            #  check the perms
+            # Check the perms
             else:
                 ret = __salt__['file.check_perms'](name,
                                                    None,
@@ -3807,14 +3807,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                     )
 
     elif ntype == 'p':
-        #  check for file existence, if it is a fifo, user, group, and mode
+        # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
                 'File exists and is not a fifo pipe {0}. Cowardly refusing '
                 'to continue'.format(name)
             )
 
-        #  if it is a fifo
+        # Check if it is a fifo
         elif not __salt__['file.is_fifo'](name):
             if __opts__['test']:
                 ret['comment'] = 'Fifo pipe {0} is set to be created'.format(
@@ -3830,7 +3830,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                              group,
                                              mode)
 
-        #  check the perms
+        # Check the perms
         else:
             ret = __salt__['file.check_perms'](name,
                                                None,

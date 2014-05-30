@@ -1063,7 +1063,7 @@ def replace(path,
                     found = True
 
                 # Identity check each potential change until one change is made
-                if has_changes is False and not result is line:
+                if has_changes is False and result is not line:
                     has_changes = True
 
                 if show_changes:
@@ -1225,8 +1225,8 @@ def blockreplace(path,
                             content = content[:-1]
 
                         # push new block content in file
-                        for cline in content.split("\n"):
-                            new_file.append(cline + "\n")
+                        for cline in content.split('\n'):
+                            new_file.append(cline + '\n')
 
                         done = True
 
@@ -1550,7 +1550,7 @@ def prepend(path, *args):
 
     preface = []
     for line in args:
-        preface.append("{0}\n".format(line))
+        preface.append('{0}\n'.format(line))
 
     with salt.utils.fopen(path, "w") as ofile:
         contents = preface + contents
@@ -3159,10 +3159,8 @@ def mknod_chrdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug("Creating character device name:{0} major:{1} minor:{2} mode:{3}".format(name,
-                                                                                       major,
-                                                                                       minor,
-                                                                                       mode))
+    log.debug('Creating character device name:{0} major:{1} minor:{2} mode:{3}'
+              .format(name, major, minor, mode))
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
@@ -3232,10 +3230,8 @@ def mknod_blkdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug("Creating block device name:{0} major:{1} minor:{2} mode:{3}".format(name,
-                                                                                   major,
-                                                                                   minor,
-                                                                                   mode))
+    log.debug('Creating block device name:{0} major:{1} minor:{2} mode:{3}'
+              .format(name, major, minor, mode))
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
@@ -3303,7 +3299,7 @@ def mknod_fifo(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug("Creating FIFO name:{0}".format(name))
+    log.debug('Creating FIFO name: {0}'.format(name))
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
@@ -3351,26 +3347,16 @@ def mknod(name,
     ret = False
     makedirs_(name, user, group)
     if ntype == 'c':
-        ret = mknod_chrdev(name,
-                           major,
-                           minor,
-                           user,
-                           group,
-                           mode)
+        ret = mknod_chrdev(name, major, minor, user, group, mode)
     elif ntype == 'b':
-        ret = mknod_blkdev(name,
-                            major,
-                            minor,
-                            user,
-                            group,
-                            mode)
+        ret = mknod_blkdev(name, major, minor, user, group, mode)
     elif ntype == 'p':
-        ret = mknod_fifo(name,
-                          user,
-                          group,
-                          mode)
+        ret = mknod_fifo(name, user, group, mode)
     else:
-        raise Exception("Node type unavailable: '{0}'. Available node types are character ('c'), block ('b'), and pipe ('p').".format(ntype))
+        raise SaltInvocationError(
+            'Node type unavailable: {0!r}. Available node types are '
+            'character (\'c\'), block (\'b\'), and pipe (\'p\').'.format(ntype)
+        )
     return ret
 
 
@@ -3649,7 +3635,7 @@ def open_files(by_pid=False):
             except OSError:
                 continue
 
-            if not name in files:
+            if name not in files:
                 files[name] = [pid]
             else:
                 # We still want to know which PIDs are using each file
