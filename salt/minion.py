@@ -624,11 +624,15 @@ class Minion(MinionBase):
             msg = ('No master could be reached or all masters denied '
                    'the minions connection attempt.')
             log.error(msg)
-            sys,exit(1)
+            sys.exit(1)
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
-            self.authenticate(timeout, safe)
+            if self.authenticate(timeout, safe) == 'full':
+                msg = ('master {0} rejected the minions connection because too '
+                       'many minions are already connected.'.format(opts['master']))
+                log.error(msg)
+                sys.exit(1)
 
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
