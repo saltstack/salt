@@ -358,6 +358,18 @@ only the cache for the mine system.
 
     enforce_mine_cache: False
 
+``presence_events``
+----------------------
+
+Default: False
+
+When enabled the master regularly sends events of currently connected, lost 
+and newly connected minions on the eventbus. 
+
+.. code-block:: yaml
+
+    presence_events: False
+
 
 Master Security Settings
 ========================
