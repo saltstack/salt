@@ -71,7 +71,7 @@ address. A more elaborate roster can be created:
 Calling Salt SSH
 ================
 
-The ``salt-ssh`` command can be easily executed in the same was as a salt
+The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
 
 .. code-block:: bash
