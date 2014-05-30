@@ -1,8 +1,8 @@
-==================
-salt.renderers.sls
-==================
+=====================
+salt.renderers.yamlex
+=====================
 
-SLS renderer is a remplacement of the YAML renderer.
+YAMLEX renderer is a remplacement of the YAML renderer.
 It's 100% YAML with a pinch of Salt magic:
 
 * All mappings are automatically OrderedDict
@@ -14,7 +14,7 @@ Instructed aggregation within the ``!aggregation`` and the ``!reset`` tags:
 
 .. code-block:: yaml
 
-    #!sls
+    #!yamlex
     foo: !aggregate first
     foo: !aggregate second
     bar: !aggregate {first: foo}
@@ -36,5 +36,5 @@ is roughly equivalent to
 Reference
 ---------
 
-.. automodule:: salt.renderers.sls
+.. automodule:: salt.renderers.yamlex
     :members:

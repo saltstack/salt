@@ -17,7 +17,7 @@ Full list of builtin renderer modules
     py
     pydsl
     pyobjects
-    sls
+    yamlex
     stateconf
     wempy
     yaml

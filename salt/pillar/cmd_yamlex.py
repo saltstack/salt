@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Execute a command and read the output as SLS. The SLS data is then directly overlaid onto the minion's Pillar data
+Execute a command and read the output as YAMLEX. The YAMLEX data is then
+directly overlaid onto the minion's Pillar data
 '''
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
@@ -12,7 +13,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from salt.utils.serializers.sls import deserialize
+from salt.utils.serializers.yamlex import deserialize
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 
 def ext_pillar(minion_id, pillar, command):
     '''
-    Execute a command and read the output as SLS
+    Execute a command and read the output as YAMLEX
     '''
     try:
         return deserialize(__salt__['cmd.run']('{0}'.format(command)))

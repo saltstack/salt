@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.serializers.sls
+    salt.utils.serializers.yamlex
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    SLS is a format that allows to make things like sls file more intuitive.
+    YAMLEX is a format that allows to make things like sls file more intuitive.
 
     It's an extension of YAML that implements all the salt magic:
     - it implies omap for any dict like.
@@ -22,10 +22,10 @@
 
     .. code-block:: python
 
-        from salt.utils.serializers import sls
+        from salt.utils.serializers import yamlex
 
         with open('state.sls', 'r') as stream:
-            obj = sls.deserialize(stream)
+            obj = yamlex.deserialize(stream)
 
     Check that ``obj`` is an OrderedDict
 
@@ -37,7 +37,7 @@
         assert isinstance(obj, OrderedDict)
 
 
-    sls `__repr__` and `__str__` objects' methods render YAML understandable
+    yamlex `__repr__` and `__str__` objects' methods render YAML understandable
     string. It means that they are template friendly.
 
 
@@ -59,7 +59,7 @@
         yml_obj = yaml.deserialize(str(obj))
         assert yml_obj == obj
 
-    sls implements also custom tags:
+    yamlex implements also custom tags:
 
     !aggregate
 

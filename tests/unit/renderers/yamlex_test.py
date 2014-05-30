@@ -8,13 +8,13 @@ ensure_in_syspath('../')
 import salt.state
 from salt.config import minion_config
 from salt.template import compile_template_str
-from salt.utils.serializers import sls
+from salt.utils.serializers import yamlex
 
-basic_template = '''#!sls
+basic_template = '''#!yamlex
 foo: bar
 '''
 
-complex_template = '''#!sls
+complex_template = '''#!yamlex
 placeholder: {foo: !aggregate {foo: 42}}
 placeholder: {foo: !aggregate {bar: null}}
 placeholder: {foo: !aggregate {baz: inga}}
@@ -36,12 +36,12 @@ class RendererMixin(object):
 
 
 class RendererTests(TestCase, RendererMixin):
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'yamlex')
     def test_basic(self):
         sls_obj = self.render(basic_template)
         assert sls_obj == {'foo': 'bar'}, sls_obj
 
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'yamlex')
     def test_complex(self):
 
         sls_obj = self.render(complex_template)

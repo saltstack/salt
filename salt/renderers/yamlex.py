@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 def render(sls_data, saltenv='base', sls='', **kws):
     '''
-    Accepts SLS as a string or as a file object and runs it through the SLS
+    Accepts YAML_EX as a string or as a file object and runs it through the YAML_EX
     parser.
 
     :rtype: A Python data structure

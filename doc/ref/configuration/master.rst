@@ -1626,13 +1626,13 @@ between differents sources. It accepts 3 values:
 
 * aggregate:
 
-  instructs aggregation of elements between sources that use the #!sls rendered.
+  instructs aggregation of elements between sources that use the #!yamlex rendered.
 
   For example, these two documents:
 
   .. code-block:: yaml
 
-      #!sls
+      #!yamlex
       foo: 42
       bar: !aggregate {
         element1: True
@@ -1641,7 +1641,7 @@ between differents sources. It accepts 3 values:
 
   .. code-block:: yaml
 
-      #!sls
+      #!yamlex
       bar: !aggregate {
         element2: True
       }

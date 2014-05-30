@@ -18,7 +18,7 @@ import salt.transport
 from salt._compat import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
-from salt.utils.serializers.sls import merge_recursive
+from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
@@ -519,7 +519,7 @@ class Pillar(object):
 
         if strategy == 'smart':
             renderer = self.opts.get('renderer', 'yaml')
-            if renderer == 'sls' or renderer.startswith('sls_'):
+            if renderer == 'yamlex' or renderer.startswith('yamlex_'):
                 strategy = 'aggregate'
             else:
                 strategy = 'recurse'
