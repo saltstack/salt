@@ -1299,7 +1299,7 @@ def sanitize_win_path_string(winpath):
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, unicode):
-        winpath= winpath.translate(dict((ord(c), u'_') for c in intab))
+        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
 
