@@ -19,6 +19,7 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
@@ -135,6 +136,7 @@ def auth(username, password):
         paramvalues['binddn'] = _render_template(paramvalues['binddn'], username)
 
     if paramvalues['filter']:
+        paramvalues['filter'] = ldap.filter.escape_filter_chars(paramvalues['filter'])
         paramvalues['filter'] = _render_template(paramvalues['filter'], username)
 
     # Only add binddn/bindpw to the connargs when they're set, as they're not
