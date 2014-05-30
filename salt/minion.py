@@ -575,8 +575,7 @@ class Minion(MinionBase):
         # module
         opts['grains'] = salt.loader.grains(opts)
 
-        # if master_type was changed, we might want to load our
-        # master-variable from a user defined modules function
+        # check if master_type was altered from its default
         if opts['master_type'] != 'str':
             # check for a valid keyword
             if opts['master_type'] == 'func':
@@ -593,16 +592,40 @@ class Minion(MinionBase):
                            'module \'{0}\''.format(opts['master']))
                     log.error(msg)
                     sys.exit(1)
-                log.info('Evaluated master from module: {0}'.format(opts['master']))
+                log.info('Evaluated master from module: {0}'.format(mod_master))
+
+            # if failover is set, master has to be of type list
+            elif opts['master_type'] == 'failover':
+                if type(opts['master']) is list:
+                    log.info('Got list of available master addresses:'
+                             ' {0}'.format(opts['master']))
+                else:
+                    msg = ('master_type set to \'failover\' but \'master\' '
+                           'is not of type list but of type '
+                           '{0}'.format(type(opts['master'])))
+                    log.error(msg)
+                    sys.exit(1)
             else:
                 msg = ('Invalid keyword \'{0}\' for variable '
                        '\'master_type\''.format(opts['master_type']))
                 log.error(msg)
                 sys.exit(1)
 
-        opts.update(resolve_dns(opts))
-        super(Minion, self).__init__(opts)
-        self.authenticate(timeout, safe)
+        # if we have a list of masters, loop through them and be
+        # happy with the first one that allows us to connect
+        if type(opts['master']) is list:
+            local_masters = copy.copy(opts['master'])
+            for master in local_masters:
+                opts['master'] = master
+                opts.update(resolve_dns(opts))
+                super(Minion, self).__init__(opts)
+                if self.authenticate(timeout, safe) != 'full':
+                    break
+        else:
+            opts.update(resolve_dns(opts))
+            super(Minion, self).__init__(opts)
+            self.authenticate(timeout, safe)
+
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
@@ -1217,8 +1240,7 @@ class Minion(MinionBase):
         while True:
             creds = auth.sign_in(timeout, safe, tries)
             if creds == 'full':
-                log.debug('master full, exit')
-                sys.exit(1)
+                return creds
             elif creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
