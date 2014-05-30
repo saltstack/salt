@@ -166,7 +166,7 @@
 # can be used.
 #
 # recon_default: the interval in milliseconds that the socket should wait before
-#                trying to reconnect to the master (100ms = 1 second)
+#                trying to reconnect to the master (1000ms = 1 second)
 #
 # recon_max: the maximum time a socket should wait. each interval the time to wait
 #            is calculated by doubling the previous time. if recon_max is reached,
