@@ -234,7 +234,7 @@ VALID_OPTS = {
     'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
-    'max_minion': int,
+    'max_minions': int,
 }
 
 # default configurations
