@@ -2053,13 +2053,6 @@ class BaseHighState(object):
                     for item in data:
                         if isinstance(item, string_types):
                             matches[saltenv].append(item)
-        # ext_matches = self.client.ext_nodes()
-        # for saltenv in ext_matches:
-        #     if saltenv in matches:
-        #         matches[saltenv] = list(
-        #             set(ext_matches[saltenv]).union(matches[saltenv]))
-        #     else:
-        #         matches[saltenv] = ext_matches[saltenv]
         return matches
 
     def load_dynamic(self, matches):
