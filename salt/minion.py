@@ -621,6 +621,10 @@ class Minion(MinionBase):
                 super(Minion, self).__init__(opts)
                 if self.authenticate(timeout, safe) != 'full':
                     break
+            msg = ('No master could be reached or all masters denied '
+                   'the minions connection attempt.')
+            log.error(msg)
+            sys,exit(1)
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
