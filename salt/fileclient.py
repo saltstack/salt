@@ -505,10 +505,6 @@ class Client(object):
             saltenv = env
 
         url_data = urlparse(url)
-        from pprint import pprint
-        print '!' * 10
-        print type(url_data)
-        pprint(url_data)
         if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, saltenv)
         if dest:
@@ -523,8 +519,6 @@ class Client(object):
                 netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
             else:
                 netloc = url_data.netloc
-            print '!' * 10
-            pprint(url_data)
             dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'extrn_files',
