@@ -10,6 +10,9 @@ to use this backend, and ``minion`` must also be present in the
 Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 :conf_master:`minionfs_blacklist`, :conf_master:`minionfs_mountpoint`, and
 :conf_master:`minionfs_env`.
+
+.. seealso:: :ref:`tutorial-minionfs`
+
 '''
 
 # Import python libs
