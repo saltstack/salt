@@ -530,7 +530,7 @@ class Pillar(object):
             #: level = 1 merge at least root data
             merged = merge_aggregate(obj_a, obj_b)
         else:
-            log.warning('unknown merging strategy {}, '
+            log.warning('unknown merging strategy {0}, '
                         'fallback to recurse'.format(strategy))
             merged = merge_recurse(obj_a, obj_b)
 

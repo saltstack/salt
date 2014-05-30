@@ -6,7 +6,7 @@ import logging
 import warnings
 
 # Import salt libs
-from salt.utils.serializers.sls import deserialize
+from salt.utils.serializers.yamlex import deserialize
 
 log = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ from textwrap import dedent
 import jinja2
 
 # Import salt libs
-from salt.utils.serializers import json, sls, yaml, msgpack
+from salt.utils.serializers import json, yamlex, yaml, msgpack
 from salt.utils.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
