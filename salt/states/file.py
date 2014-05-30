@@ -226,18 +226,14 @@ import os
 import shutil
 import difflib
 import logging
-import json
 import pprint
 import traceback
-
-# Import third party libs
-import yaml
 
 # Import salt libs
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
-from salt.utils.yamldumper import OrderedDumper
+from salt.utils.serializers import yaml, json
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -2829,15 +2825,15 @@ def append(name,
 
 
 def prepend(name,
-           text=None,
-           makedirs=False,
-           source=None,
-           source_hash=None,
-           template='jinja',
-           sources=None,
-           source_hashes=None,
-           defaults=None,
-           context=None):
+            text=None,
+            makedirs=False,
+            source=None,
+            source_hash=None,
+            template='jinja',
+            sources=None,
+            source_hashes=None,
+            defaults=None,
+            context=None):
     '''
     Ensure that some text appears at the beginning of a file
 
@@ -3602,22 +3598,21 @@ def serialize(name,
                 dataset = existing_data
 
     if formatter == 'yaml':
-        contents = yaml.dump(
-            dataset,
-            default_flow_style=False,
-            Dumper=OrderedDumper
-        )
+        contents = yaml.serialize(dataset,
+                                  default_flow_style=False)
     elif formatter == 'json':
-        contents = json.dumps(dataset,
-                              indent=2,
-                              separators=(',', ': '),
-                              sort_keys=True)
+        contents = json.serialize(dataset,
+                                  indent=2,
+                                  separators=(',', ': '),
+                                  sort_keys=True)
     elif formatter == 'python':
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
+        # TODO remove json round-trip when all dataset will use
+        # utils.serializers
         contents = pprint.pformat(
-            json.loads(
-                json.dumps(dataset),
+            json.json.loads(
+                json.json.dumps(dataset),
                 object_hook=salt.utils.decode_dict
             )
         )
