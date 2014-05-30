@@ -4388,3 +4388,9 @@ source_file = _build/locale/topics/development/conventions/documentation.pot
 source_lang = en
 source_name = topics/development/conventions/documentation.rst
 
+[salt.ref--states--altering_states]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/altering_states.po
+source_file = _build/locale/ref/states/altering_states.pot
+source_lang = en
+source_name = ref/states/altering_states.rst
+

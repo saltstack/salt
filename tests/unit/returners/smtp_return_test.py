@@ -8,7 +8,7 @@
 '''
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -19,11 +19,19 @@ from salt.returners import smtp_return as smtp
 
 smtp.__salt__ = {}
 
+try:
+    import gnupg  # pylint: disable=unused-import
+    HAS_GNUPG = True
+except ImportError:
+    HAS_GNUPG = False
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.returners.smtp_return.smtplib.SMTP')
 class SMTPReturnerTestCase(TestCase):
-    def test_returner(self, mocked_smtplib):
+    '''
+    Test SMTP returner
+    '''
+    def _test_returner(self, mocked_smtplib, *args):  # pylint: disable=unused-argument
         '''
         Test to see if the SMTP returner sends a message
         '''
@@ -38,7 +46,18 @@ class SMTPReturnerTestCase(TestCase):
             smtp.returner(ret)
             self.assertTrue(mocked_smtplib.return_value.sendmail.called)
 
+if HAS_GNUPG:
+    @patch('salt.returners.smtp_return.gnupg')
+    @patch('salt.returners.smtp_return.smtplib.SMTP')
+    def test_returner(self, mocked_smtplib, *args):
+        self._test_returner(mocked_smtplib, *args)
 
+else:
+    @patch('salt.returners.smtp_return.smtplib.SMTP')
+    def test_returner(self, mocked_smtplib, *args):
+        self._test_returner(mocked_smtplib, *args)
+
+SMTPReturnerTestCase.test_returner = test_returner
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(SMTPReturnerTestCase, needs_daemon=False)

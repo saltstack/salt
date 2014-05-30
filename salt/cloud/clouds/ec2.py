@@ -1278,8 +1278,10 @@ def request_instance(vm_=None, call=None):
         eni_devices = []
         for interface in network_interfaces:
             _new_eip = None
-            if interface['allocate_new_eip']:
+            if 'allocate_new_eip' in interface and interface['allocate_new_eip']:
                 _new_eip = _request_eip(interface)
+            elif 'associate_eip' in interface and interface['associate_eip']:
+                _new_eip = interface['associate_eip']
             _new_eni = _create_eni(interface, _new_eip)
             eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',

@@ -372,6 +372,18 @@ this can slow down the authentication process a bit in large setups.
 
     max_minions: 100
 
+``presence_events``
+----------------------
+
+Default: False
+
+When enabled the master regularly sends events of currently connected, lost 
+and newly connected minions on the eventbus. 
+
+.. code-block:: yaml
+
+    presence_events: False
+
 
 Master Security Settings
 ========================
@@ -686,7 +698,7 @@ If set to 'changes', the output will be full unless the state didn't change.
 
 Default: ``False``
 
-Enable extra yaml render routines for states containing UTF characters
+Enable extra routines for yaml renderer used states containing UTF characters
 
 .. code-block:: yaml
 
@@ -1588,6 +1600,83 @@ Default: ``None``
           inventory_base_uri: /etc/reclass
 
 There are additional details at :ref:`salt-pillars`
+
+.. conf_master:: pillar_source_merging_strategy
+
+``pillar_source_merging_strategy``
+----------------------------------
+
+Default: ``smart``
+
+The pillar_source_merging_strategy option allows to configure merging strategy
+between differents sources. It accepts 3 values:
+
+* recurse:
+
+  it will merge recursivelly mapping of data. For example, theses 2 sources:
+
+  .. code-block:: yaml
+
+      foo: 42
+      bar:
+          element1: True
+
+  .. code-block:: yaml
+
+      bar:
+          element2: True
+      baz: quux
+
+  will be merged as:
+
+  .. code-block:: yaml
+
+      foo: 42
+      bar:
+          element1: True
+          element2: True
+      baz: quux
+
+
+* aggregate:
+
+  instructs aggregation of elements between sources that use the #!yamlex rendered.
+
+  For example, these two documents:
+
+  .. code-block:: yaml
+
+      #!yamlex
+      foo: 42
+      bar: !aggregate {
+        element1: True
+      }
+      baz: !aggregate quux
+
+  .. code-block:: yaml
+
+      #!yamlex
+      bar: !aggregate {
+        element2: True
+      }
+      baz: !aggregate quux2
+
+  will be merged as:
+
+  .. code-block:: yaml
+
+      foo: 42
+      bar:
+        element1: True
+        element2: True
+      baz:
+        - quux
+        - quux2
+
+* smart (default):
+
+    it guesses the best strategy, based on the "renderer" setting.
+
 
 Syndic Server Settings
 ======================

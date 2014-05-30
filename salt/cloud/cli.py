@@ -260,8 +260,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
                 msg = ''
                 if 'existing' in dmap:
-                    msg += ('The following virtual machines were found '
-                            'already running:\n')
+                    msg += ('The following virtual machines already exist:\n')
                     for name in dmap['existing']:
                         msg += '  {0}\n'.format(name)
 

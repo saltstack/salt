@@ -515,11 +515,15 @@ class Client(object):
                 else:
                     return ''
         else:
+            if salt.utils.is_windows():
+                netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
+            else:
+                netloc = url_data.netloc
             dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'extrn_files',
                 saltenv,
-                url_data.netloc,
+                netloc,
                 url_data.path
             )
             destdir = os.path.dirname(dest)

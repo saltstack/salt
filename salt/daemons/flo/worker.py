@@ -56,8 +56,8 @@ class WorkerFork(ioflo.base.deeding.Deed):
                 real=self.opts.value['ioflo_realtime'],
                 filepath=self.opts.value['worker_floscript'],
                 behaviors=behaviors,
-                username="",
-                password="",
+                username='',
+                password='',
                 mode=None,
                 houses=None,
                 metas=None,
@@ -155,7 +155,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
                 else:
                     r_share = 'ret'
                 ret['route'] = {
-                        'src': (self.opts.value['id'], self.uxd_stack.value.local.name, None),
+                        'src': (self.opts.value.get('id', 'master'), self.uxd_stack.value.local.name, None),
                         'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)
                         }
                 self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids.get('yard0'))

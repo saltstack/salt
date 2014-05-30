@@ -13,7 +13,7 @@ from textwrap import dedent
 import jinja2
 
 # Import salt libs
-from salt.utils.serializers import json, sls, yaml, msgpack
+from salt.utils.serializers import json, yamlex, yaml, msgpack
 from salt.utils.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
@@ -48,30 +48,30 @@ class TestSerializers(TestCase):
         data = {
             "foo": "bar"
         }
-        serialized = sls.serialize(data)
+        serialized = yamlex.serialize(data)
         assert serialized == '{foo: bar}', serialized
 
-        deserialized = sls.deserialize(serialized)
+        deserialized = yamlex.deserialize(serialized)
         assert deserialized == data, deserialized
 
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_serialize_complex_sls(self):
         data = OrderedDict([
             ("foo", 1),
             ("bar", 2),
             ("baz", True),
         ])
-        serialized = sls.serialize(data)
+        serialized = yamlex.serialize(data)
         assert serialized == '{foo: 1, bar: 2, baz: true}', serialized
 
-        deserialized = sls.deserialize(serialized)
+        deserialized = yamlex.deserialize(serialized)
         assert deserialized == data, deserialized
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_compare_sls_vs_yaml(self):
         src = '{foo: 1, bar: 2, baz: {qux: true}}'
-        sls_data = sls.deserialize(src)
+        sls_data = yamlex.deserialize(src)
         yml_data = yaml.deserialize(src)
 
         # ensure that sls & yaml have the same base
@@ -84,16 +84,16 @@ class TestSerializers(TestCase):
         assert not isinstance(yml_data, OrderedDict)
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_compare_sls_vs_yaml_with_jinja(self):
         tpl = '{{ data }}'
         env = jinja2.Environment()
         src = '{foo: 1, bar: 2, baz: {qux: true}}'
 
-        sls_src = env.from_string(tpl).render(data=sls.deserialize(src))
+        sls_src = env.from_string(tpl).render(data=yamlex.deserialize(src))
         yml_src = env.from_string(tpl).render(data=yaml.deserialize(src))
 
-        sls_data = sls.deserialize(sls_src)
+        sls_data = yamlex.deserialize(sls_src)
         yml_data = yaml.deserialize(yml_src)
 
         # ensure that sls & yaml have the same base
@@ -113,7 +113,7 @@ class TestSerializers(TestCase):
             ('baz', {'qux': True})
         ])
 
-        sls_obj = sls.deserialize(sls.serialize(obj))
+        sls_obj = yamlex.deserialize(yamlex.serialize(obj))
         try:
             yml_obj = yaml.deserialize(yaml.serialize(obj))
         except SerializationError:
@@ -131,7 +131,7 @@ class TestSerializers(TestCase):
         final_obj = yaml.deserialize(yml_src)
         assert obj != final_obj
 
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_aggregate(self):
         src = dedent("""
             a: lol
@@ -144,7 +144,7 @@ class TestSerializers(TestCase):
         """).strip()
 
         # test that !aggregate is correctly parsed
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {
             'a': 'lol',
             'foo': ['hello'],
@@ -161,7 +161,7 @@ class TestSerializers(TestCase):
             foo: [hello]
             bar: [1, 2, 3]
             baz: {a: 42, b: 666, c: the beast}
-        """).strip() == sls.serialize(sls_obj), sls_obj
+        """).strip() == yamlex.serialize(sls_obj), sls_obj
 
         # test that !aggregate aggregates scalars
         src = dedent("""
@@ -170,7 +170,7 @@ class TestSerializers(TestCase):
             placeholder: !aggregate baz
         """).strip()
 
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {'placeholder': ['foo', 'bar', 'baz']}, sls_obj
 
         # test that !aggregate aggregates lists
@@ -181,7 +181,7 @@ class TestSerializers(TestCase):
             placeholder: !aggregate ~
         """).strip()
 
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {'placeholder': ['foo', 'bar', 'baz']}, sls_obj
 
         # test that !aggregate aggregates dicts
@@ -191,7 +191,7 @@ class TestSerializers(TestCase):
             placeholder: !aggregate {baz: inga}
         """).strip()
 
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {
             'placeholder': {
                 'foo': 42,
@@ -207,7 +207,7 @@ class TestSerializers(TestCase):
             placeholder: {foo: !aggregate {baz: inga}}
         """).strip()
 
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {
             'placeholder': {
                 'foo': {
@@ -226,7 +226,7 @@ class TestSerializers(TestCase):
             placeholder: {!aggregate foo: {baz: inga}}
         """).strip()
 
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {
             'placeholder': {
                 'foo': {
@@ -237,7 +237,7 @@ class TestSerializers(TestCase):
             }
         }, sls_obj
 
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_reset(self):
         src = dedent("""
             placeholder: {!aggregate foo: {foo: 42}}
@@ -245,7 +245,7 @@ class TestSerializers(TestCase):
             !reset placeholder: {!aggregate foo: {baz: inga}}
         """).strip()
 
-        sls_obj = sls.deserialize(src)
+        sls_obj = yamlex.deserialize(src)
         assert sls_obj == {
             'placeholder': {
                 'foo': {
@@ -254,13 +254,13 @@ class TestSerializers(TestCase):
             }
         }, sls_obj
 
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_repr(self):
         """
         Ensure that obj __repr__ and __str__ methods are yaml friendly.
         """
         def convert(obj):
-            return sls.deserialize(sls.serialize(obj))
+            return yamlex.deserialize(yamlex.serialize(obj))
         sls_obj = convert(OrderedDict([('foo', 'bar'), ('baz', 'qux')]))
 
         # ensure that repr and str are yaml friendly
@@ -271,10 +271,10 @@ class TestSerializers(TestCase):
         assert sls_obj['foo'].__str__() == '"bar"'
         assert sls_obj['foo'].__repr__() == '"bar"'
 
-    @skipIf(not sls.available, SKIP_MESSAGE % 'sls')
+    @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_micking_file_merging(self):
         def convert(obj):
-            return sls.deserialize(sls.serialize(obj))
+            return yamlex.deserialize(yamlex.serialize(obj))
 
         # let say that we have 2 pillar files
 
@@ -294,9 +294,9 @@ class TestSerializers(TestCase):
               subkey3: second
         """).strip()
 
-        sls_obj1 = sls.deserialize(src1)
-        sls_obj2 = sls.deserialize(src2)
-        sls_obj3 = sls.merge_recursive(sls_obj1, sls_obj2)
+        sls_obj1 = yamlex.deserialize(src1)
+        sls_obj2 = yamlex.deserialize(src2)
+        sls_obj3 = yamlex.merge_recursive(sls_obj1, sls_obj2)
 
         assert sls_obj3 == {
             'a': 'second',

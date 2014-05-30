@@ -444,8 +444,11 @@ def running():
     proc_dir = os.path.join(__opts__['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_)
+
+    def _read_proc_file(path):
+        '''
+        Return a dict of JID metadata, or None
+        '''
         with salt.utils.fopen(path, 'rb') as fp_:
             buf = fp_.read()
             fp_.close()
@@ -454,28 +457,42 @@ def running():
             else:
                 # Proc file is empty, remove
                 os.remove(path)
-                continue
+                return None
         if not isinstance(data, dict):
             # Invalid serial object
-            continue
+            return None
         if not salt.utils.process.os_is_running(data['pid']):
             # The process is no longer running, clear out the file and
             # continue
             os.remove(path)
-            continue
+            return None
         if __opts__['multiprocessing']:
             if data.get('pid') == pid:
-                continue
+                return None
         else:
             if data.get('pid') != pid:
                 os.remove(path)
-                continue
+                return None
             if data.get('jid') == current_thread:
-                continue
+                return None
             if not data.get('jid') in [x.name for x in threading.enumerate()]:
                 os.remove(path)
-                continue
-        ret.append(data)
+                return None
+
+        return data
+
+    for fn_ in os.listdir(proc_dir):
+        path = os.path.join(proc_dir, fn_)
+        try:
+            data = _read_proc_file(path)
+            if data is not None:
+                ret.append(data)
+        except IOError:
+            # proc files may be removed at any time during this process by
+            # the minion process that is executing the JID in question, so
+            # we must ignore ENOENT during this process
+            pass
+
     return ret
 
 
@@ -500,37 +517,6 @@ def clear_cache():
                 log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
                 return False
     return True
-
-
-def cached():
-    '''
-    Return the data on all cached salt jobs on the minion
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltutil.cached
-    '''
-    ret = []
-    serial = salt.payload.Serial(__opts__)
-    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
-    if not os.path.isdir(proc_dir):
-        return []
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_, 'return.p')
-        with salt.utils.fopen(path, 'rb') as fp_:
-            buf = fp_.read()
-            fp_.close()
-            if buf:
-                data = serial.loads(buf)
-            else:
-                continue
-        if not isinstance(data, dict):
-            # Invalid serial object
-            continue
-        ret.append(data)
-    return ret
 
 
 def find_job(jid):
@@ -559,10 +545,23 @@ def find_cached_job(jid):
 
         salt '*' saltutil.find_cached_job <job id>
     '''
-    for data in cached():
-        if data['jid'] == jid:
-            return data
-    return {}
+    serial = salt.payload.Serial(__opts__)
+    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
+    job_dir = os.path.join(proc_dir, str(jid))
+    if not os.path.isdir(job_dir):
+        return
+    path = os.path.join(job_dir, 'return.p')
+    with salt.utils.fopen(path, 'rb') as fp_:
+        buf = fp_.read()
+        fp_.close()
+        if buf:
+            data = serial.loads(buf)
+        else:
+            return
+    if not isinstance(data, dict):
+        # Invalid serial object
+        return
+    return data
 
 
 def signal_job(jid, sig):

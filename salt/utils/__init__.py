@@ -33,6 +33,7 @@ import types
 import warnings
 import yaml
 from calendar import month_abbr as months
+from string import maketrans
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -1286,6 +1287,20 @@ def is_windows():
     Simple function to return if a host is Windows or not
     '''
     return sys.platform.startswith('win')
+
+
+def sanitize_win_path_string(winpath):
+    '''
+    Remove illegal path characters for windows
+    '''
+    intab = '<>:|?*'
+    outtab = '_' * len(intab)
+    trantab = maketrans(intab, outtab)
+    if isinstance(winpath, str):
+        winpath = winpath.translate(trantab)
+    elif isinstance(winpath, unicode):
+        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
+    return winpath
 
 
 @real_memoize
