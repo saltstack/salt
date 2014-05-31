@@ -23,6 +23,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
     import ldap
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
@@ -133,6 +134,7 @@ def _do_search(conf):
         attrs = None
     # Perform the search
     try:
+        _filter = __salt__['ldap.filter.escape_filter_chars'](_filter)
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results'][0][1]
         log.debug(
