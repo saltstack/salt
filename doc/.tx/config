@@ -4394,3 +4394,9 @@ source_file = _build/locale/ref/states/altering_states.pot
 source_lang = en
 source_name = ref/states/altering_states.rst
 
+[salt.ref--renderers--all--salt_renderers_yamlex]
+file_filter = locale/<lang>/LC_MESSAGES/ref/renderers/all/salt.renderers.yamlex.po
+source_file = _build/locale/ref/renderers/all/salt.renderers.yamlex.pot
+source_lang = en
+source_name = ref/renderers/all/salt.renderers.yamlex.rst
+
