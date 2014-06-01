@@ -5,6 +5,8 @@ Execute puppet routines
 
 # Import python libs
 import os
+import yaml
+import datetime
 
 # Import salt libs
 import salt.utils
@@ -79,6 +81,7 @@ class _Puppet(object):
         self.disabled_lockfile = self.vardir + '/state/agent_disabled.lock'
         self.catalog_run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
         self.agent_pidfile = self.rundir + '/agent.pid'
+        self.lastrunfile = self.vardir + '/state/last_run_summary.yaml'
 
     def __repr__(self):
         '''
@@ -265,6 +268,47 @@ def status(*args, **kwargs):
             return 'stale pidfile'
 
     return 'stopped'
+
+
+def summary(*args, **kwargs):
+    '''
+    Show a summary of the last puppet agent run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.summary
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    try:
+        report = yaml.load(open(puppet.lastrunfile, 'r'))
+        summary = {}
+
+        if 'time' in report:
+            try:
+                summary['last_run'] = datetime.datetime.fromtimestamp(
+                    int(report['time']['last_run'])).isoformat()
+            except (TypeError, ValueError, KeyError):
+                summary['last_run'] = 'invalid or missing timestamp'
+
+            summary['time'] = {}
+            for key in ('total', 'config_retrieval'):
+                if key in report['time']:
+                    summary['time'][key] = report['time'][key]
+
+        if 'resources' in report:
+            summary['resources'] = report['resources']
+
+        return summary
+
+    except yaml.YAMLError:
+        return 'failed to parse puppet run summary'
+    except IOError:
+        return 'unable to read puppet run summary'
 
 
 def facts(puppet=False):
