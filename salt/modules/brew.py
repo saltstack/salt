@@ -315,7 +315,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
     __salt__['cmd.run'](
         cmd,
-        runas=user if user != __opts__['user'] else __opts__['user'],
+        runas=user if user != __opts__['user'] else None,
         output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)

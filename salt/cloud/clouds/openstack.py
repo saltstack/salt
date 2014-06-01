@@ -75,6 +75,7 @@ Either a password or an API key must also be specified:
       apikey: 901d3f579h23c8v73q9
 
 Optionally, if you don't want to save plain-text password in your configuration file, you can use keyring:
+
 .. code-block:: yaml
 
     my-openstack-keyring-config:
