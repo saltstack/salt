@@ -10,7 +10,7 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, Mock, NO_MOCK, NO_MOCK_REASON
 
-ensure_in_syspath('../')
+ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.loader
