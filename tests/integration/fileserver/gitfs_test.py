@@ -39,7 +39,7 @@ if not gitfs.__virtual__():
     GITFS_AVAILABLE = False
 
 
-# @skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
+@skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitFSTest(integration.ModuleCase):
     def setUp(self):
