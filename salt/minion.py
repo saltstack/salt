@@ -742,9 +742,9 @@ class Minion(MinionBase):
             load['tag'] = tag
         else:
             return
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            result = sreq.send('aes', self.crypticle.dumps(load))
+            result = channel.send(load)
             try:
                 data = self.crypticle.loads(result)
             except AuthenticationError:
@@ -861,6 +861,7 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        print (data)
         if self.opts['multiprocessing']:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
@@ -1066,7 +1067,7 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(jid))
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
@@ -1110,7 +1111,7 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
-            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+            ret_val = channel.send(load)
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
@@ -1121,7 +1122,7 @@ class Minion(MinionBase):
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
-            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+            ret_val = channel.send(load)
         log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
