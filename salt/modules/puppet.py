@@ -3,6 +3,9 @@
 Execute puppet routines
 '''
 
+# Import python libs
+import os
+
 # Import salt libs
 import salt.utils
 
@@ -69,6 +72,8 @@ class _Puppet(object):
             else:
                 self.vardir = '/var/lib/puppet'
                 self.confdir = '/etc/puppet'
+
+        self.disabled_lockfile = self.vardir + '/state/agent_disabled.lock'
 
     def __repr__(self):
         '''
@@ -169,6 +174,56 @@ def noop(*args, **kwargs):
     '''
     args += ('noop',)
     return run(*args, **kwargs)
+
+
+def enable(*args, **kwargs):
+    '''
+    Enable the puppet agent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.disable
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        try:
+            os.remove(puppet.disabled_lockfile)
+            return 'successfully enabled'
+        except (IOError, OSError):
+            return 'failed to enable'
+    else:
+        return 'already enabled'
+
+
+def disable(*args, **kwargs):
+    '''
+    Disable the puppet agent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.disable
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        return 'already disabled'
+    else:
+        try:
+            fd = open(puppet.disabled_lockfile, 'w')
+            fd.write('{}') # puppet chokes when no valid json is found
+            fd.close()
+            return 'successfully disabled'
+        except (IOError, OSError):
+            return 'failed to disable'
 
 
 def facts(puppet=False):
