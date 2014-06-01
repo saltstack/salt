@@ -3615,8 +3615,8 @@ def serialize(name,
         # TODO remove json round-trip when all dataset will use
         # utils.serializers
         contents = pprint.pformat(
-            json.json.loads(
-                json.json.dumps(dataset),
+            json.loads(
+                json.dumps(dataset),
                 object_hook=salt.utils.decode_dict
             )
         )
