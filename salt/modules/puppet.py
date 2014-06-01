@@ -79,7 +79,7 @@ class _Puppet(object):
                 self.confdir = '/etc/puppet'
 
         self.disabled_lockfile = self.vardir + '/state/agent_disabled.lock'
-        self.catalog_run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
+        self.run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
         self.agent_pidfile = self.rundir + '/agent.pid'
         self.lastrunfile = self.vardir + '/state/last_run_summary.yaml'
 
@@ -184,7 +184,7 @@ def noop(*args, **kwargs):
     return run(*args, **kwargs)
 
 
-def enable(*args, **kwargs):
+def enable():
     '''
     Enable the puppet agent
 
@@ -208,7 +208,7 @@ def enable(*args, **kwargs):
         return 'already enabled'
 
 
-def disable(*args, **kwargs):
+def disable():
     '''
     Disable the puppet agent
 
@@ -226,15 +226,15 @@ def disable(*args, **kwargs):
         return 'already disabled'
     else:
         try:
-            fd = open(puppet.disabled_lockfile, 'w')
-            fd.write('{}') # puppet chokes when no valid json is found
-            fd.close()
+            lockfile = open(puppet.disabled_lockfile, 'w')
+            lockfile.write('{}') # puppet chokes when no valid json is found
+            lockfile.close()
             return 'successfully disabled'
         except (IOError, OSError):
             return 'failed to disable'
 
 
-def status(*args, **kwargs):
+def status():
     '''
     Display puppet agent status
 
@@ -251,9 +251,9 @@ def status(*args, **kwargs):
     if os.path.isfile(puppet.disabled_lockfile):
         return 'administratively disabled'
 
-    if os.path.isfile(puppet.catalog_run_lockfile):
+    if os.path.isfile(puppet.run_lockfile):
         try:
-            pid = int(open(puppet.catalog_run_lockfile, 'r').read())
+            pid = int(open(puppet.run_lockfile, 'r').read())
             os.kill(pid, 0)
             return 'applying a catalog'
         except (OSError, ValueError):
@@ -270,7 +270,7 @@ def status(*args, **kwargs):
     return 'stopped'
 
 
-def summary(*args, **kwargs):
+def summary():
     '''
     Show a summary of the last puppet agent run
 
@@ -286,24 +286,24 @@ def summary(*args, **kwargs):
 
     try:
         report = yaml.load(open(puppet.lastrunfile, 'r'))
-        summary = {}
+        result = {}
 
         if 'time' in report:
             try:
-                summary['last_run'] = datetime.datetime.fromtimestamp(
+                result['last_run'] = datetime.datetime.fromtimestamp(
                     int(report['time']['last_run'])).isoformat()
             except (TypeError, ValueError, KeyError):
-                summary['last_run'] = 'invalid or missing timestamp'
+                result['last_run'] = 'invalid or missing timestamp'
 
-            summary['time'] = {}
+            result['time'] = {}
             for key in ('total', 'config_retrieval'):
                 if key in report['time']:
-                    summary['time'][key] = report['time'][key]
+                    result['time'][key] = report['time'][key]
 
         if 'resources' in report:
-            summary['resources'] = report['resources']
+            result['resources'] = report['resources']
 
-        return summary
+        return result
 
     except yaml.YAMLError:
         return 'failed to parse puppet run summary'
