@@ -64,16 +64,21 @@ class _Puppet(object):
 
         if salt.utils.is_windows():
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
+            self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
         else:
             if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
                 self.vardir = '/var/opt/lib/pe-puppet'
+                self.rundir = '/var/opt/run/pe-puppet'
                 self.confdir = '/etc/puppetlabs/puppet'
             else:
                 self.vardir = '/var/lib/puppet'
+                self.rundir = '/var/run/puppet'
                 self.confdir = '/etc/puppet'
 
         self.disabled_lockfile = self.vardir + '/state/agent_disabled.lock'
+        self.catalog_run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
+        self.agent_pidfile = self.rundir + '/agent.pid'
 
     def __repr__(self):
         '''
@@ -224,6 +229,42 @@ def disable(*args, **kwargs):
             return 'successfully disabled'
         except (IOError, OSError):
             return 'failed to disable'
+
+
+def status(*args, **kwargs):
+    '''
+    Display puppet agent status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.status
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        return 'administratively disabled'
+
+    if os.path.isfile(puppet.catalog_run_lockfile):
+        try:
+            pid = int(open(puppet.catalog_run_lockfile, 'r').read())
+            os.kill(pid, 0)
+            return 'applying a catalog'
+        except (OSError, ValueError):
+            return 'stale lockfile'
+
+    if os.path.isfile(puppet.agent_pidfile):
+        try:
+            pid = int(open(puppet.agent_pidfile, 'r').read())
+            os.kill(pid, 0)
+            return 'idle daemon'
+        except (OSError, ValueError):
+            return 'stale pidfile'
+
+    return 'stopped'
 
 
 def facts(puppet=False):
