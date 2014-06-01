@@ -222,18 +222,21 @@ A more complex ``recurse`` example:
 '''
 
 # Import python libs
-import os
-import shutil
 import difflib
+import json
 import logging
+import os
 import pprint
+import shutil
 import traceback
+import yaml
 
 # Import salt libs
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
-from salt.utils.serializers import yaml, json
+from salt.utils.serializers import yaml as yaml_serializer
+from salt.utils.serializers import json as json_serializer
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -3429,7 +3432,7 @@ def _merge_dict(obj, k, v):
         if type(obj[k]) is list:
             if type(v) is list:
                 for a in v:
-                    if not a in obj[k]:
+                    if a not in obj[k]:
                         changes[k] = a
                         obj[k].append(a)
             else:
@@ -3521,6 +3524,8 @@ def serialize(name,
         be parsed and the dataset passed in will be merged with the existing
         content
 
+        .. versionadded:: Helium
+
     For example, this state::
 
         /etc/dummy/package.json:
@@ -3535,7 +3540,7 @@ def serialize(name,
                 engine: node 0.4.1
             - formatter: json
 
-    will manages the file ``/etc/dummy/package.json``::
+    will manage the file ``/etc/dummy/package.json``::
 
         {
           "author": "A confused individual <iam@confused.com>",
@@ -3577,18 +3582,17 @@ def serialize(name,
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
-                existing_data = yaml.load(file(name, 'r'))
+                existing_data = yaml.safe_load(file(name, 'r'))
             elif formatter == 'json':
                 existing_data = json.load(file(name, 'r'))
             else:
                 return {'changes': {},
-                        'comment': '{0} format is not supported for merging'.format(
-                            formatter.capitalized()),
+                        'comment': ('{0} format is not supported for merging'
+                                    .format(formatter.capitalized())),
                         'name': name,
-                        'result': False
-                        }
+                        'result': False}
 
-            if not existing_data is None:
+            if existing_data is not None:
                 for k, v in dataset.iteritems():
                     if k in existing_data:
                         ret['changes'].update(_merge_dict(existing_data, k, v))
@@ -3598,13 +3602,13 @@ def serialize(name,
                 dataset = existing_data
 
     if formatter == 'yaml':
-        contents = yaml.serialize(dataset,
-                                  default_flow_style=False)
+        contents = yaml_serializer.serialize(dataset,
+                                             default_flow_style=False)
     elif formatter == 'json':
-        contents = json.serialize(dataset,
-                                  indent=2,
-                                  separators=(',', ': '),
-                                  sort_keys=True)
+        contents = json_serializer.serialize(dataset,
+                                             indent=2,
+                                             separators=(',', ': '),
+                                             sort_keys=True)
     elif formatter == 'python':
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
