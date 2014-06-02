@@ -610,6 +610,9 @@ def get_known_host(user, hostname, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
+    if type(full) == dict:
+        return full
+
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
     lines = __salt__['cmd.run'](cmd).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
@@ -704,6 +707,9 @@ def rm_known_host(user=None, hostname=None, config=None):
 
     full = _get_known_hosts_file(config=config, user=user)
 
+    if type(full) == dict:
+        return full
+
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
@@ -774,6 +780,9 @@ def set_known_host(user=None,
     # set up new value
 
     full = _get_known_hosts_file(config=config, user=user)
+
+    if type(full) == dict:
+        return full
 
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
@@ -908,6 +917,9 @@ def hash_known_hosts(user=None, config=None):
 
     '''
     full = _get_known_hosts_file(config=config, user=user)
+
+    if type(full) == dict:
+        return full
 
     if not os.path.isfile(full):
         return {'status': 'error',
