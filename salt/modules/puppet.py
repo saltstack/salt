@@ -207,7 +207,7 @@ def enable():
     if os.path.isfile(puppet.disabled_lockfile):
         try:
             os.remove(puppet.disabled_lockfile)
-        except (IOError, OSError):
+        except (IOError, OSError) as exc:
             msg = 'Failed to enable: {0}'.format(exc)
             log.error(msg)
             raise CommandExecutionError(msg)
@@ -269,20 +269,20 @@ def status():
         try:
             with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
                 pid = int(fp_.read())
+                os.kill(pid, 0) # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale lockfile'
         else:
-            os.kill(pid, 0)
             return 'Applying a catalog'
 
     if os.path.isfile(puppet.agent_pidfile):
         try:
             with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
                 pid = int(fp_.read())
+                os.kill(pid, 0) # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale pidfile'
         else:
-            os.kill(pid, 0)
             return 'Idle daemon'
 
     return 'Stopped'
