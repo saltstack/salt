@@ -80,7 +80,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):
 
         headers = {'accept': 'version=' + str(api) + ',application/json'}
 
-        if verify and not (cafile is None):
+        if verify and cafile is not None:
             verify = cafile
 
         resp = requests.get(
