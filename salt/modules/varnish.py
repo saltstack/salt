@@ -2,16 +2,23 @@
 '''
 Support for Varnish
 
-Please note: The functions in here are generic functions designed to work with
-all implementations of Varnish.
+.. versionadded:: Helium
+
+.. note::
+
+    These functions are generic, and are designed to work with all
+    implementations of Varnish.
 '''
 
-# Import salt libs
-import salt.utils
+# Import python libs
 import logging
 import re
 
-log = logging.getLogger(__name__)
+# Import salt libs
+import salt.utils
+
+# Define the module's virtual name
+__virtualname__ = 'varnish'
 
 
 def __virtual__():
@@ -20,7 +27,7 @@ def __virtual__():
     '''
     cmd = _detect_os()
     if salt.utils.which(cmd):
-        return True
+        return __virtualname__
     return False
 
 
