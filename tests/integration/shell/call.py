@@ -83,37 +83,10 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn(expected_comment, ''.join(stdout))
         self.assertNotEqual(0, retcode)
 
-    @skipIf(True, 'This test should not use hardcoded paths!')
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_return(self):
-        config_dir = '/tmp/salttest'
-        minion_config_file = os.path.join(config_dir, 'minion')
-        minion_config = {
-            'id': 'minion_test_issue_2731',
-            'master': 'localhost',
-            'master_port': 64506,
-            'root_dir': '/tmp/salttest',
-            'pki_dir': 'pki',
-            'cachedir': 'cachedir',
-            'sock_dir': 'minion_sock',
-            'open_mode': True,
-            'log_file': '/tmp/salttest/minion_test_issue_2731',
-            'log_level': 'quiet',
-            'log_level_logfile': 'info'
-        }
-
-        # Remove existing logfile
-        if os.path.isfile('/tmp/salttest/minion_test_issue_2731'):
-            os.unlink('/tmp/salttest/minion_test_issue_2731')
-
-        # Let's first test with a master running
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
-        out = self.run_call('-c {0} cmd.run "echo returnTOmaster"'.format(
-            os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf')))
-        jobs = [a for a in self.run_run('-c {0} jobs.list_jobs'.format(
-            os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf')))]
+        self.run_call('-c {0} cmd.run "echo returnTOmaster"'.format(self.get_config_dir()))
+        jobs = [a for a in self.run_run('-c {0} jobs.list_jobs'.format(self.get_config_dir()))]
 
         self.assertTrue(True in ['returnTOmaster' in j for j in jobs])
         # lookback jid
@@ -130,38 +103,43 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         assert idx > 0
         assert jid
         master_out = [
-            a for a in self.run_run('-c {0} jobs.lookup_jid {1}'.format(
-                os.path.join(integration.INTEGRATION_TEST_DIR,
-                             'files',
-                             'conf'),
-                jid))]
+            a for a in self.run_run('-c {0} jobs.lookup_jid {1}'.format(self.get_config_dir(), jid))
+        ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):
-        config_dir = '/tmp/salttest'
+        root_dir = os.path.join(integration.TMP, 'issue-2731')
+        config_dir = os.path.join(root_dir, 'conf')
         minion_config_file = os.path.join(config_dir, 'minion')
+        logfile = os.path.join(root_dir, 'minion_test_issue_2731')
+
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        master_config = yaml.load(open(self.get_config_file_path('master')).read())
+        master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
-            config_dir, 'pki', 'minions', 'minion_test_issue_2731'
+            master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
         )
 
         minion_config = {
             'id': 'minion_test_issue_2731',
             'master': 'localhost',
             'master_port': 64506,
-            'root_dir': '/tmp/salttest',
+            'root_dir': master_root_dir,
             'pki_dir': 'pki',
             'cachedir': 'cachedir',
             'sock_dir': 'minion_sock',
             'open_mode': True,
-            'log_file': '/tmp/salttest/minion_test_issue_2731',
+            'log_file': logfile,
             'log_level': 'quiet',
             'log_level_logfile': 'info'
         }
 
         # Remove existing logfile
-        if os.path.isfile('/tmp/salttest/minion_test_issue_2731'):
-            os.unlink('/tmp/salttest/minion_test_issue_2731')
+        if os.path.isfile(logfile):
+            os.unlink(logfile)
 
         start = datetime.now()
         # Let's first test with a master running
