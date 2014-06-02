@@ -718,6 +718,7 @@ def rm_known_host(user=None, hostname=None, config=None):
     cmd_result = __salt__['cmd.run'](cmd)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
+        uinfo = __salt__['user.info'](user)
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'removed', 'comment': cmd_result}
 
@@ -790,6 +791,9 @@ def set_known_host(user=None,
 
     # ensure ~/.ssh exists
     ssh_dir = os.path.dirname(full)
+    if user:
+        uinfo = __salt__['user.info'](user)
+
     try:
         log.debug('Ensuring ssh config dir "{0}" exists'.format(ssh_dir))
         os.makedirs(ssh_dir)
@@ -928,5 +932,6 @@ def hash_known_hosts(user=None, config=None):
     cmd_result = __salt__['cmd.run'](cmd)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
+        uinfo = __salt__['user.info'](user)
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'comment': cmd_result}
