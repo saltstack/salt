@@ -155,6 +155,7 @@ Full list of builtin execution modules
     pkgng
     pkgutil
     portage_config
+    postfix
     postgres
     poudriere
     powerpath
