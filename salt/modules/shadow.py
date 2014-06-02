@@ -13,7 +13,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-import salt.utils.pycrypto
+try:
+    import salt.utils.pycrypto
+    HAS_CRYPT = True
+else:
+    HAS_CRYPT = False
 
 
 def __virtual__():
@@ -156,6 +160,11 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
         salt '*' shadow.gen_password 'I_am_password'
         salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
     '''
+    if not HAS_CRYPT:
+        raise CommandExecutionError(
+                'gen_password is not available on this operating system '
+                'because the "crypt" python module is not available.'
+                )
     return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
 
 
