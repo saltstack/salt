@@ -269,7 +269,7 @@ def status():
         try:
             with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
                 pid = int(fp_.read())
-                os.kill(pid, 0) # raise an OSError if process doesn't exist
+                os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale lockfile'
         else:
@@ -279,7 +279,7 @@ def status():
         try:
             with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
                 pid = int(fp_.read())
-                os.kill(pid, 0) # raise an OSError if process doesn't exist
+                os.kill(pid, 0)  # raise an OSError if process doesn't exist
         except (OSError, ValueError):
             return 'Stale pidfile'
         else:
