@@ -4,12 +4,16 @@ Execute puppet routines
 '''
 
 # Import python libs
+import logging
 import os
 import yaml
 import datetime
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -186,6 +190,8 @@ def noop(*args, **kwargs):
 
 def enable():
     '''
+    .. versionadded:: Helium
+
     Enable the puppet agent
 
     CLI Example:
@@ -201,15 +207,19 @@ def enable():
     if os.path.isfile(puppet.disabled_lockfile):
         try:
             os.remove(puppet.disabled_lockfile)
-            return 'successfully enabled'
-        except (IOError, OSError):
-            return 'failed to enable'
-    else:
-        return 'already enabled'
+        except (IOError, OSError) as exc:
+            msg = 'Failed to enable: {0}'.format(exc)
+            log.error(msg)
+            raise CommandExecutionError(msg)
+        else:
+            return True
+    return False
 
 
 def disable():
     '''
+    .. versionadded:: Helium
+
     Disable the puppet agent
 
     CLI Example:
@@ -223,19 +233,24 @@ def disable():
     puppet = _Puppet()
 
     if os.path.isfile(puppet.disabled_lockfile):
-        return 'already disabled'
+        return False
     else:
-        try:
-            lockfile = open(puppet.disabled_lockfile, 'w')
-            lockfile.write('{}')  # puppet chokes when no valid json is found
-            lockfile.close()
-            return 'successfully disabled'
-        except (IOError, OSError):
-            return 'failed to disable'
+        with salt.utils.fopen(puppet.disabled_lockfile, 'w') as lockfile:
+            try:
+                # Puppet chokes when no valid json is found
+                lockfile.write('{}')
+                lockfile.close()
+                return True
+            except (IOError, OSError) as exc:
+                msg = 'Failed to disable: {0}'.format(exc)
+                log.error(msg)
+                raise CommandExecutionError(msg)
 
 
 def status():
     '''
+    .. versionadded:: Helium
+
     Display puppet agent status
 
     CLI Example:
@@ -244,34 +259,39 @@ def status():
 
         salt '*' puppet.status
     '''
-
     _check_puppet()
     puppet = _Puppet()
 
     if os.path.isfile(puppet.disabled_lockfile):
-        return 'administratively disabled'
+        return 'Administratively disabled'
 
     if os.path.isfile(puppet.run_lockfile):
         try:
-            pid = int(open(puppet.run_lockfile, 'r').read())
-            os.kill(pid, 0)
-            return 'applying a catalog'
+            with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
+                pid = int(fp_.read())
+                os.kill(pid, 0) # raise an OSError if process doesn't exist
         except (OSError, ValueError):
-            return 'stale lockfile'
+            return 'Stale lockfile'
+        else:
+            return 'Applying a catalog'
 
     if os.path.isfile(puppet.agent_pidfile):
         try:
-            pid = int(open(puppet.agent_pidfile, 'r').read())
-            os.kill(pid, 0)
-            return 'idle daemon'
+            with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
+                pid = int(fp_.read())
+                os.kill(pid, 0) # raise an OSError if process doesn't exist
         except (OSError, ValueError):
-            return 'stale pidfile'
+            return 'Stale pidfile'
+        else:
+            return 'Idle daemon'
 
-    return 'stopped'
+    return 'Stopped'
 
 
 def summary():
     '''
+    .. versionadded:: Helium
+
     Show a summary of the last puppet agent run
 
     CLI Example:
@@ -285,7 +305,8 @@ def summary():
     puppet = _Puppet()
 
     try:
-        report = yaml.load(open(puppet.lastrunfile, 'r'))
+        with salt.utils.fopen(puppet.lastrunfile, 'r') as fp_:
+            report = yaml.safe_load(fp_.read())
         result = {}
 
         if 'time' in report:
@@ -303,12 +324,16 @@ def summary():
         if 'resources' in report:
             result['resources'] = report['resources']
 
-        return result
+    except yaml.YAMLError as exc:
+        raise CommandExecutionError(
+            'YAML error parsing puppet run summary: {0}'.format(exc)
+        )
+    except IOError as exc:
+        raise CommandExecutionError(
+            'Unable to read puppet run summary: {0}'.format(exc)
+        )
 
-    except yaml.YAMLError:
-        return 'failed to parse puppet run summary'
-    except IOError:
-        return 'unable to read puppet run summary'
+    return result
 
 
 def facts(puppet=False):
