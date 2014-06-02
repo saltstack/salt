@@ -619,12 +619,20 @@ class Minion(MinionBase):
                 opts['master'] = master
                 opts.update(resolve_dns(opts))
                 super(Minion, self).__init__(opts)
-                if self.authenticate(timeout, safe) != 'full':
-                    break
+                try:
+                    if self.authenticate(timeout, safe) != 'full':
+                        break
+                    else:
+                        continue
+                except SaltClientError:
+                    msg = ('Master {0} could not be reached, trying '
+                           'master'.format(opts['master']))
+                    log.info(msg)
+                    continue
+
             msg = ('No master could be reached or all masters denied '
                    'the minions connection attempt.')
             log.error(msg)
-            sys.exit(1)
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
