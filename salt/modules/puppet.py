@@ -227,7 +227,7 @@ def disable():
     else:
         try:
             lockfile = open(puppet.disabled_lockfile, 'w')
-            lockfile.write('{}') # puppet chokes when no valid json is found
+            lockfile.write('{}')  # puppet chokes when no valid json is found
             lockfile.close()
             return 'successfully disabled'
         except (IOError, OSError):
