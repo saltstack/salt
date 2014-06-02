@@ -622,11 +622,9 @@ class Minion(MinionBase):
                 try:
                     if self.authenticate(timeout, safe) != 'full':
                         break
-                    else:
-                        continue
                 except SaltClientError:
                     msg = ('Master {0} could not be reached, trying '
-                           'master'.format(opts['master']))
+                           'next master (if any)'.format(opts['master']))
                     log.info(msg)
                     continue
 
