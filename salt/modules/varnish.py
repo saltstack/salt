@@ -3,7 +3,7 @@
 Support for Varnish
 
 Please note: The functions in here are generic functions designed to work with
-all implementations of Varnish. 
+all implementations of Varnish.
 '''
 
 # Import salt libs
@@ -45,10 +45,11 @@ def version():
         salt '*' varnish.version
     '''
     cmd = '{0} -V'.format(_detect_os())
-    out = __salt__['cmd.run'](cmd) 
+    out = __salt__['cmd.run'](cmd)
     ret = out.split(' ')
-    ret = re.findall(r'\d+',ret[1])
+    ret = re.findall(r'\d+', ret[1])
     return ret[0]
+
 
 def purge():
     '''
