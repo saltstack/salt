@@ -1558,6 +1558,27 @@ def prepend(path, *args):
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
+def write(path, *args):
+    '''
+    .. versionadded:: Helium
+
+    Write text to a file, overwriting any existing contents.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.write /etc/motd \\
+                "With all thine offerings thou shalt offer salt."
+    '''
+    contents = []
+    for line in args:
+        contents.append('{0}\n'.format(line))
+    with salt.utils.fopen(path, "w") as ofile:
+        ofile.write(''.join(contents))
+    return 'Wrote {0} lines to "{1}"'.format(len(contents), path)
+
+
 def touch(name, atime=None, mtime=None):
     '''
     .. versionadded:: 0.9.5
