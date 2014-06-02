@@ -13,6 +13,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 try:
     import salt.utils.pycrypto
     HAS_CRYPT = True
