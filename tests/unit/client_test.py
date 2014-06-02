@@ -14,24 +14,22 @@ ensure_in_syspath('../')
 
 # Import Salt libs
 import integration
-from salt import client
+from salt import client, config
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
 
 
-@skipIf(True, 'These tests should not use hardcoded paths!')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
                           integration.AdaptedConfigurationTestCaseMixIn):
     def setUp(self):
-        if not os.path.exists('/tmp/salttest'):
-            # This path is hardcoded in the configuration file
-            os.makedirs('/tmp/salttest/cache')
+        master_config_path = self.get_config_file_path('master')
+        master_config = config.master_config(master_config_path)
+        if not os.path.exists(master_config['cachedir']):
+            os.makedirs(master_config['cachedir'])
         if not os.path.exists(integration.TMP_CONF_DIR):
             os.makedirs(integration.TMP_CONF_DIR)
 
-        self.local_client = client.LocalClient(
-            self.get_config_file_path('master')
-        )
+        self.local_client = client.LocalClient(mopts=master_config)
 
     def test_create_local_client(self):
         local_client = client.LocalClient(self.get_config_file_path('master'))
