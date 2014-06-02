@@ -76,6 +76,7 @@ This can be used to manage the minion's master setting from an execution
 module. By simply changing the algorithm in the module to return a new 
 master ip/fqdn, restart the minion and it will connect to the new master.
 
+
 .. code-block:: yaml
 
     master_type: 'func'
@@ -87,6 +88,19 @@ successfully connects.
 .. code-block:: yaml
 
     master_type: 'failover'
+
+``master_shuffle``
+---------------
+
+Default: ``False``
+
+If :conf_minion:`master` is list of addresses, shuffle them before trying
+to connect to distribute the minions over all available masters. This uses
+pythons random.shuffle method.
+
+.. code-block:: yaml
+
+    master_shuffle: True
 
 .. conf_minion:: master_port
 

@@ -614,13 +614,20 @@ class Minion(MinionBase):
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
         if type(opts['master']) is list:
+            conn = False 
+            # shuffle the masters and then loop through them
             local_masters = copy.copy(opts['master'])
+            if opts['master_shuffle']:
+                from random import shuffle
+                shuffle(local_masters)
+
             for master in local_masters:
                 opts['master'] = master
                 opts.update(resolve_dns(opts))
                 super(Minion, self).__init__(opts)
                 try:
                     if self.authenticate(timeout, safe) != 'full':
+                        conn = True
                         break
                 except SaltClientError:
                     msg = ('Master {0} could not be reached, trying '
@@ -628,9 +635,12 @@ class Minion(MinionBase):
                     log.info(msg)
                     continue
 
-            msg = ('No master could be reached or all masters denied '
-                   'the minions connection attempt.')
-            log.error(msg)
+            if not conn:
+                msg = ('No master could be reached or all masters denied '
+                       'the minions connection attempt.')
+                log.error(msg)
+
+        # single master sign in
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
