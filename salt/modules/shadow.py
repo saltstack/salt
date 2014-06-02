@@ -16,7 +16,7 @@ import salt.utils
 try:
     import salt.utils.pycrypto
     HAS_CRYPT = True
-else:
+except ImportError:
     HAS_CRYPT = False
 
 
