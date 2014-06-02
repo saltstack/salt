@@ -18,6 +18,7 @@ from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
 
 
+@skipIf(True, 'These tests should not use hardcoded paths!')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
                           integration.AdaptedConfigurationTestCaseMixIn):

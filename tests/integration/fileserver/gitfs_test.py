@@ -83,6 +83,7 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.file_list(load)
             self.assertIn('testfile', ret)
 
+    @skipIf(True, 'This test should not use hardcoded paths!')
     def test_find_file(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],

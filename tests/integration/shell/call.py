@@ -83,6 +83,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn(expected_comment, ''.join(stdout))
         self.assertNotEqual(0, retcode)
 
+    @skipIf(True, 'This test should not use hardcoded paths!')
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_return(self):
         config_dir = '/tmp/salttest'

@@ -334,6 +334,7 @@ class ConfigTestCase(TestCase):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    @skipIf(True, 'This test should not use hardcoded paths!')
     def test_syndic_config(self):
         syndic_conf_path = os.path.join(
             integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'
