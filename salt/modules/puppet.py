@@ -207,7 +207,7 @@ def enable():
     if os.path.isfile(puppet.disabled_lockfile):
         try:
             os.remove(puppet.disabled_lockfile)
-        except (IOError, OSError):
+        except (IOError, OSError) as exc:
             msg = 'Failed to enable: {0}'.format(exc)
             log.error(msg)
             raise CommandExecutionError(msg)
