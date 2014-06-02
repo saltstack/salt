@@ -25,20 +25,9 @@ def __virtual__():
     '''
     Only load the module if varnish is installed
     '''
-    cmd = _detect_os()
-    if salt.utils.which(cmd):
+    if salt.utils.which('varnishd'):
         return __virtualname__
     return False
-
-
-def _detect_os():
-    '''
-    Varnish commands and paths differ depending on packaging
-    '''
-    if __grains__['os_family'] == 'Debian':
-        return 'varnishd'
-    else:
-        return 'varnishd'
 
 
 def version():
