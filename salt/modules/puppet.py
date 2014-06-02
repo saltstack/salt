@@ -3,6 +3,11 @@
 Execute puppet routines
 '''
 
+# Import python libs
+import os
+import yaml
+import datetime
+
 # Import salt libs
 import salt.utils
 
@@ -61,14 +66,22 @@ class _Puppet(object):
 
         if salt.utils.is_windows():
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
+            self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
         else:
             if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
                 self.vardir = '/var/opt/lib/pe-puppet'
+                self.rundir = '/var/opt/run/pe-puppet'
                 self.confdir = '/etc/puppetlabs/puppet'
             else:
                 self.vardir = '/var/lib/puppet'
+                self.rundir = '/var/run/puppet'
                 self.confdir = '/etc/puppet'
+
+        self.disabled_lockfile = self.vardir + '/state/agent_disabled.lock'
+        self.run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
+        self.agent_pidfile = self.rundir + '/agent.pid'
+        self.lastrunfile = self.vardir + '/state/last_run_summary.yaml'
 
     def __repr__(self):
         '''
@@ -169,6 +182,133 @@ def noop(*args, **kwargs):
     '''
     args += ('noop',)
     return run(*args, **kwargs)
+
+
+def enable():
+    '''
+    Enable the puppet agent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.disable
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        try:
+            os.remove(puppet.disabled_lockfile)
+            return 'successfully enabled'
+        except (IOError, OSError):
+            return 'failed to enable'
+    else:
+        return 'already enabled'
+
+
+def disable():
+    '''
+    Disable the puppet agent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.disable
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        return 'already disabled'
+    else:
+        try:
+            lockfile = open(puppet.disabled_lockfile, 'w')
+            lockfile.write('{}') # puppet chokes when no valid json is found
+            lockfile.close()
+            return 'successfully disabled'
+        except (IOError, OSError):
+            return 'failed to disable'
+
+
+def status():
+    '''
+    Display puppet agent status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.status
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        return 'administratively disabled'
+
+    if os.path.isfile(puppet.run_lockfile):
+        try:
+            pid = int(open(puppet.run_lockfile, 'r').read())
+            os.kill(pid, 0)
+            return 'applying a catalog'
+        except (OSError, ValueError):
+            return 'stale lockfile'
+
+    if os.path.isfile(puppet.agent_pidfile):
+        try:
+            pid = int(open(puppet.agent_pidfile, 'r').read())
+            os.kill(pid, 0)
+            return 'idle daemon'
+        except (OSError, ValueError):
+            return 'stale pidfile'
+
+    return 'stopped'
+
+
+def summary():
+    '''
+    Show a summary of the last puppet agent run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.summary
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    try:
+        report = yaml.load(open(puppet.lastrunfile, 'r'))
+        result = {}
+
+        if 'time' in report:
+            try:
+                result['last_run'] = datetime.datetime.fromtimestamp(
+                    int(report['time']['last_run'])).isoformat()
+            except (TypeError, ValueError, KeyError):
+                result['last_run'] = 'invalid or missing timestamp'
+
+            result['time'] = {}
+            for key in ('total', 'config_retrieval'):
+                if key in report['time']:
+                    result['time'][key] = report['time'][key]
+
+        if 'resources' in report:
+            result['resources'] = report['resources']
+
+        return result
+
+    except yaml.YAMLError:
+        return 'failed to parse puppet run summary'
+    except IOError:
+        return 'unable to read puppet run summary'
 
 
 def facts(puppet=False):
