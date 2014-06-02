@@ -19,7 +19,8 @@ Manage the information stored in the known_hosts files.
         - user: root
 '''
 
-from os.path import isabs
+# Import python libs
+import os
 
 
 def present(
@@ -74,7 +75,7 @@ def present(
     else:
         config = config or '.ssh/known_hosts'
 
-    if not user and not isabs(config):
+    if not user and not os.path.isabs(config):
         comment = 'If not specifying a "user", specify an absolute "path".'
         ret['result'] = False
         return dict(ret, comment=comment)
@@ -164,7 +165,7 @@ def absent(name, user=None, config=None):
     else:
         config = config or '.ssh/known_hosts'
 
-    if not user and not isabs(config):
+    if not user and not os.path.isabs(config):
         comment = 'If not specifying a "user", specify an absolute "path".'
         ret['result'] = False
         return dict(ret, comment=comment)
