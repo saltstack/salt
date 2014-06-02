@@ -35,9 +35,9 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
         if exclude:
             exclude = None
     if exclude:
-        options.append(' --exclude={0}'.format(exclude))
+        options.append('--exclude={0}'.format(exclude))
 
-    return options
+    return ' '.join(options)
 
 
 def rsync(src,
