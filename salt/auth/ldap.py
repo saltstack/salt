@@ -133,9 +133,11 @@ def auth(username, password):
         #   - cn={{ username }},ou=users,dc=company,dc=tld
         # so make sure to render it first before using it
         paramvalues['binddn'] = _render_template(paramvalues['binddn'], username)
+        paramvalues['binddn'] = ldap.filter.escape_filter_chars(paramvalues['binddn'])
 
     if paramvalues['filter']:
-        paramvalues['filter'] = _render_template(paramvalues['filter'], username)
+        escaped_username = ldap.filter.escape_filter_chars(username)
+        paramvalues['filter'] = _render_template(paramvalues['filter'], escaped_username)
 
     # Only add binddn/bindpw to the connargs when they're set, as they're not
     # mandatory for initializing the LDAP object, but if they're provided
