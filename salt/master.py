@@ -175,6 +175,7 @@ class Master(SMaster):
             loop_interval = int(self.opts['loop_interval'])
             if (now - last) >= loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
+                salt.daemons.masterapi.clean_expired_tokens(self.opts)
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
