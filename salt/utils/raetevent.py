@@ -30,8 +30,6 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
-        #import  wingdbstub
-
         self.node = node
         self.sock_dir = sock_dir
         self.listen = listen

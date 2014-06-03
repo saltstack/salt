@@ -117,7 +117,6 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
 
-
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Closes stack server socket connection
@@ -682,12 +681,15 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
+        stackname = self.opts['id'] + ret['jid']
+        dirpath = os.path.join(self.opts['cachedir'], stackname)
         ret_stack = LaneStack(
-                name=self.opts['id'] + ret['jid'],
+                name=stackname,
                 lanename=self.opts['id'],
                 yid=ret['jid'],
                 sockdirpath=self.opts['sock_dir'],
-                dirpath=self.opts['cachedir'])
+                dirpath=dirpath)
+
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
                 stack=ret_stack,
@@ -696,19 +698,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
                 dirpath=self.opts['sock_dir']
                 )
 
-        log.debug("XXX Stack lanename {0} yid {1} dirpath {2} sockdirpath {3}\n".format(self.opts['id'],
-                                                                             ret['jid'],
-                                                                             self.opts['cachedir'],
-                                                                             self.opts['sock_dir']),
-                                                                             exc_info=True)
-        log.debug("XXX Stack Local name {0} yid {1} ha {2}\n".format(ret_stack.local.name,
-                                                                     ret_stack.local.yid,
-                                                                     ret_stack.local.ha),
-                                                                     exc_info=True)
-        log.debug("XXX Stack Remote name {0} yid {1} ha {2}".format(main_yard.name,
-                                                                    main_yard.yid,
-                                                                    main_yard.ha),
-                                                                    exc_info=True)
         ret_stack.addRemote(main_yard)
         route = {'src': (self.opts['id'], ret_stack.local.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
@@ -729,7 +718,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Pull the queue for functions to execute
         '''
-        #import wingdbstub
         while self.fun.value:
             exchange = self.fun.value.popleft()
             data = exchange.get('pub')
