@@ -8,7 +8,6 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import
 import logging
-
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -19,6 +18,7 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
