@@ -113,6 +113,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         ret['subnets'] = lb.subnets
         ret['security_groups'] = lb.security_groups
         ret['scheme'] = lb.scheme
+        ret['dns_name'] = lb.dns_name
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
