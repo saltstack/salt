@@ -2306,4 +2306,3 @@ def total_seconds(td):
     method which does not exist in versions of Python < 2.7.
     '''
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
-
