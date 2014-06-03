@@ -462,7 +462,6 @@ class CkMinions(object):
         '''
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
@@ -471,7 +470,6 @@ class CkMinions(object):
         infinite = [
                 'node',
                 'ipcidr',
-                'exsel',
                 'pillar']
         if not self.opts.get('minion_data_cache', False):
             infinite.append('grain')

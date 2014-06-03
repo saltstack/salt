@@ -268,16 +268,10 @@ def function(
            'changes': {},
            'comment': '',
            'result': True}
-
-    if expr_form and tgt_type:
-        ret['warnings'] = [
-            'Please only use \'tgt_type\' or \'expr_form\' not both. '
-            'Preferring \'tgt_type\' over \'expr_form\''
-        ]
-        expr_form = None
-    elif expr_form and not tgt_type:
-        tgt_type = expr_form
-    elif not tgt_type and not expr_form:
+    cmd_kw = {'arg': arg or []}
+    if 'expr_form' in kwargs and not tgt_type:
+        tgt_type = kwargs['expr_form']
+    if not tgt_type:
         tgt_type = 'glob'
 
     cmd_kw['expr_form'] = tgt_type

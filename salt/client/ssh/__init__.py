@@ -35,6 +35,12 @@ import salt.minion
 import salt.exceptions
 import salt.config
 
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
+
 # This is just a delimiter to distinguish the beginning of salt STDOUT.  There
 # is no special meaning
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
@@ -176,10 +182,8 @@ class SSH(object):
     '''
     def __init__(self, opts):
         self.verify_env()
-        if salt.utils.verify.verify_socket(
-                opts['interface'],
-                opts['publish_port'],
-                opts['ret_port']):
+        pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
+        if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],

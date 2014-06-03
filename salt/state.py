@@ -1971,19 +1971,22 @@ class BaseHighState(object):
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
                         continue
-                    for tgt in targets:
-                        if tgt not in top[saltenv]:
-                            top[saltenv][tgt] = ctop[saltenv][tgt]
-                            continue
-                        matches = []
-                        states = set()
-                        for comp in top[saltenv][tgt]:
-                            if isinstance(comp, dict):
-                                matches.append(comp)
-                            if isinstance(comp, string_types):
-                                states.add(comp)
-                        top[saltenv][tgt] = matches
-                        top[saltenv][tgt].extend(list(states))
+                    try:
+                        for tgt in targets:
+                            if tgt not in top[saltenv]:
+                                top[saltenv][tgt] = ctop[saltenv][tgt]
+                                continue
+                            matches = []
+                            states = set()
+                            for comp in top[saltenv][tgt]:
+                                if isinstance(comp, dict):
+                                    matches.append(comp)
+                                if isinstance(comp, string_types):
+                                    states.add(comp)
+                            top[saltenv][tgt] = matches
+                            top[saltenv][tgt].extend(list(states))
+                    except TypeError:
+                        raise SaltRenderError('Unable to render top file. No targets found.')
         return top
 
     def verify_tops(self, tops):
@@ -2058,31 +2061,18 @@ class BaseHighState(object):
                 if saltenv != self.opts['environment']:
                     continue
             for match, data in body.items():
-                def _filter_matches(_match, _data, _opts):
-                    if isinstance(_data, string_types):
-                        _data = [_data]
-                    if self.matcher.confirm_top(
-                            _match,
-                            _data,
-                            _opts
-                            ):
-                        if saltenv not in matches:
-                            matches[saltenv] = []
-                        for item in _data:
-                            if 'subfilter' in item:
-                                _tmpdata = item.pop('subfilter')
-                                for match, data in _tmpdata.items():
-                                    _filter_matches(match, data, _opts)
-                            if isinstance(item, string_types):
-                                matches[saltenv].append(item)
-                _filter_matches(match, data, self.opts['nodegroups'])
-        ext_matches = self.client.ext_nodes()
-        for saltenv in ext_matches:
-            if saltenv in matches:
-                matches[saltenv] = list(
-                    set(ext_matches[saltenv]).union(matches[saltenv]))
-            else:
-                matches[saltenv] = ext_matches[saltenv]
+                if isinstance(data, string_types):
+                    data = [data]
+                if self.matcher.confirm_top(
+                        match,
+                        data,
+                        self.opts['nodegroups']
+                        ):
+                    if saltenv not in matches:
+                        matches[saltenv] = []
+                    for item in data:
+                        if isinstance(item, string_types):
+                            matches[saltenv].append(item)
         return matches
 
     def load_dynamic(self, matches):
@@ -2495,6 +2485,9 @@ class BaseHighState(object):
         err = []
         try:
             top = self.get_top()
+        except SaltRenderError as err:
+            ret[tag_name]['comment'] = err.error
+            return ret
         except Exception:
             trb = traceback.format_exc()
             err.append(trb)

@@ -189,6 +189,14 @@ def create(*args):
     test_mode = False
     arguments = {'new_array': '', 'opt_val': {}, 'opt_raw': [], "disks_to_array": []}
 
+    salt.utils.warn_until(
+            'Helium',
+            'The mdadm API will change drastically in the \'Helium\' Salt '
+            ' release. This will break current states and module calls. '
+            'See http://salt.rtfd.org/en/latest/ref/modules/all/salt.modules.mdadm.html '
+            'for more information.'
+            )
+
     for arg in args:
         if arg.startswith('test_mode'):
             test_mode = bool(arg.split('=')[-1])

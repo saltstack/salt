@@ -73,7 +73,6 @@ VALID_OPTS = {
     'file_roots': dict,
     'pillar_roots': dict,
     'hash_type': str,
-    'external_nodes': str,
     'disable_modules': list,
     'disable_returners': list,
     'whitelist_modules': list,
@@ -243,7 +242,6 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'hash_type': 'md5',
-    'external_nodes': '',
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
@@ -377,7 +375,6 @@ DEFAULT_MASTER_OPTS = {
     'failhard': False,
     'state_top': 'top.sls',
     'master_tops': {},
-    'external_nodes': '',
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
@@ -2017,9 +2014,9 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Update with the users salt dot file or with the environment variable
     opts.update(
         load_config(
-            os.path.expanduser('~/.salt'),
+            os.path.expanduser('~/.saltrc'),
             env_var,
-            os.path.expanduser('~/.salt')
+            os.path.expanduser('~/.saltrc')
         )
     )
     # Make sure we have a proper and absolute path to the token file

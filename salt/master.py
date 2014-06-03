@@ -200,10 +200,32 @@ class Master(SMaster):
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
         pillargitfs = []
+        git_pillars = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                br, loc = opts_dict['git'].strip().split()
-                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
+                git_pillars.append(opts_dict)
+
+        for idx, opts_dict in enumerate(git_pillars):
+
+            if 'git' in opts_dict:
+                parts = opts_dict['git'].strip().split()
+                br, loc = parts[0], parts[1]
+                if len(parts) > 2:
+                    key, _dir = parts[2].split('=')
+
+                    if key != 'root':
+                        log.error("malformed params, got: %s. Ignoring.", key)
+                        continue
+
+                    working_dir = os.path.join(self.opts['cachedir'],
+                                               'pillar_gitfs', str(idx))
+                    pillar_dir = os.path.normpath(os.path.join(
+                        working_dir, _dir))
+
+                    self.opts['pillar_roots'][br] = pillar_dir
+
+                p = git_pillar.GitPillar(br, loc, self.opts)
+                pillargitfs.append(p)
 
         # Clear remote fileserver backend env cache so it gets recreated during
         # the first loop_interval
@@ -240,13 +262,23 @@ class Master(SMaster):
                             if not os.path.isfile(jid_file):
                                 # No jid file means corrupted cache entry,
                                 # scrub it
-                                shutil.rmtree(f_path)
+                                try:
+                                    shutil.rmtree(f_path)
+                                except (os.error, IOError) as exc:
+                                    log.critical('Error while attempting to '
+                                                 'remove an entry from the '
+                                                 'job cache!  {0}'.format(exc))
                             else:
                                 with salt.utils.fopen(jid_file, 'r') as fn_:
                                     jid = fn_.read()
                                 if len(jid) < 18:
                                     # Invalid jid, scrub the dir
-                                    shutil.rmtree(f_path)
+                                    try:
+                                        shutil.rmtree(f_path)
+                                    except (os.error, IOError) as exc:
+                                        log.critical('Error while attempting to '
+                                                     'remove an entry from the '
+                                                     'job cache!  {0}'.format(exc))
                                 else:
                                     # Parse the jid into a proper datetime
                                     # object. We only parse down to the minute,
@@ -260,11 +292,21 @@ class Master(SMaster):
                                                                     int(jid[10:12]))
                                     except ValueError as e:
                                         # Invalid jid, scrub the dir
-                                        shutil.rmtree(f_path)
+                                        try:
+                                            shutil.rmtree(f_path)
+                                        except (os.error, IOError) as exc:
+                                            log.critical('Error while attempting to '
+                                                         'remove an entry from the '
+                                                         'job cache!  {0}'.format(exc))
                                     difference = cur - jidtime
-                                    hours_difference = difference.seconds / 3600.0
+                                    hours_difference = difference.total_seconds() / 3600.0
                                     if hours_difference > self.opts['keep_jobs']:
-                                        shutil.rmtree(f_path)
+                                        try:
+                                            shutil.rmtree(f_path)
+                                        except (os.error, IOError) as exc:
+                                            log.critical('Error while attempting to '
+                                                         'remove an entry from the '
+                                                         'job cache!  {0}'.format(exc))
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
@@ -898,86 +940,6 @@ class AESFuncs(object):
             return False
         return True
 
-    def _ext_nodes(self, load):
-        '''
-        Return the results from an external node classifier if one is
-        specified
-        '''
-        if 'id' not in load:
-            log.error('Received call for external nodes without an id')
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return {}
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
-            return {}
-        load.pop('tok')
-        ret = {}
-        # The old ext_nodes method is set to be deprecated in 0.10.4
-        # and should be removed within 3-5 releases in favor of the
-        # "master_tops" system
-        if self.opts['external_nodes']:
-            if not salt.utils.which(self.opts['external_nodes']):
-                log.error(('Specified external nodes controller {0} is not'
-                           ' available, please verify that it is installed'
-                           '').format(self.opts['external_nodes']))
-                return {}
-            cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-            ndata = yaml.safe_load(
-                    subprocess.Popen(
-                        cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])
-            if 'environment' in ndata:
-                saltenv = ndata['environment']
-            else:
-                saltenv = 'base'
-
-            if 'classes' in ndata:
-                if isinstance(ndata['classes'], dict):
-                    ret[saltenv] = list(ndata['classes'])
-                elif isinstance(ndata['classes'], list):
-                    ret[saltenv] = ndata['classes']
-                else:
-                    return ret
-        # Evaluate all configured master_tops interfaces
-
-        opts = {}
-        grains = {}
-        if 'opts' in load:
-            opts = load['opts']
-            if 'grains' in load['opts']:
-                grains = load['opts']['grains']
-        for fun in self.tops:
-            if fun not in self.opts.get('master_tops', {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=opts, grains=grains))
-            except Exception as exc:
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    'Top function {0} failed with error {1} for minion '
-                    '{2}'.format(
-                        fun, exc, load['id']
-                    )
-                )
-        return ret
 
     def _master_opts(self, load):
         '''
