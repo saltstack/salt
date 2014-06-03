@@ -12,7 +12,6 @@ import urlparse
 from copy import deepcopy
 import time
 import codecs
-import chardet
 
 # import third party libs
 import yaml
