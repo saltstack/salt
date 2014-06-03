@@ -222,22 +222,21 @@ A more complex ``recurse`` example:
 '''
 
 # Import python libs
-import os
-import shutil
 import difflib
-import logging
 import json
+import logging
+import os
 import pprint
+import shutil
 import traceback
-
-# Import third party libs
 import yaml
 
 # Import salt libs
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
-from salt.utils.yamldumper import OrderedDumper
+from salt.utils.serializers import yaml as yaml_serializer
+from salt.utils.serializers import json as json_serializer
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -970,6 +969,7 @@ def managed(name,
             contents_pillar=None,
             contents_pillar_newline=True,
             follow_symlinks=True,
+            check_cmd=None,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1152,9 +1152,26 @@ def managed(name,
         If the desired path is a symlink follow it and make changes to the
         file to which the symlink points.
 
+    check_cmd
+        .. versionadded:: Helium
+
+        Do run the state only if the check_cmd succeeds
+
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
+
+    # If no source is specified, set replace to False, as there is nothing
+    # to replace the file with.
+    src_defined = source or contents or contents_pillar
+    if not src_defined and replace:
+        replace = False
+        log.warning(
+            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' '
+            'was defined, yet \'replace\' was set to \'True\'. As there is '
+            'no source to replace the file with, \'replace\' has been set '
+            'to \'False\' to avoid reading the file unnecessarily'.format(name)
+        )
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
@@ -1279,6 +1296,59 @@ def managed(name,
         ret['changes'] = {}
         log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
+
+    if check_cmd:
+        tmp_filename = salt.utils.mkstemp()
+
+        # if exists copy existing file to tmp to compare
+        if __salt__['file.file_exists'](name):
+            try:
+                __salt__['file.copy'](name, tmp_filename)
+            except Exception as exc:
+                return _error(ret, 'Unable to copy file {0} to {1}: {2}'.format(name, tmp_filename, exc))
+
+        try:
+            ret = __salt__['file.manage_file'](
+                tmp_filename,
+                sfn,
+                ret,
+                source,
+                source_sum,
+                user,
+                group,
+                mode,
+                __env__,
+                backup,
+                makedirs,
+                template,
+                show_diff,
+                contents,
+                dir_mode,
+                follow_symlinks)
+        except Exception as exc:
+            ret['changes'] = {}
+            log.debug(traceback.format_exc())
+            return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
+
+        # file being updated to verify using check_cmd
+        if ret['changes']:
+            # Reset ret
+            ret = {'changes': {},
+                   'comment': '',
+                   'name': name,
+                   'result': True}
+
+            cret = mod_run_check_cmd(
+                check_cmd, tmp_filename
+            )
+            if isinstance(cret, dict):
+                ret.update(cret)
+                return ret
+        else:
+            ret = {'changes': {},
+                   'comment': '',
+                   'name': name,
+                   'result': True}
 
     if comment_ and contents is None:
         return _error(ret, comment_)
@@ -2758,15 +2828,15 @@ def append(name,
 
 
 def prepend(name,
-           text=None,
-           makedirs=False,
-           source=None,
-           source_hash=None,
-           template='jinja',
-           sources=None,
-           source_hashes=None,
-           defaults=None,
-           context=None):
+            text=None,
+            makedirs=False,
+            source=None,
+            source_hash=None,
+            template='jinja',
+            sources=None,
+            source_hashes=None,
+            defaults=None,
+            context=None):
     '''
     Ensure that some text appears at the beginning of a file
 
@@ -3362,7 +3432,7 @@ def _merge_dict(obj, k, v):
         if type(obj[k]) is list:
             if type(v) is list:
                 for a in v:
-                    if not a in obj[k]:
+                    if a not in obj[k]:
                         changes[k] = a
                         obj[k].append(a)
             else:
@@ -3454,6 +3524,8 @@ def serialize(name,
         be parsed and the dataset passed in will be merged with the existing
         content
 
+        .. versionadded:: Helium
+
     For example, this state::
 
         /etc/dummy/package.json:
@@ -3468,7 +3540,7 @@ def serialize(name,
                 engine: node 0.4.1
             - formatter: json
 
-    will manages the file ``/etc/dummy/package.json``::
+    will manage the file ``/etc/dummy/package.json``::
 
         {
           "author": "A confused individual <iam@confused.com>",
@@ -3510,18 +3582,17 @@ def serialize(name,
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
-                existing_data = yaml.load(file(name, 'r'))
+                existing_data = yaml.safe_load(file(name, 'r'))
             elif formatter == 'json':
                 existing_data = json.load(file(name, 'r'))
             else:
                 return {'changes': {},
-                        'comment': '{0} format is not supported for merging'.format(
-                            formatter.capitalized()),
+                        'comment': ('{0} format is not supported for merging'
+                                    .format(formatter.capitalized())),
                         'name': name,
-                        'result': False
-                        }
+                        'result': False}
 
-            if not existing_data is None:
+            if existing_data is not None:
                 for k, v in dataset.iteritems():
                     if k in existing_data:
                         ret['changes'].update(_merge_dict(existing_data, k, v))
@@ -3531,19 +3602,18 @@ def serialize(name,
                 dataset = existing_data
 
     if formatter == 'yaml':
-        contents = yaml.dump(
-            dataset,
-            default_flow_style=False,
-            Dumper=OrderedDumper
-        )
+        contents = yaml_serializer.serialize(dataset,
+                                             default_flow_style=False)
     elif formatter == 'json':
-        contents = json.dumps(dataset,
-                              indent=2,
-                              separators=(',', ': '),
-                              sort_keys=True)
+        contents = json_serializer.serialize(dataset,
+                                             indent=2,
+                                             separators=(',', ': '),
+                                             sort_keys=True)
     elif formatter == 'python':
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
+        # TODO remove json round-trip when all dataset will use
+        # utils.serializers
         contents = pprint.pformat(
             json.loads(
                 json.dumps(dataset),
@@ -3648,14 +3718,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
            'result': False}
 
     if ntype == 'c':
-        #  check for file existence
+        # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
                 'File exists and is not a character device {0}. Cowardly '
                 'refusing to continue'.format(name)
             )
 
-        #if it is a character device
+        # Check if it is a character device
         elif not __salt__['file.is_chrdev'](name):
             if __opts__['test']:
                 ret['comment'] = (
@@ -3671,7 +3741,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                              group,
                                              mode)
 
-        #  check the major/minor
+        # Check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
@@ -3680,7 +3750,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                     'major/minor {1}/{2}. Cowardly refusing to continue'
                     .format(name, devmaj, devmin)
                 )
-            #check the perms
+            # Check the perms
             else:
                 ret = __salt__['file.check_perms'](name,
                                                    None,
@@ -3695,14 +3765,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                     )
 
     elif ntype == 'b':
-        #  check for file existence
+        # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
                 'File exists and is not a block device {0}. Cowardly '
                 'refusing to continue'.format(name)
             )
 
-        #  if it is a block device
+        # Check if it is a block device
         elif not __salt__['file.is_blkdev'](name):
             if __opts__['test']:
                 ret['comment'] = (
@@ -3718,7 +3788,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                              group,
                                              mode)
 
-        #  check the major/minor
+        # Check the major/minor
         else:
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
@@ -3728,7 +3798,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                         name, devmaj, devmin
                     )
                 )
-            #  check the perms
+            # Check the perms
             else:
                 ret = __salt__['file.check_perms'](name,
                                                    None,
@@ -3741,14 +3811,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                     )
 
     elif ntype == 'p':
-        #  check for file existence, if it is a fifo, user, group, and mode
+        # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
                 'File exists and is not a fifo pipe {0}. Cowardly refusing '
                 'to continue'.format(name)
             )
 
-        #  if it is a fifo
+        # Check if it is a fifo
         elif not __salt__['file.is_fifo'](name):
             if __opts__['test']:
                 ret['comment'] = 'Fifo pipe {0} is set to be created'.format(
@@ -3764,7 +3834,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                              group,
                                              mode)
 
-        #  check the perms
+        # Check the perms
         else:
             ret = __salt__['file.check_perms'](name,
                                                None,
@@ -3783,3 +3853,21 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         )
 
     return ret
+
+
+def mod_run_check_cmd(cmd, filename):
+    '''
+    Execute the check_cmd logic
+    Return a result dict if:
+    * check_cmd succeeded (check_cmd == 0)
+    else return True
+    '''
+
+    log.debug('running our check_cmd')
+    _cmd = '{0} {1}'.format(cmd, filename)
+    if __salt__['cmd.retcode'](_cmd) != 0:
+        return {'comment': 'check_cmd execution failed',
+                'result': True}
+
+    # No reason to stop, return True
+    return True

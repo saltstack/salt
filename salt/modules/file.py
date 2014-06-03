@@ -767,15 +767,16 @@ def psed(path,
 
     shutil.copy2(path, '{0}{1}'.format(path, backup))
 
-    ofile = salt.utils.fopen(path, 'w')
-    with salt.utils.fopen('{0}{1}'.format(path, backup), 'r') as ifile:
-        if multi is True:
-            for line in ifile.readline():
-                ofile.write(_psed(line, before, after, limit, flags))
-        else:
-            ofile.write(_psed(ifile.read(), before, after, limit, flags))
-
-    ofile.close()
+    try:
+        ofile = salt.utils.fopen(path, 'w')
+        with salt.utils.fopen('{0}{1}'.format(path, backup), 'r') as ifile:
+            if multi is True:
+                for line in ifile.readline():
+                    ofile.write(_psed(line, before, after, limit, flags))
+            else:
+                ofile.write(_psed(ifile.read(), before, after, limit, flags))
+    finally:
+        ofile.close()
 
 
 RE_FLAG_TABLE = {'I': re.I,
@@ -1039,39 +1040,40 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
-    fi_file = fileinput.input(path,
-                    inplace=not dry_run,
-                    backup=False if dry_run else backup,
-                    bufsize=bufsize,
-                    mode='rb')
-    found = False
-    for line in fi_file:
+    try:
+        fi_file = fileinput.input(path,
+                        inplace=not dry_run,
+                        backup=False if dry_run else backup,
+                        bufsize=bufsize,
+                        mode='rb')
+        found = False
+        for line in fi_file:
 
-        if search_only:
-            # Just search; bail as early as a match is found
-            result = re.search(cpattern, line)
+            if search_only:
+                # Just search; bail as early as a match is found
+                result = re.search(cpattern, line)
 
-            if result:
-                fi_file.close()  # close file handle before returning
-                return True
-        else:
-            result, nrepl = re.subn(cpattern, repl, line, count)
+                if result:
+                    return True  # `finally` block handles file closure
+            else:
+                result, nrepl = re.subn(cpattern, repl, line, count)
 
-            # found anything? (even if no change)
-            if nrepl > 0:
-                found = True
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
 
-            # Identity check each potential change until one change is made
-            if has_changes is False and not result is line:
-                has_changes = True
+                # Identity check each potential change until one change is made
+                if has_changes is False and result is not line:
+                    has_changes = True
 
-            if show_changes:
-                orig_file.append(line)
-                new_file.append(result)
+                if show_changes:
+                    orig_file.append(line)
+                    new_file.append(result)
 
-            if not dry_run:
-                print(result, end='', file=sys.stdout)
-    fi_file.close()
+                if not dry_run:
+                    print(result, end='', file=sys.stdout)
+    finally:
+        fi_file.close()
 
     if not found and (append_if_not_found or prepend_if_not_found):
         if None == not_found_content:
@@ -1089,10 +1091,12 @@ def replace(path,
         if not dry_run:
             # backup already done in filter part
             # write new content in the file while avoiding partial reads
-            f = salt.utils.atomicfile.atomic_open(path, 'wb')
-            for line in new_file:
-                f.write(line)
-            f.close()
+            try:
+                f = salt.utils.atomicfile.atomic_open(path, 'wb')
+                for line in new_file:
+                    f.write(line)
+            finally:
+                f.close()
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -1197,47 +1201,49 @@ def blockreplace(path,
     # no changes are required and to avoid any file access on a partially
     # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
-    fi_file = fileinput.input(path,
-                inplace=False, backup=False,
-                bufsize=1, mode='rb')
-    for line in fi_file:
+    try:
+        fi_file = fileinput.input(path,
+                    inplace=False, backup=False,
+                    bufsize=1, mode='rb')
+        for line in fi_file:
 
-        result = line
+            result = line
 
-        if marker_start in line:
-            # managed block start found, start recording
-            in_block = True
+            if marker_start in line:
+                # managed block start found, start recording
+                in_block = True
 
-        else:
-            if in_block:
-                if marker_end in line:
-                    # end of block detected
-                    in_block = False
+            else:
+                if in_block:
+                    if marker_end in line:
+                        # end of block detected
+                        in_block = False
 
-                    # Check for multi-line '\n' terminated content as split will
-                    # introduce an unwanted additional new line.
-                    if content[-1] == '\n':
-                        content = content[:-1]
+                        # Check for multi-line '\n' terminated content as split will
+                        # introduce an unwanted additional new line.
+                        if content and content[-1] == '\n':
+                            content = content[:-1]
 
-                    # push new block content in file
-                    for cline in content.split("\n"):
-                        new_file.append(cline + "\n")
+                        # push new block content in file
+                        for cline in content.split('\n'):
+                            new_file.append(cline + '\n')
 
-                    done = True
+                        done = True
 
-                else:
-                    # remove old content, but keep a trace
-                    old_content += line
-                    result = None
-        # else: we are not in the marked block, keep saving things
+                    else:
+                        # remove old content, but keep a trace
+                        old_content += line
+                        result = None
+            # else: we are not in the marked block, keep saving things
 
-        orig_file.append(line)
-        if result is not None:
-            new_file.append(result)
-    # end for. If we are here without block management we maybe have some problems,
-    # or we need to initialise the marked block
+            orig_file.append(line)
+            if result is not None:
+                new_file.append(result)
+        # end for. If we are here without block management we maybe have some problems,
+        # or we need to initialise the marked block
 
-    fi_file.close()
+    finally:
+        fi_file.close()
 
     if in_block:
         # unterminated block => bad, always fail
@@ -1283,10 +1289,12 @@ def blockreplace(path,
             perms['mode'] = __salt__['config.manage_mode'](get_mode(path))
 
             # write new content in the file while avoiding partial reads
-            f = salt.utils.atomicfile.atomic_open(path, 'wb')
-            for line in new_file:
-                f.write(line)
-            f.close()
+            try:
+                f = salt.utils.atomicfile.atomic_open(path, 'wb')
+                for line in new_file:
+                    f.write(line)
+            finally:
+                f.close()
 
             # this may have overwritten file attrs
             check_perms(path,
@@ -1542,12 +1550,33 @@ def prepend(path, *args):
 
     preface = []
     for line in args:
-        preface.append("{0}\n".format(line))
+        preface.append('{0}\n'.format(line))
 
     with salt.utils.fopen(path, "w") as ofile:
         contents = preface + contents
         ofile.write(''.join(contents))
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
+
+
+def write(path, *args):
+    '''
+    .. versionadded:: Helium
+
+    Write text to a file, overwriting any existing contents.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.write /etc/motd \\
+                "With all thine offerings thou shalt offer salt."
+    '''
+    contents = []
+    for line in args:
+        contents.append('{0}\n'.format(line))
+    with salt.utils.fopen(path, "w") as ofile:
+        ofile.write(''.join(contents))
+    return 'Wrote {0} lines to "{1}"'.format(len(contents), path)
 
 
 def touch(name, atime=None, mtime=None):
@@ -1606,10 +1635,12 @@ def seek_read(path, size, offset):
 
         salt '*' file.seek_read /path/to/file 4096 0
     '''
-    seek_fh = os.open(path, os.O_RDONLY)
-    os.lseek(seek_fh, int(offset), 0)
-    data = os.read(seek_fh, int(size))
-    os.close(seek_fh)
+    try:
+        seek_fh = os.open(path, os.O_RDONLY)
+        os.lseek(seek_fh, int(offset), 0)
+        data = os.read(seek_fh, int(size))
+    finally:
+        os.close(seek_fh)
     return data
 
 
@@ -1625,11 +1656,13 @@ def seek_write(path, data, offset):
 
         salt '*' file.seek_write /path/to/file 'some data' 4096
     '''
-    seek_fh = os.open(path, os.O_WRONLY)
-    os.lseek(seek_fh, int(offset), 0)
-    ret = os.write(seek_fh, data)
-    os.fsync(seek_fh)
-    os.close(seek_fh)
+    try:
+        seek_fh = os.open(path, os.O_WRONLY)
+        os.lseek(seek_fh, int(offset), 0)
+        ret = os.write(seek_fh, data)
+        os.fsync(seek_fh)
+    finally:
+        os.close(seek_fh)
     return ret
 
 
@@ -1645,9 +1678,11 @@ def truncate(path, length):
 
         salt '*' file.truncate /path/to/file 512
     '''
-    seek_fh = open(path, 'r+')
-    seek_fh.truncate(int(length))
-    seek_fh.close()
+    try:
+        seek_fh = open(path, 'r+')
+        seek_fh.truncate(int(length))
+    finally:
+        seek_fh.close()
 
 
 def link(src, path):
@@ -3145,10 +3180,8 @@ def mknod_chrdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug("Creating character device name:{0} major:{1} minor:{2} mode:{3}".format(name,
-                                                                                       major,
-                                                                                       minor,
-                                                                                       mode))
+    log.debug('Creating character device name:{0} major:{1} minor:{2} mode:{3}'
+              .format(name, major, minor, mode))
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
@@ -3218,10 +3251,8 @@ def mknod_blkdev(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug("Creating block device name:{0} major:{1} minor:{2} mode:{3}".format(name,
-                                                                                   major,
-                                                                                   minor,
-                                                                                   mode))
+    log.debug('Creating block device name:{0} major:{1} minor:{2} mode:{3}'
+              .format(name, major, minor, mode))
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
@@ -3289,7 +3320,7 @@ def mknod_fifo(name,
            'changes': {},
            'comment': '',
            'result': False}
-    log.debug("Creating FIFO name:{0}".format(name))
+    log.debug('Creating FIFO name: {0}'.format(name))
     try:
         if __opts__['test']:
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
@@ -3337,26 +3368,16 @@ def mknod(name,
     ret = False
     makedirs_(name, user, group)
     if ntype == 'c':
-        ret = mknod_chrdev(name,
-                           major,
-                           minor,
-                           user,
-                           group,
-                           mode)
+        ret = mknod_chrdev(name, major, minor, user, group, mode)
     elif ntype == 'b':
-        ret = mknod_blkdev(name,
-                            major,
-                            minor,
-                            user,
-                            group,
-                            mode)
+        ret = mknod_blkdev(name, major, minor, user, group, mode)
     elif ntype == 'p':
-        ret = mknod_fifo(name,
-                          user,
-                          group,
-                          mode)
+        ret = mknod_fifo(name, user, group, mode)
     else:
-        raise Exception("Node type unavailable: '{0}'. Available node types are character ('c'), block ('b'), and pipe ('p').".format(ntype))
+        raise SaltInvocationError(
+            'Node type unavailable: {0!r}. Available node types are '
+            'character (\'c\'), block (\'b\'), and pipe (\'p\').'.format(ntype)
+        )
     return ret
 
 
@@ -3635,7 +3656,7 @@ def open_files(by_pid=False):
             except OSError:
                 continue
 
-            if not name in files:
+            if name not in files:
                 files[name] = [pid]
             else:
                 # We still want to know which PIDs are using each file
@@ -3648,3 +3669,53 @@ def open_files(by_pid=False):
     if by_pid:
         return pids
     return files
+
+
+def pardir():
+    '''
+    Return the relative parent directory path symbol for underlying OS
+
+    .. versionadded:: Helium
+
+    This can be useful when constructing Salt Formulas.
+
+    .. code-block:: yaml
+
+        {% set pardir = salt['file.pardir']() %}
+        {% set final_path = salt['file.join']('subdir', pardir, 'confdir') %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.pardir
+    '''
+    return os.path.pardir
+
+
+def join(*args):
+    '''
+    Return a normalized file system path for the underlying OS
+
+    .. versionadded:: Helium
+
+    This can be useful at the CLI but is frequently useful when scripting
+    combining path variables:
+
+    .. code-block:: yaml
+
+        {% set www_root = '/var' %}
+        {% set app_dir = 'myapp' %}
+
+        myapp_config:
+          file:
+            - managed
+            - name: {{ salt['file.join'](www_root, app_dir, 'config.yaml') }}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.join '/' 'usr' 'local' 'bin'
+    '''
+    return os.path.join(*args)

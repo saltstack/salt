@@ -3,8 +3,17 @@
 Execute puppet routines
 '''
 
+# Import python libs
+import logging
+import os
+import yaml
+import datetime
+
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -60,15 +69,23 @@ class _Puppet(object):
         self.args = []         # eg. --noop
 
         if salt.utils.is_windows():
-            self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var\\lib\\puppet'
+            self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
+            self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
         else:
             if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
                 self.vardir = '/var/opt/lib/pe-puppet'
+                self.rundir = '/var/opt/run/pe-puppet'
                 self.confdir = '/etc/puppetlabs/puppet'
             else:
                 self.vardir = '/var/lib/puppet'
+                self.rundir = '/var/run/puppet'
                 self.confdir = '/etc/puppet'
+
+        self.disabled_lockfile = self.vardir + '/state/agent_disabled.lock'
+        self.run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
+        self.agent_pidfile = self.rundir + '/agent.pid'
+        self.lastrunfile = self.vardir + '/state/last_run_summary.yaml'
 
     def __repr__(self):
         '''
@@ -169,6 +186,154 @@ def noop(*args, **kwargs):
     '''
     args += ('noop',)
     return run(*args, **kwargs)
+
+
+def enable():
+    '''
+    .. versionadded:: Helium
+
+    Enable the puppet agent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.disable
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        try:
+            os.remove(puppet.disabled_lockfile)
+        except (IOError, OSError) as exc:
+            msg = 'Failed to enable: {0}'.format(exc)
+            log.error(msg)
+            raise CommandExecutionError(msg)
+        else:
+            return True
+    return False
+
+
+def disable():
+    '''
+    .. versionadded:: Helium
+
+    Disable the puppet agent
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.disable
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        return False
+    else:
+        with salt.utils.fopen(puppet.disabled_lockfile, 'w') as lockfile:
+            try:
+                # Puppet chokes when no valid json is found
+                lockfile.write('{}')
+                lockfile.close()
+                return True
+            except (IOError, OSError) as exc:
+                msg = 'Failed to disable: {0}'.format(exc)
+                log.error(msg)
+                raise CommandExecutionError(msg)
+
+
+def status():
+    '''
+    .. versionadded:: Helium
+
+    Display puppet agent status
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.status
+    '''
+    _check_puppet()
+    puppet = _Puppet()
+
+    if os.path.isfile(puppet.disabled_lockfile):
+        return 'Administratively disabled'
+
+    if os.path.isfile(puppet.run_lockfile):
+        try:
+            with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
+                pid = int(fp_.read())
+                os.kill(pid, 0)  # raise an OSError if process doesn't exist
+        except (OSError, ValueError):
+            return 'Stale lockfile'
+        else:
+            return 'Applying a catalog'
+
+    if os.path.isfile(puppet.agent_pidfile):
+        try:
+            with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
+                pid = int(fp_.read())
+                os.kill(pid, 0)  # raise an OSError if process doesn't exist
+        except (OSError, ValueError):
+            return 'Stale pidfile'
+        else:
+            return 'Idle daemon'
+
+    return 'Stopped'
+
+
+def summary():
+    '''
+    .. versionadded:: Helium
+
+    Show a summary of the last puppet agent run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' puppet.summary
+    '''
+
+    _check_puppet()
+    puppet = _Puppet()
+
+    try:
+        with salt.utils.fopen(puppet.lastrunfile, 'r') as fp_:
+            report = yaml.safe_load(fp_.read())
+        result = {}
+
+        if 'time' in report:
+            try:
+                result['last_run'] = datetime.datetime.fromtimestamp(
+                    int(report['time']['last_run'])).isoformat()
+            except (TypeError, ValueError, KeyError):
+                result['last_run'] = 'invalid or missing timestamp'
+
+            result['time'] = {}
+            for key in ('total', 'config_retrieval'):
+                if key in report['time']:
+                    result['time'][key] = report['time'][key]
+
+        if 'resources' in report:
+            result['resources'] = report['resources']
+
+    except yaml.YAMLError as exc:
+        raise CommandExecutionError(
+            'YAML error parsing puppet run summary: {0}'.format(exc)
+        )
+    except IOError as exc:
+        raise CommandExecutionError(
+            'Unable to read puppet run summary: {0}'.format(exc)
+        )
+
+    return result
 
 
 def facts(puppet=False):

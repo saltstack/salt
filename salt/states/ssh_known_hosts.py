@@ -19,6 +19,9 @@ Manage the information stored in the known_hosts files.
         - user: root
 '''
 
+# Import python libs
+import os
+
 
 def present(
         name,
@@ -27,7 +30,7 @@ def present(
         key=None,
         port=None,
         enc=None,
-        config='.ssh/known_hosts',
+        config=None,
         hash_hostname=True):
     '''
     Verifies that the specified host is known by the specified user
@@ -57,7 +60,9 @@ def present(
 
     config
         The location of the authorized keys file relative to the user's home
-        directory, defaults to ".ssh/known_hosts"
+        directory, defaults to ".ssh/known_hosts". If no user is specified,
+        defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
+        absolute path when a user is not specified.
 
     hash_hostname : True
         Hash all hostnames and addresses in the output.
@@ -66,8 +71,16 @@ def present(
            'changes': {},
            'result': None if __opts__['test'] else True,
            'comment': ''}
+
     if not user:
-        config = '/etc/ssh/ssh_known_hosts'
+        config = config or '/etc/ssh/ssh_known_hosts'
+    else:
+        config = config or '.ssh/known_hosts'
+
+    if not user and not os.path.isabs(config):
+        comment = 'If not specifying a "user", specify an absolute "config".'
+        ret['result'] = False
+        return dict(ret, comment=comment)
 
     if __opts__['test']:
         if key and fingerprint:
@@ -130,7 +143,7 @@ def present(
                              name, config, fingerprint))
 
 
-def absent(name, user=None, config='.ssh/known_hosts'):
+def absent(name, user=None, config=None):
     '''
     Verifies that the specified host is not known by the given user
 
@@ -142,14 +155,24 @@ def absent(name, user=None, config='.ssh/known_hosts'):
 
     config
         The location of the authorized keys file relative to the user's home
-        directory, defaults to ".ssh/known_hosts"
+        directory, defaults to ".ssh/known_hosts". If no user is specified,
+        defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
+        absolute path when a user is not specified.
     '''
     ret = {'name': name,
            'changes': {},
            'result': None if __opts__['test'] else True,
            'comment': ''}
+
     if not user:
-        config = '/etc/ssh/ssh_known_hosts'
+        config = config or '/etc/ssh/ssh_known_hosts'
+    else:
+        config = config or '.ssh/known_hosts'
+
+    if not user and not os.path.isabs(config):
+        comment = 'If not specifying a "user", specify an absolute "config".'
+        ret['result'] = False
+        return dict(ret, comment=comment)
 
     known_host = __salt__['ssh.get_known_host'](user=user, hostname=name, config=config)
     if not known_host:

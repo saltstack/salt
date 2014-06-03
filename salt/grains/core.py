@@ -512,8 +512,14 @@ def _virtual(osdata):
     if osdata['kernel'] in choices:
         if os.path.isfile('/proc/1/cgroup'):
             try:
-                if ':/lxc/' in salt.utils.fopen('/proc/1/cgroup', 'r').read():
+                if ':/lxc/' in salt.utils.fopen(
+                    '/proc/1/cgroup', 'r'
+                ).read():
                     grains['virtual_subtype'] = 'LXC'
+                if ':/docker/' in salt.utils.fopen(
+                    '/proc/1/cgroup', 'r'
+                ).read():
+                    grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
         if isdir('/proc/vz'):
@@ -807,8 +813,11 @@ def os_data():
     # Ubuntu 10.04
     # ('Linux', 'MINIONNAME', '2.6.32-38-server',
     # '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
+
+    # pylint: disable=unpacking-non-sequence
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+    # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_windows():
         grains['osrelease'] = grains['kernelrelease']

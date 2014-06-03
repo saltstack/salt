@@ -150,14 +150,17 @@ def template_shebang(template, renderers, default):
 #
 OLD_STYLE_RENDERERS = {}
 
-for comb in """
+for comb in '''
     yaml_jinja
     yaml_mako
     yaml_wempy
     json_jinja
     json_mako
     json_wempy
-    """.strip().split():
+    yamlex_jinja
+    yamlexyamlex_mako
+    yamlexyamlex_wempy
+    '''.strip().split():
 
     fmt, tmpl = comb.split('_')
     OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)

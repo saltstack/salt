@@ -67,7 +67,7 @@ def installed(name,
         .. versionadded:: 0.17.0
 
     registry
-        The NPM registry to install the package from.
+        The NPM registry from which to install the package
 
         .. versionadded:: Helium
 
@@ -103,12 +103,10 @@ def installed(name,
     prefix = name.split('@')[0].strip()
 
     try:
-        installed_pkgs = __salt__['npm.list'](pkg=name,
-                                              dir=dir,
-                                              registry=registry)
+        installed_pkgs = __salt__['npm.list'](pkg=name, dir=dir)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+        ret['comment'] = 'Error installing {0!r}: {1}'.format(name, err)
         return ret
 
     installed_pkgs = dict((p.lower(), info) for p, info in installed_pkgs.items())
@@ -116,24 +114,25 @@ def installed(name,
     if prefix.lower() in installed_pkgs:
         if force_reinstall is False:
             ret['result'] = True
-            ret['comment'] = 'Package {0} satisfied by {1}@{2}'.format(
+            ret['comment'] = 'Package {0!r} satisfied by {1}@{2}'.format(
                     name, prefix, installed_pkgs[prefix.lower()]['version'])
             return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'NPM package {0} is set to be installed'.format(name)
+        ret['comment'] = 'NPM package {0!r} is set to be installed'.format(name)
         return ret
 
     try:
         call = __salt__['npm.install'](
             pkg=name,
             dir=dir,
-            runas=user
+            runas=user,
+            registry=registry
         )
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error installing \'{0}\': {1}'.format(name, err)
+        ret['comment'] = 'Error installing {0!r}: {1}'.format(name, err)
         return ret
 
     if call and (isinstance(call, list) or isinstance(call, dict)):
@@ -141,10 +140,10 @@ def installed(name,
         version = call[0]['version']
         pkg_name = call[0]['name']
         ret['changes']['{0}@{1}'.format(pkg_name, version)] = 'Installed'
-        ret['comment'] = 'Package {0} was successfully installed'.format(name)
+        ret['comment'] = 'Package {0!r} was successfully installed'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Could not install package'
+        ret['comment'] = 'Could not install package {0!r}'.format(name)
 
     return ret
 
@@ -200,26 +199,26 @@ def removed(name,
         installed_pkgs = __salt__['npm.list'](dir=dir)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
+        ret['comment'] = 'Error uninstalling {0!r}: {1}'.format(name, err)
         return ret
 
     if name not in installed_pkgs:
         ret['result'] = True
-        ret['comment'] = 'Package is not installed.'
+        ret['comment'] = 'Package {0!r} is not installed'.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Package {0} is set to be removed'.format(name)
+        ret['comment'] = 'Package {0!r} is set to be removed'.format(name)
         return ret
 
     if __salt__['npm.uninstall'](pkg=name, dir=dir, runas=user):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
-        ret['comment'] = 'Package was successfully removed.'
+        ret['comment'] = 'Package {0!r} was successfully removed'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Error removing package.'
+        ret['comment'] = 'Error removing package {0!r}'.format(name)
 
     return ret
 
@@ -274,7 +273,7 @@ def bootstrap(name,
         call = __salt__['npm.install'](dir=name, runas=user, pkg=None)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
+        ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
         return ret
 
     # npm.install will return a string if it can't parse a JSON result

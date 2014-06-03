@@ -6,7 +6,7 @@ A Python-based DSL
 :maturity: new
 :platform: all
 
-The `pydsl` renderer allows one to author salt formulas(.sls files) in pure
+The `pydsl` renderer allows one to author salt formulas (.sls files) in pure
 Python using a DSL that's easy to write and easy to read. Here's an example:
 
 .. code-block:: python
@@ -24,7 +24,7 @@ Python using a DSL that's easy to write and easy to read. Here's an example:
 
 Notice that any Python code is allow in the file as it's really a Python
 module, so you have the full power of Python at your disposal. In this module,
-a few objects are defined for you, including the usual(with ``__`` added)
+a few objects are defined for you, including the usual (with ``__`` added)
 ``__salt__`` dictionary, ``__grains__``, ``__pillar__``, ``__opts__``,
 ``__env__``, and ``__sls__``, plus a few more:
 
@@ -78,18 +78,18 @@ state module available in Salt.
 Then, a :ref:`function-declaration` object can be created from a
 :ref:`state-declaration` object by one of the following two ways:
 
-1. by directly calling the attribute named for the :ref:`state-declaration`, and
+1. by calling a method named after the state function on the :ref:`state-declaration` object.
+
+.. code-block:: python
+
+       state('example').file.managed(...)
+
+2. by directly calling the attribute named for the :ref:`state-declaration`, and
    supplying the state function name as the first argument.
 
 .. code-block:: python
 
        state('example').file('managed', ...)
-
-2. by calling a method named after the state function on the :ref:`state-declaration` object.
-
-.. code-block:: python
-
-       state('example').file.managed(...)
 
 With either way of creating a :ref:`function-declaration` object, any
 :ref:`function-arg-declaration`'s can be passed as keyword arguments to the
@@ -101,21 +101,23 @@ declarations.
     state('example').file('managed', source='salt://webserver/index.html')
     state('example').file.managed(source='salt://webserver/index.html')
 
-As a shortcut, the special `name` argument can also be passed as the first(second if
-calling using the first way) positional argument.
+As a shortcut, the special `name` argument can also be passed as the
+first or second positional argument depending on the first or second
+way of calling the :ref:`state-declaration` object. In the following
+two examples `ls -la` is the `name` argument.
 
 .. code-block:: python
 
-    state('example').cmd('run', 'ls -la', cwd='/')
     state('example').cmd.run('ls -la', cwd='/')
+    state('example').cmd('run', 'ls -la', cwd='/')
 
 Finally, a :ref:`requisite-declaration` object with its
-:ref:`requisite-reference`'s can be created by invoking one of the requisite
-methods(``require``, ``watch``, ``use``, ``require_in``, ``watch_in``, and
-``use_in``) on either a :ref:`function-declaration` object or a
-:ref:`state-declaration` object. The return value of a requisite call is also a
-:ref:`function-declaration` object, so you can chain several requisite calls
-together.
+:ref:`requisite-reference`'s can be created by invoking one of the
+requisite methods (see :doc:`State Requisites
+</ref/states/requisites>`) on either a :ref:`function-declaration`
+object or a :ref:`state-declaration` object. The return value of a
+requisite call is also a :ref:`function-declaration` object, so you
+can chain several requisite calls together.
 
 Arguments to a requisite call can be a list of :ref:`state-declaration` objects
 and/or a set of keyword arguments whose names are state modules and values are
@@ -247,13 +249,14 @@ It's important to know that `pydsl` tracks the *creations* of
 to a :ref:`function-declaration` object that requires the last
 :ref:`function-declaration` object created before it in the sls file.
 
-This means later calls(perhaps to update the function's :ref:`function-arg-declaration`) to a previously created function declaration will not change the
+This means later calls (perhaps to update the function's :ref:`function-arg-declaration`) to a previously created function declaration will not change the
 order.
 
 
 Render time state execution
 -------------------------------------
-When Salt processes a salt formula file(`.sls`), the file is rendered to salt's
+
+When Salt processes a salt formula file, the file is rendered to salt's
 high state data representation by a renderer before the states can be executed.
 In the case of the `pydsl` renderer, the .sls file is executed as a python module
 as it is being rendered which makes it easy to execute a state at render time.
@@ -276,7 +279,7 @@ Once an :ref:`ID-declaration` is called at render time it is detached from the
 sls module as if it was never defined.
 
 .. note::
-    If `implicit ordering` is enabled(ie, via ``__pydsl__.set(ordered=True)``) then
+    If `implicit ordering` is enabled (ie, via ``__pydsl__.set(ordered=True)``) then
     the *first* invocation of a :ref:`ID-declaration` object must be done before a
     new :ref:`function-declaration` is created.
 
@@ -285,7 +288,7 @@ Integration with the stateconf renderer
 -----------------------------------------
 The :doc:`salt.renderers.stateconf` renderer offers a few interesting features that
 can be leveraged by the `pydsl` renderer. In particular, when using with the `pydsl`
-renderer, we are interested in `stateconf`'s sls namespacing feature(via dot-prefixed
+renderer, we are interested in `stateconf`'s sls namespacing feature (via dot-prefixed
 id declarations), as well as, the automatic `start` and `goal` states generation.
 
 Now you can use `pydsl` with `stateconf` like this:

@@ -29,9 +29,41 @@ Default: ``salt``
 
 The hostname or ipv4 of the master.
 
+Default: ``salt``
+
 .. code-block:: yaml
 
     master: salt
+
+The master is, by default, staticaly configured by the `master` setting, but
+if desired, the master can be dynamically configured. The `master` value can
+be set to a module function will will be executed and will assume that the
+returning value is the ip or hostname of the desired master. In addition to
+specifying the function to execute to detect the master the
+:conf_minion:`master_type`, option must be set to 'func'.
+
+.. code-block:: yaml
+
+    master: module.function
+
+
+.. conf_minion:: master_type
+
+``master_type``
+---------------
+
+Default: ``str``
+
+The type of the :conf_minion:`master` variable. If the master needs to be
+dynamically assigned by executing a function instead of reading in the static
+master value, set this  to 'func'. This can be used to manage the minion's
+master setting from an execution module. By simply changeing the algorithm
+in the module to return a new master ip/fqdn, restart the minion and it will
+connect to the new master.
+
+.. code-block:: yaml
+
+    master_type: str
 
 .. conf_minion:: master_port
 

@@ -506,6 +506,8 @@ def show_highstate(queue=False, **kwargs):
     '''
     Retrieve the highstate data from the salt master and display it
 
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
     CLI Example:
 
     .. code-block:: bash
@@ -519,7 +521,14 @@ def show_highstate(queue=False, **kwargs):
         if conflict:
             __context__['retcode'] = 1
             return conflict
-    st_ = salt.state.HighState(__opts__)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.HighState(__opts__, pillar)
     st_.push_active()
     try:
         ret = st_.compile_highstate()
@@ -676,6 +685,8 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     This function does not support topfiles.  For ``top.sls`` please use
     ``show_top`` instead.
 
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
     CLI Example:
 
     .. code-block:: bash
@@ -697,13 +708,22 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         if conflict:
             __context__['retcode'] = 1
             return conflict
+
     orig_test = __opts__.get('test', None)
     opts = copy.deepcopy(__opts__)
+
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.HighState(opts)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.HighState(opts, pillar)
     if isinstance(mods, string_types):
         mods = mods.split(',')
     st_.push_active()

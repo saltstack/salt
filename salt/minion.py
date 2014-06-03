@@ -574,6 +574,32 @@ class Minion(MinionBase):
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
+
+        # if master_type was changed, we might want to load our
+        # master-variable from a user defined modules function
+        if opts['master_type'] != 'str':
+            # check for a valid keyword
+            if opts['master_type'] == 'func':
+                # split module and function and try loading the module
+                mod, fun = opts['master'].split('.')
+                try:
+                    master_mod = salt.loader.raw_mod(opts, mod, fun)
+                    if not master_mod:
+                        raise TypeError
+                    # we take whatever the module returns as master address
+                    opts['master'] = master_mod[mod + '.' + fun]()
+                except TypeError:
+                    msg = ('Failed to evaluate master address from '
+                           'module \'{0}\''.format(opts['master']))
+                    log.error(msg)
+                    sys.exit(1)
+                log.info('Evaluated master from module: {0}'.format(opts['master']))
+            else:
+                msg = ('Invalid keyword \'{0}\' for variable '
+                       '\'master_type\''.format(opts['master_type']))
+                log.error(msg)
+                sys.exit(1)
+
         opts.update(resolve_dns(opts))
         super(Minion, self).__init__(opts)
         self.authenticate(timeout, safe)
@@ -1579,23 +1605,10 @@ class Syndic(Minion):
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            self.socket.setsockopt(
-                zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
-            )
-        if hasattr(zmq, 'TCP_KEEPALIVE'):
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
-            )
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
-            )
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-            )
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
-            )
+
+        self._set_reconnect_ivl_max()
+        self._set_tcp_keepalive()
+
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         # Send an event to the master that the minion is live
@@ -1831,14 +1844,6 @@ class Matcher(object):
             val,
             comps[1],
         ))
-
-    def exsel_match(self, tgt):
-        '''
-        Runs a function and return the exit code
-        '''
-        if tgt not in self.functions:
-            return False
-        return self.functions[tgt]()
 
     def pillar_match(self, tgt, delim=':'):
         '''

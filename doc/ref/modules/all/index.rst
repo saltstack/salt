@@ -155,6 +155,7 @@ Full list of builtin execution modules
     pkgng
     pkgutil
     portage_config
+    postfix
     postgres
     poudriere
     powerpath
@@ -216,6 +217,7 @@ Full list of builtin execution modules
     upstart
     useradd
     uwsgi
+    varnish
     virt
     virtualenv_mod
     win_autoruns

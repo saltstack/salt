@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-The Saltutil module is used to manage the state of the salt minion itself. It is used to manage minion modules as well as automate updates to the salt minion.
+The Saltutil module is used to manage the state of the salt minion itself. It
+is used to manage minion modules as well as automate updates to the salt
+minion.
 
 :depends:   - esky Python module for update functionality
 '''
@@ -42,24 +44,34 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def _get_top_file_envs():
+    '''
+    Get all environments from the top file
+    '''
+    try:
+        return __context__['saltutil._top_file_envs']
+    except KeyError:
+        try:
+            st_ = salt.state.HighState(__opts__)
+            top = st_.get_top()
+            if top:
+                envs = st_.top_matches(top).keys() or 'base'
+            else:
+                envs = 'base'
+        except SaltRenderError as exc:
+            raise CommandExecutionError(
+                'Unable to render top file(s): {0}'.format(exc)
+            )
+        __context__['saltutil._top_file_envs'] = envs
+        return envs
+
+
 def _sync(form, saltenv=None):
     '''
     Sync the given directory in the given environment
     '''
     if saltenv is None:
-        # No environment passed, detect them based on gathering the top files
-        # from the master
-        try:
-            st_ = salt.state.HighState(__opts__)
-            top = st_.get_top()
-            if top:
-                saltenv = st_.top_matches(top).keys()
-            if not saltenv:
-                saltenv = 'base'
-        except SaltRenderError as exc:
-            raise CommandExecutionError(
-                'Unable to render top file(s): {0}'.format(exc)
-            )
+        saltenv = _get_top_file_envs()
     if isinstance(saltenv, string_types):
         saltenv = saltenv.split(',')
     ret = []
@@ -135,7 +147,7 @@ def _sync(form, saltenv=None):
             if os.path.isfile(full):
                 touched = True
                 os.remove(full)
-        #cleanup empty dirs
+        # Cleanup empty dirs
         while True:
             emptydirs = _list_emptydirs(mod_dir)
             if not emptydirs:
@@ -143,7 +155,7 @@ def _sync(form, saltenv=None):
             for emptydir in emptydirs:
                 touched = True
                 os.rmdir(emptydir)
-    #dest mod_dir is touched? trigger reload if requested
+    # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
@@ -432,8 +444,11 @@ def running():
     proc_dir = os.path.join(__opts__['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_)
+
+    def _read_proc_file(path):
+        '''
+        Return a dict of JID metadata, or None
+        '''
         with salt.utils.fopen(path, 'rb') as fp_:
             buf = fp_.read()
             fp_.close()
@@ -442,28 +457,42 @@ def running():
             else:
                 # Proc file is empty, remove
                 os.remove(path)
-                continue
+                return None
         if not isinstance(data, dict):
             # Invalid serial object
-            continue
+            return None
         if not salt.utils.process.os_is_running(data['pid']):
             # The process is no longer running, clear out the file and
             # continue
             os.remove(path)
-            continue
+            return None
         if __opts__['multiprocessing']:
             if data.get('pid') == pid:
-                continue
+                return None
         else:
             if data.get('pid') != pid:
                 os.remove(path)
-                continue
+                return None
             if data.get('jid') == current_thread:
-                continue
+                return None
             if not data.get('jid') in [x.name for x in threading.enumerate()]:
                 os.remove(path)
-                continue
-        ret.append(data)
+                return None
+
+        return data
+
+    for fn_ in os.listdir(proc_dir):
+        path = os.path.join(proc_dir, fn_)
+        try:
+            data = _read_proc_file(path)
+            if data is not None:
+                ret.append(data)
+        except IOError:
+            # proc files may be removed at any time during this process by
+            # the minion process that is executing the JID in question, so
+            # we must ignore ENOENT during this process
+            pass
+
     return ret
 
 
@@ -488,37 +517,6 @@ def clear_cache():
                 log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
                 return False
     return True
-
-
-def cached():
-    '''
-    Return the data on all cached salt jobs on the minion
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltutil.cached
-    '''
-    ret = []
-    serial = salt.payload.Serial(__opts__)
-    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
-    if not os.path.isdir(proc_dir):
-        return []
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_, 'return.p')
-        with salt.utils.fopen(path, 'rb') as fp_:
-            buf = fp_.read()
-            fp_.close()
-            if buf:
-                data = serial.loads(buf)
-            else:
-                continue
-        if not isinstance(data, dict):
-            # Invalid serial object
-            continue
-        ret.append(data)
-    return ret
 
 
 def find_job(jid):
@@ -547,10 +545,23 @@ def find_cached_job(jid):
 
         salt '*' saltutil.find_cached_job <job id>
     '''
-    for data in cached():
-        if data['jid'] == jid:
-            return data
-    return {}
+    serial = salt.payload.Serial(__opts__)
+    proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
+    job_dir = os.path.join(proc_dir, str(jid))
+    if not os.path.isdir(job_dir):
+        return
+    path = os.path.join(job_dir, 'return.p')
+    with salt.utils.fopen(path, 'rb') as fp_:
+        buf = fp_.read()
+        fp_.close()
+        if buf:
+            data = serial.loads(buf)
+        else:
+            return
+    if not isinstance(data, dict):
+        # Invalid serial object
+        return
+    return data
 
 
 def signal_job(jid, sig):

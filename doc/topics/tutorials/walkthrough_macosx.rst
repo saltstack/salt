@@ -92,7 +92,7 @@ have to do it all over again. It also lets you *uninstall* things easily.
 .. note::
 
     Brew is a Ruby program (Ruby is installed by default with your Mac). Brew
-    downloads, compile and links software. The linking phase is when compiled
+    downloads, compiles and links software. The linking phase is when compiled
     software is deployed on your machine. It may conflict with manually
     installed software, especially in the /usr/local directory. It's ok,
     remove the manually installed version then refresh the link by typing
@@ -120,8 +120,8 @@ Or just type
     ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
 
 
-Now type the following commands in your terminal (you may want to type brew
-doctor after each to make sure everything's fine):
+Now type the following commands in your terminal (you may want to type ``brew
+doctor`` after each to make sure everything's fine):
 
 .. code-block:: bash
 
@@ -137,7 +137,7 @@ doctor after each to make sure everything's fine):
 Install Salt
 ------------
 
-you should now have everything ready to launch this command:
+You should now have everything ready to launch this command:
 
 .. code-block:: bash
 
@@ -219,7 +219,7 @@ Install Vagrant
 ---------------
 
 Go get it here: http://downloads.vagrantup.com/ and choose the latest version
-(1.3.5 at time of writing), then the .dmg file. double-click to install it.
+(1.3.5 at time of writing), then the .dmg file. Double-click to install it.
 Make sure the ``vagrant`` command is found when run in the terminal. Type
 ``vagrant``. It should display a list of commands.
 
@@ -298,14 +298,14 @@ to the terminal:
 
 The VM should respond to your ping request.
 
-Now log inside the VM in ssh using Vagrant again:
+Now log into the VM in ssh using Vagrant again:
 
 .. code-block:: bash
 
     vagrant ssh
 
-You should see the shell prompt changing to something similar to
-``vagrant@precise64:~$`` meaning you're inside the VM. From there enter the
+You should see the shell prompt change to something similar to
+``vagrant@precise64:~$`` meaning you're inside the VM. From there, enter the
 following:
 
 .. code-block:: bash
@@ -337,9 +337,9 @@ following lines, giving the ID for this minion, and the IP of the master:
     file_client: remote
 
 Minions authenticate with the master using keys. Keys are generated
-automatically if you don't provide one, and you can accept them later on. But
-this requires you to accept the minion key every time you destroy and recreate
-a minion (which could be quite often). A better way is to create those keys in
+automatically if you don't provide one and can accept them later on. However,
+this requires accepting the minion key every time the minion is destroyed or
+created (which could be quite often). A better way is to create those keys in
 advance, feed them to the minion, and authorize them once.
 
 Preseed minion keys
@@ -352,7 +352,7 @@ From the minion folder on your Mac run:
     sudo salt-key --gen-keys=minion1
 
 This should create two files: minion1.pem, and minion1.pub.
-Since those files have been created by sudo, but will be used by vagrant,
+Since those files have been created using sudo, but will be used by vagrant,
 you need to change ownership:
 
 .. code-block:: bash

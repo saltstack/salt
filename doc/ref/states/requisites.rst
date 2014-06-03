@@ -1,3 +1,5 @@
+.. _requisites:
+
 ==========
 Requisites
 ==========
@@ -428,3 +430,9 @@ be modified to function in the same way using ``prereq_in``:
         - prereq_in:
           - cmd: graceful-down
 
+Altering Statefulness
+=====================
+
+To alter if a state runs or not, or how the return data from a state is
+interpreted, :ref:`See the document on altering states. <altering_states>` for
+more information about pre and post run checks.

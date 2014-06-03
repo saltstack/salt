@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     salt.utils.parsers
@@ -889,13 +887,6 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'targets other than globs are preceded with an identifier '
                   'matching the specific targets argument type: salt '
                   '\'G@os:RedHat and webser* or E@database.*\'')
-        )
-        group.add_option(
-            '-X', '--exsel',
-            default=False,
-            action='store_true',
-            help=('Instead of using shell globs use the return code of '
-                  'a function.')
         )
         group.add_option(
             '-I', '--pillar',

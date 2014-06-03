@@ -72,14 +72,18 @@ def present(name, value, config=None):
             ret['comment'] = 'Sysctl value {0} is present in configuration file but is not present in the running config.\n'\
                     'The value {0} is set to be changed to {1} '
             return ret
-        elif name not in configured and name not in current:
-            ret['result'] = None
-            ret['comment'] = 'Sysctl option {0}  set to be changed to {1}'.format(name, value)
-            return ret
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Invalid sysctl option {0} = {1}'.format(name, value)
-            return ret
+        elif name in configured and name in current:
+            if str(value) == __salt__['sysctl.get'](name):
+                ret['result'] = True
+                ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(
+                        name,
+                        value
+                        )
+                return ret
+        # otherwise, we don't have it set anywhere and need to set it
+        ret['result'] = None
+        ret['comment'] = 'Sysctl option {0}  set to be changed to {1}'.format(name, value)
+        return ret
 
     update = __salt__['sysctl.persist'](name, value, config)
 

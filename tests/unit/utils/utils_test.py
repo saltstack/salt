@@ -448,6 +448,7 @@ class UtilsTestCase(TestCase):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):
+        # pylint: disable=assignment-from-none
         with patch('sys.argv', ['salt-call']):
             ret = utils.daemonize_if({})
             self.assertEqual(None, ret)
@@ -462,6 +463,7 @@ class UtilsTestCase(TestCase):
         with patch('salt.utils.daemonize'):
             utils.daemonize_if({})
             self.assertTrue(utils.daemonize.called)
+        # pylint: enable=assignment-from-none
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_which_bin(self):

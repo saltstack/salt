@@ -75,6 +75,7 @@ Either a password or an API key must also be specified:
       apikey: 901d3f579h23c8v73q9
 
 Optionally, if you don't want to save plain-text password in your configuration file, you can use keyring:
+
 .. code-block:: yaml
 
     my-openstack-keyring-config:
@@ -183,6 +184,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
+get_node = namespaced_function(get_node, globals())
 
 
 # Only load in this module is the OPENSTACK configurations are in place

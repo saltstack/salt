@@ -331,7 +331,7 @@ class Schedule(ioflo.base.deeding.Deed):
         '''
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
-        self.scedule = salt.utils.schedule.Schedule(
+        self.schedule = salt.utils.schedule.Schedule(
                 self.opts.value,
                 self.modules.value,
                 self.returners.value)
@@ -340,7 +340,7 @@ class Schedule(ioflo.base.deeding.Deed):
         '''
         Eval the schedule
         '''
-        self.scedule.eval()
+        self.schedule.eval()
 
 
 class Setup(ioflo.base.deeding.Deed):

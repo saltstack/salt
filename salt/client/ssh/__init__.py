@@ -576,7 +576,7 @@ class Single(object):
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         elif self.fun in self.wfuncs:
-            stdout, stderr, retcode = self.run_wfunc()
+            stdout = self.run_wfunc()
 
         else:
             stdout, stderr, retcode = self.cmd_block()
@@ -735,7 +735,7 @@ class Single(object):
         else:
             # RSTR was found in stdout but not stderr - which means there
             # is a SHIM command for the master.
-            shim_command = re.split(r'\r?\n', stdout, 1)[1].strip()
+            shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
             if 'deploy' == shim_command and retcode == salt.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)

@@ -42,7 +42,8 @@ def mounted(name,
             dump=0,
             pass_num=0,
             config='/etc/fstab',
-            persist=True):
+            persist=True,
+            mount=True):
     '''
     Verify that a device is mounted
 
@@ -75,6 +76,9 @@ def mounted(name,
 
     persist
         Set if the mount should be saved in the fstab, default to True
+
+    mount
+        Set if the mount should be mounted immediately, default to True
     '''
     ret = {'name': name,
            'changes': {},
@@ -118,63 +122,67 @@ def mounted(name,
 
     device_list = []
     if real_name in active:
-        device_list.append(active[real_name]['device'])
-        device_list.append(os.path.realpath(device_list[0]))
-        alt_device = active[real_name]['alt_device'] if 'alt_device' in active[real_name] else None
-        uuid_device = active[real_name]['device_uuid'] if 'device_uuid' in active[real_name] else None
-        if alt_device and alt_device not in device_list:
-            device_list.append(alt_device)
-        if uuid_device and uuid_device not in device_list:
-            device_list.append(uuid_device)
-        if opts:
-            for opt in opts:
-                if opt not in active[real_name]['opts']:
-                    if __opts__['test']:
-                        ret['result'] = None
-                        ret['comment'] = "Remount would be forced because options changed"
-                        return ret
-                    else:
-                        ret['changes']['umount'] = "Forced remount because " \
-                                                    + "options changed"
-                        remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
-                        ret['result'] = remount_result
-                        return ret
-        if real_device not in device_list:
-            # name matches but device doesn't - need to umount
-            ret['changes']['umount'] = "Forced unmount because devices " \
-                                       + "don't match. Wanted: " + device
-            if real_device != device:
-                ret['changes']['umount'] += " (" + real_device + ")"
-            ret['changes']['umount'] += ", current: " + ', '.join(device_list)
-            out = __salt__['mount.umount'](real_name)
-            active = __salt__['mount.active']()
-            if real_name in active:
-                ret['comment'] = "Unable to unmount"
-                ret['result'] = None
-                return ret
-        else:
-            ret['comment'] = 'Target was already mounted'
+        if mount:
+            device_list.append(active[real_name]['device'])
+            device_list.append(os.path.realpath(device_list[0]))
+            alt_device = active[real_name]['alt_device'] if 'alt_device' in active[real_name] else None
+            uuid_device = active[real_name]['device_uuid'] if 'device_uuid' in active[real_name] else None
+            if alt_device and alt_device not in device_list:
+                device_list.append(alt_device)
+            if uuid_device and uuid_device not in device_list:
+                device_list.append(uuid_device)
+            if opts:
+                for opt in opts:
+                    if opt not in active[real_name]['opts']:
+                        if __opts__['test']:
+                            ret['result'] = None
+                            ret['comment'] = "Remount would be forced because options changed"
+                            return ret
+                        else:
+                            ret['changes']['umount'] = "Forced remount because " \
+                                                        + "options changed"
+                            remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                            ret['result'] = remount_result
+                            return ret
+            if real_device not in device_list:
+                # name matches but device doesn't - need to umount
+                ret['changes']['umount'] = "Forced unmount because devices " \
+                                           + "don't match. Wanted: " + device
+                if real_device != device:
+                    ret['changes']['umount'] += " (" + real_device + ")"
+                ret['changes']['umount'] += ", current: " + ', '.join(device_list)
+                out = __salt__['mount.umount'](real_name)
+                active = __salt__['mount.active']()
+                if real_name in active:
+                    ret['comment'] = "Unable to unmount"
+                    ret['result'] = None
+                    return ret
+            else:
+                ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount
     if real_name not in active:
-        # The mount is not present! Mount it
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = '{0} would be mounted'.format(name)
-            return ret
+        if mount:
+            # The mount is not present! Mount it
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = '{0} would be mounted'.format(name)
+                return ret
 
-        out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
-        active = __salt__['mount.active']()
-        if isinstance(out, string_types):
-            # Failed to (re)mount, the state has failed!
-            ret['comment'] = out
-            ret['result'] = False
-            return ret
-        elif real_name in active:
-            # (Re)mount worked!
-            ret['comment'] = 'Target was successfully mounted'
-            ret['changes']['mount'] = True
+            out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
+            active = __salt__['mount.active']()
+            if isinstance(out, string_types):
+                # Failed to (re)mount, the state has failed!
+                ret['comment'] = out
+                ret['result'] = False
+                return ret
+            elif real_name in active:
+                # (Re)mount worked!
+                ret['comment'] = 'Target was successfully mounted'
+                ret['changes']['mount'] = True
+        else:
+            ret['comment'] = '{0} not mounted'.format(name)
 
-    if persist and real_name in active:
+    if persist:
         if __opts__['test']:
             out = __salt__['mount.set_fstab'](name,
                                               device,
@@ -187,12 +195,21 @@ def mounted(name,
             if out != 'present':
                 ret['result'] = None
                 if out == 'new':
-                    ret['comment'] = ('{0} is mounted, but needs to be '
-                                      'written to the fstab in order to be '
-                                      'made persistent').format(name)
+                    if mount:
+                        ret['comment'] = ('{0} is mounted, but needs to be '
+                                          'written to the fstab in order to be '
+                                          'made persistent').format(name)
+                    else:
+                        ret['comment'] = ('{0} needs to be '
+                                          'written to the fstab in order to be '
+                                          'made persistent').format(name)
                 elif out == 'change':
-                    ret['comment'] = ('{0} is mounted, but its fstab entry '
-                                      'must be updated').format(name)
+                    if mount:
+                        ret['comment'] = ('{0} is mounted, but its fstab entry '
+                                          'must be updated').format(name)
+                    else:
+                        ret['comment'] = ('The {0} fstab entry '
+                                          'must be updated').format(name)
                 else:
                     ret['result'] = False
                     ret['comment'] = ('Unable to detect fstab status for '
@@ -212,6 +229,7 @@ def mounted(name,
                                               config)
 
         if out == 'present':
+            ret['comment'] += '. Entry already exists in the fstab.'
             return ret
         if out == 'new':
             ret['changes']['persist'] = 'new'
@@ -346,6 +364,9 @@ def unmounted(name,
             # umount worked!
             ret['comment'] = 'Target was successfully unmounted'
             ret['changes']['umount'] = True
+        else:
+            ret['comment'] = 'Execute set to False, Target was not unmounted'
+            ret['result'] = True
 
     if persist:
         fstab_data = __salt__['mount.fstab'](config)
@@ -364,6 +385,7 @@ def unmounted(name,
                     ret['result'] = False
                     ret['comment'] += '. Failed to persist purge'
                 else:
+                    ret['comment'] += '. Removed target from fstab'
                     ret['changes']['persist'] = 'purged'
 
     return ret

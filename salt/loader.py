@@ -1050,7 +1050,7 @@ class Loader(object):
                 elif virtual is not True and module_name != virtual:
                     # The module is renaming itself. Updating the module name
                     # with the new name
-                    log.debug('Loaded {0} as virtual {1}'.format(
+                    log.trace('Loaded {0} as virtual {1}'.format(
                         module_name, virtual
                     ))
 
@@ -1271,15 +1271,6 @@ class LazyLoader(MutableMapping):
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
-        else:
-            patched = []
-            # be sure that the global __salt__ dict is able of loading
-            # new functions from inside execution functions
-            for func in mod_funcs.values():
-                mod = sys.modules.get(func.__module__, None)
-                if mod and mod not in patched:
-                    patched.append(mod)
-                    mod.__salt__ = self
         self._dict.update(mod_funcs)
 
     def load_all(self):

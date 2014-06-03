@@ -639,10 +639,13 @@ def push(path):
 
         salt '*' cp.push /etc/fstab
     '''
+    log.debug('Trying to copy {0!r} to master'.format(path))
     if '../' in path or not os.path.isabs(path):
+        log.debug('Path must be absolute, returning False')
         return False
     path = os.path.realpath(path)
     if not os.path.isfile(path):
+        log.debug('Path failed os.path.isfile check, returning False')
         return False
     auth = _auth()
 

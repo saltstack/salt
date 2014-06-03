@@ -758,7 +758,8 @@ def list_nodes(call=None, **kwargs):
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
             'state': server_tmp['state'],
-            'private_ips': [addrs['addr'] for addrs in server_tmp['addresses']['private']],
+            'private_ips': [addrs['addr'] for addrs in
+                            server_tmp['addresses'].get('private', [])],
             'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
         }
     return ret

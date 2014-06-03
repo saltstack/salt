@@ -42,21 +42,24 @@ log = logging.getLogger(__name__)
 STATE_INTERNAL_KEYWORDS = frozenset([
     # These are keywords passed to state module functions which are to be used
     # by salt in this state module and not on the actual state module function
+    'check_cmd',
+    'fail_hard',
     'fun',
+    'onchanges',
+    'onfail',
+    'onlyif',
     'order',
-    'state',
-    'watch',
-    'watch_in',
     'prereq',
     'prereq_in',
+    'reload_modules',
     'require',
     'require_in',
-    'onfail',
-    'onchanges',
-    'use',
-    'fail_hard',
-    'reload_modules',
     'saltenv',
+    'state',
+    'unless',
+    'use',
+    'watch',
+    'watch_in',
     '__id__',
     '__sls__',
     '__env__',
@@ -595,6 +598,58 @@ class State(object):
                     log.error('Failed to execute aggregate for state {0}'.format(low['state']))
         return low
 
+    def _run_check(self, low_data):
+        '''
+        Check that unless doesn't return 0, and that onlyif returns a 0.
+        '''
+        ret = {'result': False}
+        if 'onlyif' in low_data:
+            if not isinstance(low_data['onlyif'], list):
+                low_data_onlyif = [low_data['onlyif']]
+            else:
+                low_data_onlyif = low_data['onlyif']
+            for entry in low_data_onlyif:
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+                log.debug('Last command return code: {0}'.format(cmd))
+                if cmd != 0 and ret['result'] is False:
+                    ret.update({'comment': 'onlyif execution failed', 'result': True})
+                elif cmd == 0:
+                    ret.update({'comment': 'onlyif execution succeeded', 'result': False})
+                    return ret
+            return ret
+
+        if 'unless' in low_data:
+            if not isinstance(low_data['unless'], list):
+                low_data_unless = [low_data['unless']]
+            else:
+                low_data_unless = low_data['unless']
+            for entry in low_data_unless:
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+                log.debug('Last command return code: {0}'.format(cmd))
+                if cmd == 0 and ret['result'] is False:
+                    ret.update({'comment': 'unless execution succeeded', 'result': True})
+                elif cmd != 0:
+                    ret.update({'comment': 'unless execution failed', 'result': False})
+                    return ret
+
+        # No reason to stop, return ret
+        return ret
+
+    def _run_check_cmd(self, low_data):
+        '''
+        Alter the way a successfull state run is determined
+        '''
+        ret = {'result': False}
+        for entry in low_data['check_cmd']:
+            cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+            log.debug('Last command return code: {0}'.format(cmd))
+            if cmd == 0 and ret['result'] is False:
+                ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
+            elif cmd != 0:
+                ret.update({'comment': 'check_cmd determined the state failed', 'result': False})
+                return ret
+        return ret
+
     def load_modules(self, data=None):
         '''
         Load the modules into the state
@@ -635,7 +690,7 @@ class State(object):
             # order for the newly installed package to be importable.
             reload(site)
         self.load_modules()
-        if not self.opts.get('local', False):
+        if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):
@@ -1367,6 +1422,8 @@ class State(object):
             format_log(ret)
             self.check_refresh(low, ret)
             return ret
+        else:
+            ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         if not low.get('__prereq__'):
             log.info(
@@ -1407,6 +1464,10 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
+            if ('unless' in low and '{0[state]}.mod_run_check'.format(low) not in self.states) or \
+                    ('onlyif' in low and '{0[state]}.mod_run_check'.format(low) not in self.states):
+                ret.update(self._run_check(low))
+
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
             elif isinstance(cdata['kwargs'].get('env', None), string_types):
@@ -1424,11 +1485,14 @@ class State(object):
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
 
-            with context.func_globals_inject(self.states[cdata['full']],
-                                             **inject_globals):
-                ret = self.states[cdata['full']](*cdata['args'],
-                                                 **cdata['kwargs'])
-                self.verify_ret(ret)
+            if 'result' not in ret or ret['result'] is False:
+                with context.func_globals_inject(self.states[cdata['full']],
+                                                 **inject_globals):
+                    ret = self.states[cdata['full']](*cdata['args'],
+                                                     **cdata['kwargs'])
+            if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
+                ret.update(self._run_check_cmd(low))
+            self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
@@ -2133,6 +2197,7 @@ class BaseHighState(object):
         {'saltenv': ['state1', 'state2', ...]}
         '''
         matches = {}
+        # pylint: disable=cell-var-from-loop
         for saltenv, body in top.items():
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
@@ -2163,6 +2228,7 @@ class BaseHighState(object):
                     set(ext_matches[saltenv]).union(matches[saltenv]))
             else:
                 matches[saltenv] = ext_matches[saltenv]
+        # pylint: enable=cell-var-from-loop
         return matches
 
     def load_dynamic(self, matches):
@@ -2173,9 +2239,11 @@ class BaseHighState(object):
         if not self.opts['autoload_dynamic_modules']:
             return
         if self.opts.get('local', False):
-            syncd = self.state.functions['saltutil.sync_all'](list(matches), refresh=False)
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         else:
-            syncd = self.state.functions['saltutil.sync_all'](list(matches))
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()
@@ -2559,7 +2627,7 @@ class BaseHighState(object):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
-        #Check that top file exists
+        # Check that top file exists
         tag_name = 'no_|-states_|-states_|-None'
         ret = {tag_name: {
                 'result': False,
@@ -2578,7 +2646,7 @@ class BaseHighState(object):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high)
-        #File exists so continue
+        # File exists so continue
         err = []
         try:
             top = self.get_top()

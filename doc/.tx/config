@@ -3032,6 +3032,12 @@ source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.digital_ocean.pot
 source_lang = en
 source_name = ref/clouds/all/salt.cloud.clouds.digital_ocean.rst
 
+[salt.ref--clouds--all--salt_cloud_clouds_aliyun]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.aliyun.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.aliyun.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.aliyun.rst
+
 [salt.ref--clouds--all--salt_cloud_clouds_ec2]
 file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.ec2.po
 source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.ec2.pot
@@ -4369,4 +4375,28 @@ file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_sqs.po
 source_file = _build/locale/ref/states/all/salt.states.boto_sqs.pot
 source_lang = en
 source_name = ref/states/all/salt.states.boto_sqs.rst
+
+[salt.topics--cloud--aliyun]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/aliyun.po
+source_file = _build/locale/topics/cloud/aliyun.pot
+source_lang = en
+source_name = topics/cloud/aliyun.rst
+
+[salt.topics--development--conventions--documentation]
+file_filter = locale/<lang>/LC_MESSAGES/topics/development/conventions/documentation.po
+source_file = _build/locale/topics/development/conventions/documentation.pot
+source_lang = en
+source_name = topics/development/conventions/documentation.rst
+
+[salt.ref--states--altering_states]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/altering_states.po
+source_file = _build/locale/ref/states/altering_states.pot
+source_lang = en
+source_name = ref/states/altering_states.rst
+
+[salt.ref--renderers--all--salt_renderers_yamlex]
+file_filter = locale/<lang>/LC_MESSAGES/ref/renderers/all/salt.renderers.yamlex.po
+source_file = _build/locale/ref/renderers/all/salt.renderers.yamlex.pot
+source_lang = en
+source_name = ref/renderers/all/salt.renderers.yamlex.rst
 

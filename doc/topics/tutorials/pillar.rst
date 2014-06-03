@@ -14,7 +14,7 @@ only to the relevant minion.
 .. note::
 
     Grains and Pillar are sometimes confused, just remember that Grains
-    is data about a minion which is stored or generated from the minion.
+    are data about a minion which is stored or generated from the minion.
     This is why information like the OS and CPU type are found in Grains.
     Pillar is information about a minion or many minions stored or generated
     on the Salt Master.
@@ -38,7 +38,7 @@ Arbitrary Data:
     key/value store can be defined making it easy to iterate over a group
     of values in sls formulas
 
-Pillar is therefore one of the most important systems when using Salt, this
+Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
 and then to dive into the capabilities of Pillar and where the data is
 available.

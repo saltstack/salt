@@ -34,7 +34,6 @@ steps are executing with a single path.
 
     release_lock:
       zk_concurrency.unlock:
-        - zk_hosts: 'zookeeper:2181'
         - path: /trafficserver
         - require:
             - service: trafficserver
@@ -53,6 +52,65 @@ try:
     )
     import kazoo.recipe.lock
     from kazoo.exceptions import CancelledError
+    from kazoo.exceptions import NoNodeError
+
+    # TODO: use the kazoo one, waiting for pull req:
+    # https://github.com/python-zk/kazoo/pull/206
+    class _Semaphore(kazoo.recipe.lock.Semaphore):
+        def __init__(self,
+                    client,
+                    path,
+                    identifier=None,
+                    max_leases=1,
+                    ephemeral_lease=True,
+                    ):
+            kazoo.recipe.lock.Semaphore.__init__(self,
+                                                client,
+                                                path,
+                                                identifier=identifier,
+                                                max_leases=max_leases)
+            self.ephemeral_lease = ephemeral_lease
+
+            # if its not ephemeral, make sure we didn't already grab it
+            if not self.ephemeral_lease:
+                for child in self.client.get_children(self.path):
+                    try:
+                        data, stat = self.client.get(self.path + "/" + child)
+                        if identifier == data.decode('utf-8'):
+                            self.create_path = self.path + "/" + child
+                            self.is_acquired = True
+                            break
+                    except NoNodeError:  # pragma: nocover
+                        pass
+
+        def _get_lease(self, data=None):
+            # Make sure the session is still valid
+            if self._session_expired:
+                raise ForceRetryError("Retry on session loss at top")
+
+            # Make sure that the request hasn't been canceled
+            if self.cancelled:
+                raise CancelledError("Semaphore cancelled")
+
+            # Get a list of the current potential lock holders. If they change,
+            # notify our wake_event object. This is used to unblock a blocking
+            # self._inner_acquire call.
+            children = self.client.get_children(self.path,
+                                                self._watch_lease_change)
+
+            # If there are leases available, acquire one
+            if len(children) < self.max_leases:
+                self.client.create(self.create_path, self.data, ephemeral=self.ephemeral_lease)
+
+            # Check if our acquisition was successful or not. Update our state.
+            if self.client.exists(self.create_path):
+                self.is_acquired = True
+            else:
+                self.is_acquired = False
+
+            # Return current state
+            return self.is_acquired
+
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
@@ -109,7 +167,7 @@ def lock(zk_hosts,
 
     zk = _get_zk_conn(zk_hosts)
     if path not in SEMAPHORE_MAP:
-        SEMAPHORE_MAP[path] = Semaphore(zk,
+        SEMAPHORE_MAP[path] = _Semaphore(zk,
                                         path,
                                         __grains__['id'],
                                         max_leases=max_concurrency,
@@ -131,7 +189,7 @@ def lock(zk_hosts,
     return ret
 
 
-def unlock(zk_hosts, path):
+def unlock(path):
     '''
     Remove lease from semaphore
     '''
@@ -154,49 +212,3 @@ def unlock(zk_hosts, path):
 
     ret['result'] = True
     return ret
-
-
-# TODO: use the kazoo one, waiting for pull req: https://github.com/python-zk/kazoo/pull/206
-class Semaphore(kazoo.recipe.lock.Semaphore):
-    def __init__(self,
-                 client,
-                 path,
-                 identifier=None,
-                 max_leases=1,
-                 ephemeral_lease=True,
-                 ):
-        kazoo.recipe.lock.Semaphore.__init__(self,
-                                             client,
-                                             path,
-                                             identifier=identifier,
-                                             max_leases=max_leases)
-
-        self.ephemeral_lease = ephemeral_lease
-
-    def _get_lease(self, data=None):
-        # Make sure the session is still valid
-        if self._session_expired:
-            raise ForceRetryError("Retry on session loss at top")
-
-        # Make sure that the request hasn't been canceled
-        if self.cancelled:
-            raise CancelledError("Semaphore cancelled")
-
-        # Get a list of the current potential lock holders. If they change,
-        # notify our wake_event object. This is used to unblock a blocking
-        # self._inner_acquire call.
-        children = self.client.get_children(self.path,
-                                            self._watch_lease_change)
-
-        # If there are leases available, acquire one
-        if len(children) < self.max_leases:
-            self.client.create(self.create_path, self.data, ephemeral=self.ephemeral_lease)
-
-        # Check if our acquisition was successful or not. Update our state.
-        if self.client.exists(self.create_path):
-            self.is_acquired = True
-        else:
-            self.is_acquired = False
-
-        # Return current state
-        return self.is_acquired

@@ -233,6 +233,9 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if has_powershell():
+        cmd = 'Restart-Service {0}'.format(name)
+        return not __salt__['cmd.retcode'](cmd, shell='powershell')
     stop(name)
     return start(name)
 

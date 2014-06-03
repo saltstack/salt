@@ -153,7 +153,7 @@ class SaltNova(object):
             self.kwargs['bypass_url'] = get_entry(
                 servers_endpoints,
                 'region',
-                region_name.upper()
+                region_name
             )['publicURL']
 
         self.compute_conn = client.Client(**self.kwargs)
@@ -167,7 +167,7 @@ class SaltNova(object):
             self.kwargs['bypass_url'] = get_entry(
                 servers_endpoints,
                 'region',
-                region_name.upper()
+                region_name
             )['publicURL']
 
         self.kwargs['service_type'] = 'volume'
