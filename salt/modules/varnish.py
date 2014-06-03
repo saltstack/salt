@@ -2,36 +2,41 @@
 '''
 Support for Varnish
 
-Please note: The functions in here are generic functions designed to work with
-all implementations of Varnish.
+.. versionadded:: Helium
+
+.. note::
+
+    These functions are generic, and are designed to work with all
+    implementations of Varnish.
 '''
 
-# Import salt libs
-import salt.utils
+# Import python libs
 import logging
 import re
 
-log = logging.getLogger(__name__)
+# Import salt libs
+import salt.utils
+
+# Define the module's virtual name
+__virtualname__ = 'varnish'
 
 
 def __virtual__():
     '''
     Only load the module if varnish is installed
     '''
-    cmd = _detect_os()
-    if salt.utils.which(cmd):
-        return True
+    if salt.utils.which(_get_varnish_bin()):
+        return __virtualname__
     return False
 
 
-def _detect_os():
+def _get_varnish_bin():
     '''
-    Varnish commands and paths differ depending on packaging
+    Helper module to resolve the platform to the correct name of the varnish
+    binary. Currently just returns 'varnishd' but this will allow future
+    revisions of this module to integrate nicely with the rest of the module.
     '''
-    if __grains__['os_family'] == 'Debian':
-        return 'varnishd'
-    else:
-        return 'varnishd'
+    return 'varnishd'
 
 
 def version():
@@ -44,7 +49,7 @@ def version():
 
         salt '*' varnish.version
     '''
-    cmd = '{0} -V'.format(_detect_os())
+    cmd = '{0} -V'.format(_get_varnish_bin())
     out = __salt__['cmd.run'](cmd)
     ret = out.split(' ')
     ret = re.findall(r'\d+', ret[1])
@@ -54,19 +59,20 @@ def version():
 def purge():
     '''
     Purge the varnish cache
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' varnish.purge
     '''
     ver = version()
-    msg = "Purging varnish cache."
-    log.debug(msg)
-    if ver.startswith("4"):
-        purge = "ban ."
-    elif ver.startswith("3"):
-        purge = "ban.url ."
-    elif ver.startswith("2"):
-        purge = "url.purge ."
+    log.debug('Purging varnish cache')
+    if ver.startswith('4'):
+        purge = 'ban .'
+    elif ver.startswith('3'):
+        purge = 'ban.url .'
+    elif ver.startswith('2'):
+        purge = 'url.purge .'
     cmd = 'varnishadm {0}'.format(purge)
-    return msg
+    return __salt__['cmd.retcode'](cmd) == 0
