@@ -32,6 +32,7 @@ import pprint
 
 # Import salt libs
 import salt.utils
+import salt.output
 
 
 def output(data):
@@ -94,7 +95,8 @@ def output(data):
                 elif __opts__.get('state_output', 'full').lower() == 'mixed':
                     # Print terse unless it failed
                     if ret['result'] is not False:
-                        msg = _format_terse(tcolor, comps, ret, colors, tabular)
+                        msg = _format_terse(tcolor, comps,
+                                            ret, colors, tabular)
                         hstrs.append(msg)
                         continue
                 elif __opts__.get('state_output', 'full').lower() == 'changes':
@@ -234,11 +236,11 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     else:
         fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
     msg = fmt_string.format(tcolor,
-                            comps[2],
-                            comps[0],
-                            comps[-1],
-                            result,
+                            salt.output.strip_esc_sequence(comps[2]),
+                            salt.output.strip_esc_sequence(comps[0]),
+                            salt.output.strip_esc_sequence(comps[-1]),
+                            salt.output.strip_esc_sequence(result),
                             colors['ENDC'],
-                            ret)
+                            salt.output.strip_esc_sequence(ret))
 
     return msg

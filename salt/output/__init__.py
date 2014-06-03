@@ -8,6 +8,7 @@ for managing outputters.
 import os
 import sys
 import errno
+import re
 
 # Import salt libs
 import salt.loader
@@ -93,3 +94,10 @@ def out_format(data, out, opts=None):
     Return the formatted outputter string for the passed data
     '''
     return get_printout(out, opts)(data).rstrip()
+
+def strip_esc_sequence(txt):
+    '''
+    Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
+    from writing their own terminal manipulation commands
+    '''
+    return txt.replace('\033', '?')
