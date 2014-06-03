@@ -868,6 +868,25 @@ def local_port_tcp(port):
         ret = remotes_on_local_tcp_port(port)
     return ret
 
+def remote_port_tcp(port):
+    '''
+    Return a set of ip addrs the current host is connected to on given port
+    '''
+    ret = set()
+    if os.path.isfile('/proc/net/tcp'):
+        with open('/proc/net/tcp', 'rb') as fp_:
+            for line in fp_:
+                if line.strip().startswith('sl'):
+                    continue
+                iret = _parse_tcp_line(line)
+                sl = iter(iret).next()
+                if iret[sl]['remote_port'] == port:
+                    ret.add(iret[sl]['remote_addr'])
+        return ret
+    else:  # Fallback to use 'lsof' if /proc not available
+        ret = remotes_on_remote_tcp_port(port)
+    return ret
+
 
 def _parse_tcp_line(line):
     '''
@@ -930,6 +949,51 @@ def remotes_on_local_tcp_port(port):
         remotes.add(rhost)
 
     return remotes
+
+def remotes_on_remote_tcp_port(port):
+    '''
+    Returns set of ipv4 host addresses which the current host is connected
+    to on given port
+
+    Parses output of shell 'lsof' to get connections
+
+    $ sudo lsof -i4TCP:4505 -n
+    COMMAND   PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+    Python   9971 root   35u  IPv4 0x18a8464a29ca329d      0t0  TCP *:4505 (LISTEN)
+    Python   9971 root   37u  IPv4 0x18a8464a29b2b29d      0t0  TCP 127.0.0.1:4505->127.0.0.1:55703 (ESTABLISHED)
+    Python  10152 root   22u  IPv4 0x18a8464a29c8cab5      0t0  TCP 127.0.0.1:55703->127.0.0.1:4505 (ESTABLISHED)
+
+    '''
+    port = int(port)
+    remotes = set()
+
+    try:
+        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
+    except subprocess.CalledProcessError as ex:
+        log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        chunks = line.split()
+        if not chunks:
+            continue
+        # ['Python', '9971', 'root', '37u', 'IPv4', '0x18a8464a29b2b29d', '0t0',
+        # 'TCP', '127.0.0.1:4505->127.0.0.1:55703', '(ESTABLISHED)']
+        #print chunks
+        if 'COMMAND' in chunks[0]:
+            continue  # ignore header
+        if 'ESTABLISHED' not in chunks[-1]:
+            continue  # ignore if not ESTABLISHED
+        # '127.0.0.1:4505->127.0.0.1:55703'
+        local, remote = chunks[8].split('->')
+        rhost, rport = remote.split(':')
+        if int(rport) != port:  # ignore if local port not port
+            continue
+        rhost, rport = remote.split(':')
+        remotes.add(rhost)
+
+    return remotes 
 
 
 class IPv4Address(object):
