@@ -17,6 +17,8 @@ import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
+import salt.transport
+import salt.utils.args
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 
@@ -64,18 +66,25 @@ class Caller(object):
             sys.exit(-1)
         try:
             sdata = {
-                    'fun': fun,
-                    'pid': os.getpid(),
-                    'jid': ret['jid'],
-                    'tgt': 'salt-call'}
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                self.minion.functions[fun], self.opts['arg'], data=sdata)
+                'fun': fun,
+                'pid': os.getpid(),
+                'jid': ret['jid'],
+                'tgt': 'salt-call'}
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.minion.functions[fun],
+                salt.utils.args.parse_input(self.opts['arg']),
+                data=sdata)
             try:
                 with salt.utils.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local
                 pass
+            except IOError:
+                sys.stderr.write(
+                    'Cannot write to process directory. '
+                    'Do you have permissions to '
+                    'write to {0} ?\n'.format(proc_fn))
             func = self.minion.functions[fun]
             try:
                 ret['return'] = func(*args, **kwargs)
@@ -104,17 +113,41 @@ class Caller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
-        if self.opts.get('return', ''):
+        is_local = self.opts['local'] or self.opts.get(
+            'file_client', False) == 'local'
+        returners = self.opts.get('return', '').split(',')
+        if (not is_local) or returners:
             ret['id'] = self.opts['id']
             ret['fun'] = fun
             ret['fun_args'] = self.opts['arg']
-            for returner in self.opts['return'].split(','):
-                try:
-                    ret['success'] = True
-                    self.minion.returners['{0}.returner'.format(returner)](ret)
-                except Exception:
-                    pass
+
+        for returner in returners:
+            try:
+                ret['success'] = True
+                self.minion.returners['{0}.returner'.format(returner)](ret)
+            except Exception:
+                pass
+
+        # return the job infos back up to the respective minion's master
+
+        if not is_local:
+            try:
+                mret = ret.copy()
+                mret['jid'] = 'req'
+                self.return_pub(mret)
+            except Exception:
+                pass
         return ret
+
+    def return_pub(self, ret):
+        '''
+        Return the data up to the master
+        '''
+        channel = salt.transport.Channel.factory(self.opts)
+        load = {'cmd': '_return', 'id': self.opts['id']}
+        for key, value in ret.items():
+            load[key] = value
+        channel.send(load)
 
     def print_docs(self):
         '''

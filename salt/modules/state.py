@@ -78,7 +78,7 @@ def _wait(jid):
         states = _prior_running_states(jid)
 
 
-def running():
+def running(concurrent=False):
     '''
     Return a dict of state return data if a state function is already running.
     This function is used to prevent multiple state calls from being run at
@@ -91,6 +91,8 @@ def running():
         salt '*' state.running
     '''
     ret = []
+    if concurrent:
+        return ret
     active = __salt__['saltutil.is_running']('state.*')
     for data in active:
         err = (
@@ -225,6 +227,8 @@ def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
     CLI Example:
 
     .. code-block:: bash
@@ -233,6 +237,8 @@ def highstate(test=None, queue=False, **kwargs):
 
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
+        salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -244,10 +250,13 @@ def highstate(test=None, queue=False, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = copy.deepcopy(__opts__)
 
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
+    if test is None:
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-        opts['test'] = __opts__.get('test', None)
+        opts['test'] = test
 
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -309,11 +318,19 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
+        concurrent=False,
         **kwargs):
     '''
     Execute a set list of state modules from an environment. The default
     environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
     to specify a different environment
+
+    Custom Pillar data can be passed with the ``pillar`` kwarg.
+
+    concurrent:
+        WARNING: This flag is potentially dangerous. It is designed
+        for use when multiple state runs can safely be run at the same
+        Do not use this flag for performance optimization.
 
     CLI Example:
 
@@ -321,6 +338,8 @@ def sls(mods,
 
         salt '*' state.sls core,edit.vim dev
         salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+
+        salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -334,7 +353,7 @@ def sls(mods,
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
-        conflict = running()
+        conflict = running(concurrent)
         if conflict:
             __context__['retcode'] = 1
             return conflict
@@ -405,8 +424,9 @@ def sls(mods,
         with salt.utils.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
-        msg = 'Unable to write to "state.sls" cache file {0}'
+        msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
+
     os.umask(cumask)
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -798,12 +818,15 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         popts['test'] = True
     else:
         popts['test'] = __opts__.get('test', None)
-    for fn_ in os.listdir(root):
+    envs = os.listdir(root)
+    for fn_ in envs:
         full = os.path.join(root, fn_)
         if not os.path.isdir(full):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts)
+    st_.functions['saltutil.sync_all'](envs)
+    st_.module_refresh()
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)

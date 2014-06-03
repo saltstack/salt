@@ -109,7 +109,7 @@ def absent(name, protocol=None, service_address=None):
         The service protocol
 
     service_address
-        The LVS service adress
+        The LVS service address
     '''
     ret = {'name': name,
            'changes': {},

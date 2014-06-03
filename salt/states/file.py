@@ -221,8 +221,6 @@ import os
 import shutil
 import difflib
 import logging
-import re
-import fnmatch
 import json
 import pprint
 import traceback
@@ -234,6 +232,7 @@ import yaml
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
+from salt.utils.yamldumper import OrderedDumper
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -319,8 +318,8 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root) + 1:], None,
-                                              exclude_pat):
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -330,8 +329,8 @@ def _clean_dir(root, keep, exclude_pat):
             if nfn not in real_keep:
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
-                if not _check_include_exclude(nfn[len(root) + 1:], None,
-                                              exclude_pat):
+                if not salt.utils.check_include_exclude(
+                        nfn[len(root) + 1:], None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -423,8 +422,8 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, fname)
                 if path not in keep:
-                    if not _check_include_exclude(path[len(name) + 1:], None,
-                                                  exclude_pat):
+                    if not salt.utils.check_include_exclude(
+                            path[len(name) + 1:], None, exclude_pat):
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
@@ -432,8 +431,8 @@ def _check_directory(name,
                 fchange = {}
                 path = os.path.join(root, name_)
                 if path not in keep:
-                    if not _check_include_exclude(path[len(name) + 1:], None,
-                                                  exclude_pat):
+                    if not salt.utils.check_include_exclude(
+                            path[len(name) + 1:], None, exclude_pat):
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
@@ -550,56 +549,6 @@ def _symlink_check(name, target, force, user, group):
                           .format(name, target))
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name))
-
-
-def _check_include_exclude(path_str, include_pat=None, exclude_pat=None):
-    '''
-     Check for glob or regexp patterns for include_pat and exclude_pat in the
-     'path_str' string and return True/False conditions as follows.
-      - Default: return 'True' if no include_pat or exclude_pat patterns are
-        supplied
-      - If only include_pat or exclude_pat is supplied: return 'True' if string
-        passes the include_pat test or fails exclude_pat test respectively
-      - If both include_pat and exclude_pat are supplied: return 'True' if
-        include_pat matches AND exclude_pat does not match
-    '''
-    ret = True  # -- default true
-    # Before pattern match, check if it is regexp (E@'') or glob(default)
-    if include_pat:
-        if re.match('E@', include_pat):
-            retchk_include = True if re.search(
-                include_pat[2:],
-                path_str
-            ) else False
-        else:
-            retchk_include = True if fnmatch.fnmatch(
-                path_str,
-                include_pat
-            ) else False
-
-    if exclude_pat:
-        if re.match('E@', exclude_pat):
-            retchk_exclude = False if re.search(
-                exclude_pat[2:],
-                path_str
-            ) else True
-        else:
-            retchk_exclude = False if fnmatch.fnmatch(
-                path_str,
-                exclude_pat
-            ) else True
-
-    # Now apply include/exclude conditions
-    if include_pat and not exclude_pat:
-        ret = retchk_include
-    elif exclude_pat and not include_pat:
-        ret = retchk_exclude
-    elif include_pat and exclude_pat:
-        ret = retchk_include and retchk_exclude
-    else:
-        ret = True
-
-    return ret
 
 
 def _test_owner(kwargs, user=None):
@@ -850,6 +799,7 @@ def symlink(
             # Remove whatever is in the way
             if os.path.isfile(name):
                 os.remove(name)
+                ret['changes']['forced'] = 'Symlink was forcibly replaced'
             else:
                 shutil.rmtree(name)
         else:
@@ -887,8 +837,9 @@ def symlink(
 
 def absent(name):
     '''
-    Verify that the named file or directory is absent, this will work to
-    reverse any of the functions in the file state module.
+    Make sure that the named file or directory is absent. If it exists, it will
+    be deleted. This will work to reverse any of the functions in the file
+    state module.
 
     name
         The path which should be deleted
@@ -1002,6 +953,9 @@ def managed(name,
     source
         The source file to download to the minion, this source file can be
         hosted on either the salt master server, or on an HTTP or FTP server.
+        Both HTTPS and HTTP are supported as well as downloading directly
+        from Amazon S3 compatible URLs with both pre-configured and automatic
+        IAM credentials. (see s3.get state documentation)
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
@@ -1135,7 +1089,7 @@ def managed(name,
         ``pillar['userdata']['deployer']['id_rsa']``. An example of this pillar
         setup would be like so:
 
-        .. code-block:: yaml:
+        .. code-block:: yaml
 
             userdata:
               deployer:
@@ -1151,7 +1105,7 @@ def managed(name,
 
             The private key above is shortened to keep the example brief, but
             shows how to do multiline string in YAML. The key is followed by a
-            pipe character, and the mutli-line string is indented two more
+            pipe character, and the mutliline string is indented two more
             spaces.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
@@ -1458,7 +1412,7 @@ def directory(name,
                     # file.user_to_uid returns '' if user does not exist. Above
                     # check for user is not fatal, so we need to be sure user
                     # exists.
-                    if isinstance(uid, basestring):
+                    if isinstance(uid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
@@ -1468,11 +1422,13 @@ def directory(name,
                     ret['comment'] = 'user not specified, but configured as ' \
                                      'a target for recursive ownership ' \
                                      'management'
+            else:
+                user = None
             if 'group' in recurse:
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
-                    if isinstance(gid, basestring):
+                    if isinstance(gid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group, user)
@@ -1481,6 +1437,12 @@ def directory(name,
                     ret['comment'] = 'group not specified, but configured ' \
                                      'as a target for recursive ownership ' \
                                      'management'
+            else:
+                group = None
+
+            if 'mode' not in recurse:
+                file_mode = None
+                dir_mode = None
 
             for root, dirs, files in os.walk(name):
                 for fn_ in files:
@@ -1719,7 +1681,10 @@ def recurse(name,
     # Check source path relative to fileserver root, make sure it is a
     # directory
     source_rel = source.partition('://')[2]
-    if source_rel not in __salt__['cp.list_master_dirs'](__env__):
+    master_dirs = __salt__['cp.list_master_dirs'](__env__)
+    if source_rel not in master_dirs \
+            and not any((x for x in master_dirs
+                         if x.startswith(source_rel + '/'))):
         ret['result'] = False
         ret['comment'] = (
             'The directory {0!r} does not exist on the salt fileserver '
@@ -1739,7 +1704,7 @@ def recurse(name,
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
-        if isinstance(comment, basestring):
+        if isinstance(comment, string_types):
             comments.append(comment)
         else:
             comments.extend(comment)
@@ -1824,9 +1789,8 @@ def recurse(name,
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
         for lname, ltarget in symlinks.items():
-            if not _check_include_exclude(os.path.relpath(lname, srcpath),
-                                          include_pat,
-                                          exclude_pat):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(lname, srcpath), include_pat, exclude_pat):
                 continue
             srelpath = os.path.relpath(lname, srcpath)
             # Check for max depth
@@ -1902,7 +1866,8 @@ def recurse(name,
 
         #- Check if it is to be excluded. Match only part of the path
         # relative to the target directory
-        if not _check_include_exclude(relname, include_pat, exclude_pat):
+        if not salt.utils.check_include_exclude(
+                relname, include_pat, exclude_pat):
             continue
         dest = os.path.join(name, relname)
         dirname = os.path.dirname(dest)
@@ -1919,9 +1884,8 @@ def recurse(name,
     if include_empty:
         mdirs = __salt__['cp.list_master_dirs'](__env__, srcpath)
         for mdir in mdirs:
-            if not _check_include_exclude(os.path.relpath(mdir, srcpath),
-                                          include_pat,
-                                          exclude_pat):
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(mdir, srcpath), include_pat, exclude_pat):
                 continue
             mdest = os.path.join(name, os.path.relpath(mdir, srcpath))
             # Check for symlinks that happen to point to an empty dir.
@@ -1955,7 +1919,7 @@ def recurse(name,
     # Flatten comments until salt command line client learns
     # to display structured comments in a readable fashion
     ret['comment'] = '\n'.join('\n#### {0} ####\n{1}'.format(
-        k, v if isinstance(v, basestring) else '\n'.join(v)
+        k, v if isinstance(v, string_types) else '\n'.join(v)
     ) for (k, v) in ret['comment'].iteritems()).strip()
 
     if not ret['comment']:
@@ -1975,6 +1939,9 @@ def replace(name,
             count=0,
             flags=0,
             bufsize=1,
+            append_if_not_found=False,
+            prepend_if_not_found=False,
+            not_found_content=None,
             backup='.bak',
             show_changes=True):
     '''
@@ -1997,6 +1964,9 @@ def replace(name,
                                        count=count,
                                        flags=flags,
                                        bufsize=bufsize,
+                                       append_if_not_found=append_if_not_found,
+                                       prepend_if_not_found=prepend_if_not_found,
+                                       not_found_content=not_found_content,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes)
@@ -2582,6 +2552,149 @@ def append(name,
     return ret
 
 
+def prepend(name,
+           text=None,
+           makedirs=False,
+           source=None,
+           source_hash=None,
+           template='jinja',
+           sources=None,
+           source_hashes=None,
+           defaults=None,
+           context=None):
+    '''
+    Ensure that some text appears at the beginning of a file
+
+    The text will not be prepended again if it already exists in the file. You
+    may specify a single line of text or a list of lines to append.
+
+    Multi-line example::
+
+        /etc/motd:
+          file.prepend:
+            - text: |
+                Thou hadst better eat salt with the Philosophers of Greece,
+                than sugar with the Courtiers of Italy.
+                - Benjamin Franklin
+
+    Multiple lines of text::
+
+        /etc/motd:
+          file.prepend:
+            - text:
+              - Trust no one unless you have eaten much salt with him.
+              - "Salt is born of the purest of parents: the sun and the sea."
+
+    Gather text from multiple template files::
+
+        /etc/motd:
+          file:
+              - prepend
+              - template: jinja
+              - sources:
+                  - salt://motd/devops-messages.tmpl
+                  - salt://motd/hr-messages.tmpl
+                  - salt://motd/general-messages.tmpl
+
+    .. versionadded:: Helium
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if sources is None:
+        sources = []
+
+    if source_hashes is None:
+        source_hashes = []
+
+    # Add sources and source_hashes with template support
+    # NOTE: FIX 'text' and any 'source' are mutually exclusive as 'text'
+    #       is re-assigned in the original code.
+    (ok_, err, sl_) = _unify_sources_and_hashes(source=source,
+                                                source_hash=source_hash,
+                                                sources=sources,
+                                                source_hashes=source_hashes)
+    if not ok_:
+        return _error(ret, err)
+
+    if makedirs is True:
+        dirname = os.path.dirname(name)
+        if not __salt__['file.directory_exists'](dirname):
+            __salt__['file.makedirs'](name)
+            check_res, check_msg = _check_directory(
+                dirname, None, None, False, None, False, False, None
+            )
+            if not check_res:
+                return _error(ret, check_msg)
+
+        # Make sure that we have a file
+        __salt__['file.touch'](name)
+
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
+
+    #Follow the original logic and re-assign 'text' if using source(s)...
+    if sl_:
+        tmpret = _get_template_texts(source_list=sl_,
+                                     template=template,
+                                     defaults=defaults,
+                                     context=context)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
+
+    if isinstance(text, string_types):
+        text = (text,)
+
+    with salt.utils.fopen(name, 'rb') as fp_:
+        slines = fp_.readlines()
+
+    count = 0
+
+    preface = []
+    for chunk in text:
+
+        if __salt__['file.contains_regex_multiline'](
+                name, salt.utils.build_whitespace_split_regex(chunk)):
+            continue
+
+        try:
+            lines = chunk.splitlines()
+        except AttributeError:
+            log.debug(
+                'Error appending text to {0}; given object is: {1}'.format(
+                    name, type(chunk)
+                )
+            )
+            return _error(ret, 'Given text is not a string')
+
+        for line in lines:
+            if __opts__['test']:
+                ret['comment'] = 'File {0} is set to be updated'.format(name)
+                ret['result'] = None
+                return ret
+            preface.append(line)
+            count += 1
+
+    __salt__['file.prepend'](name, *preface)
+
+    with salt.utils.fopen(name, 'rb') as fp_:
+        nlines = fp_.readlines()
+
+    if slines != nlines:
+        if not salt.utils.istextfile(name):
+            ret['changes']['diff'] = 'Replace binary file'
+        else:
+            # Changes happened, add them
+            ret['changes']['diff'] = (
+                ''.join(difflib.unified_diff(slines, nlines))
+            )
+
+    ret['comment'] = 'Prepended {0} lines'.format(count)
+    ret['result'] = True
+    return ret
+
+
 def patch(name,
           source=None,
           hash=None,
@@ -2740,9 +2853,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
             ret, 'Directory not present to touch file {0}'.format(name)
         )
 
-    ret['result'] = __salt__['file.touch'](name, atime, mtime)
-
     extant = os.path.exists(name)
+
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
     if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
@@ -2750,6 +2863,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )
+        ret['changes']['touched'] = name
 
     return ret
 
@@ -3033,7 +3147,7 @@ def serialize(name,
     simple configuration files.
 
     name
-        The location of the symlink to create
+        The location of the file to create
 
     dataset
         the dataset that will be serialized
@@ -3125,7 +3239,11 @@ def serialize(name,
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
     if formatter == 'yaml':
-        contents = yaml.dump(dataset, default_flow_style=False)
+        contents = yaml.dump(
+            dataset,
+            default_flow_style=False,
+            Dumper=OrderedDumper
+        )
     elif formatter == 'json':
         contents = json.dumps(dataset,
                               indent=2,

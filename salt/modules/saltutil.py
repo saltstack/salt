@@ -18,6 +18,7 @@ import copy
 import threading
 
 # Import salt libs
+import salt
 import salt.payload
 import salt.state
 import salt.client
@@ -60,12 +61,21 @@ def _sync(form, saltenv=None):
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir {0!r}'.format(mod_dir))
-        os.makedirs(mod_dir)
+        try:
+            os.makedirs(mod_dir)
+        except (IOError, OSError):
+            msg = 'Cannot create cache module directory {0}. Check permissions.'
+            log.error(msg.format(mod_dir))
     for sub_env in saltenv:
         log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
-        cache.extend(__salt__['cp.cache_dir'](source, sub_env))
+        # Grab only the desired files (.py, .pyx, .so)
+        cache.extend(
+            __salt__['cp.cache_dir'](
+                source, sub_env, include_pat=r'E@\.(pyx?|so)$'
+            )
+        )
         local_cache_dir = os.path.join(
                 __opts__['cachedir'],
                 'files',
@@ -445,6 +455,22 @@ def find_job(jid):
     return {}
 
 
+def find_cached_job(jid):
+    '''
+    Return the data for a specific cached job id
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.find_cached_job <job id>
+    '''
+    for data in cached():
+        if data['jid'] == jid:
+            return data
+    return {}
+
+
 def signal_job(jid, sig):
     '''
     Sends a signal to the named salt job's process
@@ -459,6 +485,9 @@ def signal_job(jid, sig):
         if data['jid'] == jid:
             try:
                 os.kill(int(data['pid']), sig)
+                if 'child_pids' in data:
+                    for pid in data['child_pids']:
+                        os.kill(int(pid), sig)
                 return 'Signal {0} sent to job {1} at pid {2}'.format(
                         int(sig),
                         jid,
@@ -549,6 +578,29 @@ def revoke_auth():
     return False
 
 
+def _get_ssh_or_api_client(cfgfile, ssh=False):
+    if ssh:
+        client = salt.client.SSHClient(cfgfile)
+    else:
+        client = salt.client.get_local_client(cfgfile)
+    return client
+
+
+def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+    ret = {}
+    seen = 0
+    for ret_comp in client.cmd_iter(
+            tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+        ret.update(ret_comp)
+        seen += 1
+        # ret can be empty, so we cannot len the whole return dict
+        if expr_form == 'list' and len(tgt) == seen:
+            # do not wait for timeout when explicit list matching
+            # and all results are there
+            break
+    return ret
+
+
 def cmd(tgt,
         fun,
         arg=(),
@@ -567,21 +619,22 @@ def cmd(tgt,
 
         salt '*' saltutil.cmd
     '''
-    if ssh:
-        client = salt.client.SSHClient(__opts__['conf_file'])
-    else:
-        client = salt.client.LocalClient(__opts__['conf_file'])
-    ret = {}
-    for ret_comp in client.cmd_iter(
-            tgt,
-            fun,
-            arg,
-            timeout,
-            expr_form,
-            ret,
-            kwarg,
-            **kwargs):
-        ret.update(ret_comp)
+    cfgfile = __opts__['conf_file']
+    client = _get_ssh_or_api_client(cfgfile, ssh)
+    ret = _exec(
+        client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+    # if return is empty, we may have not used the right conf,
+    # try with the 'minion relative master configuration counter part
+    # if available
+    master_cfgfile = '{0}master'.format(cfgfile[:-6])  # remove 'minion'
+    if (
+        not ret
+        and cfgfile.endswith('{0}{1}'.format(os.path.sep, 'minion'))
+        and os.path.exists(master_cfgfile)
+    ):
+        client = _get_ssh_or_api_client(master_cfgfile, ssh)
+        ret = _exec(
+            client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
     return ret
 
 
@@ -606,7 +659,7 @@ def cmd_iter(tgt,
     if ssh:
         client = salt.client.SSHClient(__opts__['conf_file'])
     else:
-        client = salt.client.LocalClient(__opts__['conf_file'])
+        client = salt.client.get_local_client(__opts__['conf_file'])
     for ret in client.cmd_iter(
             tgt,
             fun,
@@ -617,3 +670,51 @@ def cmd_iter(tgt,
             kwarg,
             **kwargs):
         yield ret
+
+
+# this is the only way I could figure out how to get the REAL file_roots
+# __opt__['file_roots'] is set to  __opt__['pillar_root']
+class _MMinion(object):
+    def __new__(cls, saltenv, reload_env=False):
+        # this is to break out of salt.loaded.int and make this a true singleton
+        # hack until https://github.com/saltstack/salt/pull/10273 is resolved
+        # this is starting to look like PHP
+        global _mminions  # pylint: disable=W0601
+        if '_mminions' not in globals():
+            _mminions = {}
+        if saltenv not in _mminions or reload_env:
+            opts = copy.deepcopy(__opts__)
+            del opts['file_roots']
+            # grains at this point are in the context of the minion
+            global __grains__  # pylint: disable=W0601
+            grains = copy.deepcopy(__grains__)
+            m = salt.minion.MasterMinion(opts)
+
+            # this assignment is so that the rest of fxns called by salt still
+            # have minion context
+            __grains__ = grains
+
+            # this assignment is so that fxns called by mminion have minion
+            # context
+            m.opts['grains'] = grains
+
+            env_roots = m.opts['file_roots'][saltenv]
+            m.opts['module_dirs'] = [fp + '/_modules' for fp in env_roots]
+            m.gen_modules()
+            _mminions[saltenv] = m
+        return _mminions[saltenv]
+
+
+def mmodule(saltenv, fun, *args, **kwargs):
+    '''
+    Loads minion modules from an environment so that they can be used in pillars
+    for that environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.mmodule base test.ping
+    '''
+    mminion = _MMinion(saltenv)
+    return mminion.functions[fun](*args, **kwargs)

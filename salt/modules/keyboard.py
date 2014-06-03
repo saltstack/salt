@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing keyboards on POSIX-like systems.
+Module for managing keyboards on supported POSIX-like systems such as
+Arch, Redhat, Debian, and Gentoo systems.
 '''
 
 # Import python libs
 import logging
-
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work on supported POSIX-like systems
     '''
-    if salt.utils.is_windows():
-        return False
-    return 'keyboard'
+    if __grains__['os_family'] in ('Arch', 'Redhat', 'Debian', 'Gentoo'):
+        return True
+    return False
 
 
 def get_sys():
@@ -58,11 +56,17 @@ def set_sys(layout):
     if 'Arch' in __grains__['os_family']:
         __salt__['cmd.run']('localectl set-keymap {0}'.format(layout))
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/sysconfig/keyboard', '^LAYOUT=.*', 'LAYOUT={0}'.format(layout))
+        __salt__['file.sed']('/etc/sysconfig/keyboard',
+                             '^LAYOUT=.*',
+                             'LAYOUT={0}'.format(layout))
     elif 'Debian' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/default/keyboard', '^XKBLAYOUT=.*', 'XKBLAYOUT={0}'.format(layout))
+        __salt__['file.sed']('/etc/default/keyboard',
+                             '^XKBLAYOUT=.*',
+                             'XKBLAYOUT={0}'.format(layout))
     elif 'Gentoo' in __grains__['os_family']:
-        __salt__['file.sed']('/etc/conf.d/keymaps', '^keymap=.*', 'keymap={0}'.format(layout))
+        __salt__['file.sed']('/etc/conf.d/keymaps',
+                             '^keymap=.*',
+                             'keymap={0}'.format(layout))
     return layout
 
 

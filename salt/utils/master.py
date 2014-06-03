@@ -93,6 +93,29 @@ class MasterPillarUtil(object):
             )
         )
 
+    def _get_cached_mine_data(self, *minion_ids):
+        # Return one dict with the cached mine data of the targeted minions
+        mine_data = dict([(minion_id, {}) for minion_id in minion_ids])
+        if (not self.opts.get('minion_data_cache', False)
+                and not self.opts.get('enforce_mine_cache', False)):
+            log.debug('Skipping cached mine data minion_data_cache'
+                      'and enfore_mine_cache are both disabled.')
+            return mine_data
+        mdir = os.path.join(self.opts['cachedir'], 'minions')
+        try:
+            for minion_id in minion_ids:
+                if not salt.utils.verify.valid_id(self.opts, minion_id):
+                    continue
+                path = os.path.join(mdir, minion_id, 'mine.p')
+                if os.path.isfile(path):
+                    with salt.utils.fopen(path, 'rb') as fp_:
+                        mdata = self.serial.loads(fp_.read())
+                        if isinstance(mdata, dict):
+                            mine_data[minion_id] = mdata
+        except (OSError, IOError):
+            return mine_data
+        return mine_data
+
     def _get_cached_minion_data(self, *minion_ids):
         # Return two separate dicts of cached grains and pillar data of the
         # minions
@@ -122,7 +145,7 @@ class MasterPillarUtil(object):
     def _get_live_minion_grains(self, minion_ids):
         # Returns a dict of grains fetched directly from the minions
         log.debug('Getting live grains for minions: "{0}"'.format(minion_ids))
-        client = salt.client.LocalClient(self.opts['conf_file'])
+        client = salt.client.get_local_client(self.opts['conf_file'])
         ret = client.cmd(
                        ','.join(minion_ids),
                         'grains.items',
@@ -276,6 +299,16 @@ class MasterPillarUtil(object):
                                         *minion_ids,
                                         cached_grains=cached_minion_grains)
         return minion_grains
+
+    def get_cached_mine_data(self):
+        '''
+        Get cached mine data for the targeted minions.
+        '''
+        mine_data = {}
+        minion_ids = self._tgt_to_list()
+        log.debug('Getting cached mine data for: {0}'.format(minion_ids))
+        mine_data = self._get_cached_mine_data(*minion_ids)
+        return mine_data
 
     def clear_cached_minion_data(self,
                                  clear_pillar=False,

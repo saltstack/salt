@@ -23,6 +23,8 @@ from functools import partial
 # Import salt libs
 import salt.config as config
 import salt.loader as loader
+import salt.log.setup as log
+import salt.syspaths as syspaths
 import salt.utils as utils
 import salt.version as version
 import salt.syspaths as syspaths
@@ -314,6 +316,109 @@ class MergeConfigMixIn(object):
                     setattr(self.options,
                             option.dest,
                             self.config[option.dest])
+
+
+class SaltfileMixIn(object):
+    __metaclass__ = MixInMeta
+    _mixin_prio_ = -20
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--saltfile', default=None,
+            help='Specify the path to a Saltfile. If not passed, on will be '
+                 'searched for in the current working directory'
+        )
+
+    def process_saltfile(self):
+        if self.options.saltfile is None:
+            # No one passed a Saltfile as an option, environment variable!?
+            self.options.saltfile = os.environ.get('SALT_SALTFILE', None)
+
+        if self.options.saltfile is None:
+            # If we're here, no one passed a Saltfile either to the CLI tool or
+            # as an environment variable.
+            # Is there a Saltfile in the current directory?
+            saltfile = os.path.join(os.getcwd(), 'Saltfile')
+            if os.path.isfile(saltfile):
+                self.options.saltfile = saltfile
+
+        if not self.options.saltfile:
+            # There's still no valid Saltfile? No need to continue...
+            return
+
+        if not os.path.isfile(self.options.saltfile):
+            self.error(
+                '{0!r} file does not exist.\n'.format(self.options.saltfile
+                )
+            )
+
+        # Make sure we have an absolute path
+        self.options.saltfile = os.path.abspath(self.options.saltfile)
+
+        # Make sure we let the user know that we will be loading a Saltfile
+        logging.getLogger(__name__).info(
+            'Loading Saltfile from {0!r}'.format(self.options.saltfile)
+        )
+
+        saltfile_config = config._read_conf_file(saltfile)
+
+        if not saltfile_config:
+            # No configuration was loaded from the Saltfile
+            return
+
+        if self.get_prog_name() not in saltfile_config:
+            # There's no configuration specific to the CLI tool. Stop!
+            return
+
+        # We just want our own configuration
+        cli_config = saltfile_config[self.get_prog_name()]
+
+        # If there are any options, who's names match any key from the loaded
+        # Saltfile, we need to update it's default value
+        for option in self.option_list:
+            if option.dest is None:
+                # --version does not have dest attribute set for example.
+                continue
+
+            if option.dest not in cli_config:
+                # If we don't have anything in Saltfile for this option, let's
+                # continue processing right now
+                continue
+
+            # Get the passed value from shell. If empty get the default one
+            default = self.defaults.get(option.dest)
+            value = getattr(self.options, option.dest, default)
+            if value != default:
+                # The user passed an argument, we won't override it with the
+                # one from Saltfile, if any
+                continue
+
+            # We reched this far! Set the Saltfile value on the option
+            setattr(self.options, option.dest, cli_config[option.dest])
+
+        # Let's also search for options referred in any option groups
+        for group in self.option_groups:
+            for option in group.option_list:
+                if option.dest is None:
+                    continue
+
+                if option.dest not in cli_config:
+                    # If we don't have anything in Saltfile for this option,
+                    # let's continue processing right now
+                    continue
+
+                # Get the passed value from shell. If empty get the default one
+                default = self.defaults.get(option.dest)
+                value = getattr(self.options, option.dest, default)
+                if value != default:
+                    # The user passed an argument, we won't override it with
+                    # the one from Saltfile, if any
+                    continue
+
+                if option.dest in cli_config:
+                    setattr(self.options,
+                            option.dest,
+                            cli_config[option.dest])
 
 
 class ConfigDirMixIn(object):
@@ -1655,7 +1760,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, OutputOptionsMixIn):
+                          LogLevelMixIn, OutputOptionsMixIn, RunUserMixin):
 
     __metaclass__ = OptionParserMeta
 
@@ -2039,7 +2144,7 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, TargetOptionsMixIn,
-                          OutputOptionsMixIn):
+                          OutputOptionsMixIn, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     usage = '%prog [options]'
@@ -2062,16 +2167,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'raw shell command')
         )
         self.add_option(
-            '--priv',
-            dest='ssh_priv',
-            help=('Ssh private key file'))
-        self.add_option(
             '--roster',
             dest='roster',
             default='',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
-                  'used. Default is the flat file roster.'))
+                  'used. Default is the flat file roster.')
+        )
         self.add_option(
             '--roster-file',
             dest='roster_file',
@@ -2079,7 +2181,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('define an alternative location for the default roster '
                   'file location. The default roster file is called roster '
                   'and is found in the same directory as the master config '
-                  'file.'))
+                  'file.')
+        )
         self.add_option(
             '--refresh', '--refresh-cache',
             dest='refresh_cache',
@@ -2088,7 +2191,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Force a refresh of the master side data cache of the '
                   'target\'s data. This is needed if a target\'s grains have '
                   'been changed and the auto refresh timeframe has not been '
-                  'reached.'))
+                  'reached.')
+        )
         self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
@@ -2097,35 +2201,50 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is 25')
-        self.add_option(
-            '-i',
-            '--ignore-host-keys',
-            dest='ignore_host_keys',
-            default=False,
-            action='store_true',
-            help='By default ssh host keys are honored and connections will '
-                 'ask for approval')
+                 'faster communication should be, default is %default'
+        )
         self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid')
         )
-        self.add_option(
+
+        auth_group = optparse.OptionGroup(
+            self, 'Authentication Options',
+            'Parameters affecting authentication'
+        )
+        auth_group.add_option(
+            '--priv',
+            dest='ssh_priv',
+            help='Ssh private key file'
+        )
+        auth_group.add_option(
+            '-i',
+            '--ignore-host-keys',
+            dest='ignore_host_keys',
+            default=False,
+            action='store_true',
+            help='By default ssh host keys are honored and connections will '
+                 'ask for approval'
+        )
+        auth_group.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',
             help='Set the default password to attempt to use when '
-                 'authenticating')
-        self.add_option(
+                 'authenticating'
+        )
+        auth_group.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
             default=False,
             action='store_true',
             help='Set this flag to atempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
-                 'initial deployment of keys very fast and easy')
+                 'initial deployment of keys very fast and easy'
+        )
+        self.add_option_group(auth_group)
 
     def _mixin_after_parsed(self):
         if not self.args:
@@ -2171,6 +2290,15 @@ class SaltCloudParser(OptionParser,
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
         self.exit()
+
+    def parse_args(self, args=None, values=None):
+        try:
+            # Late import in order not to break setup
+            from salt.cloud import libcloudfuncs
+            libcloudfuncs.check_libcloud_version()
+        except ImportError as exc:
+            self.error(exc)
+        return super(SaltCloudParser, self).parse_args(args, values)
 
     def _mixin_after_parsed(self):
         if 'DUMP_SALT_CLOUD_CONFIG' in os.environ:

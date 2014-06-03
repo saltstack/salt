@@ -34,6 +34,12 @@ service, then set the reload value to True:
         - reload: True
         - watch:
           - pkg: redis
+
+.. note::
+
+    More details regarding ``watch`` can be found in the
+    :doc:`Requisites </ref/states/requisites>` documentation.
+
 '''
 
 
@@ -42,7 +48,7 @@ def __virtual__():
     Only make these states available if a service provider has been detected or
     assigned for this minion
     '''
-    return 'service' if 'service.start' in __salt__ else False
+    return 'service.start' in __salt__
 
 
 def _enabled_used_error(ret):

@@ -68,8 +68,8 @@ def start(name):
     '''
     cmd = os.path.join(
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name + ' start'
-    )
+        name
+    ) + ' start'
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -85,8 +85,8 @@ def stop(name):
     '''
     cmd = os.path.join(
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name + ' stop'
-    )
+        name
+    ) + ' stop'
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -102,8 +102,8 @@ def restart(name):
     '''
     cmd = os.path.join(
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name + ' restart'
-    )
+        name
+    ) + ' restart'
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -134,8 +134,8 @@ def reload_(name):
     '''
     cmd = os.path.join(
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name + ' reload'
-    )
+        name
+    ) + ' reload'
     return not __salt__['cmd.retcode'](cmd)
 
 

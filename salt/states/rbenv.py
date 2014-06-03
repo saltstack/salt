@@ -43,6 +43,7 @@ This is how a state configuration could look like:
 
 # Import python libs
 import re
+import copy
 
 # Import salt libs
 import salt.utils
@@ -119,6 +120,7 @@ def installed(name, default=False, runas=None, user=None):
     .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    rbenv_installed_ret = copy.deepcopy(ret)
 
     salt.utils.warn_until(
         'Lithium',
@@ -151,13 +153,11 @@ def installed(name, default=False, runas=None, user=None):
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
         return ret
 
-    ret = _check_rbenv(ret, user)
-    if ret['result'] is False:
-        if not __salt__['rbenv.install'](user):
-            ret['comment'] = 'Rbenv failed to install'
-            return ret
-        else:
-            return _check_and_install_ruby(ret, name, default, user=user)
+    rbenv_installed_ret = _check_and_install_rbenv(rbenv_installed_ret, user)
+    if rbenv_installed_ret['result'] is False:
+        ret['result'] = False
+        ret['comment'] = 'Rbenv failed to install'
+        return ret
     else:
         return _check_and_install_ruby(ret, name, default, user=user)
 
@@ -247,3 +247,45 @@ def absent(name, runas=None, user=None):
         return ret
     else:
         return _check_and_uninstall_ruby(ret, name, user=user)
+
+
+def _check_and_install_rbenv(ret, user=None):
+    '''
+    Verify that rbenv is installed, install if unavailable
+    '''
+
+    ret = _check_rbenv(ret, user)
+    if ret['result'] is False:
+        if __salt__['rbenv.install'](user):
+            ret['result'] = True
+            ret['comment'] = 'Rbenv installed'
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Rbenv failed to install'
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Rbenv already installed'
+
+    return ret
+
+
+def install_rbenv(name, user=None):
+    '''
+    Install rbenv if not installed. Allows you to require rbenv be installed
+    prior to installing the plugins. Useful if you want to install rbenv
+    plugins via the git or file modules and need them installed before
+    installing any rubies.
+
+    Use the rbenv.root configuration option to set the path for rbenv if you
+    want a system wide install that is not in a user home dir.
+
+    user: None
+        The user to run rbenv as.
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if __opts__['test']:
+        ret['comment'] = 'Rbenv is set to be installed'
+        return ret
+
+    return _check_and_install_rbenv(ret, user)

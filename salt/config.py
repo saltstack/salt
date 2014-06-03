@@ -7,10 +7,10 @@ All salt configuration loading and defaults should be in this module
 import glob
 import os
 import re
-import socket
 import logging
 import urlparse
 from copy import deepcopy
+import time
 
 # import third party libs
 import yaml
@@ -43,10 +43,15 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 )
 
+FLO_DIR = os.path.join(
+        os.path.dirname(__file__),
+        'daemons', 'flo')
+
 VALID_OPTS = {
     'master': str,
     'master_port': int,
     'master_finger': str,
+    'syndic_finger': str,
     'user': str,
     'root_dir': str,
     'pki_dir': str,
@@ -74,6 +79,7 @@ VALID_OPTS = {
     'module_dirs': list,
     'returner_dirs': list,
     'states_dirs': list,
+    'grains_dirs': list,
     'render_dirs': list,
     'outputter_dirs': list,
     'providers': dict,
@@ -130,14 +136,22 @@ VALID_OPTS = {
     'keep_jobs': int,
     'master_roots': dict,
     'gitfs_remotes': list,
+    'gitfs_mountpoint': str,
     'gitfs_root': str,
     'gitfs_base': str,
+    'gitfs_env_whitelist': list,
+    'gitfs_env_blacklist': list,
     'hgfs_remotes': list,
+    'hgfs_mountpoint': str,
     'hgfs_root': str,
     'hgfs_base': str,
     'hgfs_branch_method': str,
     'svnfs_remotes': list,
+    'svnfs_mountpoint': str,
     'svnfs_root': str,
+    'svnfs_trunk': str,
+    'svnfs_branches': str,
+    'svnfs_tags': str,
     'ext_pillar': list,
     'pillar_version': int,
     'pillar_opts': bool,
@@ -165,6 +179,7 @@ VALID_OPTS = {
     'minion_data_cache': bool,
     'publish_session': int,
     'reactor': list,
+    'reactor_refresh_interval': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
@@ -198,6 +213,7 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_port': '4506',
     'master_finger': '',
+    'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
@@ -231,12 +247,14 @@ DEFAULT_MINION_OPTS = {
     'whitelist_modules': [],
     'module_dirs': [],
     'returner_dirs': [],
+    'grains_dirs': [],
     'states_dirs': [],
     'render_dirs': [],
     'outputter_dirs': [],
     'providers': {},
     'clean_dynamic_modules': True,
     'open_mode': False,
+    'auto_accept': True,
     'multiprocessing': True,
     'mine_interval': 60,
     'ipc_mode': 'ipc',
@@ -313,14 +331,22 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'gitfs_remotes': [],
+    'gitfs_mountpoint': '',
     'gitfs_root': '',
     'gitfs_base': 'master',
+    'gitfs_env_whitelist': [],
+    'gitfs_env_blacklist': [],
     'hgfs_remotes': [],
+    'hgfs_mountpoint': '',
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
     'svnfs_remotes': [],
+    'svnfs_mountpoint': '',
     'svnfs_root': '',
+    'svnfs_trunk': 'trunk',
+    'svnfs_branches': 'branches',
+    'svnfs_tags': 'tags',
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
@@ -370,6 +396,7 @@ DEFAULT_MASTER_OPTS = {
     'cluster_mode': 'paranoid',
     'range_server': 'range:80',
     'reactor': [],
+    'reactor_refresh_interval': 60,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -877,7 +904,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         'deploy_scripts_search_path',
         defaults.get('deploy_scripts_search_path', 'cloud.deploy.d')
     )
-    if isinstance(deploy_scripts_search_path, basestring):
+    if isinstance(deploy_scripts_search_path, string_types):
         deploy_scripts_search_path = [deploy_scripts_search_path]
 
     # Check the provided deploy scripts search path removing any non existing
@@ -1151,7 +1178,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
     vms = {}
 
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
             raise salt.cloud.exceptions.SaltCloudConfigError(
@@ -1308,7 +1335,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     providers = {}
     for key, val in config.items():
-        if key in ('conf_file', 'include', 'default_include'):
+        if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
         if not isinstance(val, (list, tuple)):
@@ -1636,7 +1663,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Guess the id of the minion.
 
     - If CONFIG_DIR/minion_id exists, use the cached minion ID from that file
-    - If socket.getfqdn() returns us something other than localhost, use it
+    - If salt.utils.network.get_fqhostname returns us something other than
+      localhost, use it
     - Check /etc/hostname for a value other than localhost
     - Check /etc/hosts for something that isn't localhost that maps to 127.*
     - Look for a routeable / public IP
@@ -1674,10 +1702,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    # Check socket.getfqdn()
-    fqdn = socket.getfqdn()
+    # Check salt.utils.network.get_fqhostname()
+    fqdn = salt.utils.network.get_fqhostname()
     if fqdn != 'localhost':
-        log.info('Found minion id from getfqdn(): {0}'.format(fqdn))
+        log.info('Found minion id from get_fqhostname(): {0}'.format(fqdn))
         if minion_id and cache:
             _cache_id(fqdn, id_cache)
         return fqdn, False
@@ -2000,8 +2028,11 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         )
     # If the token file exists, read and store the contained token
     if os.path.isfile(opts['token_file']):
-        with salt.utils.fopen(opts['token_file']) as fp_:
-            opts['token'] = fp_.read().strip()
+        # Make sure token is still valid
+        expire = opts.get('token_expire', 43200)
+        if os.stat(opts['token_file']).st_mtime + expire > time.mktime(time.localtime()):
+            with salt.utils.fopen(opts['token_file']) as fp_:
+                opts['token'] = fp_.read().strip()
     # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
     if opts['interface'] == '0.0.0.0':
         opts['interface'] = '127.0.0.1'

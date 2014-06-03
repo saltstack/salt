@@ -24,14 +24,19 @@ from libcloud.compute.deployment import (
 # Import salt libs
 import salt._compat
 import salt.utils.event
+import salt.client
 
 # Import salt cloud libs
+import salt.utils
 import salt.utils.cloud
 import salt.config as config
 from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+
+LIBCLOUD_MINIMAL_VERSION = (0, 14, 0)
 
 
 def node_state(id_):
@@ -75,8 +80,12 @@ def check_libcloud_version(reqver='0.13.2', why=None):
 
 def libcloud_version():
     '''
-    Require the minimal libcloud version
+    Compare different libcloud versions
     '''
+    if not isinstance(reqver, (list, tuple)):
+        raise RuntimeError(
+            '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
+        )
     try:
         import libcloud
     except ImportError:
@@ -340,25 +349,40 @@ def destroy(name, conn=None, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
     node = get_node(conn, name)
+    profiles = get_configured_provider()['profiles']  # pylint: disable=E0602
     if node is None:
         log.error('Unable to find the VM {0}'.format(name))
+    profile = None
+    if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
+        profile = node.extra['metadata']['profile']
+    flush_mine_on_destroy = False
+    if profile is not None and profile in profiles:
+        if 'flush_mine_on_destroy' in profiles[profile]:
+            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if flush_mine_on_destroy:
+        log.info('Clearing Salt Mine: {0}'.format(name))
+        client = salt.client.get_local_client(__opts__['conf_file'])
+        minions = client.cmd(name, 'mine.flush')
+
+    log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
     if ret:
         log.info('Destroyed VM: {0}'.format(name))
         # Fire destroy action
-        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
         salt.utils.cloud.fire_event(
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
             {'name': name},
+            transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
             salt.utils.cloud.remove_sshkey(node.public_ips[0])
@@ -383,17 +407,13 @@ def reboot(name, conn=None):
     if ret:
         log.info('Rebooted VM: {0}'.format(name))
         # Fire reboot action
-        # Fire destroy action
-        event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
-        try:
-            event.fire_event(
-                '{0} has been rebooted'.format(name), 'salt-cloud'
-            )
-        except ValueError:
-            # We're using develop or a 0.17.x version of salt
-            event.fire_event(
-                {name: '{0} has been rebooted'.format(name)}, 'salt-cloud'
-            )
+        salt.utils.cloud.fire_event(
+            'event',
+            '{0} has been rebooted'.format(name), 'salt-cloud'
+            'salt/cloud/{0}/rebooting'.format(name),
+            {'name': name},
+            transport=__opts__['transport']
+        )
         return True
 
     log.error('Failed to reboot VM: {0}'.format(name))

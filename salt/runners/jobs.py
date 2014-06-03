@@ -26,7 +26,7 @@ def active():
         salt-run jobs.active
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     for minion, data in active_.items():
         if not isinstance(data, list):
@@ -53,7 +53,7 @@ def active():
     return ret
 
 
-def lookup_jid(jid, ext_source=None):
+def lookup_jid(jid, ext_source=None, output=True):
     '''
     Return the printout from a previously executed job
 
@@ -80,11 +80,12 @@ def lookup_jid(jid, ext_source=None):
         return ret
 
     # Fall back to the local job cache
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
 
     for mid, data in client.get_full_returns(jid, [], 0).items():
         ret[mid] = data.get('ret')
-        salt.output.display_output(
+        if output:
+            salt.output.display_output(
                 {mid: ret[mid]},
                 data.get('out', None),
                 __opts__)

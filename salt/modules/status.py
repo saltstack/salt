@@ -21,7 +21,7 @@ __opts__ = {}
 def __virtual__():
     if salt.utils.is_windows():
         return False
-    return 'status'
+    return True
 
 
 def _number(text):
@@ -180,7 +180,7 @@ def cpustats():
 
 def meminfo():
     '''
-    Return the CPU stats for this minion
+    Return the memory info for this minion
 
     CLI Example:
 

@@ -205,6 +205,7 @@ def managed(name,
             extra_index_url=extra_index_url,
             no_chown=no_chown,
             pre_releases=pre_releases,
+            exists_action=pip_exists_action,
             no_deps=no_deps,
             proxy=proxy,
         )

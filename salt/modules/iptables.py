@@ -55,9 +55,9 @@ def _conf(family='ipv4'):
             return '/etc/iptables/iptables.rules'
     elif __grains__['os_family'] == 'Debian':
         if family == 'ipv6':
-            return '/etc/iptables/rules.v4'
-        else:
             return '/etc/iptables/rules.v6'
+        else:
+            return '/etc/iptables/rules.v4'
     elif __grains__['os'] == 'Gentoo':
         if family == 'ipv6':
             return '/var/lib/ip6tables/rules-save'
@@ -212,7 +212,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     for item in after_jump:
         rule += item
 
-    if full is True:
+    if full in ['True', 'true']:
         if not table:
             return 'Error: Table needs to be specified'
         if not chain:
@@ -358,7 +358,7 @@ def save(filename=None, family='ipv4'):
 
 def check(table='filter', chain=None, rule=None, family='ipv4'):
     '''
-    Check for the existance of a rule in the table and chain
+    Check for the existence of a rule in the table and chain
 
     This function accepts a rule in a standard iptables command format,
         starting with the chain. Trying to force users to adapt to a new
@@ -406,7 +406,7 @@ def check_chain(table='filter', chain=None, family='ipv4'):
     '''
     .. versionadded:: 2014.1.0 (Hydrogen)
 
-    Check for the existance of a chain in the table
+    Check for the existence of a chain in the table
 
     CLI Example:
 
@@ -529,6 +529,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         method of creating rules would be irritating at best, and we
         already have a parser that can handle it.
 
+    If the position specified is a negative number, then the insert will be
+        performed counting from the end of the list. For instance, a position
+        of -1 will insert the rule as the second to last rule. To insert a rule
+        in the last position, use the append function instead.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -547,6 +552,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Position needs to be specified or use append (-A)'
     if not rule:
         return 'Error: Rule needs to be specified'
+
+    if position < 0:
+        rules = get_rules(family='ipv4')
+        size = len(rules[table][chain]['rules'])
+        position = (size + position) + 1
 
     cmd = '{0} -t {1} -I {2} {3} {4}'.format(_iptables_cmd(family), table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
@@ -892,7 +902,10 @@ def _parser():
     add_arg('--string', dest='string', action='append')
     add_arg('--hex-string', dest='hex-string', action='append')
     ## tcp
-    add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    if sys.version.startswith('2.6'):
+        add_arg('--tcp-flags', dest='tcp-flags', action='append')
+    else:
+        add_arg('--tcp-flags', dest='tcp-flags', action='append', nargs='*')
     add_arg('--syn', dest='syn', action='append')
     add_arg('--tcp-option', dest='tcp-option', action='append')
     ## tcpmss

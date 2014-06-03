@@ -28,6 +28,7 @@ ensure_in_syspath('../')
 # Import salt libs
 import salt.minion
 import salt.utils
+import salt.utils.network
 import integration
 from salt import config as sconfig, version as salt_version
 from salt.version import SaltStackVersion

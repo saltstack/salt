@@ -67,6 +67,11 @@
 # Directory to store job and cache data
 #cachedir: /var/cache/salt/master
 
+# Directory for custom modules. This directory can contain subdirectories for
+# each of Salt's module types such as "runners", "output", "wheel", "modules",
+# "states", "returners", etc.
+#extension_modules: <no default>
+
 # Verify and set permissions on configuration directories at startup
 #verify_env: True
 
@@ -77,7 +82,7 @@
 # seconds
 #timeout: 5
 
-# The loop_interval option controls the seconds for the master's maintinance
+# The loop_interval option controls the seconds for the master's maintenance
 # process check cycle. This process updates file server backends, cleans the
 # job cache and executes the scheduler.
 #loop_interval: 60
@@ -144,7 +149,7 @@
 # Works like autosign_file, but instead allows you to specify minion IDs for
 # which keys will automatically be rejected. Will override both membership in
 # the autosign_file and the auto_accept setting.
-#autosign_file: /etc/salt/autosign.conf
+#autoreject_file: /etc/salt/autosign.conf
 
 # Enable permissive access to the salt keys.  This allows you to run the
 # master or minion as root, but have a non-root group be given access to
@@ -383,8 +388,20 @@
 #fileserver_events: False
 #
 # Git fileserver backend configuration
+#
+# Gitfs can be provided by one of two python modules: GitPython or pygit2. If
+# using pygit2, both libgit2 and git must also be installed.
+#gitfs_provider: gitpython
+#
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
+#
+# The repos will be searched in order to find the file requested by a client
+# and the first repo to have the file will return it.
+# When using the git backend branches and tags are translated into salt
+# environments.
+# Note:  file:// repos will be treated as a remote, so refs you want used must
+# exist in that repo as *local* refs.
 #
 #gitfs_remotes:
 #  - git://github.com/saltstack/salt-states.git
@@ -397,12 +414,6 @@
 # is a security concern, you may want to try using the ssh transport.
 #gitfs_ssl_verify: True
 #
-# The repos will be searched in order to find the file requested by a client
-# and the first repo to have the file will return it.
-# When using the git backend branches and tags are translated into salt
-# environments.
-# Note:  file:// repos will be treated as a remote, so refs you want used must
-# exist in that repo as *local* refs.
 #
 # The gitfs_root option gives the ability to serve files from a subdirectory
 # within the repository. The path is defined relative to the root of the
@@ -525,7 +536,7 @@
 #
 # mine_get:
 #   foo.example.com:
-#     - network.inetrfaces
+#     - network.interfaces
 #   web.*:
 #     - network.*
 #     - disk.*

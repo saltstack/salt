@@ -202,7 +202,7 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     form='full')
 
 
-def runner(fun, arg=None):
+def runner(fun, arg=None, timeout=5):
     '''
     Execute a runner on the master and return the data from the runner
     function
@@ -223,6 +223,7 @@ def runner(fun, arg=None):
             'fun': fun,
             'arg': arg,
             'tok': tok,
+            'tmo': timeout,
             'id': __opts__['id']}
 
     sreq = salt.transport.Channel.factory(__opts__)

@@ -9,13 +9,11 @@ import os
 import re
 import time
 import errno
-import fnmatch
 import signal
 import shutil
 import stat
 import logging
 import hashlib
-import datetime
 try:
     import pwd
 except ImportError:  # This is in case windows minion is importing
@@ -44,13 +42,14 @@ import salt.minion
 import salt.search
 import salt.key
 import salt.fileserver
+import salt.daemons.masterapi
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
-from salt.utils.debug import enable_sigusr1_handler, inspect_stack
-from salt.exceptions import SaltMasterError, MasterExit
+from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
+from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 from salt.pillar import git_pillar
 
@@ -191,7 +190,6 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
-        jid_root = os.path.join(self.opts['cachedir'], 'jobs')
         search = salt.search.Search(self.opts)
         last = int(time.time())
         rotate = int(time.time())
@@ -301,7 +299,7 @@ class Master(SMaster):
                                                          'remove an entry from the '
                                                          'job cache!  {0}'.format(exc))
                                     difference = cur - jidtime
-                                    hours_difference = difference.total_seconds() / 3600.0
+                                    hours_difference = salt.utils.total_seconds(difference) / 3600.0
                                     if hours_difference > self.opts['keep_jobs']:
                                         try:
                                             shutil.rmtree(f_path)
@@ -319,16 +317,7 @@ class Master(SMaster):
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
                     search.index()
-            try:
-                if not fileserver.servers:
-                    log.error('No fileservers loaded, the master will not be'
-                              'able to serve files to minions')
-                    raise SaltMasterError('No fileserver backends available')
-                fileserver.update()
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in file server update'.format(exc)
-                )
+            salt.daemons.masterapi.fileserver_update(fileserver)
 
             # check how close to FD limits you are
             salt.utils.verify.check_max_open_files(self.opts)
@@ -358,9 +347,9 @@ class Master(SMaster):
                     # Fire new minions present event
                     data = {'new': list(new),
                             'lost': list(lost)}
-                    event.fire_event(data, tagify('change', 'presense'))
+                    event.fire_event(data, tagify('change', 'presence'))
                 data = {'present': list(present)}
-                event.fire_event(data, tagify('present', 'presense'))
+                event.fire_event(data, tagify('present', 'presence'))
                 old_present = present
             try:
                 time.sleep(loop_interval)
@@ -444,6 +433,7 @@ class Master(SMaster):
         )
 
         enable_sigusr1_handler()
+        enable_sigusr2_handler()
 
         self.__set_max_open_files()
         clear_old_jobs_proc = multiprocessing.Process(
@@ -849,7 +839,7 @@ class AESFuncs(object):
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Create the master minion to access the external job cache
         self.mminion = salt.minion.MasterMinion(
                 self.opts,
@@ -1308,15 +1298,18 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        new_loadp = False
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
             load['jid'] = salt.utils.prep_jid(
-                    self.opts['cachedir'],
-                    self.opts['hash_type'],
-                    load.get('nocache', False))
+                self.opts['cachedir'],
+                self.opts['hash_type'],
+                load.get('nocache', False))
+            new_loadp = load.get('nocache', True) and True
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
-        self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_event(
+            load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
         if self.opts['master_ext_job_cache']:
             fstr = '{0}.returner'.format(self.opts['master_ext_job_cache'])
@@ -1325,12 +1318,17 @@ class AESFuncs(object):
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
         jid_dir = salt.utils.jid_dir(
-                load['jid'],
-                self.opts['cachedir'],
-                self.opts['hash_type']
-                )
+            load['jid'],
+            self.opts['cachedir'],
+            self.opts['hash_type']
+        )
         if os.path.exists(os.path.join(jid_dir, 'nocache')):
             return
+        if new_loadp:
+            with salt.utils.fopen(
+                os.path.join(jid_dir, '.load.p'), 'w+b'
+            ) as fp_:
+                self.serial.dump(load, fp_)
         hn_dir = os.path.join(jid_dir, load['id'])
         try:
             os.mkdir(hn_dir)
@@ -1715,7 +1713,7 @@ class ClearFuncs(object):
         # Create the event manager
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         # Make a client
-        self.local = salt.client.LocalClient(self.opts['conf_file'])
+        self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Make an minion checker object
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make an Auth object
@@ -1793,24 +1791,11 @@ class ClearFuncs(object):
         with salt.utils.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
-
                 if line.startswith('#'):
                     continue
-
-                if line == keyid:
-                    return True
-                if fnmatch.fnmatch(keyid, line):
-                    return True
-                try:
-                    if re.match(r'\A{0}\Z'.format(line), keyid):
+                else:
+                    if salt.utils.expr_match(keyid, line):
                         return True
-                except re.error:
-                    log.warn(
-                        '{0} is not a valid regular expression, ignoring line '
-                        'in {1}'.format(line, signing_file)
-                    )
-                    continue
-
         return False
 
     def __check_autoreject(self, keyid):
@@ -1870,6 +1855,9 @@ class ClearFuncs(object):
         pubfn_rejected = os.path.join(self.opts['pki_dir'],
                 'minions_rejected',
                 load['id'])
+        pubfn_denied = os.path.join(self.opts['pki_dir'],
+                'minions_denied',
+                load['id'])
         if self.opts['open_mode']:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -1892,6 +1880,9 @@ class ClearFuncs(object):
                     'keys did not match. This may be an attempt to compromise '
                     'the Salt cluster.'.format(**load)
                 )
+                # put denied minion key into minions_denied
+                with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
+                    fp_.write(load['pub'])
                 eload = {'result': False,
                          'id': load['id'],
                          'pub': load['pub']}
@@ -1976,6 +1967,9 @@ class ClearFuncs(object):
                         'attempt to compromise the Salt cluster.'
                         .format(**load)
                     )
+                    # put denied minion key into minions_denied
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
+                        fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
                              'pub': load['pub']}
@@ -2007,6 +2001,9 @@ class ClearFuncs(object):
                         'attempt to compromise the Salt cluster.'
                         .format(**load)
                     )
+                    # put denied minion key into minions_denied
+                    with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
+                        fp_.write(load['pub'])
                     eload = {'result': False,
                              'id': load['id'],
                              'pub': load['pub']}
@@ -2257,7 +2254,7 @@ class ClearFuncs(object):
                 log.error(exc)
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                             fun,
                                             exc.__class__.__name__,
                                             exc,
@@ -2326,7 +2323,7 @@ class ClearFuncs(object):
             except Exception as exc:
                 log.error('Exception occurred while '
                         'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occured in wheel {0}: {1}: {2}'.format(
+                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                             fun,
                                             exc.__class__.__name__,
                                             exc,
@@ -2478,18 +2475,26 @@ class ClearFuncs(object):
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
+
             except Exception as exc:
                 log.error(
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
                 return ''
+
+            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
+
+            # Auth has succeeded, get groups this user is a member of
+            groups = self.loadauth.get_groups(extra)
+
+            if groups:
+                auth_list = self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
             good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name]
-                        if name in self.opts['external_auth'][extra['eauth']]
-                        else self.opts['external_auth'][extra['eauth']]['*'],
+                    auth_list,
                     clear_load['fun'],
                     clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
+                    clear_load.get('tgt_type', 'glob')
+                    )
             if not good:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':

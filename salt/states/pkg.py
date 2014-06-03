@@ -21,7 +21,7 @@ This is necessary and can not be replaced by a require clause in the pkg.
     base:
       pkgrepo.managed:
         - humanname: Logstash PPA
-        - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
+        - name: ppa:wolfnet/logstash
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
@@ -55,16 +55,18 @@ if salt.utils.is_windows():
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
     _get_latest_pkg_version = \
-            _namespaced_function(_get_latest_pkg_version, globals())
+        _namespaced_function(_get_latest_pkg_version, globals())
     _reverse_cmp_pkg_versions = \
-            _namespaced_function(_reverse_cmp_pkg_versions, globals())
+        _namespaced_function(_reverse_cmp_pkg_versions, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
+    # pylint: disable=W0611
     try:
         import msgpack
     except ImportError:
         import msgpack_pure as msgpack
     from distutils.version import LooseVersion  # pylint: disable=E0611,F0401
+    # pylint: enable=W0611
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ def __virtual__():
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
     '''
-    return 'pkg' if 'pkg.install' in __salt__ else False
+    return 'pkg.install' in __salt__
 
 
 def __gen_rtag():
@@ -333,6 +335,7 @@ def installed(
         skip_verify=False,
         skip_suggestions=False,
         pkgs=None,
+        names=None,
         sources=None,
         **kwargs):
     '''
@@ -348,6 +351,55 @@ def installed(
 
     fromrepo
         Specify a repository from which to install
+
+        .. note::
+
+            Distros which use APT (Debian, Ubuntu, etc.) do not have a concept
+            of repositories, in the same way as YUM-based distros do. When a
+            source is added, it is assigned to a given release. Consider the
+            following source configuration::
+
+                deb http://ppa.launchpad.net/saltstack/salt/ubuntu precise main
+
+            The packages provided by this source would be made available via
+            the ``precise`` release, therefore ``fromrepo`` would need to be
+            set to ``precise`` for Salt to install the package from this
+            source.
+
+            Having multiple sources in the same release may result in the
+            default install candidate being newer than what is desired. If this
+            is the case, the desired version must be specified using the
+            ``version`` parameter.
+
+            If the ``pkgs`` parameter is being used to install multiple
+            packages in the same state, then instead of using ``version``,
+            use the method of version specification described in the **Multiple
+            Package Installation Options** section below.
+
+            Running the shell command ``apt-cache policy pkgname`` on a minion
+            can help elucidate the APT configuration and aid in properly
+            configuring states:
+
+            .. code-block:: bash
+
+                root@saltmaster:~# salt ubuntu01 cmd.run 'apt-cache policy ffmpeg'
+                ubuntu01:
+                    ffmpeg:
+                    Installed: (none)
+                    Candidate: 7:0.10.11-1~precise1
+                    Version table:
+                        7:0.10.11-1~precise1 0
+                            500 http://ppa.launchpad.net/jon-severinsson/ffmpeg/ubuntu/ precise/main amd64 Packages
+                        4:0.8.10-0ubuntu0.12.04.1 0
+                            500 http://us.archive.ubuntu.com/ubuntu/ precise-updates/main amd64 Packages
+                            500 http://security.ubuntu.com/ubuntu/ precise-security/main amd64 Packages
+                        4:0.8.1-0ubuntu1 0
+                            500 http://us.archive.ubuntu.com/ubuntu/ precise/main amd64 Packages
+
+            The release is located directly after the source's URL. The actual
+            release name is the part before the slash, so to install version
+            **4:0.8.10-0ubuntu0.12.04.1** either ``precise-updates`` or
+            ``precise-security`` could be used for the ``fromrepo`` value.
 
     skip_verify
         Skip the GPG verification check for the package to be installed
@@ -383,7 +435,8 @@ def installed(
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
     pkgs
-        A list of packages to install from a software repository.
+        A list of packages to install from a software repository. All packages
+        listed under ``pkgs`` will be installed via a single command.
 
     Usage::
 
@@ -434,6 +487,61 @@ def installed(
                     - foo: '~'
                     - bar: '~>=1.2:slot::overlay[use,-otheruse]'
                     - baz
+
+    names
+        A list of packages to install from a software repository. Each package
+        will be installed individually by the package manager.
+
+    Usage::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar
+              - baz
+
+    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
+    :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
+    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+    in the ``names`` argument. Example::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar: 1.2.3-4
+              - baz
+
+    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+    :mod:`pacman <salt.modules.pacman>` and
+    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
+    ``>`` operators for more control over what versions will be installed.
+    Example::
+
+        mypkgs:
+          pkg.installed:
+            - names:
+              - foo
+              - bar: '>=1.2.3-4'
+              - baz
+
+    ``NOTE:`` When using comparison operators, the expression must be enclosed
+    in quotes to avoid a YAML render error.
+
+    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
+    flag list and/or if the given packages should be in package.accept_keywords
+    file and/or the overlay from which you want the package to be installed.
+    Example::
+
+        mypkgs:
+            pkg.installed:
+                - names:
+                    - foo: '~'
+                    - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+                    - baz
+
 
     sources
         A list of packages to install, along with the source URI or local path
@@ -729,8 +837,10 @@ def latest(
                       '{0}.'.format(to_be_upgraded)
             if up_to_date:
                 if len(up_to_date) <= 10:
-                    comment += ' The following packages are already ' \
-                        'up-to-date: {0}.'.format(', '.join(sorted(up_to_date)))
+                    comment += (
+                        ' The following packages are already '
+                        'up-to-date: {0}.'
+                    ).format(', '.join(sorted(up_to_date)))
                 else:
                     comment += ' {0} packages are already up-to-date.'.format(
                         len(up_to_date))
@@ -934,7 +1044,7 @@ def removed(name, pkgs=None, **kwargs):
 def purged(name, pkgs=None, **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
-    to purge the package.
+    to purge the package. All configuration files are also removed.
 
     name
         The name of the package to be purged.
@@ -955,6 +1065,54 @@ def purged(name, pkgs=None, **kwargs):
                 'changes': {},
                 'result': False,
                 'comment': str(exc)}
+
+
+def uptodate(name, refresh=False):
+    '''
+    .. versionadded:: Helium
+
+    Verify that the system is completely up to date.
+
+    name
+        Does nothing.
+
+    refresh
+        refresh the package database before checkif for new upgrades
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to update.'}
+
+    if 'pkg.list_upgrades' not in __salt__:
+        ret['comment'] = 'State pkg.uptodate is not available'
+        return ret
+
+    if isinstance(refresh, bool):
+        packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+    else:
+        ret['comment'] = 'refresh must be a boolean.'
+        return ret
+
+    if not packages:
+        ret['comment'] = 'System is already up-to-date.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'System update will be performed'
+        ret['result'] = None
+        return ret
+
+    updated = __salt__['pkg.upgrade'](refresh=refresh)
+
+    if updated:
+        ret['changes'] = updated
+        ret['comment'] = 'Upgrade successfull.'
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Upgrade failed.'
+
+    return ret
 
 
 def mod_init(low):

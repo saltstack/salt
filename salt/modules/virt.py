@@ -575,7 +575,7 @@ def init(name,
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
 
-            except os.error:
+            except (IOError, OSError):
                 return False
             seedable = True
         else:

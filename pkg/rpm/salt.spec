@@ -215,6 +215,7 @@ rm -rf $RPM_BUILD_ROOT
 %files -n salt-master
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt.1.*
+%doc %{_mandir}/man1/salt-cloud.1.*
 %doc %{_mandir}/man1/salt-cp.1.*
 %doc %{_mandir}/man1/salt-key.1.*
 %doc %{_mandir}/man1/salt-master.1.*
@@ -223,6 +224,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man1/salt-syndic.1.*
 %doc %{_mandir}/man1/salt-cloud.1.*
 %{_bindir}/salt
+%{_bindir}/salt-cloud
 %{_bindir}/salt-cp
 %{_bindir}/salt-key
 %{_bindir}/salt-master

@@ -24,6 +24,7 @@ Full list of builtin execution modules
     at
     augeas_cfg
     aws_sqs
+    blockdev
     bluez
     brew
     bridge
@@ -40,9 +41,11 @@ Full list of builtin execution modules
     darwin_sysctl
     data
     ddns
+    deb_apache
     debconfmod
     debian_ip
     debian_service
+    defaults
     dig
     disk
     djangomod
@@ -52,7 +55,9 @@ Full list of builtin execution modules
     dpkg
     ebuild
     eix
+    environ
     eselect
+    etcd_mod
     event
     extfs
     file
@@ -67,16 +72,21 @@ Full list of builtin execution modules
     gentoolkitmod
     git
     glance
+    glusterfs
     gnomedesktop
     grains
     groupadd
     grub_legacy
     guestfs
+    hadoop
     hg
     hosts
     htpasswd
     img
+    incron
+    ini_manage
     iptables
+    junos
     key
     keyboard
     keystone
@@ -145,11 +155,15 @@ Full list of builtin execution modules
     rbenv
     rdp
     reg
+    rest_package
+    rest_sample
+    rest_service
     ret
     rh_ip
     rh_service
     riak
     rpm
+    rsync
     rvm
     s3
     saltcloudmod
@@ -182,6 +196,7 @@ Full list of builtin execution modules
     tomcat
     upstart
     useradd
+    uwsgi
     virt
     virtualenv_mod
     win_autoruns
@@ -209,4 +224,5 @@ Full list of builtin execution modules
     zcbuildout
     zfs
     zpool
+    znc
     zypper

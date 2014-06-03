@@ -2,8 +2,15 @@
 '''
 Connection module for Amazon S3
 
-:configuration: This module is not usable until the following are specified
-    either in a pillar or in the minion's config file::
+:configuration: This module accepts explicit s3 credentials but can also utilize
+    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    credentials are then automatically obtained from AWS API and no further
+    configuration is necessary. More Information available at::
+
+       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+
+    If IAM roles are not used you need to specify them either in a pillar or
+    in the minion's config file::
 
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -23,6 +30,8 @@ Connection module for Amazon S3
 
     This module should be usable to query other S3-like services, such as
     Eucalyptus.
+
+:depends: requests
 '''
 
 # Import Python libs
@@ -39,7 +48,7 @@ def __virtual__():
     '''
     Should work on any modern Python installation
     '''
-    return 's3'
+    return True
 
 
 def delete(bucket, path=None, action=None, key=None, keyid=None,

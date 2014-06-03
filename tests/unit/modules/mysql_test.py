@@ -21,7 +21,7 @@ from salt.modules import mysql
 
 NO_MYSQL = False
 try:
-    import MySQLdb
+    import MySQLdb  # pylint: disable=W0611
 except Exception:
     NO_MYSQL = True
 
@@ -253,3 +253,8 @@ class MySQLTestCase(TestCase):
             else:
                 calls = (call().cursor().execute('{0}'.format(expected_sql)))
             connect_mock.assert_has_calls(calls)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MySQLTestCase, needs_daemon=False)

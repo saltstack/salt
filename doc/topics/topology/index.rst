@@ -1,0 +1,4 @@
+.. toctree::
+
+    syndic
+    proxyminion/index

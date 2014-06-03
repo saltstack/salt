@@ -3,11 +3,11 @@
 Management of zc.buildout
 =========================
 
-This module is inspired from `minitage's buildout maker`__
+.. versionadded:: 2014.1.0 (Hydrogen)
 
-.. __: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
+.. _`minitage's buildout maker`: https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py
 
-.. versionadded:: Boron
+This module is inspired by `minitage's buildout maker`_
 
 .. note::
 
@@ -79,6 +79,7 @@ def _salt_callback(func):
         unless = kw.get('unless', None)
         runas = kw.get('runas', None)
         env = kw.get('env', ())
+        status = BASE_STATUS.copy()
         try:
             # may rise _ResultTransmission
             status = _check_onlyif_unless(onlyif,
@@ -108,6 +109,13 @@ def _salt_callback(func):
             LOG.error(trace)
             _invalid(status)
         LOG.clear()
+        # before returning, trying to compact the log output
+        for k in ['comment', 'out', 'outlog']:
+            if status[k] and isinstance(status[k], string_types):
+                status[k] = '\n'.join([
+                    log
+                    for log in status[k].split('\n')
+                    if log.strip()])
         return status
     _call_callback.__doc__ = func.__doc__
     return _call_callback

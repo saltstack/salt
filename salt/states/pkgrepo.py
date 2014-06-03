@@ -68,7 +68,7 @@ def __virtual__():
     '''
     Only load if modifying repos is available for this package type
     '''
-    return 'pkgrepo' if 'pkg.mod_repo' in __salt__ else False
+    return 'pkg.mod_repo' in __salt__
 
 
 def managed(name, **kwargs):
@@ -172,7 +172,7 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web URL to retrieve the GPG key from.
+       URL to retrieve a GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to

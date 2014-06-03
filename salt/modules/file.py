@@ -28,6 +28,7 @@ import stat
 import sys
 import tempfile
 import time
+import glob
 
 try:
     import grp
@@ -66,7 +67,7 @@ def __virtual__():
     # win_file takes care of windows
     if salt.utils.is_windows():
         return False
-    return 'file'
+    return True
 
 
 def __clean_tmp(sfn):
@@ -434,14 +435,14 @@ def check_hash(path, file_hash):
     path
         A file path
     hash
-        A string in the form <hash_type>=<hash_value>. For example:
-        ``md5=e138491e9d5b97023cea823fe17bac22``
+        A string in the form <hash_type>:<hash_value>. For example:
+        ``md5:e138491e9d5b97023cea823fe17bac22``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.check_hash /etc/fstab md5=<md5sum>
+        salt '*' file.check_hash /etc/fstab md5:<md5sum>
     '''
     hash_parts = file_hash.split(':', 1)
     if len(hash_parts) != 2:
@@ -927,15 +928,18 @@ def replace(path,
             count=0,
             flags=0,
             bufsize=1,
+            append_if_not_found=False,
+            prepend_if_not_found=False,
+            not_found_content=None,
             backup='.bak',
             dry_run=False,
             search_only=False,
             show_changes=True,
         ):
     '''
-    Replace occurances of a pattern in a file
-
     .. versionadded:: 0.17.0
+
+    Replace occurrences of a pattern in a file
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
@@ -956,6 +960,15 @@ def replace(path,
         before processing. Note: multiline searches must specify ``file``
         buffering.
     :type bufsize: int or str
+
+    :param append_if_not_found If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+    :param prepend_if_not_found If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+    :param not_found_content Content to use for append/prepend if not found. If
+        None (default), uses repl. Useful when repl uses references to group in
+        pattern.
+
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -984,6 +997,12 @@ def replace(path,
             'Cannot perform string replacements on a binary file: {0}'
             .format(path)
         )
+
+    if search_only and (append_if_not_found or prepend_if_not_found):
+        raise SaltInvocationError('Choose between search_only and append/prepend_if_not_found')
+
+    if append_if_not_found and prepend_if_not_found:
+        raise SaltInvocationError('Choose between append or prepend_if_not_found')
 
     flags_num = _get_flags(flags)
     cpattern = re.compile(pattern, flags_num)
@@ -1016,7 +1035,11 @@ def replace(path,
                 fi_file.close()  # close file handle before returning
                 return True
         else:
-            result = re.sub(cpattern, repl, line, count)
+            result, nrepl = re.subn(cpattern, repl, line, count)
+
+            # found anything? (even if no change)
+            if nrepl > 0:
+                found = True
 
             # Identity check each potential change until one change is made
             if has_changes is False and not result is line:
@@ -1028,6 +1051,28 @@ def replace(path,
 
             if not dry_run:
                 print(result, end='', file=sys.stdout)
+    fi_file.close()
+
+    if not found and (append_if_not_found or prepend_if_not_found):
+        if None == not_found_content:
+            not_found_content = repl
+        if prepend_if_not_found:
+            new_file.insert(not_found_content + '\n')
+        else:
+            # append_if_not_found
+            # Make sure we have a newline at the end of the file
+            if 0 != len(new_file):
+                if not new_file[-1].endswith('\n'):
+                    new_file[-1] += '\n'
+            new_file.append(not_found_content + '\n')
+        has_changes = True
+        if not dry_run:
+            # backup already done in filter part
+            # write new content in the file while avoiding partial reads
+            f = salt.utils.atomicfile.atomic_open(path, 'wb')
+            for line in new_file:
+                f.write(line)
+            f.close()
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -1049,9 +1094,9 @@ def blockreplace(path,
         show_changes=True,
         ):
     '''
-    Replace content of a text block in a file, delimited by line markers
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Replace content of a text block in a file, delimited by line markers
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
@@ -1132,9 +1177,10 @@ def blockreplace(path,
     # no changes are required and to avoid any file access on a partially
     # written file.
     # we could also use salt.utils.filebuffer.BufferedReader
-    for line in fileinput.input(path,
-            inplace=False, backup=False,
-            bufsize=1, mode='rb'):
+    fi_file = fileinput.input(path,
+                inplace=False, backup=False,
+                bufsize=1, mode='rb')
+    for line in fi_file:
 
         result = line
 
@@ -1163,8 +1209,10 @@ def blockreplace(path,
         orig_file.append(line)
         if result is not None:
             new_file.append(result)
-    # end for. If we are here without block managment we maybe have some problems,
+    # end for. If we are here without block management we maybe have some problems,
     # or we need to initialise the marked block
+
+    fi_file.close()
 
     if in_block:
         # unterminated block => bad, always fail
@@ -1234,9 +1282,9 @@ def search(path,
         bufsize=1,
         ):
     '''
-    Search for occurances of a pattern in a file
-
     .. versionadded:: 0.17.0
+
+    Search for occurrences of a pattern in a file
 
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
@@ -1430,7 +1478,7 @@ def append(path, *args):
         try:
             ofile.seek(-1, os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL:
+            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
@@ -1446,6 +1494,35 @@ def append(path, *args):
             ofile.write('{0}\n'.format(line))
 
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
+
+
+def prepend(path, *args):
+    '''
+    .. versionadded:: Helium
+
+    Prepend text to the beginning of a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.prepend /etc/motd \\
+                "With all thine offerings thou shalt offer salt." \\
+                "Salt is what makes things taste bad when it isn't in them."
+    '''
+    try:
+        contents = salt.utils.fopen(path).readlines()
+    except IOError:
+        contents = []
+
+    preface = []
+    for line in args:
+        preface.append("{0}\n".format(line))
+
+    with salt.utils.fopen(path, "w") as ofile:
+        contents = preface + contents
+        ofile.write(''.join(contents))
+    return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
 def touch(name, atime=None, mtime=None):
@@ -1494,9 +1571,9 @@ def touch(name, atime=None, mtime=None):
 
 def seek_read(path, size, offset):
     '''
-    Seek to a position on a file and write to it
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Seek to a position on a file and write to it
 
     CLI Example:
 
@@ -1513,9 +1590,9 @@ def seek_read(path, size, offset):
 
 def seek_write(path, data, offset):
     '''
-    Seek to a position on a file and write to it
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Seek to a position on a file and write to it
 
     CLI Example:
 
@@ -1533,9 +1610,9 @@ def seek_write(path, data, offset):
 
 def truncate(path, length):
     '''
-    Seek to a position on a file and write to it
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Seek to a position on a file and write to it
 
     CLI Example:
 
@@ -1550,9 +1627,9 @@ def truncate(path, length):
 
 def link(src, path):
     '''
-    Create a hard link to a file
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Create a hard link to a file
 
     CLI Example:
 
@@ -1647,12 +1724,12 @@ def copy(src, dst):
 
 def lstat(path):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     Returns the lstat attributes for the given file or dir. Does not support
     symbolic links.
 
     CLI Example:
-
-    .. versionadded:: 2014.1.0 (Hydrogen)
 
     .. code-block:: bash
 
@@ -1671,6 +1748,8 @@ def lstat(path):
 
 def access(path, mode):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
@@ -1678,8 +1757,6 @@ def access(path, mode):
         r: Test the readability of the path
         w: Test the writability of the path
         x: Test whether the path can be executed
-
-    .. versionadded:: 2014.1.0 (Hydrogen)
 
     CLI Example:
 
@@ -1706,9 +1783,9 @@ def access(path, mode):
 
 def readlink(path):
     '''
-    Return the path that a symlink points to
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Return the path that a symlink points to
 
     CLI Example:
 
@@ -1727,9 +1804,9 @@ def readlink(path):
 
 def readdir(path):
     '''
-    Return a list containing the contents of a directory
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Return a list containing the contents of a directory
 
     CLI Example:
 
@@ -1750,9 +1827,9 @@ def readdir(path):
 
 def statvfs(path):
     '''
-    Perform a statvfs call against the filesystem that the file resides on
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Perform a statvfs call against the filesystem that the file resides on
 
     CLI Example:
 
@@ -1829,9 +1906,9 @@ def stats(path, hash_type='md5', follow_symlinks=True):
 
 def rmdir(path):
     '''
-    Remove the specified directory. Fails if a directory is not empty.
-
     .. versionadded:: 2014.1.0 (Hydrogen)
+
+    Remove the specified directory. Fails if a directory is not empty.
 
     CLI Example:
 
@@ -1907,6 +1984,24 @@ def file_exists(path):
     return os.path.isfile(path)
 
 
+def path_exists_glob(path):
+    '''
+    Tests to see if path after expansion is a valid path (file or directory).
+    Expansion allows usage of ? * and character ranges []. Tilde expansion
+    is not supported. Returns True/False.
+
+    .. versionadded:: Hellium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.path_exists_glob /etc/pam*/pass*
+
+    '''
+    return True if glob.glob(path) else False
+
+
 def restorecon(path, recursive=False):
     '''
     Reset the SELinux context on a given path
@@ -1935,7 +2030,13 @@ def get_selinux_context(path):
         salt '*' file.get_selinux_context /etc/hosts
     '''
     out = __salt__['cmd.run']('ls -Z {0}'.format(path))
-    return out.split(' ')[4]
+
+    try:
+        ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
+    except AttributeError:
+        ret = 'No selinux context information is available for {0}'.format(path)
+
+    return ret
 
 
 def set_selinux_context(path,
@@ -2303,7 +2404,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         elif 'cgroup' in perms:
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, basestring):
+    if isinstance(orig_comment, salt._compat.string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
@@ -2390,6 +2491,11 @@ def check_file_meta(
     .. code-block:: bash
 
         salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
+
+    .. note::
+
+        Supported hash types include sha512, sha384, sha256, sha224, sha1, and
+        md5.
     '''
     changes = {}
     if not source_sum:
@@ -2919,6 +3025,8 @@ def mknod_chrdev(name,
                  group=None,
                  mode='0660'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a character device.
 
     CLI Example:
@@ -2990,6 +3098,8 @@ def mknod_blkdev(name,
                  group=None,
                  mode='0660'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a block device.
 
     CLI Example:
@@ -3059,6 +3169,8 @@ def mknod_fifo(name,
                group=None,
                mode='0660'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a FIFO pipe.
 
     CLI Example:
@@ -3103,6 +3215,8 @@ def mknod(name,
           group=None,
           mode='0600'):
     '''
+    .. versionadded:: 0.17.0
+
     Create a block device, character device, or fifo pipe.
     Identical to the gnu mknod.
 
@@ -3142,10 +3256,10 @@ def mknod(name,
 
 def list_backups(path, limit=None):
     '''
+    .. versionadded:: 0.17.0
+
     Lists the previous versions of a file backed up using Salt's :doc:`file
     state backup </ref/states/backup_mode>` system.
-
-    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
@@ -3197,10 +3311,10 @@ list_backup = list_backups
 
 def restore_backup(path, backup_id):
     '''
+    .. versionadded:: 0.17.0
+
     Restore a previous version of a file that was backed up using Salt's
     :doc:`file state backup </ref/states/backup_mode>` system.
-
-    .. versionadded:: 0.17.0
 
     path
         The path on the minion to check for backups
@@ -3256,10 +3370,10 @@ def restore_backup(path, backup_id):
 
 def delete_backup(path, backup_id):
     '''
-    Restore a previous version of a file that was backed up using Salt's
-    :doc:`file state backup </ref/states/backup_mode>` system.
-
     .. versionadded:: 0.17.0
+
+    Delete a previous version of a file that was backed up using Salt's
+    :doc:`file state backup </ref/states/backup_mode>` system.
 
     path
         The path on the minion to check for backups

@@ -23,7 +23,7 @@ def __virtual__():
         return False
     if 'openstack_config.delete' not in __salt__:
         return False
-    return 'openstack_config'
+    return True
 
 
 def present(name, filename, section, value, parameter=None):

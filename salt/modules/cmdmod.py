@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import sys
 import traceback
-import yaml
 
 # Import salt libs
 import salt.utils
@@ -407,13 +406,17 @@ def _run(cmd,
     try:
         proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
     except (OSError, IOError) as exc:
-        raise CommandExecutionError('Unable to run command "{0}" with the context "{1}", reason: {2}'.format(cmd, kwargs, exc))
+        raise CommandExecutionError(
+            'Unable to run command {0!r} with the context {1!r}, reason: {2}'
+            .format(cmd, kwargs, exc)
+        )
 
     try:
         proc.wait(timeout)
     except TimedProcTimeoutError as exc:
         ret['stdout'] = str(exc)
         ret['stderr'] = ''
+        ret['retcode'] = None
         ret['pid'] = proc.process.pid
         # ok return code for timeouts?
         ret['retcode'] = 1
@@ -571,6 +574,23 @@ def run(cmd,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv)
 
+    if 'pid' in ret and '__pub_jid' in kwargs:
+        # Stuff the child pid in the JID file
+        proc_dir = os.path.join(__opts__['cachedir'], 'proc')
+        jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
+        if os.path.isfile(jid_file):
+            serial = salt.payload.Serial(__opts__)
+            with salt.utils.fopen(jid_file, 'rb') as fn_:
+                jid_dict = serial.load(fn_)
+
+            if 'child_pids' in jid_dict:
+                jid_dict['child_pids'].append(ret['pid'])
+            else:
+                jid_dict['child_pids'] = [ret['pid']]
+            # Rewrite file
+            with salt.utils.fopen(jid_file, 'w+b') as fn_:
+                fn_.write(serial.dumps(jid_dict))
+
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
@@ -660,6 +680,8 @@ def run_stdout(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stdout']
 
 
@@ -739,6 +761,8 @@ def run_stderr(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stderr']
 
 
@@ -818,6 +842,8 @@ def run_all(cmd,
             log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
         if ret['stderr']:
             log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+        if ret['retcode']:
+            log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
 
 
@@ -896,6 +922,45 @@ def retcode(cmd,
     return ret['retcode']
 
 
+def _retcode_quiet(cmd,
+                   cwd=None,
+                   stdin=None,
+                   runas=None,
+                   shell=DEFAULT_SHELL,
+                   python_shell=True,
+                   env=None,
+                   clean_env=False,
+                   template=None,
+                   umask=None,
+                   output_loglevel='quiet',
+                   quiet=True,
+                   timeout=None,
+                   reset_system_locale=True,
+                   ignore_retcode=False,
+                   saltenv='base',
+                   **kwargs):
+    '''
+    Helper for running commands quietly for minion startup.
+    Returns same as retcode
+    '''
+    return retcode(cmd,
+                   cwd=cwd,
+                   stdin=stdin,
+                   runas=runas,
+                   shell=shell,
+                   python_shell=python_shell,
+                   env=env,
+                   clean_env=clean_env,
+                   template=template,
+                   umask=umask,
+                   output_loglevel=output_loglevel,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   ignore_retcode=ignore_retcode,
+                   saltenv=saltenv,
+                   **kwargs)
+
+
 def script(source,
            args=None,
            cwd=None,
@@ -921,7 +986,7 @@ def script(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formated as a template, the default is jinja.
+    The script can also be formatted as a template, the default is jinja.
     Arguments for the script can be specified as well.
 
     CLI Example:
@@ -1023,7 +1088,7 @@ def script_retcode(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formated as a template, the default is jinja.
+    The script can also be formatted as a template, the default is jinja.
 
     Only evaluate the script return code and do not block for terminal output
 
@@ -1101,7 +1166,7 @@ def has_exec(cmd):
 
         salt '*' cmd.has_exec cat
     '''
-    return bool(which(cmd))
+    return which(cmd) is not None
 
 
 def exec_code(lang, code, cwd=None):

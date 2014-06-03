@@ -84,7 +84,7 @@ def bootstrap(location, size, fmt):
 
     .. code-block:: bash
 
-        salt '*' qemu_nbd.bootstrap /srv/salt-images/host.qcow 4096 qcow2
+        salt '*' img.bootstrap /srv/salt-images/host.qcow 4096 qcow2
     '''
     location = __salt__['img.make_image'](location, size, fmt)
     if not location:

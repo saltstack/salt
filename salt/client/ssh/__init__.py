@@ -5,22 +5,26 @@ Create ssh executor system
 # Import python libs
 from __future__ import print_function
 import os
+import re
+import shutil
 import tarfile
 import tempfile
-import json
-import getpass
-import shutil
-import copy
 import time
-import multiprocessing
-import re
-import logging
 import yaml
 
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
+import salt.config
+import salt.exceptions
+import salt.loader
+import salt.minion
+import salt.roster
+import salt.state
 import salt.utils
+import salt.utils.args
+import salt.utils.event
+import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.event
@@ -188,12 +192,12 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
-        tgt_type = self.opts['selected_target_option'] \
+        self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts)
         self.targets = self.roster.targets(
                 self.opts['tgt'],
-                tgt_type)
+                self.tgt_type)
         priv = self.opts.get(
                 'ssh_priv',
                 os.path.join(
@@ -260,7 +264,7 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], basestring):
+        if not isinstance(ret[host], string_types):
             if self.opts.get('ssh_key_deploy'):
                 target = self.targets[host]
                 if 'passwd' in target:
@@ -295,9 +299,9 @@ class SSH(object):
                 **target)
         if salt.utils.which('ssh-copy-id'):
             # we have ssh-copy-id, use it!
-            single.shell.copy_id()
+            stdout, stderr, retcode = single.shell.copy_id()
         else:
-            ret = single.run()
+            stdout, stderr, retcode = single.run()
         if re_run:
             target.pop('passwd')
             single = Single(
@@ -313,7 +317,9 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        return ret
+        if os.EX_OK != retcode:
+            return {host: stderr}
+        return {host: stdout}
 
     def handle_routine(self, que, opts, host, target):
         '''
@@ -459,6 +465,39 @@ class SSH(object):
                 self.opts['cachedir'],
                 self.opts['hash_type'],
                 self.opts['user'])
+
+        jid_dir = salt.utils.jid_dir(jid, self.opts['cachedir'], self.opts['hash_type'])
+        # Save the invocation information
+        arg_str = self.opts['arg_str']
+
+        if self.opts['raw_shell']:
+            fun = 'ssh._raw'
+            args = [arg_str]
+        else:
+            cmd_args = arg_str.split(None, 1)
+            fun = cmd_args[0]
+            args = [cmd_args[1]]
+
+        job_load = {
+            'jid': jid,
+            'tgt_type': self.tgt_type,
+            'tgt': self.opts['tgt'],
+            'user': self.opts['user'],
+            'fun': fun,
+            'arg': args,
+            }
+        self.serial.dump(
+                job_load,
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
+                )
+        # save the targets to a cache so we can see them in the UI
+        targets = self.targets.keys()
+        targets.sort()
+        self.serial.dump(
+                targets,
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
+                )
+
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)
             print(msg)
@@ -466,7 +505,7 @@ class SSH(object):
             print('')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
-            #self.cache_job(jid, host, ret)
+            self.cache_job(jid, host, ret)
             ret = self.key_deploy(host, ret)
             salt.output.display_output(
                     ret,
@@ -660,8 +699,10 @@ class Single(object):
         if self.arg_str.startswith('state.highstate'):
             self.highstate_seed()
         if self.arg_str.startswith('state.sls'):
-            args, kwargs = salt.minion.parse_args_and_kwargs(
-                    self.sls_seed, self.arg)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.sls_seed,
+                salt.utils.args.parse_input(self.arg)
+            )
             self.sls_seed(*args, **kwargs)
         sudo = 'sudo' if self.target['sudo'] else ''
         thin_sum = salt.utils.thin.thin_sum(

@@ -21,25 +21,28 @@ will set the desired branch method. Possible values are: ``branches``,
 
 
 :depends:   - mercurial
+            - python bindings for mercurial (``python-hglib``)
 '''
 
 # Import python libs
-import os
 import glob
-import time
-import shutil
 import hashlib
 import logging
+import os
+import shutil
+from datetime import datetime
+
+VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
+PER_REMOTE_PARAMS = ('mountpoint', 'root')
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 
 # Import third party libs
-HAS_HG = False
 try:
     import hglib
     HAS_HG = True
 except ImportError:
-    pass
+    HAS_HG = False
 
 # Import salt libs
 import salt.utils
@@ -148,56 +151,114 @@ def _get_ref(repo, name):
     return False
 
 
-def _wait_lock(lk_fn, dest):
+def _get_branch(repo, name):
     '''
-    If the write lock is there, check to see if the file is actually being
-    written. If there is no change in the file size after a short sleep,
-    remove the lock and move forward.
+    Find the requested branch in the specified repo
     '''
-    if not os.path.isfile(lk_fn):
+    try:
+        return [x for x in _all_branches(repo) if x[0] == name][0]
+    except IndexError:
         return False
-    if not os.path.isfile(dest):
-        # The dest is not here, sleep for a bit, if the dest is not here yet
-        # kill the lockfile and start the write
-        time.sleep(1)
-        if not os.path.isfile(dest):
-            try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
-                pass
-            return False
-    # There is a lock file, the dest is there, stat the dest, sleep and check
-    # that the dest is being written, if it is not being written kill the lock
-    # file and continue. Also check if the lock file is gone.
-    s_count = 0
-    s_size = os.stat(dest).st_size
-    while True:
-        time.sleep(1)
-        if not os.path.isfile(lk_fn):
-            return False
-        size = os.stat(dest).st_size
-        if size == s_size:
-            s_count += 1
-            if s_count >= 3:
-                # The file is not being written to, kill the lock and proceed
-                try:
-                    os.remove(lk_fn)
-                except (OSError, IOError):
-                    pass
-                return False
-        else:
-            s_size = size
+
+
+def _all_bookmarks(repo):
+    '''
+    Returns all bookmarks for the specified repo
+    '''
+    # repo.bookmarks() returns a tuple containing the following:
+    #   1. A list of 3-tuples consisting of (bookmark name, rev #, nodeid)
+    #   2. The index of the current bookmark (-1 if no current one)
+    # Example: ([('mymark', 4, '7c96229269fa')], -1)
+    return repo.bookmarks()[0]
+
+
+def _get_bookmark(repo, name):
+    '''
+    Find the requested bookmark in the specified repo
+    '''
+    try:
+        return [x for x in _all_bookmarks(repo) if x[0] == name][0]
+    except IndexError:
+        return False
+
+
+def _all_tags(repo):
+    '''
+    Returns all tags for the specified repo
+    '''
+    # repo.tags() returns a list of 4-tuples consisting of
+    # (tag name, rev #, nodeid, islocal)
+    # Example: [('1.0', 3, '3be15e71b31a', False),
+    #           ('tip', 4, '7c96229269fa', False)]
+    # Avoid returning the special 'tip' tag.
+    return [x for x in repo.tags() if x[0] != 'tip']
+
+
+def _get_tag(repo, name):
+    '''
+    Find the requested tag in the specified repo
+    '''
+    try:
+        return [x for x in _all_tags(repo) if x[0] == name][0]
+    except IndexError:
+        return False
+
+
+def _get_ref(repo, name):
+    '''
+    Return ref tuple if ref is in the repo.
+    '''
+    if __opts__['hgfs_branch_method'] == 'branches':
+        return _get_branch(repo, name) or _get_tag(repo, name)
+    elif __opts__['hgfs_branch_method'] == 'bookmarks':
+        return _get_bookmark(repo, name) or _get_tag(repo, name)
+    elif __opts__['hgfs_branch_method'] == 'mixed':
+        return _get_branch(repo, name) or _get_bookmark(repo, name) \
+            or _get_tag(repo, name)
     return False
 
 
 def init():
     '''
-    Return the hg repo object for this session
+    Return a list of hglib objects for the various hgfs remotes
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
+    new_remote = False
     repos = []
-    for _, opt in enumerate(__opts__['hgfs_remotes']):
-        repo_hash = hashlib.md5(opt).hexdigest()
+    hgfs_remotes = salt.utils.repack_dictlist(__opts__['hgfs_remotes'])
+    for repo_uri, repo_conf_params in hgfs_remotes.iteritems():
+
+        # Validate and compile per-remote configuration parameters, if present
+        repo_conf = dict([(x, None) for x in PER_REMOTE_PARAMS])
+        if repo_conf_params is not None:
+            repo_conf_params = salt.utils.repack_dictlist(repo_conf_params)
+            if not repo_conf_params:
+                log.error(
+                    'Invalid per-remote configuration for remote {0!r}'
+                    .format(repo_uri)
+                )
+            else:
+                for param, value in repo_conf_params.iteritems():
+                    if param in PER_REMOTE_PARAMS:
+                        repo_conf[param] = value
+                    else:
+                        log.error(
+                            'Invalid configuration parameter {0!r} in remote '
+                            '{1!r}. Valid parameters are: {2}. See the '
+                            'documentation for further information.'
+                            .format(
+                                param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
+                            )
+                        )
+        try:
+            repo_conf['mountpoint'] = salt.utils.strip_proto(
+                repo_conf['mountpoint']
+            )
+        except TypeError:
+            # mountpoint not specified
+            pass
+
+        repo_hash = hashlib.md5(repo_uri).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
@@ -222,8 +283,15 @@ def init():
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
-                hgconfig.write('default = {0}\n'.format(opt))
-        repos.append(repo)
+                hgconfig.write('default = {0}\n'.format(repo_uri))
+
+        repo_conf.update({
+            'repo': repo,
+            'uri': repo_uri,
+            'hash': repo_hash,
+            'cachedir': rp_
+        })
+        repos.append(repo_conf)
         repo.close()
     return repos
 
@@ -234,10 +302,9 @@ def purge_cache():
         remove_dirs = os.listdir(bp_)
     except OSError:
         remove_dirs = []
-    for _, opt in enumerate(__opts__['hgfs_remotes']):
-        repo_hash = hashlib.md5(opt).hexdigest()
+    for repo_conf in init():
         try:
-            remove_dirs.remove(repo_hash)
+            remove_dirs.remove(repo_conf['hash'])
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, r) for r in remove_dirs
@@ -251,15 +318,15 @@ def purge_cache():
 
 def update():
     '''
-    Execute a hg pull on all of the repos
+    Execute an hg pull on all of the repos
     '''
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'hgfs'}
     pid = os.getpid()
     data['changed'] = purge_cache()
-    repos = init()
-    for repo in repos:
+    for repo_conf in init():
+        repo = repo_conf['repo']
         repo.open()
         lk_fn = os.path.join(repo.root(), 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
@@ -291,7 +358,11 @@ def update():
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.MasterEvent(__opts__['sock_dir'])
+        event = salt.utils.event.get_event(
+                'master',
+                __opts__['sock_dir'],
+                __opts__['transport'],
+                listen=False)
         event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
@@ -313,8 +384,8 @@ def envs(ignore_cache=False):
         if cache_match is not None:
             return cache_match
     ret = set()
-    repos = init()
-    for repo in repos:
+    for repo_conf in init():
+        repo = repo_conf['repo']
         repo.open()
         if __opts__['hgfs_branch_method'] in ('branches', 'mixed'):
             for branch in _all_branches(repo):
@@ -333,7 +404,7 @@ def envs(ignore_cache=False):
     return sorted(ret)
 
 
-def find_file(path, short='base', **kwargs):
+def find_file(path, tgt_env='base', **kwargs):
     '''
     Find the first file to match the path and ref, read the file out of hg
     and send the path to the newly cached file
@@ -351,15 +422,15 @@ def find_file(path, short='base', **kwargs):
     dest = os.path.join(__opts__['cachedir'], 'hgfs/refs', short, path)
     hashes_glob = os.path.join(__opts__['cachedir'],
                                'hgfs/hash',
-                               short,
+                               tgt_env,
                                '{0}.hash.*'.format(path))
     blobshadest = os.path.join(__opts__['cachedir'],
                                'hgfs/hash',
-                               short,
+                               tgt_env,
                                '{0}.hash.blob_sha1'.format(path))
     lk_fn = os.path.join(__opts__['cachedir'],
                          'hgfs/hash',
-                         short,
+                         tgt_env,
                          '{0}.lk'.format(path))
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
@@ -367,34 +438,37 @@ def find_file(path, short='base', **kwargs):
         os.makedirs(destdir)
     if not os.path.isdir(hashdir):
         os.makedirs(hashdir)
-    repos = init()
-    if 'index' in kwargs:
-        try:
-            repos = [repos[int(kwargs['index'])]]
-        except IndexError:
-            # Invalid index param
-            return fnd
-        except ValueError:
-            # Invalid index option
-            return fnd
-    for repo in repos:
+
+    for repo_conf in init():
+        repo = repo_conf['repo']
+        root = repo_conf['root'] if repo_conf['root'] is not None \
+            else hgfs_root
+        mountpoint = repo_conf['mountpoint'] \
+            if repo_conf['mountpoint'] is not None \
+            else hgfs_mountpoint
+        if mountpoint and not path.startswith(mountpoint + os.path.sep):
+            continue
+        repo_path = path[len(mountpoint):].lstrip(os.path.sep)
+        if root:
+            repo_path = os.path.join(root, repo_path)
+
         repo.open()
-        ref = _get_ref(repo, short)
+        ref = _get_ref(repo, tgt_env)
         if not ref:
             # Branch or tag not found in repo, try the next
             repo.close()
             continue
-        _wait_lock(lk_fn, dest)
+        salt.fileserver.wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
             with salt.utils.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
                 if sha == ref[2]:
-                    fnd['rel'] = local_path
+                    fnd['rel'] = path
                     fnd['path'] = dest
                     repo.close()
                     return fnd
         try:
-            repo.cat(['path:{0}'.format(path)], rev=ref[2], output=dest)
+            repo.cat(['path:{0}'.format(repo_path)], rev=ref[2], output=dest)
         except hglib.error.CommandError:
             repo.close()
             continue
@@ -411,7 +485,7 @@ def find_file(path, short='base', **kwargs):
             os.remove(lk_fn)
         except (OSError, IOError):
             pass
-        fnd['rel'] = local_path
+        fnd['rel'] = path
         fnd['path'] = dest
         repo.close()
         return fnd
@@ -609,7 +683,10 @@ def _get_dir_list(load):
                 filepath = tup[4]
                 split = filepath.rsplit('/', 1)
                 while len(split) > 1:
-                    ret.add(os.path.relpath(split[0], __opts__['hgfs_root']))
+                    path = os.path.relpath(split[0], root)
+                    # Don't add files outside the hgfs_root
+                    if not path.startswith('../'):
+                        ret.add(os.path.join(mountpoint, path))
                     split = split[0].rsplit('/', 1)
         repo.close()
     return sorted(ret)

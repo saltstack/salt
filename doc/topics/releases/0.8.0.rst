@@ -1,6 +1,7 @@
 ========================
 Salt 0.8.0 release notes
 ========================
+
 Salt 0.8.0 is ready for general consumption!
 The source tarball is available on GitHub for download:
 
@@ -27,8 +28,9 @@ Advanced minion threading
 Configurable minion modules
 
 
-Salt-cp -
-=======================
+Salt-cp
+=======
+
 The salt-cp command introduces the ability to copy simple files via salt to
 targeted servers. Using salt-cp is very simple, just call salt-cp with a target
 specification, the source file(s) and where to copy the files on the minions.
@@ -41,8 +43,9 @@ Will copy the local /etc/hosts file to all of the minions.
 Salt-cp is very young, in the future more advanced features will be added, and
 the functionality will much more closely resemble the cp command.
 
-Cython minion modules -
-========================
+Cython minion modules
+=====================
+
 Cython is an amazing tool used to compile Python modules down to c. This is
 arguably the fastest way to run Python code, and since pyzmq requires cython,
 adding support to salt for cython adds no new dependencies.
@@ -55,8 +58,9 @@ distribution called cytest.pyx:
 
 :blob:`salt/modules/cytest.pyx`
 
-Dynamic Returners -
-========================
+Dynamic Returners
+=================
+
 By default salt returns command data back to the salt master, but now salt can
 return command data to any system. This is enabled via the new returners
 modules feature for salt. The returners modules take the return data and sends
@@ -73,22 +77,23 @@ There are 2 simple stock returners in the returners directory:
 The documentation on writing returners will be added to the wiki shortly, and
 returners can be written in pure Python, or in cython.
 
-Configurable Minion Modules -
-==============================
+Configurable Minion Modules
+===========================
 Minion modules may need to be configured, now the options passed to the minion
 configuration file can be accessed inside of the minion modules via the __opt__
 dict.
 
 Information on how to use this simple addition has been added to the wiki:
-https://github.com/thatch45/salt/wiki/Writing-Salt-Modules
+:doc:`Writing modules </ref/states/writing>`
 
 The test module has an example of using the __opts__ dict, and how to set
 default options:
 
 :blob:`salt/modules/test.py`
 
-Advanced Minion Threading:
-==============================
+Advanced Minion Threading
+=========================
+
 In 0.7.0 the minion would block after receiving a command from the master, now
 the minion will spawn a thread or multiprocess. By default Python threads are
 used because for general use they have proved to be faster, but the minion can
@@ -100,7 +105,8 @@ The configuration option can be found in the minion configuration file:
 
 :blob:`conf/minion`
 
-Lowered Supported Python to 2.6 -
+Lowered Supported Python to 2.6
+===============================
 
 The requirement for Python 2.7 has been removed to support Python 2.6. I have
 received requests to take the minimum Python version back to 2.4, but
@@ -110,6 +116,7 @@ not support Python 2.4.
 Salt 0.8.0 is a very major update, it also changes the network protocol slightly
 which makes communication with older salt daemons impossible, your master and
 minions need to be upgraded together!
+
 I could use some help bringing salt to the people! Right now I only have
 packages for Arch Linux, Fedora 14 and Gentoo. We need packages for Debian and
 people willing to help test on more platforms. We also need help writing more

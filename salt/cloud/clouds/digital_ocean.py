@@ -18,6 +18,7 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       provider: digital_ocean
 
+:depends: requests
 '''
 
 # Import python libs
@@ -26,8 +27,7 @@ import copy
 import time
 import json
 import pprint
-import urllib
-import urllib2
+import requests
 import logging
 
 # Import salt cloud libs
@@ -255,6 +255,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -281,15 +282,27 @@ def create(vm_):
         )
 
     private_networking = config.get_cloud_config_value(
-        'private_networking', vm_, __opts__, search_global=False, default=None
+        'private_networking', vm_, __opts__, search_global=False, default=None,
     )
-    kwargs['private_networking'] = 'true' if private_networking else 'false'
+    if private_networking is not None:
+        if not isinstance(private_networking, bool):
+            raise SaltCloudConfigError("'private_networking' should be a boolean value.")
+        kwargs['private_networking'] = private_networking
+
+    backups_enabled = config.get_cloud_config_value(
+        'backups_enabled', vm_, __opts__, search_global=False, default=None,
+    )
+    if backups_enabled is not None:
+        if not isinstance(backups_enabled, bool):
+            raise SaltCloudConfigError("'backups_enabled' should be a boolean value.")
+        kwargs['backups_enabled'] = backups_enabled
 
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': kwargs},
+        transport=__opts__['transport']
     )
 
     try:
@@ -340,6 +353,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': data['ip_address'],
             'username': ssh_username,
             'key_filename': key_filename,
@@ -421,6 +435,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -456,6 +471,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -483,22 +499,20 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
         'api_key', get_configured_provider(), __opts__, search_global=False
     )
 
-    path += '?%s'
-    params = urllib.urlencode(args)
-    request = urllib2.urlopen(path % params)
-    if request.getcode() != 200:
+    request = requests.get(path, params=args)
+    if request.status_code != 200:
         raise SaltCloudSystemExit(
             'An error occurred while querying Digital Ocean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.getcode(),
-                request.read()
+                #request.read()
+                request.text
             )
         )
 
-    log.debug(request.geturl())
+    log.debug(request.url)
 
-    content = request.read()
-    request.close()
+    content = request.text
 
     result = json.loads(content)
     if result.get('status', '').lower() == 'error':
@@ -633,6 +647,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     scrub_data = config.get_cloud_config_value(
@@ -647,6 +662,7 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     return node

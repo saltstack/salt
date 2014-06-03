@@ -23,7 +23,7 @@ The Salt source can be downloaded from the salt GitHub site:
 
 Or from PyPI:
 
-http://pypi.python.org/packages/source/s/salt/salt-0.8.9.tar.gz
+https://pypi.python.org/packages/source/s/salt/salt-0.8.9.tar.gz
 
 Here s the md5sum:
 
@@ -42,9 +42,7 @@ A big feature is the addition of Salt run, the ``salt-run`` command allows for
 master side execution modules to be made that gather specific information or
 execute custom routines from the master.
 
-Documentation for salt-run can be found here:
-
-http://saltstack.org/ref/runners.html
+Documentation for salt-run can be found :doc:`here </ref/runners/index>`
 
 Refined Outputters
 ``````````````````
@@ -61,9 +59,7 @@ Cross Calling Salt Modules
 
 Salt modules can now call each other, the ``__salt__`` dict has been added to
 the predefined references in minion modules. This new feature is documented in
-the modules documentation:
-
-http://saltstack.org/ref/modules/index.html
+the :doc:`modules documentation </ref/modules/index>`.
 
 Watch Option Added to Salt State System
 ````````````````````````````````````````
@@ -108,7 +104,7 @@ moosefs
 ~~~~~~~
 
 Initial support for reporting on aspects of the distributed file system,
-MooseFS. For more information on MooseFS please see: http://moosefs.org
+MooseFS. For more information on MooseFS please see: http://www.moosefs.org
 
 Thanks to Joseph Hall for his work on MooseFS support.
 

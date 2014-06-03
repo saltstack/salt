@@ -22,7 +22,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'timezone'
+    return True
 
 
 def get_zone():
@@ -134,7 +134,8 @@ def set_zone(timezone):
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
     elif 'Debian' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'w') as ofh:
-            ofh.write(timezone)
+            ofh.write(timezone.strip())
+            ofh.write('\n')
     elif 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'w') as ofh:
             ofh.write(timezone)

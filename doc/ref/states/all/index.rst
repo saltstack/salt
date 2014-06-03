@@ -33,6 +33,7 @@ Full list of builtin state modules
     group
     hg
     host
+    htpasswd
     iptables
     keyboard
     keystone
@@ -69,6 +70,7 @@ Full list of builtin state modules
     postgres_database
     postgres_group
     postgres_user
+    postgres_extension
     powerpath
     process
     quota

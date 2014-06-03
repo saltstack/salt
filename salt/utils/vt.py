@@ -33,12 +33,12 @@ import logging
 import subprocess
 
 if subprocess.mswindows:
-    # pylint: disable=F0401
+    # pylint: disable=F0401,W0611
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
     import _subprocess
-    # pylint: enable=F0401
+    # pylint: enable=F0401,W0611
 else:
     import pty
     import fcntl

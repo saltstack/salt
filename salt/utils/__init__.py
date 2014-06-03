@@ -5,6 +5,7 @@ Some of the utils used by salt
 from __future__ import absolute_import
 
 # Import python libs
+import contextlib
 import copy
 import collections
 import datetime
@@ -741,15 +742,21 @@ def path_join(*parts):
     ))
 
 
-def pem_finger(path, sum_type='md5'):
+def pem_finger(path=None, key=None, sum_type='md5'):
     '''
-    Pass in the location of a pem file and the type of cryptographic hash to
-    use. The default is md5.
+    Pass in either a raw pem string, or the path on disk to the location of a
+    pem file, and the type of cryptographic hash to use. The default is md5.
+    The fingerprint of the pem will be returned.
+
+    If neither a key nor a path are passed in, a blank string will be returned.
     '''
-    if not os.path.isfile(path):
-        return ''
-    with fopen(path, 'rb') as fp_:
-        key = ''.join(fp_.readlines()[1:-1])
+    if not key:
+        if not os.path.isfile(path):
+            return ''
+
+        with fopen(path, 'rb') as fp_:
+            key = ''.join(fp_.readlines()[1:-1])
+
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
     for ind in range(len(pre)):
@@ -1061,12 +1068,17 @@ def fopen(*args, **kwargs):
 
     This flag specifies that the file descriptor should be closed when an exec
     function is invoked;
-    When a file descriptor is allocated (as with open or dup ), this bit is
+    When a file descriptor is allocated (as with open or dup), this bit is
     initially cleared on the new file descriptor, meaning that descriptor will
     survive into the new program after exec.
+
+    NB! We still have small race condition between open and fcntl.
     '''
+    # Remove lock from kwargs if present
+    lock = kwargs.pop('lock', False)
+
     fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
+    if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
         # unix and unix-like systems only
         try:
@@ -1074,25 +1086,86 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if 'lock' in kwargs:
+        if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
     return fhandle
 
 
+@contextlib.contextmanager
 def flopen(*args, **kwargs):
-    fhandle = open(*args, **kwargs)
-    if HAS_FCNTL:
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
+    '''
+    Shortcut for fopen with lock and context manager
+    '''
+    with fopen(*args, lock=True, **kwargs) as fp_:
         try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-    return fhandle
+            yield fp_
+        finally:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+
+
+def expr_match(expr, line):
+    '''
+    Evaluate a line of text against an expression. First try a full-string
+    match, next try globbing, and then try to match assuming expr is a regular
+    expression. Originally designed to match minion IDs for
+    whitelists/blacklists.
+    '''
+    if line == expr:
+        return True
+    if fnmatch.fnmatch(line, expr):
+        return True
+    try:
+        if re.match(r'\A{0}\Z'.format(expr), line):
+            return True
+    except re.error:
+        pass
+    return False
+
+
+def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+    '''
+    if not any((whitelist, blacklist)):
+        return True
+    in_whitelist = False
+    in_blacklist = False
+    if whitelist:
+        try:
+            for expr in whitelist:
+                if expr_match(expr, value):
+                    in_whitelist = True
+                    break
+        except TypeError:
+            log.error('Non-iterable whitelist {0}'.format(whitelist))
+            whitelist = None
+    else:
+        whitelist = None
+
+    if blacklist:
+        try:
+            for expr in blacklist:
+                if expr_match(expr, value):
+                    in_blacklist = True
+                    break
+        except TypeError:
+            log.error('Non-iterable blacklist {0}'.format(whitelist))
+            blacklist = None
+    else:
+        blacklist = None
+
+    if whitelist and not blacklist:
+        ret = in_whitelist
+    elif blacklist and not whitelist:
+        ret = not in_blacklist
+    elif whitelist and blacklist:
+        ret = in_whitelist and not in_blacklist
+    else:
+        ret = True
+
+    return ret
 
 
 def subdict_match(data, expr, delim=':', regex_match=False):
@@ -1130,6 +1203,11 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         if isinstance(match, list):
             # We are matching a single component to a single list member
             for member in match:
+                if isinstance(member, dict):
+                    if matchstr.startswith('*:'):
+                        matchstr = matchstr[2:]
+                    if subdict_match(member, matchstr, regex_match=regex_match):
+                        return True
                 if _match(member, matchstr, regex_match=regex_match):
                     return True
             continue
@@ -1216,6 +1294,79 @@ def is_darwin():
     return sys.platform.startswith('darwin')
 
 
+@real_memoize
+def is_sunos():
+    '''
+    Simple function to return if host is SunOS or not
+    '''
+    return sys.platform.startswith('sunos')
+
+
+def is_fcntl_available(check_sunos=False):
+    '''
+    Simple function to check if the `fcntl` module is available or not.
+
+    If `check_sunos` is passed as `True` an additional check to see if host is
+    SunOS is also made. For additional information check commit:
+        http://goo.gl/159FF8
+    '''
+    if HAS_FCNTL is False:
+        return False
+    if check_sunos is True:
+        return HAS_FCNTL and is_sunos()
+    return HAS_FCNTL
+
+
+def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
+    '''
+    Check for glob or regexp patterns for include_pat and exclude_pat in the
+    'path_str' string and return True/False conditions as follows.
+      - Default: return 'True' if no include_pat or exclude_pat patterns are
+        supplied
+      - If only include_pat or exclude_pat is supplied: return 'True' if string
+        passes the include_pat test or fails exclude_pat test respectively
+      - If both include_pat and exclude_pat are supplied: return 'True' if
+        include_pat matches AND exclude_pat does not match
+    '''
+    ret = True  # -- default true
+    # Before pattern match, check if it is regexp (E@'') or glob(default)
+    if include_pat:
+        if re.match('E@', include_pat):
+            retchk_include = True if re.search(
+                include_pat[2:],
+                path_str
+            ) else False
+        else:
+            retchk_include = True if fnmatch.fnmatch(
+                path_str,
+                include_pat
+            ) else False
+
+    if exclude_pat:
+        if re.match('E@', exclude_pat):
+            retchk_exclude = False if re.search(
+                exclude_pat[2:],
+                path_str
+            ) else True
+        else:
+            retchk_exclude = False if fnmatch.fnmatch(
+                path_str,
+                exclude_pat
+            ) else True
+
+    # Now apply include/exclude conditions
+    if include_pat and not exclude_pat:
+        ret = retchk_include
+    elif exclude_pat and not include_pat:
+        ret = retchk_exclude
+    elif include_pat and exclude_pat:
+        ret = retchk_include and retchk_exclude
+    else:
+        ret = True
+
+    return ret
+
+
 def check_ipc_path_max_len(uri):
     # The socket path is limited to 107 characters on Solaris and
     # Linux, and 103 characters on BSD-based systems.
@@ -1239,30 +1390,23 @@ def check_state_result(running):
     '''
     if not isinstance(running, dict):
         return False
+
     if not running:
         return False
-    for host in running:
-        if not isinstance(running[host], dict):
+
+    for state_result in running.itervalues():
+        if not isinstance(state_result, dict):
+            # return false when hosts return a list instead of a dict
             return False
 
-        if host.find('_|-') >= 3:
-            # This is a single ret, no host associated
-            rets = running[host]
-        else:
-            rets = running[host].values()
-
-        if isinstance(rets, dict) and 'result' in rets:
-            if rets['result'] is False:
+        if 'result' in state_result:
+            if state_result.get('result', False) is False:
                 return False
             return True
 
-        for ret in rets:
-            if not isinstance(ret, dict):
-                return False
-            if 'result' not in ret:
-                return False
-            if ret['result'] is False:
-                return False
+        # Check nested state results
+        return check_state_result(state_result)
+
     return True
 
 
@@ -1343,12 +1487,15 @@ def option(value, default='', opts=None, pillar=None):
         opts = {}
     if pillar is None:
         pillar = {}
-    if value in opts:
-        return opts[value]
-    if value in pillar.get('master', {}):
-        return pillar['master'][value]
-    if value in pillar:
-        return pillar[value]
+    sources = (
+        (opts, value),
+        (pillar, 'master:{0}'.format(value)),
+        (pillar, value),
+    )
+    for source, val in sources:
+        out = traverse_dict(source, val, default)
+        if out is not default:
+            return out
     return default
 
 
@@ -1359,6 +1506,14 @@ def valid_url(url, protos):
     if salt._compat.urlparse(url).scheme in protos:
         return True
     return False
+
+
+def strip_proto(uri):
+    '''
+    Return a copy of the string with the protocol designation stripped, if one
+    was present.
+    '''
+    return re.sub('^[^:/]+://', '', uri)
 
 
 def parse_docstring(docstring):
@@ -1487,26 +1642,6 @@ def namespaced_function(function, global_dict, defaults=None):
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
-
-
-def parse_kwarg(string_):
-    '''
-    Parses the string and looks for the kwarg format:
-    "{argument name}={argument value}"
-    For example:
-    "my_message=Hello world"
-    The argument name must have a valid python identifier format (it should
-    match the following regular expression: [^\\d\\W]\\w*).
-    If the string matches, then this function returns the following tuple:
-    ({argument name}, {value})
-    Or else it returns:
-    (None, None)
-    '''
-    match = KWARG_REGEX.match(string_)
-    if match:
-        return match.groups()
-    else:
-        return None, None
 
 
 def _win_console_event_handler(event):
@@ -2050,3 +2185,11 @@ def get_gid_list(user=None, include_default=True):
         return []
     gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
     return sorted(set(gid_list))
+
+def total_seconds(td):
+    '''
+    Takes a timedelta and returns the total number of seconds
+    represented by the object. Wrapper for the total_seconds()
+    method which does not exist in versions of Python < 2.7.
+    '''
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6

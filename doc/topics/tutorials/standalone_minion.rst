@@ -29,7 +29,7 @@ minion is configured to not gather this data from the master.
     file_client: local
 
 Now the salt-call command will not look for a master and will assume that the
-local system has all of the file ad pillar resources.
+local system has all of the file and pillar resources.
 
 
 
@@ -61,7 +61,7 @@ This makes it easy to "script" deployments with Salt states without having to
 set up a master, and allows for these SLS modules to be easily moved into a
 Salt master as the deployment grows.
 
-Now the declared state can now be executed with:
+The declared state can now be executed with:
 
 .. code-block:: bash
 

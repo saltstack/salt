@@ -184,7 +184,11 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    A specific repo can be requested using the ``fromrepo`` keyword argument.
+    A specific repo can be requested using the ``fromrepo`` keyword argument,
+    and the ``disableexcludes`` option is also supported.
+
+    .. versionadded:: Helium
+        Support for the ``disableexcludes`` option
 
     CLI Example:
 
@@ -192,6 +196,7 @@ def latest_version(*names, **kwargs):
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package name> fromrepo=epel-testing
+        salt '*' pkg.latest_version <package name> disableexcludes=main
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
@@ -231,6 +236,7 @@ def latest_version(*names, **kwargs):
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
+    exclude_arg = _get_excludes_option(**kwargs)
     updates = _repoquery_pkginfo(
         '{0} --pkgnarrow=available --plugins {1}'
         .format(repo_arg, ' '.join(names))
@@ -381,6 +387,13 @@ def list_upgrades(refresh=True, **kwargs):
     '''
     Check whether or not an upgrade is available for all packages
 
+    The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
+    supported, as used in pkg states, and the ``disableexcludes`` option is
+    also supported.
+
+    .. versionadded:: Helium
+        Support for the ``disableexcludes`` option
+
     CLI Example:
 
     .. code-block:: bash
@@ -409,8 +422,12 @@ def check_db(*names, **kwargs):
     2. If ``found`` is ``False``, then a second key called ``suggestions`` will
        be present, which will contain a list of possible matches.
 
-    The ``fromrepo``, ``enablerepo``, and ``disablerepo`` arguments are
-    supported, as used in pkg states.
+    The ``fromrepo``, ``enablerepo`` and ``disablerepo`` arguments are
+    supported, as used in pkg states, and the ``disableexcludes`` option is
+    also supported.
+
+    .. versionadded:: Helium
+        Support for the ``disableexcludes`` option
 
     CLI Examples:
 
@@ -418,6 +435,7 @@ def check_db(*names, **kwargs):
 
         salt '*' pkg.check_db <package1> <package2> <package3>
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
+        salt '*' pkg.check_db <package1> <package2> <package3> disableexcludes=main
     '''
     repo_arg = _get_repo_options(**kwargs)
     repoquery_base = \
@@ -457,7 +475,7 @@ def refresh_db():
     Returns:
 
     - ``True``: Updates are available
-    - ``False``: An error occured
+    - ``False``: An error occurred
     - ``None``: No updates are available
 
     CLI Example:
@@ -642,6 +660,12 @@ def install(name=None,
         Specify an enabled package repository (or repositories) to disable.
         (e.g., ``yum --disablerepo='somerepo'``)
 
+    disableexcludes
+        Disable exclude from main, for a repo or for everything.
+        (e.g., ``yum --disableexcludes='main'``)
+
+        .. versionadded:: Helium
+
 
     Multiple Package Installation Options:
 
@@ -698,6 +722,7 @@ def install(name=None,
                         'package targets')
 
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    exclude_arg = _get_excludes_option(**kwargs)
 
     old = list_pkgs()
     downgrade = []
@@ -729,16 +754,18 @@ def install(name=None,
         targets = pkg_params
 
     if targets:
-        cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
+        cmd = 'yum -y {repo} {exclude} {gpgcheck} install {pkg}'.format(
             repo=repo_arg,
+            exclude=exclude_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
         __salt__['cmd.run'](cmd, output_loglevel='debug')
 
     if downgrade:
-        cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
+        cmd = 'yum -y {repo} {exclude} {gpgcheck} downgrade {pkg}'.format(
             repo=repo_arg,
+            exclude=exclude_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
@@ -1024,7 +1051,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
 
 def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W0613
     '''
-    Display a repo from <basedir> (default basedir: /etc/yum.repos.d).
+    Display a repo from <basedir> (default basedir: ``/etc/yum.repos.d``).
 
     CLI Examples:
 
@@ -1274,7 +1301,7 @@ def file_list(*packages):
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     List the files that belong to a package. Not specifying any packages will
-    return a list of _every_ file on the system's rpm database (not generally
+    return a list of *every* file on the system's rpm database (not generally
     recommended).
 
     CLI Examples:
@@ -1293,7 +1320,7 @@ def file_dict(*packages):
     .. versionadded:: 2014.1.0 (Hydrogen)
 
     List the files that belong to a package, grouped by package. Not
-    specifying any packages will return a list of _every_ file on the system's
+    specifying any packages will return a list of *every* file on the system's
     rpm database (not generally recommended).
 
     CLI Examples:

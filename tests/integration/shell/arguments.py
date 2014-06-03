@@ -4,13 +4,11 @@
 '''
 
 # Import Salt Testing libs
-from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath, requires_salt_modules
 
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.exceptions import SaltInvocationError
 import integration
 
 

@@ -10,6 +10,8 @@ import tarfile
 # Import third party libs
 import jinja2
 import yaml
+import msgpack
+import requests
 try:
     import markupsafe
     HAS_MARKUPSAFE = True
@@ -60,6 +62,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
+            os.path.dirname(msgpack.__file__),
+            os.path.dirname(requests.__file__),
             ]
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():

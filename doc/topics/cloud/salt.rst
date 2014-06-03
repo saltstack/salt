@@ -195,7 +195,7 @@ commands is used, an instance name must be provided. If one of the standard
     salt myminion cloud.action show_image provider=my-ec2-config \
         image=ami-1624987f
 
-The actions available are largely dependant upon the module for the specific
+The actions available are largely dependent upon the module for the specific
 cloud provider. The following actions are available for all cloud providers:
 
 ``list_nodes``

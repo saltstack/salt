@@ -108,12 +108,12 @@ Advanced SLS module syntax
 Lastly, we will cover some incredibly useful techniques for more complex State
 trees.
 
-:term:`Include declaration`
----------------------------
+Include declaration
+-------------------
 
 A previous example showed how to spread a Salt tree across several files.
 Similarly, :doc:`requisites </ref/states/requisites>` span multiple files by
-using an :term:`include declaration`. For example:
+using an :ref:`include-declaration`. For example:
 
 ``python/python-libs.sls:``
 
@@ -134,10 +134,10 @@ using an :term:`include declaration`. For example:
         - require:
           - pkg: python-dateutil
 
-:term:`Extend declaration`
---------------------------
+Extend declaration
+------------------
 
-You can modify previous declarations by using an :term:`extend declaration`. For
+You can modify previous declarations by using an :ref:`extend-declaration`. For
 example the following modifies the Apache tree to also restart Apache when the
 vhosts file is changed:
 
@@ -168,12 +168,12 @@ vhosts file is changed:
 
 .. include:: /_incl/extend_with_require_watch.rst
 
-:term:`Name declaration`
-------------------------
+Name declaration
+----------------
 
-You can override the :term:`ID declaration` by using a :term:`name
-declaration`. For example, the previous example is a bit more maintainable if
-rewritten as follows:
+You can override the :ref:`id-declaration` by using a :ref:`name-declaration`.
+For example, the previous example is a bit more maintainable if rewritten as
+follows:
 
 ``apache/mywebsite.sls:``
 
@@ -195,11 +195,11 @@ rewritten as follows:
         - name: /etc/httpd/extra/httpd-vhosts.conf
         - source: salt://apache/httpd-vhosts.conf
 
-:term:`Names declaration`
--------------------------
+Names declaration
+-----------------
 
-Even more powerful is using a :term:`names declaration` to override the
-:term:`ID declaration` for multiple states at once. This often can remove the
+Even more powerful is using a :ref:`names-declaration` to override the
+:ref:`id-declaration` for multiple states at once. This often can remove the
 need for looping in a template. For example, the first example in this tutorial
 can be rewritten without the loop:
 

@@ -20,6 +20,7 @@ from distutils.cmd import Command
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
+from distutils.command.install_lib import install_lib
 # pylint: enable=E0611
 
 try:
@@ -380,6 +381,23 @@ class Install(install):
         install.run(self)
 
 
+class InstallLib(install_lib):
+    def run(self):
+        install_lib.run(self)
+
+        # input and outputs match 1-1
+        inp = self.get_inputs()
+        out = self.get_outputs()
+
+        #idx = inp.index('build/lib/salt/templates/git/ssh-id-wrapper')
+        for i, word in enumerate(inp):
+            if word.endswith('salt/templates/git/ssh-id-wrapper'):
+                idx = i
+        filename = out[idx]
+
+        os.chmod(filename, 0755)
+
+
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
@@ -422,41 +440,53 @@ SETUP_KWARGS = {'name': NAME,
                                 'Topic :: System :: Distributed Computing',
                                 ],
                 'packages': ['salt',
+                             'salt.auth',
                              'salt.cli',
                              'salt.client',
+                             'salt.client.raet',
                              'salt.client.ssh',
                              'salt.client.ssh.wrapper',
+                             'salt.cloud',
+                             'salt.cloud.clouds',
+                             'salt.daemons',
+                             'salt.daemons.flo',
                              'salt.ext',
-                             'salt.auth',
-                             'salt.wheel',
-                             'salt.tops',
+                             'salt.fileserver',
                              'salt.grains',
+                             'salt.log',
+                             'salt.log.handlers',
                              'salt.modules',
+                             'salt.output',
                              'salt.pillar',
+                             'salt.proxy',
                              'salt.renderers',
                              'salt.returners',
+                             'salt.roster',
                              'salt.runners',
-                             'salt.states',
-                             'salt.fileserver',
                              'salt.search',
                              'salt.templates',
                              'salt.transport',
-                             'salt.output',
+                             'salt.transport.road',
+                             'salt.transport.road.raet',
+                             'salt.transport.table',
+                             'salt.transport.table.handshake',
+                             'salt.transport.table.public',
+                             'salt.transport.table.secret',
                              'salt.utils',
                              'salt.utils.decorators',
+                             'salt.utils.openstack',
                              'salt.utils.validate',
-                             'salt.roster',
-                             'salt.log',
-                             'salt.log.handlers',
-                             'salt.templates',
-                             'salt.cloud',
-                             'salt.cloud.clouds',
+                             'salt.wheel',
                              ],
                 'package_data': {'salt.templates': [
                                     'rh_ip/*.jinja',
                                     'debian_ip/*.jinja',
-                                    'virt/*.jinja'
+                                    'virt/*.jinja',
+                                    'git/*'
                                     ],
+                                 'salt.daemons.flo': [
+                                    '*.flo'
+                                    ]
                                 },
                 'data_files': [('share/man/man1',
                                 ['doc/man/salt-cp.1',
@@ -476,6 +506,7 @@ SETUP_KWARGS = {'name': NAME,
 
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
+    SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
     #SETUP_KWARGS['packages'].extend(['salt.cloud',
     #                                 'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
@@ -601,6 +632,7 @@ else:
     SETUP_KWARGS['scripts'] = ['scripts/salt-call',
                                'scripts/salt-cp',
                                'scripts/salt-minion',
+                               'scripts/salt-unity',
                                ]
 
     if IS_WINDOWS_PLATFORM is False:

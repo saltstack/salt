@@ -12,6 +12,21 @@ can be either present or absent:
       group.present:
         - gid: 7648
         - system: True
+        - addusers:
+          - user1
+          - users2
+        - delusers:
+          - foo
+
+    cheese:
+      group.present:
+        - gid: 7648
+        - system: True
+        - members:
+          - foo
+          - bar
+          - user1
+          - user2
 '''
 
 # Import python libs
@@ -19,7 +34,48 @@ import grp
 import sys
 
 
-def present(name, gid=None, system=False):
+def _changes(name,
+             gid=None,
+             addusers=None,
+             delusers=None,
+             members=None):
+    '''
+    Return a dict of the changes required for a group if the group is present,
+    otherwise return False.
+    '''
+    lgrp = __salt__['group.info'](name)
+    if not lgrp:
+        return False
+
+    change = {}
+    if gid:
+        if lgrp['gid'] != gid:
+            change['gid'] = gid
+
+    if members:
+        #-- if new memeber list if different than the current
+        if set(lgrp['members']) ^ set(members):
+            change['members'] = members
+
+    if addusers:
+        users_2add = [user for user in addusers if user not in lgrp['members']]
+        if users_2add:
+            change['addusers'] = users_2add
+
+    if delusers:
+        users_2del = [user for user in delusers if user in lgrp['members']]
+        if users_2del:
+            change['delusers'] = users_2del
+
+    return change
+
+
+def present(name,
+            gid=None,
+            system=False,
+            addusers=None,
+            delusers=None,
+            members=None):
     '''
     Ensure that a group is present
 
@@ -34,6 +90,17 @@ def present(name, gid=None, system=False):
         Whether or not the named group is a system group.  This is essentially
         the '-r' option of 'groupadd'.
 
+    addusers
+        List of additional users to be added as a group members.
+
+    delusers
+        Ensure these user are removed from the group membership.
+
+    members
+        Replace existing group members with a list of new members.
+
+    Note: Options 'members' and 'addusers/delusers' are mutually exclusive and
+          can not be used together.
     '''
     ret = {'name': name,
            'changes': {},

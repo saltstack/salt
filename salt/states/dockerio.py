@@ -1,10 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 Manage Docker containers
 ========================
 
-`Docker <https://docker.io>`_
+`Docker <https://www.docker.io>`_
 is a lightweight, portable, self-sufficient software container
 wrapper. The base supported wrapper type is
 `LXC <https://en.wikipedia.org/wiki/Linux_Containers>`_,
@@ -21,7 +20,7 @@ wrapper. The base supported wrapper type is
     This state module requires
     `docker-py <https://github.com/dotcloud/docker-py>`_
     which supports `Docker Remote API version 1.6
-    <https://docs.docker.io/en/latest/api/docker_remote_api_v1.6/>`_.
+    <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 
 Available Functions
 -------------------
@@ -87,28 +86,19 @@ Available Functions
 
     We should add magic to all methods to also match containers by name
     now that the 'naming link' stuff has been merged in docker.
-    This applies for exemple to:
+    This applies for example to:
 
         - running
         - absent
         - run
-        - script
 
 
 '''
-
-# Import python libs
+import functools
 
 # Import salt libs
 from salt._compat import string_types
-
-# Import 3rd-party libs
-try:
-    import docker
-    HAS_DOCKER = True
-except ImportError:
-    HAS_DOCKER = False
-
+import salt.utils
 
 # Define the module's virtual name
 __virtualname__ = 'docker'
@@ -118,7 +108,7 @@ def __virtual__():
     '''
     Only load if the docker libs are available.
     '''
-    if HAS_DOCKER:
+    if 'docker.version' in __salt__:
         return __virtualname__
     return False
 
@@ -126,15 +116,6 @@ def __virtual__():
 INVALID_RESPONSE = 'We did not get an acceptable answer from docker'
 VALID_RESPONSE = ''
 NOTSET = object()
-#Use a proxy mapping to allow queries & updates after the initial grain load
-MAPPING_CACHE = {}
-FN_CACHE = {}
-
-
-def __salt(fn):
-    if not fn in FN_CACHE:
-        FN_CACHE[fn] = __salt__[fn]
-    return FN_CACHE[fn]
 
 
 def _ret_status(exec_status=None,
@@ -198,8 +179,7 @@ def mod_watch(name, sfun=None, *args, **kw):
                                     name=name)
         installed_status = installed(name=name, **kw)
         result = installed_status['result'] and remove_status['result']
-        comment = '\n'.join((remove_status['comment'],
-                             installed_status['comment']))
+        comment = remove_status['comment']
         status = _ret_status(installed_status, name=name,
                              result=result,
                              changes={name: result},
@@ -229,7 +209,7 @@ def pulled(name, force=False, *args, **kwargs):
         `docker push`,
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
-        <http://docs.docker.io/en/latest/commandline/cli/#import>`_).
+        <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that We added saltack a way to identify yourself via pillar,
         see in the salt.modules.dockerio execution module how to ident yourself
         via the pillar.
@@ -240,9 +220,9 @@ def pulled(name, force=False, *args, **kwargs):
     force
         Pull even if the image is already pulled
     '''
-    ins = __salt('docker.inspect_image')
-    iinfos = ins(name)
-    if iinfos['status'] and not force:
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
@@ -275,9 +255,9 @@ def built(name,
         or filesystem path to the dockerfile
 
     '''
-    ins = __salt('docker.inspect_image')
-    iinfos = ins(name)
-    if iinfos['status'] and not force:
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
@@ -346,9 +326,9 @@ def installed(name,
         This command does not verify that the named container
         is running the specified image.
     '''
-    ins_image = __salt('docker.inspect_image')
-    ins_container = __salt('docker.inspect_container')
-    create = __salt('docker.create_container')
+    ins_image = __salt__['docker.inspect_image']
+    ins_container = __salt__['docker.inspect_container']
+    create = __salt__['docker.create_container']
     iinfos = ins_image(image)
     if not iinfos['status']:
         return _invalid(comment='image "{0}" does not exist'.format(image))
@@ -427,7 +407,7 @@ def absent(name):
         # destroy if we found meat to do
         if is_running:
             __salt__['docker.stop'](cid)
-            is_running = __salt('docker.is_running')(cid)
+            is_running = __salt__['docker.is_running'](cid)
             if is_running:
                 return _invalid(
                     comment=('Container {!r}'
@@ -451,7 +431,7 @@ def present(name):
     name:
         container id
     '''
-    ins_container = __salt('docker.inspect_container')
+    ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
     if cinfos['status']:
         cid = cinfos['id']
@@ -499,51 +479,62 @@ def run(name,
         Do not execute cmd if statement in the container returns 0
 
     '''
-    if not hostname:
-        hostname = cid
+    if hostname:
+        salt.utils.warn_until((0, 19),
+                              'The argument \'hostname\' argument'
+                              ' has been deprecated.')
     retcode = __salt__['docker.retcode']
-    drun = __salt__['docker.run']
-    cmd_kwargs = ''
+    drun_all = __salt__['docker.run_all']
+    valid = functools.partial(_valid, name=name)
     if onlyif is not None:
         if not isinstance(onlyif, string_types):
             if not onlyif:
-                return {'comment': 'onlyif execution failed',
-                        'result': True}
+                return valid(comment='onlyif execution failed')
         elif isinstance(onlyif, string_types):
-            if retcode(onlyif, **cmd_kwargs) != 0:
-                return {'comment': 'onlyif execution failed',
-                        'result': True}
+            if retcode(cid, onlyif) != 0:
+                return valid(comment='onlyif execution failed')
 
     if unless is not None:
         if not isinstance(unless, string_types):
             if unless:
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
+                return valid(comment='unless execution succeeded')
         elif isinstance(unless, string_types):
-            if retcode(unless, **cmd_kwargs) == 0:
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
+            if retcode(cid, unless) == 0:
+                return valid(comment='unless execution succeeded')
 
     if docked_onlyif is not None:
         if not isinstance(docked_onlyif, string_types):
             if not docked_onlyif:
-                return {'comment': 'docked_onlyif execution failed',
-                        'result': True}
+                return valid(comment='docked_onlyif execution failed')
         elif isinstance(docked_onlyif, string_types):
-            if drun(docked_onlyif, **cmd_kwargs) != 0:
-                return {'comment': 'docked_onlyif execution failed',
-                        'result': True}
+            if retcode(cid, docked_onlyif) != 0:
+                return valid(comment='docked_onlyif execution failed')
 
     if docked_unless is not None:
         if not isinstance(docked_unless, string_types):
             if docked_unless:
-                return {'comment': 'docked_unless execution succeeded',
-                        'result': True}
+                return valid(comment='docked_unless execution succeeded')
         elif isinstance(docked_unless, string_types):
-            if drun(docked_unless, **cmd_kwargs) == 0:
-                return {'comment': 'docked_unless execution succeeded',
-                        'result': True}
-    return drun(**cmd_kwargs)
+            if retcode(cid, docked_unless) == 0:
+                return valid(comment='docked_unless execution succeeded')
+    result = drun_all(cid, name)
+    if result['status']:
+        return valid(comment=result['comment'])
+    else:
+        return _invalid(comment=result['comment'], name=name)
+
+
+def script(*args, **kw):
+    '''
+    Placeholder function for a cmd.script alike.
+
+    .. note::
+
+        Not yet implemented.
+        Its implementation might be very similar from
+        :mod:`salt.states.dokcerio.run`
+    '''
+    raise NotImplementedError
 
 
 def running(name, container=None, port_bindings=None, binds=None,
@@ -587,7 +578,7 @@ def running(name, container=None, port_bindings=None, binds=None,
                     HostIp: ""
                     HostPort: "5000"
     '''
-    is_running = __salt('docker.is_running')(container)
+    is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
             comment='Container {!r} is started'.format(container))
@@ -606,92 +597,3 @@ def running(name, container=None, port_bindings=None, binds=None,
                 comment=('Container {!r}'
                          ' cannot be started\n{!s}').format(container,
                                                             started['out']))
-
-
-def script(name,
-           cid=None,
-           hostname=None,
-           state_id=None,
-           stateful=False,
-           onlyif=None,
-           unless=None,
-           docked_onlyif=None,
-           docked_unless=None,
-           *args, **kwargs):
-    '''
-    Run a command in a specific container
-
-    XXX: TODO: IMPLEMENT
-
-    Matching can be done by either name or hostname
-
-    name
-        command to run in the docker
-
-    cid
-        Container id
-
-    state_id
-        State Id
-
-    stateful
-        stateful mode
-
-    onlyif
-        Only execute cmd if statement on the host return 0
-
-    unless
-        Do not execute cmd if statement on the host return 0
-
-    docked_onlyif
-        Only execute cmd if statement in the container returns 0
-
-    docked_unless
-        Do not execute cmd if statement in the container returns 0
-
-    '''
-    if not hostname:
-        hostname = cid
-    retcode = __salt__['docker.retcode']
-    drun = __salt__['docker.run']
-    cmd_kwargs = ''
-    if onlyif is not None:
-        if not isinstance(onlyif, string_types):
-            if not onlyif:
-                return {'comment': 'onlyif execution failed',
-                        'result': True}
-        elif isinstance(onlyif, string_types):
-            if retcode(onlyif, **cmd_kwargs) != 0:
-                return {'comment': 'onlyif execution failed',
-                        'result': True}
-
-    if unless is not None:
-        if not isinstance(unless, string_types):
-            if unless:
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
-        elif isinstance(unless, string_types):
-            if retcode(unless, **cmd_kwargs) == 0:
-                return {'comment': 'unless execution succeeded',
-                        'result': True}
-
-    if docked_onlyif is not None:
-        if not isinstance(docked_onlyif, string_types):
-            if not docked_onlyif:
-                return {'comment': 'docked_onlyif execution failed',
-                        'result': True}
-        elif isinstance(docked_onlyif, string_types):
-            if drun(docked_onlyif, **cmd_kwargs) != 0:
-                return {'comment': 'docked_onlyif execution failed',
-                        'result': True}
-
-    if docked_unless is not None:
-        if not isinstance(docked_unless, string_types):
-            if docked_unless:
-                return {'comment': 'docked_unless execution succeeded',
-                        'result': True}
-        elif isinstance(docked_unless, string_types):
-            if drun(docked_unless, **cmd_kwargs) == 0:
-                return {'comment': 'docked_unless execution succeeded',
-                        'result': True}
-    return drun(**cmd_kwargs)

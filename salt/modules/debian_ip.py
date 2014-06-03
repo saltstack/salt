@@ -173,7 +173,7 @@ def _log_default_network(opt, value):
 
 def _raise_error_iface(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_iface(iface, option, expected)
     log.error(msg)
@@ -182,7 +182,7 @@ def _raise_error_iface(iface, option, expected):
 
 def _raise_error_network(option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_network(option, expected)
     log.error(msg)
@@ -191,7 +191,7 @@ def _raise_error_network(option, expected):
 
 def _raise_error_routes(iface, option, expected):
     '''
-    Log and raise an error with a logical formated message.
+    Log and raise an error with a logical formatted message.
     '''
     msg = _error_msg_routes(iface, option, expected)
     log.error(msg)
@@ -1295,9 +1295,9 @@ def build_routes(iface, **settings):
         log.error('Could not load template route_eth.jinja')
         return ''
 
-    add_routecfg = template.render(route_type='add', routes=opts['routes'])
+    add_routecfg = template.render(route_type='add', routes=opts['routes'], iface=iface)
 
-    del_routecfg = template.render(route_type='del', routes=opts['routes'])
+    del_routecfg = template.render(route_type='del', routes=opts['routes'], iface=iface)
 
     if 'test' in settings and settings['test']:
         return _read_temp(add_routecfg + del_routecfg)

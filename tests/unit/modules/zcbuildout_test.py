@@ -155,13 +155,9 @@ class BuildoutTestCase(Base):
 
         self.assertTrue(u'Log summary:\n' in ret1['outlog'])
         self.assertTrue(
-            u'\n'
             u'INFO: ibar\n'
-            u'\n'
             u'WARN: wbar\n'
-            u'\n'
             u'DEBUG: dbar\n'
-            u'\n'
             u'ERROR: ebar\n'
             in ret1['outlog']
         )
@@ -363,7 +359,7 @@ class BuildoutOnlineTestCase(Base):
         b2_dir = os.path.join(self.tdir, 'b', 'b2')
         self.assertTrue(buildout._has_old_distribute(self.py_dis))
         # this is too hard to check as on debian & other where old
-        # packages are present (virtualenv), we cant have
+        # packages are present (virtualenv), we can't have
         # a clean site-packages
         # self.assertFalse(buildout._has_old_distribute(self.py_blank))
         self.assertFalse(buildout._has_old_distribute(self.py_st))

@@ -4,18 +4,17 @@
 '''
 
 # Import Salt Testing libs
-from salttesting.helpers import (ensure_in_syspath, destructiveTest)
-from salttesting.mock import MagicMock, patch
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 ensure_in_syspath('../')
 
 # Import salt libs
 import integration
 from salt import fileclient
 
-# Import Python libs
-import os
 
-
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileClientTest(integration.ModuleCase):
 
     def setUp(self):

@@ -8,7 +8,13 @@ so:
 .. code-block:: yaml
 
     ext_pillar:
-      - git: master git://gitserver/git-pillar.git
+      - git: master git://gitserver/git-pillar.git root=subdirectory
+
+The `root=` parameter is optional and used to set the subdirectory from where
+to look for Pillar files (such as ``top.sls``).
+
+.. versionchanged:: Helium
+    The optional ``root`` parameter will be added.
 
 Note that this is not the same thing as configuring pillar data using the
 :conf_master:`pillar_roots` parameter. The branch referenced in the
@@ -88,7 +94,7 @@ class GitPillar(object):
 
     def __init__(self, branch, repo_location, opts):
         '''
-        Try to initilize the Git repo object
+        Try to initialize the Git repo object
         '''
         self.branch = branch
         self.rp_location = repo_location
@@ -97,6 +103,7 @@ class GitPillar(object):
         self.working_dir = ''
         self.repo = None
 
+        needle = '{0} {1}'.format(self.branch, self.rp_location)
         for idx, opts_dict in enumerate(self.opts['ext_pillar']):
 
             # self.opts['ext_pillar'] always contains full ext_pillar list

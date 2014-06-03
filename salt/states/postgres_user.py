@@ -28,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_user' if (
-        'postgres.user_exists' in __salt__
-    ) else False
+    return 'postgres.user_exists' in __salt__
 
 
 def present(name,
@@ -90,7 +88,7 @@ def present(name,
 
             'md5{MD5OF({password}{role}}'
 
-        If encrypted is None or True, the password will be automaticly
+        If encrypted is None or True, the password will be automatically
         encrypted to the previous
         format if it is not already done.
 
@@ -135,7 +133,7 @@ def present(name,
     # default to encrypted passwords
     if encrypted is not False:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
-    # maybe encrypt if if not already and neccesary
+    # maybe encrypt if if not already and necessary
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)

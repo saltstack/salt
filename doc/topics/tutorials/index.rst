@@ -1,5 +1,5 @@
 ==============
-Salt tutorials
+Tutorials
 ==============
 
 Introduction

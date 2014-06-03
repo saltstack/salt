@@ -36,7 +36,7 @@ def __virtual__():
     '''
     Only load if the timezone module is available in __salt__
     '''
-    return 'timezone' if 'timezone.get_zone' in __salt__ else False
+    return 'timezone.get_zone' in __salt__
 
 
 def system(name, utc=True):

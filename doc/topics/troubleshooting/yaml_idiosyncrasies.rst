@@ -250,6 +250,10 @@ This shell command can find wrong characters in your SLS files:
     find . -name '*.sls'  -exec  grep --color='auto' -P -n '[^\x00-\x7F]' \{} \;
 
 
+Alternatively you can toggle the `yaml_utf8` setting in your master configuration
+ file. This is still an experimental setting but it should manage the right
+ encoding conversion in salt after yaml states compilations.
+
 Underscores stripped in Integer Definitions
 ===========================================
 
