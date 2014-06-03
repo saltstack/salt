@@ -152,7 +152,6 @@ def salt_main():
     if '' in sys.path:
         sys.path.remove('')
     try:
-        #import wingdbstub
         client = salt.cli.SaltCMD()
         client.run()
     except KeyboardInterrupt:

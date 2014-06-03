@@ -222,6 +222,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
                                                          'sid': 0,
+                                                         'stack': 'main',
                                                          'neid': 1,})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
                                                      'sighex': dataMain['sighex'],
@@ -390,6 +391,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
                                                          'sid': 0,
+                                                         'stack': 'main',
                                                          'neid': 1,})
         self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
                                                      'sighex': dataMain['sighex'],

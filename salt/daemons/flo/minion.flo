@@ -3,6 +3,7 @@
 house minion
 
 init name in .raet.udp.stack.local from value in .salt.etc.id
+init localname in .raet.udp.stack.local from value in .salt.etc.id
 
 
 framer minionudpstack be active first setup

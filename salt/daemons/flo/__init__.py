@@ -62,8 +62,6 @@ class IofloMaster(object):
 
         port = self.opts['raet_port']
         '''
-        #import wingdbstub
-
         if behaviors is None:
             behaviors = []
         behaviors.extend(['salt.daemons.flo'])
@@ -101,8 +99,6 @@ class IofloMinion(object):
 
         port = self.opts['raet_port']
         '''
-        #import wingdbstub
-
         if behaviors is None:
             behaviors = []
         behaviors.extend(['salt.daemons.flo'])

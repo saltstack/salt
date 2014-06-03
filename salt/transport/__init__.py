@@ -3,6 +3,7 @@
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
 import time
+import os
 
 # Import Salt Libs
 import salt.payload
@@ -54,13 +55,18 @@ class RAETChannel(Channel):
         '''
         Prepare the stack objects
         '''
+        yid = salt.utils.gen_jid()
+        stackname = self.opts['id'] + yid
+        dirpath = os.path.join(self.opts['cachedir'], stackname)
         self.stack = LaneStack(
+                name=stackname,
                 lanename=self.opts['id'],
-                yid=salt.utils.gen_jid(),
-                dirpath=self.opts['cachedir'],
+                yid=yid,
+                dirpath=dirpath,
                 sockdirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.RemoteYard(
+                stack=self.stack,
                 yid=0,
                 lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
