@@ -131,15 +131,27 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             yaml.dump(config, default_flow_style=False)
         )
 
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} \'*\' test.ping'.format(
+            '--config-dir {0} \'*\' foo {0}/foo'.format(
                 config_dir
             ),
-            timeout=15
+            catch_stderr=True,
+            with_retcode=True
         )
         try:
+            self.assertIn('minion', '\n'.join(ret[0]))
+            self.assertIn('sub_minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+        except AssertionError:
+            if os.path.exists('/dev/log') and ret[2] != 2:
+                # If there's a syslog device and the exit code was not 2, 'No
+                # such file or directory', raise the error
+                raise
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             if old_cwd is not None:
                 os.chdir(old_cwd)

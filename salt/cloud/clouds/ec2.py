@@ -108,6 +108,15 @@ DEFAULT_EC2_API_VERSION = '2013-10-01'
 if hasattr(Provider, 'EC2_AP_SOUTHEAST2'):
     EC2_LOCATIONS['ap-southeast-2'] = Provider.EC2_AP_SOUTHEAST2
 
+EC2_RETRY_CODES = [
+    'RequestLimitExceeded',
+    'InsufficientInstanceCapacity',
+    'InternalError',
+    'Unavailable',
+    'InsufficientAddressCapacity',
+    'InsufficientReservedInstanceCapacity',
+]
+
 
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
@@ -115,10 +124,6 @@ def __virtual__():
     Set up the libcloud functions and check for EC2 configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no EC2 cloud provider configuration available. Not '
-            'loading module'
-        )
         return False
 
     for provider, details in __opts__['providers'].iteritems():
@@ -146,7 +151,6 @@ def __virtual__():
                 )
             )
 
-    log.debug('Loading EC2 cloud compute module')
     return True
 
 
@@ -208,60 +212,87 @@ def query(params=None, setname=None, requesturl=None, location=None,
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
 
-    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    attempts = 5
+    while attempts > 0:
+        timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    if not location:
-        location = get_location()
+        if not location:
+            location = get_location()
 
-    if not requesturl:
-        method = 'GET'
+        if not requesturl:
+            method = 'GET'
 
-        endpoint = provider.get(
-            'endpoint',
-            'ec2.{0}.{1}'.format(location, service_url)
-        )
-
-        ec2_api_version = provider.get(
-            'ec2_api_version',
-            DEFAULT_EC2_API_VERSION
-        )
-
-        params['AWSAccessKeyId'] = provider['id']
-        params['SignatureVersion'] = '2'
-        params['SignatureMethod'] = 'HmacSHA256'
-        params['Timestamp'] = '{0}'.format(timestamp)
-        params['Version'] = ec2_api_version
-        keys = sorted(params.keys())
-        values = map(params.get, keys)
-        querystring = urllib.urlencode(list(zip(keys, values)))
-
-        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                        endpoint.encode('utf-8'),
-                                        querystring.encode('utf-8'))
-
-        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
-        sig = binascii.b2a_base64(hashed.digest())
-        params['Signature'] = sig.strip()
-
-        querystring = urllib.urlencode(params)
-        requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
-
-    log.debug('EC2 Request: {0}'.format(requesturl))
-    try:
-        result = urllib2.urlopen(requesturl)
-        log.debug(
-            'EC2 Response Status Code: {0}'.format(
-                result.getcode()
+            endpoint = provider.get(
+                'endpoint',
+                'ec2.{0}.{1}'.format(location, service_url)
             )
-        )
-    except urllib2.URLError as exc:
+
+            ec2_api_version = provider.get(
+                'ec2_api_version',
+                DEFAULT_EC2_API_VERSION
+            )
+
+            params['AWSAccessKeyId'] = provider['id']
+            params['SignatureVersion'] = '2'
+            params['SignatureMethod'] = 'HmacSHA256'
+            params['Timestamp'] = '{0}'.format(timestamp)
+            params['Version'] = ec2_api_version
+            keys = sorted(params.keys())
+            values = map(params.get, keys)
+            querystring = urllib.urlencode(list(zip(keys, values)))
+
+            uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
+                                            endpoint.encode('utf-8'),
+                                            querystring.encode('utf-8'))
+
+            hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+            sig = binascii.b2a_base64(hashed.digest())
+            params['Signature'] = sig.strip()
+
+            querystring = urllib.urlencode(params)
+            requesturl = 'https://{0}/?{1}'.format(endpoint, querystring)
+
+        log.debug('EC2 Request: {0}'.format(requesturl))
+        try:
+            result = urllib2.urlopen(requesturl)
+            log.debug(
+                'EC2 Response Status Code: {0}'.format(
+                    result.getcode()
+                )
+            )
+            break
+        except urllib2.URLError as exc:
+            root = ET.fromstring(exc.read())
+            data = _xml_to_dict(root)
+
+            # check to see if we should retry the query
+            err_code = data.get('Errors', {}).get('Error', {}).get('Code', '')
+            if attempts > 0 and err_code and err_code in EC2_RETRY_CODES:
+                attempts -= 1
+                log.error(
+                    'EC2 Response Status Code and Error: [{0} {1}] {2}; '
+                    'Attempts remaining: {3}'.format(
+                        exc.code, exc.msg, data, attempts
+                    )
+                )
+                # Wait a bit before continuing to prevent throttling
+                time.sleep(2)
+                continue
+
+            log.error(
+                'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
+                    exc.code, exc.msg, data
+                )
+            )
+            if return_url is True:
+                return {'error': data}, requesturl
+            return {'error': data}
+    else:
         log.error(
-            'EC2 Response Status Code: {0} {1}'.format(
-                exc.code, exc.msg
+            'EC2 Response Status Code and Error: [{0} {1}] {2}'.format(
+                exc.code, exc.msg, data
             )
         )
-        root = ET.fromstring(exc.read())
-        data = _xml_to_dict(root)
         if return_url is True:
             return {'error': data}, requesturl
         return {'error': data}
@@ -298,8 +329,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
 def _wait_for_spot_instance(update_callback,
                             update_args=None,
                             update_kwargs=None,
-                            timeout=5 * 60,
-                            interval=5,
+                            timeout=10 * 60,
+                            interval=30,
+                            interval_multiplier=1,
                             max_failures=10):
     '''
     Helper function that waits for a spot instance request to become active
@@ -315,6 +347,8 @@ def _wait_for_spot_instance(update_callback,
                     address.
     :param interval: The looping interval, ie, the amount of time to sleep
                      before the next iteration.
+    :param interval_multiplier: Increase the interval by this multiplier after
+                                each request; helps with throttling
     :param max_failures: If update_callback returns ``False`` it's considered
                          query failure. This value is the amount of failures
                          accepted before giving up.
@@ -361,6 +395,13 @@ def _wait_for_spot_instance(update_callback,
             )
         time.sleep(interval)
         timeout -= interval
+
+        if interval_multiplier > 1:
+            interval *= interval_multiplier
+            if interval > timeout:
+                interval = timeout + 1
+            log.info('Interval multiplier in effect; interval is '
+                     'now {0}s'.format(interval))
 
 
 def avail_sizes(call=None):
@@ -713,16 +754,24 @@ def get_availability_zone(vm_):
     return avz
 
 
+def get_tenancy(vm_):
+    '''
+    Returns the Tenancy to use.
+
+    Can be "dedicated" or "default". Cannot be present for spot instances.
+    '''
+    return config.get_cloud_config_value(
+        'tenancy', vm_, __opts__, search_global=False
+    )
+
+
 def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
     '''
-    subnetid = config.get_cloud_config_value(
+    return config.get_cloud_config_value(
         'subnetid', vm_, __opts__, search_global=False
     )
-    if subnetid is None:
-        return None
-    return subnetid
 
 
 def securitygroupid(vm_):
@@ -924,9 +973,18 @@ def create(vm_=None, call=None):
     if az_ is not None:
         params[spot_prefix + 'Placement.AvailabilityZone'] = az_
 
+    tenancy_ = get_tenancy(vm_)
+    if tenancy_ is not None:
+        if spot_config is not None:
+            raise SaltCloudConfigError(
+                'Spot instance config for {0} does not support '
+                'specifying tenancy.'.format(vm_['name'])
+            )
+        params['Placement.Tenancy'] = tenancy_
+
     subnetid_ = get_subnetid(vm_)
     if subnetid_ is not None:
-        params['SubnetId'] = subnetid_
+        params[spot_prefix + 'SubnetId'] = subnetid_
 
     ex_securitygroupid = securitygroupid(vm_)
     if ex_securitygroupid:
@@ -956,7 +1014,7 @@ def create(vm_=None, call=None):
             raise SaltCloudConfigError(
                 '\'ebs_optimized\' should be a boolean value.'
             )
-        params['EbsOptimized'] = set_ebs_optimized
+        params[spot_prefix + 'EbsOptimized'] = set_ebs_optimized
 
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
@@ -1130,7 +1188,12 @@ def create(vm_=None, call=None):
                 update_args=(sir_id, location),
                 timeout=config.get_cloud_config_value(
                     'wait_for_spot_timeout', vm_, __opts__, default=10 * 60),
-                max_failures=5
+                interval=config.get_cloud_config_value(
+                    'wait_for_spot_interval', vm_, __opts__, default=30),
+                interval_multiplier=config.get_cloud_config_value(
+                    'wait_for_spot_interval_multiplier', vm_, __opts__, default=1),
+                max_failures=config.get_cloud_config_value(
+                    'wait_for_spot_max_failures', vm_, __opts__, default=10),
             )
             log.debug('wait_for_spot_instance data {0}'.format(data))
 
@@ -1166,7 +1229,9 @@ def create(vm_=None, call=None):
 
     attempts = 5
     while attempts > 0:
-        data, requesturl = query(params, location=location, return_url=True)
+        data, requesturl = query(                       # pylint: disable=W0632
+            params, location=location, return_url=True
+        )
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -1225,6 +1290,8 @@ def create(vm_=None, call=None):
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
                 'wait_for_ip_interval', vm_, __opts__, default=10),
+            interval_multiplier=config.get_cloud_config_value(
+                'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -1903,7 +1970,7 @@ def _extract_name_tag(item):
                 if tag['key'] == 'Name':
                     return tag['value']
             return item['instanceId']
-        return (item['tagSet']['item']['value'])
+        return item['tagSet']['item']['value']
     return item['instanceId']
 
 
@@ -2109,7 +2176,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
-    data, requesturl = query(params, return_url=True)
+    data = query(params)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -2196,7 +2263,8 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = query(params, return_url=True)
+        data, requesturl = query(                       # pylint: disable=W0632
+            params, return_url=True)
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 

@@ -13,7 +13,7 @@ and, in these cases, *that* specific code should be deprecated.
 Depending on the complexity and usage of a specific piece of code, the 
 deprecation time frame should be properly evaluated. As an example, a 
 deprecation warning which is shown for 2 major releases, for example `0.17.0` 
-and `0.18.0`, gives users enough time to stop using the deprecated code and 
+and `2014.1.0`, gives users enough time to stop using the deprecated code and 
 adapt to the new one.
 
 For example, if you're deprecating the usage of a keyword argument to a 
@@ -44,6 +44,6 @@ Consider the following example:
 
 Consider that the current salt release is ``0.16.0``. Whenever ``foo`` is 
 passed a value different from ``None`` that warning will be shown to the user.  
-This will happen in versions ``0.16.2`` to ``0.18.0``, after which a 
+This will happen in versions ``0.16.2`` to ``2014.1.0``, after which a 
 :py:exc:`RuntimeError` will be raised making us aware that the deprecated code 
 should now be removed.

@@ -30,7 +30,7 @@ No Deploy
 Salt Cloud was originally intended to spin up machines and deploy Salt on them,
 but several use cases have arisen in which this is not the appropriate action.
 For instance, when booting into new platforms which may not even support Salt
-just yet, it makes no sense to try and install a non-existant package. In these
+just yet, it makes no sense to try and install a nonexistent package. In these
 instances, you can add the --no-deploy argument to the salt-cloud command to
 skip running the deploy script.
 

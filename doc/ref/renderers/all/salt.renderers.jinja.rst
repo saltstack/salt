@@ -102,8 +102,8 @@ the context into the included file is required:
 Variable and block Serializers
 ==============================
 
-Salt allows one to serialize any variable into **json** or **yaml**. For example
-this variable::
+Salt allows one to serialize any variable into **json** or **yaml** or
+**python**. For example this variable::
 
     data:
       foo: True
@@ -120,12 +120,15 @@ with this template::
 
     json -> {{ data|json }}
 
+    python -> {{ data|python }}
+
 will be rendered has::
 
     yaml -> {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
 
     json -> {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
 
+    python -> {u'data': {u'bar': 42, u'baz': [1, 2, 3], u'foo': True, u'qux': 2.0}}
 
 Strings and variables can be deserialized with **load_yaml** and **load_json**
 tags and filters. It allows one to manipulate data directly in templates, easily:

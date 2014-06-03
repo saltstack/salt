@@ -34,6 +34,7 @@ Salt Table of Contents
     topics/development/index
     topics/translating
     topics/salt_projects
+    topics/proxyminion/index
 
     ref/configuration/logging/*
     ref/configuration/logging/handlers/*

@@ -173,9 +173,12 @@ def zip_(zipfile, sources, template=None):
 
 
 @decorators.which('unzip')
-def unzip(zipfile, dest, excludes=None, template=None):
+def unzip(zipfile, dest, excludes=None, template=None, options=None):
     '''
     Uses the unzip command to unpack zip files
+
+    options:
+        Options to pass to the ``unzip`` binary.
 
     CLI Example:
 
@@ -196,7 +199,11 @@ def unzip(zipfile, dest, excludes=None, template=None):
     if isinstance(excludes, salt._compat.string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
-    cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
+    if options:
+        cmd = 'unzip -{0} {1} -d {2}'.format(options, zipfile, dest)
+    else:
+        cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
+
     if excludes is not None:
         cmd += ' -x {0}'.format(' '.join(excludes))
     return __salt__['cmd.run'](cmd, template=template).splitlines()

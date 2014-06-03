@@ -11,6 +11,7 @@ The final result set is merged with the pillar data.
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import logging
 
@@ -22,6 +23,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 try:
     import ldap
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
@@ -105,7 +107,7 @@ def _result_to_dict(data, result, conf):
                         data[skey] = [sval]
                     else:
                         data[skey].append(sval)
-    print 'Returning data {0}'.format(data)
+    print('Returning data {0}'.format(data))
     return data
 
 
@@ -132,6 +134,7 @@ def _do_search(conf):
         attrs = None
     # Perform the search
     try:
+        _filter = __salt__['ldap.filter.escape_filter_chars'](_filter)
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results'][0][1]
         log.debug(
@@ -173,7 +176,7 @@ def ext_pillar(minion_id, pillar, config_file):
     for source in opts['search_order']:
         config = opts[source]
         result = _do_search(config)
-        print 'source {0} got result {1}'.format(source, result)
+        print('source {0} got result {1}'.format(source, result))
         if result:
             data = _result_to_dict(data, result, config)
     return data

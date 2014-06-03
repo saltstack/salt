@@ -8,6 +8,7 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
+from __future__ import print_function
 import optparse
 import pprint
 import time
@@ -56,16 +57,16 @@ def parse():
     return opts
 
 
-def listen(sock_dir, node, id=None):
+#def listen(sock_dir, node):
+def listen(opts):
     '''
     Attach to the pub socket and grab messages
     '''
     event = salt.utils.event.SaltEvent(
-            node,
-            sock_dir,
-            id=id
+            node=opts['node'],
+            sock_dir=opts['sock_dir']
             )
-    print event.puburi
+    print(event.puburi)
     while True:
         ret = event.get_event(full=True)
         if ret is None:
@@ -79,4 +80,4 @@ def listen(sock_dir, node, id=None):
 
 if __name__ == '__main__':
     opts = parse()
-    listen(opts['sock_dir'], opts['node'], id=opts.get('id', ''))
+    listen(opts)

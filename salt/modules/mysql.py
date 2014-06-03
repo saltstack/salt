@@ -25,7 +25,7 @@ Module to provide MySQL compatibility to salt.
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-.. versionchanged:: Hydrogen
+.. versionchanged:: 2014.1.0 (Hydrogen)
     charset connection argument added. This is a MySQL charset, not a python one
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
@@ -50,6 +50,7 @@ try:
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
+    from MySQLdb import ProgrammingError
     HAS_MYSQLDB = True
 except ImportError:
     HAS_MYSQLDB = False
@@ -60,6 +61,7 @@ log = logging.getLogger(__name__)
 __opts__ = {}
 
 __grants__ = [
+    'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
     'CREATE',
@@ -378,8 +380,11 @@ def _grant_to_tokens(grant):
             # the shlex splitter may have split on special database characters `
             database += token
             # Read-ahead
-            if exploded_grant[position_tracker + 1] == '.':
-                phrase = 'tables'
+            try:
+                if exploded_grant[position_tracker + 1] == '.':
+                    phrase = 'tables'
+            except IndexError:
+                break
 
         elif phrase == 'user':
             if dict_mode:
@@ -396,15 +401,18 @@ def _grant_to_tokens(grant):
 
         position_tracker += 1
 
-    if not dict_mode:
-        user = user.strip("'")
-        host = host.strip("'")
-    log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
-        user,
-        host,
-        grant_tokens,
-        database
-    ))
+    try:
+        if not dict_mode:
+            user = user.strip("'")
+            host = host.strip("'")
+        log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
+            user,
+            host,
+            grant_tokens,
+            database
+        ))
+    except UnboundLocalError:
+        host = ''
     return dict(user=user,
                 host=host,
                 grant=grant_tokens,
@@ -981,6 +989,17 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' passwordless=True
     '''
     dbc = _connect(**connection_args)
+    # Did we fail to connect with the user we are checking
+    # Its password might have previousely change with the same command/state
+    if dbc is None \
+            and __context__['mysql.error'] \
+                .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \
+            and password:
+        # Clear the previous error
+        __context__['mysql.error'] = None
+        log.info('Retrying with "{0}" as connection password for {1} ...'.format(password, user))
+        connection_args['connection_pass'] = password
+        dbc = _connect(**connection_args)
     if dbc is None:
         return False
 
@@ -1388,6 +1407,23 @@ def db_optimize(name,
 
 
 # Grants
+def __grant_normalize(grant):
+    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
+    # grant_exists and grant_add ALL work correctly
+    if grant == 'ALL':
+        grant = 'ALL PRIVILEGES'
+
+    # Grants are paste directly in SQL, must filter it
+    exploded_grants = grant.split(",")
+    for chkgrant in exploded_grants:
+        if not chkgrant.strip().upper() in __grants__:
+            raise Exception('Invalid grant : {0!r}'.format(
+                chkgrant
+            ))
+
+    return grant
+
+
 def __grant_generate(grant,
                     database,
                     user,
@@ -1404,20 +1440,7 @@ def __grant_generate(grant,
     #       SHOW GRANTS for xxx@yyy query (SELECT comes first, etc)
     grant = re.sub(r'\s*,\s*', ', ', grant).upper()
 
-    # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
-    # grant_exists and grant_add ALL work correctly
-    if grant == 'ALL':
-        grant = 'ALL PRIVILEGES'
-    else:
-        # Grants won't be used as query arguments, so we need
-        # some SQL barriers.
-        # White-list security check
-        grants = grant.split(', ')
-        for chkgrant in grants:
-            if not chkgrant.strip() in __grants__:
-                raise Exception('Invalid grant requested: {0!r}'.format(
-                    chkgrant
-                ))
+    grant = __grant_normalize(grant)
 
     db_part = database.rpartition('.')
     dbc = db_part[0]
@@ -1566,7 +1589,7 @@ def grant_add(grant,
     qry = __grant_generate(grant, database, user, host, grant_option, escape)
     try:
         _execute(cur, qry['qry'], qry['args'])
-    except MySQLdb.OperationalError as exc:
+    except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -1611,13 +1634,7 @@ def grant_revoke(grant,
         return False
     cur = dbc.cursor()
 
-    # Grants are paste directly in SQL, must filter it
-    exploded_grants = grant.split(",")
-    for chkgrant in exploded_grants:
-        if not chkgrant.strip().upper() in __grants__:
-            raise Exception('Invalid grant : {0!r}'.format(
-                chkgrant
-            ))
+    grant = __grant_normalize(grant)
 
     if salt.utils.is_true(grant_option):
         grant += ', GRANT OPTION'
@@ -1780,7 +1797,7 @@ def get_master_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a master
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
@@ -1848,8 +1865,60 @@ def get_slave_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a slave
-    if (len(rtnv) == 0):
+    if len(rtnv) == 0:
         rtnv.append([])
 
     log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
     return rtnv[0]
+
+
+def showvariables(**connection_args):
+    '''
+    Retrieves the show variables from the minion.
+
+    Returns::
+        show variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showvariables
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug('{0}<--'.format(mod))
+    conn = _connect(**connection_args)
+    rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
+    conn.close()
+    if len(rtnv) == 0:
+        rtnv.append([])
+
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
+    return rtnv
+
+
+def showglobal(**connection_args):
+    '''
+    Retrieves the show global variables from the minion.
+
+    Returns::
+        show global variables full dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.showglobal
+
+    '''
+    mod = sys._getframe().f_code.co_name
+    log.debug('{0}<--'.format(mod))
+    conn = _connect(**connection_args)
+    rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
+    conn.close()
+    if len(rtnv) == 0:
+        rtnv.append([])
+
+    log.debug('{0}-->{1}'.format(mod, len(rtnv[0])))
+    return rtnv

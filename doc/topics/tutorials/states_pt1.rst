@@ -1,6 +1,6 @@
-=======================
-States tutorial, part 1
-=======================
+=====================================
+States tutorial, part 1 - Basic Usage
+=====================================
 
 The purpose of this tutorial is to demonstrate how quickly you can configure a
 system to be managed by Salt States. For detailed information about the state
@@ -71,11 +71,11 @@ minion matches is defined; for now simply specify all hosts (``*``).
             - match: grain
             - webserver
 
-Create an ``sls`` module
-========================
+Create an ``sls`` file
+======================
 
-In the same directory as the :term:`top file`, create an empty file named
-``webserver.sls``, containing the following:
+In the same directory as the :ref:`top file <states-top>`, create a file
+named ``webserver.sls``, containing the following:
 
 .. code-block:: yaml
 

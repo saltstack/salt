@@ -95,13 +95,7 @@ def __virtual__():
     Set up the libcloud functions and check for JOYENT configs
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Joyent cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
-
-    log.debug('Loading Joyent cloud module')
 
     global script
     conn = None
@@ -381,14 +375,14 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
-
-    ret.update(data)
 
     salt.utils.cloud.fire_event(
         'event',

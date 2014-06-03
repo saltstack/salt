@@ -99,7 +99,7 @@ def mounted(name,
         if real_device not in device_list:
             # name matches but device doesn't - need to umount
             ret['changes']['umount'] = "Forced unmount because devices " \
-                                     + "don't match. Wanted: " + device
+                                       + "don't match. Wanted: " + device
             if real_device != device:
                 ret['changes']['umount'] += " (" + real_device + ")"
             ret['changes']['umount'] += ", current: " + ', '.join(device_list)
@@ -229,7 +229,7 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name:
+            if fstab_data['none']['device'] == name and fstab_data['none']['fstype'] != 'swap':
                 return ret
 
         # present, new, change, bad config

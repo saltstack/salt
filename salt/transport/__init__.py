@@ -37,13 +37,17 @@ class ZeroMQChannel(Channel):
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
+        self.ttype = 'zeromq'
 
         # crypt defaults to 'aes'
         self.crypt = kwargs['crypt'] if 'crypt' in kwargs else 'aes'
 
         self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':
-            self.auth = salt.crypt.SAuth(opts)
+            if 'auth' in kwargs:
+                self.auth = kwargs['auth']
+            else:
+                self.auth = salt.crypt.SAuth(opts)
         if 'master_uri' in kwargs:
             master_uri = kwargs['master_uri']
         else:

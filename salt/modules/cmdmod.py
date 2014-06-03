@@ -28,7 +28,6 @@ from salt.log import LOG_LEVELS
 # Only available on POSIX systems, nonfatal on windows
 try:
     import pwd
-    import grp
 except ImportError:
     pass
 
@@ -69,11 +68,14 @@ def _chugid(runas):
     #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
     # ]
 
-    supgroups = [g.gr_gid for g in grp.getgrall()
-                      if uinfo.pw_name in g.gr_mem
-                          and g.gr_gid not in supgroups_seen
-                          and not supgroups_seen.add(g.gr_gid)
-                ]
+    group_list = __salt__['user.list_groups'](runas)
+    supgroups = []
+    for group_name in group_list:
+        gid = __salt__['group.info'](group_name)['gid']
+        if (gid not in supgroups_seen
+           and not supgroups_seen.add(gid)):
+            supgroups.append(gid)
+
     # No logging can happen on this function
     #
     # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
@@ -218,7 +220,7 @@ def _run(cmd,
          runas=None,
          shell=DEFAULT_SHELL,
          python_shell=True,
-         env=(),
+         env=None,
          clean_env=False,
          rstrip=True,
          template=None,
@@ -274,7 +276,7 @@ def _run(cmd,
         if stack[-2][2] == 'script':
             cmd = 'Powershell -executionpolicy bypass -File ' + cmd
         else:
-            cmd = 'Powershell ' + cmd
+            cmd = 'Powershell "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv)
@@ -283,16 +285,13 @@ def _run(cmd,
 
     if not env:
         env = {}
-    elif isinstance(env, basestring):
-        try:
-            env = yaml.safe_load(env)
-        except yaml.parser.ParserError as err:
-            log.error(err)
-            env = {}
-    if not isinstance(env, dict):
-        log.error('Invalid input: {0}, must be a dict or '
-                  'string - yaml represented dict'.format(env))
-        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+
+    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+        log.error('Environment variable {0!r} passed without a value. '
+                  'Setting value to an empty string'.format(bad_env_key))
+        env[bad_env_key] = ''
 
     if runas and salt.utils.is_windows():
         # TODO: Figure out the proper way to do this in windows
@@ -446,7 +445,7 @@ def _run_quiet(cmd,
                runas=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
-               env=(),
+               env=None,
                template=None,
                umask=None,
                timeout=None,
@@ -477,7 +476,7 @@ def _run_all_quiet(cmd,
                    runas=None,
                    shell=DEFAULT_SHELL,
                    python_shell=True,
-                   env=(),
+                   env=None,
                    template=None,
                    umask=None,
                    timeout=None,
@@ -508,7 +507,7 @@ def run(cmd,
         runas=None,
         shell=DEFAULT_SHELL,
         python_shell=True,
-        env=(),
+        env=None,
         clean_env=False,
         template=None,
         rstrip=True,
@@ -517,6 +516,7 @@ def run(cmd,
         quiet=False,
         timeout=None,
         reset_system_locale=True,
+        ignore_retcode=False,
         saltenv='base',
         **kwargs):
     '''
@@ -573,7 +573,7 @@ def run(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -590,7 +590,7 @@ def run_stdout(cmd,
                runas=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
-               env=(),
+               env=None,
                clean_env=False,
                template=None,
                rstrip=True,
@@ -599,6 +599,7 @@ def run_stdout(cmd,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
+               ignore_retcode=False,
                saltenv='base',
                **kwargs):
     '''
@@ -648,7 +649,7 @@ def run_stdout(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -668,7 +669,7 @@ def run_stderr(cmd,
                runas=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
-               env=(),
+               env=None,
                clean_env=False,
                template=None,
                rstrip=True,
@@ -677,6 +678,7 @@ def run_stderr(cmd,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
+               ignore_retcode=False,
                saltenv='base',
                **kwargs):
     '''
@@ -726,7 +728,7 @@ def run_stderr(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -746,7 +748,7 @@ def run_all(cmd,
             runas=None,
             shell=DEFAULT_SHELL,
             python_shell=True,
-            env=(),
+            env=None,
             clean_env=False,
             template=None,
             rstrip=True,
@@ -755,6 +757,7 @@ def run_all(cmd,
             quiet=False,
             timeout=None,
             reset_system_locale=True,
+            ignore_retcode=False,
             saltenv='base',
             **kwargs):
     '''
@@ -804,7 +807,7 @@ def run_all(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -824,7 +827,7 @@ def retcode(cmd,
             runas=None,
             shell=DEFAULT_SHELL,
             python_shell=True,
-            env=(),
+            env=None,
             clean_env=False,
             template=None,
             umask=None,
@@ -832,6 +835,7 @@ def retcode(cmd,
             quiet=False,
             timeout=None,
             reset_system_locale=True,
+            ignore_retcode=False,
             saltenv='base',
             **kwargs):
     '''
@@ -881,7 +885,7 @@ def retcode(cmd,
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
-        if ret['retcode'] != 0:
+        if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             log.error(
@@ -899,7 +903,7 @@ def script(source,
            runas=None,
            shell=DEFAULT_SHELL,
            python_shell=True,
-           env=(),
+           env=None,
            template='jinja',
            umask=None,
            output_loglevel='info',
@@ -952,17 +956,7 @@ def script(source,
         # Backwards compatibility
         saltenv = __env__
 
-    if not salt.utils.is_windows():
-        path = salt.utils.mkstemp(dir=cwd)
-    else:
-        path = __salt__['cp.cache_file'](source, saltenv)
-        if not path:
-            _cleanup_tempfile(path)
-            return {'pid': 0,
-                    'retcode': 1,
-                    'stdout': '',
-                    'stderr': '',
-                    'cache_error': True}
+    path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
         fn_ = __salt__['cp.get_template'](source,
@@ -978,16 +972,15 @@ def script(source,
                     'stderr': '',
                     'cache_error': True}
     else:
-        if not salt.utils.is_windows():
-            fn_ = __salt__['cp.cache_file'](source, saltenv)
-            if not fn_:
-                _cleanup_tempfile(path)
-                return {'pid': 0,
-                        'retcode': 1,
-                        'stdout': '',
-                        'stderr': '',
-                        'cache_error': True}
-            shutil.copyfile(fn_, path)
+        fn_ = __salt__['cp.cache_file'](source, saltenv)
+        if not fn_:
+            _cleanup_tempfile(path)
+            return {'pid': 0,
+                    'retcode': 1,
+                    'stdout': '',
+                    'stderr': '',
+                    'cache_error': True}
+        shutil.copyfile(fn_, path)
     if not salt.utils.is_windows():
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
@@ -1014,7 +1007,7 @@ def script_retcode(source,
                    runas=None,
                    shell=DEFAULT_SHELL,
                    python_shell=True,
-                   env=(),
+                   env=None,
                    template='jinja',
                    umask=None,
                    timeout=None,

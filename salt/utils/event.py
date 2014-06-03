@@ -117,7 +117,7 @@ def tagify(suffix='', prefix='', base=SALT):
         parts.extend(suffix)
     else:  # string so append
         parts.append(suffix)
-    return (TAGPARTER.join([part for part in parts if part]))
+    return TAGPARTER.join([part for part in parts if part])
 
 
 class SaltEvent(object):
@@ -138,7 +138,13 @@ class SaltEvent(object):
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        id_hash = hashlib.md5(kwargs.get('id', '')).hexdigest()
+        hash_type = getattr(hashlib, kwargs.get('hash_type', 'md5'))
+        # Substr the first 10 chars off, because some algorithms produce
+        # longer hashes than others, and may exceed the IPC maximum length
+        # for UNIX sockets.
+        id_hash = hash_type(kwargs.get('id', '')).hexdigest()
+        if kwargs.get('hash_type', 'md5') == 'sha256':
+            id_hash = id_hash[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -218,42 +224,61 @@ class SaltEvent(object):
         self.push.connect(self.pulluri)
         self.cpush = True
 
-    def get_event(self, wait=5, tag='', full=False):
+    @classmethod
+    def unpack(cls, raw, serial=None):
+        if serial is None:
+            serial = salt.payload.Serial({'serial': 'msgpack'})
+
+        if ord(raw[20]) >= 0x80:  # old style
+            mtag = raw[0:20].rstrip('|')
+            mdata = raw[20:]
+        else:  # new style
+            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+
+        data = serial.loads(mdata)
+        return mtag, data
+
+    def get_event(self, wait=5, tag='', full=False, use_pending=False):
         '''
         Get a single publication.
         IF no publication available THEN block for upto wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
+
+        use_pending
+            Defines whether to keep all unconsumed events in a pending_events
+            list, or to discard events that don't match the requested tag.  If
+            set to True, MAY CAUSE MEMORY LEAKS.
         '''
         self.subscribe()
 
-        for evt in [x for x in self.pending_events if x['tag'].startswith(tag)]:
-            self.pending_events.remove(evt)
-            if full:
-                return evt
-            else:
-                return evt['data']
+        if use_pending:
+            for evt in [x for x in self.pending_events
+                        if x['tag'].startswith(tag)]:
+                self.pending_events.remove(evt)
+                if full:
+                    return evt
+                else:
+                    return evt['data']
 
-        start = int(time.time())
-        while not wait or int(time.time()) <= start + wait:
+        start = time.time()
+        timeout_at = start + wait
+        while not wait or time.time() <= timeout_at:
             socks = dict(self.poller.poll(wait * 1000))  # convert to milliseconds
             if self.sub in socks and socks[self.sub] == zmq.POLLIN:
                 raw = self.sub.recv()
             else:
                 continue
-            if ord(raw[20]) >= 0x80:  # old style
-                mtag = raw[0:20].rstrip('|')
-                mdata = raw[20:]
-            else:  # new style
-                mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+            mtag, data = self.unpack(raw, self.serial)
 
-            data = self.serial.loads(mdata)
             ret = {'data': data,
                     'tag': mtag}
 
             if not mtag.startswith(tag):  # tag not match
-                self.pending_events.append(ret)
+                if use_pending:
+                    self.pending_events.append(ret)
+                wait = timeout_at - time.time()
                 continue
 
             if full:
@@ -290,7 +315,7 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull(timeout=timeout)
 
-        data['_stamp'] = datetime.datetime.now().isoformat('_')
+        data['_stamp'] = datetime.datetime.now().isoformat()
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
@@ -333,6 +358,14 @@ class SaltEvent(object):
                 self.poller.unregister(socket[0])
         if self.context.closed is False:
             self.context.term()
+
+        # Hardcore destruction
+        if hasattr(self.context, 'destroy'):
+            self.context.destroy(linger=1)
+
+        # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
+        # Assertion failed: get_load () == 0 (poller_base.cpp:32)
+        time.sleep(0.025)
 
     def fire_ret_load(self, load):
         '''
@@ -415,29 +448,27 @@ class EventPublisher(Process):
         epub_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
                 )
+        salt.utils.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
-        # Start the master event publisher
-        self.epub_sock.bind(epub_uri)
-        self.epull_sock.bind(epull_uri)
-        # Restrict access to the sockets
-        pub_mode = 448
-        if self.opts.get('client_acl') or self.opts.get('external_auth'):
-            pub_mode = 511
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pub.ipc'),
-                pub_mode
-                )
-        os.chmod(
-                os.path.join(self.opts['sock_dir'],
-                    'master_event_pull.ipc'),
-                448
-                )
+        salt.utils.check_ipc_path_max_len(epull_uri)
 
+        # Start the master event publisher
+        old_umask = os.umask(0177)
+        try:
+            self.epull_sock.bind(epull_uri)
+            self.epub_sock.bind(epub_uri)
+            if self.opts.get('client_acl') or self.opts.get('external_auth'):
+                os.chmod(
+                        os.path.join(self.opts['sock_dir'],
+                            'master_event_pub.ipc'),
+                        0666
+                        )
+        finally:
+            os.umask(old_umask)
         try:
             while True:
                 # Catch and handle EINTR from when this process is sent
@@ -479,10 +510,13 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         react = {}
         for fn_ in glob.glob(glob_ref):
-            react.update(self.render_template(
+            try:
+                react.update(self.render_template(
                     fn_,
                     tag=tag,
                     data=data))
+            except Exception:
+                log.error('Failed to render "{0}"'.format(fn_))
         return react
 
     def list_reactors(self, tag):

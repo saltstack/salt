@@ -5,7 +5,6 @@ Manage users with the useradd command
 
 # Import python libs
 try:
-    import grp
     import pwd
 except ImportError:
     pass
@@ -96,7 +95,7 @@ def add(name,
     if groups:
         cmd += '-G {0} '.format(','.join(groups))
     if home is not None:
-        cmd += '-b {0} '.format(os.path.dirname(home))
+        cmd += '-d {0} '.format(home)
     if createhome is True:
         cmd += '-m '
     if shell:
@@ -414,24 +413,4 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    ugrp = set()
-    # Add the primary user's group
-    try:
-        ugrp.add(grp.getgrgid(pwd.getpwnam(name).pw_gid).gr_name)
-    except KeyError:
-        # The user's applied default group is undefined on the system, so
-        # it does not exist
-        pass
-
-    # If we already grabbed the group list, it's overkill to grab it again
-    if 'user.getgrall' in __context__:
-        groups = __context__['user.getgrall']
-    else:
-        groups = grp.getgrall()
-        __context__['user.getgrall'] = groups
-
-    # Now, all other groups the user belongs to
-    for group in groups:
-        if name in group.gr_mem:
-            ugrp.add(group.gr_name)
-    return sorted(list(ugrp))
+    return salt.utils.get_group_list(name)

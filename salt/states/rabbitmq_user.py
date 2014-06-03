@@ -91,7 +91,7 @@ def present(name,
                 for vhost, perm in element.items():
                     result = __salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
-            changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
+                    changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:

@@ -175,7 +175,6 @@ class OverstateTestCase(TestCase,
         ret = overstate._check_results('mysql', 'all', {}, {'all': {}})
         self.assertEqual(ret, ({}, {'all': {}}))
 
-
     # @patch('salt.overstate.OverState.call_stage')
     # def test_call_stage(self, call_stage_mock):
     #     overstate = salt.overstate.OverState(self.master_config)

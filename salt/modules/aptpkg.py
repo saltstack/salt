@@ -28,14 +28,20 @@ log = logging.getLogger(__name__)
 try:
     from aptsources import sourceslist
     apt_support = True
-except ImportError as e:
+except ImportError:
     apt_support = False
 
 try:
     import softwareproperties.ppa
     ppa_format_support = True
-except ImportError as e:
+except ImportError:
     ppa_format_support = False
+
+try:
+    import apt.debfile
+    resolve_dep_support = True
+except ImportError:
+    resolve_dep_support = False
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -53,7 +59,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family', False) != 'Debian':
         return False
     return __virtualname__
 
@@ -348,11 +354,14 @@ def install(name=None,
     sources
         A list of DEB packages to install. Must be passed as a list of dicts,
         with the keys being package names, and the values being the source URI
-        or local path to the package.
+        or local path to the package.  Dependencies are automatically resolved
+        and marked as auto-installed.
 
         32-bit packages can be installed on 64-bit systems by appending the
         architecture designation (``:i386``, etc.) to the end of the package
         name.
+
+        .. versionchanged:: Helium
 
         CLI Example:
 
@@ -398,6 +407,8 @@ def install(name=None,
         cmd = ['dpkg', '-i', '--force-confold']
         if skip_verify:
             cmd.append('--force-bad-verify')
+        if resolve_dep_support:
+            _resolve_deps(name, pkg_params, **kwargs)
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
@@ -578,19 +589,34 @@ def _clean_pkglist(pkgs):
             pkgs[name] = stripped
 
 
-def list_pkgs(versions_as_list=False, removed=False, **kwargs):
+def list_pkgs(versions_as_list=False,
+              removed=False,
+              purge_desired=False,
+              **kwargs):
     '''
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
 
-    If removed is ``True``, then only packages which have been removed (but not
-    purged) will be returned.
+    removed
+        If ``True``, then only packages which have been removed (but not
+        purged) will be returned.
+
+    purge_desired
+        If ``True``, then only packages which have been marked to be purged,
+        but can't be purged due to their status as dependencies for other
+        installed packages, will be returned. Note that these packages will
+        appear in installed
+
+        .. versionchanged:: 2014.1.1
+
+            Packages in this state now correctly show up in the output of this
+            function.
 
     External dependencies::
 
-        Virtual package resolution requires dctrl-tools.
-        Without dctrl-tools virtual packages will be reported as not installed.
+        Virtual package resolution requires dctrl-tools. Without dctrl-tools
+        virtual packages will be reported as not installed.
 
     CLI Example:
 
@@ -601,17 +627,20 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     removed = salt.utils.is_true(removed)
+    purge_desired = salt.utils.is_true(purge_desired)
 
     if 'pkg.list_pkgs' in __context__:
         if removed:
             ret = copy.deepcopy(__context__['pkg.list_pkgs']['removed'])
         else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs']['installed'])
+            ret = copy.deepcopy(__context__['pkg.list_pkgs']['purge_desired'])
+            if not purge_desired:
+                ret.update(__context__['pkg.list_pkgs']['installed'])
         if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
         return ret
 
-    ret = {'installed': {}, 'removed': {}}
+    ret = {'installed': {}, 'removed': {}, 'purge_desired': {}}
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
@@ -640,6 +669,10 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
                 __salt__['pkg_resource.add_pkg'](ret['removed'],
                                                  name,
                                                  version_num)
+            elif 'purge' in linetype and status == 'installed':
+                __salt__['pkg_resource.add_pkg'](ret['purge_desired'],
+                                                 name,
+                                                 version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed and __salt__['cmd.has_exec']('grep-available'):
@@ -654,7 +687,7 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
             # Set virtual package versions to '1'
             __salt__['pkg_resource.add_pkg'](ret['installed'], virtname, '1')
 
-    for pkglist_type in ('installed', 'removed'):
+    for pkglist_type in ('installed', 'removed', 'purge_desired'):
         __salt__['pkg_resource.sort_pkglist'](ret[pkglist_type])
         _clean_pkglist(ret[pkglist_type])
 
@@ -663,7 +696,9 @@ def list_pkgs(versions_as_list=False, removed=False, **kwargs):
     if removed:
         ret = ret['removed']
     else:
-        ret = ret['installed']
+        ret = copy.deepcopy(__context__['pkg.list_pkgs']['purge_desired'])
+        if not purge_desired:
+            ret.update(__context__['pkg.list_pkgs']['installed'])
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -678,7 +713,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_all'](cmd).get('stdout', '')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
@@ -743,10 +778,13 @@ def version_cmp(pkg1, pkg2):
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
                   '{2!r}'.format(pkg1, oper, pkg2)
-            if __salt__['cmd.retcode'](cmd) == 0:
+            retcode = __salt__['cmd.retcode'](
+                cmd, output_loglevel='debug', ignore_retcode=True
+            )
+            if retcode == 0:
                 return ret
-    except Exception as e:
-        log.error(e)
+    except Exception as exc:
+        log.error(exc)
     return None
 
 
@@ -827,7 +865,7 @@ def get_repo(repo, **kwargs):
     '''
     Display a repo from the sources.list / sources.list.d
 
-    The repo passwd in needs to be a complete repo entry.
+    The repo passed in needs to be a complete repo entry.
 
     CLI Examples:
 
@@ -1091,11 +1129,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         'Launchpad does not know about {0}/{1}: {2}'.format(
                             owner_name, ppa_name, exc)
                     )
-                except IndexError as e:
+                except IndexError as exc:
                     raise CommandExecutionError(
                         'Launchpad knows about {0}/{1} but did not '
                         'return a fingerprint. Please set keyid '
-                        'manually: {2}'.format(owner_name, ppa_name, e)
+                        'manually: {2}'.format(owner_name, ppa_name, exc)
                     )
 
                 if 'keyserver' not in kwargs:
@@ -1222,6 +1260,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
+        if 'comments' in kwargs:
+            mod_source.comment = kwargs['comments'][0]
         sources.list.append(mod_source)
 
     # if all comps aren't part of the disable
@@ -1527,3 +1567,46 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                         ret[_pkg] = {'old': sel_revmap.get(_pkg),
                                      'new': _state}
     return ret
+
+
+def _resolve_deps(name, pkgs, **kwargs):
+    '''
+    Installs missing dependencies and marks them as auto installed so they
+    are removed when no more manually installed packages depend on them.
+
+    .. versionadded:: Helium
+
+    :depends:   - python-apt module
+    '''
+    missing_deps = []
+    for pkg_file in pkgs:
+        deb = apt.debfile.DebPackage(filename=pkg_file, cache=apt.Cache())
+        if deb.check():
+            missing_deps.extend(deb.missing_deps)
+
+    if missing_deps:
+        cmd = ['apt-get', '-q', '-y']
+        cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
+        cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
+        cmd.append('install')
+        cmd.extend(missing_deps)
+
+        ret = __salt__['cmd.retcode'](
+            cmd,
+            env=kwargs.get('env'),
+            python_shell=False,
+            output_loglevel='debug'
+        )
+
+        if ret != 0:
+            raise CommandExecutionError(
+                    'Error: unable to resolve dependencies for: {0}'.format(name)
+            )
+        else:
+            try:
+                cmd = ['apt-mark', 'auto'] + missing_deps
+                __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
+                        output_loglevel='debug')
+            except MinionError as exc:
+                raise CommandExecutionError(exc)
+    return

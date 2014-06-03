@@ -147,7 +147,6 @@ class UtilsTestCase(TestCase):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
     def test_format_call(self, arg_lookup, get_function_argspec):
-    # def test_format_call(self):
         def dummy_func(first=None, second=None, third=None):
             pass
 

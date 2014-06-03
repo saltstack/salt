@@ -3,7 +3,7 @@
 Management of dockers
 =====================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 .. note::
 
@@ -302,11 +302,12 @@ def _get_image_infos(image):
     '''
     Verify that the image exists
     We will try to resolve either by:
-        - the mapping grain->docker id or directly
-        - dockerid
+        - name
+        - image_id
+        - tag
 
     image
-        Image Id / grain name
+        Image Name / Image Id / Image Tag
 
     Returns the image id
     '''
@@ -546,7 +547,7 @@ def export(container, path, *args, **kwargs):
 
 
 def create_container(image,
-                     command='/sbin/init',
+                     command=None,
                      hostname=None,
                      user=None,
                      detach=True,
@@ -558,7 +559,6 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
-                     privileged=False,
                      name=None,
                      *args, **kwargs):
     '''
@@ -592,8 +592,6 @@ def create_container(image,
         let stdin open
     volumes_from
         container to get volumes definition from
-    privileged
-        run container in privileged mode
     name
         name given to container
 
@@ -638,7 +636,6 @@ def create_container(image,
             dns=dns,
             volumes=mountpoints,
             volumes_from=volumes_from,
-            privileged=privileged,
             name=name,
         )
         container = info['Id']
@@ -876,6 +873,7 @@ def restart(container, timeout=10, *args, **kwargs):
 
 def start(container, binds=None, ports=None, port_bindings=None,
           lxc_conf=None, publish_all_ports=None, links=None,
+          privileged=False,
           *args, **kwargs):
     '''
     restart the specified container
@@ -901,9 +899,15 @@ def start(container, binds=None, ports=None, port_bindings=None,
     try:
         dcontainer = _get_container_infos(container)['id']
         if not is_running(container):
-            client.start(dcontainer, binds=binds, port_bindings=port_bindings,
+            bindings = None
+            if port_bindings is not None:
+                bindings = {}
+                for k, v in port_bindings.iteritems():
+                    bindings[k] = (v.get('HostIp', ''), v['HostPort'])
+            client.start(dcontainer, binds=binds, port_bindings=bindings,
                          lxc_conf=lxc_conf,
-                         publish_all_ports=publish_all_ports, links=links)
+                         publish_all_ports=publish_all_ports, links=links,
+                         privileged=privileged)
             if is_running(dcontainer):
                 valid(status,
                       comment='Container {0} was started'.format(container),
@@ -1247,7 +1251,7 @@ def import_image(src, repo, tag=None, *args, **kwargs):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            logs, info = _parse_image_multilogs_string(ret)
+            logs, info = _parse_image_multilogs_string(ret, repo)
             _create_image_assemble_error_status(status, ret, logs)
             if status['status'] is not False:
                 infos = _get_image_infos(logs[0]['status'])
@@ -1490,7 +1494,7 @@ def inspect_image(image, *args, **kwargs):
     return status
 
 
-def _parse_image_multilogs_string(ret):
+def _parse_image_multilogs_string(ret, repo):
     '''
     Parse image log strings into grokable data
     '''
@@ -1515,11 +1519,8 @@ def _parse_image_multilogs_string(ret):
         # search last layer grabbed
         for l in logs:
             if isinstance(l, dict):
-                if (
-                    l.get('progress', 'not complete') == 'complete'
-                    and l.get('id', None)
-                ):
-                    infos = _get_image_infos(l['id'])
+                if l.get('status') == 'Download complete' and l.get('id'):
+                    infos = _get_image_infos(repo)
                     break
     return logs, infos
 
@@ -1594,24 +1595,20 @@ def pull(repo, tag=None, *args, **kwargs):
                 ----------
                 - id:
                     2c80228370c9
-                - progress:
-                    complete
                 - status:
-                    Download
+                    Download complete
                 ----------
                 - id:
                     2c80228370c9
                 - progress:
-                    image (latest) from NAME, endpoint: URL
+                    [=========================>                         ]
                 - status:
-                    Pulling
+                    Downloading
                 ----------
                 - id:
                     2c80228370c9
-                - progress:
-                    image (latest) from foo/ubuntubox
-                - status:
-                    Pulling
+                - status
+                    Pulling image (latest) from foo/ubuntubox
                 ----------
                 - status:
                     Pulling repository foo/ubuntubox
@@ -1629,13 +1626,14 @@ def pull(repo, tag=None, *args, **kwargs):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            logs, infos = _parse_image_multilogs_string(ret)
+            logs, infos = _parse_image_multilogs_string(ret, repo)
             if infos and infos.get('id', None):
                 repotag = repo
                 if tag:
                     repotag = '{0}:{1}'.format(repo, tag)
                 valid(status,
-                      out=logs and logs or ret,
+                      out=logs if logs else ret,
+                      id=infos['id'],
                       comment='Image {0} was pulled ({1})'.format(
                           repotag, infos['id']))
 
@@ -1714,7 +1712,7 @@ def push(repo, *args, **kwargs):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     ret = client.push(repo)
-    logs, infos = _parse_image_multilogs_string(ret)
+    logs, infos = _parse_image_multilogs_string(ret, repo_name)
     if logs:
         laststatus = logs[0].get('status', None)
         if laststatus and (

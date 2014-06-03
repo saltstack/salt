@@ -381,8 +381,9 @@ def rename_state_ids(data, sls, is_extend=False):
                 for arg in args:
                     if isinstance(arg, dict) and iter(arg).next() == 'name':
                         break
-                else:  # then no '- name: ...' is defined in the state args
-                       # add the sid without the leading dot as the name.
+                else:
+                    # then no '- name: ...' is defined in the state args
+                    # add the sid without the leading dot as the name.
                     args.insert(0, dict(name=sid[1:]))
             data[newsid] = data[sid]
             del data[sid]

@@ -15,6 +15,7 @@ can be either present or absent:
 '''
 
 # Import python libs
+import grp
 import sys
 
 
@@ -38,69 +39,66 @@ def present(name, gid=None, system=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    grps = __salt__['group.getent']()
-    for lgrp in grps:
-        # Scan over the groups
-        if lgrp['name'] == name:
-            # The group is present, is the gid right?
-            if gid:
-                if lgrp['gid'] == gid:
-                    # All good, return likewise
-                    ret['comment'] = 'No change'
+
+    grp_info = __salt__['group.info'](name)
+    if grp_info:
+        # Group already exists
+        if gid is not None:
+            # is the GID correct?
+            if grp_info['gid'] == gid:
+                ret['comment'] = 'No change'
+                return ret
+            else:
+                # Gid is not correct.
+                if __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = (
+                        'Group {0} exists but the gid will '
+                        'be changed to {1}').format(name, gid)
+                    return ret
+                ret['result'] = __salt__['group.chgid'](name, gid)
+                # Clear cached group data
+                sys.modules[
+                    __salt__['test.ping'].__module__
+                ].__context__.pop('group.getent', None)
+                if ret['result']:
+                    ret['comment'] = ('Changed gid to {0} for group {1}'
+                                      .format(gid, name))
+                    ret['changes'] = {name: gid}
                     return ret
                 else:
-                    if __opts__['test']:
-                        ret['result'] = None
-                        ret['comment'] = (
-                            'Group {0} exists but the gid will '
-                            'be changed to {1}').format(name, gid)
-                        return ret
-                    ret['result'] = __salt__['group.chgid'](name, gid)
-                    # Clear cached group data
-                    sys.modules[
-                        __salt__['test.ping'].__module__
-                    ].__context__.pop('group.getent', None)
-                    if ret['result']:
-                        ret['comment'] = ('Changed gid to {0} for group {1}'
-                                          .format(gid, name))
-                        ret['changes'] = {name: gid}
-                        return ret
-                    else:
-                        ret['comment'] = ('Failed to change gid to {0} for '
-                                          'group {1}'.format(gid, name))
-                        return ret
-            else:
-                ret['comment'] = 'Group {0} is already present'.format(name)
-                return ret
-
-    # Group is not present, test if gid is free
-    if gid is not None:
-        gid_group = None
-        for lgrp in grps:
-            if lgrp['gid'] == gid:
-                gid_group = lgrp['name']
-                break
-
-        if gid_group is not None:
-            ret['result'] = False
-            ret['comment'] = ('Group {0} is not present but gid {1}'
-                              ' is already taken by group {2}'
-                              .format(name, gid, gid_group))
+                    ret['comment'] = ('Failed to change gid to {0} for '
+                                      'group {1}'.format(gid, name))
+                    return ret
+        else:
+            ret['comment'] = 'Group {0} is already present'.format(name)
             return ret
-
-    # Group is not present, make it!
+    else:
+        # Group is not present, test if gid is free
+        if gid is not None:
+            try:
+                gid_ent = grp.getgrgid(gid)
+                # If we do NOT get a KeyError here, GID is already taken
+                ret['result'] = False
+                ret['comment'] = ('Group {0} is not present but gid {1}'
+                                  ' is already taken by group {2}'
+                                  .format(name, gid, gid_ent.gr_name))
+                return ret
+            except KeyError:
+                # Group ID is not taken. Ok to make the group.
+                pass
+    # Now actually make the group
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = ('Group {0} is not present and should be created'
-                ).format(name)
+        ret['comment'] = ('Group {0} is not present and should '
+                          'be created'
+                          ).format(name)
         return ret
-
     ret['result'] = __salt__['group.add'](name, gid, system=system)
     # Clear cached group data
     sys.modules[
         __salt__['test.ping'].__module__
     ].__context__.pop('group.getent', None)
-
     if ret['result']:
         ret['changes'] = __salt__['group.info'](name)
         ret['comment'] = 'Added group {0}'.format(name)
@@ -121,21 +119,21 @@ def absent(name):
            'changes': {},
            'result': True,
            'comment': ''}
-    for lgrp in __salt__['group.getent']():
-        # Scan over the groups
-        if lgrp['name'] == name:
-            # The group is present, DESTROY!!
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Group {0} is set for removal'.format(name)
-                return ret
-            ret['result'] = __salt__['group.delete'](name)
-            if ret['result']:
-                ret['changes'] = {name: ''}
-                ret['comment'] = 'Removed group {0}'.format(name)
-                return ret
-            else:
-                ret['comment'] = 'Failed to remove group {0}'.format(name)
-                return ret
-    ret['comment'] = 'Group not present'
-    return ret
+    grp_info = __salt__['group.info'](name)
+    if grp_info:
+        # Group already exists. Remove the group.
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Group {0} is set for removal'.format(name)
+            return ret
+        ret['result'] = __salt__['group.delete'](name)
+        if ret['result']:
+            ret['changes'] = {name: ''}
+            ret['comment'] = 'Removed group {0}'.format(name)
+            return ret
+        else:
+            ret['comment'] = 'Failed to remove group {0}'.format(name)
+            return ret
+    else:
+        ret['comment'] = 'Group not present'
+        return ret

@@ -212,6 +212,40 @@ class FileBlockReplaceTestCase(TestCase):
                           + "\n" + new_content
                           + "\n" + '#-- END BLOCK 2', fp.read())
 
+    def test_replace_append_newline_at_eof(self):
+        '''
+        Check that file.blockreplace works consistently on files with and
+        without newlines at end of file.
+        '''
+        base = 'bar'
+        args = {
+                'marker_start': '#start',
+                'marker_end': '#stop',
+                'content': 'baz',
+                'append_if_not_found': True,
+        }
+        block = '{marker_start}\n{content}\n{marker_end}\n'.format(**args)
+        expected = base + '\n' + block
+        # File ending with a newline
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base + '\n')
+            tfile.flush()
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # File not ending with a newline
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write(base)
+            tfile.flush()
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), expected)
+        # A newline should not be added in empty files
+        with tempfile.NamedTemporaryFile() as tfile:
+            filemod.blockreplace(tfile.name, **args)
+            with open(tfile.name) as tfile2:
+                self.assertEqual(tfile2.read(), block)
+
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
 
@@ -382,6 +416,37 @@ class FileModuleTestCase(TestCase):
             filemod.append(tfile.name, 'bar')
             with open(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'bar\n')
+
+    def test_extract_hash(self):
+        '''
+        Check various hash file formats.
+        '''
+        # With file name
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write('rc.conf ef6e82e4006dee563d98ada2a2a80a27\n')
+            tfile.write(
+                'ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n')
+            tfile.flush()
+            result = filemod.extract_hash(tfile.name, '', '/rc.conf')
+            self.assertEqual(result, {
+                'hsum': 'ef6e82e4006dee563d98ada2a2a80a27',
+                'hash_type': 'md5'
+            })
+
+            result = filemod.extract_hash(tfile.name, '', '/example.tar.gz')
+            self.assertEqual(result, {
+                'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
+                'hash_type': 'sha1'
+            })
+        # Solohash - no file name (Maven repo checksum file format)
+        with tempfile.NamedTemporaryFile() as tfile:
+            tfile.write('ead48423703509d37c4a90e6a0d53e143b6fc268\n')
+            tfile.flush()
+            result = filemod.extract_hash(tfile.name, '', '/testfile')
+            self.assertEqual(result, {
+                'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
+                'hash_type': 'sha1'
+            })
 
 
 if __name__ == '__main__':

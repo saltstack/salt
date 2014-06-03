@@ -17,6 +17,8 @@ def extracted(name,
               source_hash=None,
               if_missing=None):
     '''
+    .. versionadded:: 2014.1.0 (Hydrogen)
+
     State that make sure an archive is extracted in a directory.
     The downloaded archive is erased if succesfully extracted.
     The archive is downloaded only if necessary.
@@ -94,7 +96,8 @@ def extracted(name,
                     {'name': filename},
                     {'source': source},
                     {'source_hash': source_hash},
-                    {'makedirs': True}
+                    {'makedirs': True},
+                    {'saltenv': __env__}
                 ]
             }
         }
@@ -127,7 +130,10 @@ def extracted(name,
                                           cwd=name)
         if results['retcode'] != 0:
             return results
-        files = results['stdout']
+        if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
+            files = results['stderr']
+        else:
+            files = results['stdout']
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]

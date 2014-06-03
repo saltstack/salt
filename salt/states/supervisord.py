@@ -11,7 +11,7 @@ Interaction with the Supervisor daemon
         - require:
           - pkg: supervisor
         - watch:
-          - file.managed: /etc/nginx/sites-enabled/wsgi_server.conf
+          - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
 
 # Import python libs
@@ -79,7 +79,7 @@ def running(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True
@@ -267,7 +267,7 @@ def dead(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(
-        'Hydrogen',
+        'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
         'added in 0.17.0',
         _dont_call_warnings=True

@@ -12,9 +12,9 @@
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
-import getpass
 import logging
 import optparse
 import traceback
@@ -28,9 +28,54 @@ import salt.version as version
 import salt.syspaths as syspaths
 import salt.log.setup as log
 from salt.utils.validate.path import is_writeable
+from salt._compat import string_types
+from salt.minion import yamlify_arg
 
-# Import salt cloud libs
-import salt.cloud.exceptions
+if not utils.is_windows():
+    import salt.cloud.exceptions
+
+# Import 3rd-party libs
+from yaml.scanner import ScannerError as YAMLScannerError
+
+
+def parse_args_kwargs(args):
+    '''
+    Parse out the args and kwargs from an args string
+    '''
+    _args = []
+    _kwargs = {}
+    for arg in args:
+        if isinstance(arg, string_types):
+            arg_name, arg_value = utils.parse_kwarg(arg)
+            if arg_name:
+                if arg_value.strip() == '':
+                    # Because YAML loads empty strings as None, we return the original string
+                    # >>> import yaml
+                    # >>> yaml.load('') is None
+                    # True
+                    # >>> yaml.load('      ') is None
+                    # True
+                    _kwargs[arg_name] = arg_value
+                    continue
+                try:
+                    _kwargs[arg_name] = yamlify_arg(arg_value)
+                except YAMLScannerError:
+                    _kwargs[arg_name] = arg_value
+            else:
+                if arg.strip() == '':
+                    # Because YAML loads empty strings as None, we return the original string
+                    # >>> import yaml
+                    # >>> yaml.load('') is None
+                    # True
+                    # >>> yaml.load('      ') is None
+                    # True
+                    _args.append(arg)
+                    continue
+                try:
+                    _args.append(yamlify_arg(arg))
+                except YAMLScannerError:
+                    _args.append(arg)
+    return _args, _kwargs
 
 
 def _sorted(mixins_or_funcs):
@@ -191,7 +236,7 @@ class OptionParser(optparse.OptionParser):
         )
 
     def print_versions_report(self, file=sys.stdout):
-        print >> file, '\n'.join(version.versions_report())
+        print('\n'.join(version.versions_report()), file=file)
         self.exit()
 
 
@@ -299,7 +344,12 @@ class ConfigDirMixIn(object):
         self.options.config_dir = os.path.abspath(self.options.config_dir)
 
         if hasattr(self, 'setup_config'):
-            self.config = self.setup_config()
+            try:
+                self.config = self.setup_config()
+            except (IOError, OSError) as exc:
+                self.error(
+                    'Failed to load configuration: {0}'.format(exc)
+                )
 
     def get_config_file_path(self, configfile=None):
         if configfile is None:
@@ -531,7 +581,7 @@ class LogLevelMixIn(object):
             # Since we're not be able to write to the log file or it's parent
             # directory(if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
-            current_user = getpass.getuser()
+            current_user = salt.utils.get_user()
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
@@ -775,13 +825,6 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'targets other than globs are preceded with an identifier '
                   'matching the specific targets argument type: salt '
                   '\'G@os:RedHat and webser* or E@database.*\'')
-        )
-        group.add_option(
-            '-X', '--exsel',
-            default=False,
-            action='store_true',
-            help=('Instead of using shell globs use the return code of '
-                  'a function.')
         )
         group.add_option(
             '-I', '--pillar',
@@ -1555,13 +1598,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                                 self.config['arg'][cmd_index].append(arg)
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
-                                          'defining all arguments.')
+                                          'defining all arguments.\n')
+                else:
+                    self.config['fun'] = self.args[1]
+                    self.config['arg'] = self.args[2:]
+
+                # parse the args and kwargs before sending to the publish interface
+                self.config['arg'] = salt.client.condition_kwarg(*parse_args_kwargs(self.config['arg']))
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
-
-            else:
-                self.config['fun'] = self.args[1]
-                self.config['arg'] = self.args[2:]
 
     def setup_config(self):
         return config.client_config(self.get_config_file_path())
@@ -1627,20 +1672,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'key')
 
     def _mixin_setup(self):
-        # XXX: Remove '--key-logfile' support in 0.18.0
-        utils.warn_until(
-            'Hydrogen',
-            'Remove \'--key-logfile\' support',
-            _dont_call_warnings=True
-        )
-        self.logging_options_group.add_option(
-            '--key-logfile',
-            default=None,
-            help='Send all output to a file. Default is {0!r}'.format(
-                self._default_logging_logfile_
-            )
-        )
-
         actions_group = optparse.OptionGroup(self, 'Actions')
         actions_group.add_option(
             '-l', '--list',
@@ -1808,7 +1839,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Filter accepted list arguments as soon as possible
         if not self.options.list:
             return
-        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej')):
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'all')):
             self.error(
                 '{0!r} is not a valid argument to \'--list\''.format(
                     self.options.list
@@ -1825,20 +1856,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Schedule __create_keys_dir() to run if there's a value for
         # --create-keys-dir
         self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
-
-    def process_key_logfile(self):
-        if self.options.key_logfile:
-            # XXX: Remove '--key-logfile' support in 0.18.0
-            # In < 0.18.0 error out
-            utils.warn_until(
-                'Hydrogen',
-                'Remove \'--key-logfile\' support',
-                _dont_call_warnings=True
-            )
-            self.error(
-                'The \'--key-logfile\' option has been deprecated in favour '
-                'of \'--log-file\''
-            )
 
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is
@@ -1937,6 +1954,18 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Specify the minion id to use. If this option is omitted, '
                   'the id option from the minion config will be used.')
         )
+        self.add_option(
+            '--skip-grains',
+            default=False,
+            action='store_true',
+            help=('Do not load grains.')
+        )
+        self.add_option(
+            '--refresh-grains-cache',
+            default=False,
+            action='store_true',
+            help=('Force a refresh of the grains cache')
+    )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run \
@@ -1989,8 +2018,9 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             dest='doc',
             default=False,
             action='store_true',
-            help=('Display documentation for runners, pass a module or a '
-                  'runner to see documentation on only that module/runner.')
+            help=('Display documentation for runners, pass a runner or '
+                  'runner.function to see documentation on only that runner '
+                  'or function.')
         )
 
     def _mixin_after_parsed(self):
@@ -2138,8 +2168,8 @@ class SaltCloudParser(OptionParser,
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
 
     def print_versions_report(self, file=sys.stdout):
-        print >> file, '\n'.join(
-            version.versions_report(include_salt_cloud=True))
+        print('\n'.join(version.versions_report(include_salt_cloud=True)),
+              file=file)
         self.exit()
 
     def _mixin_after_parsed(self):

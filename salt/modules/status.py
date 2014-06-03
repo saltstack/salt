@@ -102,7 +102,7 @@ def custom():
     conf = __salt__['config.dot_vals']('status')
     for key, val in conf.items():
         func = '{0}()'.format(key.split('.')[1])
-        vals = eval(func)
+        vals = eval(func)  # pylint: disable=W0123
 
         for item in val:
             ret[item] = vals[item]
@@ -503,7 +503,7 @@ def pid(sig):
         sig = "'" + sig + "'"
     cmd = ("{0[ps]} | grep {1} | grep -v grep | fgrep -v status.pid | "
            "awk '{{print $2}}'".format(__grains__, sig))
-    return (__salt__['cmd.run_stdout'](cmd) or '')
+    return __salt__['cmd.run_stdout'](cmd) or ''
 
 
 def version():

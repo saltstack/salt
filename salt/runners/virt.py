@@ -3,10 +3,14 @@
 Control virtual machines via Salt
 '''
 
+# Import python libs
+from __future__ import print_function
+
 # Import Salt libs
 import salt.client
 import salt.output
 import salt.utils.virt
+import salt.key
 
 
 def _determine_hyper(data, omit=''):
@@ -277,7 +281,7 @@ def force_off(name):
     return 'good'
 
 
-def purge(name):
+def purge(name, delete_key=True):
     '''
     Destroy the named vm
     '''
@@ -295,6 +299,10 @@ def purge(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
+
+    if delete_key:
+        skey = salt.key.Key(__opts__)
+        skey.delete_key(name)
     print('Purged VM {0}'.format(name))
     return 'good'
 
@@ -372,6 +380,6 @@ def migrate(name, target=''):
         print('Target hypervisor {0} not found'.format(origin_data))
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
-    print client.cmd_async(origin_hyper,
+    print(client.cmd_async(origin_hyper,
                            'virt.migrate_non_shared',
-                           [name, target])
+                           [name, target]))

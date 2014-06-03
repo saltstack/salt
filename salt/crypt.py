@@ -13,6 +13,7 @@ import hmac
 import shutil
 import hashlib
 import logging
+import traceback
 
 # Import third party libs
 try:
@@ -77,10 +78,10 @@ def dropfile(cachedir, user=None):
             import pwd
             uid = pwd.getpwnam(user).pw_uid
             os.chown(dfnt, uid, -1)
-            shutil.move(dfnt, dfn)
         except (KeyError, ImportError, OSError, IOError):
             pass
 
+    shutil.move(dfnt, dfn)
     os.umask(mask)
 
 
@@ -265,7 +266,14 @@ class Auth(object):
         Pass in the encrypted aes key.
         Returns the decrypted aes seed key, a string
         '''
-        log.debug('Decrypting the current master AES key')
+        if self.opts.get('auth_trb', False):
+            log.warning(
+                    'Auth Called: {0}'.format(
+                        ''.join(traceback.format_stack())
+                        )
+                    )
+        else:
+            log.debug('Decrypting the current master AES key')
         key = self.get_keys()
         key_str = key.private_decrypt(payload['aes'], RSA.pkcs1_oaep_padding)
         if 'sig' in payload:
@@ -336,10 +344,16 @@ class Auth(object):
                 True,
                 self.opts['ipv6']
             )
-        except SaltClientError:
+        except SaltClientError as e:
             if safe:
+                log.warning('SaltClientError: {0}'.format(e))
                 return 'retry'
             raise SaltClientError
+
+        if self.opts['master_ip'] not in self.opts['master_uri']:
+            self.opts['master_uri'] = (self.opts['master_uri'].replace(
+                self.opts['master_uri'].split(':')[1][2:],
+                self.opts['master_ip']))
 
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
@@ -349,22 +363,32 @@ class Auth(object):
                 self.minion_sign_in_payload(),
                 timeout=timeout
             )
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as e:
             if safe:
+                log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
             raise SaltClientError
 
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:
-                    log.critical(
-                        'The Salt Master has rejected this minion\'s public '
-                        'key!\nTo repair this issue, delete the public key '
-                        'for this minion on the Salt Master and restart this '
-                        'minion.\nOr restart the Salt Master in open mode to '
-                        'clean out the keys. The Salt Minion will now exit.'
-                    )
-                    sys.exit(0)
+                    if self.opts['rejected_retry']:
+                        log.error(
+                            'The Salt Master has rejected this minion\'s public '
+                            'key.\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master.\nThe Salt '
+                            'Minion will attempt to to re-authenicate.'
+                        )
+                        return 'retry'
+                    else:
+                        log.critical(
+                            'The Salt Master has rejected this minion\'s public '
+                            'key!\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master and restart this '
+                            'minion.\nOr restart the Salt Master in open mode to '
+                            'clean out the keys. The Salt Minion will now exit.'
+                        )
+                        sys.exit(0)
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
@@ -503,7 +527,7 @@ class SAuth(Auth):
         '''
         while True:
             creds = self.sign_in(
-                self.opts.get('_auth_timeout', 60),
+                self.opts['auth_timeout'],
                 self.opts.get('_safe_auth', True)
             )
             if creds == 'retry':

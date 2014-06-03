@@ -85,18 +85,17 @@ def _get_version(name, results):
     return None
 
 
-def _contextkey(jail=None, chroot=None):
+def _contextkey(jail=None, chroot=None, prefix='pkg.list_pkgs'):
     '''
     As this module is designed to manipulate packages in jails and chroots, use
     the passed jail/chroot to ensure that a key in the __context__ dict that is
     unique to that jail/chroot is used.
     '''
-    ret = 'pkg.list_pkgs'
     if jail:
-        ret += '.jail_{0}'.format(jail)
+        return str(prefix) + '.jail_{0}'.format(jail)
     elif chroot:
-        ret += '.chroot_{0}'.format(chroot)
-    return ret
+        return str(prefix) + '.chroot_{0}'.format(chroot)
+    return prefix
 
 
 def parse_config(file_name='/usr/local/etc/pkg.conf'):
@@ -144,6 +143,12 @@ def version(*names, **kwargs):
         Get package version information for the specified chroot (ignored if
         ``jail`` is specified)
 
+    with_origin : False
+        Return a nested dictionary containing both the origin name and version
+        for each specified package.
+
+        .. versionadded:: 2014.1.0 (Hydrogen)
+
 
     CLI Example:
 
@@ -153,7 +158,18 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package name> jail=<jail name or id>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    with_origin = kwargs.pop('with_origin', False)
+    ret = __salt__['pkg_resource.version'](*names, **kwargs)
+    if not salt.utils.is_true(with_origin):
+        return ret
+    # Put the return value back into a dict since we're adding a subdict
+    if len(names) == 1:
+        ret = {names[0]: ret}
+    origins = __context__.get('pkg.origin', {})
+    return dict([
+        (x, {'origin': origins.get(x, ''), 'version': y})
+        for x, y in ret.iteritems()
+    ])
 
 # Support pkg.info get version info, since this is the CLI usage
 info = version
@@ -258,7 +274,11 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs):
+def list_pkgs(versions_as_list=False,
+              jail=None,
+              chroot=None,
+              with_origin=False,
+              **kwargs):
     '''
     List the packages currently installed as a dict::
 
@@ -271,6 +291,12 @@ def list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs):
         List the pacakges in the specified chroot (ignored if ``jail`` is
         specified)
 
+    with_origin : False
+        Return a nested dictionary containing both the origin name and version
+        for each installed package.
+
+        .. versionadded:: 2014.1.0 (Hydrogen)
+
     CLI Example:
 
     .. code-block:: bash
@@ -279,37 +305,52 @@ def list_pkgs(versions_as_list=False, jail=None, chroot=None, **kwargs):
         salt '*' pkg.list_pkgs jail=<jail name or id>
         salt '*' pkg.list_pkgs chroot=/path/to/chroot
     '''
-    # 'removed' not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     versions_as_list = salt.utils.is_true(versions_as_list)
-    contextkey = _contextkey(jail, chroot)
+    contextkey_pkg = _contextkey(jail, chroot)
+    contextkey_origins = _contextkey(jail, chroot, prefix='pkg.origin')
 
-    if contextkey in __context__:
-        if versions_as_list:
-            return __context__[contextkey]
-        else:
-            ret = copy.deepcopy(__context__[contextkey])
+    if contextkey_pkg in __context__:
+        ret = copy.deepcopy(__context__[contextkey_pkg])
+        if not versions_as_list:
             __salt__['pkg_resource.stringify'](ret)
-            return ret
+        if salt.utils.is_true(with_origin):
+            origins = __context__.get(contextkey_origins, {})
+            return dict([
+                (x, {'origin': origins.get(x, ''), 'version': y})
+                for x, y in ret.iteritems()
+            ])
+        return ret
 
     ret = {}
-    cmd = '{0} info'.format(_pkg(jail, chroot))
+    origins = {}
+    cmd = '{0} info -ao'.format(_pkg(jail, chroot))
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
     for line in out.splitlines():
         if not line:
             continue
         try:
-            pkg, ver = line.split()[0].rsplit('-', 1)
-        except (IndexError, ValueError):
+            pkg, origin = line.split()
+            pkgname, pkgver = pkg.rsplit('-', 1)
+        except ValueError:
             continue
-        __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
+        __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
+        origins[pkgname] = origin
 
     __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__[contextkey] = copy.deepcopy(ret)
+    __context__[contextkey_pkg] = copy.deepcopy(ret)
+    __context__[contextkey_origins] = origins
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
+    if salt.utils.is_true(with_origin):
+        return dict([
+            (x, {'origin': origins.get(x, ''), 'version': y})
+            for x, y in ret.iteritems()
+        ])
     return ret
 
 
@@ -711,6 +752,7 @@ def install(name=None,
     )
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop(_contextkey(jail, chroot), None)
+    __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
     return salt.utils.compare_dicts(old, new)
 
@@ -852,6 +894,7 @@ def remove(name=None,
     )
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop(_contextkey(jail, chroot), None)
+    __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
     return salt.utils.compare_dicts(old, new)
 

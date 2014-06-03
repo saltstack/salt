@@ -179,7 +179,7 @@ def checkout(cwd,
 def switch(cwd, remote, target=None, user=None, username=None,
            password=None, *opts):
     '''
-    .. versionadded:: Hydrogen
+    .. versionadded:: 2014.1.0 (Hydrogen)
 
     Switch a working copy of a remote Subversion repository
     directory

@@ -15,10 +15,10 @@ def _parse_key(key):
     '''
     split the full path in the registry to the key and the rest
     '''
-    splt = key.split('\\')
+    splt = key.split(r'\\')
     hive = splt.pop(0)
     key = splt.pop(-1)
-    path = '\\'.join(splt)
+    path = r'\\'.join(splt)
     return hive, path, key
 
 

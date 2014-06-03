@@ -46,7 +46,7 @@ def isportopen(host, port):
         salt '*' network.isportopen 127.0.0.1 22
     '''
 
-    if not (1 <= int(port) <= 65535):
+    if not 1 <= int(port) <= 65535:
         return False
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -171,7 +171,7 @@ def _interfaces_ip(out):
         for line in group.splitlines():
             if not ' ' in line:
                 continue
-            match = re.match(r'^\d*:\s+([\w.]+)(?:@)?([\w.]+)?:\s+<(.+)>', line)
+            match = re.match(r'^\d*:\s+([\w.-]+)(?:@)?([\w.-]+)?:\s+<(.+)>', line)
             if match:
                 iface, parent, attrs = match.groups()
                 if 'UP' in attrs.split(','):
@@ -346,7 +346,7 @@ def _interfaces_ipconfig(out):
             key, val = line.split(',', 1)
             key = key.strip(' .')
             val = val.strip()
-            if addr and key in ('Subnet Mask'):
+            if addr and key == 'Subnet Mask':
                 addr['netmask'] = val
             elif key in ('IP Address', 'IPv4 Address'):
                 if 'inet' not in iface:
@@ -362,9 +362,9 @@ def _interfaces_ipconfig(out):
                 addr = {'address': val.rstrip('(Preferred)'),
                         'prefixlen': None}
                 iface['inet6'].append(addr)
-            elif key in ('Physical Address'):
+            elif key == 'Physical Address':
                 iface['hwaddr'] = val
-            elif key in ('Media State'):
+            elif key == 'Media State':
                 # XXX seen used for tunnel adaptors
                 # might be useful
                 iface['up'] = (val != 'Media disconnected')
@@ -681,7 +681,7 @@ def remotes_on_local_tcp_port(port):
         # '127.0.0.1:4505->127.0.0.1:55703'
         local, remote = chunks[8].split('->')
         lhost, lport = local.split(':')
-        if not (int(lport) == port):  # ignore if local port not port
+        if int(lport) != port:  # ignore if local port not port
             continue
         rhost, rport = remote.split(':')
         remotes.add(rhost)

@@ -3,7 +3,7 @@
 States for Management of Memcached Keys
 =======================================
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 '''
 from salt.modules.memcached import (
     DEFAULT_HOST,

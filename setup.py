@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 The setup script for salt
 '''
@@ -21,6 +21,12 @@ from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 # pylint: enable=E0611
+
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
 
 # Change to salt source's directory prior to running any command
 try:
@@ -106,28 +112,39 @@ exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 class CloudSdist(sdist):
     user_options = sdist.user_options + [
         ('skip-bootstrap-download', None,
-         'Skip downloading the bootstrap-salt.sh script. This can also be '
-         'triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an environment '
-         'variable.')
+         '[DEPRECATED] Skip downloading the bootstrap-salt.sh script. This '
+         'can also be triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an '
+         'environment variable.'),
+        ('download-bootstrap-script', None,
+         'Download the latest stable bootstrap-salt.sh script. This '
+         'can also be triggered by having `DOWNLOAD_BOOTSTRAP_SCRIPT=1` as an '
+         'environment variable.')
+
     ]
     boolean_options = sdist.boolean_options + [
-        'skip-bootstrap-download'
+        'skip-bootstrap-download',
+        'download-bootstrap-script'
     ]
 
     def initialize_options(self):
         sdist.initialize_options(self)
-        self.skip_bootstrap_download = False
+        self.skip_bootstrap_download = True
+        self.download_bootstrap_script = False
 
     def finalize_options(self):
         sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            skip_bootstrap_download = os.environ.get(
-                'SKIP_BOOTSTRAP_DOWNLOAD', '0'
+            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
+                '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
+
+        if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:
+            download_bootstrap_script = os.environ.get(
+                'DOWNLOAD_BOOTSTRAP_SCRIPT', '0'
             )
-            self.skip_bootstrap_download = skip_bootstrap_download == '1'
+            self.download_bootstrap_script = download_bootstrap_script == '1'
 
     def run(self):
-        if self.skip_bootstrap_download is False:
+        if self.download_bootstrap_script is True:
             # Let's update the bootstrap-script to the version defined to be
             # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
             url = (
@@ -422,6 +439,7 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.states',
                              'salt.fileserver',
                              'salt.search',
+                             'salt.templates',
                              'salt.transport',
                              'salt.output',
                              'salt.utils',
@@ -495,16 +513,31 @@ FREEZER_INCLUDES = [
     'email.mime.*',
 ]
 
+if HAS_ZMQ and hasattr(zmq, 'pyzmq_version_info'):
+    if HAS_ZMQ and zmq.pyzmq_version_info() >= (0, 14):
+        # We're freezing, and when freezing ZMQ needs to be installed, so this
+        # works fine
+        if 'zmq.core.*' in FREEZER_INCLUDES:
+            # For PyZMQ >= 0.14, freezing does not need 'zmq.core.*'
+            FREEZER_INCLUDES.remove('zmq.core.*')
+
 if IS_WINDOWS_PLATFORM:
     FREEZER_INCLUDES.extend([
         'win32api',
         'win32file',
         'win32con',
+        'win32com',
+        'win32net',
+        'win32netcon',
+        'win32gui',
         'win32security',
         'ntsecuritycon',
+        'pywintypes',
+        'pythoncom',
         '_winreg',
         'wmi',
         'site',
+        'psutil',
     ])
     SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
@@ -512,6 +545,20 @@ elif sys.platform.startswith('linux'):
     try:
         import yum
         FREEZER_INCLUDES.append('yum')
+    except ImportError:
+        pass
+elif sys.platform.startswith('sunos'):
+    # (The sledgehammer approach)
+    # Just try to include everything
+    # (This may be a better way to generate FREEZER_INCLUDES generally)
+    try:
+        from bbfreeze.modulegraph.modulegraph import ModuleGraph
+        mf = ModuleGraph(sys.path[:])
+        for arg in glob.glob("salt/modules/*.py"):
+                mf.run_script(arg)
+        for mod in mf.flatten():
+            if type(mod).__name__ != "Script" and mod.filename:
+                FREEZER_INCLUDES.append(str(os.path.basename(mod.identifier)))
     except ImportError:
         pass
 

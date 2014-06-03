@@ -62,13 +62,8 @@ def __virtual__():
     Set up the libcloud functions and check for GOGRID configs
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no GoGrid cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading GoGrid cloud module')
     return True
 
 
@@ -258,13 +253,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data)
+
+    if 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',

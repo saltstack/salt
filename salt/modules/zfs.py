@@ -39,20 +39,22 @@ def _available_commands():
     if not zfs_path:
         return False
 
-    _return = {}
+    ret = {}
     # Note that we append '|| :' as a unix hack to force return code to be 0.
-    res = salt_cmd.run_all('{0} help || :'.format(zfs_path))
+    res = salt_cmd.run_stderr(
+        '{0} help || :'.format(zfs_path), output_loglevel='debug'
+    )
 
     # This bit is dependent on specific output from `zfs help` - any major changes
     # in how this works upstream will require a change.
-    for line in res['stderr'].splitlines():
+    for line in res.splitlines():
         if re.match('	[a-zA-Z]', line):
             cmds = line.split(' ')[0].split('|')
             doc = ' '.join(line.split(' ')[1:])
             for cmd in [cmd.strip() for cmd in cmds]:
-                if cmd not in _return:
-                    _return[cmd] = doc
-    return _return
+                if cmd not in ret:
+                    ret[cmd] = doc
+    return ret
 
 
 def _exit_status(retcode):

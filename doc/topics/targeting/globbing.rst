@@ -69,6 +69,11 @@ Match the ``web-x``, ``web-y``, and ``web-z`` minions:
 
     salt 'web-[x-z]' test.ping
 
+.. note::
+
+    For additional targeting methods please review the
+    :doc:`compound matchers </topics/targeting/compound>` documentation.
+ 
 
 Regular Expressions
 ===================

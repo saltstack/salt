@@ -56,7 +56,7 @@ def netstat():
         salt '*' network.netstat
     '''
     ret = []
-    cmd = 'netstat -na'
+    cmd = 'netstat -nao'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
@@ -65,13 +65,15 @@ def netstat():
                 'local-address': comps[1],
                 'proto': comps[0],
                 'remote-address': comps[2],
-                'state': comps[3]})
+                'state': comps[3],
+                'program': comps[4]})
         if line.startswith('  UDP'):
             ret.append({
                 'local-address': comps[1],
                 'proto': comps[0],
                 'remote-address': comps[2],
-                'state': None})
+                'state': None,
+                'program': comps[3]})
     return ret
 
 

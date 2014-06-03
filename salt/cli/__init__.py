@@ -4,6 +4,7 @@ The management of salt command line utilities are stored in here
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
 
@@ -74,7 +75,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 'show_timeout': self.options.show_timeout}
 
             if 'token' in self.config:
-                kwargs['token'] = self.config['token']
+                try:
+                    with salt.utils.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
+                        kwargs['key'] = fp_.readline()
+                except IOError:
+                    kwargs['token'] = self.config['token']
 
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
@@ -170,7 +175,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         docs = {}
         if not ret:
             self.exit(2, 'No minions found to gather docs from\n')
-
+        if isinstance(ret, str):
+            self.exit(2, '{0}\n'.format(ret))
         for host in ret:
             for fun in ret[host]:
                 if fun not in docs:

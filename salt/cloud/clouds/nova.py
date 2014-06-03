@@ -150,13 +150,8 @@ def __virtual__():
     Check for Nova configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Nova cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Openstack Nova cloud module')
     return True
 
 
@@ -213,7 +208,7 @@ def preferred_ip(vm_, ips):
         except Exception:
             continue
 
-        return False
+    return False
 
 
 def ignore_cidr(vm_, ip):
@@ -540,7 +535,7 @@ def create(vm_):
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    elif (rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips'):
+    elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
         ip_address = data.public_ips
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
@@ -668,14 +663,17 @@ def create(vm_):
                 )
             )
 
+    ret.update(data.__dict__)
+
+    if 'password' in data.extra:
+        del data.extra['password']
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
-
-    ret.update(data.__dict__)
 
     salt.utils.cloud.fire_event(
         'event',

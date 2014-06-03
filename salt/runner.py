@@ -4,6 +4,7 @@ Execute salt convenience routines
 '''
 
 # Import python libs
+from __future__ import print_function
 import multiprocessing
 import datetime
 import time
@@ -67,8 +68,7 @@ class RunnerClient(object):
         data['user'] = user
         event.fire_event(data, tagify('ret', base=tag))
         # this is a workaround because process reaping is defeating 0MQ linger
-        time.sleep(2.0)  # delay so 0MQ event gets out before runner process
-                         # reaped
+        time.sleep(2.0)  # delay so 0MQ event gets out before runner process reaped
 
     def _verify_fun(self, fun):
         '''
@@ -191,10 +191,20 @@ class Runner(RunnerClient):
         '''
         Print out the documentation!
         '''
-        ret = super(Runner, self).get_docs()
+        fun = None
+        run = None
+        arg = self.opts.get('fun', None)
 
-        for fun in sorted(ret):
-            print('{0}:\n{1}\n'.format(fun, ret[fun]))
+        if arg:
+            if '.' in arg:
+                fun = arg
+            else:
+                run = arg
+
+        ret = super(Runner, self).get_docs()
+        for f in sorted(ret):
+            if not arg or f == fun or f.split('.')[0] == run:
+                print('{0}:\n{1}\n'.format(f, ret[f]))
 
     def run(self):
         '''
@@ -208,5 +218,5 @@ class Runner(RunnerClient):
                         self.opts['fun'], self.opts['arg'], self.opts)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
-                print ret
+                print(ret)
                 return ret

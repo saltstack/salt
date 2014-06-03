@@ -95,15 +95,18 @@ def install(pkg=None,
     lines = npm_output.splitlines()
     log.error(lines)
 
-    # Strip all lines until JSON output starts
-    while not lines[0].startswith('{') and not lines[0].startswith('['):
-        lines = lines[1:]
+    while lines:
+        # Strip all lines until JSON output starts
+        while not lines[0].startswith('{') and not lines[0].startswith('['):
+            lines = lines[1:]
 
-    try:
-        return json.loads(''.join(lines))
-    except ValueError:
-        # Still no JSON!! Return the stdout as a string
-        return npm_output
+        try:
+            return json.loads(''.join(lines))
+        except ValueError:
+            lines = lines[1:]
+
+    # Still no JSON!! Return the stdout as a string
+    return npm_output
 
 
 def uninstall(pkg,

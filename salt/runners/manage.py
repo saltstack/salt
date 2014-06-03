@@ -5,6 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
+from __future__ import print_function
 import os
 import operator
 import re
@@ -189,14 +190,14 @@ def safe_accept(target, expr_form='glob'):
             del ret[minion]
 
     if failures:
-        print "safe_accept failed on the following minions:"
+        print('safe_accept failed on the following minions:')
         for minion, message in failures.iteritems():
-            print minion
-            print '-' * len(minion)
-            print message
-            print
+            print(minion)
+            print('-' * len(minion))
+            print(message)
+            print('')
 
-    print "Accepted {0:d} keys".format(len(ret))
+    print('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
@@ -248,7 +249,7 @@ def versions():
 
 
 def bootstrap(version="develop",
-              script="http://bootstrap.saltstack.org",
+              script=None,
               hosts=""):
     '''
     Bootstrap minions with salt-bootstrap
@@ -264,9 +265,11 @@ def bootstrap(version="develop",
 
         salt-run manage.bootstrap hosts="host1,host2"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.github.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
 
     '''
+    if script is None:
+        script = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
     for host in hosts.split(","):
         # Could potentially lean on salt-ssh utils to make
         # deployment easier on existing hosts (i.e. use sshpass,

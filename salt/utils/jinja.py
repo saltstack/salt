@@ -337,6 +337,7 @@ class SerializerExtension(Extension, object):
         parser.fail('Unknown format ' + parser.stream.current.value,
                     parser.stream.current.lineno)
 
+    # pylint: disable=E1120,E1121
     def parse_load(self, parser):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
@@ -416,3 +417,4 @@ class SerializerExtension(Extension, object):
                 .set_lineno(lineno)
             ).set_lineno(lineno)
         ]
+    # pylint: enable=E1120,E1121

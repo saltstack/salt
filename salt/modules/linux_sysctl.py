@@ -78,7 +78,8 @@ def show():
     '''
     cmd = 'sysctl -a'
     ret = {}
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    for line in out.splitlines():
         if not line or ' = ' not in line:
             continue
         comps = line.split(' = ', 1)

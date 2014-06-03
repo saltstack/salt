@@ -8,11 +8,95 @@ import os
 import re
 import fnmatch
 import logging
+import time
+import errno
 
 # Import salt libs
 import salt.loader
+import salt.utils
 
 log = logging.getLogger(__name__)
+
+
+def _lock_cache(w_lock):
+    try:
+        os.mkdir(w_lock)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
+        return False
+    else:
+        log.trace('Lockfile {0} created'.format(w_lock))
+        return True
+
+
+def check_file_list_cache(opts, form, list_cache, w_lock):
+    '''
+    Checks the cache file to see if there is a new enough file list cache, and
+    returns the match (if found, along with booleans used by the fileserver
+    backend to determine if the cache needs to be refreshed/written).
+    '''
+    refresh_cache = False
+    save_cache = True
+    serial = salt.payload.Serial(opts)
+    if not os.path.isfile(list_cache) and _lock_cache(w_lock):
+        refresh_cache = True
+    else:
+        attempt = 0
+        while attempt < 11:
+            try:
+                cache_stat = os.stat(list_cache)
+                age = time.time() - cache_stat.st_mtime
+                if age < opts.get('fileserver_list_cache_time', 30):
+                    # Young enough! Load this sucker up!
+                    with salt.utils.fopen(list_cache, 'rb') as fp_:
+                        log.trace('Returning file_lists cache data from '
+                                  '{0}'.format(list_cache))
+                        return serial.load(fp_).get(form, []), False, False
+                elif _lock_cache(w_lock):
+                    # Set the w_lock and go
+                    refresh_cache = True
+                    break
+            except Exception:
+                time.sleep(0.2)
+                attempt += 1
+                continue
+        if attempt > 10:
+            save_cache = False
+            refresh_cache = True
+    return None, refresh_cache, save_cache
+
+
+def write_file_list_cache(opts, data, list_cache, w_lock):
+    '''
+    Checks the cache file to see if there is a new enough file list cache, and
+    returns the match (if found, along with booleans used by the fileserver
+    backend to determine if the cache needs to be refreshed/written).
+    '''
+    serial = salt.payload.Serial(opts)
+    with salt.utils.fopen(list_cache, 'w+b') as fp_:
+        fp_.write(serial.dumps(data))
+        try:
+            os.rmdir(w_lock)
+        except OSError, e:
+            log.trace("Error removing lockfile {0}:  {1}".format(w_lock, e))
+        log.trace('Lockfile {0} removed'.format(w_lock))
+
+
+def check_env_cache(opts, env_cache):
+    '''
+    Returns cached env names, if present. Otherwise returns None.
+    '''
+    if not os.path.isfile(env_cache):
+        return None
+    try:
+        with salt.utils.fopen(env_cache, 'rb') as fp_:
+            log.trace('Returning env cache data from {0}'.format(env_cache))
+            serial = salt.payload.Serial(opts)
+            return serial.load(fp_)
+    except (IOError, OSError):
+        pass
+    return None
 
 
 def generate_mtime_map(path_map):
@@ -50,7 +134,8 @@ def diff_mtime_map(map1, map2):
 
 def reap_fileserver_cache_dir(cache_base, find_func):
     '''
-    Remove unused cache items assuming the cache directory follows a directory convention:
+    Remove unused cache items assuming the cache directory follows a directory
+    convention:
 
     cache_base -> saltenv -> relpath
     '''
@@ -58,7 +143,8 @@ def reap_fileserver_cache_dir(cache_base, find_func):
         env_base = os.path.join(cache_base, saltenv)
         for root, dirs, files in os.walk(env_base):
             # if we have an empty directory, lets cleanup
-            # This will only remove the directory on the second time "_reap_cache" is called (which is intentional)
+            # This will only remove the directory on the second time
+            # "_reap_cache" is called (which is intentional)
             if len(dirs) == 0 and len(files) == 0:
                 os.rmdir(root)
                 continue
@@ -69,11 +155,15 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 try:
                     filename, _, hash_type = file_rel_path.rsplit('.', 2)
                 except ValueError:
-                    log.warn('Found invalid hash file [{0}] when attempting to reap cache directory.'.format(file_))
+                    log.warn((
+                        'Found invalid hash file [{0}] when attempting to reap'
+                        ' cache directory.'
+                    ).format(file_))
                     continue
                 # do we have the file?
                 ret = find_func(filename, saltenv=saltenv)
-                # if we don't actually have the file, lets clean up the cache object
+                # if we don't actually have the file, lets clean up the cache
+                # object
                 if ret['path'] == '':
                     os.unlink(file_path)
 
@@ -365,5 +455,7 @@ class Fileserver(object):
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
-            ret = [f for f in ret if f.startswith(prefix)]
+            ret = dict([
+                (x, y) for x, y in ret.items() if x.startswith(prefix)
+            ])
         return ret

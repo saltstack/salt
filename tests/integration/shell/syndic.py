@@ -36,35 +36,30 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         os.chdir(config_dir)
 
-        config_file_name = 'master'
-        pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
+        for fname in ('master', 'minion'):
+            pid_path = os.path.join(config_dir, '{0}.pid'.format(fname))
+            config = yaml.load(
+                open(self.get_config_file_path(fname), 'r').read()
+            )
+            config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
+            config['root_dir'] = config_dir
+            if 'ret_port' in config:
+                config['ret_port'] = int(config['ret_port']) + 10
+                config['publish_port'] = int(config['publish_port']) + 10
 
-        shutil.copyfile(
-            self.get_config_file_path('minion'),
-            os.path.join(config_dir, 'minion')
-        )
-        config = salt.config.syndic_config(
-            master_config_path=self.get_config_file_path('syndic'),
-            minion_config_path=self.get_config_file_path('minion')
-        )
-        config.pop('include')
-        config['root_dir'] = config_dir
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        config['ret_port'] = int(config['ret_port']) + 10
-        config['publish_port'] = int(config['publish_port']) + 10
+            open(os.path.join(config_dir, fname), 'w').write(
+                yaml.dump(config, default_flow_style=False)
+            )
 
-        open(os.path.join(config_dir, config_file_name), 'w').write(
-            yaml.dump(config, default_flow_style=False)
-        )
-
-        self.run_script(
+        ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} --pid-file {1} -l debug'.format(
+            '--config-dir={0} --pid-file={1} -l debug'.format(
                 config_dir,
                 pid_path
             ),
             timeout=5,
-            catch_stderr=True
+            catch_stderr=True,
+            with_retcode=True
         )
 
         # Now kill it if still running
@@ -75,6 +70,10 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
+            self.assertIn(
+                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
+            )
+            self.assertEqual(ret[2], 2)
         finally:
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):

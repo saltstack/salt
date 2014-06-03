@@ -34,6 +34,7 @@ load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,sal
 # --disable=W"
 disable=R,
   I0011,
+  I0013,
   E1101,
   E1103,
   C0102,
@@ -73,6 +74,7 @@ disable=R,
 # Disabled:
 # R* [refactoring suggestions & reports]
 # I0011 (locally-disabling)
+# I0013 (file-ignored)
 # E1101 (no-member) [pylint isn't smart enough]
 # E1103 (maybe-no-member)
 # C0102 (blacklisted-name) [because it activates C0103 too]

@@ -9,22 +9,23 @@ import salt.utils
 # Import python libs
 import logging
 import re
+import socket
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'dig'
 
 
 def __virtual__():
     '''
-    DNS functions which are based on dig
+    Only load module if dig binary is present
     '''
-    if not salt.utils.which('dig'):
-        return False
-    return 'dig'
+    return True if salt.utils.which('dig') else False
 
 
-def check_ip(x):
+def check_ip(addr):
     '''
-    Check that string x is a valid IP
+    Check if address is a valid IP. returns True if valid, otherwise False.
 
     CLI Example:
 
@@ -33,18 +34,47 @@ def check_ip(x):
         salt ns1 dig.check_ip 127.0.0.1
         salt ns1 dig.check_ip 1111:2222:3333:4444:5555:6666:7777:8888
     '''
-    # This is probably validating. Tacked on the CIDR bit myself.
-    ip_regex = (
-        r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}'
-        r'([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-        r'(/([0-9]|[12][0-9]|3[0-2]))?$'
-    )
-    # This IPv6 regex is from http://home.deds.nl/~aeron/regex/
-    ip6_regex = (
-        r'^(((?=.*(::))(?!.*\3.+\3))\3?|[\dA-F]{1,4}:)([\dA-F]{1,4}(\3|:\b)|\2){5}'
-        r'(([\dA-F]{1,4}(\3|:\b|$)|\2){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\Z'
-    )
-    return bool(re.match(ip_regex, x)) | bool(re.match(ip6_regex, x))
+    try:
+        addr = addr.rsplit('/', 1)
+    except AttributeError:
+        # Non-string passed
+        return False
+
+    # Test IPv4 first
+    try:
+        is_ipv4 = bool(socket.inet_pton(socket.AF_INET, addr[0]))
+    except socket.error:
+        # Not valid
+        is_ipv4 = False
+    if is_ipv4:
+        try:
+            if 1 <= int(addr[1]) <= 32:
+                return True
+        except ValueError:
+            # Non-int subnet notation
+            return False
+        except IndexError:
+            # No subnet notation used (i.e. just an IPv4 address)
+            return True
+
+    # Test IPv6 next
+    try:
+        is_ipv6 = bool(socket.inet_pton(socket.AF_INET6, addr[0]))
+    except socket.error:
+        # Not valid
+        is_ipv6 = False
+    if is_ipv6:
+        try:
+            if 8 <= int(addr[1]) <= 128:
+                return True
+        except ValueError:
+            # Non-int subnet notation
+            return False
+        except IndexError:
+            # No subnet notation used (i.e. just an IPv4 address)
+            return True
+
+    return False
 
 
 def A(host, nameserver=None):
@@ -163,43 +193,45 @@ def SPF(domain, record='SPF', nameserver=None):
 
         salt ns1 dig.SPF google.com
     '''
-    def _process(x):
-        '''
-        Parse out valid IP bits of an spf record.
-        '''
-        m = re.match(r'(\+|~)?ip4:([0-9./]+)', x)
-        if m:
-            if check_ip(m.group(2)):
-                return m.group(2)
-        return None
-
-    dig = ['dig', '+short', str(domain), record]
+    spf_re = re.compile(r'(?:\+|~)?(ip[46]|include):(.+)')
+    cmd = ['dig', '+short', str(domain), record]
 
     if nameserver is not None:
-        dig.append('@{0}'.format(nameserver))
+        cmd.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    result = __salt__['cmd.run_all'](' '.join(cmd), output_loglevel='debug')
     # In this case, 0 is not the same as False
-    if cmd['retcode'] != 0:
+    if result['retcode'] != 0:
         log.warn(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code {0!r}. Returning empty list as fallback.'
+            .format(result['retcode'])
         )
         return []
 
-    stdout = cmd['stdout']
-    if stdout == '' and record == 'SPF':
+    if result['stdout'] == '' and record == 'SPF':
         # empty string is successful query, but nothing to return. So, try TXT
         # record.
         return SPF(domain, 'TXT', nameserver)
 
-    stdout = re.sub('"', '', stdout).split()
-    if len(stdout) == 0 or stdout[0] != 'v=spf1':
+    sections = re.sub('"', '', result['stdout']).split()
+    if len(sections) == 0 or sections[0] != 'v=spf1':
         return []
 
-    return [x for x in map(_process, stdout) if x is not None]
+    if sections[1].startswith('redirect='):
+        # Run a lookup on the part after 'redirect=' (9 chars)
+        return SPF(sections[1][9:], 'SPF', nameserver)
+    ret = []
+    for section in sections[1:]:
+        try:
+            mechanism, address = spf_re.match(section).groups()
+        except AttributeError:
+            # Regex was not matched
+            continue
+        if mechanism == 'include':
+            ret.extend(SPF(address, 'SPF', nameserver))
+        elif mechanism in ('ip4', 'ip6') and check_ip(address):
+            ret.append(address)
+    return ret
 
 
 def MX(domain, resolve=False, nameserver=None):
@@ -243,3 +275,10 @@ def MX(domain, resolve=False, nameserver=None):
         ]
 
     return stdout
+
+# Let lowercase work, since that is the convention for Salt functions
+a = A
+aaaa = AAAA
+ns = NS
+spf = SPF
+mx = MX

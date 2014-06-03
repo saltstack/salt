@@ -67,19 +67,11 @@ def __virtual__():
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
-        log.debug(
-            'The \'botocore\' library is installed. The libcloud AWS support '
-            'will not be loaded.'
-        )
         return False
     except ImportError:
         pass
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no AWS cloud provider configuration available. Not '
-            'loading module'
-        )
         return False
 
     for provider, details in __opts__['providers'].iteritems():
@@ -131,7 +123,6 @@ def __virtual__():
     )
     show_instance = namespaced_function(show_instance, globals())
 
-    log.debug('Loading Libcloud AWS cloud module')
     return __virtualname__
 
 
@@ -521,6 +512,8 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
+    ret.update(data)
+
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
@@ -535,7 +528,6 @@ def create(vm_):
         log.info('Create and attach volumes to node {0}'.format(data.name))
         create_attach_volumes(volumes, location, data)
 
-    ret.update(data.__dict__)
     return ret
 
 

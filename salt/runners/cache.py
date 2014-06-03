@@ -99,7 +99,7 @@ def _clear_cache(tgt=None,
                                                 clear_mine_func=clear_mine_func)
 
 
-def clear_pillar(tgt, expr_form='glob'):
+def clear_pillar(tgt=None, expr_form='glob'):
     '''
     Clear the cached pillar data of the targeted minions
 

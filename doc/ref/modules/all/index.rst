@@ -19,7 +19,7 @@ Full list of builtin execution modules
     aliases
     alternatives
     apache
-    apt
+    aptpkg
     archive
     at
     augeas_cfg
@@ -205,7 +205,7 @@ Full list of builtin execution modules
     win_useradd
     xapi
     xmpp
-    yumpkg5
+    yumpkg
     zcbuildout
     zfs
     zpool

@@ -119,10 +119,6 @@ def __virtual__():
     Set up the libcloud functions and check for GCE configurations.
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no GCE cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
     for provider, details in __opts__['providers'].iteritems():
@@ -149,7 +145,6 @@ def __virtual__():
                 )
             )
 
-    log.debug('Loading GCE cloud module')
     return True
 
 
@@ -503,7 +498,6 @@ def create(vm_=None, call=None):
         'ex_network': __get_network(conn, vm_),
         'ex_tags': __get_tags(vm_),
         'ex_metadata': __get_metadata(vm_),
-        'ex_persistent_disk': __get_pd(vm_),
     }
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],

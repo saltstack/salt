@@ -52,7 +52,10 @@ def find_file(path, env='base', **kwargs):
         log.debug('minionfs will NOT serve top.sls '
                      'for security reasons: {0}'.format(path))
         return fnd
-    minion, pushed_file = path.split(os.sep, 1)
+    try:
+        minion, pushed_file = path.split(os.sep, 1)
+    except ValueError:
+        return fnd
     full = os.path.join(__opts__['cachedir'], 'minions',
                                      minion, 'files', pushed_file)
     if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
@@ -147,7 +150,7 @@ def file_hash(load, fnd):
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     file_hash(load, fnd)
-                    return(ret)
+                    return ret
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
@@ -155,7 +158,7 @@ def file_hash(load, fnd):
         except os.error:  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             file_hash(load, fnd)
-            return(ret)
+            return ret
 
     # if we don't have a cache entry-- lets make one
     ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])

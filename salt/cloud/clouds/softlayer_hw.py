@@ -17,8 +17,12 @@ configuration at:
       # SoftLayer account api key
       user: MYLOGIN
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-      provider: softlayer-hw
+      provider: softlayer_hw
 
+The SoftLayer Python Library needs to be installed in ordere to use the
+SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
+
+:depends: softlayer
 '''
 # pylint: disable=E0102
 
@@ -55,21 +59,11 @@ def __virtual__():
     Set up the libcloud functions and check for SoftLayer configurations.
     '''
     if not HAS_SLLIBS:
-        log.debug(
-            'The SoftLayer Python Library needs to be installed in ordere to '
-            'use the SoftLayer HW salt.cloud module. See: '
-            'https://pypi.python.org/pypi/SoftLayer'
-        )
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no SoftLayer cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading SoftLayer cloud module')
     return True
 
 
@@ -79,7 +73,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'softlayer-hw',
+        __active_provider_name__ or 'softlayer_hw',
         ('apikey',)
     )
 

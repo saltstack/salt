@@ -160,8 +160,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -328,11 +329,13 @@ def install(name=None,
                 log.error(problem)
             return {}
 
+        # It is critical that -Syu is run instead of -Sy:
+        # http://gist.io/5660494
         if salt.utils.is_true(refresh):
-            cmd = 'pacman -Syu --noprogressbar --noconfirm ' \
+            cmd = 'pacman -Syu --noprogressbar --noconfirm --needed ' \
                   '"{0}"'.format('" "'.join(targets))
         else:
-            cmd = 'pacman -S --noprogressbar --noconfirm ' \
+            cmd = 'pacman -S --noprogressbar --noconfirm --needed ' \
                   '"{0}"'.format('" "'.join(targets))
 
     old = list_pkgs()

@@ -4,6 +4,7 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
+from __future__ import print_function
 import collections
 import math
 import operator
@@ -15,6 +16,8 @@ import yaml
 import salt.utils
 import salt.utils.dictupdate
 from salt.exceptions import SaltException
+
+__proxyenabled__ = ['*']
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -304,7 +307,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
-            'default': {'pkg': 'apache', 'srv': 'apache'},
+            'default': 'Debian',
         }) %}
 
         myapache:
@@ -352,7 +355,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     :param default: default lookup_dict's key used if the grain does not exists
          or if the grain value has no match on lookup_dict.
 
-         .. versionadded:: 0.17.2
+         .. versionadded:: 2014.1
 
     CLI Example:
 

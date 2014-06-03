@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import collections
 import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
@@ -31,6 +32,13 @@ import types
 import warnings
 import yaml
 from calendar import month_abbr as months
+
+# Try to load pwd, fallback to getpass if unsuccessful
+try:
+    import pwd
+except ImportError:
+    import getpass
+    pwd = None
 
 try:
     import timelib
@@ -63,6 +71,20 @@ try:
 except ImportError:
     # Running as purely local
     pass
+
+try:
+    import grp
+    HAS_GRP = True
+except ImportError:
+    # grp is not available on windows
+    HAS_GRP = False
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
 
 # Import salt libs
 import salt._compat
@@ -99,8 +121,8 @@ DEFAULT_COLOR = '\033[00m'
 RED_BOLD = '\033[01;31m'
 ENDC = '\033[0m'
 
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w-]*)=(?!=)(.*)$')
+#KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
+KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -223,6 +245,16 @@ def get_context(template, line, num_lines=5, marker=None):
     buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
+
+
+def get_user():
+    '''
+    Get the current user
+    '''
+    if pwd is not None:
+        return pwd.getpwuid(os.geteuid()).pw_name
+    else:
+        return getpass.getuser()
 
 
 def daemonize(redirect_out=True):
@@ -379,7 +411,7 @@ def which_bin(exes):
     '''
     Scan over some possible executables and return the first one that is found
     '''
-    if not isinstance(exes, (list, tuple)):
+    if not isinstance(exes, collections.Iterable):
         return None
     for exe in exes:
         path = which(exe)
@@ -580,7 +612,7 @@ def jid_load(jid, cachedir, sum_type, serial='msgpack'):
     if not os.path.isfile(load_fn):
         return {}
     serial = salt.payload.Serial(serial)
-    with fopen(load_fn) as fp_:
+    with fopen(load_fn, 'rb') as fp_:
         return serial.load(fp_)
 
 
@@ -640,7 +672,18 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
+    # Get current file stats to they can be replicated after the new file is
+    # moved to the destination path.
+    fstat = None
+    if not salt.utils.is_windows():
+        try:
+            fstat = os.stat(dest)
+        except OSError:
+            pass
     shutil.move(tgt, dest)
+    if fstat is not None:
+        os.chown(dest, fstat.st_uid, fstat.st_gid)
+        os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
     rcon = which('restorecon')
     if rcon:
@@ -662,7 +705,7 @@ def backup_minion(path, bkroot):
     dname, bname = os.path.split(path)
     fstat = os.stat(path)
     msecs = str(int(time.time() * 1000000))[-6:]
-    stamp = time.asctime().replace(' ', '_')
+    stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')
     stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
     bkpath = os.path.join(bkroot,
                           dname[1:],
@@ -1152,9 +1195,17 @@ def is_windows():
 @real_memoize
 def is_linux():
     '''
-    Simple function to return if a host is Linux or not
+    Simple function to return if a host is Linux or not.
+    Note for a proxy minion, we need to return something else
     '''
-    return sys.platform.startswith('linux')
+    import __main__ as main
+    # This is a hack.  If a proxy minion is started by other
+    # means, e.g. a custom script that creates the minion objects
+    # then this will fail.
+    if 'salt-proxy-minion' in main.__file__:
+        return False
+    else:
+        return sys.platform.startswith('linux')
 
 
 @real_memoize
@@ -1194,7 +1245,7 @@ def check_state_result(running):
         if not isinstance(running[host], dict):
             return False
 
-        if host.find('_|-') == 4:
+        if host.find('_|-') >= 3:
             # This is a single ret, no host associated
             rets = running[host]
         else:
@@ -1587,8 +1638,8 @@ def warn_until(version,
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
             '{lineno}, is supposed to be shown until version '
-            '{until_version!r} is released. Current version is now '
-            '{salt_version!r}. Please remove the warning.'.format(
+            '{until_version} is released. Current version is now '
+            '{salt_version}. Please remove the warning.'.format(
                 filename=caller.filename,
                 lineno=caller.lineno,
                 until_version=version.formatted_version,
@@ -1856,7 +1907,7 @@ def is_bin_file(path):
         return None
     try:
         with open(path, 'r') as fp_:
-            return(is_bin_str(fp_.read(2048)))
+            return is_bin_str(fp_.read(2048))
     except os.error:
         return None
 
@@ -1912,3 +1963,98 @@ def repack_dictlist(data):
                 return {}
             ret.update(element)
     return ret
+
+
+def get_group_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group names of which the user
+    is a member.
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
+    group_names = None
+    if not isinstance(user, string_types):
+        raise Exception
+    if hasattr(os, 'getgrouplist'):
+        # Try os.getgrouplist, available in python >= 3.3
+        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        try:
+            group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+            log.trace('os.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
+        except Exception:
+            pass
+    else:
+        # Try pysss.getgrouplist
+        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        try:
+            import pysss
+            group_names = list(pysss.getgrouplist(user))
+            log.trace('pysss.getgrouplist for user {0!r}: {1!r}'.format(user, group_names))
+        except Exception:
+            pass
+    if group_names is None:
+        # Fall back to generic code
+        # Include the user's default group to behave like
+        # os.getgrouplist() and pysss.getgrouplist() do
+        log.trace('Trying generic group list for {0!r}'.format(user))
+        group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            if default_group not in group_names:
+                group_names.append(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+        log.trace('Generic group list for user {0!r}: {1!r}'.format(user, group_names))
+    if include_default is False:
+        # Historically, saltstack code for getting group lists did not
+        # include the default group. Some things may only want
+        # supplemental groups, so include_default=False omits the users
+        # default group.
+        try:
+            default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
+            group_names.remove(default_group)
+        except KeyError:
+            # If for some reason the user does not have a default group
+            pass
+    return sorted(set(group_names))
+
+
+def get_group_dict(user=None, include_default=True):
+    '''
+    Returns a dict of all of the system groups as keys, and group ids
+    as values, of which the user is a member.
+    E.g: {'staff': 501, 'sudo': 27}
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty dict
+        return {}
+    group_dict = {}
+    group_names = get_group_list(user, include_default=include_default)
+    for group in group_names:
+        group_dict.update({group: grp.getgrnam(group).gr_gid})
+    return group_dict
+
+
+def get_gid_list(user=None, include_default=True):
+    '''
+    Returns a list of all of the system group IDs of which the user
+    is a member.
+    '''
+    if HAS_GRP is False or HAS_PWD is False:
+        # We don't work on platforms that don't have grp and pwd
+        # Just return an empty list
+        return []
+    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    return sorted(set(gid_list))
+
+def total_seconds(td):
+    '''
+    Takes a timedelta and returns the total number of seconds
+    represented by the object. Wrapper for the total_seconds()
+    method which does not exist in versions of Python < 2.7.
+    '''
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6

@@ -20,7 +20,6 @@ try:
     import pwd
 except ImportError:  # This is in case windows minion is importing
     pass
-import getpass
 import resource
 import subprocess
 import multiprocessing
@@ -61,6 +60,13 @@ try:
     HAS_HALITE = True
 except ImportError:
     HAS_HALITE = False
+
+try:
+    import systemd.daemon
+    HAS_PYTHON_SYSTEMD = True
+except ImportError:
+    HAS_PYTHON_SYSTEMD = False
+
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +127,7 @@ class SMaster(object):
         acl_users = set(self.opts['client_acl'].keys())
         if self.opts.get('user'):
             acl_users.add(self.opts['user'])
-        acl_users.add(getpass.getuser())
+        acl_users.add(salt.utils.get_user())
         for user in pwd.getpwall():
             users.append(user.pw_name)
         for user in acl_users:
@@ -130,10 +136,10 @@ class SMaster(object):
                     user
                 )
             )
-            cumask = os.umask(191)
+
             if user not in users:
                 try:
-                    founduser = pwd.getpwnam(user)
+                    user = pwd.getpwnam(user)
                 except KeyError:
                     log.error('ACL user {0} is not available'.format(user))
                     continue
@@ -146,6 +152,7 @@ class SMaster(object):
                 os.unlink(keyfile)
 
             key = salt.crypt.Crypticle.generate_key_string()
+            cumask = os.umask(191)
             with salt.utils.fopen(keyfile, 'w+') as fp_:
                 fp_.write(key)
             os.umask(cumask)
@@ -194,19 +201,59 @@ class Master(SMaster):
         ckminions = salt.utils.minions.CkMinions(self.opts)
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
-        pillargitfs = None
+        pillargitfs = []
+        git_pillars = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                br, loc = opts_dict['git'].strip().split()
-                pillargitfs = git_pillar.GitPillar(br, loc, self.opts)
-                break
+                git_pillars.append(opts_dict)
+
+        for idx, opts_dict in enumerate(git_pillars):
+
+            if 'git' in opts_dict:
+                parts = opts_dict['git'].strip().split()
+                br, loc = parts[0], parts[1]
+                if len(parts) > 2:
+                    key, _dir = parts[2].split('=')
+
+                    if key != 'root':
+                        log.error("malformed params, got: %s. Ignoring.", key)
+                        continue
+
+                    working_dir = os.path.join(self.opts['cachedir'],
+                                               'pillar_gitfs', str(idx))
+                    pillar_dir = os.path.normpath(os.path.join(
+                        working_dir, _dir))
+
+                    self.opts['pillar_roots'][br] = pillar_dir
+
+                p = git_pillar.GitPillar(br, loc, self.opts)
+                pillargitfs.append(p)
+
+        # Clear remote fileserver backend env cache so it gets recreated during
+        # the first loop_interval
+        for backend in ('git', 'hg', 'svn'):
+            if backend in self.opts['fileserver_backend']:
+                env_cache = os.path.join(
+                    self.opts['cachedir'],
+                    '{0}fs'.format(backend),
+                    'envs.p'
+                )
+                if os.path.isfile(env_cache):
+                    log.debug('Clearing {0}fs env cache'.format(backend))
+                    try:
+                        os.remove(env_cache)
+                    except (IOError, OSError) as exc:
+                        log.critical(
+                            'Unable to clear env cache file {0}: {1}'
+                            .format(env_cache, exc)
+                        )
 
         old_present = set()
         while True:
             now = int(time.time())
             loop_interval = int(self.opts['loop_interval'])
             if self.opts['keep_jobs'] != 0 and (now - last) >= loop_interval:
-                cur = '{0:%Y%m%d%H}'.format(datetime.datetime.now())
+                cur = datetime.datetime.now()
 
                 if os.path.exists(jid_root):
                     for top in os.listdir(jid_root):
@@ -215,19 +262,59 @@ class Master(SMaster):
                             f_path = os.path.join(t_path, final)
                             jid_file = os.path.join(f_path, 'jid')
                             if not os.path.isfile(jid_file):
-                                continue
-                            with salt.utils.fopen(jid_file, 'r') as fn_:
-                                jid = fn_.read()
-                            if len(jid) < 18:
-                                # Invalid jid, scrub the dir
-                                shutil.rmtree(f_path)
-                            elif int(cur) - int(jid[:10]) > \
-                                    self.opts['keep_jobs']:
-                                shutil.rmtree(f_path)
+                                # No jid file means corrupted cache entry,
+                                # scrub it
+                                try:
+                                    shutil.rmtree(f_path)
+                                except (os.error, IOError) as exc:
+                                    log.critical('Error while attempting to '
+                                                 'remove an entry from the '
+                                                 'job cache!  {0}'.format(exc))
+                            else:
+                                with salt.utils.fopen(jid_file, 'r') as fn_:
+                                    jid = fn_.read()
+                                if len(jid) < 18:
+                                    # Invalid jid, scrub the dir
+                                    try:
+                                        shutil.rmtree(f_path)
+                                    except (os.error, IOError) as exc:
+                                        log.critical('Error while attempting to '
+                                                     'remove an entry from the '
+                                                     'job cache!  {0}'.format(exc))
+                                else:
+                                    # Parse the jid into a proper datetime
+                                    # object. We only parse down to the minute,
+                                    # since keep_jobs is measured in hours, so
+                                    # a minute difference is not important
+                                    try:
+                                        jidtime = datetime.datetime(int(jid[0:4]),
+                                                                    int(jid[4:6]),
+                                                                    int(jid[6:8]),
+                                                                    int(jid[8:10]),
+                                                                    int(jid[10:12]))
+                                    except ValueError as e:
+                                        # Invalid jid, scrub the dir
+                                        try:
+                                            shutil.rmtree(f_path)
+                                        except (os.error, IOError) as exc:
+                                            log.critical('Error while attempting to '
+                                                         'remove an entry from the '
+                                                         'job cache!  {0}'.format(exc))
+                                    difference = cur - jidtime
+                                    hours_difference = salt.utils.total_seconds(difference) / 3600.0
+                                    if hours_difference > self.opts['keep_jobs']:
+                                        try:
+                                            shutil.rmtree(f_path)
+                                        except (os.error, IOError) as exc:
+                                            log.critical('Error while attempting to '
+                                                         'remove an entry from the '
+                                                         'job cache!  {0}'.format(exc))
 
             if self.opts.get('publish_session'):
-                if now - rotate >= self.opts['publish_session'] * 60:
-                    salt.crypt.dropfile(self.opts['cachedir'])
+                if now - rotate >= self.opts['publish_session']:
+                    salt.crypt.dropfile(
+                            self.opts['cachedir'],
+                            self.opts['user'])
                     rotate = now
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
@@ -247,8 +334,8 @@ class Master(SMaster):
             salt.utils.verify.check_max_open_files(self.opts)
 
             try:
-                if pillargitfs is not None:
-                    pillargitfs.update()
+                for pillargit in pillargitfs:
+                    pillargit.update()
             except Exception as exc:
                 log.error('Exception {0} occurred in file server update '
                           'for git_pillar module.'.format(exc))
@@ -337,9 +424,7 @@ class Master(SMaster):
         if not fileserver.servers:
             errors.append(
                 'Failed to load fileserver backends, the configured backends '
-                'are:\n{0}'.format(
-                    ' '.join(self.opts['fileserver_backend'])
-                )
+                'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
             )
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
@@ -355,7 +440,7 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user \'{0}\''.format(getpass.getuser())
+            'salt-master is starting as user {0!r}'.format(salt.utils.get_user())
         )
 
         enable_sigusr1_handler()
@@ -454,15 +539,19 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
         )
+        salt.utils.check_ipc_path_max_len(pull_uri)
+
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
-        pull_sock.bind(pull_uri)
-        # Restrict access to the socket
-        os.chmod(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc'),
-            448
-        )
+
+        # Securely create socket
+        log.info('Starting the Salt Puller on {0}'.format(pull_uri))
+        old_umask = os.umask(0177)
+        try:
+            pull_sock.bind(pull_uri)
+        finally:
+            os.umask(old_umask)
 
         try:
             while True:
@@ -535,6 +624,13 @@ class ReqServer(object):
             proc.start()
 
         self.workers.bind(self.w_uri)
+
+        try:
+            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
+                systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon wasn't started by systemd
+            pass
 
         while True:
             try:
@@ -635,7 +731,6 @@ class MWorker(multiprocessing.Process):
         log.info('Worker binding to socket {0}'.format(w_uri))
         try:
             socket.connect(w_uri)
-
             while True:
                 try:
                     package = socket.recv()
@@ -855,86 +950,6 @@ class AESFuncs(object):
             return False
         return True
 
-    def _ext_nodes(self, load):
-        '''
-        Return the results from an external node classifier if one is
-        specified
-        '''
-        if 'id' not in load:
-            log.error('Received call for external nodes without an id')
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return {}
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
-            return {}
-        load.pop('tok')
-        ret = {}
-        # The old ext_nodes method is set to be deprecated in 0.10.4
-        # and should be removed within 3-5 releases in favor of the
-        # "master_tops" system
-        if self.opts['external_nodes']:
-            if not salt.utils.which(self.opts['external_nodes']):
-                log.error(('Specified external nodes controller {0} is not'
-                           ' available, please verify that it is installed'
-                           '').format(self.opts['external_nodes']))
-                return {}
-            cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-            ndata = yaml.safe_load(
-                    subprocess.Popen(
-                        cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])
-            if 'environment' in ndata:
-                saltenv = ndata['environment']
-            else:
-                saltenv = 'base'
-
-            if 'classes' in ndata:
-                if isinstance(ndata['classes'], dict):
-                    ret[saltenv] = list(ndata['classes'])
-                elif isinstance(ndata['classes'], list):
-                    ret[saltenv] = ndata['classes']
-                else:
-                    return ret
-        # Evaluate all configured master_tops interfaces
-
-        opts = {}
-        grains = {}
-        if 'opts' in load:
-            opts = load['opts']
-            if 'grains' in load['opts']:
-                grains = load['opts']['grains']
-        for fun in self.tops:
-            if fun not in self.opts.get('master_tops', {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=opts, grains=grains))
-            except Exception as exc:
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    'Top function {0} failed with error {1} for minion '
-                    '{2}'.format(
-                        fun, exc, load['id']
-                    )
-                )
-        return ret
 
     def _master_opts(self, load):
         '''
@@ -1010,7 +1025,7 @@ class AESFuncs(object):
                     minion,
                     'mine.p')
             try:
-                with salt.utils.fopen(mine) as fp_:
+                with salt.utils.fopen(mine, 'rb') as fp_:
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
@@ -1052,12 +1067,12 @@ class AESFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if not load.get('clear', False):
                 if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         new = self.serial.load(fp_)
                     if isinstance(new, dict):
                         new.update(load['data'])
                         load['data'] = new
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(load['data']))
         return True
 
@@ -1095,11 +1110,11 @@ class AESFuncs(object):
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
-                    with salt.utils.fopen(datap, 'r') as fp_:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
                         mine_data = self.serial.load(fp_)
                     if isinstance(mine_data, dict):
                         if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+') as fp_:
+                            with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                 except OSError:
                     return False
@@ -1215,24 +1230,33 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
+        mods = set()
+        for func in self.mminion.functions.values():
+            mods.add(func.__module__)
+        for mod in mods:
+            sys.modules[mod].__grains__ = load['grains']
+
         pillar = salt.pillar.Pillar(
                 self.opts,
                 load['grains'],
                 load['id'],
                 load.get('saltenv', load.get('env')),
-                load.get('ext'))
+                load.get('ext'),
+                self.mminion.functions)
         data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+') as fp_:
+            with salt.utils.fopen(datap, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+        for mod in mods:
+            sys.modules[mod].__grains__ = self.opts['grains']
         return data
 
     def _minion_event(self, load):
@@ -1285,7 +1309,7 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         if load['jid'] == 'req':
-        # The minion is returning a standalone job, request a jobid
+            # The minion is returning a standalone job, request a jobid
             load['jid'] = salt.utils.prep_jid(
                     self.opts['cachedir'],
                     self.opts['hash_type'],
@@ -1305,34 +1329,35 @@ class AESFuncs(object):
                 self.opts['cachedir'],
                 self.opts['hash_type']
                 )
-        if not os.path.isdir(jid_dir):
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present on the master: {jid}'.format(**load)
-            )
-            return False
         if os.path.exists(os.path.join(jid_dir, 'nocache')):
             return
         hn_dir = os.path.join(jid_dir, load['id'])
-        if not os.path.isdir(hn_dir):
-            os.makedirs(hn_dir)
-        # Otherwise the minion has already returned this jid and it should
-        # be dropped
-        else:
-            log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    load['id']
+        try:
+            os.mkdir(hn_dir)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                # Minion has already returned this jid and it should be dropped
+                log.error(
+                    'An extra return was detected from minion {0}, please verify '
+                    'the minion, this could be a replay attack'.format(
+                        load['id']
+                    )
                 )
-            )
-            return False
+                return False
+            elif e.errno == errno.ENOENT:
+                log.error(
+                    'An inconsistency occurred, a job was received with a job id '
+                    'that is not present on the master: {jid}'.format(**load)
+                )
+                return False
+            raise
 
         self.serial.dump(
             load['return'],
             # Use atomic open here to avoid the file being read before it's
             # completely written to. Refs #1935
             salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, 'return.p'), 'w+'
+                os.path.join(hn_dir, 'return.p'), 'w+b'
             )
         )
         if 'out' in load:
@@ -1341,7 +1366,7 @@ class AESFuncs(object):
                 # Use atomic open here to avoid the file being read before
                 # it's completely written to. Refs #1935
                 salt.utils.atomicfile.atomic_open(
-                    os.path.join(hn_dir, 'out.p'), 'w+'
+                    os.path.join(hn_dir, 'out.p'), 'w+b'
                 )
             )
 
@@ -1364,11 +1389,11 @@ class AESFuncs(object):
         if not os.path.isdir(jid_dir):
             os.makedirs(jid_dir)
             if 'load' in load:
-                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+') as fp_:
+                with salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b') as fp_:
                     self.serial.dump(load['load'], fp_)
         wtag = os.path.join(jid_dir, 'wtag_{0}'.format(load['id']))
         try:
-            with salt.utils.fopen(wtag, 'w+') as fp_:
+            with salt.utils.fopen(wtag, 'w+b') as fp_:
                 fp_.write('')
         except (IOError, OSError):
             log.error(
@@ -1620,7 +1645,13 @@ class AESFuncs(object):
         # Run the func
         if hasattr(self, func):
             try:
+                start = time.time()
                 ret = getattr(self, func)(load)
+                log.trace(
+                        'Master function call {0} took {1} seconds'.format(
+                            func, time.time() - start
+                            )
+                        )
             except Exception:
                 ret = ''
                 log.error(
@@ -1705,13 +1736,12 @@ class ClearFuncs(object):
             return True
 
         # After we've ascertained we're not on windows
-        import grp
         try:
             user = self.opts['user']
             pwnam = pwd.getpwnam(user)
             uid = pwnam[2]
             gid = pwnam[3]
-            groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+            groups = salt.utils.get_gid_list(user, include_default=False)
         except KeyError:
             log.error(
                 'Failed to determine groups for user {0}. The user is not '
@@ -2124,7 +2154,7 @@ class ClearFuncs(object):
 
         try:
             name = self.loadauth.load_name(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            if not (name in self.opts['external_auth'][clear_load['eauth']]) | ('*' in self.opts['external_auth'][clear_load['eauth']]):
                 msg = ('Authentication failure of type "eauth" occurred for '
                        'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
                 log.warning(msg)
@@ -2491,7 +2521,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif clear_load['user'] == getpass.getuser():
+            elif clear_load['user'] == salt.utils.get_user():
                 if clear_load.pop('key') != self.key.get(clear_load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
@@ -2529,7 +2559,7 @@ class ClearFuncs(object):
                     )
                     return ''
         else:
-            if clear_load.pop('key') != self.key[getpass.getuser()]:
+            if clear_load.pop('key') != self.key[salt.utils.get_user()]:
                 log.warning(
                     'Authentication failure of type "other" occurred.'
                 )
@@ -2585,12 +2615,12 @@ class ClearFuncs(object):
         # Save the invocation information
         self.serial.dump(
                 clear_load,
-                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.load.p'), 'w+b')
                 )
         # save the minions to a cache so we can see in the UI
         self.serial.dump(
                 minions,
-                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+')
+                salt.utils.fopen(os.path.join(jid_dir, '.minions.p'), 'w+b')
                 )
         if self.opts['ext_job_cache']:
             try:

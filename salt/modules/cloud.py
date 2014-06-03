@@ -8,7 +8,12 @@ import os
 import logging
 
 # Import salt libs
-import salt.cloud
+try:
+    import salt.cloud
+    HAS_SALTCLOUD = True
+except ImportError:
+    HAS_SALTCLOUD = False
+
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -22,9 +27,9 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
-        return False
-    return True
+    if HAS_SALTCLOUD:
+        return True
+    return False
 
 
 def _get_client():

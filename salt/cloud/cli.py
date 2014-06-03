@@ -12,9 +12,9 @@ Primary interfaces for the salt-cloud system
 # the VM data will be in opts['profiles']
 
 # Import python libs
+from __future__ import print_function
 import os
 import sys
-import getpass
 import logging
 
 # Import salt libs
@@ -51,7 +51,7 @@ class SaltCloud(parsers.SaltCloudParser):
         # Parse shell arguments
         self.parse_args()
 
-        salt_master_user = self.config.get('user', getpass.getuser())
+        salt_master_user = self.config.get('user', salt.utils.get_user())
         if salt_master_user is not None and not check_user(salt_master_user):
             self.error(
                 'salt-cloud needs to run as the same user as salt-master, '

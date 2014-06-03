@@ -140,11 +140,18 @@ Specify the location of the master pidfile
 Default: :file:`/`
 
 The system root directory to operate from, change this to make Salt run from
-an alternative root
+an alternative root.
 
 .. code-block:: yaml
 
     root_dir: /
+
+.. note::
+
+    This directory is prepended to the following options:
+    :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
+    :conf_master:`log_file`, :conf_master:`autosign_file`,
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
 
 .. conf_master:: pki_dir
 
@@ -302,10 +309,12 @@ will be automatically accepted. Matches will be searched for first by string
 comparison, then by globbing, then by full-string regex matching. This is
 insecure!
 
+.. conf_master:: autoreject_file
+
 ``autoreject_file``
 -------------------
 
-.. versionadded:: Hydrogen
+.. versionadded:: 2014.1.0 (Hydrogen)
 
 Default: ``not defined``
 
@@ -639,6 +648,246 @@ The buffer size in the file server in bytes
 .. code-block:: yaml
 
     file_buffer_size: 1048576
+
+.. conf_master:: file_ignore_regex
+
+``file_ignore_regex``
+---------------------
+
+Default: ``''``
+
+A regular expression (or a list of expressions) that will be matched
+against the file path before syncing the modules and states to the minions.
+This includes files affected by the file.recurse state.
+For example, if you manage your custom modules and states in subversion
+and don't want all the '.svn' folders and content synced to your minions,
+you could set this to '/\.svn($|/)'. By default nothing is ignored.
+
+.. code-block:: yaml
+
+    file_ignore_regex:
+      - '/\.svn($|/)'
+      - '/\.git($|/)'
+
+.. conf_master:: file_ignore_glob
+
+``file_ignore_glob``
+--------------------
+
+Default ``''``
+
+A file glob (or list of file globs) that will be matched against the file
+path before syncing the modules and states to the minions. This is similar
+to file_ignore_regex above, but works on globs instead of regex. By default
+nothing is ignored.
+
+.. code-block:: yaml
+   
+    file_ignore_glob:
+      - '\*.pyc'
+      - '\*/somefolder/\*.bak'
+      - '\*.swp'
+
+.. conf_master:: fileserver_backend
+
+``fileserver_backend``
+----------------------
+
+Default:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Salt supports a modular fileserver backend system, this system allows the salt
+master to link directly to third party systems to gather and manage the files
+available to minions. Multiple backends can be configured and will be searched
+for the requested file in the order in which they are defined here. The default
+setting only enables the standard backend ``roots``, which is configured using
+the :conf_master:`file_roots` option.
+
+Example:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+      - git
+
+.. conf_master:: gitfs_provider
+
+``gitfs_provider``
+------------------
+
+.. versionadded:: Helium
+
+Gitfs can be provided by one of two python modules: `GitPython`_ or `pygit2`_.
+If using pygit2, both libgit2 and git itself must also be installed. More
+information can be found in the :mod:`gitfs backend documentation
+<salt.fileserver.gitfs>`.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+
+.. code-block:: yaml
+
+    gitfs_provider: pygit2
+
+.. conf_master:: gitfs_remotes
+
+``gitfs_remotes``
+-----------------
+
+Default: ``[]``
+
+When using the ``git`` fileserver backend at least one git remote needs to be
+defined. The user running the salt master will need read access to the repo.
+
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and tags are
+translated into salt environments.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - git://github.com/saltstack/salt-states.git
+      - file:///var/git/saltmaster
+
+.. note::
+    ``file://`` repos will be treated as a remote, so refs you want used must
+    exist in that repo as *local* refs.
+
+.. conf_master:: gitfs_ssl_verify
+
+``gitfs_ssl_verify``
+--------------------
+
+Default: ``[]``
+
+The ``gitfs_ssl_verify`` option specifies whether to ignore ssl certificate
+errors when contacting the gitfs backend. You might want to set this to
+false if you're using a git backend that uses a self-signed certificate but
+keep in mind that setting this flag to anything other than the default of True
+is a security concern, you may want to try using the ssh transport.
+
+.. code-block:: yaml
+
+    gitfs_ssl_verify: True
+
+.. conf_master:: gitfs_root
+
+``gitfs_root``
+--------------
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver.
+
+.. code-block:: yaml
+
+    gitfs_root: somefolder/otherfolder
+
+.. conf_master:: gitfs_base
+
+``gitfs_base``
+--------------
+
+Default: ``master``
+
+Defines which branch/tag should be used as the ``base`` environment.
+
+.. code-block:: yaml
+
+    gitfs_base: salt
+
+.. conf_master:: hgfs_remotes
+
+``hgfs_remotes``
+----------------
+
+.. versionadded:: 0.17.0
+
+Default: ``[]``
+
+When using the ``hg`` fileserver backend at least one mercurial remote needs to
+be defined. The user running the salt master will need read access to the repo.
+
+The repos will be searched in order to find the file requested by a client and
+the first repo to have the file will return it. Branches and/or bookmarks are
+translated into salt environments, as defined by the
+:conf_master:`hgfs_branch_method` parameter.
+
+.. code-block:: yaml
+
+    hgfs_remotes:
+      - https://username@bitbucket.org/username/reponame
+
+.. conf_master:: hgfs_branch_method
+
+``hgfs_branch_method``
+----------------------
+
+.. versionadded:: 0.17.0
+
+Default: ``branches``
+
+Defines the objects that will be used as fileserver environments.
+
+* ``branches`` - Only branches and tags will be used
+* ``bookmarks`` - Only bookmarks and tags will be used
+* ``mixed`` - Branches, bookmarks, and tags will be used
+
+.. code-block:: yaml
+
+    hgfs_branch_method: mixed
+
+.. note::
+
+    Starting in version 2014.1.0 (Hydrogen), the value of the
+    :conf_master:`hgfs_base` parameter defines which branch is used as the
+    ``base`` environment, allowing for a ``base`` environment to be used with
+    an :conf_master:`hgfs_branch_method` of ``bookmarks``.
+
+    Prior to this release, the ``default`` branch will be used as the ``base``
+    environment.
+
+.. conf_master:: hgfs_root
+
+``hgfs_root``
+-------------
+
+.. versionadded:: 0.17.0
+
+Default: ``''``
+
+Serve files from a subdirectory within the repository, instead of the root.
+This is useful when there are files in the repository that should not be
+available to the Salt fileserver.
+
+.. code-block:: yaml
+
+    hgfs_root: somefolder/otherfolder
+
+.. conf_master:: hgfs_base
+
+``hgfs_base``
+-------------
+
+.. versionadded:: 2014.1.0 (Hydrogen)
+
+Default: ``default``
+
+Defines which branch should be used as the ``base`` environment. Change this if
+:conf_master:`hgfs_branch_method` is set to ``bookmarks`` to specify which
+bookmark should be used as the ``base`` environment.
+
+.. code-block:: yaml
+
+    hgfs_base: salt
+
 
 .. _pillar-configuration:
 

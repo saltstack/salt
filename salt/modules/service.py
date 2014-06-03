@@ -26,7 +26,7 @@ def __virtual__():
         'RedHat',
         'CentOS',
         'Amazon',
-        'Scientific',
+        'ScientificLinux',
         'CloudLinux',
         'Fedora',
         'Gentoo',

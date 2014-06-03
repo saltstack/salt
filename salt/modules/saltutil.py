@@ -14,15 +14,20 @@ import logging
 import fnmatch
 import time
 import sys
+import copy
+import threading
 
 # Import salt libs
 import salt.payload
 import salt.state
 import salt.client
 import salt.utils
+import salt.utils.process
 import salt.transport
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types
+
+__proxyenabled__ = ['*']
 
 # Import third party libs
 try:
@@ -41,11 +46,12 @@ def _sync(form, saltenv=None):
     if saltenv is None:
         # No environment passed, detect them based on gathering the top files
         # from the master
-        saltenv = 'base'
         st_ = salt.state.HighState(__opts__)
         top = st_.get_top()
         if top:
             saltenv = st_.top_matches(top).keys()
+        if not saltenv:
+            saltenv = 'base'
     if isinstance(saltenv, string_types):
         saltenv = saltenv.split(',')
     ret = []
@@ -381,10 +387,10 @@ def running():
 
         salt '*' saltutil.running
     '''
-
     ret = []
     serial = salt.payload.Serial(__opts__)
     pid = os.getpid()
+    current_thread = threading.currentThread().name
     proc_dir = os.path.join(__opts__['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
@@ -407,8 +413,18 @@ def running():
             # continue
             os.remove(path)
             continue
-        if data.get('pid') == pid:
-            continue
+        if __opts__['multiprocessing']:
+            if data.get('pid') == pid:
+                continue
+        else:
+            if data.get('pid') != pid:
+                os.remove(path)
+                continue
+            if data.get('jid') == current_thread:
+                continue
+            if not data.get('jid') in [x.name for x in threading.enumerate()]:
+                os.remove(path)
+                continue
         ret.append(data)
     return ret
 

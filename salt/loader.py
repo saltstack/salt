@@ -10,6 +10,7 @@ import sys
 import salt
 import logging
 import tempfile
+import time
 
 # Import salt libs
 from salt.exceptions import LoaderError
@@ -70,12 +71,12 @@ def _create_loader(
     for _dir in opts.get('module_dirs', []):
         # Prepend to the list to match cli argument ordering
         maybe_dir = os.path.join(_dir, ext_type)
-        if (os.path.isdir(maybe_dir)):
+        if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
             continue
 
         maybe_dir = os.path.join(_dir, '_{0}'.format(ext_type))
-        if (os.path.isdir(maybe_dir)):
+        if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
 
     if loaded_base_name is None:
@@ -125,6 +126,16 @@ def raw_mod(opts, name, functions):
     '''
     load = _create_loader(opts, 'modules', 'rawmodule')
     return load.gen_module(name, functions)
+
+
+def proxy(opts, functions, whitelist=None):
+    '''
+    Returns the proxy module for this salt-proxy-minion
+    '''
+    load = _create_loader(opts, 'proxy', 'proxy')
+    pack = {'name': '__proxy__',
+            'value': functions}
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def returners(opts, functions, whitelist=None):
@@ -280,6 +291,8 @@ def grains(opts):
     Return the functions for the dynamic grains and the values for the static
     grains.
     '''
+    if opts.get('skip_grains', False):
+        return {}
     if 'conf_file' in opts:
         pre_opts = {}
         pre_opts.update(salt.config.load_config(
@@ -425,6 +438,8 @@ class Loader(object):
         self.opts = self.__prep_mod_opts(opts)
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        if self.opts.get('grains_cache', False):
+            self.serial = salt.payload.Serial(self.opts)
 
     def __prep_mod_opts(self, opts):
         '''
@@ -602,7 +617,7 @@ class Loader(object):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
-        log.debug('loading {0} in {1}'.format(self.tag, self.module_dirs))
+        log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
         names = {}
         modules = []
         funcs = {}
@@ -619,14 +634,14 @@ class Loader(object):
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
             if not os.path.isabs(mod_dir):
-                log.debug(
+                log.trace(
                     'Skipping {0}, it is not an absolute path'.format(
                         mod_dir
                     )
                 )
                 continue
             if not os.path.isdir(mod_dir):
-                log.debug(
+                log.trace(
                     'Skipping {0}, it is not a directory'.format(
                         mod_dir
                     )
@@ -638,7 +653,7 @@ class Loader(object):
                     # log messages omitted for obviousness
                     continue
                 if fn_.split('.')[0] in disable:
-                    log.debug(
+                    log.trace(
                         'Skipping {0}, it is disabled by configuration'.format(
                             fn_
                         )
@@ -655,7 +670,7 @@ class Loader(object):
                         _name = fn_
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
-                    log.debug(
+                    log.trace(
                         'Skipping {0}, it does not end with an expected '
                         'extension'.format(
                             fn_
@@ -728,6 +743,21 @@ class Loader(object):
             modules.append(mod)
         for mod in modules:
             virtual = ''
+
+            # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
+            # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
+            # containing the names of the proxy types that the module supports.
+            if not hasattr(mod, 'render') and 'proxy' in self.opts:
+                if not hasattr(mod, '__proxyenabled__'):
+                    # This is a proxy minion but this module doesn't support proxy
+                    # minions at all
+                    continue
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or '*' in mod.__proxyenabled__):
+                    # This is a proxy minion, this module supports proxy
+                    # minions, but not this particular minion
+                    log.debug(mod)
+                    continue
+
             if hasattr(mod, '__opts__'):
                 mod.__opts__.update(self.opts)
             else:
@@ -965,6 +995,28 @@ class Loader(object):
         members. Then verify that the returns are python dict's and return
         a dict containing all of the returned values.
         '''
+        if self.opts.get('grains_cache', False):
+            cfn = os.path.join(
+            self.opts['cachedir'],
+            '{0}.cache.p'.format('grains')
+            )
+            if os.path.isfile(cfn):
+                grains_cache_age = int(time.time() - os.path.getmtime(cfn))
+                if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
+                    self.opts.get('refresh_grains_cache', False):
+                    log.debug('Retrieving grains from cache')
+                    try:
+                        with salt.utils.fopen(cfn, 'rb') as fp_:
+                            cached_grains = self.serial.load(fp_)
+                        return cached_grains
+                    except (IOError, OSError):
+                        pass
+                else:
+                    log.debug('Grains cache last modified {0} seconds ago and cache expiration is set to {1}. '
+                         'Grains cache expired. Refreshing.'.format(
+                    grains_cache_age, self.opts.get('grains_cache_expiration', 300)))
+            else:
+                log.debug('Grains cache file does not exist.')
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
@@ -991,4 +1043,21 @@ class Loader(object):
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)
+        # Write cache if enabled
+        if self.opts.get('grains_cache', False):
+            cumask = os.umask(077)
+            try:
+                if salt.utils.is_windows():
+                    # Make sure cache file isn't read-only
+                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
+                with salt.utils.fopen(cfn, 'w+b') as fp_:
+                    try:
+                        self.serial.dump(grains_data, fp_)
+                    except TypeError:
+                        # Can't serialize pydsl
+                        pass
+            except (IOError, OSError):
+                msg = 'Unable to write to grains cache file {0}'
+                log.error(msg.format(cfn))
+            os.umask(cumask)
         return grains_data

@@ -265,6 +265,9 @@ Edit the minion config file:
 4.  Uncomment and change the ``id:`` value to something descriptive like
     "saltdev". This isn't strictly necessary but it will serve as a reminder of
     which Salt installation you are working with.
+5.  If you changed the ``ret_port`` value in the master config because you are
+    also running a non-development version of Salt, then you will have to
+    change the ``master_port`` value in the minion config to match.
 
 .. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
 

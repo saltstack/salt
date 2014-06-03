@@ -65,7 +65,12 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
         if mod not in locals() and mod not in globals():
             try:
                 locals()[mod] = __import__(mod)
-                tops.append(os.path.dirname(locals()[mod].__file__))
+                moddir, modname = os.path.split(locals()[mod].__file__)
+                base, ext = os.path.splitext(modname)
+                if base == '__init__':
+                    tops.append(moddir)
+                else:
+                    tops.append(os.path.join(moddir, base + '.py'))
             except ImportError:
                 # Not entirely sure this is the right thing, but the only
                 # options seem to be 1) fail, 2) spew errors, or 3) pass.
@@ -80,6 +85,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
     for top in tops:
         base = os.path.basename(top)
         os.chdir(os.path.dirname(top))
+        if not os.path.isdir(top):
+            # top is a single file module
+            tfp.add(base)
+            continue
         for root, dirs, files in os.walk(base):
             for name in files:
                 if not name.endswith(('.pyc', '.pyo')):

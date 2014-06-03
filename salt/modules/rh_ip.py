@@ -157,7 +157,7 @@ def _parse_ethtool_opts(opts, iface):
             _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
-        valid = ['10', '100', '1000']
+        valid = ['10', '100', '1000', '10000']
         if str(opts['speed']) in valid:
             config.update({'speed': opts['speed']})
         else:
