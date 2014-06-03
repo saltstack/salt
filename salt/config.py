@@ -11,6 +11,8 @@ import logging
 import urlparse
 from copy import deepcopy
 import time
+import codecs
+import chardet
 
 # import third party libs
 import yaml
@@ -1780,6 +1782,9 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
+                utf_8_name = name.decode(chardet.detect(name)['encoding']).encode('utf-8')
+                if utf_8_name.startswith(codecs.BOM_UTF8):  # Remove BOM if exists
+                    name = utf_8_name.replace(codecs.BOM_UTF8, '', 1)
             if name:
                 log.info('Using cached minion ID from {0}: {1}'
                          .format(id_cache, name))
