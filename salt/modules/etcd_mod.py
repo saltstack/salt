@@ -63,6 +63,8 @@ def get_(key, recurse=False, profile=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt myminion etcd.get /path/to/key
         salt myminion etcd.get /path/to/key profile=my_etcd_config
         salt myminion etcd.get /path/to/key recurse=True profile=my_etcd_config
@@ -84,6 +86,8 @@ def set_(key, value, profile=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion etcd.set /path/to/key value
         salt myminion etcd.set /path/to/key value profile=my_etcd_config
     '''
@@ -98,6 +102,9 @@ def ls_(path='/', profile=None):
     Return all keys and dirs inside a specific path
 
     CLI Example:
+
+
+    .. code-block:: bash
 
         salt myminion etcd.ls /path/to/dir/
         salt myminion etcd.ls /path/to/dir/ profile=my_etcd_config
@@ -122,6 +129,9 @@ def rm_(key, recurse=False, profile=None):
 
     CLI Example:
 
+
+    .. code-block:: bash
+
         salt myminion etcd.rm /path/to/key
         salt myminion etcd.rm /path/to/key profile=my_etcd_config
         salt myminion etcd.rm /path/to/dir recurse=True profile=my_etcd_config
@@ -137,6 +147,9 @@ def tree(path='/', profile=None):
     Recurse through etcd and return all values
 
     CLI Example:
+
+
+    .. code-block:: bash
 
         salt myminion etcd.tree
         salt myminion etcd.tree profile=my_etcd_config
