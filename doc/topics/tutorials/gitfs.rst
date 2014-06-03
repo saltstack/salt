@@ -27,21 +27,48 @@ Merging a QA or staging branch up to a production branch
 can be all that is required to make state and pillar changes available to Salt
 minions.
 
+.. _gitfs-dependencies:
+
+Installing Python Dependencies
+==============================
+
+The GitFS backend requires GitPython_, version 0.3.0 or newer. For RHEL-based
+Linux distros, a compatible versions is available in EPEL, and can be easily
+installed on the master using yum:
+
+.. code-block:: bash
+
+    # yum install GitPython
+
+Ubuntu 14.04 LTS and Debian Wheezy (7.x) also have a compatible version packaged:
+
+.. code-block:: bash
+
+    # apt-get install python-git
+
+If your master is running an older version (such as Ubuntu 12.04 LTS or Debian
+Squeeze), then you will need to install GitPython using either pip_ or
+easy_install (it is recommended to use pip). Version 0.3.2.RC1 is now marked as
+the stable release in PyPI, so it should be a simple matter of running ``pip
+install GitPython`` (or ``easy_install GitPython``) as root.
+
+.. _`pip`: http://www.pip-installer.org/
+
+.. warning::
+
+    Keep in mind that if GitPython has been previously installed on the master
+    using pip (even if it was subsequently uninstalled), then it may still
+    exist in the build cache (typically ``/tmp/pip-build-root/GitPython``) if
+    the cache is not cleared after installation. The package in the build cache
+    will override any requirement specifiers, so if you try upgrading to
+    version 0.3.2.RC1 by running ``pip install 'GitPython==0.3.2.RC1'`` then it
+    will ignore this and simply install the version from the cache directory.
+    Therefore, it may be necessary to delete the GitPython directory from the
+    build cache in order to ensure that the specified version is installed.
+
 
 Simple Configuration
 ====================
-
-.. note::
-
-    GitFS requires ``GitPython`` version 0.3.0 or newer. 
-    If your OS does not have version 0.3.0 or newer
-    (such as Ubuntu 12.04 LTS), you can install ``GitPython`` with `pip`_:
-
-    .. code-block:: bash
-
-        # pip install GitPython
-
-.. _`pip`: http://www.pip-installer.org/
 
 To use the gitfs backend, only two configuration changes are required on the
 master:
