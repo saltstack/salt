@@ -217,6 +217,7 @@ Full list of builtin execution modules
     upstart
     useradd
     uwsgi
+    varnish
     virt
     virtualenv_mod
     win_autoruns
