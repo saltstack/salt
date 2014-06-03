@@ -12,7 +12,6 @@ import logging
 import urlparse
 from copy import deepcopy
 import codecs
-import chardet
 
 # import third party libs
 import yaml
