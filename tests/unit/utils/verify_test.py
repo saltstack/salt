@@ -89,8 +89,8 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_uid, os.getuid())
         self.assertEqual(dir_stat.st_gid, os.getgid())
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, stat.S_IRWXG)
+        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 0)
 
     @requires_network(only_local_network=True)
     def test_verify_socket(self):
