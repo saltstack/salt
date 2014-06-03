@@ -2050,3 +2050,11 @@ def get_gid_list(user=None, include_default=True):
         return []
     gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
     return sorted(set(gid_list))
+
+def total_seconds(td):
+    '''
+    Takes a timedelta and returns the total number of seconds
+    represented by the object. Wrapper for the total_seconds()
+    method which does not exist in versions of Python < 2.7.
+    '''
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
