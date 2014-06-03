@@ -92,13 +92,13 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         '''
         Set up the uxd stack and behaviors
         '''
-        #import wingdbstub
         self.uxd_stack.value = LaneStack(
                 lanename=self.opts.value.get('id', 'master'),
                 yid=self.yid.value,
                 sockdirpath=self.opts.value['sock_dir'])
         self.uxd_stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
+                stack=self.uxd_stack.value,
                 yid=0,
                 lanename=self.opts.value.get('id', 'master'),
                 dirpath=self.opts.value['sock_dir'])

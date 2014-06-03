@@ -32,6 +32,9 @@ from salt.exceptions import (
 from ioflo.base.odicting import odict
 import ioflo.base.deeding
 
+from ioflo.base.consoling import getConsole
+console = getConsole()
+
 # Import Third Party Libs
 HAS_PSUTIL = False
 try:
@@ -69,6 +72,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                       'ival': {'name': 'master',
                                'main': False,
                                'auto': True,
+                               'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}}
@@ -80,7 +84,8 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
         '''
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        name = self.local.data.name
+        name = self.opts.value.get('id', self.local.data.name)
+        localname = self.opts.value.get('id', self.local.data.localname)
         dirpath = os.path.abspath(
                 os.path.join(self.opts.value['cachedir'], 'raet'))
         auto = self.local.data.auto
@@ -90,7 +95,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
         eid = self.local.data.eid
         local = LocalEstate(
                 eid=eid,
-                name=name,
+                name=localname,
                 main=main,
                 ha=ha,
                 sigkey=sigkey,
@@ -103,6 +108,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 local=local,
                 store=self.store,
                 name=name,
+                localname=localname,
                 auto=auto,
                 main=main,
                 dirpath=dirpath,
@@ -237,6 +243,27 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
 
+class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
+    '''
+    Prints out messages on rxMsgs queue for associated stack
+    FloScript:
+
+    do raet road stack printer
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
+
+    def action(self, **kwa):
+        '''
+        Queue up message
+        '''
+        rxMsgs = self.rxmsgs.value
+        while rxMsgs:
+            msg = rxMsgs.popleft()
+            console.terse("\nReceived....\n{0}\n".format(msg))
+
 
 class LoadModules(ioflo.base.deeding.Deed):
     '''
@@ -361,6 +388,24 @@ class Setup(ioflo.base.deeding.Deed):
             self.workers.value = itertools.cycle(worker_seed)
 
 
+class SaltRoadService(ioflo.base.deeding.Deed):
+    '''
+    Process the udp traffic
+    FloScript:
+
+    do rx
+
+    '''
+    Ioinits = {
+               'udp_stack': '.raet.udp.stack.stack',
+               }
+
+    def action(self):
+        '''
+        Process inboud queues
+        '''
+        self.udp_stack.value.serviceAll()
+
 class Rx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
@@ -380,7 +425,6 @@ class Rx(ioflo.base.deeding.Deed):
         '''
         self.udp_stack.value.serviceAll()
         self.uxd_stack.value.serviceAll()
-
 
 class Tx(ioflo.base.deeding.Deed):
     '''
@@ -470,7 +514,6 @@ class Router(ioflo.base.deeding.Deed):
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
         '''
-        #import wingdbstub
         try:
             d_estate = msg['route']['dst'][0]
             d_yard = msg['route']['dst'][1]
@@ -640,16 +683,32 @@ class NixExecutor(ioflo.base.deeding.Deed):
         Send the return data back via the uxd socket
         '''
         ret_stack = LaneStack(
+                name=self.opts['id'] + ret['jid'],
                 lanename=self.opts['id'],
                 yid=ret['jid'],
                 sockdirpath=self.opts['sock_dir'],
                 dirpath=self.opts['cachedir'])
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
+                stack=ret_stack,
                 yid=0,
                 lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir']
                 )
+
+        log.debug("XXX Stack lanename {0} yid {1} dirpath {2} sockdirpath {3}\n".format(self.opts['id'],
+                                                                             ret['jid'],
+                                                                             self.opts['cachedir'],
+                                                                             self.opts['sock_dir']),
+                                                                             exc_info=True)
+        log.debug("XXX Stack Local name {0} yid {1} ha {2}\n".format(ret_stack.local.name,
+                                                                     ret_stack.local.yid,
+                                                                     ret_stack.local.ha),
+                                                                     exc_info=True)
+        log.debug("XXX Stack Remote name {0} yid {1} ha {2}".format(main_yard.name,
+                                                                    main_yard.yid,
+                                                                    main_yard.ha),
+                                                                    exc_info=True)
         ret_stack.addRemote(main_yard)
         route = {'src': (self.opts['id'], ret_stack.local.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
@@ -670,6 +729,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Pull the queue for functions to execute
         '''
+        #import wingdbstub
         while self.fun.value:
             exchange = self.fun.value.popleft()
             data = exchange.get('pub')
@@ -691,6 +751,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         )
             log.debug('Command details {0}'.format(data))
             ex_yard = RemoteYard(
+                    stack=self.uxd_stack.value,
                     yid=data['jid'],
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])

@@ -59,6 +59,7 @@ class LocalClient(salt.client.LocalClient):
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
+                stack=stack,
                 lanename='master',
                 yid=0,
                 dirpath=self.opts['sock_dir'])

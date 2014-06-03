@@ -61,6 +61,7 @@ class RAETChannel(Channel):
                 sockdirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.RemoteYard(
+                stack=self.stack,
                 yid=0,
                 lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir'])
