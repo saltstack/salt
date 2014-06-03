@@ -618,6 +618,29 @@ class Schedule(object):
             finally:
                 self.intervals[job] = int(time.time())
 
+    def add_job(self, data):
+        '''
+        Adds a new job to the scheduler. The format is the same as required in
+        the configuration file. See the docs on how YAML is interpreted into 
+        python data-structures to make sure, you pass correct dictionaries.
+        '''
+        
+        # we dont do any checking here besides making sure its a dict.
+        # eval() already does for us and raises errors accordingly
+        if not type(data) is dict:
+            raise ValueError, "Scheduled jobs have to be of type dict"
+        if not len(data.keys()) == 1:
+            raise ValueError, "You can only schedule one new job at a time"
+
+        new_job = data.keys()[0]
+
+        if new_job in self.opts['schedule']:
+            log.debug('Updating job settings for scheduled '
+                      'job: {0}'.format(new_job))
+        else:
+            log.debug('Added new job {0} to scheduler'.format(new_job))
+        self.opts['schedule'].update(data)
+
 
 def clean_proc_dir(opts):
 
@@ -653,3 +676,4 @@ def clean_proc_dir(opts):
                         os.unlink(fn_)
                     except OSError:
                         pass
+
