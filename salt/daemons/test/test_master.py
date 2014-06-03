@@ -12,9 +12,7 @@ from ioflo.base.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-
 import salt.daemons.flo
-
 
 def test():
     """ Execute run.start """
