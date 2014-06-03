@@ -20,7 +20,7 @@ OpenStack instances.
 
       # Configure the OpenStack driver
       #
-      identity_url: http://identity.youopenstack.com/v2.0/
+      identity_url: http://identity.youopenstack.com/v2.0/tokens
       compute_name: nova
       protocol: ipv4
 
