@@ -641,14 +641,14 @@ def create_container(image,
             name=name,
         )
         container = container_info['Id']
-        callback = valid
+        callback = _valid
         comment = 'Container created'
         out = {
             'info': _get_container_infos(container),
             'out': container_info
         }
         __salt__['mine.send']('docker.get_containers', host=True)
-        return callback(status, id=container, comment=comment, out=out)
+        return callback(status, id_=container, comment=comment, out=out)
     except Exception:
         _invalid(status, id_=image, out=traceback.format_exc())
     __salt__['mine.send']('docker.get_containers', host=True)
@@ -865,7 +865,7 @@ def restart(container, timeout=10):
                    comment='Container {0} was restarted'.format(container),
                    id_=container)
         else:
-            invalid(status)
+            _invalid(status)
     except Exception:
         _invalid(status, id_=container, out=traceback.format_exc(),
                  comment=(
