@@ -261,14 +261,30 @@ def versions():
 
 def bootstrap(version="develop",
               script=None,
-              hosts=""):
+              hosts="",
+              script_args=""):
     '''
     Bootstrap minions with salt-bootstrap
 
     Options:
         version: git tag of version to install [default: develop]
-        script: Script to execute [default: https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh]
         hosts: Comma separated hosts [example: hosts="host1.local,host2.local"]
+        script: Script to execute [default: https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh]
+        script_args:
+            -D Show debug output.
+            -g Salt repository URL. (default: git://github.com/saltstack/salt.git)
+            -M Also install salt-master
+            -S Also install salt-syndic
+            -N Do not install salt-minion
+            -X Do not start daemons after installation
+            -P Allow pip based installations
+            -F Allow copied files to overwrite existing(config, init.d, etc)
+            -U If set, fully upgrade the system prior to bootstrapping salt
+            -I If set, allow insecure connections while downloading files
+            -A Pass the salt-master DNS name or IP.
+            -i Pass the salt-minion id. 
+            -L Install the Apache Libcloud package if possible(required for salt-cloud)
+            -p Extra-package to install while installing salt dependencies. One package per -p flag
 
     CLI Example:
 
@@ -277,6 +293,7 @@ def bootstrap(version="develop",
         salt-run manage.bootstrap hosts="host1,host2"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+        salt-run manage.bootstrap hosts="host1,host2" script_args="-A saltmaster.domain.com -i customid"
 
     '''
     if script is None:
@@ -288,7 +305,7 @@ def bootstrap(version="develop",
         subprocess.call(["ssh", "root@" + host, "python -c 'import urllib; "
                         "print urllib.urlopen("
                         "\"" + script + "\""
-                        ").read()' | sh -s -- git " + version])
+                        ").read()' | sh -s -- git " + version + ' ' + script_args])
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
