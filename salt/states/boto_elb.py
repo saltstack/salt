@@ -592,8 +592,8 @@ def _cnames_present(
         _name = cname.get('name', None)
         _zone = cname.get('zone', None)
         if not _name or not _zone:
-            raise SaltInvocationError('cnames must provide name, value and'
-                                      ' zone attributes.')
+            raise SaltInvocationError('cnames must provide name and zone'
+                                      ' attributes.')
         record = __salt__['boto_route53.get_record'](_name, _zone, 'CNAME',
                                                      False, region, key,
                                                      keyid, profile)
@@ -658,7 +658,7 @@ def _cnames_present(
                     ret['result'] = True
             if not_updated:
                 msg = 'Failed to update cnames {0}.'
-                msg = msg.format(','.join(not_created))
+                msg = msg.format(','.join(not_updated))
                 if 'comment' in ret:
                     ret['comment'] = ret['comment'] + ' ' + msg
                 else:
