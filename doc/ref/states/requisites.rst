@@ -101,11 +101,21 @@ including the sls file and then setting a state to ``require`` the included sls 
 watch
 -----
 
-``watch`` statements are used to monitor changes in other states. The state containing
-the ``watch`` requisite is defined as the watching state. The state specified in the
-``watch`` statement is defined as the watched state. When the watched state executes,
-it will return a dictionary containing a key named "changes". Here are two examples
-of state return dictionaries, shown in json for clarity:
+``watch`` statements are used to add additional behavior on changes in other
+states.
+
+.. note::
+
+    If a state should only execute when another state has changes, and
+    otherwise do nothing, the new ``onchanges`` requisite should be used
+    instead of ``watch``.  ``watch`` is designed to add *additional* behavior
+    when there are changes, but otherwise execute normally.
+
+The state containing the ``watch`` requisite is defined as the watching
+state. The state specified in the ``watch`` statement is defined as the watched
+state. When the watched state executes, it will return a dictionary containing
+a key named "changes". Here are two examples of state return dictionaries,
+shown in json for clarity:
 
 .. code-block:: json
 
@@ -131,24 +141,35 @@ of state return dictionaries, shown in json for clarity:
         }
     }
 
-If the "changes" key contains a populated dictionary, it means that changes in
-the watched state occurred. The watching state will now execute. If the "changes"
-key contains an empty dictionary, this means that changes in the watched state
-did not occur and the watching state will not execute.
+If the "result" of the watched state is ``True``, the watching state *will
+execute normally*.  This part of ``watch`` mirrors the functionality of the
+``require`` requisite.  If the "result" of the watched state is ``False``, the
+watching state will never run, nor will the watching state's ``mod_watch``
+function execute.
 
-The behavior of ``watch`` depends on the presence of a function called
-``mod_watch`` in the watching state module. Note: Not all state modules contain
-``mod_watch``. If ``mod_watch`` is present, the watched state is checked to see
-if it made any changes to the system. If the watched state returns changes, the
-``mod_watch`` function is called and the watching state executes. If the watching
-state does not contain ``mod_watch``, then watch behaves the same way as the
-``require`` requisite: the watching state will only execute if the watched state
-executes successfully. If the watched state fails, then the watching state will
-not run.
+However, if the "result" of the watched state is ``True``, and the "changes"
+key contains a populated dictionary (changes occurred in the watched state),
+then the ``watch`` requisite can add additional behavior.  This additional
+behavior is defined by the ``mod_watch`` function within the watching state
+module.  If the ``mod_watch`` function exists in the watching state module, it
+will be called *in addition to* the normal watching state.  The return data
+from the ``mod_watch`` function is what will be returned to the master in this
+case; the return data from the main watching function is discarded.
+
+If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
+exactly like the ``require`` requisite (the watching state will execute if
+"result" is ``True``, and fail if "result" is ``False`` in the watched state).
+
+.. note::
+
+    Not all state modules contain ``mod_watch``. If ``mod_watch`` is absent
+    from the watching state module, the ``watch`` requisite behaves exactly
+    like a ``require`` requisite.
 
 A good example of using ``watch`` is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
-the service is reloaded/restarted when the watched state changes:
+the service is reloaded/restarted when the watched state changes, in addition
+to Salt ensuring that the service is running.
 
 .. code-block:: yaml
 
