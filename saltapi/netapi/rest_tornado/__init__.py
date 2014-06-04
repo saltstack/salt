@@ -1,5 +1,9 @@
 import logging
 
+__virtualname__ = 'rest_tornado'
+
+logger = logging.getLogger(__virtualname__)
+
 try:
     import tornado.httpserver
     import tornado.ioloop
@@ -7,15 +11,12 @@ try:
     import tornado.gen
 
     has_tornado = True
-except ImportError:
+except ImportError as err:
     has_tornado = False
+    logger.info('ImportError! {}'.format(str(err)))
 
 import salt.auth
 
-
-__virtualname__ = 'rest_tornado'
-
-logger = logging.getLogger(__virtualname__)
 
 
 def __virtual__():
@@ -35,6 +36,8 @@ def start():
 
     mod_opts = __opts__.get(__virtualname__, {})
 
+    logger.info("mod opts are {}".format(mod_opts))
+
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
 
@@ -48,6 +51,7 @@ def start():
         (r"/run", saltnado.RunSaltAPIHandler),
         (r"/events", saltnado.EventsSaltAPIHandler),
         (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
+        (r"/websocket(/.*)?", saltnado.WebsocketHandler),
 
     ], debug=mod_opts.get('debug', False))
 
@@ -59,7 +63,7 @@ def start():
     # the kwargs for the HTTPServer
     kwargs = {}
     if not mod_opts.get('disable_ssl', False):
-        if 'certfile' not in mod_opts or 'keyfile' not in mod_opts:
+        if 'ssl_crt' not in mod_opts or 'ssl_key' not in mod_opts:
             logger.error("Not starting '%s'. Options 'ssl_crt' and "
                     "'ssl_key' are required if SSL is not disabled.",
                     __name__)

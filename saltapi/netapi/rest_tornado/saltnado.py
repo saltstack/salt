@@ -28,6 +28,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.gen
+import tornado.websocket
 from tornado.concurrent import Future
 
 from collections import defaultdict
@@ -46,6 +47,8 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
+
+logger = logging.getLogger()
 
 '''
 The clients rest_cherrypi supports. We want to mimic the interface, but not
@@ -684,6 +687,38 @@ class EventsSaltAPIHandler(SaltAPIHandler):
 
         self.finish()
 
+
+class WebsocketHandler(tornado.websocket.WebSocketHandler):
+    '''
+    Handler for /events requests
+    '''
+    # @tornado.gen.coroutine
+    def open(self, *args, **kwargs):
+        self.connected = False
+        logger.info('In the open method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+
+    @tornado.gen.coroutine
+    def on_message(self, *args, **kwargs):
+
+        if self.connected:
+            logger.info('Already connected, returning')
+            return
+
+        self.connected = True
+        logger.info('In the on_message method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+        while True:
+            try:
+                event = yield self.application.event_listener.get_event(self)
+                self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
+            except Exception as err:
+                logger.info('Error! Ending server side connection. Reason = {}'.format(str(err)))
+                break
+
+        self.close()
+
+    def on_close(self, *args, **kwargs):
+        logger.info('In the close method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+        self.close()
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
     '''
