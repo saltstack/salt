@@ -71,7 +71,7 @@ requisite_in: ``require_in``, ``watch_in``, ``prereq_in`` and ``use_in``. All of
 requisites define specific relationships and always work with the dependency
 logic defined above.
 
-Require
+require
 -------
 
 The use of ``require`` demands that the dependent state executes before the
@@ -98,7 +98,7 @@ including the sls file and then setting a state to ``require`` the included sls 
         - require:
           - sls: foo
 
-Watch
+watch
 -----
 
 ``watch`` statements are used to monitor changes in other states. The state containing
@@ -160,7 +160,7 @@ the service is reloaded/restarted when the watched state changes:
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
 
-Prereq
+prereq
 ------
 
 .. versionadded:: 0.16.0
@@ -211,7 +211,7 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
-Onfail
+onfail
 ------
 
 .. versionadded:: Helium
@@ -241,7 +241,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - onfail:
           - mount: primary_mount
 
-Onchanges
+onchanges
 ---------
 
 .. versionadded:: Helium
@@ -250,7 +250,7 @@ The ``onchanges`` requisite makes a state only apply if the required states
 generate changes. This can be a useful way to execute a post hook after
 changing aspects of a system.
 
-Use
+use
 ---
 
 The ``use`` requisite is used to inherit the arguments passed in another
@@ -284,7 +284,7 @@ inherit inherited options.
 
 .. _requisites-require-in:
 
-Require In
+require_in
 ----------
 
 The ``require_in`` requisite is the literal reverse of ``require``. If
@@ -364,7 +364,7 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
 
 .. _requisites-watch-in:
 
-Watch In
+watch_in
 --------
 
 ``watch_in`` functions the same way as ``require_in``, but applies
@@ -409,7 +409,7 @@ to restart), the dependent state (Apache state) is de-coupled from the depending
         - watch_in:
           - service: apache
 
-Prereq In
+prereq_in
 ---------
 
 The ``prereq_in`` requisite_in follows the same assignment logic as the
