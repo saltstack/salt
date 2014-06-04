@@ -346,7 +346,7 @@ def installed(name,
     already_exists = cinfos['status']
     # if container exists but is not started, try to start it
     if already_exists:
-        return _valid(comment='image {!r} already exists'.format(name))
+        return _valid(comment='image {0!r} already exists'.format(name))
     dports, dvolumes, denvironment = {}, [], {}
     if not ports:
         ports = []
@@ -422,17 +422,17 @@ def absent(name):
             is_running = __salt__['docker.is_running'](cid)
             if is_running:
                 return _invalid(
-                    comment=('Container {!r}'
+                    comment=('Container {0!r}'
                              ' could not be stopped'.format(cid)))
             else:
-                return _valid(comment=('Container {!r}'
+                return _valid(comment=('Container {0!r}'
                                        ' was stopped,'.format(cid)),
                               changes={name: True})
         else:
-            return _valid(comment=('Container {!r}'
+            return _valid(comment=('Container {0!r}'
                                    ' is stopped,'.format(cid)))
     else:
-        return _valid(comment='Container {!r} not found'.format(name))
+        return _valid(comment='Container {0!r} not found'.format(name))
 
 
 def present(name):
@@ -636,14 +636,14 @@ def running(name, container=None, port_bindings=None, binds=None,
             is_running = __salt__['docker.is_running'](container)
             if is_running:
                 return _valid(
-                    comment='Container {!r} started.\n'.format(container),
+                    comment='Container {0!r} started.\n'.format(container),
                     changes={name: True})
             else:
                 return _invalid(
-                    comment=('Container {!r}'
-                            ' cannot be started\n{!s}').format(container,
+                    comment=('Container {0!r}'
+                            ' cannot be started\n{0!s}').format(container,
                                                                 started['out']))
         else:
             return _valid(
-                comment='Container {!r} started.\n'.format(container),
+                comment='Container {0!r} started.\n'.format(container),
                 changes={name: True})
