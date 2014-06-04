@@ -8,7 +8,7 @@ salt as different environments.
 To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
 master config file.
 
-As of the :strong:`Helium` release, the Git fileserver backend will support
+As of the next feature release, the Git fileserver backend will support
 `GitPython`_, `pygit2`_, and `dulwich`_ to provide the Python interface to git.
 If more than one of these are present, the order of preference for which one
 will be chosen is the same as the order in which they were listed: GitPython,
@@ -22,8 +22,9 @@ to specify which provider should be used.
 
 .. note:: Minimum requirements
 
-    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well as
-    git itself.
+    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well
+    as git itself. Instructions for installing GitPython can be found
+    :ref:`here <gitfs-dependencies>`.
 
     Using `pygit2`_ requires a minimum pygit2 version of 0.19.0. Additionally,
     using pygit2 as a provider requires `libgit2`_ 0.19.0 or newer, as well as
@@ -278,7 +279,7 @@ def __virtual__():
     Only load if the desired provider module is present and gitfs is enabled
     properly in the master config file.
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     try:
         return __virtualname__ if _get_provider() else False

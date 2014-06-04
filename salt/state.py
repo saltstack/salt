@@ -690,7 +690,7 @@ class State(object):
             # order for the newly installed package to be importable.
             reload(site)
         self.load_modules()
-        if not self.opts.get('local', False):
+        if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):

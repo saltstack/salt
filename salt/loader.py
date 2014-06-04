@@ -1050,7 +1050,7 @@ class Loader(object):
                 elif virtual is not True and module_name != virtual:
                     # The module is renaming itself. Updating the module name
                     # with the new name
-                    log.debug('Loaded {0} as virtual {1}'.format(
+                    log.trace('Loaded {0} as virtual {1}'.format(
                         module_name, virtual
                     ))
 

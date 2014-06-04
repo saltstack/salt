@@ -8,6 +8,7 @@ involves preparing the three listeners and the workers needed by the master.
 import os
 import re
 import logging
+import time
 try:
     import pwd
 except ImportError:
@@ -73,7 +74,7 @@ def init_git_pillar(opts):
 
 def clean_fsbackend(opts):
     '''
-    Clean ou the old fileserver backends
+    Clean out the old fileserver backends
     '''
     # Clear remote fileserver backend env cache so it gets recreated
     for backend in ('git', 'hg', 'svn'):
@@ -92,6 +93,23 @@ def clean_fsbackend(opts):
                         'Unable to clear env cache file {0}: {1}'
                         .format(env_cache, exc)
                     )
+
+
+def clean_expired_tokens(opts):
+    '''
+    Clean expired tokens from the master
+    '''
+    serializer = salt.payload.Serial(opts)
+    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
+        for token in filenames:
+            token_path = os.path.join(dirpath, token)
+            with salt.utils.fopen(token_path) as token_file:
+                token_data = serializer.loads(token_file.read())
+                if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
+                    try:
+                        os.remove(token_path)
+                    except (IOError, OSError):
+                        pass
 
 
 def clean_old_jobs(opts):
