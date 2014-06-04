@@ -1513,6 +1513,8 @@ class Minion(MinionBase):
                             tag, data = salt.utils.event.MinionEvent.unpack(package)
                             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
                             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+                        elif package.startswith('__master_disconnect'):
+                            log.debug('handling master disconnect')
 
                         self.epub_sock.send(package)
                     except Exception:
