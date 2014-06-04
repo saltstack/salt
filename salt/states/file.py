@@ -1889,7 +1889,7 @@ def recurse(name,
 
         # Conflicts can occur if some kwargs are passed in here
         pass_kwargs = {}
-        faults = ['mode', 'makedirs', 'replace']
+        faults = ['mode', 'makedirs']
         for key in kwargs:
             if key not in faults:
                 pass_kwargs[key] = kwargs[key]
@@ -1903,7 +1903,6 @@ def recurse(name,
             template=template,
             makedirs=True,
             context=context,
-            replace=True,
             defaults=defaults,
             backup=backup,
             **pass_kwargs)
