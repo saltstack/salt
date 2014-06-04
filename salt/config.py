@@ -54,6 +54,7 @@ VALID_OPTS = {
     'master_port': int,
     'master_type': str,
     'master_finger': str,
+    'master_alive_interval': int,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -245,6 +246,7 @@ DEFAULT_MINION_OPTS = {
     'master_type': 'str',
     'master_port': '4506',
     'master_finger': '',
+    'master_alive_interval': 0,
     'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -1873,18 +1875,10 @@ def apply_minion_config(overrides=None,
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
-    if '__mine_interval' not in opts.get('schedule', {}):
-        if not 'schedule' in opts:
-            opts['schedule'] = {}
-        opts['schedule'].update({
-            '__mine_interval':
-            {
-                'function': 'mine.update',
-                'minutes': opts['mine_interval'],
-                'jid_include': True,
-                'maxrunning': 2
-            }
-        })
+
+    # if there is no schedule option yet, add an empty scheduler
+    if not 'schedule' in opts:
+        opts['schedule'] = {}
     return opts
 
 
