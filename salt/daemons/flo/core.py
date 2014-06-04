@@ -117,6 +117,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
 
+
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Closes stack server socket connection
@@ -241,6 +242,7 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
             if stack.remotes:
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
+
 
 class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
     '''
@@ -405,6 +407,7 @@ class SaltRoadService(ioflo.base.deeding.Deed):
         '''
         self.udp_stack.value.serviceAll()
 
+
 class Rx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
@@ -424,6 +427,7 @@ class Rx(ioflo.base.deeding.Deed):
         '''
         self.udp_stack.value.serviceAll()
         self.uxd_stack.value.serviceAll()
+
 
 class Tx(ioflo.base.deeding.Deed):
     '''
