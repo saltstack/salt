@@ -53,7 +53,7 @@ class LocalClient(salt.client.LocalClient):
                 **kwargs)
         yid = salt.utils.gen_jid()
         stack = LaneStack(
-                name = 'client' + yid,
+                name=('client' + yid),
                 yid=yid,
                 lanename='master',
                 sockdirpath=self.opts['sock_dir'])
