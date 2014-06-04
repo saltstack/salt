@@ -101,8 +101,8 @@ including the sls file and then setting a state to ``require`` the included sls 
 watch
 -----
 
-``watch`` statements are used to add additional behavior on changes in other
-states.
+``watch`` statements are used to add additional behavior when there are changes
+in other states.
 
 .. note::
 
