@@ -167,7 +167,7 @@ def save_load(jid, clear_load):
     '''
     Save the load to the specified jid
     '''
-    jid_dir = _jid_dir(clear_load['jid'])
+    jid_dir = _jid_dir(jid)
 
     serial = salt.payload.Serial(__opts__)
 
