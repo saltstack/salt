@@ -1254,6 +1254,26 @@ class Minion(MinionBase):
         ).compile_pillar()
         self.module_refresh()
 
+    def manage_schedule(self, package):
+        '''
+        Refresh the functions and returners.
+        '''
+        tag, data = salt.utils.event.MinionEvent.unpack(package)
+        func = data.get('func', None)
+
+        if func == 'delete':
+            job = data.get('job', None)
+            self.schedule.delete_job(job)
+        elif func == 'add':
+            name = data.get('name', None)
+            schedule = data.get('schedule', None)
+            self.schedule.add_job(name, schedule)
+        elif func == 'modify':
+            name = data.get('name', None)
+            schedule = data.get('schedule', None)
+            self.schedule.modify_job(name, schedule)
+
+
     def environ_setenv(self, package):
         '''
         Set the salt-minion main process environment according to
@@ -1400,6 +1420,8 @@ class Minion(MinionBase):
                             self.module_refresh()
                         elif package.startswith('pillar_refresh'):
                             self.pillar_refresh()
+                        elif package.startswith('manage_schedule'):
+                            self.manage_schedule(package)
                         elif package.startswith('grains_refresh'):
                             if self.grains_cache != self.opts['grains']:
                                 self.pillar_refresh()
