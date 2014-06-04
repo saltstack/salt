@@ -60,6 +60,12 @@ as a passed in dict, or as a string to pull from pillars or minion config:
                   s3_bucket_name: 'mybucket'
                   s3_bucket_prefix: 'my-logs'
                   emit_interval: 5
+            - cnames:
+                - name: mycname.example.com.
+                  zone: example.com.
+                  ttl: 60
+                - name: myothercname.example.com.
+                  zone: example.com.
 
     # Using a profile from pillars
     Ensure myelb ELB exists:
@@ -97,6 +103,7 @@ def present(
         scheme='internet-facing',
         health_check=None,
         attributes=None,
+        cnames=None,
         region=None,
         key=None,
         keyid=None,
@@ -127,6 +134,10 @@ def present(
 
     attributes
         A dict defining the attributes to set on this ELB.
+
+    cnames
+        A list of cname dicts with attributes: name, zone, ttl, and identifier.
+        See the boto_route53 state for information about these attributes.
 
     region
         Region to connect to.
@@ -163,6 +174,15 @@ def present(
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if _ret['result'] is not None:
         ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _cnames_present(name, cnames, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if _ret['result'] is not None:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
     return ret
 
 
@@ -545,6 +565,110 @@ def _subnets_present(
         ret['changes']['new'] = {'subnets': lb['subnets']}
     else:
         msg = 'Subnets already set on ELB {0}.'.format(name)
+        ret['comment'] = msg
+    return ret
+
+
+def _cnames_present(
+        name,
+        cnames,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': None, 'comment': '', 'changes': {}}
+    if not cnames:
+        cnames = []
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+    if not lb:
+        if not __opts__['test']:
+            ret['result'] = False
+        msg = 'Failed to retrieve ELB {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    to_create = []
+    to_update = []
+    for cname in cnames:
+        _name = cname.get('name', None)
+        _zone = cname.get('zone', None)
+        if not _name or not _zone:
+            raise SaltInvocationError('cnames must provide name and zone'
+                                      ' attributes.')
+        record = __salt__['boto_route53.get_record'](_name, _zone, 'CNAME',
+                                                     False, region, key,
+                                                     keyid, profile)
+        if not record:
+            to_create.append(cname)
+        elif record['value'].rstrip('.') != lb['dns_name'].rstrip('.'):
+            to_update.append(cname)
+    if to_create or to_update:
+        if __opts__['test']:
+            msg = 'ELB {0} to have cnames modified.'.format(name)
+            ret['comment'] = msg
+            return ret
+        if to_create:
+            created = []
+            not_created = []
+            for cname in to_create:
+                _name = cname.get('name')
+                _zone = cname.get('zone')
+                _iden = cname.get('identifier', None)
+                _ttl = cname.get('ttl', None)
+                _created = __salt__['boto_route53.add_record'](
+                    _name, lb['dns_name'], _zone, 'CNAME', _iden, _ttl, region,
+                    key, keyid, profile)
+                if _created:
+                    created.append(_name)
+                else:
+                    not_created.append(_name)
+            if created:
+                msg = 'Created cnames {0}.'.format(','.join(created))
+                ret['comment'] = msg
+                ret['result'] = True
+            if not_created:
+                msg = 'Failed to create cnames {0}.'
+                msg = msg.format(','.join(not_created))
+                if 'comment' in ret:
+                    ret['comment'] = ret['comment'] + ' ' + msg
+                else:
+                    ret['comment'] = msg
+                ret['result'] = False
+        if to_update:
+            updated = []
+            not_updated = []
+            for cname in to_update:
+                _name = cname.get('name')
+                _zone = cname.get('zone')
+                _iden = cname.get('identifier', None)
+                _ttl = cname.get('ttl', None)
+                _updated = __salt__['boto_route53.update_record'](
+                    _name, lb['dns_name'], _zone, 'CNAME', _iden, _ttl, region,
+                    key, keyid, profile)
+                if _updated:
+                    updated.append(_name)
+                else:
+                    not_updated.append(_name)
+            if updated:
+                msg = 'Updated cnames {0}.'.format(','.join(updated))
+                if 'comment' in ret:
+                    ret['comment'] = ret['comment'] + ' ' + msg
+                else:
+                    ret['comment'] = msg
+                if ret['result'] is not False:
+                    ret['result'] = True
+            if not_updated:
+                msg = 'Failed to update cnames {0}.'
+                msg = msg.format(','.join(not_updated))
+                if 'comment' in ret:
+                    ret['comment'] = ret['comment'] + ' ' + msg
+                else:
+                    ret['comment'] = msg
+                ret['result'] = False
+        # We can't track old, since we'd need to know the zone to
+        # search for the ELB in the value.
+        ret['changes']['new'] = {'cnames': to_create + to_update}
+    else:
+        msg = 'cnames already set on ELB {0}.'.format(name)
         ret['comment'] = msg
     return ret
 
