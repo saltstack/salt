@@ -55,6 +55,7 @@ def _changes(name,
              createhome=True,
              password=None,
              enforce_password=True,
+             empty_password=False,
              shell=None,
              fullname='',
              roomnumber='',
@@ -160,6 +161,7 @@ def present(name,
             createhome=True,
             password=None,
             enforce_password=True,
+            empty_password=False,
             shell=None,
             unique=True,
             system=False,
@@ -228,6 +230,9 @@ def present(name,
         been set and the password hash differs from what is specified in the
         "password" field. This option will be ignored if "password" is not
         specified.
+
+    empty_password
+        Set to True to enable no password-less login for user
 
     shell
         The login shell, defaults to the system default shell
@@ -335,6 +340,7 @@ def present(name,
                        createhome,
                        password,
                        enforce_password,
+                       empty_password,
                        shell,
                        fullname,
                        roomnumber,
@@ -360,6 +366,9 @@ def present(name,
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
+            if key == 'empty_password':
+                __salt__['shadow.del_password'](name)
+                continue
             if key == 'passwd':
                 __salt__['shadow.set_password'](name, password)
                 continue
@@ -419,6 +428,7 @@ def present(name,
                            createhome,
                            password,
                            enforce_password,
+                           empty_password,
                            shell,
                            fullname,
                            roomnumber,
