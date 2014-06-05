@@ -36,7 +36,8 @@ The first three have, with too many TCP-SYN-packets, the same cause. But they oc
 in three totally independent situations. 
 
 The fourth is caused by masters with little hardware ressources in combination with 
-a possible bug in ZeroMQ. At least thats what it looks like till today (`[1] <https://github.com/saltstack/salt/issues/11865>`_)
+a possible bug in ZeroMQ. At least thats what it looks like till today (`[Issue 118651] <https://github.com/saltstack/salt/issues/11865>`_,
+`[Issue 5948] <https://github.com/saltstack/salt/issues/5948>`_)
 
 None of these problems is actually caused by salt itself. Rather the layers below like
 ZeroMQ and limited hardware ressources.
