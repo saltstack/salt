@@ -62,6 +62,7 @@ VALID_OPTS = {
     'id': str,
     'cachedir': str,
     'cache_jobs': bool,
+    'config_dir' : str,
     'conf_file': str,
     'sock_dir': str,
     'backup_mode': str,
@@ -252,6 +253,7 @@ DEFAULT_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': None,
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
+    'config_dir': salt.syspaths.CONFIG_DIR,
     'cache_jobs': False,
     'grains_cache': False,
     'grains_cache_expiration': 300,
@@ -1756,7 +1758,7 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
-def get_id(root_dir=None, minion_id=False, cache=True):
+def get_id(root_dir=None, config_dir = salt.syspaths.CONFIG_DIR, minion_id=False, cache=True):
     '''
     Guess the id of the minion.
 
@@ -1770,7 +1772,6 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     if root_dir is None:
         root_dir = salt.syspaths.ROOT_DIR
 
-    config_dir = salt.syspaths.CONFIG_DIR
     if config_dir.startswith(salt.syspaths.ROOT_DIR):
         config_dir = config_dir.split(salt.syspaths.ROOT_DIR, 1)[-1]
 
@@ -1839,6 +1840,7 @@ def apply_minion_config(overrides=None,
     if opts['id'] is None:
         opts['id'], using_ip_for_id = get_id(
                 opts['root_dir'],
+                opts['config_dir'],
                 minion_id=minion_id,
                 cache=opts.get('minion_id_caching', True))
 
