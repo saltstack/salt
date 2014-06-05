@@ -55,6 +55,7 @@ VALID_OPTS = {
     'master_port': int,
     'master_type': str,
     'master_finger': str,
+    'master_shuffle': bool,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -237,6 +238,7 @@ VALID_OPTS = {
     'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
+    'max_minions': int,
 }
 
 # default configurations
@@ -246,6 +248,7 @@ DEFAULT_MINION_OPTS = {
     'master_type': 'str',
     'master_port': '4506',
     'master_finger': '',
+    'master_shuffle': False,
     'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -505,6 +508,7 @@ DEFAULT_MASTER_OPTS = {
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
+    'max_minions': 0,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
