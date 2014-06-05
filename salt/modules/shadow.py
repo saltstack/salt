@@ -170,7 +170,6 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
 
 
 def del_password(name):
-
     '''
     Delete the password from name user
 
