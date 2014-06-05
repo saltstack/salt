@@ -1,0 +1,253 @@
+===================================
+Introduction to using salt at scale
+===================================
+
+Using salt at scale can be quite a tricky task. If you're planning on using
+saltstack for thousands of minions on one or more masters, this tutorial will
+try keep you of the most rocky trails on the way. It will show you, how to 
+tune your master and minion settings, will give you general tips what you
+can or should enable/disable and also give some insights to what errors may 
+be caused by what situation. It will not go into the details of any setup 
+procedeure required.
+
+For how to install the saltmaster and get everything up and running, please go here:
+http://docs.saltstack.com/topics/installation/index.html
+
+This tutorial is not for users with less than a thousand minions. Even though
+it can not hurt, to tune a few settings mentioned in this tutorial if you have
+less than a thousand minions.
+
+When used with minions, the term 'many' always means at least a thousand and 
+'a few' always means about 500.
+
+The Master
+==========
+
+For simplicity reasons, this tutorial will default to the standard ports used by salt. 
+
+The most common problems on the saltmaster that can occur with many minions are:
+
+1. too many minions connecting at once
+2. too many minions re-connecting at once
+3. too many minions returning at once
+4. too little ressources
+
+The first three have, with too many TCP-SYN-packets, the same cause. But they occur 
+in three totally indepedent situations. 
+
+The fourth is caused by masters with little hardware ressources in combination with 
+a possible bug in ZeroMQ. At least thats what it looks like till today ([1], [2], [3]). 
+
+None of these problems is actually caused by salt itself. Rather the layers below like
+ZeroMQ and limited hardware ressources.
+
+
+To fully understand each problem, it is vital to know about salts topolgy. 
+
+The saltmaster offers two services to the minions. 
+
+- a job publisher on port 4505
+- an open port 4506 to receive the minions returns
+
+All minions are always connected to the publisher. 
+
+A minion only connects to the return port, if necessary. 
+
+On an idle master, you will only see connections on port 4505.
+
+Too many minions connecting
+When the minion service is first started up on all machines, they connect to their masters 
+publisher on port 4505. If too many minion services are fired up at once, this can already
+cause a syn-flood on the master. This can be easily avoided by not starting too many minions 
+at once. This is rarely a problem though.
+
+The following us much more likely to happen.
+
+If many minions have already made their first connection to the master and wait for their key
+to be accepted, they check in every 10 seconds (`conf:minion:acceptance_wait_time`). With the default of 10 
+seconds and a thousand minions, thats about 100 minions checking in every second. If all keys 
+are now accepted at once with
+
+.. code-block:: bash
+
+    $ salt-key -A -y
+
+the master may run into a bug where it consumes 100% CPU and growing amounts of memory. This has
+been reported on the mailing list and the issue-tracker on github a few times, but the root cause 
+has not yet been found. 
+
+The easiest way around this is, to not accept too many minions at once. It only has to be done once,
+no need to rush.
+
+
+Too many minions re-connecting
+This is most likely to happen in the testing phase, when all minion keys have already been accepted,
+the framework is being tested and parameters change frequently in the masters configuration file.
+
+Upon a service restart, the salt-master generates a new key-pair to encrypt its publications with, but
+the minions dont yet know about the masters new public key. When the first job after the masters restart
+is published, the minions realize, that they have received a publication they can not decrypt and try to 
+re-auth themselves on the master. Because all minions always receive all publications, every single one
+who can not decrypt the publication, will try to re-auth immediately, causing thousands of minions
+trying to re-auth at once. This can be avoided by setting the
+
+
+.. code-block:: yaml
+
+    random_reauth_delay
+
+in the minions configuration file to stagger the amount of re-auth attempts. Increasing this value will
+of course increase the time it takes, until all minions are reachable again via salt commands.
+
+But this is only the salt part that requires tuning. The ZeroMQ socket settings on the minion side
+should also be tweaked.
+
+As described before, the master and the minions are permanently connected with each other through the
+publisher on port 4505.  Restarting the salt-master service shuts down the socket on the masters end 
+only to bring it back up within seconds. 
+
+This change is detected by the ZeroMQ-socket on the minions end. Not being connected does not really matter
+to the socket or the minion. The socket just waits and tries to reconnect and the minion just does not receive
+publications while not being connected.
+
+In this situation, its the ZeroMQ sockets reconnect attempt default value of 100ms that can cause problems. 
+With each and every minions socket trying to reconnect within 100ms as soon as the master publisher port
+comes back up, its a piece of cake to cause a syn-flood on the masters port with thousands of minions.
+
+To tune the minions sockets reconnect attempts, there are a few values in the sample configuration file.
+
+.. code-block:: yaml
+
+    recon_default
+    recon_max
+    recon_randomize
+
+
+- recon_default: the default value the socket should use, i.e. 100ms
+- recon_max: the max value that the socket should use as a delay before trying to reconnect
+- recon_randomize: enables randomization between recon_default and recon_max
+
+To tune this values to your environment, a few decision have to be made.
+
+
+How long can i wait before i need my minions back online and reachable with salt?
+How many reconnects can my master handle without detecting a syn flood?
+
+These questions can not be answered generally. Their answers highly depend on the hardware
+and the administrators requirements. Here is an example scenario:
+
+The goal: have all minions reconnect within a 60 second timeframe on a disconnect
+
+.. code-block:: yaml
+
+    recon_default: 1000
+    recon_max: 59000
+    recon_randomize: True
+
+Each minion will have a randomized reconnect value between 'recon_default'
+and 'recon_default + recon_max', which in this example means between 1000ms
+60000ms (or between 1 and 60 seconds). The generated random-value will be
+doubled after each attempt to reconnect (ZeroMQ default behaviour). 
+
+Lets say the generated random value is 11 seconds (or 11000ms).
+
+reconnect 1: wait 11 seconds
+reconnect 2: wait 22 seconds
+reconnect 3: wait 33 seconds
+reconnect 4: wait 44 seconds
+reconnect 5: wait 55 seconds
+reconnect 6: wait time is bigger than 60 seconds (recon_default + recon_max)
+reconnect 7: wait 11 seconds
+reconnect 8: wait 22 seconds
+reconnect 9: wait 33 seconds
+reconnect x: etc.
+
+With a thousand minions this will mean
+
+.. code-block:: math
+
+    1000/60 = ~16 
+    
+reconnection attempts a second.
+
+
+Too many minions returning at once
+This can also happen during the testing phase, if all minions are addressed at once. Doing a
+
+.. code-block:: bash
+
+    $ salt * test.ping
+
+will cause thousands of minions trying to return their data to the salt-master open port 4506.
+Also causing a syn-flood if the master cant handle that many returns at once.
+
+This can be easily avoided with salts batch mode:
+
+.. code-block:: bash
+
+    $ salt * test.ping -b 50
+
+This will only address 50 minions at once while looping through all addressed minions.
+
+Too little ressources
+It cant be said if your masters ressources are too small or not. This highly depends on your i
+environment. But here are some general tuning tips for different situations:
+
+The master has little CPU-Power
+Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096 bit key-pairs on first start.
+
+.. code-block:: yaml
+
+    keysize: 4096
+
+The key-size for the master is currently not configurable. Thats usually not a problem, because the minions
+do not encrypt as many messages as the master does. 
+
+The minions keysize can be configured with
+
+.. code-block:: yaml
+
+    keysize: 2048
+
+With thousands of decrpytions, the amount of time that can be saved on the masters end should not be neglected.
+See here for reference: https://github.com/saltstack/salt/pull/9235
+
+The master has slow disks
+By default, the master saves every minions return for every job in its job-cache. The cache can then be used
+later, to lookup results for previous jobs. The default directory for this is:
+
+.. code-block:: yaml
+    cachedir: /var/cache/salt
+
+and then in the ``/proc`` directory.
+
+Each jobs return for every minion is saved in a single file. Over time this directory can grow immensly,
+depending on the number of published jobs and if
+
+.. code-block:: yaml
+    
+    keep_jobs: 24
+
+was raised to have a longer job-history than 24 hours. Saving the files is not that expensive, but cleaning
+up can be over time. 
+
+.. code-block: math
+    
+    250 jobs/day * 2000 minions returns = 500.000 files a day
+
+If no job history is needed, the job cache can be disabled:
+
+.. code-block:: yaml
+   
+   job_cache: False
+
+
+If a permanent job cache is required, there are currently not too many alernatives.
+
+- Use returners and disable the job-cache
+- Use salt-eventsd and disable the job-cache
+
+The first one has the disadvantage of losing the encryption used by salt unless the returner implements it.
+
+The second one is not part of the official salt environment and therfore not broadly known on the mailing list
+or by the core salt-developers.
