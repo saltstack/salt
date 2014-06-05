@@ -16,6 +16,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
+from salt import syspaths
 from raet import raeting
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
@@ -35,14 +36,14 @@ class SaltEvent(object):
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
-            opts =  {}
+            opts = {}
         self.opts = opts
         self.__prep_stack()
 
     def __prep_stack(self):
         self.yid = salt.utils.gen_jid()
         name = 'event' + self.yid
-        cachedir = self.opts.get('cachedir', os.path.join('/var/cache/salt', self.node))
+        cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
         basedirpath = os.path.abspath(
                 os.path.join(cachedir, 'raet'))
         self.connected = False

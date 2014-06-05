@@ -592,7 +592,7 @@ class Minion(MinionBase):
                            'module \'{0}\''.format(opts['master']))
                     log.error(msg)
                     sys.exit(1)
-                log.info('Evaluated master from module: {0}'.format(mod_master))
+                log.info('Evaluated master from module: {0}'.format(master_mod))
 
             # if failover is set, master has to be of type list
             elif opts['master_type'] == 'failover':
@@ -614,7 +614,7 @@ class Minion(MinionBase):
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
         if type(opts['master']) is list:
-            conn = False 
+            conn = False
             # shuffle the masters and then loop through them
             local_masters = copy.copy(opts['master'])
             if opts['master_shuffle']:

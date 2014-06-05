@@ -375,7 +375,7 @@ class Auth(object):
                         sys.exit(os.EX_OK)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
-                        return 'full'
+                    return 'full'
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '

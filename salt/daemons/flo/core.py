@@ -403,6 +403,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                 worker_seed.append('yard{0}'.format(ind + 1))
             self.workers.value = itertools.cycle(worker_seed)
 
+
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Closes lane stack server socket connection

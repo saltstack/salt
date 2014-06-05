@@ -1766,7 +1766,7 @@ class ClearFuncs(object):
                              'act': 'full',
                              'id': load['id'],
                              'pub': load['pub']}
-     
+
                     self.event.fire_event(eload, tagify(prefix='auth'))
                     return {'enc': 'clear',
                             'load': {'ret': 'full'}}
