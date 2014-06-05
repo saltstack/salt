@@ -174,7 +174,7 @@ class LocalClient(object):
             return self.opts['timeout']
         if isinstance(timeout, int):
             return timeout
-        if isinstance(timeout, str):
+        if isinstance(timeout, str) or isinstance(timeout, unicode):
             try:
                 return int(timeout)
             except ValueError:
