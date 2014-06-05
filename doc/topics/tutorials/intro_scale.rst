@@ -13,14 +13,15 @@ procedeure required.
 For how to install the saltmaster and get everything up and running, please go here:
 http://docs.saltstack.com/topics/installation/index.html
 
-This tutorial is not intended for users with less than a thousand minions. Even though
-it can not hurt, to tune a few settings mentioned in this tutorial if you have
-less than a thousand minions.
+.. note::
+    This tutorial is not intended for users with less than a thousand minions. Even though
+    it can not hurt, to tune a few settings mentioned in this tutorial if you have
+    less than a thousand minions.
 
-When used with minions, the term 'many' always means at least a thousand and 
-'a few' always means about 500.
+    When used with minions, the term 'many' always means at least a thousand and 
+    'a few' always means about 500.
 
-For simplicity reasons, this tutorial will default to the standard ports used by salt. 
+    For simplicity reasons, this tutorial will default to the standard ports used by salt. 
 
 The Master
 ==========
