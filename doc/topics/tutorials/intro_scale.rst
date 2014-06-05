@@ -36,7 +36,7 @@ when doing certain things without knowing what actually happens under the hood.
 
 The fourth is caused by masters with little hardware ressources in combination with 
 a possible bug in ZeroMQ. At least thats what it looks like till today (`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
-`Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_, `Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>_`)
+`Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_, `Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>`_)
 
 None of these problems is actually caused by salt itself. Salt and ZeroMQ as well
 can handle several thousand minions a master easily. Its misconfigurations in a few
