@@ -58,6 +58,7 @@ A minion only connects to the return port, if necessary.
 On an idle master, you will only see connections on port 4505.
 
 Too many minions connecting
+===========================
 When the minion service is first started up on all machines, they connect to their masters 
 publisher on port 4505. If too many minion services are fired up at once, this can already
 cause a syn-flood on the master. This can be easily avoided by not starting too many minions 
@@ -83,6 +84,7 @@ no need to rush.
 
 
 Too many minions re-connecting
+==============================
 This is most likely to happen in the testing phase, when all minion keys have already been accepted,
 the framework is being tested and parameters change frequently in the masters configuration file.
 
@@ -174,6 +176,7 @@ reconnection attempts a second.
 
 
 Too many minions returning at once
+==================================
 This can also happen during the testing phase, if all minions are addressed at once. Doing a
 
 .. code-block:: bash
@@ -192,6 +195,7 @@ This can be easily avoided with salts batch mode:
 This will only address 50 minions at once while looping through all addressed minions.
 
 Too little ressources
+=====================
 It cant be said if your masters ressources are too small or not. This highly depends on your i
 environment. But here are some general tuning tips for different situations:
 
