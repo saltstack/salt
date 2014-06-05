@@ -189,6 +189,23 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
+    def delete_job(self, name):
+        # ensure job exists, then delete it
+        if name in self.opts['schedule']:
+            del self.opts['schedule'][name]
+
+        # remove from self.intervals
+        if name in self.intervals:
+            del self.intervals[name]
+
+    def add_job(self, name, schedule):
+        self.opts['schedule'][name] = schedule
+
+    def modify_job(self, name, schedule):
+        if name in self.opts['schedule']:
+            self.delete_job(name)
+        self.opts['schedule'][name] = schedule
+
     def handle_func(self, func, data):
         '''
         Execute this method in a multiprocess or thread
@@ -311,6 +328,7 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self.option('schedule')
+        #log.debug('calling eval {0}'.format(schedule))
         if not isinstance(schedule, dict):
             return
         for job, data in schedule.items():
@@ -335,8 +353,12 @@ class Schedule(object):
             when = 0
             seconds = 0
 
-            # clean this up
-            if ('seconds' in data or 'hours' in data or 'minutes' in data or 'days' in data) and 'when' in data:
+            time_conflict = False
+            for item in ['seconds', 'minutes', 'hours', 'days']:
+                if item in data and 'when' in data:
+                    time_conflict = True
+
+            if time_conflict:
                 log.info('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
                 continue
 
@@ -440,6 +462,7 @@ class Schedule(object):
                 else:
                     if now - self.intervals[job] >= seconds:
                         run = True
+
             else:
                 if 'splay' in data:
                     if 'when' in data:
