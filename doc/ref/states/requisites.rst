@@ -8,11 +8,11 @@ The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
-Requisites come in two types: Direct requisites (such as ``require`` and ``watch``),
-and requisite_ins (such as ``require_in`` and ``watch_in``). The relationships are
-directional: a direct requisite requires something from another state, while
-requisite_ins operate in the other direction. A requisite_in contains something that
-is required by another state. The following example demonstrates a direct requisite:
+Requisites come in two types: Direct requisites (such as ``require``),
+and requisite_ins (such as ``require_in``). The relationships are
+directional: a direct requisite requires something from another state.
+However, a requisite_in inserts a requisite into the targeted state pointing to
+the targeting state.  The following example demonstrates a direct requisite:
 
 .. code-block:: yaml
 
@@ -43,7 +43,8 @@ something", requisite_ins say "Someone depends on me":
 
 So here, with a requisite_in, the same thing is accomplished as in the first
 example, but the other way around. The vim package is saying "/etc/vimrc depends
-on me".
+on me".  This will result in a ``require`` being inserted into the
+``/etc/vimrc`` state which  targets the ``vim`` state.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -65,11 +66,12 @@ finite and predictable order.
 Direct Requisite and Requisite_in types
 =======================================
 
-There are four direct requisite statements that can be used in Salt: ``require``,
-``watch``, ``prereq``, and ``use``. Each direct requisite also has a corresponding
-requisite_in: ``require_in``, ``watch_in``, ``prereq_in`` and ``use_in``. All of the
-requisites define specific relationships and always work with the dependency
-logic defined above.
+There are six direct requisite statements that can be used in Salt:
+``require``, ``watch``, ``prereq``, ``use``, ``onchanges``, and ``onfail``.
+Each direct requisite also has a corresponding requisite_in: ``require_in``,
+``watch_in``, ``prereq_in``, ``use_in``, ``onchanges_in``, and ``onfail_in``.
+All of the requisites define specific relationships and always work with the
+dependency logic defined above.
 
 require
 -------
@@ -268,8 +270,8 @@ onchanges
 .. versionadded:: Helium
 
 The ``onchanges`` requisite makes a state only apply if the required states
-generate changes. This can be a useful way to execute a post hook after
-changing aspects of a system.
+generate changes, and if the watched state's "result" is ``True``. This can be
+a useful way to execute a post hook after changing aspects of a system.
 
 use
 ---
@@ -304,13 +306,22 @@ targeted state. This means also a chain of ``use`` requisites would not
 inherit inherited options.
 
 .. _requisites-require-in:
+.. _requisites-watch-in:
 
-require_in
-----------
+The _in versions of requisites
+------------------------------
 
-The ``require_in`` requisite is the literal reverse of ``require``. If
-a state declaration needs to be required by another state declaration then
-require_in can accommodate it. Therefore, these two sls files would be the
+All of the requisites also have corresponding requisite_in versions, which do
+the reverse of their normal counterparts.  The examples below all use
+``require_in`` as the example, but note that all of the ``_in`` requisites work
+the same way:  They result in a normal requisite in the targeted state, which
+targets the state which has defines the requisite_in.  Thus, a ``require_in``
+causes the target state to ``require`` the targeting state.  Similarly, a
+``watch_in`` causes the target state to ``watch`` the targeting state.  This
+pattern continues for the rest of the requisites.
+
+If a state declaration needs to be required by another state declaration then
+``require_in`` can accommodate it. Therefore, these two sls files would be the
 same in the end:
 
 Using ``require``
@@ -383,73 +394,6 @@ mod_python.sls
 Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
-.. _requisites-watch-in:
-
-watch_in
---------
-
-``watch_in`` functions the same way as ``require_in``, but applies
-a ``watch`` statement rather than a ``require`` statement to the external state
-declaration.
-
-A good example of when to use ``watch_in`` versus ``watch`` is in regards to writing
-an Apache state in conjunction with a git state for a Django application. On the most
-basic level, using either the ``watch`` or the ``watch_in`` requisites, the resulting
-behavior will be the same: Apache restarts each time the Django git state changes.
-
-.. code-block:: yaml
-
-    apache:
-      pkg:
-        - installed
-        - name: httpd
-      service:
-        - watch:
-          - git: django_git
-
-    django_git:
-      git:
-        - latest
-        - name: git@github.com/example/mydjangoproject.git
-
-However, by using ``watch_in``, the approach is improved. By writing ``watch_in`` in
-the depending states (such as the Django state and any other states that require Apache
-to restart), the dependent state (Apache state) is de-coupled from the depending states:
-
-.. code-block:: yaml
-
-    apache:
-      pkg:
-        - installed
-        - name: httpd
-
-    django_git:
-      git:
-        - latest
-        - name: git@github.com/example/mydjangoproject.git
-        - watch_in:
-          - service: apache
-
-prereq_in
----------
-
-The ``prereq_in`` requisite_in follows the same assignment logic as the
-``require_in`` requisite_in. The ``prereq_in`` call simply assigns
-``prereq`` to the state referenced. The above example for ``prereq`` can
-be modified to function in the same way using ``prereq_in``:
-
-.. code-block:: yaml
-
-    graceful-down:
-      cmd.run:
-        - name: service apache graceful
-
-    site-code:
-      file.recurse:
-        - name: /opt/site_code
-        - source: salt://site/code
-        - prereq_in:
-          - cmd: graceful-down
 
 Altering Statefulness
 =====================
