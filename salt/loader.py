@@ -781,8 +781,8 @@ class Loader(object):
                 not str(mod.__name__).startswith('salt.loaded.int.grain')
             ):
                 mod.__salt__ = funcs
-            elif hasattr(mod, '__salt__') and (not in_pack(pack, '__salt__') and \
-                    str(mod.__name__).startswith('salt.loaded.int.grain')
+            elif hasattr(mod, '__salt__') and (not in_pack(pack, '__salt__' and \
+                    str(mod.__name__).startswith('salt.loaded.int.grain'))
                 ):
                 mod.__salt__.update(funcs)
         return funcs
