@@ -698,7 +698,7 @@ class RemoteFuncs(object):
                 pub_load['timeout'] = int(load['timeout'])
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
-                        load['tmo'])
+                        load['timeout'])
                 log.warn(msg)
                 return {}
         if 'tgt_type' in load:
