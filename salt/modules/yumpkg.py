@@ -797,7 +797,7 @@ def install(name=None,
         pkg_params_items = []
         for pkg_source in pkg_params:
             rpm_info = _rpm_pkginfo(pkg_source)
-            if rpm_info != None:
+            if rpm_info is not None:
                 pkg_params_items.append([rpm_info.name, rpm_info.version, pkg_source])
             else:
                 pkg_params_items.append([pkg_source, None, pkg_source])
@@ -822,7 +822,6 @@ def install(name=None,
                     arch = '.' + archpart
                     pkgname = namepart
 
-            
             if pkg_type == 'repository':
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
             else:
