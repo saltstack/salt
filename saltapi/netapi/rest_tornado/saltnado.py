@@ -65,6 +65,8 @@ The event stream can be easily consumed via JavaScript:
 
 Or via Python, using the Python module
 `websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
+Or the tornado
+`client <http://tornado.readthedocs.org/en/latest/websocket.html#client-side-support>`_.
 
 .. code-block:: python
 
@@ -73,7 +75,7 @@ Or via Python, using the Python module
     from websocket import create_connection
 
     # Get the Websocket connection to Salt
-    ws = create_connection('ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
+    ws = create_connection('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
 
     # Get Salt's "real time" event stream.
     ws.send('websocket client ready')
@@ -86,6 +88,8 @@ Or via Python, using the Python module
 
     # Terminates websocket connection and Salt's "real time" event stream on the server.
     ws.close()
+
+    # Please refer to https://github.com/liris/websocket-client/issues/81 when using a self signed cert
 
 Above examples show how to establish a websocket connection to Salt and activating
 real time updates from Salt's event stream by signaling ``websocket client ready``.
@@ -784,7 +788,6 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
     '''
     Server side websocket handler.
     '''
-    # @tornado.gen.coroutine
     def open(self, *args, **kwargs):
         '''
         Return a websocket connection to Salt
@@ -794,28 +797,39 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         logger.info('In the open method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
 
     @tornado.gen.coroutine
-    def on_message(self, *args, **kwargs):
+    def on_message(self, message):
+        """Listens for a "websocket client ready" message.
+        Once that message is received an asynchronous job
+        is stated that yeilds messages to the client.
+        These messages make up salt's
+        "real time" event stream.
+        """
+        logger.info('Got message {}'.format(message))
+        if message == 'websocket client ready':
+            if self.connected:
+                # TBD: Add ability to run commands in this branch
+                logger.info('Already connected, returning')
+                return
 
-        logger.info('In the on_message method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+            self.connected = True
 
-        if self.connected:
-            # TBD: Add ability to run commands in this branch
-            logger.info('Already connected, returning')
-            return
+            while True:
+                try:
+                    event = yield self.application.event_listener.get_event(self)
+                    self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
+                except Exception as err:
+                    logger.info('Error! Ending server side connection. Reason = {}'.format(str(err)))
+                    break
 
-        self.connected = True
-
-        while True:
-            try:
-                event = yield self.application.event_listener.get_event(self)
-                self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
-            except Exception as err:
-                logger.info('Error! Ending server side connection. Reason = {}'.format(str(err)))
-                break
-
-        self.close()
+            self.close()
+        else:
+            # TBD: Add logic to run salt commands here
+            pass
 
     def on_close(self, *args, **kwargs):
+        '''Cleanup.
+
+        '''
         logger.info('In the close method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
         self.close()
 
