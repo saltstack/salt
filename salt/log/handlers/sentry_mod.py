@@ -171,7 +171,7 @@ def setup_handlers():
         # them to the Sentry server. Useful for sending additional global state
         # data or sanitizing data that you want to keep off of the server.
         'processors': get_config_value('processors'),
-        
+
         # dsn: Ensure the DSN is passed into the client
         'dsn': dsn
     })
