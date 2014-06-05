@@ -624,7 +624,7 @@ def running(name, container=None, port_bindings=None, binds=None,
     is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
-            comment='Container {!r} is started'.format(container))
+            comment='Container {0!r} is started'.format(container))
     else:
         started = __salt__['docker.start'](
             container, binds=binds, port_bindings=port_bindings,
