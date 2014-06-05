@@ -35,7 +35,7 @@ class SaltEvent(object):
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
-            opts =  {}
+            opts = {}
         self.opts = opts
         self.__prep_stack()
 
