@@ -23,6 +23,10 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'fileserver_backend': 'gitfs',
                   'gitfs_base': 'master',
                   'fileserver_events': True,
+                  'transport': 'zeromq',
+                  'gitfs_mountpoint': '',
+                  'gitfs_env_whitelist': [],
+                  'gitfs_env_blacklist': []
 }
 
 load = {'saltenv': 'base'}
@@ -83,13 +87,16 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.file_list(load)
             self.assertIn('testfile', ret)
 
-    @skipIf(True, 'This test should not use hardcoded paths!')
     def test_find_file(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.find_file('testfile')
-            expected_ret = {'path': '/tmp/salttest/cache/gitfs/refs/master/testfile',
+            expected_ret = {'path': os.path.join(self.master_opts['cachedir'],
+                                                 'gitfs',
+                                                 'refs',
+                                                 'base',
+                                                 'testfile'),
                             'rel': 'testfile'}
 
             self.assertDictEqual(ret, expected_ret)
