@@ -170,6 +170,7 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
 
 
 def del_password(name):
+
     '''
     Delete the password from name user
 
@@ -182,7 +183,7 @@ def del_password(name):
     cmd = 'passwd -d {0}'.format(name)
     __salt__['cmd.run'](cmd, output_loglevel='quiet')
     uinfo = info(name)
-    return uinfo['passwd'] == ""
+    return not uinfo['passwd']
 
 
 def set_password(name, password, use_usermod=False):
