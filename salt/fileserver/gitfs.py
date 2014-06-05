@@ -590,6 +590,9 @@ def init():
                     'hash': repo_hash,
                     'cachedir': rp_
                 })
+                # Strip trailing slashes from the gitfs root as these cause
+                # path searches to fail.
+                repo_conf['root'] = repo_conf['root'].rstrip(os.path.sep)
                 repos.append(repo_conf)
 
         except Exception as exc:
