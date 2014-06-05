@@ -5,6 +5,7 @@ Display output for minions that did not return
 
 # Import salt libs
 import salt.utils
+import salt.output
 
 
 class NestDisplay(object):
@@ -25,7 +26,7 @@ class NestDisplay(object):
                         self.colors['RED'],
                         ' ' * indent,
                         prefix,
-                        line,
+                        salt.output.strip_esc_sequence(line),
                         self.colors['ENDC'])
         elif isinstance(ret, dict):
             for key in sorted(ret):
