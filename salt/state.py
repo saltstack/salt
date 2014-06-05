@@ -2107,25 +2107,36 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.values():
+        preferred_base = 'base'  # This should be made configurable
+        locked = {}
+        for ctops_key, ctops in tops.items():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
                         continue
+                    # 21.24.15.3. HOW TOP FILES ARE COMPILED
+                    # [http://docs.saltstack.com/en/latest/ref/states/top.html#how-top-files-are-compiled]
+                    # If we load an environment from preferred_base, never overwrite it
+                    # When from the top.sls in the same environment, only overwrite if not from preferred_base
+                    # Otherwise overwrite in alphabetical order
+                    if saltenv in locked:
+                        if locked[saltenv] == 'pref':
+                            continue
+                        elif locked[saltenv] == 'env':
+                            if ctops_key == preferred_base:
+                                locked[saltenv] = 'pref'
+                            else:
+                                continue
+                    elif ctops_key == preferred_base:
+                        locked[saltenv] = 'pref'
+                    elif ctops_key == saltenv:
+                        locked[saltenv] = 'env'
+                    # Remove the old, we don't merge, we overwrite
+                    if saltenv in top:
+                        del top[saltenv]
                     try:
                         for tgt in targets:
-                            if tgt not in top[saltenv]:
-                                top[saltenv][tgt] = ctop[saltenv][tgt]
-                                continue
-                            matches = []
-                            states = set()
-                            for comp in top[saltenv][tgt]:
-                                if isinstance(comp, dict):
-                                    matches.append(comp)
-                                if isinstance(comp, string_types):
-                                    states.add(comp)
-                            top[saltenv][tgt] = matches
-                            top[saltenv][tgt].extend(list(states))
+                            top[saltenv][tgt] = ctop[saltenv][tgt]
                     except TypeError:
                         raise SaltRenderError('Unable to render top file. No targets found.')
         return top
