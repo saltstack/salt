@@ -1273,7 +1273,6 @@ class Minion(MinionBase):
             schedule = data.get('schedule', None)
             self.schedule.modify_job(name, schedule)
 
-
     def environ_setenv(self, package):
         '''
         Set the salt-minion main process environment according to
