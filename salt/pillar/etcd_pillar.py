@@ -62,11 +62,14 @@ key with all minions but override its value for a specific minion::
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Import third party libs
 try:
     from salt.utils import etcd_util
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
 
 __virtualname__ = 'etcd'
@@ -82,6 +85,21 @@ def __virtual__():
     return __virtualname__ if HAS_LIBS else False
 
 
+def _get_conn(profile):
+    '''
+    Establish a connection to etcd
+    '''
+    if profile:
+        etcd = __salt__['config.option']('profile')
+        host = etcd.get('etcd.host', '127.0.0.1')
+        port = etcd.get('etcd.port', 4001)
+    else:
+        host = __salt__['config.option']('etcd.host', '127.0.0.1')
+        port = __salt__['config.option']('etcd.port', 4001)
+
+    return salt.utils.etcd_util.get_conn(host, port)
+
+
 def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     '''
     Check etcd for all data
@@ -91,7 +109,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     profile = None
     if comps[0]:
         profile = comps[0]
-    client = etcd_util.get_conn(__opts__, profile)
+    client = _get_conn(profile)
 
     path = '/'
     if len(comps) > 1 and comps[1].startswith('root='):

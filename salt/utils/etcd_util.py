@@ -41,27 +41,19 @@ import logging
 try:
     import etcd
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
-def get_conn(opts, profile=None):
+def get_conn(host='127.0.0.1', port=4001):
     '''
     .. versionadded:: Helium
 
     Return a client object for accessing etcd
     '''
-    if profile:
-        conf = opts.get(profile, {})
-    else:
-        conf = opts
-
-    host = conf.get('etcd.host', '127.0.0.1')
-    port = conf.get('etcd.port', 4001)
-
     return etcd.Client(host, port)
 
 
