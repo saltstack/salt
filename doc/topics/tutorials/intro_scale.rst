@@ -11,7 +11,7 @@ be caused by what situation. It will not go into the details of any setup
 procedeure required.
 
 For how to install the saltmaster and get everything up and running, please go here:
-http://docs.saltstack.com/topics/installation/index.html
+.. _SaltStwack Walkthrough: http://docs.saltstack.com/topics/installation/index.html
 
 This tutorial is not for users with less than a thousand minions. Even though
 it can not hurt, to tune a few settings mentioned in this tutorial if you have
