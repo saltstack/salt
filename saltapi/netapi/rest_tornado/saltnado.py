@@ -1,20 +1,112 @@
 '''
+A REST API for Salt
+===================
 
-curl localhost:8888/login -d client=local -d username=username -d password=password -d eauth=pam
+.. py:currentmodule:: saltapi.netapi.rest_tornado.saltnado
 
-for testing
-curl -H 'X-Auth-Token: 89010c15bcbc8e4fc4ce4605b6699165' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
+:depends:   - tornado Python module
 
-# not working.... but in siege 3.0.1 and posts..
-siege -c 1 -n 1 "http://127.0.0.1:8888 POST client=local&tgt=*&fun=test.ping"
+Exposes ``all`` "real-time" events from Salt's event bus on a websocket connection.
+The event bus on the Salt master exposes a large variety of things, notably
+when executions are started on the master and also when minions ultimately
+return their results. This URL provides a real-time window into a running
+Salt infrastructure. Uses websocket as the transport mechanism.
 
-# this works
-ab -c 50 -n 100 -p body -T 'application/x-www-form-urlencoded' http://localhost:8888/
+Exposes GET method to return websocket connections.
+All requests should include an auth token.
+A way to obtain obtain authentication tokens is shown below.
 
-{"return": [{"perms": ["*.*"], "start": 1396151398.373983, "token": "cb86b805e8915c84bceb0d466026caab", "expire": 1396194598.373983, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$
+.. code-block:: bash
+
+    % curl -si localhost:8000/login \\
+        -H "Accept: application/json" \\
+        -d username='salt' \\
+        -d password='salt' \\
+        -d eauth='pam'
+
+Which results in the response
+
+.. code-block:: json
+
+    {
+        "return": [{
+            "perms": [".*", "@runner", "@wheel"],
+            "start": 1400556492.277421,
+            "token": "d0ce6c1a37e99dcc0374392f272fe19c0090cca7",
+            "expire": 1400599692.277422,
+            "user": "salt",
+            "eauth": "pam"
+        }]
+    }
+
+In this example the ``token`` returned is ``d0ce6c1a37e99dcc0374392f272fe19c0090cca7`` and can be included
+in subsequent websocket requests (as part of the URL).
+
+The event stream can be easily consumed via JavaScript:
+
+.. code-block:: javascript
+
+    // Note, you must be authenticated!
+
+    // Get the Websocket connection to Salt
+    var source = new Websocket('ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
+
+    // Get Salt's "real time" event stream.
+    source.onopen = function() { source.send('websocket client ready'); };
+
+    // Other handlers
+    source.onerror = function(e) { console.debug('error!', e); };
+
+    // e.data represents Salt's "real time" event data as serialized JSON.
+    source.onmessage = function(e) { console.debug(e.data); };
+
+    // Terminates websocket connection and Salt's "real time" event stream on the server.
+    source.close();
+
+Or via Python, using the Python module
+`websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
+
+.. code-block:: python
+
+    # Note, you must be authenticated!
+
+    from websocket import create_connection
+
+    # Get the Websocket connection to Salt
+    ws = create_connection('ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
+
+    # Get Salt's "real time" event stream.
+    ws.send('websocket client ready')
 
 
+    # Simple listener to print results of Salt's "real time" event stream.
+    # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
+    while listening_to_events:
+        print ws.recv()       #  Salt's "real time" event data as serialized JSON.
 
+    # Terminates websocket connection and Salt's "real time" event stream on the server.
+    ws.close()
+
+Above examples show how to establish a websocket connection to Salt and activating
+real time updates from Salt's event stream by signaling ``websocket client ready``.
+
+Notes
+=====
+
+.. code-block:: bash
+
+    curl localhost:8888/login -d client=local -d username=username -d password=password -d eauth=pam
+
+    # for testing
+    curl -H 'X-Auth-Token: 89010c15bcbc8e4fc4ce4605b6699165' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
+
+    # not working.... but in siege 3.0.1 and posts..
+    siege -c 1 -n 1 "http://127.0.0.1:8888 POST client=local&tgt=*&fun=test.ping"
+
+    # this works
+    ab - c 50 -n 100 -p body -T 'application/x-www-form-urlencoded' http://localhost:8888/
+
+    {"return": [{"perms": ["*.*"], "start": 1396151398.373983, "token": "cb86b805e8915c84bceb0d466026caab", "expire": 1396194598.373983, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$
 '''
 
 import logging
@@ -688,24 +780,31 @@ class EventsSaltAPIHandler(SaltAPIHandler):
         self.finish()
 
 
-class WebsocketHandler(tornado.websocket.WebSocketHandler):
+class AllEventsHandler(tornado.websocket.WebSocketHandler):
     '''
-    Handler for /events requests
+    Server side websocket handler.
     '''
     # @tornado.gen.coroutine
     def open(self, *args, **kwargs):
+        '''
+        Return a websocket connection to Salt
+        representing Salt's "real time" event stream.
+        '''
         self.connected = False
         logger.info('In the open method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
 
     @tornado.gen.coroutine
     def on_message(self, *args, **kwargs):
 
+        logger.info('In the on_message method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+
         if self.connected:
+            # TBD: Add ability to run commands in this branch
             logger.info('Already connected, returning')
             return
 
         self.connected = True
-        logger.info('In the on_message method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+
         while True:
             try:
                 event = yield self.application.event_listener.get_event(self)

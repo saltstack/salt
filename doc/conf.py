@@ -55,6 +55,7 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.ioloop',
     'tornado.web',
+    'tornado.websocket',    
 
     'yaml',
     'zmq',

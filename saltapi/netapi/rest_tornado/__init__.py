@@ -51,7 +51,7 @@ def start():
         (r"/run", saltnado.RunSaltAPIHandler),
         (r"/events", saltnado.EventsSaltAPIHandler),
         (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
-        (r"/websocket(/.*)?", saltnado.WebsocketHandler),
+        (r"/websocket(/.*)?", saltnado.AllEventsHandler),
 
     ], debug=mod_opts.get('debug', False))
 
