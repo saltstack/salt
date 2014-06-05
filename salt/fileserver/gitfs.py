@@ -42,7 +42,7 @@ def __virtual__():
     '''
     Only load if gitpython is available
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     if not HAS_GIT:
         log.error('Git fileserver backend is enabled in configuration but '
@@ -532,7 +532,7 @@ def _get_file_list(load):
             continue
         if __opts__['gitfs_root']:
             try:
-                tree = tree / __opts__['gitfs_root']
+                tree = tree / __opts__['gitfs_root'].rstrip(os.path.sep)
             except KeyError:
                 continue
         for blob in tree.traverse():
@@ -577,7 +577,7 @@ def _get_file_list_emptydirs(load):
             continue
         if __opts__['gitfs_root']:
             try:
-                tree = tree / __opts__['gitfs_root']
+                tree = tree / __opts__['gitfs_root'].rstrip(os.path.sep)
             except KeyError:
                 continue
         for blob in tree.traverse():
@@ -625,7 +625,7 @@ def _get_dir_list(load):
             continue
         if __opts__['gitfs_root']:
             try:
-                tree = tree / __opts__['gitfs_root']
+                tree = tree / __opts__['gitfs_root'].rstrip(os.path.sep)
             except KeyError:
                 continue
         for blob in tree.traverse():
