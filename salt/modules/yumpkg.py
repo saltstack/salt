@@ -130,7 +130,7 @@ def _get_repo_options(**kwargs):
     repo_arg = ''
     if fromrepo:
         log.info('Restricting to repo {0!r}'.format(fromrepo))
-        repo_arg = ('--disablerepo={0!r} --enablerepo={1!r}'
+        repo_arg = ('--disablerepo={0!r} --enablerepo={1!r} '
                     .format('*', fromrepo))
     else:
         repo_arg = ''
@@ -726,6 +726,10 @@ def install(name=None,
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
 
+    branch
+        Specifies the branch on YUM server.
+        (e.g., ``yum --branch='test'``)
+
         .. versionadded:: Helium
 
 
@@ -785,6 +789,10 @@ def install(name=None,
                         'package targets')
 
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    # Support branch parameter for yum
+    branch = kwargs.get('branch', '')
+    if branch:
+        repo_arg += '--branch={0!r}'.format(branch)
     exclude_arg = _get_excludes_option(**kwargs)
 
     old = list_pkgs()
