@@ -2,21 +2,19 @@
 Introduction to using salt at scale
 ===================================
 
-Using salt at scale can be quite a tricky task. If you're planning on using
-saltstack for thousands of minions on one or more masters, this tutorial will
-try keep you of the most rocky trails on the way. It will show you, how to 
-tune your master and minion settings, will give you general tips what you
-can or should enable/disable and also give some insights to what errors may 
-be caused by what situation. It will not go into the details of any setup 
-procedeure required.
+Using salt at scale can be quite a tricky task. If its planned to use saltstack 
+for thousands of minions on one or more masters, this tutorial will give advise on
+tune the master and minion settings, will give general tips what can or should be 
+enabled/disabled and also give some insights to what errors may be caused by what 
+situation. It will not go into the details of any setup procedeure required.
 
 For how to install the saltmaster and get everything up and running, please go here:
 http://docs.saltstack.com/topics/installation/index.html
 
 .. note::
     This tutorial is not intended for users with less than a thousand minions. Even though
-    it can not hurt, to tune a few settings mentioned in this tutorial if you have
-    less than a thousand minions.
+    it can not hurt, to tune a few settings mentioned in this tutorial if the environment
+    consists of less than a thousand minions.
 
     When used with minions, the term 'many' always means at least a thousand and 
     'a few' always means about 500.
@@ -33,16 +31,16 @@ The most common problems on the saltmaster that can occur with many minions are:
 3. too many minions returning at once
 4. too little ressources (CPU/HDD)
 
-The first three have, with too many TCP-SYN-packets, the same cause. But they occur 
-in three totally independent situations. 
+The first three have the same cause. Its usually TCP-SYN-Floods that can occur in different situations
+when doing certain things without knowing what actually happens under the hood.
 
 The fourth is caused by masters with little hardware ressources in combination with 
-a possible bug in ZeroMQ. At least thats what it looks like till today (`[Issue 118651] <https://github.com/saltstack/salt/issues/11865>`_,
-`[Issue 5948] <https://github.com/saltstack/salt/issues/5948>`_)
+a possible bug in ZeroMQ. At least thats what it looks like till today (`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
+`Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_, `Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>`)
 
-None of these problems is actually caused by salt itself. Rather the layers below like
-ZeroMQ and limited hardware ressources.
-
+None of these problems is actually caused by salt itself. Salt and ZeroMQ as well
+can handle several thousand minions a master easily. Its misconfigurations in a few
+places that can be easily fixed.
 
 To fully understand each problem, it is vital to know about salts topolgy. 
 
@@ -51,11 +49,8 @@ The saltmaster offers two services to the minions.
 - a job publisher on port 4505
 - an open port 4506 to receive the minions returns
 
-All minions are always connected to the publisher. 
-
-A minion only connects to the return port, if necessary. 
-
-On an idle master, you will only see connections on port 4505.
+All minions are always connected to the publisher on port 4505 and only connect to the open
+return port 4506 if necessary. On an idle master, there will only be connections on port 4505.
 
 Too many minions connecting
 ===========================
@@ -131,7 +126,7 @@ To tune the minions sockets reconnect attempts, there are a few values in the sa
 - recon_max: the max value that the socket should use as a delay before trying to reconnect
 - recon_randomize: enables randomization between recon_default and recon_max
 
-To tune this values to your environment, a few decision have to be made.
+To tune this values to an existing environment, a few decision have to be made.
 
 
 How long can i wait before i need my minions back online and reachable with salt?
@@ -196,27 +191,24 @@ This will only address 50 minions at once while looping through all addressed mi
 
 Too little ressources
 =====================
-It cant be said if your masters ressources are too small or not. This highly depends on your i
-environment. But here are some general tuning tips for different situations:
+The masters ressources always have to match the environment. There is no way to give good advise 
+without knowing the environment the master is supposed to run in.  But here are some general tuning 
+tips for different situations:
 
 The master has little CPU-Power
 Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096 bit key-pairs on first start.
-
-.. code-block:: yaml
-
-    keysize: 4096
-
-The key-size for the master is currently not configurable. Thats usually not a problem, because the minions
-do not encrypt as many messages as the master does. 
-
-The minions keysize can be configured with
+While the key-size for the master is currently not configurable, the minions keysize can be configured with
+different key-sizes. For example with a 2048 bit key:
 
 .. code-block:: yaml
 
     keysize: 2048
 
 With thousands of decrpytions, the amount of time that can be saved on the masters end should not be neglected.
-See here for reference: https://github.com/saltstack/salt/pull/9235
+See here for reference: https://github.com/saltstack/salt/pull/9235 how much influence the key-size can have.
+
+Downsizing the salt-masters key is not that important, because the minions do not encrypt as many messages 
+as the master does. 
 
 The master has slow disks
 By default, the master saves every minions return for every job in its job-cache. The cache can then be used
