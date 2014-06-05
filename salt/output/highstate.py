@@ -286,10 +286,10 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     else:
         fmt_string = ' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
     msg = fmt_string.format(tcolor,
-                            salt.output.strip_esc_sequence(comps[2]),
-                            salt.output.strip_esc_sequence(comps[0]),
-                            salt.output.strip_esc_sequence(comps[-1]),
-                            salt.output.strip_esc_sequence(result),
+                            comps[2],
+                            comps[0],
+                            comps[-1],
+                            result,
                             colors['ENDC'],
-                            salt.output.strip_esc_sequence(ret))
+                            ret)
     return msg
