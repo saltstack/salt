@@ -42,9 +42,9 @@ class LinodeTest(integration.ShellCase):
         providers = self.run_cloud('--list-providers')
         if profile_str not in providers:
             self.skipTest(
-                'Configuration file for {0} was not found or is not properly '
-                'configured. Please check the {0}.conf files in tests/integration/'
-                'files/conf/cloud.*.d/ to run these tests.'.format(provider)
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(provider)
             )
 
         # check if apikey and password are present
@@ -99,4 +99,3 @@ class LinodeTest(integration.ShellCase):
         # if test instance is still present, delete it
         if str in query:
             self.run_cloud('-d {0} --assume-yes'.format(name))
-
