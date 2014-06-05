@@ -614,7 +614,7 @@ class Minion(MinionBase):
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
         if type(opts['master']) is list:
-            conn = False 
+            conn = False
             # shuffle the masters and then loop through them
             local_masters = copy.copy(opts['master'])
             if opts['master_shuffle']:
