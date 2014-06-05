@@ -592,7 +592,7 @@ class Minion(MinionBase):
                            'module \'{0}\''.format(opts['master']))
                     log.error(msg)
                     sys.exit(1)
-                log.info('Evaluated master from module: {0}'.format(mod_master))
+                log.info('Evaluated master from module: {0}'.format(master_mod))
 
             # if failover is set, master has to be of type list
             elif opts['master_type'] == 'failover':
