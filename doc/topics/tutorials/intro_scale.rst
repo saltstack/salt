@@ -11,32 +11,32 @@ be caused by what situation. It will not go into the details of any setup
 procedeure required.
 
 For how to install the saltmaster and get everything up and running, please go here:
-.. _SaltStwack Walkthrough: http://docs.saltstack.com/topics/installation/index.html
+http://docs.saltstack.com/topics/installation/index.html
 
-This tutorial is not for users with less than a thousand minions. Even though
+This tutorial is not intended for users with less than a thousand minions. Even though
 it can not hurt, to tune a few settings mentioned in this tutorial if you have
 less than a thousand minions.
 
 When used with minions, the term 'many' always means at least a thousand and 
 'a few' always means about 500.
 
+For simplicity reasons, this tutorial will default to the standard ports used by salt. 
+
 The Master
 ==========
-
-For simplicity reasons, this tutorial will default to the standard ports used by salt. 
 
 The most common problems on the saltmaster that can occur with many minions are:
 
 1. too many minions connecting at once
 2. too many minions re-connecting at once
 3. too many minions returning at once
-4. too little ressources
+4. too little ressources (CPU/HDD)
 
 The first three have, with too many TCP-SYN-packets, the same cause. But they occur 
-in three totally indepedent situations. 
+in three totally independent situations. 
 
 The fourth is caused by masters with little hardware ressources in combination with 
-a possible bug in ZeroMQ. At least thats what it looks like till today ([1], [2], [3]). 
+a possible bug in ZeroMQ. At least thats what it looks like till today (:ref:`[1] <https://github.com/saltstack/salt/issues/11865>`)
 
 None of these problems is actually caused by salt itself. Rather the layers below like
 ZeroMQ and limited hardware ressources.
