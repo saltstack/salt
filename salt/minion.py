@@ -119,7 +119,6 @@ def resolve_dns(opts):
                     opts.get('master', 'Unknown'))
                 log.error(err)
                 raise SaltSystemExit(code=42, msg=err)
-                # ret['master_ip'] = '127.0.0.1'
         except SaltSystemExit:
             err = 'Master address: {0} could not be resolved. Invalid or unresolveable address.'.format(
                 opts.get('master', 'Unknown'))
