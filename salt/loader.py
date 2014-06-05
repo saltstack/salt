@@ -776,14 +776,15 @@ class Loader(object):
         # the available modules and inject the special __salt__ namespace that
         # contains these functions.
         for mod in self.modules:
-            if not hasattr(mod, '__salt__') and (
+            if not hasattr(mod, '__salt__') or (
                 not in_pack(pack, '__salt__') and
-                not str(mod.__name__).startswith('salt.loaded.int.grain')
+                (not str(mod.__name__).startswith('salt.loaded.int.grain') and
+                 not str(mod.__name__).startswith('salt.loaded.ext.grain'))
             ):
                 mod.__salt__ = funcs
-            elif hasattr(mod, '__salt__') and (not in_pack(pack, '__salt__' and \
-                    str(mod.__name__).startswith('salt.loaded.int.grain'))
-                ):
+            elif not in_pack(pack, '__salt__') and \
+                    (str(mod.__name__).startswith('salt.loaded.int.grain') or
+                     str(mod.__name__).startswith('salt.loaded.int.grain')):
                 mod.__salt__.update(funcs)
         return funcs
 
