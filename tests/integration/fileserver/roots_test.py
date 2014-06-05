@@ -26,7 +26,8 @@ class RootsTest(integration.ModuleCase):
         self.master_opts['file_roots']['base'] = [os.path.join(integration.FILES, 'file', 'base')]
 
     def test_file_list(self):
-        with patch.dict(roots.__opts__, {'file_roots': self.master_opts['file_roots'],
+        with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
+                                         'file_roots': self.master_opts['file_roots'],
                                          'fileserver_ignoresymlinks': False,
                                          'fileserver_followsymlinks': False,
                                          'file_ignore_regex': False,
@@ -102,7 +103,8 @@ class RootsTest(integration.ModuleCase):
             self.assertDictEqual(ret, {'hsum': '98aa509006628302ce38ce521a7f805f', 'hash_type': 'md5'})
 
     def test_file_list_emptydirs(self):
-        with patch.dict(roots.__opts__, {'file_roots': self.master_opts['file_roots'],
+        with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
+                                         'file_roots': self.master_opts['file_roots'],
                                          'fileserver_ignoresymlinks': False,
                                          'fileserver_followsymlinks': False,
                                          'file_ignore_regex': False,
@@ -111,11 +113,12 @@ class RootsTest(integration.ModuleCase):
             self.assertIn('empty_dir', ret)
 
     def test_dir_list(self):
-        with patch.dict(roots.__opts__, {'file_roots': self.master_opts['file_roots'],
-                                 'fileserver_ignoresymlinks': False,
-                                 'fileserver_followsymlinks': False,
-                                 'file_ignore_regex': False,
-                                 'file_ignore_glob': False}):
+        with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
+                                         'file_roots': self.master_opts['file_roots'],
+                                         'fileserver_ignoresymlinks': False,
+                                         'fileserver_followsymlinks': False,
+                                         'file_ignore_regex': False,
+                                         'file_ignore_glob': False}):
             ret = roots.dir_list({'saltenv': 'base'})
             self.assertIn('empty_dir', ret)
 
