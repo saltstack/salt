@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Module for manging the Salt schedule on a minion
+
+.. versionadded:: Helium
+
 '''
 
 # Import Python libs
