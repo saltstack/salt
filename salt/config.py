@@ -11,6 +11,7 @@ import logging
 import urlparse
 from copy import deepcopy
 import time
+import codecs
 
 # import third party libs
 import yaml
@@ -222,6 +223,7 @@ VALID_OPTS = {
     'auth_tries': int,
     'auth_safemode': bool,
     'random_master': bool,
+    'random_reauth_delay': int,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
     'ssh_passwd': str,
@@ -325,9 +327,10 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
-    'recon_max': 5000,
-    'recon_default': 100,
+    'recon_max': 59000,
+    'recon_default': 1000,
     'recon_randomize': True,
+    'random_reauth_delay': 60,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -1780,6 +1783,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
+                if name.startswith(codecs.BOM):  # Remove BOM if exists
+                    name = name.replace(codecs.BOM, '', 1)
             if name:
                 log.info('Using cached minion ID from {0}: {1}'
                          .format(id_cache, name))

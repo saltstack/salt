@@ -71,10 +71,10 @@ def purge():
     ver = version()
     log.debug('Purging varnish cache')
     if ver.startswith('4'):
-        purge = 'ban .'
+        purge_cmd = 'ban .'
     elif ver.startswith('3'):
-        purge = 'ban.url .'
+        purge_cmd = 'ban.url .'
     elif ver.startswith('2'):
-        purge = 'url.purge .'
-    cmd = 'varnishadm {0}'.format(purge)
+        purge_cmd = 'url.purge .'
+    cmd = 'varnishadm {0}'.format(purge_cmd)
     return __salt__['cmd.retcode'](cmd) == 0
