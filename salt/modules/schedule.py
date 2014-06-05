@@ -30,11 +30,12 @@ SCHEDULE_CONF = [
         'seconds',
         'minutes',
         'hours',
-        'days'
+        'days',
+        'enabled'
         ]
 
 
-def list():
+def list(show_all=False):
     '''
     List the jobs currently scheduled on the minion
 
@@ -43,11 +44,18 @@ def list():
     .. code-block:: bash
 
         salt '*' schedule.list
+
+        salt '*' schedule.list show_all=True
     '''
 
     schedule = __opts__['schedule']
     for job in schedule.keys():
-        if job.startswith('_'):
+        if job == 'enabled':
+            continue
+
+        # Default jobs added by salt begin with __
+        # by default hide them unless show_all is True.
+        if job.startswith('__') and not show_all:
             del schedule[job]
             continue
 
@@ -154,7 +162,8 @@ def add(name, **kwargs):
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
 
-    schedule = {'function': kwargs['function']}
+    schedule = {}
+    schedule[name] = {'function': kwargs['function']}
 
     time_conflict = False
     for item in ['seconds', 'minutes', 'hours', 'days']:
@@ -166,17 +175,17 @@ def add(name, **kwargs):
 
     for item in ['seconds', 'minutes', 'hours', 'days']:
         if item in kwargs:
-            schedule[item] = kwargs[item]
+            schedule[name][item] = kwargs[item]
 
     if 'job_args' in kwargs:
-        schedule['args'] = kwargs['job_args']
+        schedule[name]['args'] = kwargs['job_args']
 
     if 'job_kwargs' in kwargs:
-        schedule['kwargs'] = kwargs['job_kwargs']
+        schedule[name]['kwargs'] = kwargs['job_kwargs']
 
     for item in ['splay', 'range', 'when', 'returner', 'jid_include']:
         if item in kwargs:
-            schedule[item] = kwargs[item]
+            schedule[name][item] = kwargs[item]
 
     out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'func': 'add'}, 'manage_schedule')
     if out:
@@ -239,8 +248,71 @@ def modify(name, **kwargs):
     return ret
 
 
+def enable_job(name):
+    '''
+    Enable a job in the minion's schedule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.enable_job job1
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if not name:
+        ret['comment'] = 'Job name is required.'
+        ret['result'] = False
+
+    if name in __opts__['schedule']:
+        out = __salt__['event.fire']({'job': name, 'func': 'enable_job'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to enable job {0} from schedule.'.format(name)
+            ret['result'] = False
+    else:
+        ret['comment'] = 'Job {0} does not exist.'.format(name)
+        ret['result'] = False
+    return ret
+
+
+def disable_job(name):
+    '''
+    Disable a job in the minion's schedule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.disable_job job1
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if not name:
+        ret['comment'] = 'Job name is required.'
+        ret['result'] = False
+
+    if name in __opts__['schedule']:
+        out = __salt__['event.fire']({'job': name, 'func': 'disable_job'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to disable job {0} from schedule.'.format(name)
+            ret['result'] = False
+    else:
+        ret['comment'] = 'Job {0} does not exist.'.format(name)
+        ret['result'] = False
+    return ret
+
+
 def save():
     '''
+    Save all scheduled jobs on the minion
 
     CLI Example:
 
@@ -254,6 +326,8 @@ def save():
 
     schedule = __opts__['schedule']
     for job in schedule.keys():
+        if job == 'enabled':
+            continue
         if job.startswith('_'):
             del schedule[job]
             continue
@@ -285,5 +359,51 @@ def save():
         ret['comment'] = 'Schedule saved to {0}.'.format(sfn)
     except (IOError, OSError):
         ret['comment'] = 'Unable to write to schedule file at {0}. Check permissions.'.format(sfn)
+        ret['result'] = False
+    return ret
+
+
+def enable():
+    '''
+    Enable all scheduled jobs on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.enable
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    out = __salt__['event.fire']({'func': 'enable'}, 'manage_schedule')
+    if out:
+        ret['comment'] = 'Enabled schedule on minion.'
+    else:
+        ret['comment'] = 'Failed to enable schedule on minion.'
+        ret['result'] = False
+    return ret
+
+
+def disable():
+    '''
+    Disable all scheduled jobs on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.disable
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    out = __salt__['event.fire']({'func': 'disable'}, 'manage_schedule')
+    if out:
+        ret['comment'] = 'Disabled schedule on minion.'
+    else:
+        ret['comment'] = 'Failed to disable schedule on minion.'
         ret['result'] = False
     return ret
