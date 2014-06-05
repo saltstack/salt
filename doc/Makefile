@@ -139,6 +139,12 @@ latexpdfja: translations
 	$(MAKE) -C $(BUILDDIR)/latex all-pdf-ja
 	@echo "pdflatex finished; the PDF files are in $(BUILDDIR)/latex."
 
+xetexpdf: translations
+	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
+	@echo "Running LaTeX files through xelatex..."
+	cd $(BUILDDIR)/latex; xelatex *.tex && xelatex *.tex; cd -
+	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
+
 text: translations
 	$(SPHINXBUILD) -b text $(ALLSPHINXOPTS) $(BUILDDIR)/text
 	@echo
