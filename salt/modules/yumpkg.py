@@ -695,8 +695,8 @@ def install(name=None,
         ``yum reinstall`` will only be used if the installed version
         matches the requested version.
 
-        Works with sources when the file name in the source can be
-        matched to the name and version of the installed package.
+        Works with sources when the package header of the source can be
+        matched to the name and version of an installed package.
 
         .. versionadded:: Helium
 
@@ -790,44 +790,54 @@ def install(name=None,
     old = list_pkgs()
     targets = []
     downgrade = []
-    to_reinstall = []
+    to_reinstall = {}
     if pkg_type == 'repository':
-        for pkgname, version_num in pkg_params.iteritems():
-            if version_num is None:
-                if reinstall and pkgname in old:
-                    to_reinstall.append(pkgname)
-                else:
-                    targets.append(pkgname)
-            else:
-                cver = old.get(pkgname, '')
-                arch = ''
-                try:
-                    namepart, archpart = pkgname.rsplit('.', 1)
-                except ValueError:
-                    pass
-                else:
-                    if archpart in __ARCHES:
-                        arch = '.' + archpart
-                        pkgname = namepart
-
-                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if reinstall and cver \
-                        and salt.utils.compare_versions(ver1=version_num,
-                                                        oper='==',
-                                                        ver2=cver):
-                    to_reinstall.append(pkgstr)
-                elif not cver or salt.utils.compare_versions(ver1=version_num,
-                                                             oper='>=',
-                                                             ver2=cver):
-                    targets.append(pkgstr)
-                else:
-                    downgrade.append(pkgstr)
+        pkg_params_items = pkg_params.iteritems()
     else:
-        for pkgname in pkg_params:
-            if reinstall and _rpm_installed(pkgname):
-                to_reinstall.append(pkgname)
+        pkg_params_items = []
+        for pkg_source in pkg_params:
+            rpm_info = _rpm_pkginfo(pkg_source)
+            if rpm_info != None:
+                pkg_params_items.append([rpm_info.name, rpm_info.version, pkg_source])
+            else:
+                pkg_params_items.append([pkg_source, None, pkg_source])
+
+    for pkg_item_list in pkg_params_items:
+        pkgname = pkg_item_list[0]
+        version_num = pkg_item_list[1]
+        if version_num is None:
+            if reinstall and pkg_type == 'repository' and pkgname in old:
+                to_reinstall[pkgname] = pkgname
             else:
                 targets.append(pkgname)
+        else:
+            cver = old.get(pkgname, '')
+            arch = ''
+            try:
+                namepart, archpart = pkgname.rsplit('.', 1)
+            except ValueError:
+                pass
+            else:
+                if archpart in __ARCHES:
+                    arch = '.' + archpart
+                    pkgname = namepart
+
+            
+            if pkg_type == 'repository':
+                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
+            else:
+                pkgstr = pkg_item_list[2]
+            if reinstall and cver \
+                    and salt.utils.compare_versions(ver1=version_num,
+                                                    oper='==',
+                                                    ver2=cver):
+                to_reinstall[pkgname] = pkgstr
+            elif not cver or salt.utils.compare_versions(ver1=version_num,
+                                                         oper='>=',
+                                                         ver2=cver):
+                targets.append(pkgstr)
+            else:
+                downgrade.append(pkgstr)
 
     if targets:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} install {pkg}'.format(
@@ -852,19 +862,14 @@ def install(name=None,
             repo=repo_arg,
             exclude=exclude_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(to_reinstall),
+            pkg=' '.join(to_reinstall.values()),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
-    for pkgname in to_reinstall:
-        if pkg_type != 'repository':
-            try:
-                pkgname = _rpm_pkginfo(pkgname).name
-            except AttributeError:
-                continue
+    for pkgname in to_reinstall.keys():
         if not pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
