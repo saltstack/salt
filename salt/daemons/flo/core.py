@@ -422,8 +422,8 @@ class Rx(ioflo.base.deeding.Deed):
         '''
         Process inboud queues
         '''
-        self.udp_stack.value.serviceAll()
-        self.uxd_stack.value.serviceAll()
+        self.udp_stack.value.serviceAllRx()
+        self.uxd_stack.value.serviceAllRx()
 
 class Tx(ioflo.base.deeding.Deed):
     '''
@@ -444,8 +444,8 @@ class Tx(ioflo.base.deeding.Deed):
         '''
         Process inbound queues
         '''
-        self.uxd_stack.value.serviceAll()
-        self.udp_stack.value.serviceAll()
+        self.uxd_stack.value.serviceAllTx()
+        self.udp_stack.value.serviceAllTx()
 
 
 class Router(ioflo.base.deeding.Deed):
