@@ -7,7 +7,7 @@
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../')
+ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
