@@ -255,7 +255,7 @@ class CkMinions(object):
                         # Not a valid IPv4 address, no minions match
                         return []
                     else:
-                        if not expr in grains.get('ipv4', []):
+                        if expr not in grains.get('ipv4', []):
                             minions.remove(id_)
         return list(minions)
 
