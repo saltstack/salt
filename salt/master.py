@@ -597,11 +597,23 @@ class MWorker(multiprocessing.Process):
                     payload = self.serial.loads(package)
                     ret = self.serial.dumps(self._handle_payload(payload))
                     socket.send(ret)
-                # Properly handle EINTR from SIGUSR1
-                except zmq.ZMQError as exc:
-                    if exc.errno == errno.EINTR:
+                # don't catch keyboard interrupts, just re-raise them
+                except KeyboardInterrupt:
+                    raise
+                # catch all other exceptions, so we don't go defunct
+                except Exception as exc:
+                    # Properly handle EINTR from SIGUSR1
+                    if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
                         continue
-                    raise exc
+                    log.critical('Unexpected Error in Mworker',
+                                 exc_info=True)
+                    # lets just redo the socket (since we won't know what state its in).
+                    # This protects against a single minion doing a send but not
+                    # recv and thereby causing an MWorker process to go defunct
+                    del socket
+                    socket = context.socket(zmq.REP)
+                    socket.connect(w_uri)
+
         # Changes here create a zeromq condition, check with thatch45 before
         # making any zeromq changes
         except KeyboardInterrupt:

@@ -897,9 +897,9 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        channel = salt.transport.Channel.factory(self.opts)
-        if channel.ttype == 'zeromq':
-            self.auth = salt.crypt.SAuth(opts)
+        self.channel = salt.transport.Channel.factory(self.opts)
+        if hasattr(self.channel, 'auth'):
+            self.auth = self.channel.auth
         else:
             self.auth = ''
 
@@ -976,10 +976,7 @@ class RemoteClient(Client):
             else:
                 load['loc'] = fn_.tell()
             try:
-                channel = salt.transport.Channel.factory(
-                        self.opts,
-                        auth=self.auth)
-                data = channel.send(load)
+                data = self.channel.send(load)
             except SaltReqTimeoutError:
                 return ''
             if not data:
@@ -1048,10 +1045,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1073,10 +1067,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            channel.send(load)
+            self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1098,10 +1089,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_dir_list'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1113,10 +1101,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1154,10 +1139,7 @@ class RemoteClient(Client):
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1178,10 +1160,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1191,10 +1170,7 @@ class RemoteClient(Client):
         '''
         load = {'cmd': '_master_opts'}
         try:
-            channel = salt.transport.Channel.factory(
-                    self.opts,
-                    auth=self.auth)
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
 
@@ -1203,15 +1179,11 @@ class RemoteClient(Client):
         Return the metadata derived from the external nodes system on the
         master.
         '''
-        channel = salt.transport.Channel.factory(
-                self.opts,
-                auth=self.auth)
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts}
-        if self.auth:
-            load['tok'] = self.auth.gen_token('salt')
+        load['tok'] = self.auth.gen_token('salt')
         try:
-            return channel.send(load)
+            return self.channel.send(load)
         except SaltReqTimeoutError:
             return ''
