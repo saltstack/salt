@@ -52,7 +52,7 @@ def list():
             continue
 
         for item in schedule[job].keys():
-            if not item in SCHEDULE_CONF:
+            if item not in SCHEDULE_CONF:
                 del schedule[job][item]
                 continue
             if schedule[job][item] == 'true':
@@ -201,7 +201,7 @@ def modify(name, **kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if not name in __opts__['schedule']:
+    if name not in __opts__['schedule']:
         ret['comment'] = 'Job {0} does not exist in schedule.'.format(name)
         ret['result'] = False
         return ret
@@ -259,7 +259,7 @@ def save():
             continue
 
         for item in schedule[job].keys():
-            if not item in SCHEDULE_CONF:
+            if item not in SCHEDULE_CONF:
                 del schedule[job][item]
                 continue
             if schedule[job][item] == 'true':
