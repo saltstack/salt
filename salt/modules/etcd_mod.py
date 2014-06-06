@@ -55,21 +55,6 @@ def __virtual__():
     return __virtualname__ if HAS_LIBS else False
 
 
-def _get_conn(profile):
-    '''
-    Establish a connection to etcd
-    '''
-    if profile:
-        etcd = __salt__['config.option']('profile')
-        host = etcd.get('etcd.host', '127.0.0.1')
-        port = etcd.get('etcd.port', 4001)
-    else:
-        host = __salt__['config.option']('etcd.host', '127.0.0.1')
-        port = __salt__['config.option']('etcd.port', 4001)
-
-    return salt.utils.etcd_util.get_conn(host, port)
-
-
 def get_(key, recurse=False, profile=None):
     '''
     .. versionadded:: Helium
@@ -84,7 +69,7 @@ def get_(key, recurse=False, profile=None):
         salt myminion etcd.get /path/to/key profile=my_etcd_config
         salt myminion etcd.get /path/to/key recurse=True profile=my_etcd_config
     '''
-    client = _get_conn(profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         result = client.get(key)
 
@@ -113,7 +98,7 @@ def set_(key, value, profile=None):
         salt myminion etcd.set /path/to/key value
         salt myminion etcd.set /path/to/key value profile=my_etcd_config
     '''
-    client = _get_conn(profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         result = client.write(key, value)
         return getattr(result, 'value')
@@ -139,7 +124,7 @@ def ls_(path='/', profile=None):
         salt myminion etcd.ls /path/to/dir/
         salt myminion etcd.ls /path/to/dir/ profile=my_etcd_config
     '''
-    client = _get_conn(profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         ret = {}
         items = client.get(path)
@@ -173,7 +158,7 @@ def rm_(key, recurse=False, profile=None):
         salt myminion etcd.rm /path/to/key profile=my_etcd_config
         salt myminion etcd.rm /path/to/dir recurse=True profile=my_etcd_config
     '''
-    client = _get_conn(profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         result = client.delete(key, recursive=recurse)
         if result:
@@ -203,7 +188,7 @@ def tree(path='/', profile=None):
         salt myminion etcd.tree profile=my_etcd_config
         salt myminion etcd.tree /path/to/keys profile=my_etcd_config
     '''
-    client = _get_conn(profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         return salt.utils.etcd_util.tree(client, path)
     except (IOError, OSError) as exc:
