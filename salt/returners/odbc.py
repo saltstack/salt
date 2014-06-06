@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Return data to a Microsoft SQL Server server
+Return data to an ODBC compliant server.  This driver was
+developed with Microsoft SQL Server in mind, but theoretically
+could be used to return data to any compliant ODBC database
+as long as there is a working ODBC driver for it on your
+minion platform.
 
-:maintainer:    None
+:maintainer:    C. R. Oldham (cr@saltstack.com)
 :maturity:      New
-:depends:       unixodbc, pyodbc, freetds
+:depends:       unixodbc, pyodbc, freetds (for SQL Server)
 :platform:      all
 
 To enable this returner the minion will need
@@ -14,6 +18,11 @@ On Linux:
     unixodbc (http://www.unixodbc.org)
     pyodbc (`pip install pyodbc`)
     The FreeTDS ODBC driver for SQL Server (http://www.freetds.org)
+    or another compatible ODBC driver
+
+On Windows:
+
+    TBD
 
 unixODBC and FreeTDS need to be configured via /etc/odbcinst.ini and
 /etc/odbc.ini.
@@ -40,13 +49,13 @@ shared library.  This example is for Ubuntu 14.04.)
 Also you need the following values configured in the minion or master config.
 Configure as you see fit::
 
-    returner.mssql.dsn: 'TS'
-    returner.mssql.user: 'salt'
-    returner.mssql.passwd: 'salt'
+    returner.odbc.dsn: 'TS'
+    returner.odbc.user: 'salt'
+    returner.odbc.passwd: 'salt'
 
 Running the following commands against Microsoft SQL Server in the desired
 database as the appropriate user should create the database tables
-correctly::
+correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 
     --
     -- Table structure for table 'jids'
@@ -72,7 +81,8 @@ correctly::
        jid       varchar(255) NOT NULL,
        retval    varchar(MAX) NOT NULL,
        id        varchar(255) NOT NULL,
-       success   bit default(0)
+       success   bit default(0) NOT NULL,
+       full_ret  varchar(MAX)
      );
 
     CREATE INDEX salt_returns_added on dbo.salt_returns(added);
@@ -80,9 +90,9 @@ correctly::
     CREATE INDEX salt_returns_jid on dbo.salt_returns(jid);
     CREATE INDEX salt_returns_fun on dbo.salt_returns(fun);
 
-  To use the postgres returner, append '--return mssql' to the salt command. ex:
+  To use this returner, append '--return odbc' to the salt command. ex:
 
-    salt '*' test.ping --return mssql
+    salt '*' status.diskusage --return odbc
 
 '''
 # Let's not allow PyLint complain about string substitution
@@ -90,21 +100,22 @@ correctly::
 
 # Import python libs
 import json
+import logging
 
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
 try:
     import pyodbc
     #import psycopg2.extras
-    HAS_MSSQL = True
+    HAS_ODBC = True
 except ImportError:
-    HAS_MSSQL = False
+    HAS_ODBC = False
 
 
 def __virtual__():
-    if not HAS_MSSQL:
+    if not HAS_ODBC:
         return False
-    return 'sql_server'
+    return True
 
 
 def _get_conn():
@@ -112,9 +123,9 @@ def _get_conn():
     Return a MSSQL connection.
     '''
     return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
-            __salt__['config.option']('returner.mssql.dsn'),
-            __salt__['config.option']('returner.mssql.user'),
-            __salt__['config.option']('returner.mssql.passwd')))
+            __salt__['config.option']('returner.odbc.dsn'),
+            __salt__['config.option']('returner.odbc.user'),
+            __salt__['config.option']('returner.odbc.passwd')))
 
 
 def _close_conn(conn):
@@ -124,20 +135,21 @@ def _close_conn(conn):
 
 def returner(ret):
     '''
-    Return data to a mssql server
+    Return data to an odbc server
     '''
     conn = _get_conn()
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
-            (fun, jid, retval, id, success)
-            VALUES (?, ?, ?, ?, ?)'''
+            (fun, jid, retval, id, success, full_ret)
+            VALUES (?, ?, ?, ?, ?, ?)'''
     cur.execute(
         sql, (
             ret['fun'],
             ret['jid'],
             json.dumps(ret['return']),
             ret['id'],
-            ret['success']
+            ret['success'],
+            json.dumps(ret)
         )
     )
     _close_conn(conn)
@@ -177,14 +189,14 @@ def get_jid(jid):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT id, retval FROM salt_returns WHERE jid = ?'''
+    sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = ?'''
 
     cur.execute(sql, (jid,))
     data = cur.fetchall()
     ret = {}
     if data:
-        for minion, retval in data:
-            ret[minion] = json.loads(retval)
+        for minion, full_ret in data:
+            ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
 
@@ -195,7 +207,7 @@ def get_fun(fun):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT s.id,s.jid, s.retval
+    sql = '''SELECT s.id,s.jid, s.full_ret
             FROM salt_returns s
             JOIN ( SELECT MAX(jid) AS jid FROM salt_returns GROUP BY fun, id) max
             ON s.jid = max.jid
@@ -208,7 +220,7 @@ def get_fun(fun):
     ret = {}
     if data:
         for minion, jid, retval in data:
-            ret[minion] = json.loads(retval)
+            ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
 
@@ -219,7 +231,7 @@ def get_jids():
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT jid FROM jids'''
+    sql = '''SELECT distinct jid FROM jids'''
 
     cur.execute(sql)
     data = cur.fetchall()
