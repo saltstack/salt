@@ -94,7 +94,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True):
 
     if config is None:
         config = {}
-    if not 'master' in config:
+    if 'master' not in config:
         config['master'] = __opts__['master']
     if id_:
         config['id'] = id_
@@ -178,7 +178,7 @@ def _check_resolv(mpt):
     if not replace:
         with salt.utils.fopen(resolv, 'rb') as fp_:
             conts = fp_.read()
-            if not 'nameserver' in conts:
+            if 'nameserver' not in conts:
                 replace = True
     if replace:
         shutil.copy('/etc/resolv.conf', resolv)
