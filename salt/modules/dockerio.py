@@ -207,7 +207,7 @@ def _sizeof_fmt(num):
 
 
 def _set_status(m,
-                id=NOTSET,
+                id_=NOTSET,
                 comment=INVALID_RESPONSE,
                 status=False,
                 out=None):
@@ -217,35 +217,23 @@ def _set_status(m,
     m['comment'] = comment
     m['status'] = status
     m['out'] = out
-    if id is not NOTSET:
-        m['id'] = id
+    if id_ is not NOTSET:
+        m['id'] = id_
     return m
 
 
-def invalid(m, id=NOTSET, comment=INVALID_RESPONSE, out=None):
+def _invalid(m, id_=NOTSET, comment=INVALID_RESPONSE, out=None):
     '''
     Return invalid status
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' docker.invalid
     '''
-    return _set_status(m, status=False, id=id, comment=comment, out=out)
+    return _set_status(m, status=False, id_=id_, comment=comment, out=out)
 
 
-def valid(m, id=NOTSET, comment=VALID_RESPONSE, out=None):
+def _valid(m, id_=NOTSET, comment=VALID_RESPONSE, out=None):
     '''
     Return valid status
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' docker.valid
     '''
-    return _set_status(m, status=True, id=id, comment=comment, out=out)
+    return _set_status(m, status=True, id_=id_, comment=comment, out=out)
 
 
 def _get_client(version=None, timeout=None):
@@ -335,15 +323,14 @@ def _get_image_infos(image):
     try:
         infos = client.inspect_image(image)
         if infos:
-            valid(
-                status,
-                id=infos['id'],
-                out=infos,
-                comment='found')
+            _valid(status,
+                   id_=infos['id'],
+                   out=infos,
+                   comment='found')
     except Exception:
         pass
     if not status['id']:
-        invalid(status)
+        _invalid(status)
         raise CommandExecutionError(
             'ImageID {0!r} could not be resolved to '
             'an existing Image'.format(image)
@@ -366,9 +353,9 @@ def _get_container_infos(container):
     try:
         container_info = client.inspect_container(container)
         if container_info:
-            valid(status,
-                  id=container_info['ID'],
-                  out=container_info)
+            _valid(status,
+                   id_=container_info['ID'],
+                   out=container_info)
     except Exception:
         pass
     if not status['id']:
@@ -421,9 +408,9 @@ def get_containers(all=True,
                             before=before,
                             limit=limit)
     if ret:
-        valid(status, comment='All containers in out', out=ret)
+        _valid(status, comment='All containers in out', out=ret)
     else:
-        invalid(status)
+        _invalid(status)
     return status
 
 
@@ -444,9 +431,9 @@ def logs(container):
     client = _get_client()
     try:
         container_logs = client.logs(_get_container_infos(container)['id'])
-        valid(status, id=container, out=container_logs)
+        _valid(status, id_=container, out=container_logs)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 
@@ -498,9 +485,9 @@ def commit(container,
             raise Exception('Invalid commit return')
         image = _get_image_infos(image_id)['id']
         comment = 'Image {0} created from {1}'.format(image, container)
-        valid(status, id=image, out=commit_info, comment=comment)
+        _valid(status, id_=image, out=commit_info, comment=comment)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 
@@ -521,9 +508,9 @@ def diff(container):
     client = _get_client()
     try:
         container_diff = client.diff(_get_container_infos(container)['id'])
-        valid(status, id=container, out=container_diff)
+        _valid(status, id_=container, out=container_diff)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 
@@ -558,11 +545,11 @@ def export(container, path):
         finally:
             fic.flush()
             fic.close()
-        valid(status,
-              id=container, out=ppath,
-              comment='Exported to {0}'.format(ppath))
+        _valid(status,
+               id_=container, out=ppath,
+               comment='Exported to {0}'.format(ppath))
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 
@@ -654,16 +641,16 @@ def create_container(image,
             name=name,
         )
         container = container_info['Id']
-        callback = valid
+        callback = _valid
         comment = 'Container created'
         out = {
             'info': _get_container_infos(container),
             'out': container_info
         }
         __salt__['mine.send']('docker.get_containers', host=True)
-        return callback(status, id=container, comment=comment, out=out)
+        return callback(status, id_=container, comment=comment, out=out)
     except Exception:
-        invalid(status, id=image, out=traceback.format_exc())
+        _invalid(status, id_=image, out=traceback.format_exc())
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -682,9 +669,9 @@ def version():
     client = _get_client()
     try:
         docker_version = client.version()
-        valid(status, out=docker_version)
+        _valid(status, out=docker_version)
     except Exception:
-        invalid(status, out=traceback.format_exc())
+        _invalid(status, out=traceback.format_exc())
     return status
 
 
@@ -705,9 +692,9 @@ def info():
     client = _get_client()
     try:
         version_info = client.info()
-        valid(status, out=version_info)
+        _valid(status, out=version_info)
     except Exception:
-        invalid(status, out=traceback.format_exc())
+        _invalid(status, out=traceback.format_exc())
     return status
 
 
@@ -735,9 +722,9 @@ def port(container, private_port):
         port_info = client.port(
             _get_container_infos(container)['id'],
             private_port)
-        valid(status, id=container, out=port_info)
+        _valid(status, id_=container, out=port_info)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 
@@ -772,24 +759,23 @@ def stop(container, timeout=10):
         if is_running(dcontainer):
             client.stop(dcontainer, timeout=timeout)
             if not is_running(dcontainer):
-                valid(
+                _valid(
                     status,
                     comment='Container {0} was stopped'.format(
                         container),
-                    id=container)
+                    id_=container)
             else:
-                invalid(status)
+                _invalid(status)
         else:
-            valid(
-                status,
-                comment='Container {0} was already stopped'.format(
-                    container),
-                id=container)
+            _valid(status,
+                   comment='Container {0} was already stopped'.format(
+                       container),
+                   id_=container)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc(),
-                comment=(
-                    'An exception occurred while stopping '
-                    'your container {0}').format(container))
+        _invalid(status, id_=container, out=traceback.format_exc(),
+                 comment=(
+                     'An exception occurred while stopping '
+                     'your container {0}').format(container))
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -821,28 +807,26 @@ def kill(container):
         if is_running(dcontainer):
             client.kill(dcontainer)
             if not is_running(dcontainer):
-                valid(
-                    status,
-                    comment='Container {0} was killed'.format(
-                        container),
-                    id=container)
+                _valid(status,
+                       comment='Container {0} was killed'.format(
+                           container),
+                       id_=container)
             else:
-                invalid(status,
-                        comment='Container {0} was not killed'.format(
-                            container))
+                _invalid(status,
+                         comment='Container {0} was not killed'.format(
+                             container))
         else:
-            valid(
-                status,
-                comment='Container {0} was already stopped'.format(
-                    container),
-                id=container)
+            _valid(status,
+                   comment='Container {0} was already stopped'.format(
+                       container),
+                   id_=container)
     except Exception:
-        invalid(status,
-                id=container,
-                out=traceback.format_exc(),
-                comment=(
-                    'An exception occurred while killing '
-                    'your container {0}').format(container))
+        _invalid(status,
+                 id_=container,
+                 out=traceback.format_exc(),
+                 comment=(
+                     'An exception occurred while killing '
+                     'your container {0}').format(container))
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -877,16 +861,16 @@ def restart(container, timeout=10):
         dcontainer = _get_container_infos(container)['id']
         client.restart(dcontainer, timeout=timeout)
         if is_running(dcontainer):
-            valid(status,
-                  comment='Container {0} was restarted'.format(container),
-                  id=container)
+            _valid(status,
+                   comment='Container {0} was restarted'.format(container),
+                   id_=container)
         else:
-            invalid(status)
+            _invalid(status)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc(),
-                comment=(
-                    'An exception occurred while restarting '
-                    'your container {0}').format(container))
+        _invalid(status, id_=container, out=traceback.format_exc(),
+                 comment=(
+                     'An exception occurred while restarting '
+                     'your container {0}').format(container))
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -964,23 +948,22 @@ def start(container,
                              privileged=privileged)
 
             if is_running(dcontainer):
-                valid(status,
-                      comment='Container {0} was started'.format(container),
-                      id=container)
+                _valid(status,
+                       comment='Container {0} was started'.format(container),
+                       id_=container)
             else:
-                invalid(status)
+                _invalid(status)
         else:
-            valid(
-                status,
-                comment='Container {0} was already started'.format(container),
-                id=container)
+            _valid(status,
+                   comment='Container {0} was already started'.format(container),
+                   id_=container)
     except Exception:
-        invalid(status,
-                id=container,
-                out=traceback.format_exc(),
-                comment=(
-                    'An exception occurred while starting '
-                    'your container {0}').format(container))
+        _invalid(status,
+                 id_=container,
+                 out=traceback.format_exc(),
+                 comment=(
+                     'An exception occurred while starting '
+                     'your container {0}').format(container))
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -1009,21 +992,20 @@ def wait(container):
         if is_running(dcontainer):
             client.wait(dcontainer)
             if not is_running(container):
-                valid(status,
-                      id=container,
-                      comment='Container waited for stop')
+                _valid(status,
+                       id_=container,
+                       comment='Container waited for stop')
             else:
-                invalid(status)
+                _invalid(status)
         else:
-            valid(
-                status,
-                comment='Container {0} was already stopped'.format(container),
-                id=container)
+            _valid(status,
+                   comment='Container {0} was already stopped'.format(container),
+                   id_=container)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc(),
-                comment=(
-                    'An exception occurred while waiting '
-                    'your container {0}').format(container))
+        _invalid(status, id_=container, out=traceback.format_exc(),
+                 comment=(
+                     'An exception occurred while waiting '
+                     'your container {0}').format(container))
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -1102,10 +1084,10 @@ def remove_container(container, force=False, v=False):
         dcontainer = _get_container_infos(container)['id']
         if is_running(dcontainer):
             if not force:
-                invalid(status, id=container, out=None,
-                        comment=(
-                            'Container {0} is running, '
-                            'won\'t remove it').format(container))
+                _invalid(status, id_=container, out=None,
+                         comment=(
+                             'Container {0} is running, '
+                             'won\'t remove it').format(container))
                 __salt__['mine.send']('docker.get_containers', host=True)
                 return status
             else:
@@ -1113,13 +1095,13 @@ def remove_container(container, force=False, v=False):
         client.remove_container(dcontainer, v=v)
         try:
             _get_container_infos(dcontainer)
-            invalid(status,
-                    comment='Container was not removed: {0}'.format(container))
+            _invalid(status,
+                     comment='Container was not removed: {0}'.format(container))
         except Exception:
             status['status'] = True
             status['comment'] = 'Container {0} was removed'.format(container)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
@@ -1162,17 +1144,17 @@ def top(container):
                     for k, j in enumerate(titles):
                         data[j] = i[k]
                     ret['mprocesses'].append(data)
-                valid(status,
-                      out=ret,
-                      id=container,
-                      comment='Current top for container')
+                _valid(status,
+                       out=ret,
+                       id_=container,
+                       comment='Current top for container')
             if not status['id']:
-                invalid(status)
+                _invalid(status)
         else:
-            invalid(status,
-                    comment='Container {0} is not running'.format(container))
+            _invalid(status,
+                     comment='Container {0} is not running'.format(container))
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 
@@ -1197,10 +1179,10 @@ def inspect_container(container):
     status['id'] = container
     try:
         infos = _get_container_infos(container)
-        valid(status, id=container, out=infos)
+        _valid(status, id_=container, out=infos)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc(),
-                comment='Container does not exit: {0}'.format(container))
+        _invalid(status, id_=container, out=traceback.format_exc(),
+                 comment='Container does not exit: {0}'.format(container))
     return status
 
 
@@ -1235,9 +1217,9 @@ def search(term):
     status = base_status.copy()
     ret = client.search(term)
     if ret:
-        valid(status, out=ret, id=term)
+        _valid(status, out=ret, id_=term)
     else:
-        invalid(status)
+        _invalid(status)
     return status
 
 
@@ -1280,7 +1262,7 @@ def _create_image_assemble_error_status(status, ret, logs):
             'parsing error output:\n{0}'
         ).format(trace)
     if is_invalid:
-        invalid(status, out=out, comment=comment)
+        _invalid(status, out=out, comment=comment)
     return status
 
 
@@ -1312,14 +1294,14 @@ def import_image(src, repo, tag=None):
             _create_image_assemble_error_status(status, ret, image_logs)
             if status['status'] is not False:
                 infos = _get_image_infos(image_logs[0]['status'])
-                valid(status,
-                      comment='Image {0} was created'.format(infos['id']),
-                      id=infos['id'],
-                      out=ret)
+                _valid(status,
+                       comment='Image {0} was created'.format(infos['id']),
+                       id_=infos['id'],
+                       out=ret)
         else:
-            invalid(status)
+            _invalid(status)
     except Exception:
-        invalid(status, out=traceback.format_exc())
+        _invalid(status, out=traceback.format_exc())
     return status
 
 
@@ -1351,20 +1333,20 @@ def tag(image, repository, tag=None, force=False):
         dimage = _get_image_infos(image)['id']
         ret = client.tag(dimage, repository, tag=tag, force=force)
     except Exception:
-        invalid(status,
-                out=traceback.format_exc(),
-                comment='Cant tag image {0} {1}{2}'.format(
-                    image, repository,
-                    tag and (':' + tag) or '').strip())
+        _invalid(status,
+                 out=traceback.format_exc(),
+                 comment='Cant tag image {0} {1}{2}'.format(
+                     image, repository,
+                     tag and (':' + tag) or '').strip())
         return status
     if ret:
-        valid(status,
-              id=image,
-              comment='Image was tagged: {0}{1}'.format(
-                  repository,
-                  tag and (':' + tag) or '').strip())
+        _valid(status,
+               id_=image,
+               comment='Image was tagged: {0}{1}'.format(
+                   repository,
+                   tag and (':' + tag) or '').strip())
     else:
-        invalid(status)
+        _invalid(status)
     return status
 
 
@@ -1413,9 +1395,9 @@ def get_images(name=None, quiet=False, all=True):
                     _sizeof_fmt(int(inf['VirtualSize'])))
             except ValueError:
                 pass
-        valid(status, out=infos)
+        _valid(status, out=infos)
     except Exception:
-        invalid(status, out=traceback.format_exc())
+        _invalid(status, out=traceback.format_exc())
     return status
 
 
@@ -1436,14 +1418,19 @@ def build(path=None,
 
     path
         URL or path in the filesystem to the dockerfile
+
     tag
         Tag of the image
+
     quiet
         quiet mode
+
     nocache
         do not use docker image cache
+
     rm
         remove intermediate commits
+
     timeout
         timeout is seconds before aborting
 
@@ -1469,19 +1456,19 @@ def build(path=None,
                 message = json.loads(list(ret)[-1])
                 if 'stream' in message:
                     if 'Successfully built' in message['stream']:
-                        valid(status, out=message['stream'])
+                        _valid(status, out=message['stream'])
                 if 'errorDetail' in message:
-                    invalid(status, out=message['errorDetail']['message'])
+                    _invalid(status, out=message['errorDetail']['message'])
 
             elif isinstance(ret, tuple):
-                id, out = ret[0], ret[1]
-                if id:
-                    valid(status, id=id, out=out, comment='Image built')
+                id_, out = ret[0], ret[1]
+                if id_:
+                    _valid(status, id_=id_, out=out, comment='Image built')
                 else:
-                    invalid(status, id=id, out=out)
+                    _invalid(status, id_=id_, out=out)
 
         except Exception:
-            invalid(status,
+            _invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
             return status
@@ -1515,23 +1502,23 @@ def remove_image(image):
             try:
                 client.remove_image(infos['id'])
             except Exception:
-                invalid(status,
-                        id=image,
-                        out=traceback.format_exc(),
-                        comment='Image could not be deleted')
+                _invalid(status,
+                         id_=image,
+                         out=traceback.format_exc(),
+                         comment='Image could not be deleted')
             try:
                 infos = _get_image_infos(image)
-                invalid(status,
-                        comment=(
-                            'Image marked to be deleted but not deleted yet'))
+                _invalid(status,
+                         comment=(
+                             'Image marked to be deleted but not deleted yet'))
             except Exception:
-                valid(status, id=image, comment='Image deleted')
+                _valid(status, id_=image, comment='Image deleted')
         else:
-            invalid(status)
+            _invalid(status)
     except Exception:
-        invalid(status,
-                out=traceback.format_exc(),
-                comment='Image does not exist: {0}'.format(image))
+        _invalid(status,
+                 out=traceback.format_exc(),
+                 comment='Image does not exist: {0}'.format(image))
     return status
 
 
@@ -1555,10 +1542,10 @@ def inspect_image(image):
                 ] = _sizeof_fmt(int(infos[k]))
         except Exception:
             pass
-        valid(status, id=image, out=infos)
+        _valid(status, id_=image, out=infos)
     except Exception:
-        invalid(status, id=image, out=traceback.format_exc(),
-                comment='Image does not exist')
+        _invalid(status, id_=image, out=traceback.format_exc(),
+                 comment='Image does not exist')
     return status
 
 
@@ -1627,7 +1614,7 @@ def _pull_assemble_error_status(status, ret, logs):
                     comment += msg
     except Exception:
         out = traceback.format_exc()
-    invalid(status, out=out, comment=comment)
+    _invalid(status, out=out, comment=comment)
     return status
 
 
@@ -1699,18 +1686,18 @@ def pull(repo, tag=None):
                 repotag = repo
                 if tag:
                     repotag = '{0}:{1}'.format(repo, tag)
-                valid(status,
-                      out=image_logs if image_logs else ret,
-                      id=infos['id'],
-                      comment='Image {0} was pulled ({1})'.format(
-                          repotag, infos['id']))
+                _valid(status,
+                       out=image_logs if image_logs else ret,
+                       id_=infos['id'],
+                       comment='Image {0} was pulled ({1})'.format(
+                           repotag, infos['id']))
 
             else:
                 _pull_assemble_error_status(status, ret, image_logs)
         else:
-            invalid(status)
+            _invalid(status)
     except Exception:
-        invalid(status, id=repo, out=traceback.format_exc())
+        _invalid(status, id_=repo, out=traceback.format_exc())
     return status
 
 
@@ -1752,7 +1739,7 @@ def _push_assemble_error_status(status, ret, logs):
             'An error occurred while '
             'parsing error output:\n{0}'
         ).format(trace)
-    invalid(status, comment=comment)
+    _invalid(status, comment=comment)
     return status
 
 
@@ -1835,7 +1822,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
         # http://jpetazzo.github.io/2014/03/23/lxc-attach-nsinit-nsenter-docker-0-9/
         container_pid = container_info['State']['Pid']
         if container_pid == 0:
-            invalid(status, id=container, comment='Container is not running')
+            _invalid(status, id_=container, comment='Container is not running')
             return status
         full_cmd = ('nsenter --target {pid} --mount --uts --ipc --net --pid'
                     ' {cmd}'.format(pid=container_pid, cmd=cmd))
@@ -1853,12 +1840,12 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))
                 or (func == 'cmd.retcode' and ret != 0)):
-            return invalid(status, id=container, out=ret,
-                           comment=comment)
-        valid(status, id=container, out=ret, comment=comment,)
+            return _invalid(status, id_=container, out=ret,
+                            comment=comment)
+        _valid(status, id_=container, out=ret, comment=comment,)
     except Exception:
-        invalid(status, id=container,
-                comment=comment, out=traceback.format_exc())
+        _invalid(status, id_=container,
+                 comment=comment, out=traceback.format_exc())
     return status
 
 
@@ -2117,7 +2104,7 @@ def _script(status,
         if not no_clean:
             os.remove(path)
     except Exception:
-        invalid(status, id=container, out=traceback.format_exc())
+        _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
 

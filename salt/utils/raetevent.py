@@ -6,6 +6,7 @@ This module is used to manage events via RAET
 '''
 
 # Import python libs
+import os
 import logging
 import time
 from collections import MutableMapping
@@ -15,6 +16,7 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
+from salt import syspaths
 from raet import raeting
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
@@ -26,26 +28,34 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, listen=True):
+    def __init__(self, node, sock_dir=None, listen=True, opts=None):
         '''
         Set up the stack and remote yard
         '''
-        #import  wingdbstub
-
         self.node = node
         self.sock_dir = sock_dir
         self.listen = listen
+        if opts is None:
+            opts = {}
+        self.opts = opts
         self.__prep_stack()
 
     def __prep_stack(self):
         self.yid = salt.utils.gen_jid()
+        name = 'event' + self.yid
+        cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
+        basedirpath = os.path.abspath(
+                os.path.join(cachedir, 'raet'))
         self.connected = False
         self.stack = LaneStack(
+                name=name,
                 yid=self.yid,
                 lanename=self.node,
+                basedirpath=basedirpath,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
+                stack=self.stack,
                 lanename=self.node,
                 yid=0,
                 dirpath=self.sock_dir)

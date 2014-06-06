@@ -229,7 +229,10 @@ class Minion(parsers.MinionOptionParser):
             self.daemonize_if_required()
             self.set_pidfile()
             if isinstance(self.config.get('master'), list):
-                self.minion = salt.minion.MultiMinion(self.config)
+                if self.config.get('master_type') == 'failover':
+                    self.minion = salt.minion.Minion(self.config)
+                else:
+                    self.minion = salt.minion.MultiMinion(self.config)
             else:
                 self.minion = salt.minion.Minion(self.config)
         else:

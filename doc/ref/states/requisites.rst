@@ -8,11 +8,11 @@ The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
 inter-dependency can be easily defined.
 
-Requisites come in two types: Direct requisites (such as ``require`` and ``watch``),
-and requisite_ins (such as ``require_in`` and ``watch_in``). The relationships are
-directional: a direct requisite requires something from another state, while
-requisite_ins operate in the other direction. A requisite_in contains something that
-is required by another state. The following example demonstrates a direct requisite:
+Requisites come in two types: Direct requisites (such as ``require``),
+and requisite_ins (such as ``require_in``). The relationships are
+directional: a direct requisite requires something from another state.
+However, a requisite_in inserts a requisite into the targeted state pointing to
+the targeting state.  The following example demonstrates a direct requisite:
 
 .. code-block:: yaml
 
@@ -43,7 +43,8 @@ something", requisite_ins say "Someone depends on me":
 
 So here, with a requisite_in, the same thing is accomplished as in the first
 example, but the other way around. The vim package is saying "/etc/vimrc depends
-on me".
+on me".  This will result in a ``require`` being inserted into the
+``/etc/vimrc`` state which  targets the ``vim`` state.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -65,13 +66,14 @@ finite and predictable order.
 Direct Requisite and Requisite_in types
 =======================================
 
-There are four direct requisite statements that can be used in Salt: ``require``,
-``watch``, ``prereq``, and ``use``. Each direct requisite also has a corresponding
-requisite_in: ``require_in``, ``watch_in``, ``prereq_in`` and ``use_in``. All of the
-requisites define specific relationships and always work with the dependency
-logic defined above.
+There are six direct requisite statements that can be used in Salt:
+``require``, ``watch``, ``prereq``, ``use``, ``onchanges``, and ``onfail``.
+Each direct requisite also has a corresponding requisite_in: ``require_in``,
+``watch_in``, ``prereq_in``, ``use_in``, ``onchanges_in``, and ``onfail_in``.
+All of the requisites define specific relationships and always work with the
+dependency logic defined above.
 
-Require
+require
 -------
 
 The use of ``require`` demands that the dependent state executes before the
@@ -98,14 +100,24 @@ including the sls file and then setting a state to ``require`` the included sls 
         - require:
           - sls: foo
 
-Watch
+watch
 -----
 
-``watch`` statements are used to monitor changes in other states. The state containing
-the ``watch`` requisite is defined as the watching state. The state specified in the
-``watch`` statement is defined as the watched state. When the watched state executes,
-it will return a dictionary containing a key named "changes". Here are two examples
-of state return dictionaries, shown in json for clarity:
+``watch`` statements are used to add additional behavior when there are changes
+in other states.
+
+.. note::
+
+    If a state should only execute when another state has changes, and
+    otherwise do nothing, the new ``onchanges`` requisite should be used
+    instead of ``watch``.  ``watch`` is designed to add *additional* behavior
+    when there are changes, but otherwise execute normally.
+
+The state containing the ``watch`` requisite is defined as the watching
+state. The state specified in the ``watch`` statement is defined as the watched
+state. When the watched state executes, it will return a dictionary containing
+a key named "changes". Here are two examples of state return dictionaries,
+shown in json for clarity:
 
 .. code-block:: json
 
@@ -131,24 +143,35 @@ of state return dictionaries, shown in json for clarity:
         }
     }
 
-If the "changes" key contains a populated dictionary, it means that changes in
-the watched state occurred. The watching state will now execute. If the "changes"
-key contains an empty dictionary, this means that changes in the watched state
-did not occur and the watching state will not execute.
+If the "result" of the watched state is ``True``, the watching state *will
+execute normally*.  This part of ``watch`` mirrors the functionality of the
+``require`` requisite.  If the "result" of the watched state is ``False``, the
+watching state will never run, nor will the watching state's ``mod_watch``
+function execute.
 
-The behavior of ``watch`` depends on the presence of a function called
-``mod_watch`` in the watching state module. Note: Not all state modules contain
-``mod_watch``. If ``mod_watch`` is present, the watched state is checked to see
-if it made any changes to the system. If the watched state returns changes, the
-``mod_watch`` function is called and the watching state executes. If the watching
-state does not contain ``mod_watch``, then watch behaves the same way as the
-``require`` requisite: the watching state will only execute if the watched state
-executes successfully. If the watched state fails, then the watching state will
-not run.
+However, if the "result" of the watched state is ``True``, and the "changes"
+key contains a populated dictionary (changes occurred in the watched state),
+then the ``watch`` requisite can add additional behavior.  This additional
+behavior is defined by the ``mod_watch`` function within the watching state
+module.  If the ``mod_watch`` function exists in the watching state module, it
+will be called *in addition to* the normal watching state.  The return data
+from the ``mod_watch`` function is what will be returned to the master in this
+case; the return data from the main watching function is discarded.
+
+If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
+exactly like the ``require`` requisite (the watching state will execute if
+"result" is ``True``, and fail if "result" is ``False`` in the watched state).
+
+.. note::
+
+    Not all state modules contain ``mod_watch``. If ``mod_watch`` is absent
+    from the watching state module, the ``watch`` requisite behaves exactly
+    like a ``require`` requisite.
 
 A good example of using ``watch`` is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
-the service is reloaded/restarted when the watched state changes:
+the service is reloaded/restarted when the watched state changes, in addition
+to Salt ensuring that the service is running.
 
 .. code-block:: yaml
 
@@ -160,7 +183,7 @@ the service is reloaded/restarted when the watched state changes:
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
 
-Prereq
+prereq
 ------
 
 .. versionadded:: 0.16.0
@@ -211,7 +234,7 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
-Onfail
+onfail
 ------
 
 .. versionadded:: Helium
@@ -241,16 +264,16 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - onfail:
           - mount: primary_mount
 
-Onchanges
+onchanges
 ---------
 
 .. versionadded:: Helium
 
 The ``onchanges`` requisite makes a state only apply if the required states
-generate changes. This can be a useful way to execute a post hook after
-changing aspects of a system.
+generate changes, and if the watched state's "result" is ``True``. This can be
+a useful way to execute a post hook after changing aspects of a system.
 
-Use
+use
 ---
 
 The ``use`` requisite is used to inherit the arguments passed in another
@@ -283,13 +306,22 @@ targeted state. This means also a chain of ``use`` requisites would not
 inherit inherited options.
 
 .. _requisites-require-in:
+.. _requisites-watch-in:
 
-Require In
-----------
+The _in versions of requisites
+------------------------------
 
-The ``require_in`` requisite is the literal reverse of ``require``. If
-a state declaration needs to be required by another state declaration then
-require_in can accommodate it. Therefore, these two sls files would be the
+All of the requisites also have corresponding requisite_in versions, which do
+the reverse of their normal counterparts.  The examples below all use
+``require_in`` as the example, but note that all of the ``_in`` requisites work
+the same way:  They result in a normal requisite in the targeted state, which
+targets the state which has defines the requisite_in.  Thus, a ``require_in``
+causes the target state to ``require`` the targeting state.  Similarly, a
+``watch_in`` causes the target state to ``watch`` the targeting state.  This
+pattern continues for the rest of the requisites.
+
+If a state declaration needs to be required by another state declaration then
+``require_in`` can accommodate it. Therefore, these two sls files would be the
 same in the end:
 
 Using ``require``
@@ -362,73 +394,6 @@ mod_python.sls
 Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
-.. _requisites-watch-in:
-
-Watch In
---------
-
-``watch_in`` functions the same way as ``require_in``, but applies
-a ``watch`` statement rather than a ``require`` statement to the external state
-declaration.
-
-A good example of when to use ``watch_in`` versus ``watch`` is in regards to writing
-an Apache state in conjunction with a git state for a Django application. On the most
-basic level, using either the ``watch`` or the ``watch_in`` requisites, the resulting
-behavior will be the same: Apache restarts each time the Django git state changes.
-
-.. code-block:: yaml
-
-    apache:
-      pkg:
-        - installed
-        - name: httpd
-      service:
-        - watch:
-          - git: django_git
-
-    django_git:
-      git:
-        - latest
-        - name: git@github.com/example/mydjangoproject.git
-
-However, by using ``watch_in``, the approach is improved. By writing ``watch_in`` in
-the depending states (such as the Django state and any other states that require Apache
-to restart), the dependent state (Apache state) is de-coupled from the depending states:
-
-.. code-block:: yaml
-
-    apache:
-      pkg:
-        - installed
-        - name: httpd
-
-    django_git:
-      git:
-        - latest
-        - name: git@github.com/example/mydjangoproject.git
-        - watch_in:
-          - service: apache
-
-Prereq In
----------
-
-The ``prereq_in`` requisite_in follows the same assignment logic as the
-``require_in`` requisite_in. The ``prereq_in`` call simply assigns
-``prereq`` to the state referenced. The above example for ``prereq`` can
-be modified to function in the same way using ``prereq_in``:
-
-.. code-block:: yaml
-
-    graceful-down:
-      cmd.run:
-        - name: service apache graceful
-
-    site-code:
-      file.recurse:
-        - name: /opt/site_code
-        - source: salt://site/code
-        - prereq_in:
-          - cmd: graceful-down
 
 Altering Statefulness
 =====================

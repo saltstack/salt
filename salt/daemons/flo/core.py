@@ -32,6 +32,9 @@ from salt.exceptions import (
 from ioflo.base.odicting import odict
 import ioflo.base.deeding
 
+from ioflo.base.consoling import getConsole
+console = getConsole()
+
 # Import Third Party Libs
 HAS_PSUTIL = False
 try:
@@ -69,6 +72,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                       'ival': {'name': 'master',
                                'main': False,
                                'auto': True,
+                               'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}}
@@ -80,7 +84,8 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
         '''
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        name = self.local.data.name
+        name = self.opts.value.get('id', self.local.data.name)
+        localname = self.opts.value.get('id', self.local.data.localname)
         dirpath = os.path.abspath(
                 os.path.join(self.opts.value['cachedir'], 'raet'))
         auto = self.local.data.auto
@@ -90,7 +95,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
         eid = self.local.data.eid
         local = LocalEstate(
                 eid=eid,
-                name=name,
+                name=localname,
                 main=main,
                 ha=ha,
                 sigkey=sigkey,
@@ -103,6 +108,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 local=local,
                 store=self.store,
                 name=name,
+                localname=localname,
                 auto=auto,
                 main=main,
                 dirpath=dirpath,
@@ -238,6 +244,28 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         self.status.update(allowed=allowed)
 
 
+class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
+    '''
+    Prints out messages on rxMsgs queue for associated stack
+    FloScript:
+
+    do raet road stack printer
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
+
+    def action(self, **kwa):
+        '''
+        Queue up message
+        '''
+        rxMsgs = self.rxmsgs.value
+        while rxMsgs:
+            msg = rxMsgs.popleft()
+            console.terse("\nReceived....\n{0}\n".format(msg))
+
+
 class LoadModules(ioflo.base.deeding.Deed):
     '''
     Reload the minion modules
@@ -317,9 +345,10 @@ class Schedule(ioflo.base.deeding.Deed):
         self.schedule.eval()
 
 
-class Setup(ioflo.base.deeding.Deed):
+class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     '''
-    Only intended to be called once at the top of the house
+    Only intended to be called once at the top of the manor house
+    Sets of the LaneStack for the main yard
     FloScript:
 
     do setup at enter
@@ -334,19 +363,33 @@ class Setup(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
-               'uxd_stack': '.salt.uxd.stack.stack'}
+               'inode': '.salt.uxd.stack.',
+               'stack': 'stack',
+               'local': {'ipath': 'local',
+                          'ival': {'name': 'master',
+                                   'localname': 'master',
+                                   'yid': 0,
+                                   'lanename': 'master'}}
+            }
 
     def postinitio(self):
         '''
         Set up required objects and queues
         '''
-        self.uxd_stack.value = LaneStack(
-                name='yard',
-                lanename=self.opts.value.get('id', 'master'),
-                yid=0,
-                sockdirpath=self.opts.value['sock_dir'],
-                dirpath=self.opts.value['cachedir'])
-        self.uxd_stack.value.Pk = raeting.packKinds.pack
+        name = self.opts.value.get('id', self.local.data.name)
+        localname = self.opts.value.get('id', self.local.data.localname)
+        lanename = self.opts.value.get('id', self.local.data.lanename)
+        yid = self.local.data.yid
+        basedirpath = os.path.abspath(
+                os.path.join(self.opts.value['cachedir'], 'raet'))
+        self.stack.value = LaneStack(
+                                    name=name,
+                                    #localname=localname,
+                                    lanename=lanename,
+                                    yid=0,
+                                    sockdirpath=self.opts.value['sock_dir'],
+                                    basedirpath=basedirpath)
+        self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
         self.remote_cmd.value = deque()
@@ -359,6 +402,45 @@ class Setup(ioflo.base.deeding.Deed):
             for ind in range(self.opts.value['worker_threads']):
                 worker_seed.append('yard{0}'.format(ind + 1))
             self.workers.value = itertools.cycle(worker_seed)
+
+
+class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+    '''
+    Closes lane stack server socket connection
+    FloScript:
+
+    do raet lane stack closer at exit
+
+    '''
+    Ioinits = odict(
+        inode=".salt.uxd.stack",
+        stack='stack',)
+
+    def action(self, **kwa):
+        '''
+        Close uxd socket
+        '''
+        if self.stack.value and isinstance(self.stack.value, LaneStack):
+            self.stack.value.server.close()
+
+
+class SaltRoadService(ioflo.base.deeding.Deed):
+    '''
+    Process the udp traffic
+    FloScript:
+
+    do rx
+
+    '''
+    Ioinits = {
+               'udp_stack': '.raet.udp.stack.stack',
+               }
+
+    def action(self):
+        '''
+        Process inboud queues
+        '''
+        self.udp_stack.value.serviceAll()
 
 
 class Rx(ioflo.base.deeding.Deed):
@@ -378,8 +460,8 @@ class Rx(ioflo.base.deeding.Deed):
         '''
         Process inboud queues
         '''
-        self.udp_stack.value.serviceAll()
-        self.uxd_stack.value.serviceAll()
+        self.udp_stack.value.serviceAllRx()
+        self.uxd_stack.value.serviceAllRx()
 
 
 class Tx(ioflo.base.deeding.Deed):
@@ -401,8 +483,8 @@ class Tx(ioflo.base.deeding.Deed):
         '''
         Process inbound queues
         '''
-        self.uxd_stack.value.serviceAll()
-        self.udp_stack.value.serviceAll()
+        self.uxd_stack.value.serviceAllTx()
+        self.udp_stack.value.serviceAllTx()
 
 
 class Router(ioflo.base.deeding.Deed):
@@ -470,7 +552,6 @@ class Router(ioflo.base.deeding.Deed):
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
         '''
-        #import wingdbstub
         try:
             d_estate = msg['route']['dst'][0]
             d_yard = msg['route']['dst'][1]
@@ -639,17 +720,23 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
+        stackname = self.opts['id'] + ret['jid']
+        dirpath = os.path.join(self.opts['cachedir'], stackname)
         ret_stack = LaneStack(
+                name=stackname,
                 lanename=self.opts['id'],
                 yid=ret['jid'],
                 sockdirpath=self.opts['sock_dir'],
-                dirpath=self.opts['cachedir'])
+                dirpath=dirpath)
+
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
+                stack=ret_stack,
                 yid=0,
                 lanename=self.opts['id'],
                 dirpath=self.opts['sock_dir']
                 )
+
         ret_stack.addRemote(main_yard)
         route = {'src': (self.opts['id'], ret_stack.local.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
@@ -691,6 +778,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         )
             log.debug('Command details {0}'.format(data))
             ex_yard = RemoteYard(
+                    stack=self.uxd_stack.value,
                     yid=data['jid'],
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])

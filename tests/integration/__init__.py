@@ -282,7 +282,7 @@ class TestDaemon(object):
         self.pre_setup_minions()
         self.setup_minions()
 
-        if self.parser.options.ssh:
+        if getattr(self.parser.options, 'ssh', False):
             self.prep_ssh()
 
         if self.parser.options.sysinfo:

@@ -358,6 +358,20 @@ only the cache for the mine system.
 
     enforce_mine_cache: False
 
+``max_minions``
+---------------
+
+Default: 0
+
+The number of minions the master should allow to connect. Use this to accomodate
+the number of minions per master if you have different types of hardware serving
+your minions. The default of ``0`` means unlimited connections. Please note, that
+this can slow down the authentication process a bit in large setups.
+
+.. code-block:: yaml
+
+    max_minions: 100
+
 ``presence_events``
 ----------------------
 

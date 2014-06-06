@@ -5,6 +5,7 @@ The core bahaviuors ued by minion and master
 # pylint: disable=W0232
 
 # Import python libs
+import os
 import multiprocessing
 
 # Import salt libs
@@ -80,40 +81,57 @@ class WorkerSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',
             'yid': '.salt.yid',
             'access_keys': '.salt.access_keys',
             'remote': '.salt.loader.remote',
             'local': '.salt.loader.local',
+            'inode': '.salt.uxd.stack.',
+            'stack': 'stack',
+            'main': {'ipath': 'main',
+                       'ival': {'name': 'master',
+                                'localname': 'master',
+                                'yid': 0,
+                                'lanename': 'master'}}
             }
 
     def action(self):
         '''
         Set up the uxd stack and behaviors
         '''
-        #import wingdbstub
-        self.uxd_stack.value = LaneStack(
-                lanename=self.opts.value.get('id', 'master'),
-                yid=self.yid.value,
-                sockdirpath=self.opts.value['sock_dir'])
-        self.uxd_stack.value.Pk = raeting.packKinds.pack
+        name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
+                                  'worker',
+                                  self.yid.value)
+        localname = name
+        lanename = self.opts.value.get('id', self.main.data.lanename)
+        basedirpath = os.path.abspath(
+                os.path.join(self.opts.value['cachedir'], 'raet'))
+
+        self.stack.value = LaneStack(
+                                     name=name,
+                                     #localname=localname,
+                                     basedirpath=basedirpath,
+                                     lanename=lanename,
+                                     yid=self.yid.value,
+                                     sockdirpath=self.opts.value['sock_dir'])
+        self.stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
-                yid=0,
-                lanename=self.opts.value.get('id', 'master'),
-                dirpath=self.opts.value['sock_dir'])
-        self.uxd_stack.value.addRemote(manor_yard)
+                                 stack=self.stack.value,
+                                 yid=0,
+                                 lanename=lanename,
+                                 dirpath=self.opts.value['sock_dir'])
+        self.stack.value.addRemote(manor_yard)
         self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
         self.local.value = salt.daemons.masterapi.LocalFuncs(
                 self.opts.value,
                 self.access_keys.value)
         init = {}
         init['route'] = {
-                'src': (None, self.uxd_stack.value.local.name, None),
-                'dst': (None, 'yard0', 'worker_req')
+                'src': (None, self.stack.value.local.name, None),
+                'dst': (None, manor_yard.name, 'worker_req')
                 }
-        self.uxd_stack.value.transmit(init, self.uxd_stack.value.uids.get('yard0'))
-        self.uxd_stack.value.serviceAll()
+        self.stack.value.transmit(init, self.stack.value.uids.get(manor_yard.name))
+        self.stack.value.serviceAll()
 
 
 class WorkerRouter(ioflo.base.deeding.Deed):

@@ -11,6 +11,7 @@ import logging
 import urlparse
 from copy import deepcopy
 import time
+import codecs
 
 # import third party libs
 import yaml
@@ -54,6 +55,7 @@ VALID_OPTS = {
     'master_port': int,
     'master_type': str,
     'master_finger': str,
+    'master_shuffle': bool,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -222,6 +224,7 @@ VALID_OPTS = {
     'auth_tries': int,
     'auth_safemode': bool,
     'random_master': bool,
+    'random_reauth_delay': int,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
     'ssh_passwd': str,
@@ -235,6 +238,7 @@ VALID_OPTS = {
     'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
+    'max_minions': int,
 }
 
 # default configurations
@@ -244,6 +248,7 @@ DEFAULT_MINION_OPTS = {
     'master_type': 'str',
     'master_port': '4506',
     'master_finger': '',
+    'master_shuffle': False,
     'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -325,9 +330,10 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
-    'recon_max': 5000,
-    'recon_default': 100,
+    'recon_max': 59000,
+    'recon_default': 1000,
     'recon_randomize': True,
+    'random_reauth_delay': 60,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -502,6 +508,7 @@ DEFAULT_MASTER_OPTS = {
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
+    'max_minions': 0,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1780,6 +1787,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
+                if name.startswith(codecs.BOM):  # Remove BOM if exists
+                    name = name.replace(codecs.BOM, '', 1)
             if name:
                 log.info('Using cached minion ID from {0}: {1}'
                          .format(id_cache, name))

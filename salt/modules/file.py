@@ -950,7 +950,7 @@ def replace(path,
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
     :param path: Filesystem path to the file to be edited
-    :param pattern: The PCRE search
+    :param pattern: The Python's regular expression search
     :param repl: The replacement text
     :param count: Maximum number of pattern occurrences to be replaced
     :param flags: A list of flags defined in the :ref:`re module documentation

@@ -28,7 +28,6 @@ class LocalClient(salt.client.LocalClient):
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None):
 
-        #import  wingdbstub
         salt.client.LocalClient.__init__(self, c_path, mopts)
 
     def pub(self,
@@ -54,11 +53,13 @@ class LocalClient(salt.client.LocalClient):
                 **kwargs)
         yid = salt.utils.gen_jid()
         stack = LaneStack(
+                name=('client' + yid),
                 yid=yid,
                 lanename='master',
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
+                stack=stack,
                 lanename='master',
                 yid=0,
                 dirpath=self.opts['sock_dir'])

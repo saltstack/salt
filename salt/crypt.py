@@ -298,12 +298,13 @@ class Auth(object):
 
     def verify_master(self, payload):
         '''
-        Verify that the master is the same one that was previously accepted
+        Verify that the master is the same one that was previously accepted.
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
             if payload['pub_key'] != local_master_pub:
+
                 # This is not the last master we connected to
                 log.error('The master key has changed, the salt master could '
                           'have been subverted, verify salt master\'s public '
@@ -372,6 +373,9 @@ class Auth(object):
                             'clean out the keys. The Salt Minion will now exit.'
                         )
                         sys.exit(os.EX_OK)
+                # has the master returned that its maxed out with minions?
+                elif payload['load']['ret'] == 'full':
+                    return 'full'
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
