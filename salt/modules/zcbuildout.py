@@ -123,7 +123,7 @@ class _Logger(object):
     def _log(self, level, msg):
         if not isinstance(msg, unicode):
             msg = msg.decode('utf-8')
-        if not level in self._by_level:
+        if level not in self._by_level:
             self._by_level[level] = []
         self._msgs.append((level, msg))
         self._by_level[level].append(msg)
@@ -346,7 +346,7 @@ def _find_cfgs(path, cfgs=None):
         fi = os.path.join(path, i)
         if fi.endswith('.cfg') and os.path.isfile(fi):
             cfgs.append(fi)
-        if os.path.isdir(fi) and (not i in ignored):
+        if os.path.isdir(fi) and (i not in ignored):
             dirs.append(fi)
     for fpath in dirs:
         for p, ids, ifs in os.walk(fpath):
@@ -498,7 +498,7 @@ def upgrade_bootstrap(directory='.',
                 data = urllib2.urlopen(booturl).read()
                 updated = True
                 dled = True
-        if not 'socket.setdefaulttimeout' in data:
+        if 'socket.setdefaulttimeout' not in data:
             updated = True
             ldata = data.splitlines()
             ldata.insert(1, 'import socket;socket.setdefaulttimeout(2)')
@@ -858,7 +858,7 @@ def _merge_statuses(statuses):
         status['logs'].extend([
             (a[0], _encode_string(a[1])) for a in logs])
         for log in logs_by_level:
-            if not log in status['logs_by_level']:
+            if log not in status['logs_by_level']:
                 status['logs_by_level'][log] = []
             status['logs_by_level'][log].extend(
                 [_encode_string(a) for a in logs_by_level[log]])
