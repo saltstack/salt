@@ -1654,8 +1654,8 @@ class Syndic(Minion):
                         # Timeout reached
                         break
                     if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
-                        if not event['tag'] in jids:
-                            if not 'jid' in event['data']:
+                        if event['tag'] not in jids:
+                            if 'jid' not in event['data']:
                                 # Not a job return
                                 continue
                             jids[event['tag']] = {}
@@ -1668,7 +1668,7 @@ class Syndic(Minion):
                         jids[event['tag']][event['data']['id']] = event['data']['return']
                     else:
                         # Add generic event aggregation here
-                        if not 'retcode' in event['data']:
+                        if 'retcode' not in event['data']:
                             raw_events.append(event)
                 if raw_events:
                     self._fire_master(events=raw_events, pretag=tagify(self.opts['id'], base='syndic'))
