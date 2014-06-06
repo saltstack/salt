@@ -87,7 +87,7 @@ def lowstate_file_refs(chunks):
                 continue
             crefs.extend(salt_refs(chunk[state]))
         if crefs:
-            if not saltenv in refs:
+            if saltenv not in refs:
                 refs[saltenv] = []
             refs[saltenv].append(crefs)
     return refs
