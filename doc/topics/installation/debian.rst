@@ -31,6 +31,14 @@ For wheezy, the following line is needed in either
 
   deb http://debian.saltstack.com/debian wheezy-saltstack main
 
+Jessie (Testing)
+~~~~~~~~~~~~~~~
+
+For jessie, the following line is needed in either
+``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``::
+
+  deb http://debian.saltstack.com/debian jessie-saltstack main
+
 Sid (Unstable)
 ~~~~~~~~~~~~~~
 

@@ -345,9 +345,10 @@ class Schedule(ioflo.base.deeding.Deed):
         self.schedule.eval()
 
 
-class Setup(ioflo.base.deeding.Deed):
+class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     '''
-    Only intended to be called once at the top of the house
+    Only intended to be called once at the top of the manor house
+    Sets of the LaneStack for the main yard
     FloScript:
 
     do setup at enter
@@ -362,19 +363,33 @@ class Setup(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
-               'uxd_stack': '.salt.uxd.stack.stack'}
+               'inode': '.salt.uxd.stack.',
+               'stack': 'stack',
+               'local': {'ipath': 'local',
+                          'ival': {'name': 'master',
+                                   'localname': 'master',
+                                   'yid': 0,
+                                   'lanename': 'master'}}
+            }
 
     def postinitio(self):
         '''
         Set up required objects and queues
         '''
-        self.uxd_stack.value = LaneStack(
-                name='yard',
-                lanename=self.opts.value.get('id', 'master'),
-                yid=0,
-                sockdirpath=self.opts.value['sock_dir'],
-                dirpath=self.opts.value['cachedir'])
-        self.uxd_stack.value.Pk = raeting.packKinds.pack
+        name = self.opts.value.get('id', self.local.data.name)
+        localname = self.opts.value.get('id', self.local.data.localname)
+        lanename = self.opts.value.get('id', self.local.data.lanename)
+        yid = self.local.data.yid
+        basedirpath = os.path.abspath(
+                os.path.join(self.opts.value['cachedir'], 'raet'))
+        self.stack.value = LaneStack(
+                                    name=name,
+                                    #localname=localname,
+                                    lanename=lanename,
+                                    yid=0,
+                                    sockdirpath=self.opts.value['sock_dir'],
+                                    basedirpath=basedirpath)
+        self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
         self.remote_cmd.value = deque()
@@ -387,6 +402,26 @@ class Setup(ioflo.base.deeding.Deed):
             for ind in range(self.opts.value['worker_threads']):
                 worker_seed.append('yard{0}'.format(ind + 1))
             self.workers.value = itertools.cycle(worker_seed)
+
+
+class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+    '''
+    Closes lane stack server socket connection
+    FloScript:
+
+    do raet lane stack closer at exit
+
+    '''
+    Ioinits = odict(
+        inode=".salt.uxd.stack",
+        stack='stack',)
+
+    def action(self, **kwa):
+        '''
+        Close uxd socket
+        '''
+        if self.stack.value and isinstance(self.stack.value, LaneStack):
+            self.stack.value.server.close()
 
 
 class SaltRoadService(ioflo.base.deeding.Deed):
@@ -425,8 +460,8 @@ class Rx(ioflo.base.deeding.Deed):
         '''
         Process inboud queues
         '''
-        self.udp_stack.value.serviceAll()
-        self.uxd_stack.value.serviceAll()
+        self.udp_stack.value.serviceAllRx()
+        self.uxd_stack.value.serviceAllRx()
 
 
 class Tx(ioflo.base.deeding.Deed):
@@ -448,8 +483,8 @@ class Tx(ioflo.base.deeding.Deed):
         '''
         Process inbound queues
         '''
-        self.uxd_stack.value.serviceAll()
-        self.udp_stack.value.serviceAll()
+        self.uxd_stack.value.serviceAllTx()
+        self.udp_stack.value.serviceAllTx()
 
 
 class Router(ioflo.base.deeding.Deed):

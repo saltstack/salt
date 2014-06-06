@@ -8,7 +8,7 @@ from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-ensure_in_syspath('../')
+ensure_in_syspath('../..')
 
 # Import Python libs
 import os
@@ -23,6 +23,10 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'fileserver_backend': 'gitfs',
                   'gitfs_base': 'master',
                   'fileserver_events': True,
+                  'transport': 'zeromq',
+                  'gitfs_mountpoint': '',
+                  'gitfs_env_whitelist': [],
+                  'gitfs_env_blacklist': []
 }
 
 load = {'saltenv': 'base'}
@@ -88,7 +92,11 @@ class GitFSTest(integration.ModuleCase):
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.find_file('testfile')
-            expected_ret = {'path': '/tmp/salttest/cache/gitfs/refs/master/testfile',
+            expected_ret = {'path': os.path.join(self.master_opts['cachedir'],
+                                                 'gitfs',
+                                                 'refs',
+                                                 'base',
+                                                 'testfile'),
                             'rel': 'testfile'}
 
             self.assertDictEqual(ret, expected_ret)
@@ -140,8 +148,18 @@ class GitFSTest(integration.ModuleCase):
 
             ret = gitfs.serve_file(load, fnd)
             self.assertDictEqual({
-                                     'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ARTHUR:  And this enchanter of whom you speak, he has seen the grail?\n  OLD MAN:  Ha ha he he he he!\n  ARTHUR:  Where does he live?  Old man, where does he live?\n  OLD MAN:  He knows of a cave, a cave which no man has entered.\n  ARTHUR:  And the Grail... The Grail is there?\n  OLD MAN:  Very much danger, for beyond the cave lies the Gorge\n      of Eternal Peril, which no man has ever crossed.\n  ARTHUR:  But the Grail!  Where is the Grail!?\n  OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  The Bridge of Death, which leads to the Grail?\n  OLD MAN:  Hee hee ha ha!\n\n',
-                                     'dest': 'testfile'}, ret)
+                'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ARTHUR:  '
+                        'And this enchanter of whom you speak, he has seen the grail?\n  '
+                        'OLD MAN:  Ha ha he he he he!\n  ARTHUR:  Where does he live?  '
+                        'Old man, where does he live?\n  OLD MAN:  He knows of a cave, '
+                        'a cave which no man has entered.\n  ARTHUR:  And the Grail... '
+                        'The Grail is there?\n  OLD MAN:  Very much danger, for beyond '
+                        'the cave lies the Gorge\n      of Eternal Peril, which no man '
+                        'has ever crossed.\n  ARTHUR:  But the Grail!  Where is the Grail!?\n  '
+                        'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  The Bridge of '
+                        'Death, which leads to the Grail?\n  OLD MAN:  Hee hee ha ha!\n\n',
+                'dest': 'testfile'},
+                ret)
 
 
 if __name__ == '__main__':

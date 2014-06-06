@@ -1748,6 +1748,29 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
+        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+
+        # 0 is default which should be 'unlimited'
+        if self.opts['max_minions'] > 0:
+            if not len(minions) < self.opts['max_minions']:
+                # we reject new minions, minions that are already
+                # connected must be allowed for the mine, highstate, etc.
+                if load['id'] not in minions:
+                    msg = ('Too many minions connected (max_minions={0}). '
+                           'Rejecting connection from id '
+                           '{1}'.format(self.opts['max_minions'],
+                                        load['id'])
+                          )
+                    log.info(msg)
+                    eload = {'result': False,
+                             'act': 'full',
+                             'id': load['id'],
+                             'pub': load['pub']}
+
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': 'full'}}
+
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.__check_autoreject(load['id'])
         auto_sign = self.__check_autosign(load['id'])

@@ -25,6 +25,7 @@ import time
 import copy
 import logging
 from datetime import datetime
+from salt._compat import string_types
 
 # Import salt libs
 import salt.config
@@ -174,7 +175,7 @@ class LocalClient(object):
             return self.opts['timeout']
         if isinstance(timeout, int):
             return timeout
-        if isinstance(timeout, str):
+        if isinstance(timeout, string_types):
             try:
                 return int(timeout)
             except ValueError:
