@@ -1488,7 +1488,7 @@ class AESFuncs(object):
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
-            if not key in ret:
+            if key not in ret:
                 ret[key] = val
         if clear_load.get('form', '') != 'full':
             ret.pop('__jid__')
