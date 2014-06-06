@@ -1223,7 +1223,7 @@ def search(term):
     return status
 
 
-def _create_image_assemble_error_status(status, ret, logs):
+def _create_image_assemble_error_status(status, ret, image_logs):
     '''
     Given input in this form::
 
@@ -1239,7 +1239,7 @@ def _create_image_assemble_error_status(status, ret, logs):
     try:
         is_invalid = False
         status['out'] += '\n' + ret
-        for err_log in logs:
+        for err_log in image_logs:
             if isinstance(err_log, dict):
                 if 'errorDetail' in err_log:
                     if 'code' in err_log['errorDetail']:
