@@ -35,7 +35,7 @@ def _sd_booted():
     Return True if the system was booted with systemd, False otherwise.
     '''
     # We can cache this for as long as the minion runs.
-    if not "systemd.sd_booted" in __context__:
+    if "systemd.sd_booted" not in __context__:
         try:
             # This check does the same as sd_booted() from libsystemd-daemon:
             # http://www.freedesktop.org/software/systemd/man/sd_booted.html
