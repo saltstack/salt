@@ -360,7 +360,7 @@ class SSH(object):
                     init = True
                     continue
                 for default in self.defaults:
-                    if not default in self.targets[host]:
+                    if default not in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
                 args = (
                         que,
