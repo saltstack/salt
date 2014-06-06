@@ -443,7 +443,7 @@ def flush(name, family='ipv4', **kwargs):
         if ignore in kwargs:
             del kwargs[ignore]
 
-    if not 'table' in kwargs:
+    if 'table' not in kwargs:
         kwargs['table'] = 'filter'
 
     if not __salt__['nftables.check_table'](kwargs['table'], family=family):
@@ -454,7 +454,7 @@ def flush(name, family='ipv4', **kwargs):
         )
         return ret
 
-    if not 'chain' in kwargs:
+    if 'chain' not in kwargs:
         kwargs['chain'] = ''
     else:
         if not __salt__['nftables.check_chain'](kwargs['table'], kwargs['chain'], family=family):

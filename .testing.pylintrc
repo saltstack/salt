@@ -70,6 +70,8 @@ disable=R,
   E8126,
   E8127,
   E8128,
+  E8129,
+  E8131,
   E8265
 
 # Disabled:

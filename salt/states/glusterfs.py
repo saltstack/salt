@@ -175,7 +175,7 @@ def started(name):
            'comment': '',
            'result': False}
     volumes = __salt__['glusterfs.list_volumes']()
-    if not name in volumes:
+    if name not in volumes:
         ret['result'] = False
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         return ret

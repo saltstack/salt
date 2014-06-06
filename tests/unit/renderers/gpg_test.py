@@ -26,12 +26,12 @@ OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
 OPTS['gpg_keydir'] = os.getcwd()
 
-ENCRYPTED_STRING = """
+ENCRYPTED_STRING = '''
 -----BEGIN PGP MESSAGE-----
 I AM SO SECRET!
 -----END PGP MESSAGE-----
-"""
-DECRYPTED_STRING = "I am not a secret anymore"
+'''
+DECRYPTED_STRING = 'I am not a secret anymore'
 SKIP = False
 
 try:
@@ -65,7 +65,7 @@ class GPGTestCase(TestCase):
     def make_nested_object(self, s):
         return OrderedDict([
             ('array_key', [1, False, s]),
-            ('string_key', "A Normal String"),
+            ('string_key', 'A Normal String'),
             ('dict_key', {1: None}),
         ])
 

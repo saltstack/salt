@@ -263,7 +263,7 @@ def _get_client(version=None, timeout=None):
         # only if defined by user.
         kwargs['timeout'] = timeout
 
-    if not 'base_url' in kwargs and 'DOCKER_HOST' in os.environ:
+    if 'base_url' not in kwargs and 'DOCKER_HOST' in os.environ:
         #Check if the DOCKER_HOST environment variable has been set
         kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 

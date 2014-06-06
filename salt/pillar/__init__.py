@@ -462,7 +462,7 @@ class Pillar(object):
         '''
         Render the external pillar data
         '''
-        if not 'ext_pillar' in self.opts:
+        if 'ext_pillar' not in self.opts:
             return pillar
         if not isinstance(self.opts['ext_pillar'], list):
             log.critical('The "ext_pillar" option is malformed')

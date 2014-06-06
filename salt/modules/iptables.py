@@ -212,7 +212,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['sport']
 
     if 'dports' in kwargs:
-        if not '-m multiport' in rule:
+        if '-m multiport' not in rule:
             rule += '-m multiport '
             if not proto:
                 return 'Error: proto must be specified'
@@ -233,7 +233,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['dports']
 
     if 'sports' in kwargs:
-        if not '-m multiport' in rule:
+        if '-m multiport' not in rule:
             rule += '-m multiport '
             if not proto:
                 return 'Error: proto must be specified'

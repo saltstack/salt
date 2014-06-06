@@ -109,7 +109,7 @@ def options_absent(name, sections=None):
                                                           key)
             if not current_value:
                 continue
-            if not section in ret['changes']:
+            if section not in ret['changes']:
                 ret['changes'].update({section: {}})
             ret['changes'][section].update({key: {'before': current_value,
                                                   'after': None}})

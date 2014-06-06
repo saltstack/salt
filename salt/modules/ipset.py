@@ -144,12 +144,12 @@ def new_set(set=None, set_type=None, family='ipv4', comment=False, **kwargs):
     if not set_type:
         return 'Error: Set Type needs to be specified'
 
-    if not set_type in _IPSET_SET_TYPES:
+    if set_type not in _IPSET_SET_TYPES:
         return 'Error: Set Type is invalid'
 
     # Check for required arguments
     for item in _CREATE_OPTIONS_REQUIRED[set_type]:
-        if not item in kwargs:
+        if item not in kwargs:
             return 'Error: {0} is a required argument'.format(item)
 
     cmd = '{0} create {1} {2}'.format(_ipset_cmd(), set, set_type)
@@ -317,15 +317,15 @@ def add(set=None, entry=None, family='ipv4', **kwargs):
     cmd = '{0}'.format(entry)
 
     if 'timeout' in kwargs:
-        if not 'timeout' in setinfo['Header']:
+        if 'timeout' not in setinfo['Header']:
             return 'Error: Set {0} not created with timeout support'.format(set)
 
     if 'packets' in kwargs or 'bytes' in kwargs:
-        if not 'counters' in setinfo['Header']:
+        if 'counters' not in setinfo['Header']:
             return 'Error: Set {0} not created with counters support'.format(set)
 
     if 'comment' in kwargs:
-        if not 'comment' in setinfo['Header']:
+        if 'comment' not in setinfo['Header']:
             return 'Error: Set {0} not created with comment support'.format(set)
         cmd = '{0} comment "{1}"'.format(cmd, kwargs['comment'])
 
