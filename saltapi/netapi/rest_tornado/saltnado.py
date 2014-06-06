@@ -7,6 +7,11 @@ A REST API for Salt
 :depends:   - tornado Python module
 
 Exposes ``all`` "real-time" events from Salt's event bus on a websocket connection.
+It should be noted that "Real-time" here means these events are made available
+to the server as soon as any salt related action (changes to minions, new jobs etc) happens.
+Clients are however assumed to be able to tolerate any network transport related latencies.
+Functionality provided by this endpoint is similar to the ``/events`` end point.
+
 The event bus on the Salt master exposes a large variety of things, notably
 when executions are started on the master and also when minions ultimately
 return their results. This URL provides a real-time window into a running
@@ -49,7 +54,7 @@ The event stream can be easily consumed via JavaScript:
     // Note, you must be authenticated!
 
     // Get the Websocket connection to Salt
-    var source = new Websocket('ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
+    var source = new Websocket('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
 
     // Get Salt's "real time" event stream.
     source.onopen = function() { source.send('websocket client ready'); };
@@ -793,8 +798,14 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         Return a websocket connection to Salt
         representing Salt's "real time" event stream.
         '''
-        self.connected = False
         logger.info('In the open method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+
+        # close the connection, if not authenticated
+        if not self._verify_auth():
+            self.close()
+            return
+
+        self.connected = False
 
     @tornado.gen.coroutine
     def on_message(self, message):

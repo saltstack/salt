@@ -1,3 +1,4 @@
+import hashlib
 import logging
 
 __virtualname__ = 'rest_tornado'
@@ -36,11 +37,13 @@ def start():
 
     mod_opts = __opts__.get(__virtualname__, {})
 
-    logger.info("mod opts are {}".format(mod_opts))
-
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
 
+    token_len = len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest())
+    token_pattern = r"([0-9A-Fa-f]{%s})" % token_len
+    all_events_pattern = r"/all_events/{}".format(token_pattern)
+    logger.info("All events pattern is {}".format(all_events_pattern))
     application = tornado.web.Application([
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
@@ -51,8 +54,12 @@ def start():
         (r"/run", saltnado.RunSaltAPIHandler),
         (r"/events", saltnado.EventsSaltAPIHandler),
         (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
-        (r"/all_events(/.*)?", saltnado.AllEventsHandler),
-
+        # Matches /all_events/[0-9A-Fa-f]{n}
+        # Where n is the length of hexdigest
+        # for the current hashing algorithm.
+        # This algorithm is specified in the
+        # salt master config file.
+        (all_events_pattern, saltnado.AllEventsHandler),
     ], debug=mod_opts.get('debug', False))
 
     application.opts = __opts__
