@@ -63,7 +63,7 @@ def get_conn(opts, profile=None):
     opts_merged.update(opts.pop('pillar'))
 
     if profile:
-        conf = opts_merged.get(profile)
+        conf = opts_merged.get(profile, {})
     else:
         conf = opts_merged
 
