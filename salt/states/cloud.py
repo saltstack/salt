@@ -425,7 +425,7 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
     if not ret['result']:
         return ret
 
-    if not server_name is None:
+    if server_name is not None:
         ret = _check_name(server_name)
         if not ret['result']:
             return ret
@@ -447,7 +447,7 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         ret['result'] = True
         return ret
-    elif not instance and not server_name is None:
+    elif not instance and server_name is not None:
         ret['comment'] = 'Server {0} does not exist'.format(server_name)
         ret['result'] = True
         return ret
