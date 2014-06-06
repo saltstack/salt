@@ -102,13 +102,13 @@ ssh_key_file
  The SSH private key that the salt-cloud uses to SSH into the VM after its first booted in order to execute a command or script. This private key's *public key* must be the openstack public key inserted into the authorized_key's file of the VM's root user account. 
 
 ssh_key_name
- The name of the openstack SSH public key that is inserted into the authorized_keys file of VM's root user account. Prior to using this public key, you must use openstack commands or the horizon web UI to load that key into the tenant's account. Note that this openstack tenant must be the one you defined in the cloud provider. 
+ The name of the openstack SSH public key that is inserted into the authorized_keys file of the VM's root user account. Prior to using this public key, you must use openstack commands or the horizon web UI to load that key into the tenant's account. Note that this openstack tenant must be the one you defined in the cloud provider. 
 
 ssh_interface
  This option allows you to create a VM without a public IP. If this option is omitted and the VM does not have a public IP, then the salt-cloud waits for a certain period of time and then destroys the VM.    
   
 script
- After salt-cloud successfully launches a VM, it SSH into the VM and executes a deploy script. By default, this is the *bootstrap-salt.sh*, which installs and configures a salt minion on the VM. However, you can use the script property to specify a different deploy script. This script must exist in the */etc/salt/cloud.deploy.d* directory. 
+ After salt-cloud successfully launches a VM, it SSH into the VM and executes a deploy script. By default, this is *bootstrap-salt.sh*, which installs and configures a salt minion on the VM. However, you can use the script property to specify a different deploy script. This script must exist in the */etc/salt/cloud.deploy.d* directory. 
 
 
 change_password
