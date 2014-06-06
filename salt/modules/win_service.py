@@ -131,7 +131,7 @@ def missing(name):
 
         salt '*' service.missing <service name>
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():

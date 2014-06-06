@@ -611,7 +611,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in __salt__['cmd.run'](
                     '{0} -n machdep.cpu_brand'.format(sysctl)):
                 grains['virtual'] = 'kvm'
-            elif not 'invalid' in __salt__['cmd.run'](
+            elif 'invalid' not in __salt__['cmd.run'](
                     '{0} -n machdep.xen.suspend'.format(sysctl)):
                 grains['virtual'] = 'Xen PV DomU'
             elif 'VMware' in __salt__['cmd.run'](

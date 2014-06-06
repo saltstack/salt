@@ -5,9 +5,10 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
+import fnmatch
+import logging
 import os
 import re
-import logging
 import time
 try:
     import pwd
@@ -76,7 +77,7 @@ def clean_fsbackend(opts):
     '''
     Clean out the old fileserver backends
     '''
-    # Clear remote fileserver backend env cache so it gets recreated
+    # Clear remote fileserver backend caches so they get recreated
     for backend in ('git', 'hg', 'svn'):
         if backend in opts['fileserver_backend']:
             env_cache = os.path.join(
@@ -92,6 +93,25 @@ def clean_fsbackend(opts):
                     log.critical(
                         'Unable to clear env cache file {0}: {1}'
                         .format(env_cache, exc)
+                    )
+
+            file_lists_dir = os.path.join(
+                opts['cachedir'],
+                'file_lists',
+                '{0}fs'.format(backend)
+            )
+            try:
+                file_lists_caches = os.listdir(file_lists_dir)
+            except OSError:
+                continue
+            for file_lists_cache in fnmatch.filter(file_lists_caches, '*.p'):
+                cache_file = os.path.join(file_lists_dir, file_lists_cache)
+                try:
+                    os.remove(cache_file)
+                except (IOError, OSError) as exc:
+                    log.critical(
+                        'Unable to file_lists cache file {0}: {1}'
+                        .format(cache_file, exc)
                     )
 
 
@@ -678,7 +698,7 @@ class RemoteFuncs(object):
                 pub_load['timeout'] = int(load['timeout'])
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
-                        load['tmo'])
+                        load['timeout'])
                 log.warn(msg)
                 return {}
         if 'tgt_type' in load:
@@ -704,7 +724,7 @@ class RemoteFuncs(object):
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
-            if not key in ret:
+            if key not in ret:
                 ret[key] = val
         if load.get('form', '') != 'full':
             ret.pop('__jid__')

@@ -92,6 +92,7 @@ and Friday, and 3pm on Tuesday and Thursday.
             start: 8:00am
             end: 5:00pm
 
+w
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.
@@ -188,6 +189,70 @@ class Schedule(object):
         if 'config.merge' in self.functions:
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
+
+    def delete_job(self, name):
+        # ensure job exists, then delete it
+        if name in self.opts['schedule']:
+            del self.opts['schedule'][name]
+
+        # remove from self.intervals
+        if name in self.intervals:
+            del self.intervals[name]
+
+    def add_job(self, data):
+        '''
+        Adds a new job to the scheduler. The format is the same as required in
+        the configuration file. See the docs on how YAML is interpreted into
+        python data-structures to make sure, you pass correct dictionaries.
+        '''
+
+        # we dont do any checking here besides making sure its a dict.
+        # eval() already does for us and raises errors accordingly
+        if not type(data) is dict:
+            raise ValueError('Scheduled jobs have to be of type dict')
+        if not len(data.keys()) == 1:
+            raise ValueError('You can only schedule one new job at a time')
+
+        new_job = data.keys()[0]
+
+        if new_job in self.opts['schedule']:
+            log.debug('Updating job settings for scheduled '
+                      'job: {0}'.format(new_job))
+        else:
+            log.debug('Added new job {0} to scheduler'.format(new_job))
+        self.opts['schedule'].update(data)
+
+    def enable_job(self, name):
+        '''
+        Enable a job in the scheduler.
+        '''
+        self.opts['schedule'][name]['enabled'] = True
+
+    def disable_job(self, name):
+        '''
+        Disable a job in the scheduler.
+        '''
+        self.opts['schedule'][name]['enabled'] = False
+
+    def modify_job(self, name, schedule):
+        '''
+        Modify a job in the scheduler.
+        '''
+        if name in self.opts['schedule']:
+            self.delete_job(name)
+        self.opts['schedule'][name] = schedule
+
+    def enable_schedule(self):
+        '''
+        Enable the scheduler.
+        '''
+        self.opts['schedule']['enabled'] = True
+
+    def disable_schedule(self):
+        '''
+        Disable the scheduler.
+        '''
+        self.opts['schedule']['enabled'] = False
 
     def handle_func(self, func, data):
         '''
@@ -311,9 +376,17 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self.option('schedule')
+        #log.debug('calling eval {0}'.format(schedule))
         if not isinstance(schedule, dict):
             return
+        if 'enabled' in schedule and not schedule['enabled']:
+            return
         for job, data in schedule.items():
+            if job == 'enabled':
+                continue
+            # Job is disabled, continue
+            if 'enabled' in data and not data['enabled']:
+                continue
             if 'function' in data:
                 func = data['function']
             elif 'func' in data:
@@ -335,8 +408,12 @@ class Schedule(object):
             when = 0
             seconds = 0
 
-            # clean this up
-            if ('seconds' in data or 'hours' in data or 'minutes' in data or 'days' in data) and 'when' in data:
+            time_conflict = False
+            for item in ['seconds', 'minutes', 'hours', 'days']:
+                if item in data and 'when' in data:
+                    time_conflict = True
+
+            if time_conflict:
                 log.info('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
                 continue
 
@@ -380,11 +457,11 @@ class Schedule(object):
                         if seconds < 0:
                             continue
 
-                        if not '_when_run' in data:
+                        if '_when_run' not in data:
                             data['_when_run'] = True
 
                         # Backup the run time
-                        if not '_when' in data:
+                        if '_when' not in data:
                             data['_when'] = when
 
                         # A new 'when' ensure _when_run is True
@@ -409,11 +486,11 @@ class Schedule(object):
                     if seconds < 0:
                         continue
 
-                    if not '_when_run' in data:
+                    if '_when_run' not in data:
                         data['_when_run'] = True
 
                     # Backup the run time
-                    if not '_when' in data:
+                    if '_when' not in data:
                         data['_when'] = when
 
                     # A new 'when' ensure _when_run is True
@@ -440,6 +517,7 @@ class Schedule(object):
                 else:
                     if now - self.intervals[job] >= seconds:
                         run = True
+
             else:
                 if 'splay' in data:
                     if 'when' in data:

@@ -102,7 +102,7 @@ def verify(*package, **kwargs):
         fname = line[13:]
         if line[11:12] in ftypes:
             fdict['type'] = ftypes[line[11:12]]
-        if not 'type' in fdict.keys() or not fdict['type'] in ignore_types:
+        if 'type' not in fdict.keys() or fdict['type'] not in ignore_types:
             if line[0:1] == 'S':
                 fdict['mismatch'].append('size')
             if line[1:2] == 'M':

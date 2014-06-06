@@ -11,6 +11,7 @@ import logging
 import urlparse
 from copy import deepcopy
 import time
+import codecs
 
 # import third party libs
 import yaml
@@ -54,6 +55,7 @@ VALID_OPTS = {
     'master_port': int,
     'master_type': str,
     'master_finger': str,
+    'master_shuffle': bool,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -236,6 +238,7 @@ VALID_OPTS = {
     'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
+    'max_minions': int,
 }
 
 # default configurations
@@ -245,6 +248,7 @@ DEFAULT_MINION_OPTS = {
     'master_type': 'str',
     'master_port': '4506',
     'master_finger': '',
+    'master_shuffle': False,
     'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -504,6 +508,7 @@ DEFAULT_MASTER_OPTS = {
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
+    'max_minions': 0,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1782,6 +1787,8 @@ def get_id(root_dir=None, minion_id=False, cache=True):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
+                if name.startswith(codecs.BOM):  # Remove BOM if exists
+                    name = name.replace(codecs.BOM, '', 1)
             if name:
                 log.info('Using cached minion ID from {0}: {1}'
                          .format(id_cache, name))
@@ -1874,7 +1881,7 @@ def apply_minion_config(overrides=None,
 
     prepend_root_dir(opts, prepend_root_dirs)
     if '__mine_interval' not in opts.get('schedule', {}):
-        if not 'schedule' in opts:
+        if 'schedule' not in opts:
             opts['schedule'] = {}
         opts['schedule'].update({
             '__mine_interval':

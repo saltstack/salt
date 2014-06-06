@@ -235,6 +235,18 @@ latex_documents = [
 
 latex_logo = '_static/salt-logo.pdf'
 
+latex_elements = {
+    'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
+    'utf8extra': '',
+    'preamble': '''
+
+\usepackage{fontspec}
+\setsansfont{DejaVu Sans}
+\setromanfont{DejaVu Serif}
+\setmonofont{DejaVu Sans Mono}
+''',
+}
+
 ### Linkcheck options
 linkcheck_ignore = [r'http://127.0.0.1',
                     r'http://salt:\d+',

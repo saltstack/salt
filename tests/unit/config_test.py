@@ -93,7 +93,7 @@ def _fopen_side_effect_etc_hosts(filename):
         _unhandled_mock_read(filename)
 
 
-class ConfigTestCase(TestCase):
+class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def test_proper_path_joining(self):
         fpath = tempfile.mktemp()
         try:
@@ -335,31 +335,28 @@ class ConfigTestCase(TestCase):
                 shutil.rmtree(tempdir)
 
     def test_syndic_config(self):
-        syndic_conf_path = os.path.join(
-            integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'
-        )
-        minion_config_path = os.path.join(
-            integration.INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
-        )
+        syndic_conf_path = self.get_config_file_path('syndic')
+        minion_conf_path = self.get_config_file_path('minion')
         syndic_opts = sconfig.syndic_config(
-            syndic_conf_path, minion_config_path
+            syndic_conf_path, minion_conf_path
         )
         syndic_opts.update(salt.minion.resolve_dns(syndic_opts))
+        root_dir = syndic_opts['root_dir']
         # id & pki dir are shared & so configured on the minion side
         self.assertEqual(syndic_opts['id'], 'minion')
-        self.assertEqual(syndic_opts['pki_dir'], '/tmp/salttest/pki')
+        self.assertEqual(syndic_opts['pki_dir'], os.path.join(root_dir, 'pki'))
         # the rest is configured master side
         self.assertEqual(syndic_opts['master_uri'], 'tcp://127.0.0.1:54506')
         self.assertEqual(syndic_opts['master_port'], 54506)
         self.assertEqual(syndic_opts['master_ip'], '127.0.0.1')
         self.assertEqual(syndic_opts['master'], 'localhost')
-        self.assertEqual(syndic_opts['sock_dir'], '/tmp/salttest/minion_sock')
-        self.assertEqual(syndic_opts['cachedir'], '/tmp/salttest/cachedir')
-        self.assertEqual(syndic_opts['log_file'], '/tmp/salttest/osyndic.log')
-        self.assertEqual(syndic_opts['pidfile'], '/tmp/salttest/osyndic.pid')
+        self.assertEqual(syndic_opts['sock_dir'], os.path.join(root_dir, 'minion_sock'))
+        self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cachedir'))
+        self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'osyndic.log'))
+        self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'osyndic.pid'))
         # Show that the options of localclient that repub to local master
         # are not merged with syndic ones
-        self.assertEqual(syndic_opts['_master_conf_file'], minion_config_path)
+        self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
 
     def test_check_dns_deprecation_warning(self):

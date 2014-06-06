@@ -113,13 +113,13 @@ class SaltNova(object):
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
-        if not os_auth_plugin is None:
+        if os_auth_plugin is not None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
             self.kwargs['auth_plugin'] = auth_plugin
             self.kwargs['auth_system'] = os_auth_plugin
 
-        if not 'api_key' in self.kwargs.keys():
+        if 'api_key' not in self.kwargs.keys():
             self.kwargs['api_key'] = password
         extensions = []
         if 'extensions' in kwargs:
@@ -148,7 +148,7 @@ class SaltNova(object):
             self.catalog = \
                 conn.client.service_catalog.catalog['access']['serviceCatalog']
 
-        if not region_name is None:
+        if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
             self.kwargs['bypass_url'] = get_entry(
                 servers_endpoints,
@@ -158,7 +158,7 @@ class SaltNova(object):
 
         self.compute_conn = client.Client(**self.kwargs)
 
-        if not region_name is None:
+        if region_name is not None:
             servers_endpoints = get_entry(
                 self.catalog,
                 'type',

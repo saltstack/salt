@@ -165,7 +165,7 @@ def _get_jinja_error(trace, context=None):
     # resolve the filename
     add_log = False
     template_path = None
-    if not 'sls' in context:
+    if 'sls' not in context:
         if (
             (error[0] != '<unknown>')
             and os.path.exists(error[0])

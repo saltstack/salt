@@ -2067,7 +2067,7 @@ def cache_node_list(nodes, provider, opts):
 
     .. versionadded:: Helium
     '''
-    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+    if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
     base = os.path.join(init_cachedir(), 'active')
@@ -2092,7 +2092,7 @@ def cache_node(node, provider, opts):
 
     .. versionadded:: Helium
     '''
-    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+    if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
     if not os.path.exists(os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')):
@@ -2155,7 +2155,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     .. versionadded:: Helium
     '''
-    if not 'diff_cache_events' in opts or not opts['diff_cache_events']:
+    if 'diff_cache_events' not in opts or not opts['diff_cache_events']:
         return
 
     path = os.path.join(prov_dir, node)

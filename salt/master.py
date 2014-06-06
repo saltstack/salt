@@ -597,11 +597,23 @@ class MWorker(multiprocessing.Process):
                     payload = self.serial.loads(package)
                     ret = self.serial.dumps(self._handle_payload(payload))
                     socket.send(ret)
-                # Properly handle EINTR from SIGUSR1
-                except zmq.ZMQError as exc:
-                    if exc.errno == errno.EINTR:
+                # don't catch keyboard interrupts, just re-raise them
+                except KeyboardInterrupt:
+                    raise
+                # catch all other exceptions, so we don't go defunct
+                except Exception as exc:
+                    # Properly handle EINTR from SIGUSR1
+                    if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
                         continue
-                    raise exc
+                    log.critical('Unexpected Error in Mworker',
+                                 exc_info=True)
+                    # lets just redo the socket (since we won't know what state its in).
+                    # This protects against a single minion doing a send but not
+                    # recv and thereby causing an MWorker process to go defunct
+                    del socket
+                    socket = context.socket(zmq.REP)
+                    socket.connect(w_uri)
+
         # Changes here create a zeromq condition, check with thatch45 before
         # making any zeromq changes
         except KeyboardInterrupt:
@@ -1488,7 +1500,7 @@ class AESFuncs(object):
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
-            if not key in ret:
+            if key not in ret:
                 ret[key] = val
         if clear_load.get('form', '') != 'full':
             ret.pop('__jid__')
@@ -1747,6 +1759,29 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
+
+        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+
+        # 0 is default which should be 'unlimited'
+        if self.opts['max_minions'] > 0:
+            if not len(minions) < self.opts['max_minions']:
+                # we reject new minions, minions that are already
+                # connected must be allowed for the mine, highstate, etc.
+                if load['id'] not in minions:
+                    msg = ('Too many minions connected (max_minions={0}). '
+                           'Rejecting connection from id '
+                           '{1}'.format(self.opts['max_minions'],
+                                        load['id'])
+                          )
+                    log.info(msg)
+                    eload = {'result': False,
+                             'act': 'full',
+                             'id': load['id'],
+                             'pub': load['pub']}
+
+                    self.event.fire_event(eload, tagify(prefix='auth'))
+                    return {'enc': 'clear',
+                            'load': {'ret': 'full'}}
 
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.__check_autoreject(load['id'])

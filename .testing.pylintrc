@@ -69,7 +69,10 @@ disable=R,
   E8125,
   E8126,
   E8127,
-  E8128
+  E8128,
+  E8129,
+  E8131,
+  E8265
 
 # Disabled:
 # R* [refactoring suggestions & reports]
@@ -103,6 +106,7 @@ disable=R,
 # F0401 (import-error)
 #
 # E812* All PEP8 E12*
+# E8265 PEP8 E265 - block comment should start with "# "
 # E8501 PEP8 line too long
 
 [REPORTS]

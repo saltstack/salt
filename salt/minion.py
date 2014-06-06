@@ -575,8 +575,7 @@ class Minion(MinionBase):
         # module
         opts['grains'] = salt.loader.grains(opts)
 
-        # if master_type was changed, we might want to load our
-        # master-variable from a user defined modules function
+        # check if master_type was altered from its default
         if opts['master_type'] != 'str':
             # check for a valid keyword
             if opts['master_type'] == 'func':
@@ -593,16 +592,64 @@ class Minion(MinionBase):
                            'module \'{0}\''.format(opts['master']))
                     log.error(msg)
                     sys.exit(1)
-                log.info('Evaluated master from module: {0}'.format(opts['master']))
+                log.info('Evaluated master from module: {0}'.format(master_mod))
+
+            # if failover is set, master has to be of type list
+            elif opts['master_type'] == 'failover':
+                if type(opts['master']) is list:
+                    log.info('Got list of available master addresses:'
+                             ' {0}'.format(opts['master']))
+                else:
+                    msg = ('master_type set to \'failover\' but \'master\' '
+                           'is not of type list but of type '
+                           '{0}'.format(type(opts['master'])))
+                    log.error(msg)
+                    sys.exit(1)
             else:
                 msg = ('Invalid keyword \'{0}\' for variable '
                        '\'master_type\''.format(opts['master_type']))
                 log.error(msg)
                 sys.exit(1)
 
-        opts.update(resolve_dns(opts))
-        super(Minion, self).__init__(opts)
-        self.authenticate(timeout, safe)
+        # if we have a list of masters, loop through them and be
+        # happy with the first one that allows us to connect
+        if type(opts['master']) is list:
+            conn = False
+            # shuffle the masters and then loop through them
+            local_masters = copy.copy(opts['master'])
+            if opts['master_shuffle']:
+                from random import shuffle
+                shuffle(local_masters)
+
+            for master in local_masters:
+                opts['master'] = master
+                opts.update(resolve_dns(opts))
+                super(Minion, self).__init__(opts)
+                try:
+                    if self.authenticate(timeout, safe) != 'full':
+                        conn = True
+                        break
+                except SaltClientError:
+                    msg = ('Master {0} could not be reached, trying '
+                           'next master (if any)'.format(opts['master']))
+                    log.info(msg)
+                    continue
+
+            if not conn:
+                msg = ('No master could be reached or all masters denied '
+                       'the minions connection attempt.')
+                log.error(msg)
+
+        # single master sign in
+        else:
+            opts.update(resolve_dns(opts))
+            super(Minion, self).__init__(opts)
+            if self.authenticate(timeout, safe) == 'full':
+                msg = ('master {0} rejected the minions connection because too '
+                       'many minions are already connected.'.format(opts['master']))
+                log.error(msg)
+                sys.exit(1)
+
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
@@ -695,9 +742,9 @@ class Minion(MinionBase):
             load['tag'] = tag
         else:
             return
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            result = sreq.send('aes', self.crypticle.dumps(load))
+            result = channel.send(load)
             try:
                 data = self.crypticle.loads(result)
             except AuthenticationError:
@@ -1019,7 +1066,7 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(jid))
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
@@ -1063,7 +1110,7 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
-            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+            ret_val = channel.send(load)
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
@@ -1074,7 +1121,7 @@ class Minion(MinionBase):
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
-            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+            ret_val = channel.send(load)
         log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
@@ -1102,7 +1149,7 @@ class Minion(MinionBase):
         :return: None
         '''
         if '__update_grains' not in self.opts.get('schedule', {}):
-            if not 'schedule' in self.opts:
+            if 'schedule' not in self.opts:
                 self.opts['schedule'] = {}
             self.opts['schedule'].update({
                 '__update_grains':
@@ -1216,7 +1263,9 @@ class Minion(MinionBase):
         safe = self.opts.get('auth_safemode', safe)
         while True:
             creds = auth.sign_in(timeout, safe, tries)
-            if creds != 'retry':
+            if creds == 'full':
+                return creds
+            elif creds != 'retry':
                 log.info('Authentication with master successful!')
                 break
             log.info('Waiting for minion key to be accepted by the master.')
@@ -1253,6 +1302,35 @@ class Minion(MinionBase):
             self.opts['environment'],
         ).compile_pillar()
         self.module_refresh()
+
+    def manage_schedule(self, package):
+        '''
+        Refresh the functions and returners.
+        '''
+        tag, data = salt.utils.event.MinionEvent.unpack(package)
+        func = data.get('func', None)
+
+        if func == 'delete':
+            job = data.get('job', None)
+            self.schedule.delete_job(job)
+        elif func == 'add':
+            name = data.get('name', None)
+            schedule = data.get('schedule', None)
+            self.schedule.add_job(schedule)
+        elif func == 'modify':
+            name = data.get('name', None)
+            schedule = data.get('schedule', None)
+            self.schedule.modify_job(name, schedule)
+        elif func == 'enable':
+            self.schedule.enable_schedule()
+        elif func == 'disable':
+            self.schedule.disable_schedule()
+        elif func == 'enable_job':
+            job = data.get('job', None)
+            self.schedule.enable_job(job)
+        elif func == 'disable_job':
+            job = data.get('job', None)
+            self.schedule.disable_job(job)
 
     def environ_setenv(self, package):
         '''
@@ -1400,6 +1478,8 @@ class Minion(MinionBase):
                             self.module_refresh()
                         elif package.startswith('pillar_refresh'):
                             self.pillar_refresh()
+                        elif package.startswith('manage_schedule'):
+                            self.manage_schedule(package)
                         elif package.startswith('grains_refresh'):
                             if self.grains_cache != self.opts['grains']:
                                 self.pillar_refresh()
@@ -1698,7 +1778,7 @@ class Syndic(Minion):
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
             if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
-                if not 'jid' in event['data']:
+                if 'jid' not in event['data']:
                     # Not a job return
                     continue
                 jdict = self.jids.setdefault(event['tag'], {})
@@ -1713,7 +1793,7 @@ class Syndic(Minion):
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here
-                if not 'retcode' in event['data']:
+                if 'retcode' not in event['data']:
                     self.raw_events.append(event)
 
     def _forward_events(self):

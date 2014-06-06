@@ -112,7 +112,10 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node, sock_dir, listen)
+        return salt.utils.raetevent.SaltEvent(node,
+                                              sock_dir=sock_dir,
+                                              listen=listen,
+                                              opts=opts)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -670,7 +673,7 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].low(fun, kwargs)
+        return self.client_cache['runner'].async(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''

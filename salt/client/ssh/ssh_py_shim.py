@@ -83,7 +83,7 @@ def need_deployment():
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
     # Delimeter emitted on stdout *only* to indicate shim message to master.
-    sys.stdout.write("%s\ndeploy\n".format(OPTIONS.delimeter))
+    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimeter))
     sys.exit(EX_THIN_DEPLOY)
 
 
