@@ -14,7 +14,7 @@ def _mk_client():
     '''
     Create a file client and add it to the context
     '''
-    if not 'cp.fileclient' in __context__:
+    if 'cp.fileclient' not in __context__:
         __context__['cp.fileclient'] = \
             salt.fileclient.get_file_client(__opts__)
 
