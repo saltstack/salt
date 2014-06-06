@@ -72,7 +72,8 @@ correctly::
        jid       varchar(255) NOT NULL,
        retval    varchar(MAX) NOT NULL,
        id        varchar(255) NOT NULL,
-       success   bit default(0)
+       success   bit default(0) NOT NULL,
+       full_ret  varchar(MAX)
      );
 
     CREATE INDEX salt_returns_added on dbo.salt_returns(added);
@@ -90,6 +91,7 @@ correctly::
 
 # Import python libs
 import json
+import logging
 
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
@@ -104,7 +106,7 @@ except ImportError:
 def __virtual__():
     if not HAS_MSSQL:
         return False
-    return 'sql_server'
+    return True
 
 
 def _get_conn():
@@ -129,15 +131,16 @@ def returner(ret):
     conn = _get_conn()
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
-            (fun, jid, retval, id, success)
-            VALUES (?, ?, ?, ?, ?)'''
+            (fun, jid, retval, id, success, full_ret)
+            VALUES (?, ?, ?, ?, ?, ?)'''
     cur.execute(
         sql, (
             ret['fun'],
             ret['jid'],
             json.dumps(ret['return']),
             ret['id'],
-            ret['success']
+            ret['success'],
+            json.dumps(ret)
         )
     )
     _close_conn(conn)
@@ -177,14 +180,14 @@ def get_jid(jid):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT id, retval FROM salt_returns WHERE jid = ?'''
+    sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = ?'''
 
     cur.execute(sql, (jid,))
     data = cur.fetchall()
     ret = {}
     if data:
-        for minion, retval in data:
-            ret[minion] = json.loads(retval)
+        for minion, full_ret in data:
+            ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
 
@@ -195,7 +198,7 @@ def get_fun(fun):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT s.id,s.jid, s.retval
+    sql = '''SELECT s.id,s.jid, s.full_ret
             FROM salt_returns s
             JOIN ( SELECT MAX(jid) AS jid FROM salt_returns GROUP BY fun, id) max
             ON s.jid = max.jid
@@ -208,7 +211,7 @@ def get_fun(fun):
     ret = {}
     if data:
         for minion, jid, retval in data:
-            ret[minion] = json.loads(retval)
+            ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
 
@@ -219,7 +222,7 @@ def get_jids():
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT jid FROM jids'''
+    sql = '''SELECT distinct jid FROM jids'''
 
     cur.execute(sql)
     data = cur.fetchall()
