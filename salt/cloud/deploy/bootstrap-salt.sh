@@ -2484,10 +2484,6 @@ install_red_hat_linux_stable_deps() {
     else
         OPTIONAL_ARCH=$CPU_ARCH_L
     fi
-    if [ $DISTRO_MAJOR_VERSION -eq 6 ] && case "X$(rhn-channel -l | grep optional)" in Xrhel-${OPTIONAL_ARCH}-server-optional-${DISTRO_MAJOR_VERSION}* ) false ;; * ) true ;; esac ; then
-      echoerror "Failed to find RHN optional repo, please enable it using the GUI or rhn-channel command."
-      return 1
-    fi
     install_centos_stable_deps || return 1
     return 0
 }
