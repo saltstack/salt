@@ -11,8 +11,11 @@ a yaml configuration. The syntax for declaring profiles is simple:
         provider: rackspace
         image: Fedora 17
         size: 256 server
-        script: Fedora
+        script: bootstrap-salt
 
+It should be noted that the ``script`` option defaults to ``bootstrap-salt``,
+and does not normally need to be specified. Further examples in this document
+will not show the ``script`` option.
 
 A few key pieces of information need to be declared and can change based on the
 public cloud provider. A number of additional parameters can also be inserted:
@@ -23,7 +26,6 @@ public cloud provider. A number of additional parameters can also be inserted:
         provider: rackspace
         image: CentOS 6.2
         size: 1024 server
-        script: RHEL6
         minion:
             master: salt.example.com
             append_domain: webs.example.com
@@ -67,7 +69,6 @@ Larger Example
         provider: ec2
         image: ami-e565ba8c
         size: Micro Instance
-        script: RHEL6
         minion:
             cheese: edam
 
@@ -75,7 +76,6 @@ Larger Example
         provider: ec2
         image: ami-7e2da54e
         size: Micro Instance
-        script: Ubuntu
         minion:
             cheese: edam
 
@@ -83,7 +83,6 @@ Larger Example
         provider: rackspace
         image: Ubuntu 12.04 LTS
         size: 256 server
-        script: Ubuntu
         minion:
             cheese: edam
 
@@ -91,7 +90,6 @@ Larger Example
         provider: rackspace
         image: Fedora 17
         size: 256 server
-        script: Fedora
         minion:
             cheese: edam
 
@@ -99,16 +97,13 @@ Larger Example
         provider: linode
         image: CentOS 6.2 64bit
         size: Linode 512
-        script: RHEL6
 
     cent_gogrid:
         provider: gogrid
         image: 12834
         size: 512MB
-        script: RHEL6
 
     cent_joyent:
         provider: joyent
         image: centos-6
-        script: RHEL6
         size: Small 1GB
