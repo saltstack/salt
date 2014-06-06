@@ -41,6 +41,7 @@ import re
 # Import salt libs
 import salt.utils
 from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.odict import OrderedDict
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.modules.pkg_resource import _repack_pkgs
@@ -131,6 +132,19 @@ def _find_install_targets(name=None,
                 'result': False,
                 'comment': 'Only one of "pkgs" and "sources" is permitted.'}
 
+    if type(pkg_verify) is list and any(x.get('ignore_types') is not None \
+                                        for x in pkg_verify \
+                                        if type(x) is OrderedDict \
+                                        and 'ignore_types' in x):
+        ignore_types = next(x.get('ignore_types') \
+                            for x in pkg_verify \
+                            if 'ignore_types' in x)
+    else:
+        ignore_types = []
+    print "==="
+    print ignore_types
+    print "==="
+
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if any((pkgs, sources)):
         if pkgs:
@@ -188,7 +202,8 @@ def _find_install_targets(name=None,
         for x in desired:
             if x not in cur_pkgs:
                 targets.append(x)
-            elif pkg_verify and __salt__['lowpkg.verify'](x):
+            elif pkg_verify and __salt__['pkg.verify'](x,
+                                                       ignore_types=ignore_types):
                 targets.append(x)
                 reinstall[0] = True
     else:
@@ -234,7 +249,8 @@ def _find_install_targets(name=None,
                 continue
             # No version specified and pkg is installed
             elif __salt__['pkg_resource.version_clean'](pkgver) is None:
-                if pkg_verify and __salt__['lowpkg.verify'](pkgname):
+                if pkg_verify and __salt__['pkg.verify'](pkgname,
+                                                         ignore_types=ignore_types):
                     targets[pkgname] = pkgver
                     reinstall[0] = True
                 continue
@@ -258,8 +274,8 @@ def _find_install_targets(name=None,
                 if not _fulfills_version_spec(cver, comparison, verstr):
                     log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver, comparison, verstr))
                     targets[pkgname] = pkgver
-                elif pkg_verify and comparison == '==' and _fulfills_version_spec(cver, comparison, verstr):
-                    if __salt__['lowpkg.verify'](pkgname):
+                elif pkg_verify and comparison == '==':
+                    if __salt__['pkg.verify'](pkgname, ignore_types=ignore_types):
                         targets[pkgname] = pkgver
                         reinstall[0] = True
 
@@ -569,11 +585,15 @@ def installed(
         salt.utils.is_true(refresh)
         or (os.path.isfile(rtag) and refresh is not False)
     )
-    if pkg_verify and 'lowpkg.verify' not in __salt__:
+    print "==="
+    print pkg_verify
+    print type(pkg_verify)
+    print "==="
+    if (pkg_verify or type(pkg_verify) is list) and 'pkg.verify' not in __salt__:
         return {'name': name,
                 'changes': {},
                 'result': False,
-                'comment': 'lowpkg.verify not implemented'}
+                'comment': 'pkg.verify not implemented'}
     reinstall = [False]
 
     if not isinstance(version, string_types) and version is not None:

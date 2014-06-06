@@ -86,9 +86,7 @@ def verify(*package, **kwargs):
               'l': 'license',
               'r': 'readme'}
     ret = {}
-    ignore_types = {}
-    if 'ignore_types' in kwargs:
-        ignore_types = kwargs.get('ignore_types')
+    ignore_types = kwargs.get('ignore_types', [])
     if package:
         packages = ' '.join(package)
         cmd = 'rpm -V {0}'.format(packages)
