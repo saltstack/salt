@@ -596,6 +596,7 @@ class MWorker(multiprocessing.Process):
                     self._update_aes()
                     payload = self.serial.loads(package)
                     ret = self.serial.dumps(self._handle_payload(payload))
+                    socket.send(ret)
                 # don't catch keyboard interrupts, just re-raise them
                 except KeyboardInterrupt:
                     raise
