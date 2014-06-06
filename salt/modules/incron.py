@@ -230,7 +230,7 @@ def set_job(user, path, mask, cmd):
 
     # Check for valid mask types
     for item in mask.split(','):
-        if not item in _MASK_TYPES:
+        if item not in _MASK_TYPES:
             return 'Invalid mask type: {0}' . format(item)
 
     updated = False
@@ -293,7 +293,7 @@ def rm_job(user,
 
     # Check for valid mask types
     for item in mask.split(','):
-        if not item in _MASK_TYPES:
+        if item not in _MASK_TYPES:
             return 'Invalid mask type: {0}' . format(item)
 
     lst = list_tab(user)
