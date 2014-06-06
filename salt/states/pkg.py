@@ -118,6 +118,8 @@ def _find_install_targets(name=None,
                           pkgs=None,
                           sources=None,
                           skip_suggestions=False,
+                          pkg_verify=False,
+                          reinstall=[False],
                           **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -162,7 +164,7 @@ def _find_install_targets(name=None,
 
         cver = cur_pkgs.get(name, [])
         if name not in to_unpurge:
-            if version and version in cver:
+            if version and version in cver and not pkg_verify:
                 # The package is installed and is the correct version
                 return {'name': name,
                         'changes': {},
@@ -171,7 +173,7 @@ def _find_install_targets(name=None,
                                    'installed'.format(version, name)}
 
             # if cver is not an empty string, the package is already installed
-            elif cver and version is None:
+            elif cver and version is None and not pkg_verify:
                 # The package is installed
                 return {'name': name,
                         'changes': {},
@@ -182,7 +184,13 @@ def _find_install_targets(name=None,
     version_spec = False
     # Find out which packages will be targeted in the call to pkg.install
     if sources:
-        targets = [x for x in desired if x not in cur_pkgs]
+        targets = []
+        for x in desired:
+            if x not in cur_pkgs:
+                targets.append(x)
+            elif pkg_verify and __salt__['lowpkg.verify'](x):
+                targets.append(x)
+                reinstall[0] = True
     else:
         # Check for alternate package names if strict processing is not
         # enforced.
@@ -224,8 +232,11 @@ def _find_install_targets(name=None,
                                                                        pkgver):
                 targets[pkgname] = pkgver
                 continue
-            # No version specified and pkg is installed, do not add to targets
+            # No version specified and pkg is installed
             elif __salt__['pkg_resource.version_clean'](pkgver) is None:
+                if pkg_verify and __salt__['lowpkg.verify'](pkgname):
+                    targets[pkgname] = pkgver
+                    reinstall[0] = True
                 continue
             version_spec = True
             match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
@@ -247,6 +258,10 @@ def _find_install_targets(name=None,
                 if not _fulfills_version_spec(cver, comparison, verstr):
                     log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver, comparison, verstr))
                     targets[pkgname] = pkgver
+                elif pkg_verify and comparison == '==' and _fulfills_version_spec(cver, comparison, verstr):
+                    if __salt__['lowpkg.verify'](pkgname):
+                        targets[pkgname] = pkgver
+                        reinstall[0] = True
 
         if problems:
             return {'name': name,
@@ -341,6 +356,7 @@ def installed(
         pkgs=None,
         sources=None,
         allow_updates=False,
+        pkg_verify=False,
         **kwargs):
     '''
     Verify that the package is installed, and that it is the correct version
@@ -553,6 +569,12 @@ def installed(
         salt.utils.is_true(refresh)
         or (os.path.isfile(rtag) and refresh is not False)
     )
+    if pkg_verify and 'lowpkg.verify' not in __salt__:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'lowpkg.verify not implemented'}
+    reinstall = [False]
 
     if not isinstance(version, string_types) and version is not None:
         version = str(version)
@@ -561,6 +583,8 @@ def installed(
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
+                                   pkg_verify=pkg_verify,
+                                   reinstall=reinstall,
                                    **kwargs)
 
     try:
@@ -644,6 +668,7 @@ def installed(
                                             skip_verify=skip_verify,
                                             pkgs=pkgs,
                                             sources=sources,
+                                            reinstall=reinstall[0],
                                             **kwargs)
 
             if os.path.isfile(rtag) and refresh:
