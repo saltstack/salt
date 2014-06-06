@@ -1058,7 +1058,9 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     current_pkgs = list_pkgs()
     if 'yum-plugin-versionlock' not in current_pkgs:
-        return 'Error: Package yum-plugin-versionlock needs to be installed.'
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = 'Packages cannot be held, yum-plugin-versionlock needs to be installed.'
 
     current_locks = get_locked_packages()
     ret = {}
@@ -1122,7 +1124,9 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     current_pkgs = list_pkgs()
     if 'yum-plugin-versionlock' not in current_pkgs:
-        return 'Error: Package yum-plugin-versionlock needs to be installed.'
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = 'Error: Package yum-plugin-versionlock needs to be installed.'
 
     current_locks = get_locked_packages(full=True)
     ret = {}
