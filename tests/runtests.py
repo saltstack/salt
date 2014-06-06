@@ -110,6 +110,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run unit tests'
         )
         self.test_selection_group.add_option(
+            '--fileserver-tests',
+            dest='fileserver',
+            default=False,
+            action='store_true',
+            help='Run Fileserver tests'
+        )
+        self.test_selection_group.add_option(
             '-o',
             '--outputter',
             action='store_true',
@@ -137,7 +144,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.module, self.options.client, self.options.shell,
                 self.options.unit, self.options.state, self.options.runner,
                 self.options.loader, self.options.name, self.options.outputter,
-                os.geteuid() != 0, not self.options.run_destructive)):
+                self.options.fileserver, os.geteuid() != 0,
+                not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
                 'not running the full test suite, including the '
@@ -149,7 +157,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not any((self.options.module, self.options.client,
                     self.options.shell, self.options.unit, self.options.state,
                     self.options.runner, self.options.loader,
-                    self.options.name, self.options.outputter)):
+                    self.options.name, self.options.outputter,
+                    self.options.fileserver)):
             self.options.module = True
             self.options.client = True
             self.options.shell = True
@@ -158,6 +167,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.state = True
             self.options.loader = True
             self.options.outputter = True
+            self.options.fileserver = True
 
         self.start_coverage(
             branch=True,
@@ -192,6 +202,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.client or
                  self.options.loader or
                  self.options.outputter or
+                 self.options.fileserver or
                  named_tests):
             # We're either not running any of runner, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
@@ -240,7 +251,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not any([self.options.client, self.options.module,
                     self.options.runner, self.options.shell,
                     self.options.state, self.options.loader,
-                    self.options.outputter, self.options.name]):
+                    self.options.outputter, self.options.name,
+                    self.options.fileserver]):
             return status
 
         with TestDaemon(self):
@@ -264,6 +276,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('shell', 'Shell'))
             if self.options.outputter:
                 status.append(self.run_integration_suite('output', 'Outputter'))
+            if self.options.fileserver:
+                status.append(self.run_integration_suite('fileserver', 'Fileserver'))
         return status
 
     def run_unit_tests(self):
