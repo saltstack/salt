@@ -45,7 +45,7 @@ class Shell(object):
         self.host = host
         self.user = user
         self.port = port
-        self.passwd = passwd
+        self.passwd = str(passwd) if passwd else passwd
         self.priv = priv
         self.timeout = timeout
         self.sudo = sudo
