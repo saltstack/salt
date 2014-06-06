@@ -876,8 +876,8 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
-    for pkgname in to_reinstall():
-        if not pkgname in old:
+    for pkgname in to_reinstall:
+        if not pkgname not in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
         else:
