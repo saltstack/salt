@@ -40,7 +40,7 @@ class Roster(object):
         targets = {}
         for back in self._gen_back():
             f_str = '{0}.targets'.format(back)
-            if not f_str in self.rosters:
+            if f_str not in self.rosters:
                 continue
             targets.update(self.rosters[f_str](tgt, tgt_type))
         return targets

@@ -873,11 +873,11 @@ def install(name=None,
                 pkgname = _rpm_pkginfo(pkgname).name
             except AttributeError:
                 continue
-        if not pkgname in old:
+        if pkgname not in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
         else:
-            if not pkgname in ret:
+            if pkgname not in ret:
                 ret.update({pkgname: {'old': old.get(pkgname, ''),
                                       'new': new.get(pkgname, '')}})
     if ret:
@@ -1053,7 +1053,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         pkgs.append(name)
 
     current_pkgs = list_pkgs()
-    if not 'yum-plugin-versionlock' in current_pkgs:
+    if 'yum-plugin-versionlock' not in current_pkgs:
         return 'Error: Package yum-plugin-versionlock needs to be installed.'
 
     current_locks = get_locked_packages()
@@ -1063,7 +1063,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
             pkg = pkg.keys()[0]
 
         ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
-        if not pkg in current_locks:
+        if pkg not in current_locks:
             if 'test' in kwargs and kwargs['test']:
                 ret[pkg].update(result=None)
                 ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
@@ -1117,7 +1117,7 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         pkgs.append(name)
 
     current_pkgs = list_pkgs()
-    if not 'yum-plugin-versionlock' in current_pkgs:
+    if 'yum-plugin-versionlock' not in current_pkgs:
         return 'Error: Package yum-plugin-versionlock needs to be installed.'
 
     current_locks = get_locked_packages(full=True)

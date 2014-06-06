@@ -153,7 +153,7 @@ def _parse_dnamasq(filename):
                 else:
                     fileopts[comps[0]] = comps[1].strip()
             else:
-                if not 'unparsed' in fileopts:
+                if 'unparsed' not in fileopts:
                     fileopts['unparsed'] = []
                 fileopts['unparsed'].append(line)
     return fileopts

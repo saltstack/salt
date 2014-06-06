@@ -1881,7 +1881,7 @@ def apply_minion_config(overrides=None,
 
     prepend_root_dir(opts, prepend_root_dirs)
     if '__mine_interval' not in opts.get('schedule', {}):
-        if not 'schedule' in opts:
+        if 'schedule' not in opts:
             opts['schedule'] = {}
         opts['schedule'].update({
             '__mine_interval':

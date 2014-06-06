@@ -221,7 +221,7 @@ def add(pool_name, vdev):
     zpool = _check_zpool()
     cmd = '{0} add {1} {2}'.format(zpool, pool_name, vdev)
     res = __salt__['cmd.run'](cmd)
-    if not 'errors' in res.splitlines():
+    if 'errors' not in res.splitlines():
         ret['Added'] = '{0} to {1}'.format(vdev, pool_name)
         return ret
     ret['Error'] = 'Something went wrong add {0} to {1}'.format(vdev, pool_name)

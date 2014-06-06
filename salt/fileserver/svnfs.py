@@ -58,7 +58,7 @@ def __virtual__():
     '''
     Only load if subversion is available
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     if not HAS_SVN:
         log.error('Subversion fileserver backend is enabled in configuration '

@@ -156,7 +156,7 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
         tmp = tempfile.mkdtemp()
     if config is None:
         config = {}
-    if not 'master' in config and __opts__['master'] != 'salt':
+    if 'master' not in config and __opts__['master'] != 'salt':
         config['master'] = __opts__['master']
     if id_:
         config['id'] = id_
@@ -209,7 +209,7 @@ def _check_resolv(mpt):
     if not replace:
         with salt.utils.fopen(resolv, 'rb') as fp_:
             conts = fp_.read()
-            if not 'nameserver' in conts:
+            if 'nameserver' not in conts:
                 replace = True
     if replace:
         shutil.copy('/etc/resolv.conf', resolv)

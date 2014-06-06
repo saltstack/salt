@@ -216,7 +216,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
                     family)
             else:
                 command = __salt__['ipset.add'](kwargs['set_name'], entry, family, **kwargs)
-                if not 'Error' in command:
+                if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'entry {0} added to set {1} for family {2}\n'.format(
@@ -285,7 +285,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
                     family)
             else:
                 command = __salt__['ipset.delete'](kwargs['set_name'], entry, family, **kwargs)
-                if not 'Error' in command:
+                if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'ipset entry {1} for set {0} removed for family {2}\n'.format(

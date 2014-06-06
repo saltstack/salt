@@ -104,7 +104,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
     info = __salt__['cloud.create'](cloud_provider, name, **kwargs)
-    if info and not 'Error' in info:
+    if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = ('Created instance {0} using provider {1}'
@@ -113,7 +113,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
             cloud_provider,
             pprint.pformat(kwargs)
         )
-    elif info and not 'Error' in info:
+    elif info and 'Error' not in info:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
                           'using profile {1}: {2}').format(
@@ -178,7 +178,7 @@ def absent(name, onlyif=None, unless=None):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
     info = __salt__['cloud.destroy'](name)
-    if info and not 'Error' in info:
+    if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = ('Destroyed instance {0}').format(
@@ -336,7 +336,7 @@ def volume_absent(name, provider=None, **kwargs):
 
     volumes = __salt__['cloud.volume_list'](provider=provider)
 
-    if not name in volumes.keys():
+    if name not in volumes.keys():
         ret['comment'] = 'Volume is absent.'
         ret['result'] = True
         return ret
@@ -384,7 +384,7 @@ def volume_attached(name, server_name, provider=None, **kwargs):
                           'attached: {attachments}').format(**volumes[name])
         ret['result'] = True
         return ret
-    elif not name in volumes.keys():
+    elif name not in volumes.keys():
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         ret['result'] = False
         return ret
@@ -425,7 +425,7 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
     if not ret['result']:
         return ret
 
-    if not server_name is None:
+    if server_name is not None:
         ret = _check_name(server_name)
         if not ret['result']:
             return ret
@@ -443,11 +443,11 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
         ).format(**volumes[name])
         ret['result'] = True
         return ret
-    elif not name in volumes.keys():
+    elif name not in volumes.keys():
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         ret['result'] = True
         return ret
-    elif not instance and not server_name is None:
+    elif not instance and server_name is not None:
         ret['comment'] = 'Server {0} does not exist'.format(server_name)
         ret['result'] = True
         return ret
