@@ -282,7 +282,7 @@ class Fileserver(object):
                 path = hcomps[0]
                 comps = hcomps[1].split('&')
                 for comp in comps:
-                    if not '=' in comp:
+                    if '=' not in comp:
                         # Invalid option, skip it
                         continue
                     args = comp.split('=', 1)
