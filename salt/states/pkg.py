@@ -576,26 +576,33 @@ def installed(
                 else:
                     hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
 
-                modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
-                not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
-                failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
+                if 'result' in hold_ret and not hold_ret['result']:
+                    return {'name': name,
+                            'changes': {},
+                            'result': False,
+                            'comment': 'An error was encountered while holding/unholding '
+                                       'package(s): {0}'.format(hold_ret['comment'])}
+                else:
+                    modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
+                    not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
+                    failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
 
-                if modified_hold:
-                    for i in modified_hold:
-                        result['comment'] += ' {0}'.format(i['comment'])
-                        result['result'] = i['result']
-                        change_name = i['name']
-                        result['changes'][change_name] = i['changes']
+                    if modified_hold:
+                        for i in modified_hold:
+                            result['comment'] += ' {0}'.format(i['comment'])
+                            result['result'] = i['result']
+                            change_name = i['name']
+                            result['changes'][change_name] = i['changes']
 
-                if not_modified_hold:
-                    for i in not_modified_hold:
-                        result['comment'] += ' {0}'.format(i['comment'])
-                        result['result'] = i['result']
+                    if not_modified_hold:
+                        for i in not_modified_hold:
+                            result['comment'] += ' {0}'.format(i['comment'])
+                            result['result'] = i['result']
 
-                if failed_hold:
-                    for i in failed_hold:
-                        result['comment'] += ' {0}'.format(i['comment'])
-                        result['result'] = i['result']
+                    if failed_hold:
+                        for i in failed_hold:
+                            result['comment'] += ' {0}'.format(i['comment'])
+                            result['result'] = i['result']
         return result
 
     if to_unpurge and 'lowpkg.unpurge' not in __salt__:
@@ -662,9 +669,16 @@ def installed(
                 else:
                     hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
 
-                modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
-                not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
-                failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
+                if 'result' in hold_ret and not hold_ret['result']:
+                    return {'name': name,
+                            'changes': {},
+                            'result': False,
+                            'comment': 'An error was encountered while holding/unholding '
+                                       'package(s): {0}'.format(hold_ret['comment'])}
+                else:
+                    modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
+                    not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
+                    failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
