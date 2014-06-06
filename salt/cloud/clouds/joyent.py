@@ -729,13 +729,13 @@ def reformat_node(item=None, full=False):
 
     # add any undefined desired keys
     for key in desired_keys:
-        if not key in item.keys():
+        if key not in item.keys():
             item[key] = None
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
         for key in item.keys():
-            if not key in desired_keys:
+            if key not in desired_keys:
                 del item[key]
 
     if 'state' in item.keys():
