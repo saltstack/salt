@@ -99,7 +99,7 @@ def send(func, *args, **kwargs):
 
         salt '*' mine.send network.interfaces eth0
     '''
-    if not func in __salt__:
+    if func not in __salt__:
         return False
     data = {}
     arg_data = salt.utils.arg_lookup(__salt__[func])
