@@ -186,7 +186,7 @@ def list_custom_images(call=None):
     conn = get_conn('SoftLayer_Account')
     response = conn.getBlockDeviceTemplateGroups()
     for image in response:
-        if not 'globalIdentifier' in image:
+        if 'globalIdentifier' not in image:
             continue
         ret[image['name']] = {
             'id': image['id'],
