@@ -100,7 +100,6 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 
 # Import python libs
 import json
-import logging
 
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
@@ -220,7 +219,7 @@ def get_fun(fun):
     ret = {}
     if data:
         for minion, jid, retval in data:
-            ret[minion] = json.loads(full_ret)
+            ret[minion] = json.loads(retval)
     _close_conn(conn)
     return ret
 
