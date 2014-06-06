@@ -1316,11 +1316,21 @@ class Minion(MinionBase):
         elif func == 'add':
             name = data.get('name', None)
             schedule = data.get('schedule', None)
-            self.schedule.add_job(name, schedule)
+            self.schedule.add_job(schedule)
         elif func == 'modify':
             name = data.get('name', None)
             schedule = data.get('schedule', None)
             self.schedule.modify_job(name, schedule)
+        elif func == 'enable':
+            self.schedule.enable_schedule()
+        elif func == 'disable':
+            self.schedule.disable_schedule()
+        elif func == 'enable_job':
+            job = data.get('job', None)
+            self.schedule.enable_job(job)
+        elif func == 'disable_job':
+            job = data.get('job', None)
+            self.schedule.disable_job(job)
 
     def environ_setenv(self, package):
         '''
