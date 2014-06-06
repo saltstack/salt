@@ -85,8 +85,8 @@ Here is an example of a profile:
         size: m1.tiny
         image: cirros-0.3.1-x86_64-uec
         ssh_key_file: /tmp/test.pem
-	ssh_key_name: test
-	ssh_interface: private_ips
+        ssh_key_name: test
+        ssh_interface: private_ips
         script: cloud_deploy.sh
 
 The following list explains some of the important properties.
