@@ -130,7 +130,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
                 query='SELECT 1',
                 **kwargs
             )
-            if not isinstance(ret, dict) or not 'results' in ret:
+            if not isinstance(ret, dict) or 'results' not in ret:
                 raise AssertionError(
                     ('Unexpected result while testing connection'
                     ' on database : {0}').format(
@@ -696,7 +696,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             repr(ret)
         ))
         # Alter password
-        if not new_password is None or new_password_hash is not None:
+        if new_password is not None or new_password_hash is not None:
             ret = self.run_function(
                 'mysql.user_chpass',
                 user=uname,
@@ -1095,7 +1095,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_pass='pwd`\'"1b',
             connection_host='localhost'
         )
-        if not isinstance(ret, dict) or not 'results' in ret:
+        if not isinstance(ret, dict) or 'results' not in ret:
             raise AssertionError(
                 ('Unexpected result while testing connection'
                 ' with user {0!r}: {1}').format(
@@ -1121,7 +1121,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #    connection_charset='utf8',
         #    saltenv={"LC_ALL": "en_US.utf8"}
         #)
-        #if not isinstance(ret, dict) or not 'results' in ret:
+        #if not isinstance(ret, dict) or 'results' not in ret:
         #    raise AssertionError(
         #        ('Unexpected result while testing connection'
         #        ' with user {0!r}: {1}').format(
@@ -1138,7 +1138,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_pass='',
             connection_host='localhost',
         )
-        if not isinstance(ret, dict) or not 'results' in ret:
+        if not isinstance(ret, dict) or 'results' not in ret:
             raise AssertionError(
                 ('Unexpected result while testing connection'
                 ' with user {0!r}: {1}').format(
@@ -1158,7 +1158,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #    connection_charset='utf8',
         #    saltenv={"LC_ALL": "en_US.utf8"}
         #)
-        #if not isinstance(ret, dict) or not 'results' in ret:
+        #if not isinstance(ret, dict) or 'results' not in ret:
         #    raise AssertionError(
         #        ('Unexpected result while testing connection'
         #        ' with user {0!r}: {1}').format(
@@ -1177,7 +1177,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        if not isinstance(ret, dict) or not 'results' in ret:
+        if not isinstance(ret, dict) or 'results' not in ret:
             raise AssertionError(
                 ('Unexpected result while testing connection'
                 ' with user {0!r}: {1}').format(

@@ -84,7 +84,7 @@ def detail(device='/dev/md0'):
             continue
         if ' ' not in line:
             continue
-        if not ':' in line:
+        if ':' not in line:
             if '/dev/' in line:
                 comps = line.split()
                 state = comps[4:-1]

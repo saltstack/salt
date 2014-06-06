@@ -279,7 +279,7 @@ class LoadModules(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
 
-    def action(self):
+    def postinitio(self):
         '''
         Return the functions and the returners loaded up from the loader
         module

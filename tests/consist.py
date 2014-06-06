@@ -59,7 +59,7 @@ def run(command):
     hashes = set()
     for key, val in data.items():
         has = hashlib.md5(str(val)).hexdigest()
-        if not has in hashes:
+        if has not in hashes:
             print('{0}:'.format(has))
             pprint.pprint(val)
         hashes.add(has)

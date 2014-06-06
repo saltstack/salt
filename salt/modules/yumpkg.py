@@ -695,8 +695,8 @@ def install(name=None,
         ``yum reinstall`` will only be used if the installed version
         matches the requested version.
 
-        Works with sources when the file name in the source can be
-        matched to the name and version of the installed package.
+        Works with sources when the package header of the source can be
+        matched to the name and version of an installed package.
 
         .. versionadded:: Helium
 
@@ -798,44 +798,53 @@ def install(name=None,
     old = list_pkgs()
     targets = []
     downgrade = []
-    to_reinstall = []
+    to_reinstall = {}
     if pkg_type == 'repository':
-        for pkgname, version_num in pkg_params.iteritems():
-            if version_num is None:
-                if reinstall and pkgname in old:
-                    to_reinstall.append(pkgname)
-                else:
-                    targets.append(pkgname)
-            else:
-                cver = old.get(pkgname, '')
-                arch = ''
-                try:
-                    namepart, archpart = pkgname.rsplit('.', 1)
-                except ValueError:
-                    pass
-                else:
-                    if archpart in __ARCHES:
-                        arch = '.' + archpart
-                        pkgname = namepart
-
-                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
-                if reinstall and cver \
-                        and salt.utils.compare_versions(ver1=version_num,
-                                                        oper='==',
-                                                        ver2=cver):
-                    to_reinstall.append(pkgstr)
-                elif not cver or salt.utils.compare_versions(ver1=version_num,
-                                                             oper='>=',
-                                                             ver2=cver):
-                    targets.append(pkgstr)
-                else:
-                    downgrade.append(pkgstr)
+        pkg_params_items = pkg_params.iteritems()
     else:
-        for pkgname in pkg_params:
-            if reinstall and _rpm_installed(pkgname):
-                to_reinstall.append(pkgname)
+        pkg_params_items = []
+        for pkg_source in pkg_params:
+            rpm_info = _rpm_pkginfo(pkg_source)
+            if rpm_info is not None:
+                pkg_params_items.append([rpm_info.name, rpm_info.version, pkg_source])
+            else:
+                pkg_params_items.append([pkg_source, None, pkg_source])
+
+    for pkg_item_list in pkg_params_items:
+        pkgname = pkg_item_list[0]
+        version_num = pkg_item_list[1]
+        if version_num is None:
+            if reinstall and pkg_type == 'repository' and pkgname in old:
+                to_reinstall[pkgname] = pkgname
             else:
                 targets.append(pkgname)
+        else:
+            cver = old.get(pkgname, '')
+            arch = ''
+            try:
+                namepart, archpart = pkgname.rsplit('.', 1)
+            except ValueError:
+                pass
+            else:
+                if archpart in __ARCHES:
+                    arch = '.' + archpart
+                    pkgname = namepart
+
+            if pkg_type == 'repository':
+                pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
+            else:
+                pkgstr = pkg_item_list[2]
+            if reinstall and cver \
+                    and salt.utils.compare_versions(ver1=version_num,
+                                                    oper='==',
+                                                    ver2=cver):
+                to_reinstall[pkgname] = pkgstr
+            elif not cver or salt.utils.compare_versions(ver1=version_num,
+                                                         oper='>=',
+                                                         ver2=cver):
+                targets.append(pkgstr)
+            else:
+                downgrade.append(pkgstr)
 
     if targets:
         cmd = 'yum -y {repo} {exclude} {gpgcheck} install {pkg}'.format(
@@ -860,7 +869,7 @@ def install(name=None,
             repo=repo_arg,
             exclude=exclude_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(to_reinstall),
+            pkg=' '.join(to_reinstall.values()),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
@@ -868,16 +877,11 @@ def install(name=None,
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
     for pkgname in to_reinstall:
-        if pkg_type != 'repository':
-            try:
-                pkgname = _rpm_pkginfo(pkgname).name
-            except AttributeError:
-                continue
-        if not pkgname in old:
+        if not pkgname not in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
         else:
-            if not pkgname in ret:
+            if pkgname not in ret:
                 ret.update({pkgname: {'old': old.get(pkgname, ''),
                                       'new': new.get(pkgname, '')}})
     if ret:
@@ -1053,7 +1057,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         pkgs.append(name)
 
     current_pkgs = list_pkgs()
-    if not 'yum-plugin-versionlock' in current_pkgs:
+    if 'yum-plugin-versionlock' not in current_pkgs:
         return 'Error: Package yum-plugin-versionlock needs to be installed.'
 
     current_locks = get_locked_packages()
@@ -1063,7 +1067,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
             pkg = pkg.keys()[0]
 
         ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
-        if not pkg in current_locks:
+        if pkg not in current_locks:
             if 'test' in kwargs and kwargs['test']:
                 ret[pkg].update(result=None)
                 ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
@@ -1117,7 +1121,7 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         pkgs.append(name)
 
     current_pkgs = list_pkgs()
-    if not 'yum-plugin-versionlock' in current_pkgs:
+    if 'yum-plugin-versionlock' not in current_pkgs:
         return 'Error: Package yum-plugin-versionlock needs to be installed.'
 
     current_locks = get_locked_packages(full=True)

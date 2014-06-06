@@ -428,11 +428,14 @@ def run(opts):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    stdout, _ = proc.communicate()
+    stdout, stderr = proc.communicate()
 
     if stdout:
         print(stdout)
     sys.stdout.flush()
+    if stderr:
+        print(stderr)
+    sys.stderr.flush()
 
     retcode = proc.returncode
     if retcode != 0:
@@ -463,11 +466,14 @@ def run(opts):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        stdout, _ = proc.communicate()
+        stdout, stderr = proc.communicate()
 
         if stdout:
             print(stdout)
         sys.stdout.flush()
+        if stderr:
+            print(stderr)
+        sys.stderr.flush()
 
         retcode = proc.returncode
         if retcode != 0:
@@ -492,8 +498,8 @@ def run(opts):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        stdout, _ = proc.communicate()
-        sys.stdout.flush()
+
+        proc.communicate()
 
         retcode = proc.returncode
         if retcode != 0:
@@ -587,11 +593,14 @@ def run(opts):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    stdout, _ = proc.communicate()
+    stdout, stderr = proc.communicate()
 
     if stdout:
         print(stdout)
     sys.stdout.flush()
+    if stderr:
+        print(stderr)
+    sys.stderr.flush()
 
     try:
         match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)

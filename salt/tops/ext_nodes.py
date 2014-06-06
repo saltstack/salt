@@ -40,7 +40,7 @@ def top(**kwargs):
     '''
     Run the command configured
     '''
-    if not 'id' in kwargs['opts']:
+    if 'id' not in kwargs['opts']:
         return {}
     cmd = '{0} {1}'.format(
             __opts__['master_tops']['ext_nodes'],

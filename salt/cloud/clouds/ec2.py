@@ -210,7 +210,7 @@ def _xml_to_dict(xmltree):
         if '}' in name:
             comps = name.split('}')
             name = comps[1]
-        if not name in xmldict.keys():
+        if name not in xmldict.keys():
             if sys.version_info < (2, 7):
                 children_len = len(item.getchildren())
             else:
@@ -1687,7 +1687,7 @@ def wait_for_instance(
         )
         if known_hosts_file:
             console = {}
-            while not 'output_decoded' in console:
+            while 'output_decoded' not in console:
                 console = get_console_output(
                     instance_id=vm_['instance_id'],
                     call='action',
@@ -1962,7 +1962,7 @@ def create_attach_volumes(name, kwargs, call=None):
             '-a or --action.'
         )
 
-    if not 'instance_id' in kwargs:
+    if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
     if type(kwargs['volumes']) is str:
@@ -2216,7 +2216,7 @@ def del_tags(name=None,
     if kwargs is None:
         kwargs = {}
 
-    if not 'tags' in kwargs:
+    if 'tags' not in kwargs:
         raise SaltCloudSystemExit(
             'A tag or tags must be specified using tags=list,of,tags'
         )

@@ -1436,7 +1436,7 @@ def __grant_normalize(grant):
     # Grants are paste directly in SQL, must filter it
     exploded_grants = grant.split(",")
     for chkgrant in exploded_grants:
-        if not chkgrant.strip().upper() in __grants__:
+        if chkgrant.strip().upper() not in __grants__:
             raise Exception('Invalid grant : {0!r}'.format(
                 chkgrant
             ))
@@ -1454,7 +1454,7 @@ def __ssl_option_sanitize(ssl_option):
 
         normal_key = key.strip().upper()
 
-        if not normal_key in __ssl_options__:
+        if normal_key not in __ssl_options__:
             raise Exception('Invalid SSL option : {0!r}'.format(
                 key
             ))

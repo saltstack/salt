@@ -10,6 +10,9 @@ init .salt.uxd.stack.local to yid 0 name "minion" localname "minion" lanename "m
 framer minionudpstack be active first setup
     frame setup
         enter
+            do load modules
+    frame manorsetup
+        enter
             do salt manor lane setup
         go start
     frame start

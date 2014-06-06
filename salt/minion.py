@@ -742,9 +742,9 @@ class Minion(MinionBase):
             load['tag'] = tag
         else:
             return
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            result = sreq.send('aes', self.crypticle.dumps(load))
+            result = channel.send(load)
             try:
                 data = self.crypticle.loads(result)
             except AuthenticationError:
@@ -1066,7 +1066,7 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(jid))
-        sreq = salt.payload.SREQ(self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
@@ -1110,7 +1110,7 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
-            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+            ret_val = channel.send(load)
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
@@ -1121,7 +1121,7 @@ class Minion(MinionBase):
         if isinstance(ret_val, string_types) and not ret_val:
             # The master AES key has changed, reauth
             self.authenticate()
-            ret_val = sreq.send('aes', self.crypticle.dumps(load))
+            ret_val = channel.send(load)
         log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
@@ -1149,7 +1149,7 @@ class Minion(MinionBase):
         :return: None
         '''
         if '__update_grains' not in self.opts.get('schedule', {}):
-            if not 'schedule' in self.opts:
+            if 'schedule' not in self.opts:
                 self.opts['schedule'] = {}
             self.opts['schedule'].update({
                 '__update_grains':
@@ -1316,11 +1316,21 @@ class Minion(MinionBase):
         elif func == 'add':
             name = data.get('name', None)
             schedule = data.get('schedule', None)
-            self.schedule.add_job(name, schedule)
+            self.schedule.add_job(schedule)
         elif func == 'modify':
             name = data.get('name', None)
             schedule = data.get('schedule', None)
             self.schedule.modify_job(name, schedule)
+        elif func == 'enable':
+            self.schedule.enable_schedule()
+        elif func == 'disable':
+            self.schedule.disable_schedule()
+        elif func == 'enable_job':
+            job = data.get('job', None)
+            self.schedule.enable_job(job)
+        elif func == 'disable_job':
+            job = data.get('job', None)
+            self.schedule.disable_job(job)
 
     def environ_setenv(self, package):
         '''
@@ -1768,7 +1778,7 @@ class Syndic(Minion):
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
             if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
-                if not 'jid' in event['data']:
+                if 'jid' not in event['data']:
                     # Not a job return
                     continue
                 jdict = self.jids.setdefault(event['tag'], {})
@@ -1783,7 +1793,7 @@ class Syndic(Minion):
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here
-                if not 'retcode' in event['data']:
+                if 'retcode' not in event['data']:
                     self.raw_events.append(event)
 
     def _forward_events(self):

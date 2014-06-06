@@ -274,7 +274,7 @@ def join_domain(
              account_exists=False
     '''
 
-    if not '@' in username:
+    if '@' not in username:
         username = '{0}@{1}'.format(username, domain)
 
     # remove any escape characters
