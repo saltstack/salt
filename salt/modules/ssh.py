@@ -862,7 +862,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         keys[u] = {}
         userinfo = __salt__['user.info'](u)
 
-        if not 'home' in userinfo:
+        if 'home' not in userinfo:
             # no home directory, skip
             continue
 
