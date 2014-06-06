@@ -202,7 +202,7 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name),
     }
-    if not 'test' in kwargs:
+    if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface
@@ -309,7 +309,7 @@ def routes(name, **kwargs):
         'comment': 'Interface {0} routes are up to date.'.format(name),
     }
     apply_routes = False
-    if not 'test' in kwargs:
+    if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface routes
