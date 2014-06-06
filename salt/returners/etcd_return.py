@@ -73,11 +73,11 @@ def _get_conn():
     profile = __salt__['config.option']('etcd.returner', None)
     if profile:
         etcd = __salt__['config.option']('profile')
-        host = etcd.get('etcd.host')
-        port = etcd.get('etcd.port')
+        host = etcd.get('etcd.host', '127.0.0.1')
+        port = etcd.get('etcd.port', 4001)
     else:
-        host = __salt__['config.option']('etcd.host')
-        port = __salt__['config.option']('etcd.port')
+        host = __salt__['config.option']('etcd.host', '127.0.0.1')
+        port = __salt__['config.option']('etcd.port', 4001)
 
     return salt.utils.etcd_util.get_conn(host, port), path
 
