@@ -17,6 +17,10 @@ __proxyenabled__ = ['*']
 import logging
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'list_': 'list'
+}
+
 SCHEDULE_CONF = [
         'function',
         'splay',
@@ -35,7 +39,7 @@ SCHEDULE_CONF = [
         ]
 
 
-def list(show_all=False):
+def list_(show_all=False):
     '''
     List the jobs currently scheduled on the minion
 
