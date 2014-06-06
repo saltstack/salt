@@ -696,7 +696,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             repr(ret)
         ))
         # Alter password
-        if not new_password is None or new_password_hash is not None:
+        if new_password is not None or new_password_hash is not None:
             ret = self.run_function(
                 'mysql.user_chpass',
                 user=uname,
