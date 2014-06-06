@@ -1149,7 +1149,7 @@ class Minion(MinionBase):
         :return: None
         '''
         if '__update_grains' not in self.opts.get('schedule', {}):
-            if not 'schedule' in self.opts:
+            if 'schedule' not in self.opts:
                 self.opts['schedule'] = {}
             self.opts['schedule'].update({
                 '__update_grains':
@@ -1768,7 +1768,7 @@ class Syndic(Minion):
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
             if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
-                if not 'jid' in event['data']:
+                if 'jid' not in event['data']:
                     # Not a job return
                     continue
                 jdict = self.jids.setdefault(event['tag'], {})
@@ -1783,7 +1783,7 @@ class Syndic(Minion):
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here
-                if not 'retcode' in event['data']:
+                if 'retcode' not in event['data']:
                     self.raw_events.append(event)
 
     def _forward_events(self):
