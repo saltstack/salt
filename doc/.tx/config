@@ -4400,3 +4400,15 @@ source_file = _build/locale/ref/renderers/all/salt.renderers.yamlex.pot
 source_lang = en
 source_name = ref/renderers/all/salt.renderers.yamlex.rst
 
+[salt.ref--modules--all--salt_modules_postfix]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.postfix.po
+source_file = _build/locale/ref/modules/all/salt.modules.postfix.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.postfix.rst
+
+[salt.ref--modules--all--salt_modules_varnish]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.varnish.po
+source_file = _build/locale/ref/modules/all/salt.modules.varnish.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.varnish.rst
+
