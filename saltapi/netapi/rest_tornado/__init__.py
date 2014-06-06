@@ -40,10 +40,11 @@ def start():
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
 
-    token_len = len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest())
-    token_pattern = r"([0-9A-Fa-f]{%s})" % token_len
+    token_pattern = r"([0-9A-Fa-f]{%s})" % len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest())
+
     all_events_pattern = r"/all_events/{}".format(token_pattern)
-    logger.info("All events pattern is {}".format(all_events_pattern))
+    logger.debug("All events URL pattern is {}".format(all_events_pattern))
+
     application = tornado.web.Application([
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
@@ -70,14 +71,18 @@ def start():
     # the kwargs for the HTTPServer
     kwargs = {}
     if not mod_opts.get('disable_ssl', False):
-        if 'ssl_crt' not in mod_opts or 'ssl_key' not in mod_opts:
+        if 'ssl_crt' not in mod_opts:
             logger.error("Not starting '%s'. Options 'ssl_crt' and "
                     "'ssl_key' are required if SSL is not disabled.",
                     __name__)
 
             return None
-        kwargs['ssl_options'] = {'certfile': mod_opts['ssl_crt'],
-                                 'keyfile': mod_opts['ssl_key']}
+        # cert is required, key may be optional
+        # https://docs.python.org/2/library/ssl.html#ssl.wrap_socket
+        ssl_opts = {'certfile': mod_opts['ssl_crt']}
+        if mod_opts.get('ssl_key', False):
+            ssl_opts.update({'keyfile': mod_opts['ssl_key']})
+        kwargs['ssl_options'] = ssl_opts
 
     http_server = tornado.httpserver.HTTPServer(application, **kwargs)
     try:

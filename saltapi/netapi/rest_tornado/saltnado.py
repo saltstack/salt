@@ -98,6 +98,25 @@ Or the tornado
 
 Above examples show how to establish a websocket connection to Salt and activating
 real time updates from Salt's event stream by signaling ``websocket client ready``.
+
+Setup
+=====
+
+In order to run rest_tornado with the salt-master
+add the following to your salt master config file.
+
+.. code-block:: yaml
+
+    rest_tornado:
+        # can be any port
+        port: 8000
+        ssl_crt: /etc/pki/api/certs/server.crt
+        # no need to specify ssl_key if cert and key
+        # are in one single file
+        ssl_key: /etc/pki/api/certs/server.key
+        debug: False
+        disable_ssl: False
+
 '''
 
 
