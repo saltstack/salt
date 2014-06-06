@@ -15,68 +15,81 @@ On Linux:
     pyodbc (`pip install pyodbc`)
     The FreeTDS ODBC driver for SQL Server (http://www.freetds.org)
 
-the following values configured in the minion or master config.
+unixODBC and FreeTDS need to be configured via /etc/odbcinst.ini and
+/etc/odbc.ini.
+
+/etc/odbcinst.ini::
+
+    [TDS]
+    Description=TDS
+    Driver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
+
+(Note the above Driver line needs to point to the location of the FreeTDS
+shared library.  This example is for Ubuntu 14.04.)
+
+/etc/odbc.ini::
+
+    [TS]
+    Description = "Salt Returner"
+    Driver=TDS
+    Server = <your server ip or fqdn>
+    Port = 1433
+    Database = salt
+    Trace = No
+
+Also you need the following values configured in the minion or master config.
 Configure as you see fit::
 
-    returner.mssql.host: 'salt'
+    returner.mssql.dsn: 'TS'
     returner.mssql.user: 'salt'
     returner.mssql.passwd: 'salt'
-    returner.mssql.db: 'salt'
 
-Running the following commands as the appropriate user should create the database
+Running the following commands against Microsoft SQL Server in the desired
+database as the appropriate user should create the database tables
 correctly::
 
-    psql << EOF
-    CREATE ROLE salt WITH PASSWORD 'salt';
-    CREATE DATABASE salt WITH OWNER salt;
-    EOF
-
-    psql -h localhost -U salt << EOF
     --
     -- Table structure for table 'jids'
     --
 
-   if OBJECT_ID('dbo.jids', 'U') is not null
-  DROP TABLE dbo.jids
+    if OBJECT_ID('dbo.jids', 'U') is not null
+        DROP TABLE dbo.jids
 
-CREATE TABLE dbo.jids (
-   jid   varchar(255) PRIMARY KEY,
-   load  varchar(MAX) NOT NULL
- );
+    CREATE TABLE dbo.jids (
+       jid   varchar(255) PRIMARY KEY,
+       load  varchar(MAX) NOT NULL
+     );
 
- --
- -- Table structure for table 'salt_returns'
- --
- IF OBJECT_ID('dbo.salt_returns', 'U') IS NOT NULL
-  DROP TABLE dbo.salt_returns;
+    --
+    -- Table structure for table 'salt_returns'
+    --
+    IF OBJECT_ID('dbo.salt_returns', 'U') IS NOT NULL
+        DROP TABLE dbo.salt_returns;
 
-CREATE TABLE dbo.salt_returns (
-   added     datetime not null default (getdate()),
-   fun       varchar(100) NOT NULL,
-   jid       varchar(255) NOT NULL,
-   retval    varchar(MAX) NOT NULL,
-   id        varchar(255) NOT NULL,
-   success   bit default(0)
- );
+    CREATE TABLE dbo.salt_returns (
+       added     datetime not null default (getdate()),
+       fun       varchar(100) NOT NULL,
+       jid       varchar(255) NOT NULL,
+       retval    varchar(MAX) NOT NULL,
+       id        varchar(255) NOT NULL,
+       success   bit default(0)
+     );
 
- CREATE INDEX salt_returns_added on dbo.salt_returns(added);
- CREATE INDEX salt_returns_id on dbo.salt_returns(id);
- CREATE INDEX salt_returns_jid on dbo.salt_returns(jid);
- CREATE INDEX salt_returns_fun on dbo.salt_returns(fun);
-    EOF
+    CREATE INDEX salt_returns_added on dbo.salt_returns(added);
+    CREATE INDEX salt_returns_id on dbo.salt_returns(id);
+    CREATE INDEX salt_returns_jid on dbo.salt_returns(jid);
+    CREATE INDEX salt_returns_fun on dbo.salt_returns(fun);
 
-Required python modules: psycopg2
+  To use the postgres returner, append '--return mssql' to the salt command. ex:
 
-  To use the postgres returner, append '--return postgres' to the salt command. ex:
+    salt '*' test.ping --return mssql
 
-    salt '*' test.ping --return postgres
 '''
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
 # Import python libs
 import json
-
 
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
@@ -98,11 +111,10 @@ def _get_conn():
     '''
     Return a MSSQL connection.
     '''
-    return pyodbc.connect('DRIVER=\{SQL Server\};SERVER={0};DATABASE={1};UID={2};PWD={3}'.format(
-            __salt__['config.option']('returner.mssql.host'),
+    return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
+            __salt__['config.option']('returner.mssql.dsn'),
             __salt__['config.option']('returner.mssql.user'),
-            __salt__['config.option']('returner.mssql.passwd'),
-            __salt__['config.option']('returner.mssql.db')))
+            __salt__['config.option']('returner.mssql.passwd')))
 
 
 def _close_conn(conn):
@@ -165,14 +177,14 @@ def get_jid(jid):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = ?'''
+    sql = '''SELECT id, retval FROM salt_returns WHERE jid = ?'''
 
     cur.execute(sql, (jid,))
     data = cur.fetchall()
     ret = {}
     if data:
-        for minion, full_ret in data:
-            ret[minion] = json.loads(full_ret)
+        for minion, retval in data:
+            ret[minion] = json.loads(retval)
     _close_conn(conn)
     return ret
 
@@ -183,7 +195,7 @@ def get_fun(fun):
     '''
     conn = _get_conn()
     cur = conn.cursor()
-    sql = '''SELECT s.id,s.jid, s.full_ret
+    sql = '''SELECT s.id,s.jid, s.retval
             FROM salt_returns s
             JOIN ( SELECT MAX(jid) AS jid FROM salt_returns GROUP BY fun, id) max
             ON s.jid = max.jid
@@ -195,8 +207,8 @@ def get_fun(fun):
 
     ret = {}
     if data:
-        for minion, jid, full_ret in data:
-            ret[minion] = json.loads(full_ret)
+        for minion, jid, retval in data:
+            ret[minion] = json.loads(retval)
     _close_conn(conn)
     return ret
 
