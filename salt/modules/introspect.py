@@ -22,13 +22,13 @@ def running_service_owners(
         salt myminion introspect.running_service_owners
     '''
     error = {}
-    if not 'pkg.owner' in __salt__:
+    if 'pkg.owner' not in __salt__:
         error['Unsupported Package Manager'] = (
             'The module for the package manager on this system does not '
             'support looking up which package(s) owns which file(s)'
         )
 
-    if not 'file.open_files' in __salt__:
+    if 'file.open_files' not in __salt__:
         error['Unsupported File Module'] = (
             'The file module on this system does not '
             'support looking up open files on the system'
@@ -70,13 +70,13 @@ def enabled_service_owners():
         salt myminion introspect.enabled_service_owners
     '''
     error = {}
-    if not 'pkg.owner' in __salt__:
+    if 'pkg.owner' not in __salt__:
         error['Unsupported Package Manager'] = (
             'The module for the package manager on this system does not '
             'support looking up which package(s) owns which file(s)'
         )
 
-    if not 'service.show' in __salt__:
+    if 'service.show' not in __salt__:
         error['Unsupported Service Manager'] = (
             'The module for the service manager on this system does not '
             'support showing descriptive service data'
@@ -90,7 +90,7 @@ def enabled_service_owners():
 
     for service in services:
         data = __salt__['service.show'](service)
-        if not 'ExecStart' in data:
+        if 'ExecStart' not in data:
             continue
         start_cmd = data['ExecStart']['path']
         pkg = __salt__['pkg.owner'](start_cmd)
