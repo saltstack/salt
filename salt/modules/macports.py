@@ -130,7 +130,7 @@ def latest_version(*names, **kwargs):
     ret = {}
 
     for k, v in available.items():
-        if not k in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
+        if k not in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
             ret[k] = v
         else:
             ret[k] = ''
