@@ -154,7 +154,7 @@ def profile(name, profile):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
     info = __salt__['cloud.profile'](profile, name)
-    if info and not 'Error' in info:
+    if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = 'Created instance {0} using profile {1}'.format(
