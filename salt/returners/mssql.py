@@ -2,7 +2,7 @@
 '''
 Return data to a Microsoft SQL Server server
 
-:maintainer:    None
+:maintainer:    C. R. Oldham (cr@saltstack.com)
 :maturity:      New
 :depends:       unixodbc, pyodbc, freetds
 :platform:      all
