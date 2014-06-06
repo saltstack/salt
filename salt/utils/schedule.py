@@ -402,11 +402,11 @@ class Schedule(object):
                         if seconds < 0:
                             continue
 
-                        if not '_when_run' in data:
+                        if '_when_run' not in data:
                             data['_when_run'] = True
 
                         # Backup the run time
-                        if not '_when' in data:
+                        if '_when' not in data:
                             data['_when'] = when
 
                         # A new 'when' ensure _when_run is True
@@ -431,11 +431,11 @@ class Schedule(object):
                     if seconds < 0:
                         continue
 
-                    if not '_when_run' in data:
+                    if '_when_run' not in data:
                         data['_when_run'] = True
 
                     # Backup the run time
-                    if not '_when' in data:
+                    if '_when' not in data:
                         data['_when'] = when
 
                     # A new 'when' ensure _when_run is True
