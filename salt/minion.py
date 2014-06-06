@@ -1031,7 +1031,7 @@ class Minion(object):
         :return: None
         '''
         if '__update_grains' not in self.opts.get('schedule', {}):
-            if not 'schedule' in self.opts:
+            if 'schedule' not in self.opts:
                 self.opts['schedule'] = {}
             self.opts['schedule'].update({
                 '__update_grains':
