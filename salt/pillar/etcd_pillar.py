@@ -62,12 +62,9 @@ key with all minions but override its value for a specific minion::
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
-
 # Import third party libs
 try:
-    from salt.utils import etcd_util
+    import salt.utils.etcd_util
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -91,11 +88,11 @@ def _get_conn(profile):
     '''
     if profile:
         etcd = __salt__['config.option']('profile')
-        host = etcd.get('etcd.host', '127.0.0.1')
-        port = etcd.get('etcd.port', 4001)
+        host = etcd.get('etcd.host')
+        port = etcd.get('etcd.port')
     else:
-        host = __salt__['config.option']('etcd.host', '127.0.0.1')
-        port = __salt__['config.option']('etcd.port', 4001)
+        host = __salt__['config.option']('etcd.host')
+        port = __salt__['config.option']('etcd.port')
 
     return salt.utils.etcd_util.get_conn(host, port)
 
