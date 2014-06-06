@@ -48,12 +48,28 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def get_conn(host='127.0.0.1', port=4001):
+def get_conn(opts, profile=None):
     '''
     .. versionadded:: Helium
 
     Return a client object for accessing etcd
     '''
+    opts_merged = {}
+    opts_pillar = opts.get('pillar', {})
+    opts_master = opts_pillar.get('master', {})
+
+    opts_merged.update(opts_master)
+    opts_merged.update(opts_pillar.pop('master'))
+    opts_merged.update(opts.pop('pillar'))
+
+    if profile:
+        conf = opts_merged.get(profile)
+    else:
+        conf = opts_merged
+
+    host = conf.get('etcd.host', '127.0.0.1')
+    port = conf.get('etcd.port', 4001)
+
     return etcd.Client(host, port)
 
 

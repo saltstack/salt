@@ -82,21 +82,6 @@ def __virtual__():
     return __virtualname__ if HAS_LIBS else False
 
 
-def _get_conn(profile):
-    '''
-    Establish a connection to etcd
-    '''
-    if profile:
-        etcd = __salt__['config.option']('profile')
-        host = etcd.get('etcd.host', '127.0.0.1')
-        port = etcd.get('etcd.port', 4001)
-    else:
-        host = __salt__['config.option']('etcd.host', '127.0.0.1')
-        port = __salt__['config.option']('etcd.port', 4001)
-
-    return salt.utils.etcd_util.get_conn(host, port)
-
-
 def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     '''
     Check etcd for all data
@@ -106,7 +91,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     profile = None
     if comps[0]:
         profile = comps[0]
-    client = _get_conn(profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
 
     path = '/'
     if len(comps) > 1 and comps[1].startswith('root='):
@@ -118,7 +103,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     }
 
     try:
-        pillar = etcd_util.tree(client, path)
+        pillar = salt.utils.etcd_util.tree(client, path)
     except KeyError:
         log.error('No such key in etcd profile {0}: {1}'.format(profile, path))
         pillar = {}

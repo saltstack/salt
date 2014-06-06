@@ -65,28 +65,20 @@ def __virtual__():
     return __virtualname__ if HAS_LIBS else False
 
 
-def _get_conn():
+def _get_conn(opts):
     '''
     Establish a connection to etcd
     '''
-    path = __salt__['config.option']('etcd.returner_root', '/salt/return')
-    profile = __salt__['config.option']('etcd.returner', None)
-    if profile:
-        etcd = __salt__['config.option']('profile')
-        host = etcd.get('etcd.host', '127.0.0.1')
-        port = etcd.get('etcd.port', 4001)
-    else:
-        host = __salt__['config.option']('etcd.host', '127.0.0.1')
-        port = __salt__['config.option']('etcd.port', 4001)
-
-    return salt.utils.etcd_util.get_conn(host, port), path
+    profile = opts.get('etcd.returner', None)
+    path = opts.get('etcd.returner_root', '/salt/return')
+    return salt.utils.etcd_util.get_conn(opts, profile), path
 
 
 def returner(ret):
     '''
     Return data to an etcd server or cluster
     '''
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
 
     # Make a note of this minion for the external job cache
     client.write(
@@ -110,7 +102,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid
     '''
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
     client.write(
         '/'.join((path, 'jobs', jid, '.load.p')),
         json.dumps(load)
@@ -121,7 +113,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
     return json.loads(client.get('/'.join(path, 'jobs', jid, '.load.p')))
 
 
@@ -129,7 +121,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
     jid_path = '/'.join((path, 'jobs', jid))
     return salt.utils.etcd_util.tree(client, jid_path)
 
@@ -139,7 +131,7 @@ def get_fun():
     Return a dict of the last function called for all minions
     '''
     ret = {}
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
         comps = str(item.key).split('/')
@@ -152,7 +144,7 @@ def get_jids():
     Return a list of all job ids
     '''
     ret = []
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'jobs')))
     for item in items.children:
         if item.dir is True:
@@ -166,7 +158,7 @@ def get_minions():
     Return a list of minions
     '''
     ret = []
-    client, path = _get_conn()
+    client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
         comps = str(item.key).split('/')
