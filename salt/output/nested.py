@@ -75,6 +75,8 @@ class NestDisplay(object):
                             self.colors['GREEN'],
                             self.colors['ENDC'])
                     out = self.display(ind, indent + 2, '- ', out)
+                if isinstance(ind, dict):
+                    out = self.display(ind, indent, '',  out)
                 else:
                     out = self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
