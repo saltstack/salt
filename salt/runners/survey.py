@@ -162,7 +162,7 @@ def _get_pool_results(*args, **kwargs):
     # hash minion return values as a string
     for minion in sorted(minions):
         h = hashlib.sha256(str(minions[minion])).hexdigest()
-        if not h in ret:
+        if h not in ret:
             ret[h] = {}
             ret[h]['pool'] = []
             ret[h]['result'] = str(minions[minion])

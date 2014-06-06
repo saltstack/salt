@@ -1034,7 +1034,7 @@ def info(name):
             if 'inet' in line:
                 line = line.split()
                 ip_address = line[1].split('/')[0]
-                if not ip_address in ret['_ips']:
+                if ip_address not in ret['_ips']:
                     ret['_ips'].append(ip_address)
                     if '::' in ip_address:
                         ret['ipv6_ips'].append(ip_address)
@@ -1145,7 +1145,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                     line = line.split('=')
                     index = line.pop(0)
                     val = (index.strip(), '='.join(line).strip())
-                    if not val in lines:
+                    if val not in lines:
                         lines.append(val)
             for k, item in filtered_lxc_conf:
                 matched = False
@@ -1168,7 +1168,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                     for opt in lxc_conf_unset:
                         if (
                             not line[0].startswith(opt)
-                            and not line in dest_lxc_conf
+                            and line not in dest_lxc_conf
                         ):
                             dest_lxc_conf.append(line)
                         else:
@@ -1456,7 +1456,7 @@ def read_conf(conf_file, out_format='simple'):
     ret_simple = {}
     with salt.utils.fopen(conf_file, 'r') as fp_:
         for line in fp_.readlines():
-            if not '=' in line:
+            if '=' not in line:
                 ret_commented.append(line)
                 continue
             comps = line.split('=')
@@ -1566,7 +1566,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             continue
         else:
             key = line.keys()[0]
-            if not key in kwargs:
+            if key not in kwargs:
                 data.append(line)
                 continue
             data.append({

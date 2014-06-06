@@ -154,7 +154,7 @@ def set_master(service,
             # This line is a comment or is empty
             new_conf.append(line)
 
-    if not dict_key in conf_dict:
+    if dict_key not in conf_dict:
         # This config value does not exist, so append it to the end
         new_conf.append(new_line)
 

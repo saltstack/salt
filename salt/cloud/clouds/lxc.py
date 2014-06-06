@@ -146,7 +146,7 @@ def _salt(fun, *args, **kw):
     except TypeError:
         skwargs = ''
     cache_key = (laps, target, fun, sargs, skw, skwargs)
-    if not cache or (cache and (not cache_key in __CACHED_CALLS)):
+    if not cache or (cache and (cache_key not in __CACHED_CALLS)):
         conn = _client()
         runner = _runner()
         rkwargs = kwargs.copy()
@@ -369,7 +369,7 @@ def create(vm_, call=None):
         return
     __grains__ = _salt('grains.items')
     name = vm_['name']
-    if not 'minion' in vm_:
+    if 'minion' not in vm_:
         vm_['minion'] = {}
     minion = vm_['minion']
 
@@ -438,10 +438,10 @@ def create(vm_, call=None):
         users = ['root']
         if (
             __grains__['os'] in ['Ubuntu']
-            and not 'ubuntu' in users
+            and 'ubuntu' not in users
         ):
             users.append('ubuntu')
-    if not ssh_username in users:
+    if ssh_username not in users:
         users.append(ssh_username)
     if not users:
         users = []
@@ -733,7 +733,7 @@ def get_configured_provider(vm_=None):
             data = get_provider(img_provider)
             matched = True
     # providers are set in configuration
-    if not data and not 'profile' in __opts__ and arg_providers:
+    if not data and 'profile' not in __opts__ and arg_providers:
         for name in arg_providers:
             tgt = 'provider: {0}'.format(name)
             if dalias == name:
