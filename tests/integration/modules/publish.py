@@ -37,7 +37,7 @@ class PublishModuleTest(integration.ModuleCase,
             '__pub_tgt_type',
         )
         for name in check_true:
-            if not name in ret:
+            if name not in ret:
                 print name
             self.assertTrue(name in ret)
 
@@ -79,7 +79,7 @@ class PublishModuleTest(integration.ModuleCase,
             '__pub_tgt_type',
         )
         for name in check_true:
-            if not name in ret:
+            if name not in ret:
                 print name
             self.assertTrue(name in ret)
 
