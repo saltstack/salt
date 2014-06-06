@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Return data to a Microsoft SQL Server server
+Return data to an ODBC compliant server.  This driver was
+developed with Microsoft SQL Server in mind, but theoretically
+could be used to return data to any compliant ODBC database
+as long as there is a working ODBC driver for it on your
+minion platform.
 
 :maintainer:    C. R. Oldham (cr@saltstack.com)
 :maturity:      New
-:depends:       unixodbc, pyodbc, freetds
+:depends:       unixodbc, pyodbc, freetds (for SQL Server)
 :platform:      all
 
 To enable this returner the minion will need
@@ -14,6 +18,11 @@ On Linux:
     unixodbc (http://www.unixodbc.org)
     pyodbc (`pip install pyodbc`)
     The FreeTDS ODBC driver for SQL Server (http://www.freetds.org)
+    or another compatible ODBC driver
+
+On Windows:
+
+    TBD
 
 unixODBC and FreeTDS need to be configured via /etc/odbcinst.ini and
 /etc/odbc.ini.
@@ -40,13 +49,13 @@ shared library.  This example is for Ubuntu 14.04.)
 Also you need the following values configured in the minion or master config.
 Configure as you see fit::
 
-    returner.mssql.dsn: 'TS'
-    returner.mssql.user: 'salt'
-    returner.mssql.passwd: 'salt'
+    returner.odbc.dsn: 'TS'
+    returner.odbc.user: 'salt'
+    returner.odbc.passwd: 'salt'
 
 Running the following commands against Microsoft SQL Server in the desired
 database as the appropriate user should create the database tables
-correctly::
+correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 
     --
     -- Table structure for table 'jids'
@@ -81,9 +90,9 @@ correctly::
     CREATE INDEX salt_returns_jid on dbo.salt_returns(jid);
     CREATE INDEX salt_returns_fun on dbo.salt_returns(fun);
 
-  To use the postgres returner, append '--return mssql' to the salt command. ex:
+  To use this returner, append '--return odbc' to the salt command. ex:
 
-    salt '*' test.ping --return mssql
+    salt '*' status.diskusage --return odbc
 
 '''
 # Let's not allow PyLint complain about string substitution
@@ -98,13 +107,13 @@ import logging
 try:
     import pyodbc
     #import psycopg2.extras
-    HAS_MSSQL = True
+    HAS_ODBC = True
 except ImportError:
-    HAS_MSSQL = False
+    HAS_ODBC = False
 
 
 def __virtual__():
-    if not HAS_MSSQL:
+    if not HAS_ODBC:
         return False
     return True
 
@@ -114,9 +123,9 @@ def _get_conn():
     Return a MSSQL connection.
     '''
     return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
-            __salt__['config.option']('returner.mssql.dsn'),
-            __salt__['config.option']('returner.mssql.user'),
-            __salt__['config.option']('returner.mssql.passwd')))
+            __salt__['config.option']('returner.odbc.dsn'),
+            __salt__['config.option']('returner.odbc.user'),
+            __salt__['config.option']('returner.odbc.passwd')))
 
 
 def _close_conn(conn):
@@ -126,7 +135,7 @@ def _close_conn(conn):
 
 def returner(ret):
     '''
-    Return data to a mssql server
+    Return data to an odbc server
     '''
     conn = _get_conn()
     cur = conn.cursor()
