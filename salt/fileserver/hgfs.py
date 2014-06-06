@@ -56,7 +56,7 @@ def __virtual__():
     '''
     Only load if mercurial is available
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     if not HAS_HG:
         log.error('Mercurial fileserver backend is enabled in configuration '
