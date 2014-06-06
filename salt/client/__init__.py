@@ -41,7 +41,6 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-from salt._compat import string_types
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
