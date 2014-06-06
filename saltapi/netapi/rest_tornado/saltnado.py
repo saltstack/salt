@@ -98,7 +98,10 @@ Or the tornado
 
 Above examples show how to establish a websocket connection to Salt and activating
 real time updates from Salt's event stream by signaling ``websocket client ready``.
+'''
 
+
+'''
 Notes
 =====
 
@@ -793,15 +796,16 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
     '''
     Server side websocket handler.
     '''
-    def open(self, *args, **kwargs):
+    def open(self, token):
         '''
         Return a websocket connection to Salt
         representing Salt's "real time" event stream.
         '''
-        logger.info('In the open method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+        logger.debug('In the websocket open method')
 
         # close the connection, if not authenticated
-        if not self._verify_auth():
+        if not self.application.auth.get_tok(token):
+            logger.debug('Refusing websocket connection, bad token!')
             self.close()
             return
 
@@ -815,11 +819,11 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         These messages make up salt's
         "real time" event stream.
         """
-        logger.info('Got message {}'.format(message))
+        logger.debug('Got websocket message {}'.format(message))
         if message == 'websocket client ready':
             if self.connected:
                 # TBD: Add ability to run commands in this branch
-                logger.info('Already connected, returning')
+                logger.debug('Websocket already connected, returning')
                 return
 
             self.connected = True
@@ -829,7 +833,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
                     event = yield self.application.event_listener.get_event(self)
                     self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
                 except Exception as err:
-                    logger.info('Error! Ending server side connection. Reason = {}'.format(str(err)))
+                    logger.info('Error! Ending server side websocket connection. Reason = {}'.format(str(err)))
                     break
 
             self.close()
@@ -841,7 +845,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         '''Cleanup.
 
         '''
-        logger.info('In the close method for websocket args={0},\nkwargs={1})'.format(args, kwargs))
+        logger.debug('In the websocket close method')
         self.close()
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
