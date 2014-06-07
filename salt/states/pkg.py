@@ -38,7 +38,6 @@ import logging
 import os
 import re
 import json
-import pprint
 
 # Import salt libs
 import salt.utils
@@ -369,6 +368,16 @@ def _preflight_check(desired, fromrepo, **kwargs):
     return ret
 
 
+def _dump_json_for_comments(obj):
+    '''
+    Serialize obj to a JSON string and format for comments 
+    '''
+    ret = json.dumps(obj, indent=4, separators=(',', ': ')) \
+                     .replace('"', '').replace(',\n', '\n') \
+                     .replace('{', '').replace('}', '').rstrip()
+    return ret
+    
+    
 def installed(
         name,
         version=None,
@@ -639,11 +648,7 @@ def installed(
                                    **kwargs)
 
     try:
-        print "==="
-        print result
         desired, targets, to_unpurge, to_reinstall, altered_files = result
-        #print pprint.pformat(json.dumps(altered_files['tzdata'], indent=4, separators=(',', ': ')))
-        print "==="
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
 
@@ -685,20 +690,12 @@ def installed(
 
     # Remove any targets not returned by _find_install_targets
     if pkgs:
-        print "==="
         pkgs = [dict([(x, y)]) for x, y in targets.iteritems()]
-        print pkgs
         pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.iteritems()])
-        print pkgs
-        print "==="
     elif sources:
-        print "==="
         oldsources = sources
         sources = [x for x in oldsources if x.keys()[0] in targets]
-        print sources
         sources.extend([x for x in oldsources if x.keys()[0] in to_reinstall])
-        print sources
-        print "==="
 
     comment = []
     if __opts__['test']:
@@ -717,16 +714,15 @@ def installed(
                 .format(', '.join(to_unpurge))
             )
         if to_reinstall:
-            if sources:
-                for x in to_reinstall:
-                    comment.append('Package {0} is set to be reinstalled because the following files have been altered:' \
-                                   .format(x))
-                    comment.append(json.dumps(altered_files[x], indent=4, separators=(',', ': ')).replace('"', '').replace('{', '').replace('}', ''))
-            else:
-                for x in to_reinstall:
-                    comment.append('Package {0} is set to be reinstalled because the following files have been altered:' \
-                                   .format(_get_desired_pkg(x, to_reinstall)))
-                    comment.append(json.dumps(altered_files[x], indent=4, separators=(',', ': ')).replace('"', '').replace('{', '').replace('}', ''))
+            # Add a comment for each package in to_reinstall with its pkg.verify output
+            for x in to_reinstall:
+                if sources:
+                    pkgstr = x
+                else:
+                    pkgstr = _get_desired_pkg(x, to_reinstall)
+                comment.append('\nPackage {0} is set to be reinstalled because the following files have been altered:' \
+                            .format(pkgstr))
+                comment.append(_dump_json_for_comments(altered_files[x]))
         return {'name': name,
                 'changes': {},
                 'result': None,
@@ -777,6 +773,7 @@ def installed(
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
 
+    # Analyze pkg.install results for packages in targets
     if sources:
         modified = [x for x in changes['installed'].keys() if x in targets]
         not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
@@ -826,6 +823,7 @@ def installed(
                 changes[change_name]['old'] += '\n'
             changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
+    # Any requested packages that were not targetted for install or reinstall
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -863,16 +861,57 @@ def installed(
     if failed_hold:
         for i in failed_hold:
             comment.append(i['comment'])
-
-        return {'name': name,
-                'changes': changes,
-                'result': False,
-                'comment': ' '.join(comment)}
+        result = False
+        
+    # Get the ignore_types list if any from the pkg_verify argument
+    if type(pkg_verify) is list and any(x.get('ignore_types') is not None \
+                                        for x in pkg_verify \
+                                        if type(x) is OrderedDict \
+                                        and 'ignore_types' in x):
+        ignore_types = next(x.get('ignore_types') \
+                            for x in pkg_verify \
+                            if 'ignore_types' in x)
     else:
-        return {'name': name,
-                'changes': changes,
-                'result': result,
-                'comment': ' '.join(comment)}
+        ignore_types = []
+
+    # Rerun pkg.verify for packages in to_reinstall to determine failed
+    modified = []
+    failed = []
+    for x in to_reinstall:
+        retval = __salt__['pkg.verify'](x, ignore_types=ignore_types)
+        if retval: 
+            failed.append(x)
+            altered_files[x] = retval
+        else:
+            modified.append(x)
+    
+    if modified:
+        # Add a comment for each package in modified with its pkg.verify output
+        for x in modified:
+            if sources:
+                pkgstr = x
+            else:
+                pkgstr = _get_desired_pkg(x, desired)
+            comment.append('\nPackage {0} was reinstalled.  The following files were remediated:' \
+                           .format(pkgstr))
+            comment.append(_dump_json_for_comments(altered_files[x]))
+
+    if failed:
+        # Add a comment for each package in failed with its pkg.verify output
+        for x in failed:
+            if sources:
+                pkgstr = x
+            else:
+                pkgstr = _get_desired_pkg(x, desired)
+            comment.append('\nReinstall was not successful for package {0}.  The following files could not be remediated:' \
+                           .format(pkgstr))
+            comment.append(_dump_json_for_comments(altered_files[x]))
+        result = False
+
+    return {'name': name,
+            'changes': changes,
+            'result': result,
+            'comment': ' '.join(comment)}
 
 
 def latest(
