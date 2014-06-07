@@ -710,6 +710,12 @@ def installed(
                                      for x in targets])
             comment.append('The following packages are set to be '
                            'installed/updated: {0}.'.format(summary))
+        if to_unpurge:
+            comment.append(
+                'The following packages will have their selection status '
+                'changed from \'purge\' to \'install\': {0}.'
+                .format(', '.join(to_unpurge))
+            )
         if to_reinstall:
             if sources:
                 for x in to_reinstall:
@@ -721,12 +727,6 @@ def installed(
                     comment.append('Package {0} is set to be reinstalled because the following files have been altered:' \
                                    .format(_get_desired_pkg(x, to_reinstall)))
                     comment.append(json.dumps(altered_files[x], indent=4, separators=(',', ': ')).replace('"', '').replace('{', '').replace('}', ''))
-        if to_unpurge:
-            comment.append(
-                'The following packages will have their selection status '
-                'changed from \'purge\' to \'install\': {0}.'
-                .format(', '.join(to_unpurge))
-            )
         return {'name': name,
                 'changes': {},
                 'result': None,
@@ -779,7 +779,7 @@ def installed(
 
     if sources:
         modified = [x for x in changes['installed'].keys() if x in targets]
-        not_modified = [x for x in desired if x not in targets]
+        not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
         ok, failed = \
@@ -789,7 +789,8 @@ def installed(
                 )
             )
         modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok if x not in targets]
+        not_modified = [x for x in ok if x not in targets and x not in to_reinstall]
+        failed = [x for x in failed if x in targets]
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].
