@@ -38,9 +38,11 @@ import logging
 import os
 import re
 import json
+import yaml
 
 # Import salt libs
 import salt.utils
+from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict
 from salt._compat import string_types
@@ -372,9 +374,8 @@ def _dump_json_for_comments(obj):
     '''
     Serialize obj to a JSON string and format for comments 
     '''
-    ret = json.dumps(obj, indent=4, separators=(',', ': ')) \
-                     .replace('"', '').replace(',\n', '\n') \
-                     .replace('{', '').replace('}', '').rstrip()
+    nested.__opts__ = __opts__
+    ret = nested.output(obj).rstrip()
     return ret
     
     
@@ -722,7 +723,7 @@ def installed(
                     pkgstr = _get_desired_pkg(x, to_reinstall)
                 comment.append('\nPackage {0} is set to be reinstalled because the following files have been altered:' \
                             .format(pkgstr))
-                comment.append(_dump_json_for_comments(altered_files[x]))
+                comment.append('\n' + _dump_json_for_comments(altered_files[x]))
         return {'name': name,
                 'changes': {},
                 'result': None,
