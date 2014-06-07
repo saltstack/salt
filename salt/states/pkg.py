@@ -37,8 +37,6 @@ This is necessary and can not be replaced by a require clause in the pkg.
 import logging
 import os
 import re
-import json
-import yaml
 
 # Import salt libs
 import salt.utils
