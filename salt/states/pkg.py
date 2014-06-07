@@ -135,12 +135,12 @@ def _find_install_targets(name=None,
     # dict for packages that fail pkg.verify and their altered files
     altered_files = {}
     # Get the ignore_types list if any from the pkg_verify argument
-    if type(pkg_verify) is list and any(x.get('ignore_types') is not None \
-                                        for x in pkg_verify \
-                                        if type(x) is OrderedDict \
+    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+                                        for x in pkg_verify
+                                        if type(x) is OrderedDict
                                         and 'ignore_types' in x):
-        ignore_types = next(x.get('ignore_types') \
-                            for x in pkg_verify \
+        ignore_types = next(x.get('ignore_types')
+                            for x in pkg_verify
                             if 'ignore_types' in x)
     else:
         ignore_types = []
@@ -205,10 +205,9 @@ def _find_install_targets(name=None,
                 targets.append(x)
             elif pkg_verify:
                 retval = __salt__['pkg.verify'](x, ignore_types=ignore_types)
-                if retval: 
+                if retval:
                     to_reinstall.append(x)
                     altered_files[x] = retval
-                    
     else:
         # Check for alternate package names if strict processing is not
         # enforced.
@@ -255,7 +254,7 @@ def _find_install_targets(name=None,
             elif __salt__['pkg_resource.version_clean'](pkgver) is None:
                 if pkg_verify:
                     retval = __salt__['pkg.verify'](pkgname, ignore_types=ignore_types)
-                    if retval: 
+                    if retval:
                         to_reinstall[pkgname] = pkgver
                         altered_files[pkgname] = retval
                 continue
@@ -281,7 +280,7 @@ def _find_install_targets(name=None,
                     targets[pkgname] = pkgver
                 elif pkg_verify and comparison == '==':
                     retval = __salt__['pkg.verify'](pkgname, ignore_types=ignore_types)
-                    if retval: 
+                    if retval:
                         to_reinstall[pkgname] = pkgver
                         altered_files[pkgname] = retval
 
@@ -370,13 +369,13 @@ def _preflight_check(desired, fromrepo, **kwargs):
 
 def _nested_output(obj):
     '''
-    Serialize obj and format for output 
+    Serialize obj and format for output
     '''
     nested.__opts__ = __opts__
     ret = nested.output(obj).rstrip()
     return ret
-    
-    
+
+
 def installed(
         name,
         version=None,
@@ -719,8 +718,8 @@ def installed(
                     pkgstr = x
                 else:
                     pkgstr = _get_desired_pkg(x, to_reinstall)
-                comment.append('\nPackage {0} is set to be reinstalled because the following files have been altered:' \
-                            .format(pkgstr))
+                comment.append('\nPackage {0} is set to be reinstalled because the '
+                               'following files have been altered:'.format(pkgstr))
                 comment.append('\n' + _nested_output(altered_files[x]))
         return {'name': name,
                 'changes': {},
@@ -861,14 +860,14 @@ def installed(
         for i in failed_hold:
             comment.append(i['comment'])
         result = False
-        
+
     # Get the ignore_types list if any from the pkg_verify argument
-    if type(pkg_verify) is list and any(x.get('ignore_types') is not None \
-                                        for x in pkg_verify \
-                                        if type(x) is OrderedDict \
+    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+                                        for x in pkg_verify
+                                        if type(x) is OrderedDict
                                         and 'ignore_types' in x):
-        ignore_types = next(x.get('ignore_types') \
-                            for x in pkg_verify \
+        ignore_types = next(x.get('ignore_types')
+                            for x in pkg_verify
                             if 'ignore_types' in x)
     else:
         ignore_types = []
@@ -878,12 +877,12 @@ def installed(
     failed = []
     for x in to_reinstall:
         retval = __salt__['pkg.verify'](x, ignore_types=ignore_types)
-        if retval: 
+        if retval:
             failed.append(x)
             altered_files[x] = retval
         else:
             modified.append(x)
-    
+
     if modified:
         # Add a comment for each package in modified with its pkg.verify output
         for x in modified:
@@ -891,8 +890,8 @@ def installed(
                 pkgstr = x
             else:
                 pkgstr = _get_desired_pkg(x, desired)
-            comment.append('\nPackage {0} was reinstalled.  The following files were remediated:' \
-                           .format(pkgstr))
+            comment.append('\nPackage {0} was reinstalled.  The following files '
+                           'were remediated:'.format(pkgstr))
             comment.append(_nested_output(altered_files[x]))
 
     if failed:
@@ -902,8 +901,10 @@ def installed(
                 pkgstr = x
             else:
                 pkgstr = _get_desired_pkg(x, desired)
-            comment.append('\nReinstall was not successful for package {0}.  The following files could not be remediated:' \
-                           .format(pkgstr))
+            comment.append(
+                '\nReinstall was not successful for package {0}.  The following '
+                'files could not be remediated:'.format(pkgstr)
+            )
             comment.append(_nested_output(altered_files[x]))
         result = False
 
