@@ -169,7 +169,7 @@ def _interfaces_ip(out):
         data = dict()
 
         for line in group.splitlines():
-            if not ' ' in line:
+            if ' ' not in line:
                 continue
             match = re.match(r'^\d*:\s+([\w.-]+)(?:@)?([\w.-]+)?:\s+<(.+)>', line)
             if match:

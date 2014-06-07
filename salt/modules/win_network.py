@@ -91,7 +91,7 @@ def traceroute(host):
     cmd = 'tracert {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
-        if not ' ' in line:
+        if ' ' not in line:
             continue
         if line.startswith('Trac'):
             continue

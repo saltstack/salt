@@ -22,7 +22,7 @@ def _auth():
     '''
     Return the auth object
     '''
-    if not 'auth' in __context__:
+    if 'auth' not in __context__:
         __context__['auth'] = salt.crypt.SAuth(__opts__)
     return __context__['auth']
 
@@ -59,7 +59,7 @@ def _mk_client():
     '''
     Create a file client and add it to the context
     '''
-    if not 'cp.fileclient' in __context__:
+    if 'cp.fileclient' not in __context__:
         __context__['cp.fileclient'] = \
                 salt.fileclient.get_file_client(__opts__)
 
@@ -191,13 +191,13 @@ def get_template(path,
         saltenv = env
 
     _mk_client()
-    if not 'salt' in kwargs:
+    if 'salt' not in kwargs:
         kwargs['salt'] = __salt__
-    if not 'pillar' in kwargs:
+    if 'pillar' not in kwargs:
         kwargs['pillar'] = __pillar__
-    if not 'grains' in kwargs:
+    if 'grains' not in kwargs:
         kwargs['grains'] = __grains__
-    if not 'opts' in kwargs:
+    if 'opts' not in kwargs:
         kwargs['opts'] = __opts__
     return __context__['cp.fileclient'].get_template(
             path,

@@ -319,7 +319,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     new = list_pkgs()
 
     # Remove the temp adminfile
-    if not 'admin_source' in kwargs:
+    if 'admin_source' not in kwargs:
         os.unlink(adminfile)
 
     return salt.utils.compare_dicts(old, new)
@@ -428,7 +428,7 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
                                                  ' '.join(targets))
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     # Remove the temp adminfile
-    if not 'admin_source' in kwargs:
+    if 'admin_source' not in kwargs:
         os.unlink(adminfile)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

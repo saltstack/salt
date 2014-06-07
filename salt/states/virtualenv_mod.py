@@ -72,7 +72,7 @@ def managed(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    if not 'virtualenv.create' in __salt__:
+    if 'virtualenv.create' not in __salt__:
         ret['result'] = False
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret

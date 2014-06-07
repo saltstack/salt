@@ -481,10 +481,10 @@ def flush(name, family='ipv4', **kwargs):
         if ignore in kwargs:
             del kwargs[ignore]
 
-    if not 'table' in kwargs:
+    if 'table' not in kwargs:
         kwargs['table'] = 'filter'
 
-    if not 'chain' in kwargs:
+    if 'chain' not in kwargs:
         kwargs['chain'] = ''
 
     if not __salt__['iptables.flush'](kwargs['table'], kwargs['chain'], family):

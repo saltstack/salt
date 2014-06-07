@@ -68,7 +68,7 @@ def _enable(name, started, result=True, **kwargs):
         return ret
 
     # Check to see if this minion supports enable
-    if not 'service.enable' in __salt__ or not 'service.enabled' in __salt__:
+    if 'service.enable' not in __salt__ or 'service.enabled' not in __salt__:
         if started is True:
             ret['comment'] = ('Enable is not available on this minion,'
                               ' service {0} started').format(name)
@@ -158,7 +158,7 @@ def _disable(name, started, result=True, **kwargs):
         return ret
 
     # is enable/disable available?
-    if not 'service.disable' in __salt__ or not 'service.disabled' in __salt__:
+    if 'service.disable' not in __salt__ or 'service.disabled' not in __salt__:
         if started is True:
             ret['comment'] = ('Disable is not available on this minion,'
                               ' service {0} started').format(name)

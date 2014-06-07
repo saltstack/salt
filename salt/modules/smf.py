@@ -79,7 +79,7 @@ def get_stopped():
         comps = line.split()
         if not comps:
             continue
-        if not 'online' in line and not 'legacy_run' in line:
+        if 'online' not in line and 'legacy_run' not in line:
             ret.add(comps[0])
     return sorted(ret)
 
@@ -110,7 +110,7 @@ def missing(name):
 
         salt '*' service.missing net-snmp
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
