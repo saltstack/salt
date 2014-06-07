@@ -100,7 +100,7 @@ class GitPillar(object):
         for idx, opts_dict in enumerate(self.opts['ext_pillar']):
 
             # self.opts['ext_pillar'] always contains full ext_pillar list
-            if not 'git' in opts_dict:
+            if 'git' not in opts_dict:
                 continue
 
             parts = opts_dict.get('git', '').split()
