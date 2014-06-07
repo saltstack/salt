@@ -1962,7 +1962,7 @@ def update_bootstrap(config):
             'Updating the bootstrap-salt.sh script requires the '
             'Python requests library to be installed'
         )}
-    url = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
+    url = 'https://bootstrap.saltstack.com'
     req = requests.get(url)
     if req.status_code != 200:
         return {'error': (

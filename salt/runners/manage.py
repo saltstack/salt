@@ -267,7 +267,7 @@ def bootstrap(version="develop",
 
     Options:
         version: git tag of version to install [default: develop]
-        script: Script to execute [default: https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh]
+        script: Script to execute [default: https://bootstrap.saltstack.com]
         hosts: Comma separated hosts [example: hosts="host1.local,host2.local"]
 
     CLI Example:
@@ -276,11 +276,11 @@ def bootstrap(version="develop",
 
         salt-run manage.bootstrap hosts="host1,host2"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://bootstrap.saltstack.com/develop"
 
     '''
     if script is None:
-        script = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
+        script = 'https://bootstrap.saltstack.com'
     for host in hosts.split(","):
         # Could potentially lean on salt-ssh utils to make
         # deployment easier on existing hosts (i.e. use sshpass,
