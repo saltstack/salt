@@ -412,7 +412,7 @@ def run(opts):
             bootstrap_minion_version = os.environ.get(
                 'SALT_MINION_BOOTSTRAP_RELEASE',
                 opts.bootstrap_salt_commit[:7]
-            ),
+            )
             if bootstrap_minion_version not in version_info[vm_name]:
                 print('\n\nATTENTION!!!!\n')
                 print('The boostrapped minion version commit does not contain the desired commit:')
