@@ -327,13 +327,27 @@ def run(opts):
             opts.bootstrap_salt_url = 'https://github.com/saltstack/salt.git'
         cmd = (
             'salt-cloud -l debug'
-            ' --script-args "-D -g {bootstrap_salt_url} -n git {bootstrap_salt_commit}"'
-            ' -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
+            ' --script-args "-D -g {bootstrap_salt_url} -n git {1}"'
+            ' -p {provider}_{platform} {0}'.format(
+                vm_name,
+                os.environ.get(
+                    'SALT_MINION_BOOTSTRAP_RELEASE',
+                    opts.bootstrap_salt_commit
+                ),
+                **opts.__dict__
+            )
         )
     else:
         cmd = (
             'salt-cloud -l debug'
-            ' --script-args "-D" -p {provider}_{platform} {0}'.format(vm_name, **opts.__dict__)
+            ' --script-args "-D -n git {1}" -p {provider}_{platform} {0}'.format(
+                vm_name,
+                os.environ.get(
+                    'SALT_MINION_BOOTSTRAP_RELEASE',
+                    opts.bootstrap_salt_commit
+                ),
+                **opts.__dict__
+            )
         )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
@@ -395,10 +409,14 @@ def run(opts):
 
         try:
             version_info = json.loads(stdout.strip())
-            if opts.bootstrap_salt_commit[:7] not in version_info[vm_name]:
+            bootstrap_minion_version = os.environ.get(
+                'SALT_MINION_BOOTSTRAP_RELEASE',
+                opts.bootstrap_salt_commit[:7]
+            ),
+            if bootstrap_minion_version not in version_info[vm_name]:
                 print('\n\nATTENTION!!!!\n')
                 print('The boostrapped minion version commit does not contain the desired commit:')
-                print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], opts.bootstrap_salt_commit[:7]))
+                print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], bootstrap_minion_version))
                 print('\n\n')
                 sys.stdout.flush()
                 #if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
