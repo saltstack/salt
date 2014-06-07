@@ -370,9 +370,9 @@ def _preflight_check(desired, fromrepo, **kwargs):
     return ret
 
 
-def _dump_json_for_comments(obj):
+def _nested_output(obj):
     '''
-    Serialize obj to a JSON string and format for comments 
+    Serialize obj and format for output 
     '''
     nested.__opts__ = __opts__
     ret = nested.output(obj).rstrip()
@@ -723,7 +723,7 @@ def installed(
                     pkgstr = _get_desired_pkg(x, to_reinstall)
                 comment.append('\nPackage {0} is set to be reinstalled because the following files have been altered:' \
                             .format(pkgstr))
-                comment.append('\n' + _dump_json_for_comments(altered_files[x]))
+                comment.append('\n' + _nested_output(altered_files[x]))
         return {'name': name,
                 'changes': {},
                 'result': None,
@@ -895,7 +895,7 @@ def installed(
                 pkgstr = _get_desired_pkg(x, desired)
             comment.append('\nPackage {0} was reinstalled.  The following files were remediated:' \
                            .format(pkgstr))
-            comment.append(_dump_json_for_comments(altered_files[x]))
+            comment.append(_nested_output(altered_files[x]))
 
     if failed:
         # Add a comment for each package in failed with its pkg.verify output
@@ -906,7 +906,7 @@ def installed(
                 pkgstr = _get_desired_pkg(x, desired)
             comment.append('\nReinstall was not successful for package {0}.  The following files could not be remediated:' \
                            .format(pkgstr))
-            comment.append(_dump_json_for_comments(altered_files[x]))
+            comment.append(_nested_output(altered_files[x]))
         result = False
 
     return {'name': name,
