@@ -49,7 +49,7 @@ import logging
 try:
     import salt.utils.etcd_util
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
 
 log = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ def get_jid(jid):
     return salt.utils.etcd_util.tree(client, jid_path)
 
 
-def get_fun(fun):
+def get_fun():
     '''
     Return a dict of the last function called for all minions
     '''
