@@ -37,6 +37,9 @@ always use a named configuration profile, as shown above.
 # Import python libs
 import logging
 
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
 # Import third party libs
 try:
     import etcd
@@ -54,13 +57,13 @@ def get_conn(opts, profile=None):
 
     Return a client object for accessing etcd
     '''
-    opts_merged = {}
     opts_pillar = opts.get('pillar', {})
     opts_master = opts_pillar.get('master', {})
 
+    opts_merged = {}
     opts_merged.update(opts_master)
-    opts_merged.update(opts_pillar.pop('master'))
-    opts_merged.update(opts.pop('pillar'))
+    opts_merged.update(opts_pillar)
+    opts_merged.update(opts)
 
     if profile:
         conf = opts_merged.get(profile, {})
@@ -70,7 +73,13 @@ def get_conn(opts, profile=None):
     host = conf.get('etcd.host', '127.0.0.1')
     port = conf.get('etcd.port', 4001)
 
-    return etcd.Client(host, port)
+    if HAS_LIBS:
+        return etcd.Client(host, port)
+    else:
+        raise CommandExecutionError(
+            '(unable to import etcd, '
+            'module most likely not installed)'
+        )
 
 
 def tree(client, path):

@@ -72,17 +72,16 @@ def get_(key, recurse=False, profile=None):
     client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         result = client.get(key)
+    except KeyError as err:
+        log.error('etcd: {0}'.format(err))
+        return ''
+    except Exception:
+        raise
 
-        if recurse:
-            return salt.utils.etcd_util.tree(client, key)
-        else:
-            return getattr(result, 'value')
-    except (IOError, OSError) as exc:
-        log.error('{0}'.format(exc))
-        return None
-    except Exception as exc:
-        log.error('{0}'.format(exc))
-        return None
+    if recurse:
+        return salt.utils.etcd_util.tree(client, key)
+    else:
+        return getattr(result, 'value')
 
 
 def set_(key, value, profile=None):
@@ -101,13 +100,13 @@ def set_(key, value, profile=None):
     client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         result = client.write(key, value)
-        return getattr(result, 'value')
-    except (IOError, OSError) as exc:
-        log.error('{0}'.format(exc))
-        return None
-    except Exception as exc:
-        log.error('{0}'.format(exc))
-        return None
+    except KeyError as err:
+        log.error('etcd: {0}'.format(err))
+        return ''
+    except Exception:
+        raise
+
+    return getattr(result, 'value')
 
 
 def ls_(path='/', profile=None):
@@ -126,21 +125,21 @@ def ls_(path='/', profile=None):
     '''
     client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
-        ret = {}
         items = client.get(path)
-        for item in items.children:
-            if item.dir is True:
-                dir_name = '{0}/'.format(item.key)
-                ret[dir_name] = {}
-            else:
-                ret[item.key] = item.value
-        return {path: ret}
-    except (IOError, OSError) as exc:
-        log.error('{0}'.format(exc))
-        return None
-    except Exception as exc:
-        log.error('{0}'.format(exc))
-        return None
+    except KeyError as err:
+        log.error('etcd: {0}'.format(err))
+        return {}
+    except Exception:
+        raise
+
+    ret = {}
+    for item in items.children:
+        if item.dir is True:
+            dir_name = '{0}/'.format(item.key)
+            ret[dir_name] = {}
+        else:
+            ret[item.key] = item.value
+    return {path: ret}
 
 
 def rm_(key, recurse=False, profile=None):
@@ -160,17 +159,15 @@ def rm_(key, recurse=False, profile=None):
     '''
     client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
-        result = client.delete(key, recursive=recurse)
-        if result:
+        if client.delete(key, recursive=recurse):
             return True
         else:
             return False
-    except (IOError, OSError) as exc:
-        log.error('{0}'.format(exc))
-        return None
-    except Exception as exc:
-        log.error('{0}'.format(exc))
+    except KeyError as err:
+        log.error('etcd: {0}'.format(err))
         return False
+    except Exception:
+        raise
 
 
 def tree(path='/', profile=None):
@@ -191,9 +188,8 @@ def tree(path='/', profile=None):
     client = salt.utils.etcd_util.get_conn(__opts__, profile)
     try:
         return salt.utils.etcd_util.tree(client, path)
-    except (IOError, OSError) as exc:
-        log.error('{0}'.format(exc))
-        return None
-    except Exception as exc:
-        log.error('{0}'.format(exc))
-        return None
+    except KeyError as err:
+        log.error('etcd: {0}'.format(err))
+        return {}
+    except Exception:
+        raise
