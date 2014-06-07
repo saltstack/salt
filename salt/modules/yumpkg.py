@@ -1024,7 +1024,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     return remove(name=name, pkgs=pkgs)
 
 
-def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
     Hold packages with ``yum -q versionlock``.
 
@@ -1049,12 +1049,15 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.hold <package name>
         salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
-    if not name and not pkgs:
+    if not name and not pkgs and not sources:
         return 'Error: name or pkgs needs to be specified.'
 
-    if name and not pkgs:
-        pkgs = []
+    pkgs = []
+    if name and not pkgs and not sources:
         pkgs.append(name)
+    elif name and sources:
+        for source in sources:
+            pkgs += source.keys()
 
     current_pkgs = list_pkgs()
     if 'yum-plugin-versionlock' not in current_pkgs:
@@ -1090,7 +1093,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     return ret
 
 
-def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
     Hold packages with ``yum -q versionlock``.
 
@@ -1115,12 +1118,15 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.unhold <package name>
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
-    if not name and not pkgs:
-        return 'Error: name or pkgs needs to be specified.'
+    if not name and not pkgs and not sources:
+        return 'Error: name, pkgs or sources needs to be specified.'
 
+    pkgs = []
     if name and not pkgs:
-        pkgs = []
         pkgs.append(name)
+    elif name and sources:
+        for source in sources:
+            pkgs += source.keys()
 
     current_pkgs = list_pkgs()
     if 'yum-plugin-versionlock' not in current_pkgs:
