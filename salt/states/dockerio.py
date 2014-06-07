@@ -132,7 +132,7 @@ FN_CACHE = {}
 
 
 def __salt(fn):
-    if not fn in FN_CACHE:
+    if fn not in FN_CACHE:
         FN_CACHE[fn] = __salt__[fn]
     return FN_CACHE[fn]
 
