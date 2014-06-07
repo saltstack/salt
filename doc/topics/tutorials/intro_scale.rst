@@ -42,9 +42,9 @@ None of these problems is actually caused by salt itself. Salt and ZeroMQ as wel
 can handle several thousand minions a master easily. Its misconfigurations in a few
 places that can be easily fixed.
 
-To fully understand each problem, it is vital to know about salts topolgy. 
+To fully understand each problem, it is important to understand, how salt works. 
 
-The saltmaster offers two services to the minions. 
+Very briefly, the the saltmaster offers two services to the minions. 
 
 - a job publisher on port 4505
 - an open port 4506 to receive the minions returns
@@ -56,23 +56,26 @@ Too many minions connecting
 ===========================
 When the minion service is first started up on all machines, they connect to their masters 
 publisher on port 4505. If too many minion services are fired up at once, this can already
-cause a syn-flood on the master. This can be easily avoided by not starting too many minions 
+cause a TCP-SYN-flood on the master. This can be easily avoided by not starting too many minions 
 at once. This is rarely a problem though.
 
 The following us much more likely to happen.
 
 If many minions have already made their first connection to the master and wait for their key
-to be accepted, they check in every 10 seconds (`conf:minion:acceptance_wait_time`). With the default of 10 
-seconds and a thousand minions, thats about 100 minions checking in every second. If all keys 
-are now accepted at once with
+to be accepted, they check in every 10 seconds (conf_minion:`acceptance_wait_time`). With the
+default of 10 seconds and a thousand minions, thats about 100 minions checking in every second. 
+If all keys are now accepted at once with
 
 .. code-block:: bash
 
     $ salt-key -A -y
 
 the master may run into a bug where it consumes 100% CPU and growing amounts of memory. This has
-been reported on the mailing list and the issue-tracker on github a few times, but the root cause 
-has not yet been found. 
+been reported on the mailing list and the issue-tracker on github a few times (
+`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
+`Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_, 
+`Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>`_),
+but the root cause has not yet been found. 
 
 The easiest way around this is, to not accept too many minions at once. It only has to be done once,
 no need to rush.
@@ -80,23 +83,26 @@ no need to rush.
 
 Too many minions re-connecting
 ==============================
-This is most likely to happen in the testing phase, when all minion keys have already been accepted,
-the framework is being tested and parameters change frequently in the masters configuration file.
+This is most likely to happen in the testing phase, when all minion keys have already been 
+accepted, the framework is being tested and parameters change frequently in the masters
+configuration file.
 
-Upon a service restart, the salt-master generates a new key-pair to encrypt its publications with, but
-the minions dont yet know about the masters new public key. When the first job after the masters restart
-is published, the minions realize, that they have received a publication they can not decrypt and try to 
-re-auth themselves on the master. Because all minions always receive all publications, every single one
-who can not decrypt the publication, will try to re-auth immediately, causing thousands of minions
-trying to re-auth at once. This can be avoided by setting the
+Upon a service restart, the salt-master generates a new key-pair to encrypt its publications
+with, but the minions dont yet know about the masters new public key. When the first job after
+the masters restart is published, the minions realize, that they have received a publication
+they can not decrypt and try to re-auth themselves on the master. 
 
+Because all minions always receive all publications, every single one who can not decrypt the
+publication, will try to re-auth immediately, causing thousands of minions trying to re-auth
+at once. This can be avoided by setting the
 
 .. code-block:: yaml
 
-    random_reauth_delay
+    random_reauth_delay: 60
 
-in the minions configuration file to stagger the amount of re-auth attempts. Increasing this value will
-of course increase the time it takes, until all minions are reachable again via salt commands.
+in the minions configuration file to a higher value and stagger the amount of re-auth 
+attempts. Increasing this value will of course increase the time it takes, until all minions
+are reachable again via salt commands.
 
 But this is only the salt part that requires tuning. The ZeroMQ socket settings on the minion side
 should also be tweaked.
