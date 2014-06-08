@@ -44,7 +44,7 @@ def __virtual__():
         return False
     if not isinstance(__opts__['svnfs_root'], str):
         return False
-    if not 'svn' in __opts__['fileserver_backend']:
+    if 'svn' not in __opts__['fileserver_backend']:
         return False
     if not HAS_SVN:
         log.error('subversion fileserver backend is enabled in configuration '
