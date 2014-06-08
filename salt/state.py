@@ -2067,6 +2067,7 @@ class BaseHighState(object):
                     for item in data:
                         if isinstance(item, string_types):
                             matches[saltenv].append(item)
+        # pylint: enable=cell-var-from-loop
         return matches
 
     def load_dynamic(self, matches):
