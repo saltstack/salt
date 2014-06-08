@@ -546,7 +546,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, **kwargs):
+def upgrade(refresh=True, dist_upgrade=True, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -554,6 +554,12 @@ def upgrade(refresh=True, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
+
+    dist_upgrade
+        Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
+        is to use dist-upgrade.
+        
+    .. versionadded:: Helium
 
     CLI Example:
 
@@ -565,8 +571,12 @@ def upgrade(refresh=True, **kwargs):
         refresh_db()
 
     old = list_pkgs()
-    cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
-           '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
+    if dist_upgrade:
+        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+               '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
+    else:
+        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+               '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
     __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
