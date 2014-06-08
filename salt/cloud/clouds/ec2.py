@@ -1359,6 +1359,7 @@ def create(vm_=None, call=None):
     elif salt.utils.cloud.wait_for_port(ip_address,
                                         timeout=ssh_connect_timeout):
         for user in usernames:
+            if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
                 username=user,
                 ssh_timeout=config.get_cloud_config_value(
