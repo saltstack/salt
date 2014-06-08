@@ -558,7 +558,7 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
     dist_upgrade
         Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
         is to use dist-upgrade.
-        
+
     .. versionadded:: Helium
 
     CLI Example:
