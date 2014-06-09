@@ -329,7 +329,7 @@ restart the minion, since a minion process will die if the key is rejected.
 
 We also say that if the key is pending and the id starts with ink we will
 accept the key. A minion that is waiting on a pending key will retry
-authentication authentication every ten seconds by default.
+authentication every ten seconds by default.
 
 :file:`/srv/reactor/auth-pending.sls`:
 
