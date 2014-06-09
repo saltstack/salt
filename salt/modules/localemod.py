@@ -183,6 +183,13 @@ def gen_locale(locale):
 
         salt '*' locale.gen_locale 'en_US.UTF-8'
     '''
+    if __grains__.get('os') == 'Debian':
+        __salt__['file.replace'](
+            '/etc/locale.gen',
+            '# {0} '.format(locale),
+            '{0} '.format(locale),
+            append_if_not_found=True
+        )
 
     __salt__['cmd.run'](
         'locale-gen {0}'.format(locale)
