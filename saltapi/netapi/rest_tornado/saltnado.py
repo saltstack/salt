@@ -167,7 +167,7 @@ The event stream can be easily consumed via JavaScript:
     // Note, you must be authenticated!
 
     // Get the Websocket connection to Salt
-    var source = new Websocket('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
+    var source = new Websocket('wss://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
 
     // Get Salt's "real time" event stream.
     source.onopen = function() { source.send('websocket client ready'); };
@@ -193,7 +193,7 @@ Or the tornado
     from websocket import create_connection
 
     # Get the Websocket connection to Salt
-    ws = create_connection('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
+    ws = create_connection('wss://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
 
     # Get Salt's "real time" event stream.
     ws.send('websocket client ready')
