@@ -411,3 +411,39 @@ def disable():
         ret['comment'] = 'Failed to disable schedule on minion.'
         ret['result'] = False
     return ret
+
+
+def reload():
+    '''
+    Reload saved scheduled jobs on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.reload
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    # move this file into an configurable opt
+    sfn = '{0}/{1}/schedule.conf'.format(__opts__['config_dir'], os.path.dirname(__opts__['default_include']))
+    if os.path.isfile(sfn):
+        with salt.utils.fopen(sfn, 'rb') as fp_:
+            try:
+                schedule = yaml.safe_load(fp_.read())
+            except Exception as e:
+                ret['comment'] = 'Unable to read existing schedule file: {0}'.format(e)
+
+    if 'schedule' in schedule and schedule['schedule']:
+        out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Reloaded schedule on minion.'
+        else:
+            ret['comment'] = 'Failed to reload schedule on minion.'
+            ret['result'] = False
+    else:
+            ret['comment'] = 'Failed to reload schedule on minion.  Saved file is empty or invalid.'
+            ret['result'] = False
+    return ret

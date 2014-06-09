@@ -191,6 +191,10 @@ class Schedule(object):
         return self.opts.get(opt, {})
 
     def delete_job(self, name):
+        '''
+        Deletes a job from the scheduler.
+        '''
+
         # ensure job exists, then delete it
         if name in self.opts['schedule']:
             del self.opts['schedule'][name]
@@ -253,6 +257,16 @@ class Schedule(object):
         Disable the scheduler.
         '''
         self.opts['schedule']['enabled'] = False
+
+    def reload(self, schedule):
+        '''
+        Reload the schedule from saved schedule file.
+        '''
+
+        if 'schedule' in self.opts:
+            self.opts['schedule'].update(schedule['schedule'])
+        else:
+            self.opts['schedule'] = schedule
 
     def handle_func(self, func, data):
         '''

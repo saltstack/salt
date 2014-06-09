@@ -1331,6 +1331,9 @@ class Minion(MinionBase):
         elif func == 'disable_job':
             job = data.get('job', None)
             self.schedule.disable_job(job)
+        elif func == 'reload':
+            schedule = data.get('schedule', None)
+            self.schedule.reload(schedule)
 
     def environ_setenv(self, package):
         '''
