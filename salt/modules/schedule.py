@@ -18,7 +18,8 @@ import logging
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
+    'reload_': 'reload'
 }
 
 SCHEDULE_CONF = [
@@ -413,7 +414,7 @@ def disable():
     return ret
 
 
-def reload():
+def reload_():
     '''
     Reload saved scheduled jobs on the minion
 
