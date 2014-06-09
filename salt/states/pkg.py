@@ -656,9 +656,9 @@ def installed(
         if 'pkg.hold' in __salt__:
             if 'hold' in kwargs:
                 if kwargs['hold']:
-                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs)
+                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs, sources=sources)
                 else:
-                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
+                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs, sources=sources)
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
@@ -764,9 +764,9 @@ def installed(
         if 'pkg.hold' in __salt__:
             if 'hold' in kwargs:
                 if kwargs['hold']:
-                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs)
+                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs, sources=sources)
                 else:
-                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs)
+                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs, sources=sources)
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
