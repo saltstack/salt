@@ -499,6 +499,8 @@ def installed(
             - hold: False
 
     pkg_verify
+        .. versionadded:: Helium
+
         For requested packages that are already installed and would not be targeted for
         upgrade or downgrade, use pkg.verify to determine if any of the files installed
         by the package have been altered. If files have been altered, the reinstall
