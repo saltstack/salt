@@ -444,6 +444,6 @@ def reload():
             ret['comment'] = 'Failed to reload schedule on minion.'
             ret['result'] = False
     else:
-            ret['comment'] = 'Failed to reload schedule on minion.  Saved file is empty or invalid.'
-            ret['result'] = False
+        ret['comment'] = 'Failed to reload schedule on minion.  Saved file is empty or invalid.'
+        ret['result'] = False
     return ret
