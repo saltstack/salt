@@ -153,6 +153,7 @@ import tornado.web
 import tornado.gen
 import tornado.websocket
 from tornado.concurrent import Future
+import event_processor
 
 from collections import defaultdict
 
@@ -164,6 +165,7 @@ import zmq
 import fnmatch
 
 # salt imports
+import saltapi
 import salt.utils
 import salt.utils.event
 from salt.utils.event import tagify
@@ -822,6 +824,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         '''
         logger.debug('In the websocket open method')
 
+        self.token = token
         # close the connection, if not authenticated
         if not self.application.auth.get_tok(token):
             logger.debug('Refusing websocket connection, bad token!')
@@ -866,6 +869,51 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         '''
         logger.debug('In the websocket close method')
         self.close()
+
+
+class FormattedEventsHandler(AllEventsHandler):
+
+    @tornado.gen.coroutine
+    def on_message(self, message):
+        """Listens for a "websocket client ready" message.
+        Once that message is received an asynchronous job
+        is stated that yeilds messages to the client.
+        These messages make up salt's
+        "real time" event stream.
+        """
+        logger.debug('Got websocket message {}'.format(message))
+        if message == 'websocket client ready':
+            if self.connected:
+                # TBD: Add ability to run commands in this branch
+                logger.debug('Websocket already connected, returning')
+                return
+
+            self.connected = True
+
+            evt_processor = event_processor.SaltInfo(self)
+            client = saltapi.APIClient(self.application.opts)
+            client.run({
+                'fun': 'grains.items',
+                'tgt': '*',
+                'token': self.token,
+                'mode': 'client',
+                'async': 'local_async',
+                'client': 'local'
+                })
+            while True:
+                try:
+                    event = yield self.application.event_listener.get_event(self)
+                    evt_processor.process(event, self.token, self.application.opts)
+                    # self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
+                except Exception as err:
+                    logger.debug('Error! Ending server side websocket connection. Reason = {}'.format(str(err)))
+                    break
+
+            self.close()
+        else:
+            # TBD: Add logic to run salt commands here
+            pass
+
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
     '''

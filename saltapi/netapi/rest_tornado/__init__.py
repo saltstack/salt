@@ -43,6 +43,7 @@ def start():
     token_pattern = r"([0-9A-Fa-f]{%s})" % len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest())
 
     all_events_pattern = r"/all_events/{}".format(token_pattern)
+    formatted_events_pattern = r"/formatted_events/{}".format(token_pattern)
     logger.debug("All events URL pattern is {}".format(all_events_pattern))
 
     application = tornado.web.Application([
@@ -61,6 +62,7 @@ def start():
         # This algorithm is specified in the
         # salt master config file.
         (all_events_pattern, saltnado.AllEventsHandler),
+        (formatted_events_pattern, saltnado.FormattedEventsHandler),
     ], debug=mod_opts.get('debug', False))
 
     application.opts = __opts__
