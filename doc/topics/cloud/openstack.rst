@@ -115,8 +115,8 @@ ssh_interface
     is omitted and the VM does not have a public IP, then the salt-cloud waits
     for a certain period of time and then destroys the VM.    
   
-For more information concerning cloud profiles, see
-:doc:`</topics/cloud/profiles>`.
+For more information concerning cloud profiles, see :doc:`here
+</topics/cloud/profiles>`.
 
 
 change_password
