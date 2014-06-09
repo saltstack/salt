@@ -127,7 +127,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
                           ' using profile {1},'
                           ' please check your configuration').format(name,
                                                                      profile)
-        return ret
+    return ret
 
 
 def absent(name, onlyif=None, unless=None):
