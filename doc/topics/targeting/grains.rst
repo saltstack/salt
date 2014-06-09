@@ -170,6 +170,13 @@ Before adding a grain to Salt, consider what the grain is and remember that
 grains need to be static data. If the data is something that is likely to
 change, consider using :doc:`Pillar <../pillar/index>` instead.
 
+.. warning::
+
+    Custom grains will not be available in the top file until after the first
+    :ref:`highstate <running-highstate>`. To make custom grains available on a
+    minion's first highstate, it is recommended to use :ref:`this example
+    <minion-start-reactor>` to ensure that the custom grains are synced when
+    the minion starts.
 
 Precedence
 ==========
