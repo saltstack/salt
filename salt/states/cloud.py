@@ -56,7 +56,7 @@ def present(name, provider, **kwargs):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
     info = __salt__['cloud.create'](provider, name, **kwargs)
-    if info and not 'Error' in info:
+    if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = ('Created instance {0} using provider {1}'
@@ -65,7 +65,7 @@ def present(name, provider, **kwargs):
             provider,
             pprint.pformat(kwargs)
         )
-    elif 'Error' in info:
+    elif info and 'Error' not in info:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
                           'using profile {1}: {2}').format(
@@ -106,7 +106,7 @@ def absent(name):
         ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
         return ret
     info = __salt__['cloud.destroy'](name)
-    if info and not 'Error' in info:
+    if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = ('Destroyed instance {0}').format(
@@ -154,7 +154,7 @@ def profile(name, profile):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
     info = __salt__['cloud.profile'](profile, name)
-    if info and not 'Error' in info:
+    if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
         ret['comment'] = 'Created instance {0} using profile {1}'.format(

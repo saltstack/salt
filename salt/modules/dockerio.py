@@ -287,7 +287,7 @@ def _merge_auth_bits():
             fic.close()
     except Exception:
         config = {'rootPath': '/dev/null'}
-    if not 'Configs' in config:
+    if 'Configs' not in config:
         config['Configs'] = {}
     config['Configs'].update(
         __pillar__.get('docker-registries', {})
@@ -359,7 +359,7 @@ def _get_container_infos(container):
                 container)
         )
     if (
-        (not 'id' in status['out'])
+        ('id' not in status['out'])
         and ('ID' in status['out'])
     ):
         status['out']['id'] = status['out']['ID']

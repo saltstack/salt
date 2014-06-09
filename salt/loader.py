@@ -162,7 +162,7 @@ def tops(opts):
     '''
     Returns the tops modules
     '''
-    if not 'master_tops' in opts:
+    if 'master_tops' not in opts:
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')

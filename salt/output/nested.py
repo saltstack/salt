@@ -9,6 +9,7 @@ from numbers import Number
 import salt.utils
 import salt.output
 
+
 class NestDisplay(object):
     '''
     Manage the nested display contents

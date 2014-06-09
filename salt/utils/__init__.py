@@ -2051,6 +2051,7 @@ def get_gid_list(user=None, include_default=True):
     gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
     return sorted(set(gid_list))
 
+
 def total_seconds(td):
     '''
     Takes a timedelta and returns the total number of seconds

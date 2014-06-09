@@ -60,6 +60,7 @@ disable=R,
   W0622,
   W0631,
   W0704,
+  W0713,
   F0220,
   F0401,
   E8501,
@@ -104,6 +105,7 @@ disable=R,
 # W0622 (redefined-builtin) [many parameter names shadow builtins]
 # W0631 (undefined-loop-variable) [~3 instances, seem to be okay]
 # W0704 (pointless-except) [misnomer; "ignores the exception" rather than "pointless"]
+# W0713 (indexing-exception) Indexing exceptions will not work on Python 3
 # F0220 (unresolved-interface)
 # F0401 (import-error)
 #

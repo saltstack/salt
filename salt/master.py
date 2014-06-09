@@ -950,7 +950,6 @@ class AESFuncs(object):
             return False
         return True
 
-
     def _master_opts(self, load):
         '''
         Return the master options to the minion

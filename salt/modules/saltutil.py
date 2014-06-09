@@ -464,6 +464,7 @@ def running():
 
     return ret
 
+
 def cached():
     '''
     Return the data on all cached salt jobs on the minion
@@ -509,6 +510,7 @@ def find_job(jid):
         if data['jid'] == jid:
             return data
     return {}
+
 
 def find_cached_job(jid):
     '''

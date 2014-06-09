@@ -187,7 +187,7 @@ def _xml_to_dict(xmltree):
         if '}' in name:
             comps = name.split('}')
             name = comps[1]
-        if not name in xmldict.keys():
+        if name not in xmldict.keys():
             if sys.version_info < (2, 7):
                 children_len = len(item.getchildren())
             else:
@@ -1540,7 +1540,7 @@ def create_attach_volumes(name, kwargs, call=None):
             '-a or --action.'
         )
 
-    if not 'instance_id' in kwargs:
+    if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
     if type(kwargs['volumes']) is str:
@@ -1743,7 +1743,7 @@ def del_tags(name, kwargs, call=None):
             'The del_tags action must be called with -a or --action.'
         )
 
-    if not 'tags' in kwargs:
+    if 'tags' not in kwargs:
         raise SaltCloudSystemExit(
             'A tag or tags must be specified using tags=list,of,tags'
         )

@@ -91,7 +91,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
-            if not 'token' in kwargs and self.options.eauth:
+            if 'token' not in kwargs and self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:

@@ -313,14 +313,14 @@ def _parse_interfaces():
                     context = sline[2]
 
                     # Create item in dict, if not already there
-                    if not iface_name in adapters:
+                    if iface_name not in adapters:
                         adapters[iface_name] = {}
 
                     # Create item in dict, if not already there
-                    if not 'data' in adapters[iface_name]:
+                    if 'data' not in adapters[iface_name]:
                         adapters[iface_name]['data'] = {}
 
-                    if not context in adapters[iface_name]['data']:
+                    if context not in adapters[iface_name]['data']:
                         adapters[iface_name]['data'][context] = {}
 
                     adapters[iface_name]['data'][context]['inet_type'] = sline[2]
@@ -341,7 +341,7 @@ def _parse_interfaces():
 
                         if sline[0] in _REV_ETHTOOL_CONFIG_OPTS:
                             ethtool_key = sline[0]
-                            if not 'ethtool' in adapters[iface_name]['data'][context]:
+                            if 'ethtool' not in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['ethtool'] = {}
                             adapters[iface_name]['data'][context]['ethtool'][ethtool_key] = sline[1]
 
@@ -350,7 +350,7 @@ def _parse_interfaces():
                             sline.pop(0)
                             value = ' '.join(sline)
 
-                            if not 'bonding' in adapters[iface_name]['data'][context]:
+                            if 'bonding' not in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['bonding'] = {}
                             adapters[iface_name]['data'][context]['bonding'][opt] = value
 
@@ -359,21 +359,21 @@ def _parse_interfaces():
                             sline.pop(0)
                             value = ' '.join(sline)
 
-                            if not 'bridgeing' in adapters[iface_name]['data'][context]:
+                            if 'bridgeing' not in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['bridgeing'] = {}
                             adapters[iface_name]['data'][context]['bridgeing'][opt] = value
 
                         if sline[0].startswith('dns-nameservers'):
                             ud = sline.pop(0)
-                            if not 'dns' in adapters[iface_name]['data'][context]:
+                            if 'dns' not in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context]['dns'] = []
                             adapters[iface_name]['data'][context]['dns'] = sline
 
                         if sline[0] in ['up', 'down', 'pre-up', 'post-up', 'pre-down', 'post-down']:
                             ud = sline.pop(0)
                             cmd = ' '.join(sline)
-                            cmd_key = '%s_cmds' % (re.sub('-', '_', ud))
-                            if not cmd_key in adapters[iface_name]['data'][context]:
+                            cmd_key = '{0}_cmds'.format(re.sub('-', '_', ud))
+                            if cmd_key not in adapters[iface_name]['data'][context]:
                                 adapters[iface_name]['data'][context][cmd_key] = []
                             adapters[iface_name]['data'][context][cmd_key].append(cmd)
 
@@ -383,7 +383,7 @@ def _parse_interfaces():
                         if word == 'auto':
                             pass
                         else:
-                            if not word in adapters:
+                            if word not in adapters:
                                 adapters[word] = {}
                             adapters[word]['enabled'] = True
 
@@ -393,7 +393,7 @@ def _parse_interfaces():
                         if word == 'allow-hotplug':
                             pass
                         else:
-                            if not word in adapters:
+                            if word not in adapters:
                                 adapters[word] = {}
                             adapters[word]['hotplug'] = True
 
@@ -999,7 +999,7 @@ def _parse_network_settings(opts, current):
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    if not 'enabled' in opts:
+    if 'enabled' not in opts:
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
@@ -1016,7 +1016,7 @@ def _parse_network_settings(opts, current):
     else:
         _raise_error_network('networking', valid)
 
-    if not 'hostname' in opts:
+    if 'hostname' not in opts:
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
@@ -1051,7 +1051,7 @@ def _parse_routes(iface, opts):
     # Normalize keys
     opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
     result = {}
-    if not 'routes' in opts:
+    if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')
 
     for opt in opts:
@@ -1438,7 +1438,7 @@ def apply_network_settings(**settings):
 
         salt '*' ip.apply_network_settings
     '''
-    if not 'require_reboot' in settings:
+    if 'require_reboot' not in settings:
         settings['require_reboot'] = False
 
     if settings['require_reboot'] in _CONFIG_TRUE:

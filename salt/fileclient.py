@@ -1115,4 +1115,3 @@ class RemoteClient(Client):
             return channel.send(load)
         except SaltReqTimeoutError:
             return ''
-
