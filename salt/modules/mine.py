@@ -321,8 +321,9 @@ def get_docker(interfaces=None, cidrs=None):
         else:
             for interface in interfaces:
                 if interface in containers['host']['interfaces']:
-                    for item in containers['host']['interfaces'][interface]['inet']:
-                        host_ips.append(item['address'])
+                    if 'inet' in containers['host']['interfaces'][interface]:
+                        for item in containers['host']['interfaces'][interface]['inet']:
+                            host_ips.append(item['address'])
         host_ips = list(set(host_ips))
 
         # Filter out ips from host_ips with cidrs
