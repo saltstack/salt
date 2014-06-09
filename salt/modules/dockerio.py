@@ -324,7 +324,7 @@ def _get_image_infos(image):
         infos = client.inspect_image(image)
         if infos:
             _valid(status,
-                   id_=infos['id'],
+                   id_=infos['Id'],
                    out=infos,
                    comment='found')
     except Exception:
