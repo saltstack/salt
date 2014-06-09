@@ -12,7 +12,10 @@ from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import (
+    cloudProviderTest,
+    ensure_in_syspath,
+)
 
 ensure_in_syspath('../../../')
 
@@ -22,6 +25,7 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
+
 try:
     import requests  # pylint: disable=W0611
     HAS_REQUESTS = True
@@ -71,6 +75,7 @@ class DigitalOceanTest(integration.ShellCase):
                 .format(provider)
             )
 
+    @cloudProviderTest
     def test_instance(self):
         '''
         Test creating an instance on Digital Ocean
@@ -96,6 +101,7 @@ class DigitalOceanTest(integration.ShellCase):
         except AssertionError:
             raise
 
+    @cloudProviderTest
     def tearDown(self):
         '''
         Clean up after tests
