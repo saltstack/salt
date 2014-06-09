@@ -35,68 +35,83 @@ Default: ``salt``
 
     master: salt
 
-The master is, by default, staticaly configured by the `master` setting, but
-if desired, the master can be dynamically configured. The `master` value can
-be set to a module function which will be executed and will assume that the
-returning value is the ip or hostname of the desired master. In addition to
-specifying the function to execute to detect the master the
-:conf_minion:`master_type`, option must be set to 'func'.
-
-.. code-block:: yaml
-
-    master: module.function
-
-The `master` can also be a list of masters the minion should try to connect
-to. If the first master fails or rejects the minions connection (for example
-when too many minions are already connected), the minion will try the next
-master in the given list. For this to work, :conf_minion:`master_type` must
-be set to 'failover'. If `master_type` is not set, the minion will be in
-multimaster mode: :ref:`multi master <topics-tutorials-multimaster>`
+The option can can also be set to a list of masters, enabling
+:doc:`multi-master </topics/tutorials/multimaster>` mode.
 
 .. code-block:: yaml
 
     master: 
-        - address1
-        - address2
+      - address1
+      - address2
 
+.. versionchanged:: Helium
+
+    The master can be dynamically configured. The :conf_minion:`master` value
+    can be set to an module function which will be executed and will assume
+    that the returning value is the ip or hostname of the desired master. If a
+    function is being specified, then the :conf_minion:`master_type` option
+    must be set to ``func``, to tell the minion that the value is a function to
+    be run and not a fully-qualified domain name.
+
+    .. code-block:: yaml
+
+        master: module.function
+        master_type: func
+
+    In addition, instead of using multi-master mode, the minion can be
+    configured to use the list of master addresses as a failover list, trying
+    the first address, then the second, etc. until the minion successfully
+    connects. To enable this behavior, set :conf_minion:`master_type` to
+    ``failover``:
+
+    .. code-block:: yaml
+
+        master: 
+          - address1
+          - address2
+        master_type: failover
 
 .. conf_minion:: master_type
 
 ``master_type``
 ---------------
 
+.. versionadded:: Helium
+
 Default: ``str``
 
-The type of the :conf_minion:`master` variable. Can be either 'func' or
-'failover'.
+The type of the :conf_minion:`master` variable. Can be either ``func`` or
+``failover``.
 
-If the master needs to be dynamically assigned by executing a function 
-instead of reading in the static master value, set this  to 'func'. 
-This can be used to manage the minion's master setting from an execution 
-module. By simply changing the algorithm in the module to return a new 
-master ip/fqdn, restart the minion and it will connect to the new master.
+If the master needs to be dynamically assigned by executing a function instead
+of reading in the static master value, set this to ``func``. This can be used
+to manage the minion's master setting from an execution module. By simply
+changing the algorithm in the module to return a new master ip/fqdn, restart
+the minion and it will connect to the new master.
 
-
-.. code-block:: yaml
-
-    master_type: 'func'
-
-If it is set to 'failover', :conf_minion:`master` has to be a list of master
-addresses. The minion will then try one master after the other, until it 
-successfully connects.
 
 .. code-block:: yaml
 
-    master_type: 'failover'
+    master_type: func
+
+If this option is set to ``failover``, :conf_minion:`master` must be a list of
+master addresses. The minion will then try each master in the order specified
+in the list until it successfully connects.
+
+.. code-block:: yaml
+
+    master_type: failover
 
 ``master_shuffle``
----------------
+------------------
+
+.. versionadded:: Helium
 
 Default: ``False``
 
-If :conf_minion:`master` is list of addresses, shuffle them before trying
-to connect to distribute the minions over all available masters. This uses
-pythons random.shuffle method.
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses
+Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
 .. code-block:: yaml
 
