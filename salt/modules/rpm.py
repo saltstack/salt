@@ -86,15 +86,13 @@ def verify(*package, **kwargs):
               'l': 'license',
               'r': 'readme'}
     ret = {}
-    ignore_types = {}
-    if 'ignore_types' in kwargs:
-        ignore_types = kwargs.get('ignore_types')
+    ignore_types = kwargs.get('ignore_types', [])
     if package:
         packages = ' '.join(package)
         cmd = 'rpm -V {0}'.format(packages)
     else:
         cmd = 'rpm -Va'
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', ignore_retcode=True)
     for line in out.splitlines():
         fdict = {'mismatch': []}
         if 'missing' in line:

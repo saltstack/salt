@@ -40,7 +40,9 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.odict import OrderedDict
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.modules.pkg_resource import _repack_pkgs
@@ -118,6 +120,7 @@ def _find_install_targets(name=None,
                           pkgs=None,
                           sources=None,
                           skip_suggestions=False,
+                          pkg_verify=False,
                           **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -128,6 +131,19 @@ def _find_install_targets(name=None,
                 'changes': {},
                 'result': False,
                 'comment': 'Only one of "pkgs" and "sources" is permitted.'}
+
+    # dict for packages that fail pkg.verify and their altered files
+    altered_files = {}
+    # Get the ignore_types list if any from the pkg_verify argument
+    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+                                        for x in pkg_verify
+                                        if type(x) is OrderedDict
+                                        and 'ignore_types' in x):
+        ignore_types = next(x.get('ignore_types')
+                            for x in pkg_verify
+                            if 'ignore_types' in x)
+    else:
+        ignore_types = []
 
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if any((pkgs, sources)):
@@ -162,7 +178,7 @@ def _find_install_targets(name=None,
 
         cver = cur_pkgs.get(name, [])
         if name not in to_unpurge:
-            if version and version in cver:
+            if version and version in cver and not pkg_verify:
                 # The package is installed and is the correct version
                 return {'name': name,
                         'changes': {},
@@ -171,7 +187,7 @@ def _find_install_targets(name=None,
                                    'installed'.format(version, name)}
 
             # if cver is not an empty string, the package is already installed
-            elif cver and version is None:
+            elif cver and version is None and not pkg_verify:
                 # The package is installed
                 return {'name': name,
                         'changes': {},
@@ -182,7 +198,16 @@ def _find_install_targets(name=None,
     version_spec = False
     # Find out which packages will be targeted in the call to pkg.install
     if sources:
-        targets = [x for x in desired if x not in cur_pkgs]
+        targets = []
+        to_reinstall = []
+        for x in desired:
+            if x not in cur_pkgs:
+                targets.append(x)
+            elif pkg_verify:
+                retval = __salt__['pkg.verify'](x, ignore_types=ignore_types)
+                if retval:
+                    to_reinstall.append(x)
+                    altered_files[x] = retval
     else:
         # Check for alternate package names if strict processing is not
         # enforced.
@@ -213,6 +238,7 @@ def _find_install_targets(name=None,
 
         # Check current versions against desired versions
         targets = {}
+        to_reinstall = {}
         problems = []
         for pkgname, pkgver in desired.iteritems():
             cver = cur_pkgs.get(pkgname, [])
@@ -224,8 +250,13 @@ def _find_install_targets(name=None,
                                                                        pkgver):
                 targets[pkgname] = pkgver
                 continue
-            # No version specified and pkg is installed, do not add to targets
+            # No version specified and pkg is installed
             elif __salt__['pkg_resource.version_clean'](pkgver) is None:
+                if pkg_verify:
+                    retval = __salt__['pkg.verify'](pkgname, ignore_types=ignore_types)
+                    if retval:
+                        to_reinstall[pkgname] = pkgver
+                        altered_files[pkgname] = retval
                 continue
             version_spec = True
             match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
@@ -247,6 +278,11 @@ def _find_install_targets(name=None,
                 if not _fulfills_version_spec(cver, comparison, verstr):
                     log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver, comparison, verstr))
                     targets[pkgname] = pkgver
+                elif pkg_verify and comparison == '==':
+                    retval = __salt__['pkg.verify'](pkgname, ignore_types=ignore_types)
+                    if retval:
+                        to_reinstall[pkgname] = pkgver
+                        altered_files[pkgname] = retval
 
         if problems:
             return {'name': name,
@@ -254,7 +290,7 @@ def _find_install_targets(name=None,
                     'result': False,
                     'comment': ' '.join(problems)}
 
-    if not any((targets, to_unpurge)):
+    if not any((targets, to_unpurge, to_reinstall)):
         # All specified packages are installed
         msg = (
             'All specified packages are already installed{0}.'
@@ -265,7 +301,7 @@ def _find_install_targets(name=None,
                 'result': True,
                 'comment': msg}
 
-    return desired, targets, to_unpurge
+    return desired, targets, to_unpurge, to_reinstall, altered_files
 
 
 def _verify_install(desired, new_pkgs):
@@ -331,6 +367,15 @@ def _preflight_check(desired, fromrepo, **kwargs):
     return ret
 
 
+def _nested_output(obj):
+    '''
+    Serialize obj and format for output
+    '''
+    nested.__opts__ = __opts__
+    ret = nested.output(obj).rstrip()
+    return ret
+
+
 def installed(
         name,
         version=None,
@@ -341,6 +386,7 @@ def installed(
         pkgs=None,
         sources=None,
         allow_updates=False,
+        pkg_verify=False,
         **kwargs):
     '''
     Verify that the package is installed, and that it is the correct version
@@ -452,6 +498,36 @@ def installed(
             - refresh: True
             - hold: False
 
+    pkg_verify
+        .. versionadded:: Helium
+
+        For requested packages that are already installed and would not be targeted for
+        upgrade or downgrade, use pkg.verify to determine if any of the files installed
+        by the package have been altered. If files have been altered, the reinstall
+        option of pkg.install is used to force a reinstall.  Types to ignore can be
+        passed to pkg.verify (see example below).  Currently, this option is supported
+        for the following pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+
+    Examples:
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.installed:
+            - version: 2.2.15-30.el6.centos
+            - pkg_verify: True
+
+    .. code-block:: yaml
+
+        mypkgs:
+          pkg.installed:
+            - pkgs:
+              - foo
+              - bar: 1.2.3-4
+              - baz
+            - pkg_verify:
+              - ignore_types: [config,doc]
+
     Multiple Package Installation Options: (not supported in Windows or pkgng)
 
     pkgs
@@ -553,6 +629,13 @@ def installed(
         salt.utils.is_true(refresh)
         or (os.path.isfile(rtag) and refresh is not False)
     )
+    if type(pkg_verify) is not list:
+        pkg_verify = pkg_verify is True
+    if (pkg_verify or type(pkg_verify) is list) and 'pkg.verify' not in __salt__:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'pkg.verify not implemented'}
 
     if not isinstance(version, string_types) and version is not None:
         version = str(version)
@@ -561,10 +644,11 @@ def installed(
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
+                                   pkg_verify=pkg_verify,
                                    **kwargs)
 
     try:
-        desired, targets, to_unpurge = result
+        desired, targets, to_unpurge, to_reinstall, altered_files = result
     except ValueError:
         # _find_install_targets() found no targets or encountered an error
 
@@ -611,11 +695,14 @@ def installed(
                 'result': False,
                 'comment': 'lowpkg.unpurge not implemented'}
 
-    # Remove any targets that are already installed, to avoid upgrading them
+    # Remove any targets not returned by _find_install_targets
     if pkgs:
         pkgs = [dict([(x, y)]) for x, y in targets.iteritems()]
+        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.iteritems()])
     elif sources:
-        sources = [x for x in sources if x.keys()[0] in targets]
+        oldsources = sources
+        sources = [x for x in oldsources if x.keys()[0] in targets]
+        sources.extend([x for x in oldsources if x.keys()[0] in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -633,6 +720,16 @@ def installed(
                 'changed from \'purge\' to \'install\': {0}.'
                 .format(', '.join(to_unpurge))
             )
+        if to_reinstall:
+            # Add a comment for each package in to_reinstall with its pkg.verify output
+            for x in to_reinstall:
+                if sources:
+                    pkgstr = x
+                else:
+                    pkgstr = _get_desired_pkg(x, to_reinstall)
+                comment.append('\nPackage {0} is set to be reinstalled because the '
+                               'following files have been altered:'.format(pkgstr))
+                comment.append('\n' + _nested_output(altered_files[x]))
         return {'name': name,
                 'changes': {},
                 'result': None,
@@ -642,7 +739,8 @@ def installed(
     modified_hold = None
     not_modified_hold = None
     failed_hold = None
-    if targets:
+    if targets or to_reinstall:
+        reinstall = bool(to_reinstall)
         try:
             pkg_ret = __salt__['pkg.install'](name,
                                             refresh=refresh,
@@ -651,6 +749,7 @@ def installed(
                                             skip_verify=skip_verify,
                                             pkgs=pkgs,
                                             sources=sources,
+                                            reinstall=reinstall,
                                             **kwargs)
 
             if os.path.isfile(rtag) and refresh:
@@ -688,9 +787,10 @@ def installed(
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
 
+    # Analyze pkg.install results for packages in targets
     if sources:
         modified = [x for x in changes['installed'].keys() if x in targets]
-        not_modified = [x for x in desired if x not in targets]
+        not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
         ok, failed = \
@@ -700,7 +800,8 @@ def installed(
                 )
             )
         modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok if x not in targets]
+        not_modified = [x for x in ok if x not in targets and x not in to_reinstall]
+        failed = [x for x in failed if x in targets]
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].
@@ -736,6 +837,7 @@ def installed(
                 changes[change_name]['old'] += '\n'
             changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
+    # Any requested packages that were not targetted for install or reinstall
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -773,16 +875,59 @@ def installed(
     if failed_hold:
         for i in failed_hold:
             comment.append(i['comment'])
+        result = False
 
-        return {'name': name,
-                'changes': changes,
-                'result': False,
-                'comment': ' '.join(comment)}
+    # Get the ignore_types list if any from the pkg_verify argument
+    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+                                        for x in pkg_verify
+                                        if type(x) is OrderedDict
+                                        and 'ignore_types' in x):
+        ignore_types = next(x.get('ignore_types')
+                            for x in pkg_verify
+                            if 'ignore_types' in x)
     else:
-        return {'name': name,
-                'changes': changes,
-                'result': result,
-                'comment': ' '.join(comment)}
+        ignore_types = []
+
+    # Rerun pkg.verify for packages in to_reinstall to determine failed
+    modified = []
+    failed = []
+    for x in to_reinstall:
+        retval = __salt__['pkg.verify'](x, ignore_types=ignore_types)
+        if retval:
+            failed.append(x)
+            altered_files[x] = retval
+        else:
+            modified.append(x)
+
+    if modified:
+        # Add a comment for each package in modified with its pkg.verify output
+        for x in modified:
+            if sources:
+                pkgstr = x
+            else:
+                pkgstr = _get_desired_pkg(x, desired)
+            comment.append('\nPackage {0} was reinstalled.  The following files '
+                           'were remediated:'.format(pkgstr))
+            comment.append(_nested_output(altered_files[x]))
+
+    if failed:
+        # Add a comment for each package in failed with its pkg.verify output
+        for x in failed:
+            if sources:
+                pkgstr = x
+            else:
+                pkgstr = _get_desired_pkg(x, desired)
+            comment.append(
+                '\nReinstall was not successful for package {0}.  The following '
+                'files could not be remediated:'.format(pkgstr)
+            )
+            comment.append(_nested_output(altered_files[x]))
+        result = False
+
+    return {'name': name,
+            'changes': changes,
+            'result': result,
+            'comment': ' '.join(comment)}
 
 
 def latest(
