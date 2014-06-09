@@ -967,7 +967,8 @@ def managed(name,
             create=True,
             contents=None,
             contents_pillar=None,
-            contents_pillar_newline=True,
+            contents_grains=None,
+            contents_newline=True,
             follow_symlinks=True,
             check_cmd=None,
             **kwargs):
@@ -1139,12 +1140,17 @@ def managed(name,
             pipe character, and the mutliline string is indented two more
             spaces.
 
-    contents_pillar_newline
+    contents_grains
         .. versionadded:: Helium
 
-        When using content_pillar, a newline is inserted into the data gathered
-        from pillar. When loading some data this newline is better left off.
-        Setting contents_pillar_newline to False will omit this newline.
+        Same as contents_pillar, but with grains
+
+    contents_newline
+        .. versionadded:: Helium
+
+        When using contents, contents_pillar, or contents_grains, a newline is
+        inserted into the data. When loading some data this newline is better
+        left off.  Setting contents_newline to False will omit this newline.
 
     follow_symlinks : True
         .. versionadded:: Helium
@@ -1163,11 +1169,11 @@ def managed(name,
 
     # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
-    src_defined = source or contents or contents_pillar
+    src_defined = source or contents or contents_pillar or contents_grains
     if not src_defined and replace:
         replace = False
         log.warning(
-            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' '
+            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor \'contents_grains\' '
             'was defined, yet \'replace\' was set to \'True\'. As there is '
             'no source to replace the file with, \'replace\' has been set '
             'to \'False\' to avoid reading the file unnecessarily'.format(name)
@@ -1221,17 +1227,21 @@ def managed(name,
         return _error(
             ret, 'Context must be formed as a dict')
 
-    if contents and contents_pillar:
+    if len(filter(None, [contents, contents_pillar, contents_grains])) > 1:
         return _error(
-            ret, 'Only one of contents and contents_pillar is permitted')
+            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
 
     # If contents_pillar was used, get the pillar data
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
-        if contents_pillar_newline:
-            # Make sure file ends in newline
-            if not contents.endswith('\n'):
-                contents += '\n'
+
+    if contents_grains:
+        contents = __salt__['grains.get'](contents_grains)
+
+    if contents_newline:
+        # Make sure file ends in newline
+        if not contents.endswith('\n'):
+            contents += '\n'
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
