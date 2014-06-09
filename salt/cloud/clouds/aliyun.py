@@ -3,6 +3,8 @@
 AliYun ECS Cloud Module
 ==========================
 
+.. versionadded:: Helium
+
 The Aliyun cloud module is used to control access to the aliyun ECS.
 http://www.aliyun.com/
 
