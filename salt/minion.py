@@ -745,13 +745,9 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
-            try:
-                data = self.crypticle.loads(result)
-            except AuthenticationError:
-                log.info("AES key changed, re-authenticating")
-                # We can't decode the master's response to our event,
-                # so we will need to re-authenticate.
-                self.authenticate()
+        except AuthenticationError:
+            log.info("AES key changed, re-authenticating")
+            self.authenticate()
         except SaltReqTimeoutError:
             log.info("Master failed to respond. Preforming re-authenticating")
             self.authenticate()
