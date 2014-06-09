@@ -31,13 +31,13 @@ class SaltInfo:
         '''
         Publishes minions as a list of dicts.
         '''
-        minions = []
+        minions = {}
 
         for minion, minion_info in self.minions.iteritems():
             curr_minion = {}
             curr_minion.update(minion_info)
             curr_minion.update({'id': minion})
-            minions.append(curr_minion)
+            minions[minion] = curr_minion
 
         ret = {'minions': minions}
         self.handler.write_message(u'data: {}\n\n'.format(json.dumps(ret)))
@@ -184,6 +184,8 @@ class SaltInfo:
         Process events and publish data
         '''
         logger.debug('In process')
+        logger.debug(salt_data['tag'])
+
         parts = salt_data['tag'].split('/')
         if len(parts) < 2:
             return

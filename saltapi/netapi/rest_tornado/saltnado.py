@@ -212,42 +212,57 @@ Or the tornado
 Above examples show how to establish a websocket connection to Salt and activating
 real time updates from Salt's event stream by signaling ``websocket client ready``.
 
-Example responses returned by formatted_events
+Example responses
+-----------------
+
+``Minion information`` is a dictionary keyed by each connected minion's ``id`` (``mid``),
+grains information for each minion is also included.
+
+Minion information is sent in response to the following minion events:
+
+- connection drops
+    - requires running ``manage.present`` periodically every ``loop_interval`` seconds
+- minion addition
+- minon removal
 
 .. code-block:: python
 
     # Not all grains are shown
-    minions: [{
-        id: 'minion1',
-        grains: {
-            num_gpus: 2
+    data: {
+        "minions": {
+            "minion1": {
+                "id": "minion1",
+                "grains": {
+                    "kernel": "Darwin",
+                    "domain": "local",
+                    "zmqversion": "4.0.3",
+                    "kernelrelease": "13.2.0"
+                }
+            }
         }
-    }, {
-        id: 'minion2',
-        grains: {
-            cpuarch: "x86_64"
-        }
-    }]
+    }
 
-Or jobs information
+``Job information`` is also tracked and delivered.
+
+Job information is also a dictionary
+in which each job's information is keyed by salt's ``jid``.
 
 .. code-block:: python
 
-    {
+    data: {
         "jobs": {
-            "20140609130817846616": {
+            "20140609153646699137": {
                 "tgt_type": "glob",
-                "jid": "20140609130817846616",
+                "jid": "20140609153646699137",
                 "tgt": "*",
-                "start_time": "2014-06-09T13:08:17.847824",
-                "state": "running",
-                "fun": "grains.items",
+                "start_time": "2014-06-09T15:36:46.700315",
+                "state": "complete",
+                "fun": "test.ping",
                 "minions": {
-                    "minion2": {
-                        "success": true
-                    },
                     "minion1": {
-                        "success": false
+                        "return": true,
+                        "retcode": 0,
+                        "success": true
                     }
                 }
             }
