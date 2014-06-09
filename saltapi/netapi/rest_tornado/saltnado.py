@@ -6,6 +6,9 @@ A REST API for Salt
 
 :depends:   - tornado Python module
 
+All Events
+----------
+
 Exposes ``all`` "real-time" events from Salt's event bus on a websocket connection.
 It should be noted that "Real-time" here means these events are made available
 to the server as soon as any salt related action (changes to minions, new jobs etc) happens.
@@ -98,6 +101,158 @@ Or the tornado
 
 Above examples show how to establish a websocket connection to Salt and activating
 real time updates from Salt's event stream by signaling ``websocket client ready``.
+
+
+Formatted Events
+-----------------
+
+Exposes ``formatted`` "real-time" events from Salt's event bus on a websocket connection.
+It should be noted that "Real-time" here means these events are made available
+to the server as soon as any salt related action (changes to minions, new jobs etc) happens.
+Clients are however assumed to be able to tolerate any network transport related latencies.
+Functionality provided by this endpoint is similar to the ``/events`` end point.
+
+The event bus on the Salt master exposes a large variety of things, notably
+when executions are started on the master and also when minions ultimately
+return their results. This URL provides a real-time window into a running
+Salt infrastructure. Uses websocket as the transport mechanism.
+
+Formatted events parses the raw "real time" event stream and maintains
+a current view of the following:
+
+- minions
+- jobs
+
+A change to the minions (such as addition, removal of keys or connection drops)
+or jobs is processed and clients are updated.
+Since we use salt's presence events to track minions,
+please enable ``presence_events``
+and set a small value for the ``loop_interval``
+in the salt master config file.
+
+Exposes GET method to return websocket connections.
+All requests should include an auth token.
+A way to obtain obtain authentication tokens is shown below.
+
+.. code-block:: bash
+
+    % curl -si localhost:8000/login \\
+        -H "Accept: application/json" \\
+        -d username='salt' \\
+        -d password='salt' \\
+        -d eauth='pam'
+
+Which results in the response
+
+.. code-block:: json
+
+    {
+        "return": [{
+            "perms": [".*", "@runner", "@wheel"],
+            "start": 1400556492.277421,
+            "token": "d0ce6c1a37e99dcc0374392f272fe19c0090cca7",
+            "expire": 1400599692.277422,
+            "user": "salt",
+            "eauth": "pam"
+        }]
+    }
+
+In this example the ``token`` returned is ``d0ce6c1a37e99dcc0374392f272fe19c0090cca7`` and can be included
+in subsequent websocket requests (as part of the URL).
+
+The event stream can be easily consumed via JavaScript:
+
+.. code-block:: javascript
+
+    // Note, you must be authenticated!
+
+    // Get the Websocket connection to Salt
+    var source = new Websocket('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
+
+    // Get Salt's "real time" event stream.
+    source.onopen = function() { source.send('websocket client ready'); };
+
+    // Other handlers
+    source.onerror = function(e) { console.debug('error!', e); };
+
+    // e.data represents Salt's "real time" event data as serialized JSON.
+    source.onmessage = function(e) { console.debug(e.data); };
+
+    // Terminates websocket connection and Salt's "real time" event stream on the server.
+    source.close();
+
+Or via Python, using the Python module
+`websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
+Or the tornado
+`client <http://tornado.readthedocs.org/en/latest/websocket.html#client-side-support>`_.
+
+.. code-block:: python
+
+    # Note, you must be authenticated!
+
+    from websocket import create_connection
+
+    # Get the Websocket connection to Salt
+    ws = create_connection('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
+
+    # Get Salt's "real time" event stream.
+    ws.send('websocket client ready')
+
+
+    # Simple listener to print results of Salt's "real time" event stream.
+    # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
+    while listening_to_events:
+        print ws.recv()       #  Salt's "real time" event data as serialized JSON.
+
+    # Terminates websocket connection and Salt's "real time" event stream on the server.
+    ws.close()
+
+    # Please refer to https://github.com/liris/websocket-client/issues/81 when using a self signed cert
+
+Above examples show how to establish a websocket connection to Salt and activating
+real time updates from Salt's event stream by signaling ``websocket client ready``.
+
+Example responses returned by formatted_events
+
+.. code-block:: python
+
+    # Not all grains are shown
+    minions: [{
+        id: 'minion1',
+        grains: {
+            num_gpus: 2
+        }
+    }, {
+        id: 'minion2',
+        grains: {
+            cpuarch: "x86_64"
+        }
+    }]
+
+Or jobs information
+
+.. code-block:: python
+
+    {
+        "jobs": {
+            "20140609130817846616": {
+                "tgt_type": "glob",
+                "jid": "20140609130817846616",
+                "tgt": "*",
+                "start_time": "2014-06-09T13:08:17.847824",
+                "state": "running",
+                "fun": "grains.items",
+                "minions": {
+                    "minion2": {
+                        "success": true
+                    },
+                    "minion1": {
+                        "success": false
+                    }
+                }
+            }
+        }
+    }
 
 Setup
 =====

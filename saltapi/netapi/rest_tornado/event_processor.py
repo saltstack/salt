@@ -40,14 +40,15 @@ class SaltInfo:
             minions.append(curr_minion)
 
         ret = {'minions': minions}
-        self.handler.write_message(json.dumps(ret), False)
+        self.handler.write_message(u'data: {}\n\n'.format(json.dumps(ret)))
 
     def publish(self, key, data):
         '''
         Publishes the data to the event stream.
         '''
         publish_data = {key: data}
-        self.handler.write_message(json.dumps(publish_data), False)
+        pub = u'data: {}\n\n'.format(json.dumps(publish_data))
+        self.handler.write_message(pub)
 
     def process_minion_update(self, event_data):
         '''
@@ -140,31 +141,27 @@ class SaltInfo:
 
         self.publish_minions()
 
-    def process_presense_events(salt_data, token, opts):
+    def process_presence_events(self, salt_data, token, opts):
         '''
         Check if any minions have connected or dropped.
         Send a message to the client if they have.
         '''
-        tag = event_data['tag']
-        event_info = event_data['data']
-
-        minions_detected = event_info['present']
-        curr_minions = self.minions.keys()
 
         changed = False
 
         # check if any connections were dropped
-        dropped_minions = set(curr_minions) - set(minions_detected)
+        dropped_minions = set(self.minions.keys()) - \
+            set(salt_data['data']['present'])
 
         for minion in dropped_minions:
             changed = True
             self.minions.pop(minion, None)
 
         # check if any new connections were made
-        new_minions = set(minions_detected) - set(curr_minions)
+        new_minions = set(salt_data['data']['present']) -\
+            set(self.minions.keys())
 
         tgt = ','.join(new_minions)
-
         if tgt:
             changed = True
             client = saltapi.APIClient(opts)
@@ -186,21 +183,27 @@ class SaltInfo:
         '''
         Process events and publish data
         '''
+        logger.debug('In process')
         parts = salt_data['tag'].split('/')
         if len(parts) < 2:
             return
 
         # TBD: Simplify these conditional expressions
         if parts[1] == 'job':
+            logger.debug('In job part 1')
             if parts[3] == 'new':
+                logger.debug('In new job')
                 self.process_new_job_event(salt_data)
                 if salt_data['data']['fun'] == 'grains.items':
                     self.minions = {}
             elif parts[3] == 'ret':
+                logger.debug('In ret')
                 self.process_ret_job_event(salt_data)
                 if salt_data['data']['fun'] == 'grains.items':
                     self.process_minion_update(salt_data)
-        if parts[1] == 'key':
+        elif parts[1] == 'key':
+            logger.debug('In key')
             self.process_key_event(salt_data)
-        if parts[1] == 'presense':
-            self.process_presense_events(salt_data, token, opts)
+        elif parts[1] == 'presence':
+            self.process_presence_events(salt_data, token, opts)
+            logger.debug('In presence')
