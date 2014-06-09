@@ -354,7 +354,7 @@ def _get_container_infos(container):
         container_info = client.inspect_container(container)
         if container_info:
             _valid(status,
-                   id_=container_info['ID'],
+                   id_=container_info['Id'],
                    out=container_info)
     except Exception:
         pass
