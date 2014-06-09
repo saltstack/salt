@@ -618,7 +618,6 @@ class Minion(MinionBase):
             # shuffle the masters and then loop through them
             local_masters = copy.copy(opts['master'])
             if opts['master_shuffle']:
-                from random import shuffle
                 shuffle(local_masters)
 
             for master in local_masters:
