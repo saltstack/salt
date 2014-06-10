@@ -12,7 +12,7 @@ from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
 
@@ -72,6 +72,7 @@ class DigitalOceanTest(integration.ShellCase):
                 .format(provider)
             )
 
+    @expensiveTest
     def test_instance(self):
         '''
         Test creating an instance on Digital Ocean
