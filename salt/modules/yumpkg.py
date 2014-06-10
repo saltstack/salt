@@ -1026,6 +1026,8 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
+    .. versionadded:: Helium
+
     Hold packages with ``yum -q versionlock``.
 
     name
@@ -1037,9 +1039,6 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         A list of packages to hold. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
-    .. versionadded:: Helium
-
-
     Returns a dict containing the changes.
 
     CLI Example:
@@ -1049,54 +1048,68 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.hold <package name>
         salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
+    if 'yum-plugin-versionlock' not in list_pkgs():
+        raise SaltInvocationError(
+            'Packages cannot be held, yum-plugin-versionlock is not installed.'
+        )
     if not name and not pkgs and not sources:
-        return 'Error: name or pkgs needs to be specified.'
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
 
-    if name and not pkgs and not sources:
-        pkgs = []
-        pkgs.append(name)
-    elif name and sources:
-        pkgs = []
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
         for source in sources:
-            pkgs += source.keys()
-
-    current_pkgs = list_pkgs()
-    if 'yum-plugin-versionlock' not in current_pkgs:
-        ret = {}
-        ret['result'] = False
-        ret['comment'] = 'Packages cannot be held, yum-plugin-versionlock needs to be installed.'
-        return ret
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
 
     current_locks = get_locked_packages()
     ret = {}
-    for pkg in pkgs:
-        if isinstance(pkg, dict):
-            pkg = pkg.keys()[0]
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
 
-        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
-        if pkg not in current_locks:
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        if target not in current_locks:
             if 'test' in kwargs and kwargs['test']:
-                ret[pkg].update(result=None)
-                ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be held.'
+                                          .format(target))
             else:
-                cmd = 'yum -q versionlock {0}'.format(pkg)
+                cmd = 'yum -q versionlock {0}'.format(target)
                 out = __salt__['cmd.run_all'](cmd)
 
                 if out['retcode'] == 0:
-                    ret[pkg].update(result=True)
-                    ret[pkg]['comment'] = 'Package {0} is now being held.'.format(pkg)
-                    ret[pkg]['changes']['new'] = 'hold'
-                    ret[pkg]['changes']['old'] = ''
+                    ret[target].update(result=True)
+                    ret[target]['comment'] = ('Package {0} is now being held.'
+                                              .format(target))
+                    ret[target]['changes']['new'] = 'hold'
+                    ret[target]['changes']['old'] = ''
                 else:
-                    ret[pkg]['comment'] = 'Package {0} was unable to be held.'.format(pkg)
+                    ret[target]['comment'] = ('Package {0} was unable to be held.'
+                                              .format(target))
         else:
-            ret[pkg].update(result=True)
-            ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set to be held.'
+                                      .format(target))
     return ret
 
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
+    .. versionadded:: Helium
+
     Hold packages with ``yum -q versionlock``.
 
     name
@@ -1108,9 +1121,6 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         A list of packages to unhold. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
-    .. versionadded:: Helium
-
-
     Returns a dict containing the changes.
 
     CLI Example:
@@ -1120,52 +1130,64 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         salt '*' pkg.unhold <package name>
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
+    if 'yum-plugin-versionlock' not in list_pkgs():
+        raise SaltInvocationError(
+            'Packages cannot be unheld, yum-plugin-versionlock is not installed.'
+        )
     if not name and not pkgs and not sources:
-        return 'Error: name, pkgs or sources needs to be specified.'
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
 
-    if name and not pkgs:
-        pkgs = []
-        pkgs.append(name)
-    elif name and sources:
-        pkgs = []
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
         for source in sources:
-            pkgs += source.keys()
-
-    current_pkgs = list_pkgs()
-    if 'yum-plugin-versionlock' not in current_pkgs:
-        ret = {}
-        ret['result'] = False
-        ret['comment'] = 'Error: Package yum-plugin-versionlock needs to be installed.'
-        return ret
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
 
     current_locks = get_locked_packages(full=True)
     ret = {}
-    for pkg in pkgs:
-        if isinstance(pkg, dict):
-            pkg = pkg.keys()[0]
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
 
-        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
 
-        search_locks = [lock for lock in current_locks if lock.startswith(pkg)]
+        search_locks = [lock for lock in current_locks
+                        if lock.startswith(target)]
         if search_locks:
             if 'test' in kwargs and kwargs['test']:
-                ret[pkg].update(result=None)
-                ret[pkg]['comment'] = 'Package {0} is set to be unheld.'.format(pkg)
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be unheld.'
+                                          .format(target))
             else:
-                _pkgs = ' '.join('"0:' + item + '"' for item in search_locks)
-                cmd = 'yum -q versionlock delete {0}'.format(_pkgs)
+                _targets = ' '.join('"0:' + item + '"' for item in search_locks)
+                cmd = 'yum -q versionlock delete {0}'.format(_targets)
                 out = __salt__['cmd.run_all'](cmd)
 
                 if out['retcode'] == 0:
-                    ret[pkg].update(result=True)
-                    ret[pkg]['comment'] = 'Package {0} is no longer held.'.format(pkg)
-                    ret[pkg]['changes']['new'] = ''
-                    ret[pkg]['changes']['old'] = 'hold'
+                    ret[target].update(result=True)
+                    ret[target]['comment'] = ('Package {0} is no longer held.'
+                                              .format(target))
+                    ret[target]['changes']['new'] = ''
+                    ret[target]['changes']['old'] = 'hold'
                 else:
-                    ret[pkg]['comment'] = 'Package {0} was unable to be unheld.'.format(pkg)
+                    ret[target]['comment'] = ('Package {0} was unable to be '
+                                              'unheld.'.format(target))
         else:
-            ret[pkg].update(result=True)
-            ret[pkg]['comment'] = 'Package {0} is not being held.'.format(pkg)
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is not being held.'
+                                      .format(target))
     return ret
 
 
