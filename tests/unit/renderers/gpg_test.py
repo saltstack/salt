@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 import salt.loader
 import salt.config
 from salt.state import HighState
+from integration import TMP
 
 OPTS = salt.config.minion_config(None)
 OPTS['state_events'] = False
@@ -24,7 +25,7 @@ OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
-OPTS['gpg_keydir'] = os.getcwd()
+OPTS['gpg_keydir'] = os.path.join(TMP, 'gpg-renderer-keydir')
 
 ENCRYPTED_STRING = '''
 -----BEGIN PGP MESSAGE-----
