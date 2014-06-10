@@ -665,6 +665,29 @@ class Minion(MinionBase):
             self.functions,
             self.returners)
 
+        # add default scheduling jobs to the minions scheduler
+        self.schedule.add_job({
+            '__mine_interval':
+            {
+                'function': 'mine.update',
+                'minutes': opts['mine_interval'],
+                'jid_include': True,
+                'maxrunning': 2
+            }
+        })
+    
+        # add master_alive job if enabled
+        if self.opts['master_alive_interval'] > 0:
+            self.schedule.add_job({
+                '__master_alive':
+                {
+                    'function': 'status.master',
+                    'seconds': opts['master_alive_interval'],
+                    'jid_include': True,
+                    'maxrunning': 2
+                }
+            })
+
         self.grains_cache = self.opts['grains']
 
         if 'proxy' in self.opts['pillar']:
@@ -1488,6 +1511,8 @@ class Minion(MinionBase):
                             tag, data = salt.utils.event.MinionEvent.unpack(package)
                             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
                             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+                        elif package.startswith('__master_disconnect'):
+                            log.debug('handling master disconnect')
 
                         self.epub_sock.send(package)
                     except Exception:
