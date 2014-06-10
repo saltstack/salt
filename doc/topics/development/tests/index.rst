@@ -72,6 +72,53 @@ To run tests marked as destructive, set the ``--run-destructive`` flag:
     ./tests/runtests.py --run-destructive
 
 
+Running Cloud Provider Tests
+============================
+
+Salt's testing suite also includes integration tests to assess the successful
+creation and deletion of cloud instances using :ref:`Salt-Cloud<salt-cloud>` for
+providers supported by Salt-Cloud.
+
+The cloud provider tests are off by default and run on sample configuration files
+provided in ``tests/integration/files/conf/cloud.providers.d/``. In order to run
+the cloud provider tests, valid credentials, which differ per provider, must be
+supplied. Each credential item that must be supplied is indicated by an empty
+string value and should be edited by the user before running the tests. For
+example, Digital Ocean requires a client key and an api key to operate. Therefore,
+the default cloud provider configuration file for Digital Ocean looks like this:
+
+.. code-block:: yaml
+
+    digitalocean-config:
+      provider: digital_ocean
+      client_key: ''
+      api_key: ''
+      location: New York 1
+
+As indicated by the empty string values, the ``client_key`` and the ``api_key``
+must be provided:
+
+.. code-block:: yaml
+
+    digitalocean-config:
+      provider: digital_ocean
+      client_key: wFGEwgregeqw3435gDger
+      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      location: New York 1
+
+.. note::
+
+    When providing credential information in cloud provider configuration files,
+    do not include the single quotes.
+
+Once all of the valid credentials for the cloud provider have been supplied, the
+cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
+
+.. code-block:: bash
+
+    ./tests/runtests.py --cloud-provider-tests
+
+
 Running The Tests In A Docker Container
 =======================================
 
