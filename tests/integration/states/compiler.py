@@ -50,7 +50,8 @@ class CompileTest(integration.ModuleCase):
         template = [
             '{0}:'.format(managed_file),
             '  file.managed:',
-            '    - contents: {{ saltenv }}'
+            '    - contents: {{ saltenv }}',
+            '    - contents_newline: False'
         ]
         try:
             ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
@@ -62,7 +63,9 @@ class CompileTest(integration.ModuleCase):
         template = [
             '{0}:'.format(managed_file),
             '  file.managed:',
-            '    - contents: {{ env }}'
+            '    - contents: {{ env }}',
+            '    - contents_newline: False'
+
         ]
         try:
             ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
