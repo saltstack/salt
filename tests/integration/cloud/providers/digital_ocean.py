@@ -12,10 +12,7 @@ from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import (
-    cloudProviderTest,
-    ensure_in_syspath,
-)
+from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../../')
 
@@ -75,7 +72,6 @@ class DigitalOceanTest(integration.ShellCase):
                 .format(provider)
             )
 
-    @cloudProviderTest
     def test_instance(self):
         '''
         Test creating an instance on Digital Ocean
@@ -101,7 +97,6 @@ class DigitalOceanTest(integration.ShellCase):
         except AssertionError:
             raise
 
-    @cloudProviderTest
     def tearDown(self):
         '''
         Clean up after tests
@@ -113,3 +108,8 @@ class DigitalOceanTest(integration.ShellCase):
         # if test instance is still present, delete it
         if str in query:
             self.run_cloud('-d {0} --assume-yes'.format(name))
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(DigitalOceanTest)
