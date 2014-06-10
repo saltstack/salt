@@ -166,6 +166,7 @@ class SSHAuthStateTests(integration.ModuleCase,
             name=authorized_keys_file,
             user=username,
             makedirs=True,
+            contents_newline=False,
             # Explicit no ending line break
             contents='ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root'
         )
