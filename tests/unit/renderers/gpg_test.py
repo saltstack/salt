@@ -18,6 +18,16 @@ import salt.config
 from salt.state import HighState
 from integration import TMP
 
+GPG_KEYDIR = os.path.join(TMP, 'gpg-renderer-keydir')
+
+# The keyring library uses `getcwd()`, let's make sure we in a good directory
+# before importing keyring
+if not os.path.isdir(GPG_KEYDIR):
+    os.makedirs(GPG_KEYDIR)
+
+os.chdir(GPG_KEYDIR)
+
+
 OPTS = salt.config.minion_config(None)
 OPTS['state_events'] = False
 OPTS['id'] = 'whatever'
@@ -25,7 +35,7 @@ OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
-OPTS['gpg_keydir'] = os.path.join(TMP, 'gpg-renderer-keydir')
+OPTS['gpg_keydir'] = GPG_KEYDIR
 
 ENCRYPTED_STRING = '''
 -----BEGIN PGP MESSAGE-----
