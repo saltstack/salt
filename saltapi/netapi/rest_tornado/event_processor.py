@@ -40,14 +40,14 @@ class SaltInfo:
             minions[minion] = curr_minion
 
         ret = {'minions': minions}
-        self.handler.write_message(u'data: {}\n\n'.format(json.dumps(ret)))
+        self.handler.write_message(u'{}\n\n'.format(json.dumps(ret)))
 
     def publish(self, key, data):
         '''
         Publishes the data to the event stream.
         '''
         publish_data = {key: data}
-        pub = u'data: {}\n\n'.format(json.dumps(publish_data))
+        pub = u'{}\n\n'.format(json.dumps(publish_data))
         self.handler.write_message(pub)
 
     def process_minion_update(self, event_data):
