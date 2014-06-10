@@ -375,7 +375,6 @@ run the cloud provider tests, the ``--cloud-provider-tests`` flag must be provid
 
     ./tests/runtests.py --cloud-provider-tests
 
-
 Since cloud provider tests do not run automatically, all provider tests must be
 preceded with the ``@expensiveTest`` decorator. The expensive test decorator is
 necessary because it signals to the test suite that the
