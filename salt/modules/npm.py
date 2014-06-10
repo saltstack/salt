@@ -78,7 +78,9 @@ def install(pkg=None,
 
     '''
     if not _valid_version():
-        return '{0!r} is not available.'.format('npm.install')
+        raise CommandExecutionError(
+            '{0!r} is not recent enough. Please Upgrade.'.format('npm.install')
+        )
 
     cmd = 'npm install --silent --json'
 
@@ -147,8 +149,9 @@ def uninstall(pkg,
 
     '''
     if not _valid_version():
-        log.error('{0!r} is not available.'.format('npm.uninstall'))
-        return False
+        raise CommandExecutionError(
+            '{0!r} is not recent enough. Please Upgrade.'.format('npm.uninstall')
+        )
 
     cmd = 'npm uninstall'
 
@@ -187,7 +190,9 @@ def list_(pkg=None, dir=None):
 
     '''
     if not _valid_version():
-        return '{0!r} is not available.'.format('npm.list')
+        raise CommandExecutionError(
+            '{0!r} is not recent enough. Please Upgrade.'.format('npm.list')
+        )
 
     cmd = 'npm list --json'
 
