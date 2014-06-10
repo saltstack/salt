@@ -44,7 +44,9 @@ from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict
 from salt._compat import string_types
-from salt.exceptions import CommandExecutionError, MinionError
+from salt.exceptions import (
+    CommandExecutionError, MinionError, SaltInvocationError
+)
 from salt.modules.pkg_resource import _repack_pkgs
 
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
@@ -184,7 +186,7 @@ def _find_install_targets(name=None,
                         'changes': {},
                         'result': True,
                         'comment': 'Version {0} of package {1!r} is already '
-                                   'installed'.format(version, name)}
+                                   'installed.'.format(version, name)}
 
             # if cver is not an empty string, the package is already installed
             elif cver and version is None and not pkg_verify:
@@ -193,7 +195,7 @@ def _find_install_targets(name=None,
                         'changes': {},
                         'result': True,
                         'comment': 'Package {0} is already '
-                                   'installed'.format(name)}
+                                   'installed.'.format(name)}
 
     version_spec = False
     # Find out which packages will be targeted in the call to pkg.install
@@ -655,28 +657,42 @@ def installed(
         # check that the hold function is available
         if 'pkg.hold' in __salt__:
             if 'hold' in kwargs:
-                if kwargs['hold']:
-                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs, sources=sources)
-                else:
-                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs, sources=sources)
+                try:
+                    if kwargs['hold']:
+                        hold_ret = __salt__['pkg.hold'](
+                            name=name, pkgs=pkgs, sources=sources
+                        )
+                    else:
+                        hold_ret = __salt__['pkg.unhold'](
+                            name=name, pkgs=pkgs, sources=sources
+                        )
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    return {'name': name,
+                            'changes': {},
+                            'result': False,
+                            'comment': exc.message}
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
                             'changes': {},
                             'result': False,
-                            'comment': 'An error was encountered while holding/unholding '
-                                       'package(s): {0}'.format(hold_ret['comment'])}
+                            'comment': 'An error was encountered while '
+                                       'holding/unholding package(s): {0}'
+                                       .format(hold_ret['comment'])}
                 else:
-                    modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
-                    not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
-                    failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
+                    modified_hold = [hold_ret[x] for x in hold_ret
+                                     if hold_ret[x]['changes']]
+                    not_modified_hold = [hold_ret[x] for x in hold_ret
+                                         if not hold_ret[x]['changes']
+                                         and hold_ret[x]['result']]
+                    failed_hold = [hold_ret[x] for x in hold_ret
+                                   if not hold_ret[x]['result']]
 
                     if modified_hold:
                         for i in modified_hold:
                             result['comment'] += ' {0}'.format(i['comment'])
                             result['result'] = i['result']
-                            change_name = i['name']
-                            result['changes'][change_name] = i['changes']
+                            result['changes'][i['name']] = i['changes']
 
                     if not_modified_hold:
                         for i in not_modified_hold:
@@ -759,30 +775,46 @@ def installed(
                     'changes': {},
                     'result': False,
                     'comment': 'An error was encountered while installing '
-                            'package(s): {0}'.format(exc)}
-
-        if 'pkg.hold' in __salt__:
-            if 'hold' in kwargs:
-                if kwargs['hold']:
-                    hold_ret = __salt__['pkg.hold'](name=name, pkgs=pkgs, sources=sources)
-                else:
-                    hold_ret = __salt__['pkg.unhold'](name=name, pkgs=pkgs, sources=sources)
-
-                if 'result' in hold_ret and not hold_ret['result']:
-                    return {'name': name,
-                            'changes': {},
-                            'result': False,
-                            'comment': 'An error was encountered while holding/unholding '
-                                       'package(s): {0}'.format(hold_ret['comment'])}
-                else:
-                    modified_hold = [hold_ret[x] for x in hold_ret.keys() if hold_ret[x]['changes']]
-                    not_modified_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['changes'] and hold_ret[x]['result']]
-                    failed_hold = [hold_ret[x] for x in hold_ret.keys() if not hold_ret[x]['result']]
+                               'package(s): {0}'.format(exc)}
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
         elif isinstance(pkg_ret, string_types):
             comment.append(pkg_ret)
+
+        if 'pkg.hold' in __salt__:
+            if 'hold' in kwargs:
+                try:
+                    if kwargs['hold']:
+                        hold_ret = __salt__['pkg.hold'](
+                            name=name, pkgs=pkgs, sources=sources
+                        )
+                    else:
+                        hold_ret = __salt__['pkg.unhold'](
+                            name=name, pkgs=pkgs, sources=sources
+                        )
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    comment.append(exc.message)
+                    return {'name': name,
+                            'changes': changes,
+                            'result': False,
+                            'comment': ' '.join(comment)}
+                else:
+                    if 'result' in hold_ret and not hold_ret['result']:
+                        return {'name': name,
+                                'changes': {},
+                                'result': False,
+                                'comment': 'An error was encountered while '
+                                           'holding/unholding package(s): {0}'
+                                           .format(hold_ret['comment'])}
+                    else:
+                        modified_hold = [hold_ret[x] for x in hold_ret
+                                         if hold_ret[x]['changes']]
+                        not_modified_hold = [hold_ret[x] for x in hold_ret
+                                             if not hold_ret[x]['changes']
+                                             and hold_ret[x]['result']]
+                        failed_hold = [hold_ret[x] for x in hold_ret
+                                       if not hold_ret[x]['result']]
 
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)

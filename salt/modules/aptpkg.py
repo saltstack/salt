@@ -585,6 +585,8 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
 
 def hold(name=None, pkgs=None, sources=None, *kwargs):
     '''
+    .. versionadded:: Helium
+
     Set package in 'hold' state, meaning it will not be upgraded.
 
     name
@@ -604,49 +606,60 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
         .. code-block:: bash
 
             salt '*' pkg.hold pkgs='["foo", "bar"]'
-
-    .. versionadded:: Helium
-
     '''
-
     if not name and not pkgs and not sources:
-        return 'Error: name, pkgs or sources needs to be specified.'
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
 
-    if name and not pkgs:
-        pkgs = []
-        pkgs.append(name)
-    elif name and sources:
-        pkgs = []
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
         for source in sources:
-            pkgs += source.keys()
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
 
     ret = {}
-    for pkg in pkgs:
-        if isinstance(pkg, dict):
-            pkg = pkg.keys()[0]
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
 
-        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
-        state = get_selections(pattern=pkg, state=hold)
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        state = get_selections(pattern=target, state='hold')
         if not state:
-            ret[pkg]['comment'] = 'Package {0} not currently held.'.format(pkg)
+            ret[target]['comment'] = ('Package {0} not currently held.'
+                                      .format(target))
         elif not salt.utils.is_true(state.get('hold', False)):
             if 'test' in kwargs and kwargs['test']:
-                ret[pkg].update(result=None)
-                ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be held.'
+                                          .format(target))
             else:
-                result = set_selections(
-                    selection={'hold': [pkg]}
-                )
-                ret[pkg].update(changes=result[pkg], result=True)
-                ret[pkg]['comment'] = 'Package {0} is now being held.'.format(pkg)
+                result = set_selections(selection={'hold': [target]})
+                ret[target].update(changes=result[target], result=True)
+                ret[target]['comment'] = ('Package {0} is now being held.'
+                                          .format(target))
         else:
-            ret[pkg].update(result=True)
-            ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set to be held.'
+                                      .format(target))
     return ret
 
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):
     '''
+    .. versionadded:: Helium
+
     Set package current in 'hold' state to install state,
     meaning it will be upgraded.
 
@@ -667,46 +680,53 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.unhold pkgs='["foo", "bar"]'
-
-    .. versionadded:: Helium
-
     '''
-
     if not name and not pkgs and not sources:
-        return 'Error: name, pkgs or sources needs to be specified.'
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
 
-    if name and not pkgs:
-        pkgs = []
-        pkgs.append(name)
-    elif name and sources:
-        pkgs = []
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
         for source in sources:
-            pkgs += source.keys()
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
 
     ret = {}
-    for pkg in pkgs:
-        if isinstance(pkg, dict):
-            pkg = pkg.keys()[0]
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
 
-        ret[pkg] = {'changes': {}, 'result': False, 'comment': ''}
-        state = get_selections(pattern=pkg)
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
+
+        state = get_selections(pattern=target)
         if not state:
-            ret[pkg]['comment'] = 'Package {0} does not have a state.'.format(pkg)
+            ret[target]['comment'] = ('Package {0} does not have a state.'
+                                      .format(target))
         elif salt.utils.is_true(state.get('hold', False)):
             if 'test' in kwargs and kwargs['test']:
-                ret[pkg].update(result=None)
-                ret['comment'] = 'Package {0} is set not to be held.'.format(pkg)
+                ret[target].update(result=None)
+                ret['comment'] = ('Package {0} is set not to be held.'
+                                  .format(target))
             else:
-                result = set_selections(
-                    selection={'install': [pkg]}
-                )
-                ret[pkg].update(changes=result[pkg], result=True)
-                ret[pkg]['comment'] = 'Package {0} is no longer being held.'.format(pkg)
+                result = set_selections(selection={'install': [target]})
+                ret[target].update(changes=result[target], result=True)
+                ret[target]['comment'] = ('Package {0} is no longer being '
+                                          'held.'.format(target))
         else:
-            ret[pkg].update(result=True)
-            ret[pkg]['comment'] = 'Package {0} is already set not to be held.'.format(pkg)
-
-    log.debug('in unhold {0}'.format(ret))
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set not to be '
+                                      'held.'.format(target))
     return ret
 
 
