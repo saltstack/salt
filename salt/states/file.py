@@ -1240,7 +1240,7 @@ def managed(name,
 
     if contents_newline:
         # Make sure file ends in newline
-        if not contents.endswith('\n'):
+        if contents and not contents.endswith('\n'):
             contents += '\n'
 
     if not replace and os.path.exists(name):
