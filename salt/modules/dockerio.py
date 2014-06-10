@@ -160,7 +160,7 @@ from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 import salt.utils
-from salt.utils.odict import OrderedDict
+import salt.utils.odict
 
 try:
     import docker
@@ -1140,7 +1140,7 @@ def top(container):
                 ret['mprocesses'] = []
                 titles = ret['Titles']
                 for i in ret['Processes']:
-                    data = OrderedDict()
+                    data = salt.utils.odict.OrderedDict()
                     for k, j in enumerate(titles):
                         data[j] = i[k]
                     ret['mprocesses'].append(data)
