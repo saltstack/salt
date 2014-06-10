@@ -12,6 +12,7 @@ import logging
 import salt.crypt
 import salt.payload
 import salt.transport
+import salt.utils.args
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import string_types, integer_types
 
@@ -49,7 +50,7 @@ def _publish(
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
 
-    arg = _normalize_arg(arg)
+    arg = [salt.utils.args.yamlify_arg(arg)]
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
@@ -86,24 +87,6 @@ def _publish(
         return cret
     else:
         return ret
-
-
-def _normalize_arg(arg):
-    '''
-    Take the arguments and return them in a standard list
-    '''
-    if not arg:
-        arg = []
-
-    try:
-        # Numeric checks here because of all numeric strings, like JIDs
-        if isinstance(ast.literal_eval(arg), (dict, integer_types, long)):
-            arg = [arg]
-    except Exception:
-        if isinstance(arg, string_types):
-            arg = arg.split(',')
-
-    return arg
 
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
@@ -207,7 +190,7 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    arg = _normalize_arg(arg)
+    arg = [salt.utils.args.yamlify_arg(arg)]
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'
