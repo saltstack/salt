@@ -612,10 +612,11 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
     if not name and not pkgs and not sources:
         return 'Error: name, pkgs or sources needs to be specified.'
 
-    pkgs = []
     if name and not pkgs:
+        pkgs = []
         pkgs.append(name)
     elif name and sources:
+        pkgs = []
         for source in sources:
             pkgs += source.keys()
 
@@ -674,10 +675,11 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):
     if not name and not pkgs and not sources:
         return 'Error: name, pkgs or sources needs to be specified.'
 
-    pkgs = []
     if name and not pkgs:
+        pkgs = []
         pkgs.append(name)
     elif name and sources:
+        pkgs = []
         for source in sources:
             pkgs += source.keys()
 

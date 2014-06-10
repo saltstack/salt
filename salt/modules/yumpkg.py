@@ -1052,10 +1052,11 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     if not name and not pkgs and not sources:
         return 'Error: name or pkgs needs to be specified.'
 
-    pkgs = []
     if name and not pkgs and not sources:
+        pkgs = []
         pkgs.append(name)
     elif name and sources:
+        pkgs = []
         for source in sources:
             pkgs += source.keys()
 
@@ -1064,6 +1065,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         ret = {}
         ret['result'] = False
         ret['comment'] = 'Packages cannot be held, yum-plugin-versionlock needs to be installed.'
+        return ret
 
     current_locks = get_locked_packages()
     ret = {}
@@ -1121,10 +1123,11 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     if not name and not pkgs and not sources:
         return 'Error: name, pkgs or sources needs to be specified.'
 
-    pkgs = []
     if name and not pkgs:
+        pkgs = []
         pkgs.append(name)
     elif name and sources:
+        pkgs = []
         for source in sources:
             pkgs += source.keys()
 
@@ -1133,6 +1136,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         ret = {}
         ret['result'] = False
         ret['comment'] = 'Error: Package yum-plugin-versionlock needs to be installed.'
+        return ret
 
     current_locks = get_locked_packages(full=True)
     ret = {}
