@@ -34,7 +34,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def _group_changes(cur, wanted, remove=True):
+def _group_changes(cur, wanted, remove=False):
     '''
     Determine if the groups need to be changed
     '''
