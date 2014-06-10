@@ -184,10 +184,14 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    refresh_db
+       If set to false this will skip refreshing the apt package database on
+       debian based systems.
+
     require_in
-        Set this to a list of pkg.installed or pkg.latest to trigger the
-        running of apt-get update prior to attempting to install these
-        packages. Setting a require in the pkg will not work for this.
+       Set this to a list of pkg.installed or pkg.latest to trigger the
+       running of apt-get update prior to attempting to install these
+       packages. Setting a require in the pkg will not work for this.
     '''
     ret = {'name': name,
            'changes': {},
@@ -276,11 +280,6 @@ def managed(name, **kwargs):
         ret['comment'] = \
             'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
-    else:
-        # Repo was modified, refresh the pkg db if on an apt-based OS. Other
-        # package managers do this sort of thing automatically.
-        if __grains__['os_family'] == 'Debian':
-            __salt__['pkg.refresh_db']()
 
     try:
         repodict = __salt__['pkg.get_repo'](

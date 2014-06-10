@@ -1218,7 +1218,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         cmd = 'apt-add-repository -y {0}'.format(repo)
                     out = __salt__['cmd.run_stdout'](cmd, **kwargs)
                     # explicit refresh when a repo is modified.
-                    refresh_db()
+                    if kwargs.get('refresh_db', True):
+                        refresh_db()
                     return {repo: out}
             else:
                 if not ppa_format_support:
@@ -1414,7 +1415,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
             setattr(mod_source, key, kwargs[key])
     sources.save()
     # on changes, explicitly refresh
-    refresh_db()
+    if kwargs.get('refresh_db', True):
+        refresh_db()
     return {
         repo: {
             'architectures': getattr(mod_source, 'architectures', []),
