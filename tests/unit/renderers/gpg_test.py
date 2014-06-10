@@ -18,7 +18,7 @@ import salt.config
 from salt.state import HighState
 from integration import TMP
 
-GPG_KEYDIR = os.path.join(TMP, 'gpg-renderer-keydir')
+GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 
 # The keyring library uses `getcwd()`, let's make sure we in a good directory
 # before importing keyring

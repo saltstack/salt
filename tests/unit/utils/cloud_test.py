@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 from salt.utils import cloud
 from integration import TMP
 
-GPG_KEYDIR = os.path.join(TMP, 'gpg-renderer-keydir')
+GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 
 # The keyring library uses `getcwd()`, let's make sure we in a good directory
 # before importing keyring
