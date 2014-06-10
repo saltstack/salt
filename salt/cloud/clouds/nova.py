@@ -386,8 +386,10 @@ def destroy(name, conn=None, call=None):
             {'name': name},
             transport=__opts__['transport']
         )
+        print __opts__.get('ssh_interface')
+        print str(node)
         if __opts__.get('delete_sshkeys', False) is True:
-            salt.utils.cloud.remove_sshkey(node.public_ips[0])
+            salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
         if __opts__.get('update_cachedir', False) is True:
             salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
         return True
@@ -445,20 +447,24 @@ def request_instance(vm_=None, call=None):
     )
     if security_groups is not None:
         vm_groups = security_groups.split(',')
-        avail_groups = conn.list_security_groups()
+        avail_groups = conn.secgroup_list()
         group_list = []
 
         for vmg in vm_groups:
-            if vmg in [ag.name for ag in avail_groups]:
+            if vmg in [name for name, details in avail_groups.iteritems()]:
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
                     'No such security group: \'{0}\''.format(vmg)
                 )
 
-        kwargs['security_groups'] = [
-            g for g in avail_groups if g.name in group_list
-        ]
+        kwargs['security_groups'] = group_list
+
+    avz = config.get_cloud_config_value(
+        'availability_zone', vm_, __opts__, default=None, search_global=False
+    )
+    if avz is not None:
+        kwargs['availability_zone'] = avz
 
     networks = config.get_cloud_config_value(
         'networks', vm_, __opts__, search_global=False
@@ -618,8 +624,13 @@ def create(vm_):
                 return
 
         result = []
-        private = node['private_ips']
-        public = node['public_ips']
+
+        if 'private_ips' not in node and 'public_ips' not in node and \
+           'access_ip' in node.get('extra', {}):
+            result = [node['extra']['access_ip']]
+
+        private = node.get('private_ips', [])
+        public = node.get('public_ips', [])
         if private and not public:
             log.warn(
                 'Private IPs returned, but not public... Checking for '
