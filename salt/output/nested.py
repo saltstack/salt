@@ -69,12 +69,13 @@ class NestDisplay(object):
                         self.colors['ENDC'])
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
-                if isinstance(ind, (list, tuple)):
+                if isinstance(ind, (list, tuple, dict)):
                     out += '{0}{1}|_{2}\n'.format(
                             ' ' * indent,
                             self.colors['GREEN'],
                             self.colors['ENDC'])
-                    out = self.display(ind, indent + 2, '- ', out)
+                    prefix = '' if isinstance(ind, dict) else '- '
+                    out = self.display(ind, indent + 2, prefix, out)
                 else:
                     out = self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
