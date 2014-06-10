@@ -6,7 +6,7 @@ Manage and query NPM packages.
 # Import python libs
 import json
 import logging
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -25,9 +25,7 @@ def __virtual__():
     '''
     Only work when npm is installed.
     '''
-    if salt.utils.which('npm'):
-        return 'npm'
-    return False
+    return salt.utils.which('npm') is not None
 
 
 def _valid_version():
@@ -35,9 +33,11 @@ def _valid_version():
     Check the version of npm to ensure this module will work. Currently
     npm must be at least version 1.2.
     '''
+    # pylint: disable=no-member
     npm_version = distutils.version.LooseVersion(
         __salt__['cmd.run']('npm --version'))
     valid_version = distutils.version.LooseVersion('1.2')
+    # pylint: enable=no-member
     return npm_version >= valid_version
 
 
