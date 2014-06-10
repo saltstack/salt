@@ -635,7 +635,7 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
                        'result': False,
                        'comment': ''}
 
-        state = get_selections(pattern=target, state=hold)
+        state = get_selections(pattern=target, state='hold')
         if not state:
             ret[target]['comment'] = ('Package {0} not currently held.'
                                       .format(target))
