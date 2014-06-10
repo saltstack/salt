@@ -1415,7 +1415,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
             setattr(mod_source, key, kwargs[key])
     sources.save()
     # on changes, explicitly refresh
-    refresh_db()
+    if kwargs.get('refresh_db', True):
+        refresh_db()
     return {
         repo: {
             'architectures': getattr(mod_source, 'architectures', []),
