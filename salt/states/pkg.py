@@ -666,7 +666,7 @@ def installed(
                         hold_ret = __salt__['pkg.unhold'](
                             name=name, pkgs=pkgs, sources=sources
                         )
-                except SaltInvocationError as exc:
+                except (CommandExecutionError, SaltInvocationError) as exc:
                     return {'name': name,
                             'changes': {},
                             'result': False,
@@ -793,7 +793,7 @@ def installed(
                         hold_ret = __salt__['pkg.unhold'](
                             name=name, pkgs=pkgs, sources=sources
                         )
-                except SaltInvocationError as exc:
+                except (CommandExecutionError, SaltInvocationError) as exc:
                     comment.append(exc.message)
                     return {'name': name,
                             'changes': changes,
