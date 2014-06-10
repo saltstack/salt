@@ -607,10 +607,6 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
 
             salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
-    if 'yum-plugin-versionlock' not in list_pkgs():
-        raise SaltInvocationError(
-            'Packages cannot be held, yum-plugin-versionlock is not installed.'
-        )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
             'One of name, pkgs, or sources must be specified.'
@@ -685,10 +681,6 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):
 
             salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
-    if 'yum-plugin-versionlock' not in list_pkgs():
-        raise SaltInvocationError(
-            'Packages cannot be unheld, yum-plugin-versionlock is not installed.'
-        )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
             'One of name, pkgs, or sources must be specified.'
