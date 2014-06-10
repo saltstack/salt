@@ -220,10 +220,10 @@ class Schedule(object):
         new_job = data.keys()[0]
 
         if new_job in self.opts['schedule']:
-            log.debug('Updating job settings for scheduled '
+            log.info('Updating job settings for scheduled '
                       'job: {0}'.format(new_job))
         else:
-            log.debug('Added new job {0} to scheduler'.format(new_job))
+            log.info('Added new job {0} to scheduler'.format(new_job))
         self.opts['schedule'].update(data)
 
     def enable_job(self, name):
@@ -428,7 +428,7 @@ class Schedule(object):
                     time_conflict = True
 
             if time_conflict:
-                log.info('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
+                log.error('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
                 continue
 
             # clean this up
@@ -440,7 +440,7 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.info('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil.  Ignoring job {0}'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
@@ -450,7 +450,7 @@ class Schedule(object):
                         try:
                             tmp = int(dateutil_parser.parse(i).strftime('%s'))
                         except ValueError:
-                            log.info('Invalid date string {0}.  Ignoring job {1}.'.format(i, job))
+                            log.error('Invalid date string {0}.  Ignoring job {1}.'.format(i, job))
                             continue
                         if tmp >= now:
                             _when.append(tmp)
@@ -490,7 +490,7 @@ class Schedule(object):
                     try:
                         when = int(dateutil_parser.parse(data['when']).strftime('%s'))
                     except ValueError:
-                        log.info('Invalid date string.  Ignoring')
+                        log.error('Invalid date string.  Ignoring')
                         continue
 
                     now = int(time.time())
@@ -535,7 +535,7 @@ class Schedule(object):
             else:
                 if 'splay' in data:
                     if 'when' in data:
-                        log.debug('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
                     else:
                         data['_seconds'] = data['seconds']
 
@@ -550,19 +550,19 @@ class Schedule(object):
             if run:
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
-                        log.info('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                        log.error('Missing python-dateutil.  Ignoring job {0}'.format(job))
                         continue
                     else:
                         if isinstance(data['range'], dict):
                             try:
                                 start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
                             except ValueError:
-                                log.info('Invalid date string for start.  Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for start.  Ignoring job {0}.'.format(job))
                                 continue
                             try:
                                 end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
                             except ValueError:
-                                log.info('Invalid date string for end.  Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for end.  Ignoring job {0}.'.format(job))
                                 continue
                             if end > start:
                                 if 'invert' in data['range'] and data['range']['invert']:
@@ -576,11 +576,11 @@ class Schedule(object):
                                     else:
                                         run = False
                             else:
-                                log.info('schedule.handle_func: Invalid range, end must be larger than start. \
+                                log.error('schedule.handle_func: Invalid range, end must be larger than start. \
                                          Ignoring job {0}.'.format(job))
                                 continue
                         else:
-                            log.info('schedule.handle_func: Invalid, range must be specified as a dictionary. \
+                            log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
                                      Ignoring job {-1}.'.format(job))
                             continue
 
@@ -589,13 +589,13 @@ class Schedule(object):
             else:
                 if 'splay' in data:
                     if 'when' in data:
-                        log.debug('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
                     else:
                         if isinstance(data['splay'], dict):
                             if data['splay']['end'] > data['splay']['start']:
                                 splay = random.randint(data['splay']['start'], data['splay']['end'])
                             else:
-                                log.info('schedule.handle_func: Invalid Splay, end must be larger than start. \
+                                log.error('schedule.handle_func: Invalid Splay, end must be larger than start. \
                                          Ignoring splay.')
                                 splay = None
                         else:
@@ -606,7 +606,7 @@ class Schedule(object):
                                       '{0} seconds to next run.'.format(splay))
                             data['seconds'] = data['_seconds'] + splay
 
-                log.debug('Running scheduled job: {0}'.format(job))
+                log.info('Running scheduled job: {0}'.format(job))
 
             if 'jid_include' not in data or data['jid_include']:
                 data['jid_include'] = True
