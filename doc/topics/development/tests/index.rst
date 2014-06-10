@@ -112,11 +112,11 @@ must be provided:
     do not include the single quotes.
 
 Once all of the valid credentials for the cloud provider have been supplied, the
-cloud provider tests can be run by setting the ``--run-cloud-providers`` flag:
+cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --run-cloud-providers
+    ./tests/runtests.py --cloud-provider-tests
 
 
 Running The Tests In A Docker Container
