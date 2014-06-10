@@ -28,7 +28,7 @@ def __virtual__():
     return salt.utils.which('npm') is not None
 
 
-def _valid_version():
+def _check_valid_version():
     '''
     Check the version of npm to ensure this module will work. Currently
     npm must be at least version 1.2.
@@ -38,7 +38,12 @@ def _valid_version():
         __salt__['cmd.run']('npm --version'))
     valid_version = distutils.version.LooseVersion('1.2')
     # pylint: enable=no-member
-    return npm_version >= valid_version
+    if npm_version < valid_version:
+        raise CommandExecutionError(
+            '\'npm\' is not recent enough({0} < {1}). Please Upgrade.'.format(
+                npm_version, valid_version
+            )
+        )
 
 
 def install(pkg=None,
@@ -77,10 +82,7 @@ def install(pkg=None,
         salt '*' npm.install coffee-script@1.0.1
 
     '''
-    if not _valid_version():
-        raise CommandExecutionError(
-            '{0!r} is not recent enough. Please Upgrade.'.format('npm.install')
-        )
+    _check_valid_version()
 
     cmd = 'npm install --silent --json'
 
@@ -148,10 +150,7 @@ def uninstall(pkg,
         salt '*' npm.uninstall coffee-script
 
     '''
-    if not _valid_version():
-        raise CommandExecutionError(
-            '{0!r} is not recent enough. Please Upgrade.'.format('npm.uninstall')
-        )
+    _check_valid_version()
 
     cmd = 'npm uninstall'
 
@@ -189,10 +188,7 @@ def list_(pkg=None, dir=None):
         salt '*' npm.list
 
     '''
-    if not _valid_version():
-        raise CommandExecutionError(
-            '{0!r} is not recent enough. Please Upgrade.'.format('npm.list')
-        )
+    _check_valid_version()
 
     cmd = 'npm list --json'
 
