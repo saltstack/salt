@@ -367,20 +367,27 @@ contain valid information are also required in the test class's ``setUp`` functi
                 )
             )
 
-Since creating and destroying instances on cloud providers can cost money, the cloud
-provider tests are off by default and do not run automatically. To run the cloud
-provider tests, the ``--cloud-provider-tests`` flag must be provided:
+Repeatedly creating and destroying instances on cloud providers can be costly.
+Therefore, cloud provider tests are off by default and do not run automatically. To
+run the cloud provider tests, the ``--cloud-provider-tests`` flag must be provided:
 
 .. code-block:: bash
 
     ./tests/runtests.py --cloud-provider-tests
 
-Once the appropriate measures to set up the cloud provider test have been taken, a
-cloud provider test checking for successful creation and deletion of an instance can
-be written as follows:
+Since cloud provider tests do not run automatically, all provider tests must be
+preceded with the ``@expensiveTest`` decorator. The expensive test decorator is
+necessary because it signals to the test suite that the
+``--cloud-provider-tests`` flag is required to run the cloud provider tests.
+
+To write a cloud provider test, import and use the expensiveTest decorator for
+the test function:
 
 .. code-block:: python
 
+    from salttesting.helpers import expensiveTest
+
+    @expensiveTest
     def test_instance(self):
         '''
         Test creating an instance on Linode
