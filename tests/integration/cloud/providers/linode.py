@@ -72,20 +72,20 @@ class LinodeTest(integration.ShellCase):
 
         # create the instance
         instance = self.run_cloud('-p linode-test {0}'.format(name))
-        str = '        {0}'.format(name)
+        ret_str = '        {0}'.format(name)
 
         # check if instance with salt installed returned
         try:
-            self.assertIn(str, instance)
+            self.assertIn(ret_str, instance)
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(name))
             raise
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(name))
-        str = '            True'
+        ret_str = '            True'
         try:
-            self.assertIn(str, delete)
+            self.assertIn(ret_str, delete)
         except AssertionError:
             raise
 
@@ -95,10 +95,10 @@ class LinodeTest(integration.ShellCase):
         '''
         name = 'linode-testing'
         query = self.run_cloud('--query')
-        str = '        {0}:'.format(name)
+        ret_str = '        {0}:'.format(name)
 
         # if test instance is still present, delete it
-        if str in query:
+        if ret_str in query:
             self.run_cloud('-d {0} --assume-yes'.format(name))
 
 
