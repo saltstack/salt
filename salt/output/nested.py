@@ -7,7 +7,7 @@ from numbers import Number
 
 # Import salt libs
 import salt.utils
-import salt.output
+
 
 
 class NestDisplay(object):
@@ -43,7 +43,7 @@ class NestDisplay(object):
                         ' ' * indent,
                         self.colors['GREEN'],
                         prefix,
-                        salt.output.strip_esc_sequence(line),
+                        line,
                         self.colors['ENDC'])
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
@@ -70,8 +70,7 @@ class NestDisplay(object):
                         prefix,
                         key,
                         self.colors['ENDC'])
-                out = self.display(salt.output.strip_esc_sequence(val),
-                                   indent + 4, '', out)
+                out = self.display(val, indent + 4, '', out)
         return out
 
 

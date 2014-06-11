@@ -7,7 +7,6 @@ data and should only be used with the salt-key command.
 
 # Import salt libs
 import salt.utils
-import salt.output
 
 
 def output(data):
@@ -42,13 +41,13 @@ def output(data):
         for key in data[status]:
             if isinstance(data[status], list):
                 ret += '{0}{1}{2}\n'.format(
-                       salt.output.strip_esc_sequence(cmap[status]),
-                       salt.output.strip_esc_sequence(key),
-                       color['ENDC'])
+                        cmap[status],
+                        key,
+                        color['ENDC'])
             if isinstance(data[status], dict):
                 ret += '{0}{1}:  {2}{3}\n'.format(
-                       salt.output.strip_esc_sequence(cmap[status]),
-                       salt.output.strip_esc_sequence(key),
-                       data[status][key],
-                       color['ENDC'])
+                        cmap[status],
+                        key,
+                        data[status][key],
+                        color['ENDC'])
     return ret

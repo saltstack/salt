@@ -32,7 +32,6 @@ import pprint
 
 # Import salt libs
 import salt.utils
-import salt.output
 
 
 def output(data):
@@ -105,72 +104,55 @@ def _format_host(host, data):
                     msg = _format_terse(tcolor, comps, ret, colors, tabular)
                     hstrs.append(msg)
                     continue
-                elif __opts__.get('state_output', 'full').lower() == 'mixed':
-                    # Print terse unless it failed
-                    if ret['result'] is not False:
-                        msg = _format_terse(tcolor, comps,
-                                            ret, colors, tabular)
-                        hstrs.append(msg)
-                        continue
-                elif __opts__.get('state_output', 'full').lower() == 'changes':
-                    # Print terse if no error and no changes, otherwise, be
-                    # verbose
-                    if ret['result'] and not ret['changes']:
-                        msg = _format_terse(tcolor, comps, ret, colors, tabular)
-                        hstrs.append(msg)
-                        continue
-                state_lines = [
-                    '{tcolor}----------{colors[ENDC]}',
-                    '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
-                    '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
-                    '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
-                    '    {tcolor} Comment: {comment}{colors[ENDC]}'
-                ]
-                # This isn't the prettiest way of doing this, but it's readable.
-                if (comps[1] != comps[2]):
-                    state_lines.insert(
-                        3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
-                svars = {
-                    'tcolor': tcolor,
-                    'comps': comps,
-                    'ret': ret,
-                    # This nukes any trailing \n and indents the others.
-                    'comment': ret['comment'].strip().replace(
-                        '\n',
-                        '\n' + ' ' * 14),
-                    'colors': colors
-                }
-                hstrs.extend([sline.format(**svars) for sline in state_lines])
-                changes = '     Changes:   '
-                if not isinstance(ret['changes'], dict):
-                    changes += 'Invalid Changes data: {0}'.format(
-                            ret['changes'])
-                else:
-                    pass_opts = __opts__
-                    if __opts__['color']:
-                        pass_opts['color'] = 'CYAN'
-                    pass_opts['nested_indent'] = 14
-                    changes += '\n'
-                    changes += salt.output.out_format(
-                            ret['changes'],
-                            'nested',
-                            pass_opts)
-                hstrs.append(('{0}{1}{2[ENDC]}'
-                              .format(tcolor, changes, colors)))
+            elif __opts__.get('state_output', 'full').lower() == 'changes':
+                # Print terse if no error and no changes, otherwise, be
+                # verbose
+                if ret['result'] and not schanged:
+                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
+                    hstrs.append(msg)
+                    continue
+            state_lines = [
+                '{tcolor}----------{colors[ENDC]}',
+                '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
+                '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
+                '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
+                '    {tcolor} Comment: {comment}{colors[ENDC]}'
+            ]
+            # This isn't the prettiest way of doing this, but it's readable.
+            if comps[1] != comps[2]:
+                state_lines.insert(
+                    3, '    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
+            try:
+                comment = ret['comment'].strip().replace('\n', '\n' + ' ' * 14)
+            except AttributeError:
+                comment = ret['comment'].join(' ').replace('\n',
+                                                           '\n' + ' ' * 13)
+            svars = {
+                'tcolor': tcolor,
+                'comps': comps,
+                'ret': ret,
+                'comment': comment,
+                # This nukes any trailing \n and indents the others.
+                'colors': colors
+            }
+            hstrs.extend([sline.format(**svars) for sline in state_lines])
+            changes = '     Changes:   ' + ctext
+            hstrs.append(('{0}{1}{2[ENDC]}'
+                          .format(tcolor, changes, colors)))
 
-            # Append result counts to end of output
-            colorfmt = '{0}{1}{2[ENDC]}'
-            rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run'}
-            count_max_len = max([len(str(x)) for x in rcounts.values()] or [0])
-            label_max_len = max([len(x) for x in rlabel.values()] or [0])
-            line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
-            hstrs.append(
-                colorfmt.format(
-                    colors['CYAN'],
-                    '\nSummary\n{0}'.format('-' * line_max_len),
-                    colors
-                )
+        # Append result counts to end of output
+        colorfmt = '{0}{1}{2[ENDC]}'
+        rlabel = {True: 'Succeeded', False: 'Failed', None: 'Not Run'}
+        count_max_len = max([len(str(x)) for x in rcounts.values()] or [0])
+        label_max_len = max([len(x) for x in rlabel.values()] or [0])
+        line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
+        hstrs.append(
+            colorfmt.format(
+                colors['CYAN'],
+                '\nSummary\n{0}'.format('-' * line_max_len),
+                colors
             )
+        )
 
         def _counts(label, count):
             return '{0}: {1:>{2}}'.format(
