@@ -571,7 +571,7 @@ def bootstrap(directory='.',
     distribute
         Forcing use of distribute
 
-    new_set
+    new_st
         Forcing use of setuptools >= 0.7
 
     python
@@ -913,7 +913,7 @@ def buildout(directory='.',
     test_release
         buildout accept test release
 
-    new_set
+    new_st
         Forcing use of setuptools >= 0.7
 
     distribute
