@@ -632,7 +632,7 @@ def _get_template_texts(source_list=None,
             source,
             '',
             template=template,
-            env=__env__,
+            saltenv=__env__,
             context=tmpctx,
             **kwargs
         )
