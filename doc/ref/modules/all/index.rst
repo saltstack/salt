@@ -27,6 +27,7 @@ Full list of builtin execution modules
     blockdev
     bluez
     boto_asg
+    boto_elasticache
     boto_elb
     boto_iam
     boto_route53
