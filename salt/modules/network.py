@@ -26,9 +26,13 @@ def __virtual__():
     return True
 
 
-def ping(host):
+def ping(host, boolean=False):
     '''
     Performs a ping to a host
+
+    If 'boolean' flag is set to True,
+    simple return a bool indicating whether or not
+    a host responded to an ICMP ping.
 
     CLI Example:
 
@@ -37,7 +41,15 @@ def ping(host):
         salt '*' network.ping archlinux.org
     '''
     cmd = 'ping -c 4 {0}'.format(salt.utils.network.sanitize_host(host))
-    return __salt__['cmd.run'](cmd)
+    if boolean:
+        result = __salt__['cmd.retcode'](cmd)
+        if result == 0:
+            return True
+        else:
+            return False
+        return __salt__['cmd.retcode'](cmd)
+    else:
+        return __salt__['cmd.run'](cmd)
 
 
 # FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools
