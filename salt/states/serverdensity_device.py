@@ -37,6 +37,7 @@ Available Functions
         'server_name':
           serverdensity_device.monitored
 
+.. versionadded:: Helium
 '''
 
 import logging
@@ -51,6 +52,8 @@ def get_salt_params():
     Note:
         Missing publicDNS and publicIPs parameters.
         There might be way of getting them with salt-cloud.
+
+    .. versionadded:: Helium
     '''
     all_stats = __salt__['status.all_status']()
     all_grains = __salt__['grains.items']()
@@ -64,7 +67,7 @@ def get_salt_params():
         params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
         params['privateIPs'] = all_grains['fqdn_ip4']
         params['privateDNS'] = all_grains['fqdn']
-    except:
+    except KeyError:
         pass
 
     return params
@@ -113,6 +116,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
                 - cpuCores: 2
                 - os: CentOS
 
+    .. versionadded:: Helium
     '''
     ret = {'name': name, 'changes': {}, 'result': None, 'comment': ''}
     params_from_salt = get_salt_params()
@@ -156,10 +160,9 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
         ret['changes'] = {}
         return ret
 
-    installed_agent = __salt__['serverdensity_devices.install_agent'](agent_key) 
+    installed_agent = __salt__['serverdensity_devices.install_agent'](agent_key)
 
     ret['result'] = True
     ret['comment'] = 'Successfully installed agent and created device in Server Density db.'
     ret['changes'] = {'created_device': device, 'installed_agent': installed_agent}
     return ret
-
