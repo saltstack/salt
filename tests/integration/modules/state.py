@@ -433,6 +433,7 @@ fi
         }
         result = {}
         ret = self.run_function('state.sls', mods='requisites.mixed_simple')
+        self.assertReturnNonEmptySaltType(ret)
         for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
@@ -533,6 +534,7 @@ fi
         }
         result = {}
         ret = self.run_function('state.sls', mods='requisites.require')
+        self.assertReturnNonEmptySaltType(ret)
         for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
@@ -591,6 +593,7 @@ fi
         }
         result = {}
         ret = self.run_function('state.sls', mods='requisites.fullsls_require')
+        self.assertReturnNonEmptySaltType(ret)
         for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
@@ -682,6 +685,7 @@ fi
         }
         result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple')
+        self.assertReturnNonEmptySaltType(ret)
         for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
@@ -708,6 +712,7 @@ fi
 
         result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple2')
+        self.assertReturnNonEmptySaltType(ret)
         for item, descr in ret.iteritems():
             result[item] = {
                 '__run_num__': descr['__run_num__'],
@@ -724,6 +729,7 @@ fi
         #)
 
         ret = self.run_function('state.sls', mods='requisites.prereq_compile_error1')
+        self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(
             ret['cmd_|-B_|-echo B_|-run']['comment'],
             'The following requisites were not found:\n'
@@ -732,6 +738,7 @@ fi
         )
 
         ret = self.run_function('state.sls', mods='requisites.prereq_compile_error2')
+        self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(
             ret['cmd_|-B_|-echo B_|-run']['comment'],
             'The following requisites were not found:\n'
@@ -766,6 +773,7 @@ fi
         '''
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function('state.sls', mods='requisites.use')
+        self.assertReturnNonEmptySaltType(ret)
         for item, descr in ret.iteritems():
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
