@@ -1063,11 +1063,22 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     targets = []
     if pkgs:
+        for pkg in pkgs:
+            ret = check_db(pkg)
+            if not ret[pkg]['found']:
+                raise SaltInvocationError(
+                    'Package {0} not available in repository.'.format(name)
+                )
         targets.extend(pkgs)
     elif sources:
         for source in sources:
             targets.append(next(iter(source)))
     else:
+        ret = check_db(name)
+        if not ret[name]['found']:
+            raise SaltInvocationError(
+                'Package {0} not available in repository.'.format(name)
+            )
         targets.append(name)
 
     current_locks = get_locked_packages(full=False)
