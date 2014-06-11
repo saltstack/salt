@@ -16,7 +16,12 @@ log = logging.getLogger(__name__)
 def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     '''
     Returns requested Server Density authentication value from pillar.
+
     .. versionadded:: Helium
+    
+    CLI Example:
+
+        salt '*' serverdensity_devices.get_sd_auth <val>
     '''
     sd_pillar = __pillar__.get(sd_auth_pillar_name)
     log.debug('SD Pillar: {0}'.format(sd_pillar))
@@ -45,6 +50,7 @@ def create(name, **params):
     '''
     Function to create device in Server Density.
     Ref: https://apidocs.serverdensity.com/Inventory/Devices/Creating
+
     CLI Example::
 
         salt '*' serverdensity_devices.create lama
@@ -75,6 +81,7 @@ def delete(device_id):
     '''
     Function to delete device from Server Density.
     Ref: https://apidocs.serverdensity.com/Inventory/Devices/Deleting
+
     CLI Example::
 
         salt '*' serverdensity_devices.delete 51f7eafcdba4bb235e000ae4
@@ -101,6 +108,7 @@ def ls(**params):
     If additional params are passed - will filter by those params.
     Ref: https://apidocs.serverdensity.com/Inventory/Devices/Listing
          https://apidocs.serverdensity.com/Inventory/Devices/Searching
+
     CLI Example::
 
         salt '*' serverdensity_devices.ls
@@ -140,6 +148,7 @@ def update(device_id, **params):
     '''
     Function that updates device information in Server Density.
     Ref: https://apidocs.serverdensity.com/Inventory/Devices/Updating
+
     CLI Example::
 
         salt '*' serverdensity_devices.update 51f7eafcdba4bb235e000ae4 name=lama group=lama_band
@@ -167,6 +176,7 @@ def update(device_id, **params):
 def install_agent(agent_key):
     '''
     Function downloads Server Density installation agent, and installs sd-agent with agent_key.
+
     CLI Example::
 
         salt '*' serverdensity_devices.install_agent c2bbdd6689ff46282bdaa07555641498
