@@ -582,9 +582,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             else:
                 _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
         else:
-            ifaces = __salt__['network.interfaces']()
-            if iface in ifaces and 'hwaddr' in ifaces[iface]:
-                result['addr'] = ifaces[iface]['hwaddr']
+            # If interface type is slave for bond, not setting hwaddr
+            if iface_type != 'slave':
+                ifaces = __salt__['network.interfaces']()
+                if iface in ifaces and 'hwaddr' in ifaces[iface]:
+                    result['addr'] = ifaces[iface]['hwaddr']
 
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
