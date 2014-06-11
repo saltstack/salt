@@ -85,7 +85,13 @@ def show(config_file=False):
         try:
             for line in salt.utils.fopen(config_file_path):
                 if not line.startswith('#') and '=' in line:
-                    key, value = line.split(' = ', 1)
+                    # search if we have some '=' instead of ' = ' separators
+                    SPLIT = ' = '
+                    if SPLIT not in line:
+                        SPLIT = SPLIT.strip()
+                    key, value = line.split(SPLIT, 1)
+                    key = key.strip()
+                    value = value.lstrip()
                     ret[key] = value
         except OSError:
             log.error('Could not open sysctl file')
