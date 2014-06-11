@@ -552,7 +552,6 @@ def request_instance(vm_=None, call=None):
 
     try:
         data = conn.create_node(**kwargs)
-        return data, vm_
     except Exception as exc:
         raise SaltCloudSystemExit(
             'Error creating {0} on OpenStack\n\n'
@@ -561,6 +560,9 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             )
         )
+
+    vm_['password'] = data.extra.get('password', None)
+    return data, vm_
 
 
 def create(vm_):
