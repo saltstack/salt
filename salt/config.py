@@ -2045,7 +2045,13 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 
-    client_config_dir = salt.utils.xdg.xdg_config_dir()
+    xdg_dir = salt.utils.xdg.xdg_config_dir()
+    if os.path.isdir(xdg_dir):
+        client_config_dir = xdg_dir
+        saltrc_config_file = 'saltrc'
+    else:
+        client_config_dir = '~'
+        saltrc_config_file = '.saltrc'
 
     # Get the token file path from the provided defaults. If not found, specify
     # our own, sane, default
@@ -2061,7 +2067,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         master_config(path, defaults=defaults)
     )
     # Update with the users salt dot file or with the environment variable
-    saltrc_config = os.path.join(client_config_dir, 'saltrc')
+    saltrc_config = os.path.join(client_config_dir, saltrc_config_file)
     opts.update(
         load_config(
             saltrc_config,
