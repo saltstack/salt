@@ -4,6 +4,9 @@ Encapsulate the different transports available to Salt.  Currently this is only 
 '''
 import time
 import os
+import threading
+
+from collections import defaultdict
 
 # Import Salt Libs
 import salt.payload
@@ -26,14 +29,16 @@ class Channel(object):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
+        # determine the ttype
         if 'transport' in opts:
             ttype = opts['transport']
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
+        # switch on available ttypes
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
-        if ttype == 'raet':
+        elif ttype == 'raet':
             return RAETChannel(opts, **kwargs)
         else:
             raise Exception('Channels are only defined for ZeroMQ and raet')
@@ -102,6 +107,28 @@ class ZeroMQChannel(Channel):
 
     ZMQ Channels default to 'crypt=aes'
     '''
+    # the sreq is the zmq connection, since those are relatively expensive to
+    # set up, we are going to reuse them as much as possible.
+    sreq_cache = defaultdict(dict)
+
+    @property
+    def sreq_key(self):
+        '''
+        Return a tuple which uniquely defines this channel (for caching)
+        '''
+        return (self.master_uri,                  # which master you want to talk to
+                os.getpid(),                      # per process
+                threading.current_thread().name,  # per per-thread
+                )
+
+    @property
+    def sreq(self):
+        key = self.sreq_key
+        if key not in ZeroMQChannel.sreq_cache:
+            ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
+
+        return ZeroMQChannel.sreq_cache[key]
+
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
@@ -116,11 +143,9 @@ class ZeroMQChannel(Channel):
             else:
                 self.auth = salt.crypt.SAuth(opts)
         if 'master_uri' in kwargs:
-            master_uri = kwargs['master_uri']
+            self.master_uri = kwargs['master_uri']
         else:
-            master_uri = opts['master_uri']
-
-        self.sreq = salt.payload.SREQ(master_uri)
+            self.master_uri = opts['master_uri']
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
