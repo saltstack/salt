@@ -11,6 +11,9 @@ import fnmatch
 
 # Import salt libs
 import salt.utils
+from salt.utils.network import remote_port_tcp
+import salt.utils.event
+import salt.config
 
 
 __opts__ = {}
@@ -540,3 +543,16 @@ def version():
     ret = salt.utils.fopen(procf, 'r').read().strip()
 
     return ret
+
+def master():
+    '''
+    Fire an event if the minion gets disconnected from its master
+    This function is meant to be run via a scheduled job from the minion
+    '''
+    ip = __salt__['config.option']('master')
+    port = int(__salt__['config.option']('publish_port'))
+    ips = remote_port_tcp(port)
+
+    if not ip in ips:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        event.fire_event({'master':ip}, '__master_disconnected')
