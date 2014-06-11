@@ -148,6 +148,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
     def validate_options(self):
+        if self.options.cloud_provider_tests:
+            # Turn on expensive tests execution
+            os.environ['EXPENSIVE_TESTS'] = 'True'
+
         if self.options.coverage and any((
                 self.options.module, self.options.client, self.options.shell,
                 self.options.unit, self.options.state, self.options.runner,
