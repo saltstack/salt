@@ -296,8 +296,10 @@ class Terminal(object):
         Close the communication with the terminal's child and terminate it.
         '''
         if not self.closed:
-            os.close(self.child_fd)
-            os.close(self.child_fde)
+            if self.child_fd is not None:
+                os.close(self.child_fd)
+            if self.child_fde is not None:
+                os.close(self.child_fde)
             time.sleep(0.1)
             if not self.terminate(force):
                 raise TerminalException('Failed to terminate child process.')
@@ -321,7 +323,8 @@ class Terminal(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.close(force=True)
         # Wait for the process to terminate, to avoid zombies.
-        self.wait()
+        if self.isalive():
+            self.wait()
     # <---- Context Manager Methods ------------------------------------------
 
 # ----- Platform Specific Methods ------------------------------------------->
