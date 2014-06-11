@@ -1121,14 +1121,18 @@ class LocalFuncs(object):
                 )
                 return ''
             if not token:
-                log.warning('Authentication failure of type "token" occurred.')
+                log.warning('Authentication failure of type "token" occurred. \
+                            Token could not be retrieved.')
                 return ''
             if token['eauth'] not in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" occurred.')
+                log.warning('Authentication failure of type "token" occurred. \
+                            Authentication type of {0} not present.').format(token['eauth'])
                 return ''
             if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
                     ('*' in self.opts['external_auth'][token['eauth']])):
-                log.warning('Authentication failure of type "token" occurred.')
+                log.warning('Authentication failure of type "token" occurred. \
+                            Token does not verify against eauth provider: {0}').format(
+                                    self.opts['external_auth'])
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][token['eauth']][token['name']]
