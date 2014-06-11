@@ -188,7 +188,7 @@ def minion_config(opts, vm_):
     '''
 
     # Let's get a copy of the salt minion default options
-    minion = salt.config.DEFAULT_MINION_OPTS.copy()
+    minion = copy.deepcopy(salt.config.DEFAULT_MINION_OPTS)
     # Some default options are Null, let's set a reasonable default
     minion.update(
         log_level='info',
@@ -233,7 +233,7 @@ def master_config(opts, vm_):
     Return a master's configuration for the provided options and VM
     '''
     # Let's get a copy of the salt master default options
-    master = salt.config.DEFAULT_MASTER_OPTS.copy()
+    master = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
     # Some default options are Null, let's set a reasonable default
     master.update(
         log_level='info',
