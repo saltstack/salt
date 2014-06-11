@@ -187,6 +187,7 @@ Full list of builtin execution modules
     saltutil
     seed
     selinux
+    serverdensity_device
     service
     shadow
     smartos_imgadm
