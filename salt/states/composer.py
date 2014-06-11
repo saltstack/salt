@@ -31,7 +31,6 @@ the location of composer in the state.
 
     # Without composer installed in your PATH
     # Note: composer.phar must be executable for state to work properly
-    
     /path/to/project:
       composer.installed:
         - composer: /path/to/composer.phar
