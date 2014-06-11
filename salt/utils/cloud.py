@@ -980,7 +980,7 @@ def scp_file(dest_path, contents, kwargs):
                 sent_password = True
 
             time.sleep(0.025)
-
+        proc.close(force=True)
         return proc.exitstatus
     except vt.TerminalException as err:
         log.error(
@@ -1127,6 +1127,7 @@ def root_cmd(command, tty, sudo, **kwargs):
 
             time.sleep(0.025)
 
+        proc.close(force=True)
         return proc.exitstatus
     except vt.TerminalException as err:
         log.error(
