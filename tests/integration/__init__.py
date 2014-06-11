@@ -219,6 +219,18 @@ class TestDaemon(object):
                     os.path.join(self.smaster_opts['pki_dir'],
                                  'minions_rejected'),
                     os.path.join(self.smaster_opts['cachedir'], 'jobs'),
+                    os.path.join(self.master_opts['pki_dir'], 'accepted'),
+                    os.path.join(self.master_opts['pki_dir'], 'rejected'),
+                    os.path.join(self.master_opts['pki_dir'], 'pending'),
+                    os.path.join(self.smaster_opts['pki_dir'], 'accepted'),
+                    os.path.join(self.smaster_opts['pki_dir'], 'rejected'),
+                    os.path.join(self.smaster_opts['pki_dir'], 'pending'),
+                    os.path.join(self.minion_opts['pki_dir'], 'accepted'),
+                    os.path.join(self.minion_opts['pki_dir'], 'rejected'),
+                    os.path.join(self.minion_opts['pki_dir'], 'pending'),
+                    os.path.join(self.sub_minion_opts['pki_dir'], 'accepted'),
+                    os.path.join(self.sub_minion_opts['pki_dir'], 'rejected'),
+                    os.path.join(self.sub_minion_opts['pki_dir'], 'pending'),
                     os.path.dirname(self.master_opts['log_file']),
                     self.minion_opts['extension_modules'],
                     self.sub_minion_opts['extension_modules'],
@@ -236,27 +248,10 @@ class TestDaemon(object):
         # Set up PATH to mockbin
         self._enter_mockbin()
 
-        master = salt.master.Master(self.master_opts)
-        self.master_process = multiprocessing.Process(target=master.start)
-        self.master_process.start()
-
-        minion = salt.minion.Minion(self.minion_opts)
-        self.minion_process = multiprocessing.Process(target=minion.tune_in)
-        self.minion_process.start()
-
-        sub_minion = salt.minion.Minion(self.sub_minion_opts)
-        self.sub_minion_process = multiprocessing.Process(
-            target=sub_minion.tune_in
-        )
-        self.sub_minion_process.start()
-
-        smaster = salt.master.Master(self.smaster_opts)
-        self.smaster_process = multiprocessing.Process(target=smaster.start)
-        self.smaster_process.start()
-
-        syndic = salt.minion.Syndic(self.syndic_opts)
-        self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
-        self.syndic_process.start()
+        if self.parser.options.transport == 'zeromq':
+            self.start_zeromq_daemons()
+        elif self.parser.options.transport == 'raet':
+            self.start_raet_daemons()
 
         if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
             from copy import deepcopy
@@ -322,6 +317,68 @@ class TestDaemon(object):
             return self
         finally:
             self.post_setup_minions()
+
+    def start_zeromq_daemons(self):
+        '''
+        Fire up the daemons used for zeromq tests
+        '''
+        master = salt.master.Master(self.master_opts)
+        self.master_process = multiprocessing.Process(target=master.start)
+        self.master_process.start()
+
+        minion = salt.minion.Minion(self.minion_opts)
+        self.minion_process = multiprocessing.Process(target=minion.tune_in)
+        self.minion_process.start()
+
+        sub_minion = salt.minion.Minion(self.sub_minion_opts)
+        self.sub_minion_process = multiprocessing.Process(
+            target=sub_minion.tune_in
+        )
+        self.sub_minion_process.start()
+
+        smaster = salt.master.Master(self.smaster_opts)
+        self.smaster_process = multiprocessing.Process(target=smaster.start)
+        self.smaster_process.start()
+
+        syndic = salt.minion.Syndic(self.syndic_opts)
+        self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
+        self.syndic_process.start()
+
+    def start_raet_daemons(self):
+        '''
+        Fire up the raet daemons!
+        '''
+        self.master_opts['transport'] = 'raet'
+        self.master_opts['raet_port'] = 64506
+        self.minion_opts['transport'] = 'raet'
+        self.minion_opts['raet_port'] = 64510
+        self.sub_minion_opts['transport'] = 'raet'
+        self.sub_minion_opts['raet_port'] = 64520
+        #self.smaster_opts['transport'] = 'raet'
+
+        import salt.daemons.flo
+
+        master = salt.daemons.flo.IofloMaster(self.master_opts)
+        self.master_process = multiprocessing.Process(target=master.start)
+        self.master_process.start()
+
+        minion = salt.daemons.flo.IofloMinion(self.minion_opts)
+        self.minion_process = multiprocessing.Process(target=minion.tune_in)
+        self.minion_process.start()
+
+        sub_minion = salt.daemons.flo.IofloMinion(self.sub_minion_opts)
+        self.sub_minion_process = multiprocessing.Process(
+            target=sub_minion.tune_in
+        )
+        self.sub_minion_process.start()
+        # Wait for the daemons to all spin up
+        time.sleep(5)
+
+        #smaster = salt.daemons.flo.IofloMaster(self.smaster_opts)
+        #self.smaster_process = multiprocessing.Process(target=smaster.start)
+        #self.smaster_process.start()
+
+        # no raet syndic daemon yet
 
     def prep_ssh(self):
         '''
@@ -477,7 +534,7 @@ class TestDaemon(object):
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
-        return salt.client.LocalClient(
+        return salt.client.get_local_client(
             mopts=self.master_opts
         )
 
