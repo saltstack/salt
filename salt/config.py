@@ -2061,7 +2061,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         master_config(path, defaults=defaults)
     )
     # Update with the users salt dot file or with the environment variable
-    saltrc_config = os.path.join(client_config_dir, 'saltrc')
+    saltrc_config = ''.join([client_config_dir, 'saltrc'])
     opts.update(
         load_config(
             saltrc_config,
