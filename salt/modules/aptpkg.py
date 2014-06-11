@@ -640,7 +640,7 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
             ret[target]['comment'] = ('Package {0} not currently held.'
                                       .format(target))
         elif not salt.utils.is_true(state.get('hold', False)):
-            if 'test' in kwargs and kwargs['test']:
+            if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
                 ret[target]['comment'] = ('Package {0} is set to be held.'
                                           .format(target))
@@ -714,7 +714,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):
             ret[target]['comment'] = ('Package {0} does not have a state.'
                                       .format(target))
         elif salt.utils.is_true(state.get('hold', False)):
-            if 'test' in kwargs and kwargs['test']:
+            if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
                 ret['comment'] = ('Package {0} is set not to be held.'
                                   .format(target))
