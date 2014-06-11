@@ -1335,7 +1335,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
 
 
 def _exec_ssh_cmd(cmd,
-                  error_msg='A wrong password has been issued while establishing ssh session'
+                  error_msg='A wrong password has been issued while establishing ssh session',
                   **kwargs):
     password_retries = kwargs.get('password_retries', 3)
     try:
