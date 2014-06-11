@@ -83,6 +83,9 @@ def extracted(name,
         **shoult not be used** here.
         If this option is not set, then the Python tarfile module is used.
         The tarfile module supports gzip and bz2 in Python 2.
+
+    keep
+        Keep the archive in the minion's cache
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
