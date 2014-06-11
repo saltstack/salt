@@ -18,7 +18,7 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     Returns requested Server Density authentication value from pillar.
 
     .. versionadded:: Helium
-    
+
     CLI Example:
 
         salt '*' serverdensity_devices.get_sd_auth <val>

@@ -868,6 +868,7 @@ def local_port_tcp(port):
         ret = remotes_on_local_tcp_port(port)
     return ret
 
+
 def remote_port_tcp(port):
     '''
     Return a set of ip addrs the current host is connected to on given port
@@ -950,6 +951,7 @@ def remotes_on_local_tcp_port(port):
 
     return remotes
 
+
 def remotes_on_remote_tcp_port(port):
     '''
     Returns set of ipv4 host addresses which the current host is connected
@@ -993,7 +995,7 @@ def remotes_on_remote_tcp_port(port):
         rhost, rport = remote.split(':')
         remotes.add(rhost)
 
-    return remotes 
+    return remotes
 
 
 class IPv4Address(object):

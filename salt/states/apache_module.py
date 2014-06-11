@@ -51,7 +51,7 @@ def enable(name):
             ret['result'] = False
             ret['comment'] = 'Failed to enable {0} Apache module'.format(name)
             if isinstance(status, string_types):
-                ret['comment'] = ret['comment'] + ' ({})'.format(status)
+                ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:
         ret['comment'] = '{0} already enabled.'.format(name)
@@ -82,7 +82,7 @@ def disable(name):
             ret['result'] = False
             ret['comment'] = 'Failed to disable {0} Apache module'.format(name)
             if isinstance(status, string_types):
-                ret['comment'] = ret['comment'] + ' ({})'.format(status)
+                ret['comment'] = ret['comment'] + ' ({0})'.format(status)
             return ret
     else:
         ret['comment'] = '{0} already disabled.'.format(name)

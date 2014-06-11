@@ -675,7 +675,7 @@ class Minion(MinionBase):
                 'maxrunning': 2
             }
         })
-    
+
         # add master_alive job if enabled
         if self.opts['master_alive_interval'] > 0:
             self.schedule.add_job({

@@ -544,6 +544,7 @@ def version():
 
     return ret
 
+
 def master():
     '''
     Fire an event if the minion gets disconnected from its master
@@ -553,6 +554,6 @@ def master():
     port = int(__salt__['config.option']('publish_port'))
     ips = remote_port_tcp(port)
 
-    if not ip in ips:
+    if ip not in ips:
         event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master':ip}, '__master_disconnected')
+        event.fire_event({'master': ip}, '__master_disconnected')
