@@ -272,7 +272,10 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+        if __grains__['os_family'] == 'Debain':
+            __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+        else:
+            __salt__['pkg.mod_repo'](**kwargs)
     except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.
