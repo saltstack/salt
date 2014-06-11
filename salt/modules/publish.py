@@ -5,7 +5,6 @@ Publish a command from a minion to a target
 
 # Import python libs
 import time
-import ast
 import logging
 
 # Import salt libs
@@ -14,7 +13,6 @@ import salt.payload
 import salt.transport
 import salt.utils.args
 from salt.exceptions import SaltReqTimeoutError
-from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
