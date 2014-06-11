@@ -24,7 +24,6 @@ except ImportError:
     HAS_LIBCLOUD = False
 
 
-@skipIf(True, 'waiting on bug report fixes on #13369')
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
 class RackspaceTest(integration.ShellCase):
     '''
