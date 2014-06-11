@@ -1070,7 +1070,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     else:
         targets.append(name)
 
-    current_locks = get_locked_packages()
+    current_locks = get_locked_packages(full=False)
     ret = {}
     for target in targets:
         if isinstance(target, dict):
@@ -1082,7 +1082,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
                        'comment': ''}
 
         if target not in current_locks:
-            if 'test' in kwargs and kwargs['test']:
+            if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
                 ret[target]['comment'] = ('Package {0} is set to be held.'
                                           .format(target))
@@ -1164,14 +1164,14 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                        'comment': ''}
 
         search_locks = [lock for lock in current_locks
-                        if lock.startswith(target)]
+                        if target in lock]
         if search_locks:
-            if 'test' in kwargs and kwargs['test']:
+            if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
                 ret[target]['comment'] = ('Package {0} is set to be unheld.'
                                           .format(target))
             else:
-                _targets = ' '.join('"0:' + item + '"' for item in search_locks)
+                _targets = ' '.join('"' + item + '"' for item in search_locks)
                 cmd = 'yum -q versionlock delete {0}'.format(_targets)
                 out = __salt__['cmd.run_all'](cmd)
 
@@ -1191,7 +1191,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return ret
 
 
-def get_locked_packages(pattern=None, full=False):
+def get_locked_packages(pattern=None, full=True):
     '''
     Get packages that are currently locked
     ``yum -q versionlock list``.
@@ -1207,21 +1207,28 @@ def get_locked_packages(pattern=None, full=False):
 
     if pattern:
         if full:
-            _pat = r'\d\:({0}\-\S+)'.format(pattern)
+            _pat = r'(\d\:{0}\-\S+)'.format(pattern)
         else:
-            _pat = r'\d\:({0})\-\S+'.format(pattern)
+            _pat = r'\d\:({0}\-\S+)'.format(pattern)
     else:
         if full:
-            _pat = r'\d\:(\w+\-\S+)'
+            _pat = r'(\d\:\w+\-\S+)'
         else:
-            _pat = r'\d\:(\w+)\-\S+'
+            _pat = r'\d\:(\w+\-\S+)'
     pat = re.compile(_pat)
 
     current_locks = []
     for item in ret:
         match = pat.search(item)
         if match:
-            current_locks.append(match.group(1))
+            if not full:
+                woarch = match.group(1).rsplit('.', 1)[0]
+                worel = woarch.rsplit('-', 1)[0]
+                wover = worel.rsplit('-', 1)[0]
+                _match = wover
+            else:
+                _match = match.group(1)
+            current_locks.append(_match)
     return current_locks
 
 
