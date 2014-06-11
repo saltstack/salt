@@ -48,7 +48,6 @@ class DigitalOceanTest(integration.ShellCase):
         profile_str = 'digitalocean-config:'
         provider = 'digital_ocean'
         providers = self.run_cloud('--list-providers')
-        print providers
         if profile_str not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
@@ -62,7 +61,6 @@ class DigitalOceanTest(integration.ShellCase):
                             'cloud.providers.d',
                             provider + '.conf')
         config = cloud_providers_config(path)
-        print config
         api = config['digitalocean-config']['digital_ocean']['api_key']
         client = config['digitalocean-config']['digital_ocean']['client_key']
         if api == '' or client == '':
@@ -81,20 +79,20 @@ class DigitalOceanTest(integration.ShellCase):
 
         # create the instance
         instance = self.run_cloud('-p digitalocean-test {0}'.format(name))
-        str = '        {0}'.format(name)
+        ret_str = '        {0}'.format(name)
 
         # check if instance with salt installed returned
         try:
-            self.assertIn(str, instance)
+            self.assertIn(ret_str, instance)
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(name))
             raise
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(name))
-        str = '            True'
+        ret_str = '            True'
         try:
-            self.assertIn(str, delete)
+            self.assertIn(ret_str, delete)
         except AssertionError:
             raise
 
@@ -104,10 +102,10 @@ class DigitalOceanTest(integration.ShellCase):
         '''
         name = 'digitalocean-testing'
         query = self.run_cloud('--query')
-        str = '        {0}:'.format(name)
+        ret_str = '        {0}:'.format(name)
 
         # if test instance is still present, delete it
-        if str in query:
+        if ret_str in query:
             self.run_cloud('-d {0} --assume-yes'.format(name))
 
 
