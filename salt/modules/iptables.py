@@ -14,7 +14,6 @@ import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 import salt.modules.cmdmod as salt_cmd
-HAS_CHECK = False
 
 
 def __virtual__():
@@ -23,10 +22,6 @@ def __virtual__():
     '''
     if not salt.utils.which('iptables'):
         return False
-
-    global HAS_CHECK
-    if '--check' in salt_cmd.run('iptables --help', output_loglevel='quiet'):
-        HAS_CHECK = True
 
     return True
 
@@ -484,6 +479,9 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
+
+    if '--check' in salt_cmd.run('iptables --help', output_loglevel='quiet'):
+        HAS_CHECK = True
 
     if HAS_CHECK is False:
         cmd = '{0}-save' . format(_iptables_cmd(family))
