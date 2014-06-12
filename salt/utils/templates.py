@@ -285,6 +285,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=unicode_context)[1]
         tmplstr = ''
+        # Don't include the line number, since it is misreported
+        # https://github.com/mitsuhiko/jinja2/issues/276
         raise SaltRenderError(
             'Jinja variable {0}{1}'.format(
                 exc, out),
