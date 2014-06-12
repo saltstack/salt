@@ -435,6 +435,25 @@ class Publisher(multiprocessing.Process):
                 context.term()
 
 
+class WorkerTrack(object):
+    def __init__(self, opts):
+        '''
+        Watches the worker procs
+        '''
+        self.opts = opts
+        self.counter = multiprocessing.Value('i', 0)
+        self.lock = multiprocessing.Lock()
+
+    def finished(self):
+        '''
+        To be called when a process finishes initializing
+        '''
+        with self.lock:
+            self.counter.value += 1
+        if int(self.opts['worker_threads']) == self.counter.value:
+            log.info('Master is ready to receive requests!')
+
+
 class ReqServer(object):
     '''
     Starts up the master request server, minions send results to this
@@ -457,6 +476,7 @@ class ReqServer(object):
         # Prepare the AES key
         self.key = key
         self.crypticle = crypticle
+        self.tracker = WorkerTrack(opts)
 
     def __bind(self):
         '''
@@ -476,11 +496,14 @@ class ReqServer(object):
             self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
-                    self.crypticle))
+                    self.crypticle,
+                    tracker=self.tracker)
+            )
 
         for ind, proc in enumerate(self.work_procs):
             log.info('Starting Salt worker process {0}'.format(ind))
             proc.start()
+            log.info('Successfully started Salt worker process on PID: {0}'.format(proc.pid))
 
         self.workers.bind(self.w_uri)
 
@@ -569,7 +592,8 @@ class MWorker(multiprocessing.Process):
             opts,
             mkey,
             key,
-            crypticle):
+            crypticle,
+            tracker=None):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
@@ -577,6 +601,7 @@ class MWorker(multiprocessing.Process):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
+        self.tracker = tracker
 
     def __bind(self):
         '''
@@ -590,6 +615,7 @@ class MWorker(multiprocessing.Process):
         log.info('Worker binding to socket {0}'.format(w_uri))
         try:
             socket.connect(w_uri)
+            self.tracker.finished()
             while True:
                 try:
                     package = socket.recv()
