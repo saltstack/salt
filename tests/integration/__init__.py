@@ -923,7 +923,7 @@ class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     @property
     def client(self):
-        return salt.client.LocalClient(
+        return salt.client.get_local_client(
             self.get_config_file_path(self._salt_client_config_file_name_)
         )
 
