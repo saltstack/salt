@@ -36,7 +36,7 @@ def enable(name):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_mod_enabled'](name)
+    is_enabled = __salt__['apache.check_mod_enabled']('{0}.load'.format(name))
     if not is_enabled:
         if __opts__['test']:
             msg = 'Apache module {0} is set to be enabled.'.format(name)
@@ -67,7 +67,7 @@ def disable(name):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_mod_enabled'](name)
+    is_enabled = __salt__['apache.check_mod_enabled']('{0}.load'.format(name))
     if is_enabled:
         if __opts__['test']:
             msg = 'Apache module {0} is set to be disabled.'.format(name)
