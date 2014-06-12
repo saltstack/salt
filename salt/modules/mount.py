@@ -111,7 +111,7 @@ def _active_mounts_solaris(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[2]] = {'device': comps[0],
                          'fstype': comps[4],
-                         'opts': comps[5].split(',')}
+                         'opts': comps[5].split('/')}
     return ret
 
 
