@@ -15,7 +15,10 @@ can be either present or absent:
 '''
 
 # Import python libs
-import grp
+try:
+    import grp
+except ImportError:
+    pass
 import sys
 
 
