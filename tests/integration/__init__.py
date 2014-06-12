@@ -35,7 +35,6 @@ INTEGRATION_TEST_DIR = os.path.dirname(
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
 SALT_LIBS = os.path.dirname(CODE_DIR)
-TRANSPORT = 'zeromq'
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -252,8 +251,6 @@ class TestDaemon(object):
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
-            global TRANSPORT
-            TRANSPORT = 'raet'
             self.start_raet_daemons()
 
         if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
@@ -926,15 +923,6 @@ class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     @property
     def client(self):
-        if TRANSPORT == 'raet':
-            mopts = salt.config.client_config(
-                    self.get_config_file_path(
-                        self._salt_client_config_file_name_
-                        )
-                    )
-            mopts['transport'] = 'raet'
-            mopts['raet_port'] = 64506
-            return salt.client.get_local_client(mopts=mopts)
         return salt.client.get_local_client(
             self.get_config_file_path(self._salt_client_config_file_name_)
         )
