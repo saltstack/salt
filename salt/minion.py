@@ -1438,6 +1438,7 @@ class Minion(MinionBase):
         self.poller.register(self.epull_sock, zmq.POLLIN)
 
         self._fire_master_minion_start()
+        log.info('Minion is ready to receive requests!')
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
