@@ -9,6 +9,8 @@ from __future__ import print_function
 import os
 import re
 import sys
+import copy
+import json
 import time
 import errno
 import shutil
@@ -17,7 +19,6 @@ import logging
 import tempfile
 import subprocess
 import multiprocessing
-import json
 from hashlib import md5
 from datetime import datetime, timedelta
 try:
@@ -73,6 +74,7 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
+CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +108,21 @@ def run_tests(*test_cases, **kwargs):
                 action='store_true',
                 help='Disable colour printing.'
             )
+            if needs_daemon:
+                self.add_option(
+                    '--transport',
+                    default='zeromq',
+                    choices=('zeromq', 'raet'),
+                    help='Set to raet to run integration tests with raet transport. Default: %default'
+                )
+
+        def validate_options(self):
+            SaltTestcaseParser.validate_options(self)
+            # Transplant configuration
+            transport = None
+            if needs_daemon:
+                transport = self.options.transport
+            TestDaemon.transplant_configs(transport=transport)
 
         def run_testcase(self, testcase, needs_daemon=True):  # pylint: disable=W0221
             if needs_daemon:
@@ -137,77 +154,16 @@ class TestDaemon(object):
         Start a master and minion
         '''
         running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-        self.master_opts = salt.config.master_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'master')
-        )
-        self.master_opts['user'] = running_tests_user
-        minion_config_path = os.path.join(
-            INTEGRATION_TEST_DIR, 'files', 'conf', 'minion'
-        )
+        self.master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
+        minion_config_path = os.path.join(TMP_CONF_DIR, 'minion')
         self.minion_opts = salt.config.minion_config(minion_config_path)
-        self.minion_opts['user'] = running_tests_user
+
         self.syndic_opts = salt.config.syndic_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic'),
+            os.path.join(TMP_CONF_DIR, 'syndic'),
             minion_config_path
         )
-        self.syndic_opts['user'] = running_tests_user
-
-        #if sys.version_info < (2, 7):
-        #    self.minion_opts['multiprocessing'] = False
-        self.sub_minion_opts = salt.config.minion_config(
-            os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf', 'sub_minion')
-        )
-        self.sub_minion_opts['root_dir'] = os.path.join(TMP, 'subsalt')
-        self.sub_minion_opts['user'] = running_tests_user
-        #if sys.version_info < (2, 7):
-        #    self.sub_minion_opts['multiprocessing'] = False
-        self.smaster_opts = salt.config.master_config(
-            os.path.join(
-                INTEGRATION_TEST_DIR, 'files', 'conf', 'syndic_master'
-            )
-        )
-        self.smaster_opts['user'] = running_tests_user
-
-        # Set up config options that require internal data
-        self.master_opts['pillar_roots'] = {
-            'base': [os.path.join(FILES, 'pillar', 'base')]
-        }
-        self.master_opts['file_roots'] = {
-            'base': [
-                os.path.join(FILES, 'file', 'base'),
-                # Let's support runtime created files that can be used like:
-                #   salt://my-temp-file.txt
-                TMP_STATE_TREE
-            ],
-            # Alternate root to test __env__ choices
-            'prod': [
-                os.path.join(FILES, 'file', 'prod'),
-                TMP_PRODENV_STATE_TREE
-            ]
-        }
-        self.master_opts['ext_pillar'].append(
-            {'cmd_yaml': 'cat {0}'.format(
-                os.path.join(
-                    FILES,
-                    'ext.yaml'
-                )
-            )}
-        )
-
-        self.master_opts['extension_modules'] = os.path.join(
-            INTEGRATION_TEST_DIR, 'files', 'extension_modules'
-        )
-
-        # clean up the old files
-        self._clean()
-
-        # Point the config values to the correct temporary paths
-        for name in ('hosts', 'aliases'):
-            optname = '{0}.file'.format(name)
-            optname_path = os.path.join(TMP, name)
-            self.master_opts[optname] = optname_path
-            self.minion_opts[optname] = optname_path
-            self.sub_minion_opts[optname] = optname_path
+        self.sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
+        self.smaster_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
 
         verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
                     os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
@@ -348,16 +304,7 @@ class TestDaemon(object):
         '''
         Fire up the raet daemons!
         '''
-        self.master_opts['transport'] = 'raet'
-        self.master_opts['raet_port'] = 64506
-        self.minion_opts['transport'] = 'raet'
-        self.minion_opts['raet_port'] = 64510
-        self.sub_minion_opts['transport'] = 'raet'
-        self.sub_minion_opts['raet_port'] = 64520
-        #self.smaster_opts['transport'] = 'raet'
-
         import salt.daemons.flo
-
         master = salt.daemons.flo.IofloMaster(self.master_opts)
         self.master_process = multiprocessing.Process(target=master.start)
         self.master_process.start()
@@ -537,6 +484,104 @@ class TestDaemon(object):
         return salt.client.get_local_client(
             mopts=self.master_opts
         )
+
+    @classmethod
+    def transplant_configs(cls, transport='zeromq'):
+        if os.path.isdir(TMP_CONF_DIR):
+            shutil.rmtree(TMP_CONF_DIR)
+        os.makedirs(TMP_CONF_DIR)
+        print(' * Transplanting configuration files to {0!r}'.format(TMP_CONF_DIR))
+        running_tests_user = pwd.getpwuid(os.getuid()).pw_name
+        master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
+        master_opts['user'] = running_tests_user
+
+        minion_config_path = os.path.join(CONF_DIR, 'minion')
+        minion_opts = salt.config._read_conf_file(minion_config_path)
+        minion_opts['user'] = running_tests_user
+        minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'master-minion-root')
+
+        syndic_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic'))
+        syndic_opts['user'] = running_tests_user
+
+        sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
+        sub_minion_opts['root_dir'] = os.path.join(TMP, 'sub-minion-root')
+        sub_minion_opts['user'] = running_tests_user
+
+        syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
+        syndic_master_opts['user'] = running_tests_user
+        syndic_master_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
+
+        if transport == 'raet':
+            master_opts['transport'] = 'raet'
+            master_opts['raet_port'] = 64506
+            minion_opts['transport'] = 'raet'
+            minion_opts['raet_port'] = 64510
+            sub_minion_opts['transport'] = 'raet'
+            sub_minion_opts['raet_port'] = 64520
+            #smaster_opts['transport'] = 'raet'
+
+        # Set up config options that require internal data
+        master_opts['pillar_roots'] = {
+            'base': [os.path.join(FILES, 'pillar', 'base')]
+        }
+        master_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                TMP_PRODENV_STATE_TREE
+            ]
+        }
+        master_opts['ext_pillar'].append(
+            {'cmd_yaml': 'cat {0}'.format(
+                os.path.join(
+                    FILES,
+                    'ext.yaml'
+                )
+            )}
+        )
+
+        master_opts['extension_modules'] = os.path.join(
+            INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+        )
+
+        # Point the config values to the correct temporary paths
+        for name in ('hosts', 'aliases'):
+            optname = '{0}.file'.format(name)
+            optname_path = os.path.join(TMP, name)
+            master_opts[optname] = optname_path
+            minion_opts[optname] = optname_path
+            sub_minion_opts[optname] = optname_path
+
+        # ----- Transcribe Configuration ---------------------------------------------------------------------------->
+        for entry in os.listdir(CONF_DIR):
+            if entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
+                # These have runtime computed values and will be handled
+                # differently
+                continue
+            entry_path = os.path.join(CONF_DIR, entry)
+            if os.path.isfile(entry_path):
+                shutil.copy(
+                    entry_path,
+                    os.path.join(TMP_CONF_DIR, entry)
+                )
+            elif os.path.isdir(entry_path):
+                shutil.copytree(
+                    entry_path,
+                    os.path.join(TMP_CONF_DIR, entry)
+                )
+
+        for entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
+            computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
+            open(os.path.join(TMP_CONF_DIR, entry), 'w').write(
+                yaml.dump(computed_config, default_flow_style=False)
+            )
+        # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
     def __exit__(self, type, value, traceback):
         '''
@@ -874,46 +919,10 @@ class AdaptedConfigurationTestCaseMixIn(object):
     __slots__ = ()
 
     def get_config_dir(self):
-        integration_config_dir = os.path.join(
-            INTEGRATION_TEST_DIR, 'files', 'conf'
-        )
-        if os.getuid() == 0:
-            # Running as root, the running user does not need to be updated
-            return integration_config_dir
-
-        for triplet in os.walk(integration_config_dir):
-            partial = triplet[0].replace(integration_config_dir, "")[1:]
-            if partial.startswith('_'):
-                continue
-            for fname in triplet[2]:
-                if fname.startswith(('.', '_')):
-                    continue
-                self.get_config_file_path(os.path.join(partial, fname))
         return TMP_CONF_DIR
 
     def get_config_file_path(self, filename):
-        integration_config_file = os.path.join(
-            INTEGRATION_TEST_DIR, 'files', 'conf', filename
-        )
-        if os.getuid() == 0:
-            # Running as root, the running user does not need to be updated
-            return integration_config_file
-
-        updated_config_path = os.path.join(TMP_CONF_DIR, filename)
-        partial = os.path.dirname(updated_config_path)
-        if not os.path.isdir(partial):
-            os.makedirs(partial)
-
-        if not os.path.isfile(updated_config_path):
-            self.__update_config(integration_config_file, updated_config_path)
-        return updated_config_path
-
-    def __update_config(self, source, dest):
-        if not os.path.isfile(dest):
-            running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-            configuration = yaml.load(open(source).read())
-            configuration['user'] = running_tests_user
-            open(dest, 'w').write(yaml.dump(configuration))
+        return os.path.join(TMP_CONF_DIR, filename)
 
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
