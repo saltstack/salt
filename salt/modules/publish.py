@@ -49,6 +49,8 @@ def _publish(
         return {}
 
     arg = [salt.utils.args.yamlify_arg(arg)]
+    if len(arg) == 1 and arg[0] is None:
+        arg = []
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
@@ -189,6 +191,8 @@ def runner(fun, arg=None, timeout=5):
         salt publish.runner manage.down
     '''
     arg = [salt.utils.args.yamlify_arg(arg)]
+    if len(arg) == 1 and arg[0] is None:
+        arg = []
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'

@@ -52,7 +52,7 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.fib', ['40']]
+            ['minion', 'test.fib', 40]
         )
         self.assertTrue(ret)
         self.assertEqual(ret['minion']['ret'][0][-1], 34)
