@@ -546,6 +546,7 @@ FREEZER_INCLUDES = [
     'sqlite3',
     'email',
     'email.mime.*',
+    'sqlite3',
 ]
 
 if HAS_ZMQ and hasattr(zmq, 'pyzmq_version_info'):
