@@ -548,10 +548,16 @@ class TestDaemon(object):
         self.minion_process.join()
         salt.master.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
-        salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
-        self.syndic_process.join()
-        salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
-        self.smaster_process.join()
+        try:
+            salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
+            self.syndic_process.join()
+        except AttributeError:
+            pass
+        try:
+            salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
+            self.smaster_process.join()
+        except AttributeError:
+            pass
         self._exit_mockbin()
         self._exit_ssh()
         self._clean()
