@@ -63,7 +63,7 @@ class PostgresTestCase(TestCase):
                           owner='otheruser',
                           runas='foo')
         postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
             '--host testhost --port testport --dbname maint_db '
             '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
             host='testhost', user='testuser',
@@ -84,7 +84,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
             '--host testhost --port testport --dbname maint_db -c '
             '\'CREATE DATABASE "dbname" '
             'WITH TABLESPACE = testspace OWNER = "otheruser"\'',
@@ -151,7 +151,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --username testuser "
+            "/usr/bin/pgsql --no-align --no-readline --no-password --username testuser "
             "--host testhost --port testport --dbname maint_db "
             "-c 'DROP DATABASE test_db'",
             host='testhost', user='testuser',
@@ -178,7 +178,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
             '--host testhost --port testport '
             '--dbname maint_db -c (\'|\")CREATE ROLE',
             postgres._run_psql.call_args[0][0]))
@@ -197,7 +197,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --username testuser "
+            "/usr/bin/pgsql --no-align --no-readline --no-password --username testuser "
             "--host testhost --port testport "
             "--dbname maint_db -c 'DROP ROLE testgroup'",
             host='testhost', user='testuser',
@@ -252,7 +252,7 @@ class PostgresTestCase(TestCase):
         )
         call = postgres._run_psql.call_args[0][0]
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser'
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser'
             ' --host testhost --port testport'
             ' --dbname maint_test -c (\'|\")CREATE ROLE',
             call))
@@ -349,7 +349,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --username test_user "
+            "/usr/bin/pgsql --no-align --no-readline --no-password --username test_user "
             "--host test_host --port test_port "
             "--dbname maint_db -c 'DROP ROLE test_user'",
             host='test_host', port='test_port', user='test_user',
@@ -379,7 +379,7 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
@@ -411,7 +411,7 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN;'
@@ -443,7 +443,7 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN NOPASSWORD;'
@@ -475,7 +475,7 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
@@ -497,7 +497,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username test_user '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
             '--host test_host --port test_port '
             '--dbname test_maint '
             '-c (\'|\")SELECT setting FROM pg_catalog.pg_settings',

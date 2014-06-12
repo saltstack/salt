@@ -202,9 +202,8 @@ def _psql_cmd(*args, **kwargs):
 
     cmd = [salt.utils.which('psql'),
            '--no-align',
-           '--no-readline']
-    if password is None:
-        cmd += ['--no-password']
+           '--no-readline',
+           '--no-password']         # It is never acceptable to issue a password prompt.
     if user:
         cmd += ['--username', user]
     if host:
