@@ -108,6 +108,7 @@ Full list of builtin state modules
     rvm
     saltmod
     selinux
+    serverdensity_device
     service
     smtp
     ssh_auth
