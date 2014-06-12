@@ -20,6 +20,10 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. admonition:: Download here
 
+    * 2014.1.5
+    * `Salt-Minion-2014.1.5-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-win32-Setup.exe.md5>`__
+    * `Salt-Minion-2014.1.5-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-AMD64-Setup.exe.md5>`__
+
     * 2014.1.4
     * `Salt-Minion-2014.1.4-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-win32-Setup.exe.md5>`__
     * `Salt-Minion-2014.1.4-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-AMD64-Setup.exe.md5>`__
