@@ -54,3 +54,6 @@ Vagrantfile
 # locale/zh_CN/LC_MESSAGES/topics/virt/nic.mo
 *.mo
 .doctrees
+
+# Allow a user to set their own _version.py for testing
+_version.py
