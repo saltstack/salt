@@ -42,13 +42,14 @@ def _find_chocolatey():
     '''
     Returns the full path to chocolatey.bat on the host.
     '''
-    choc_default = 'C:\\Chocolatey\\bin\\chocolatey.bat'
+    choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
+                     'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.bat', ]
 
     choc_path = __salt__['cmd.which']('chocolatey.bat')
     if not choc_path:
-        if __salt__['cmd.has_exec'](choc_default):
-            choc_path = choc_default
-
+        for choc_dir in choc_defaults:
+            if __salt__['cmd.has_exec'](choc_dir):
+                choc_path = choc_dir
     return choc_path
 
 
