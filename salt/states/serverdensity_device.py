@@ -1,59 +1,59 @@
 # -*- coding: utf-8 -*-
 '''
 Monitor Server with Server Density
-========================
+==================================
+
+.. versionadded:: Helium
 
 `Server Density <https://www.serverdensity.com/>`_
 Is a hosted monitoring service.
 
 .. warning::
 
-    This state module is beta. It might be changed later to include more or less automation.
+    This state module is beta. It might be changed later to include more or
+    less automation.
 
 .. note::
-    This state modules requires a pillar for authentication with Server Density:
-      .. code-block:: yaml
 
-    serverdensity:
-        api_token: "b97da80a41c4f61bff05975ee51eb1aa"
-        account_url: "https://your-account.serverdensity.io"
+    This state module requires a pillar for authentication with Server Density:
+
+    .. code-block:: yaml
+
+        serverdensity:
+          api_token: "b97da80a41c4f61bff05975ee51eb1aa"
+          account_url: "https://your-account.serverdensity.io"
 
 .. note::
-    Although Server Density allows duplicate device names in its database,
-    this module will raise exception if you try monitoring devices with the same name.
-    It is easier to managed this way and adds some `saltiness` to the module.
+
+    Although Server Density allows duplicate device names in its database, this
+    module will raise an exception if you try monitoring devices with the same
+    name.
 
 
-.. to-do::
-    Add a plugin support.
-    Add notification support
+Example:
 
-Available Functions
--------------------
+.. code-block:: yaml
 
-- monitored
-
-  .. code-block:: yaml
-        'server_name':
-          serverdensity_device.monitored
-
-.. versionadded:: Helium
+    'server_name':
+      serverdensity_device.monitored
 '''
+
+# TODO:
+#
+#  Add a plugin support
+#  Add notification support
 
 import logging
 
 log = logging.getLogger(__name__)
 
 
-def get_salt_params():
+def _get_salt_params():
     '''
     Try to get all sort of parameters for Server Density server info.
-    Ref: https://apidocs.serverdensity.com/Inventory/Devices/Creating
-    Note:
-        Missing publicDNS and publicIPs parameters.
-        There might be way of getting them with salt-cloud.
 
-    .. versionadded:: Helium
+    NOTE: Missing publicDNS and publicIPs parameters. There might be way of
+    getting them with salt-cloud.
     '''
     all_stats = __salt__['status.all_status']()
     all_grains = __salt__['grains.items']()
@@ -81,45 +81,49 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
         Device name in Server Density.
 
     salt_name
-        True (default): take name from grains['id'].
-        False: use name provided.
+        If ``True`` (default), takes the name from the ``id`` grain. If
+        ``False``, the provided name is used.
 
     group
         Group name under with device will appear in Server Density dashboard.
         Default - `None`.
 
     salt_params
-        True (default): will take some parameters from grains and status.all_status execution module.
-        False: will not take any parameters.
+        If ``True`` (default), needed config parameters will be sourced from
+        grains and from :mod:`status.all_status
+        <salt.modules.status.all_status>`.
 
     params
         Add parameters that you want to appear in the Server Density dashboard.
-        Will overwrite the `salt_params` parameters.
-        Ref: `https://apidocs.serverdensity.com/Inventory/Devices/Creating`
+        Will overwrite the `salt_params` parameters. For more info, see the
+        `API docs`__.
 
-    Usage example
+    .. __: https://apidocs.serverdensity.com/Inventory/Devices/Creating
 
-        .. code-block:: yaml
-            'server_name':
-              serverdensity_device.monitored
+    Usage example:
 
-        .. code-block:: yaml
-            'server_name':
-              serverdensity_device.monitored:
-                - group: web-servers
+    .. code-block:: yaml
 
-        .. code-block:: yaml
-            'my_special_server':
-              serverdensity_device.monitored:
-                - salt_name: False
-                - group: web-servers
-                - cpuCores: 2
-                - os: CentOS
+        'server_name':
+          serverdensity_device.monitored
 
-    .. versionadded:: Helium
+    .. code-block:: yaml
+
+        'server_name':
+          serverdensity_device.monitored:
+            - group: web-servers
+
+    .. code-block:: yaml
+
+        'my_special_server':
+          serverdensity_device.monitored:
+            - salt_name: False
+            - group: web-servers
+            - cpuCores: 2
+            - os: CentOS
     '''
     ret = {'name': name, 'changes': {}, 'result': None, 'comment': ''}
-    params_from_salt = get_salt_params()
+    params_from_salt = _get_salt_params()
 
     if salt_name:
         name = params_from_salt.pop('name')
@@ -128,7 +132,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
     if group:
         params['group'] = group
 
-    # override salt_params with given params,
+    # override salt_params with given params
     if salt_params:
         for k, v in params.items():
             params_from_salt[k] = v
@@ -136,7 +140,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
     else:
         params_to_use = params
 
-    device_in_sd = True if __salt__['serverdensity_devices.ls'](name=name) else False
+    device_in_sd = True if __salt__['serverdensity_device.ls'](name=name) else False
     sd_agent_installed = True if 'sd-agent' in __salt__['pkg.list_pkgs']() else False
 
     if device_in_sd and sd_agent_installed:
@@ -146,12 +150,12 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
         return ret
 
     if not device_in_sd:
-        device = __salt__['serverdensity_devices.create'](name, **params_from_salt)
+        device = __salt__['serverdensity_device.create'](name, **params_from_salt)
         agent_key = device['agentKey']
         ret['comment'] = 'Device created in Server Density db.'
         ret['changes'] = {'device_created': device}
     elif device_in_sd:
-        device = __salt__['serverdensity_devices.ls'](name=name)[0]
+        device = __salt__['serverdensity_device.ls'](name=name)[0]
         agent_key = device['agentKey']
         ret['comment'] = 'Device was already in Server Density db.'
     else:
@@ -160,7 +164,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
         ret['changes'] = {}
         return ret
 
-    installed_agent = __salt__['serverdensity_devices.install_agent'](agent_key)
+    installed_agent = __salt__['serverdensity_device.install_agent'](agent_key)
 
     ret['result'] = True
     ret['comment'] = 'Successfully installed agent and created device in Server Density db.'
