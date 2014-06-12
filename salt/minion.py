@@ -1448,7 +1448,10 @@ class Minion(MinionBase):
 
         # On first startup execute a state run if configured to do so
         self._state_run()
-        time.sleep(.5)
+        if self.opts['startup_states']:
+            startup_sleep_length = 0.5
+            log.debug('Sleeping for {0}s before running startup states'.format(startup_sleep_length))
+            time.sleep(startup_sleep_length)
 
         loop_interval = int(self.opts['loop_interval'])
 
