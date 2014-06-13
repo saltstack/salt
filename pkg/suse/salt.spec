@@ -17,7 +17,7 @@
 
 
 Name:           salt
-Version:        2014.1.4
+Version:        2014.1.5
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -76,6 +76,17 @@ Requires(pre): %fillup_prereq
 %if 0%{?suse_version} < 1210
 Requires(pre): %insserv_prereq
 %endif
+
+%if 0%{?sles_version} > 10 && 0%{?sles_version} < 12
+%define with_bashcomp 0
+%else
+%define with_bashcomp 1
+%endif
+
+%if %with_bashcomp
+BuildRequires:  bash-completion
+%endif #with_bashcomp
+
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version} && 0%{?suse_version} <= 1110
@@ -197,6 +208,20 @@ Requires(pre):  %fillup_prereq
 Salt ssh is a master running without zmq.
 it enables the management of minions over a ssh connection.
 
+%if %with_bashcomp
+
+%package bash-completion
+Summary:        Bash Completion for %{name}
+Group:          System/Management
+Requires:       %{name} = %{version}
+Requires:       bash-completion
+BuildArch:      noarch
+
+%description bash-completion
+Bash command line completion support for %{name}.
+
+%endif # with_bashcomp
+
 %prep
 %setup -q
 
@@ -261,6 +286,11 @@ install -Dpm 0644  pkg/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotat
 #
 ## install SuSEfirewall2 rules
 install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
+#
+## install completion scripts
+%if %with_bashcomp
+install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
+%endif #with_bashcomp
 
 %check
 # don't test on factory because of ssl2 method deprication
@@ -416,6 +446,14 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %attr(755,root,root)%{python_sitelib}/salt/cloud/deploy/*.sh
 %{python_sitelib}/*
-%doc LICENSE AUTHORS README.rst HACKING.rst 
+%doc LICENSE AUTHORS README.rst HACKING.rst
+
+%if %with_bashcomp
+
+%files bash-completion
+%defattr(-,root,root)
+%config %{_sysconfdir}/bash_completion.d/%{name}
+
+%endif #with_bashcomp
 
 %changelog
