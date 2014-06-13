@@ -89,7 +89,7 @@ def clean_fsbackend(opts):
                 log.debug('Clearing {0}fs env cache'.format(backend))
                 try:
                     os.remove(env_cache)
-                except (IOError, OSError) as exc:
+                except OSError as exc:
                     log.critical(
                         'Unable to clear env cache file {0}: {1}'
                         .format(env_cache, exc)
@@ -108,7 +108,7 @@ def clean_fsbackend(opts):
                 cache_file = os.path.join(file_lists_dir, file_lists_cache)
                 try:
                     os.remove(cache_file)
-                except (IOError, OSError) as exc:
+                except OSError as exc:
                     log.critical(
                         'Unable to file_lists cache file {0}: {1}'
                         .format(cache_file, exc)
