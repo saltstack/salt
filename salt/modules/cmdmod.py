@@ -375,8 +375,8 @@ def _run(cmd,
             # Don't override if the user has passed LC_ALL
             env.setdefault('LC_ALL', 'C')
         else:
-            # On Windows set the codepage to US English.
-            cmd = 'chcp 437 > nul & ' + cmd
+            # On Windows set the codepage to UTF-8.
+            cmd = 'chcp 65001 > nul & ' + cmd
 
     if clean_env:
         run_env = env
