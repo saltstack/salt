@@ -88,7 +88,7 @@ def get(key, default='', delim=':'):
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__grains__, key, default, delim)
+    return salt.utils.traverse_dict_and_list(__grains__, key, default, delim)
 
 
 def has_value(key):
