@@ -28,6 +28,7 @@ except ImportError:
 import os
 import locale
 from distutils.version import LooseVersion  # pylint: disable=E0611
+import re
 
 # Import salt libs
 import salt.utils
@@ -284,32 +285,53 @@ def _search_software(target):
 
 def _get_msi_software():
     '''
-    This searches the msi product databases and returns a dict keyed
-    on the product name and all the product properties in another dict
+    Uses powershell to search the msi product databases, returns a
+    dict keyed on the product name as the key and the version as the
+    value. If powershell is not available, returns `{}`
     '''
     win32_products = {}
-    this_computer = "."
-    wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-    swbem_services = wmi_service.ConnectServer(this_computer, "root\\cimv2")
 
-    # Find out whether the Windows Installer provider is present. It
-    # is optional on Windows Server 2003 and 64-bit operating systems See
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa392726%28v=vs.85%29.aspx#windows_installer_provider
-    try:
-        swbem_services.Get("Win32_Product")
-    except pywintypes.com_error:
-        log.warning("Windows Installer (MSI) provider not found; package management will not work correctly on MSI packages")
-        return win32_products
+    # Don't use WMI to select from `Win32_product`, that has nasty
+    # side effects. Use the `WindowsInstaller.Installer` COM object's
+    # `ProductsEx`. Jumping through powershell because `ProductsEx` is
+    # a get property that takes 3 arguments, and `win32com` can't call
+    # that
+    #
+    # see https://github.com/saltstack/salt/issues/12550 for detail
 
-    products = swbem_services.ExecQuery("Select * from Win32_Product")
-    for product in products:
-        try:
-            prd_name = product.Name.encode('ascii', 'ignore')
-            prd_ver = product.Version.encode('ascii', 'ignore')
-            win32_products[prd_name] = prd_ver
-        except Exception:
-            pass
+    # powershell script to fetch (name, version) from COM, and write
+    # without word-wrapping. Attempting to target minimal powershell
+    # versions
+    ps = '''
+$msi = New-Object -ComObject WindowsInstaller.Installer;
+$msi.GetType().InvokeMember('ProductsEx', 'GetProperty', $null, $msi, ('', 's-1-1-0', 7))
+| select @{
+      name='name';
+      expression={$_.GetType().InvokeMember('InstallProperty', 'GetProperty', $null, $_, ('ProductName'))}
+    },
+    @{
+      name='version';
+      expression={$_.GetType().InvokeMember('InstallProperty', 'GetProperty', $null, $_, ('VersionString'))}
+    }
+| Write-host
+'''.replace('\n', ' ')  # make this a one-liner
+
+    ret = __salt__['cmd.run_all'](ps, shell='powershell')
+    # sometimes the powershell reflection fails on a single product,
+    # giving us a non-zero return code AND useful output. Ignore RC
+    # and just try to process stdout, which should empty if the cmd
+    # failed.
+    #
+    # each line of output looks like:
+    #
+    # `@{name=PRD_NAME; version=PRD_VER}`
+    pattern = r'@{name=(.+); version=(.+)}'
+    for m in re.finditer(pattern, ret['stdout']):
+        (prd_name, prd_ver) = m.groups()
+        win32_products[prd_name] = prd_ver
+
     return win32_products
+
 
 
 def _get_reg_software():
