@@ -474,7 +474,9 @@ def versions_information(include_salt_cloud=False):
         ('pycrypto', 'Crypto', '__version__'),
         ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
+        ('ioflo', 'ioflo', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
+        ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version')
     ]
 
