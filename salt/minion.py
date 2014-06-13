@@ -1338,17 +1338,20 @@ class Minion(MinionBase):
         elif func == 'modify':
             name = data.get('name', None)
             schedule = data.get('schedule', None)
-            self.schedule.modify_job(name, schedule)
+            where = data.get('where', None)
+            self.schedule.modify_job(name, schedule, where)
         elif func == 'enable':
             self.schedule.enable_schedule()
         elif func == 'disable':
             self.schedule.disable_schedule()
         elif func == 'enable_job':
             job = data.get('job', None)
-            self.schedule.enable_job(job)
+            where = data.get('where', None)
+            self.schedule.enable_job(job, where)
         elif func == 'disable_job':
             job = data.get('job', None)
-            self.schedule.disable_job(job)
+            where = data.get('where', None)
+            self.schedule.disable_job(job, where)
         elif func == 'reload':
             schedule = data.get('schedule', None)
             self.schedule.reload(schedule)

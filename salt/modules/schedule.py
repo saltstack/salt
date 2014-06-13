@@ -53,7 +53,10 @@ def list_(show_all=False):
         salt '*' schedule.list show_all=True
     '''
 
-    schedule = __opts__['schedule']
+    schedule = __opts__['schedule'].copy()
+    if 'schedule' in __pillar__:
+        schedule.update(__pillar__['schedule'])
+
     for job in schedule.keys():
         if job == 'enabled':
             continue
@@ -99,7 +102,10 @@ def purge():
     ret = {'comment': [],
            'result': True}
 
-    schedule = __opts__['schedule']
+    schedule = __opts__['schedule'].copy()
+    if 'schedule' in __pillar__:
+        schedule.update(__pillar__['schedule'])
+
     for job in schedule.keys():
         if job.startswith('_'):
             continue
@@ -138,6 +144,14 @@ def delete(name):
         else:
             ret['comment'] = 'Failed to delete job {0} from schedule.'.format(name)
             ret['result'] = False
+    elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
+        log.debug('found job in pillar')
+        out = __salt__['event.fire']({'job': name, 'where': 'pillar', 'func': 'delete'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to delete job {0} from schedule.'.format(name)
+            ret['result'] = False
     else:
         ret['comment'] = 'Job {0} does not exist.'.format(name)
         ret['result'] = False
@@ -158,7 +172,11 @@ def add(name, **kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if name in __opts__['schedule']:
+    current_schedule = __opts__['schedule'].copy()
+    if 'schedule' in __pillar__:
+        current_schedule.update(__pillar__['schedule'])
+
+    if name in current_schedule:
         ret['comment'] = 'Job {0} already exists in schedule.'.format(name)
         ret['result'] = True
         return ret
@@ -215,7 +233,11 @@ def modify(name, **kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if name not in __opts__['schedule']:
+    current_schedule = __opts__['schedule'].copy()
+    if 'schedule' in __pillar__:
+        current_schedule.update(__pillar__['schedule'])
+
+    if name not in current_schedule:
         ret['comment'] = 'Job {0} does not exist in schedule.'.format(name)
         ret['result'] = False
         return ret
@@ -244,12 +266,20 @@ def modify(name, **kwargs):
         if item in kwargs:
             schedule[item] = kwargs[item]
 
-    out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'func': 'modify'}, 'manage_schedule')
-    if out:
-        ret['comment'] = 'Modified job: {0} in schedule.'.format(name)
-    else:
-        ret['comment'] = 'Failed to modify job {0} in schedule.'.format(name)
-        ret['result'] = False
+    if name in __opts__['schedule']:
+        out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'func': 'modify'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Modified job: {0} in schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to modify job {0} in schedule.'.format(name)
+            ret['result'] = False
+    elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
+        out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'where': 'pillar', 'func': 'modify'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Modified job: {0} in schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to modify job {0} in schedule.'.format(name)
+            ret['result'] = False
     return ret
 
 
@@ -273,6 +303,13 @@ def enable_job(name):
 
     if name in __opts__['schedule']:
         out = __salt__['event.fire']({'job': name, 'func': 'enable_job'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to enable job {0} from schedule.'.format(name)
+            ret['result'] = False
+    elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
+        out = __salt__['event.fire']({'job': name, 'where': 'pillar', 'func': 'enable_job'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
         else:
@@ -304,6 +341,13 @@ def disable_job(name):
 
     if name in __opts__['schedule']:
         out = __salt__['event.fire']({'job': name, 'func': 'disable_job'}, 'manage_schedule')
+        if out:
+            ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
+        else:
+            ret['comment'] = 'Failed to disable job {0} from schedule.'.format(name)
+            ret['result'] = False
+    elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
+        out = __salt__['event.fire']({'job': name, 'where': 'pillar', 'func': 'disable_job'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
         else:
@@ -361,7 +405,7 @@ def save():
     try:
         with salt.utils.fopen(sfn, 'w+') as fp_:
             fp_.write(yaml_out)
-        ret['comment'] = 'Schedule saved to {0}.'.format(sfn)
+        ret['comment'] = 'Schedule (non-pillar items) saved to {0}.'.format(sfn)
     except (IOError, OSError):
         ret['comment'] = 'Unable to write to schedule file at {0}. Check permissions.'.format(sfn)
         ret['result'] = False
@@ -428,6 +472,15 @@ def reload_():
     ret = {'comment': [],
            'result': True}
 
+    # If there a schedule defined in pillar, refresh it.
+    if 'schedule' in __pillar__:
+        out = __salt__['event.fire']({}, 'pillar_refresh')
+        if out:
+            ret['comment'].append('Reloaded schedule from pillar on minion.')
+        else:
+            ret['comment'].append('Failed to reload schedule from pillar on minion.')
+            ret['result'] = False
+
     # move this file into an configurable opt
     sfn = '{0}/{1}/schedule.conf'.format(__opts__['config_dir'], os.path.dirname(__opts__['default_include']))
     if os.path.isfile(sfn):
@@ -435,16 +488,16 @@ def reload_():
             try:
                 schedule = yaml.safe_load(fp_.read())
             except Exception as e:
-                ret['comment'] = 'Unable to read existing schedule file: {0}'.format(e)
+                ret['comment'].append('Unable to read existing schedule file: {0}'.format(e))
 
-    if 'schedule' in schedule and schedule['schedule']:
-        out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
-        if out:
-            ret['comment'] = 'Reloaded schedule on minion.'
+        if 'schedule' in schedule and schedule['schedule']:
+            out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
+            if out:
+                ret['comment'].append('Reloaded schedule on minion from schedule.conf.')
+            else:
+                ret['comment'].append('Failed to reload schedule on minion from schedule.conf.')
+                ret['result'] = False
         else:
-            ret['comment'] = 'Failed to reload schedule on minion.'
+            ret['comment'].append('Failed to reload schedule on minion.  Saved file is empty or invalid.')
             ret['result'] = False
-    else:
-        ret['comment'] = 'Failed to reload schedule on minion.  Saved file is empty or invalid.'
-        ret['result'] = False
     return ret

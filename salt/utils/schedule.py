@@ -199,6 +199,11 @@ class Schedule(object):
         if name in self.opts['schedule']:
             del self.opts['schedule'][name]
 
+        # If job is in pillar, delete it there too
+        if 'schedule' in self.opts['pillar']:
+            if name in self.opts['pillar']['schedule']:
+                del self.opts['pillar']['schedule'][name]
+
         # remove from self.intervals
         if name in self.intervals:
             del self.intervals[name]
@@ -221,30 +226,43 @@ class Schedule(object):
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
-                      'job: {0}'.format(new_job))
+                     'job: {0}'.format(new_job))
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
         self.opts['schedule'].update(data)
 
-    def enable_job(self, name):
+    def enable_job(self, name, where=None):
         '''
         Enable a job in the scheduler.
         '''
-        self.opts['schedule'][name]['enabled'] = True
+        if where == 'pillar':
+            self.opts['pillar']['schedule'][name]['enabled'] = True
+        else:
+            self.opts['schedule'][name]['enabled'] = True
+        log.info('Enabling job {0} in scheduler'.format(name))
 
-    def disable_job(self, name):
+    def disable_job(self, name, where=None):
         '''
         Disable a job in the scheduler.
         '''
-        self.opts['schedule'][name]['enabled'] = False
+        if where == 'pillar':
+            self.opts['pillar']['schedule'][name]['enabled'] = False
+        else:
+            self.opts['schedule'][name]['enabled'] = False
+        log.info('Disabling job {0} in scheduler'.format(name))
 
-    def modify_job(self, name, schedule):
+    def modify_job(self, name, schedule, where=None):
         '''
         Modify a job in the scheduler.
         '''
-        if name in self.opts['schedule']:
-            self.delete_job(name)
-        self.opts['schedule'][name] = schedule
+        if where == 'pillar':
+            if name in self.opts['pillar']['schedule']:
+                self.delete_job(name)
+            self.opts['pillar']['schedule'][name] = schedule
+        else:
+            if name in self.opts['schedule']:
+                self.delete_job(name)
+            self.opts['schedule'][name] = schedule
 
     def enable_schedule(self):
         '''
