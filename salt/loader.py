@@ -408,11 +408,11 @@ def queues(opts):
     return load.gen_functions()
 
 
-def db(opts, functions=None, whitelist=None):
+def sdb(opts, functions=None, whitelist=None):
     '''
-    Call out to a database
+    Make a very small database call
     '''
-    load = _create_loader(opts, 'db', 'db')
+    load = _create_loader(opts, 'sdb', 'sdb')
     pack = {'name': '__saltdb__',
             'value': functions}
     return LazyLoader(load,
