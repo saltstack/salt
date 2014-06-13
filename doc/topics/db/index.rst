@@ -11,7 +11,7 @@ interface, it could conceptually be used for a number of other purposes.
 
 SDB was added to Salt in version Helium.
 
-SB Configuration
+SDB Configuration
 ================
 In order to use the SDB interface, a configuration profile must be set up in
 either the master or minion configuration file. The configuration stanza
@@ -54,7 +54,7 @@ OpenStack account. The profile might look like:
 
     kevinopenstack:
       driver: keyring
-      table: salt.cloud.openstack.kevin
+      service salt.cloud.openstack.kevin
 
 And the URI used to reference the password might look like:
 
