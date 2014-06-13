@@ -10,10 +10,8 @@ A module to manage software on Windows
 
 # Import third party libs
 try:
-    import win32com.client
     import win32api
     import win32con
-    import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -331,7 +329,6 @@ $msi.GetType().InvokeMember('ProductsEx', 'GetProperty', $null, $msi, ('', 's-1-
         win32_products[prd_name] = prd_ver
 
     return win32_products
-
 
 
 def _get_reg_software():
