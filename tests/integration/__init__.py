@@ -163,43 +163,7 @@ class TestDaemon(object):
             minion_config_path
         )
         self.sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
-        self.smaster_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
-
-        verify_env([os.path.join(self.master_opts['pki_dir'], 'minions'),
-                    os.path.join(self.master_opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.master_opts['pki_dir'],
-                                 'minions_rejected'),
-                    os.path.join(self.master_opts['cachedir'], 'jobs'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'minions'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'minions_pre'),
-                    os.path.join(self.smaster_opts['pki_dir'],
-                                 'minions_rejected'),
-                    os.path.join(self.smaster_opts['cachedir'], 'jobs'),
-                    os.path.join(self.master_opts['pki_dir'], 'accepted'),
-                    os.path.join(self.master_opts['pki_dir'], 'rejected'),
-                    os.path.join(self.master_opts['pki_dir'], 'pending'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'accepted'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'rejected'),
-                    os.path.join(self.smaster_opts['pki_dir'], 'pending'),
-                    os.path.join(self.minion_opts['pki_dir'], 'accepted'),
-                    os.path.join(self.minion_opts['pki_dir'], 'rejected'),
-                    os.path.join(self.minion_opts['pki_dir'], 'pending'),
-                    os.path.join(self.sub_minion_opts['pki_dir'], 'accepted'),
-                    os.path.join(self.sub_minion_opts['pki_dir'], 'rejected'),
-                    os.path.join(self.sub_minion_opts['pki_dir'], 'pending'),
-                    os.path.dirname(self.master_opts['log_file']),
-                    self.minion_opts['extension_modules'],
-                    self.sub_minion_opts['extension_modules'],
-                    self.sub_minion_opts['pki_dir'],
-                    self.master_opts['sock_dir'],
-                    self.smaster_opts['sock_dir'],
-                    self.sub_minion_opts['sock_dir'],
-                    self.minion_opts['sock_dir'],
-                    TMP_STATE_TREE,
-                    TMP_PRODENV_STATE_TREE,
-                    TMP,
-                    ],
-                   running_tests_user)
+        self.syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
 
         # Set up PATH to mockbin
         self._enter_mockbin()
@@ -292,7 +256,7 @@ class TestDaemon(object):
         )
         self.sub_minion_process.start()
 
-        smaster = salt.master.Master(self.smaster_opts)
+        smaster = salt.master.Master(self.syndic_master_opts)
         self.smaster_process = multiprocessing.Process(target=smaster.start)
         self.smaster_process.start()
 
@@ -321,7 +285,7 @@ class TestDaemon(object):
         # Wait for the daemons to all spin up
         time.sleep(5)
 
-        #smaster = salt.daemons.flo.IofloMaster(self.smaster_opts)
+        #smaster = salt.daemons.flo.IofloMaster(self.syndic_master_opts)
         #self.smaster_process = multiprocessing.Process(target=smaster.start)
         #self.smaster_process.start()
 
@@ -518,7 +482,7 @@ class TestDaemon(object):
             minion_opts['raet_port'] = 64510
             sub_minion_opts['transport'] = 'raet'
             sub_minion_opts['raet_port'] = 64520
-            #smaster_opts['transport'] = 'raet'
+            #syndic_master_opts['transport'] = 'raet'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = {
@@ -582,6 +546,57 @@ class TestDaemon(object):
                 yaml.dump(computed_config, default_flow_style=False)
             )
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
+
+        # ----- Verify Environment ---------------------------------------------------------------------------------->
+        master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
+        minion_config_path = os.path.join(TMP_CONF_DIR, 'minion')
+        minion_opts = salt.config.minion_config(minion_config_path)
+
+        syndic_opts = salt.config.syndic_config(
+            os.path.join(TMP_CONF_DIR, 'syndic'),
+            minion_config_path
+        )
+        sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
+        syndic_master_opts_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
+
+        verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
+                    os.path.join(master_opts['pki_dir'], 'minions_pre'),
+                    os.path.join(master_opts['pki_dir'], 'minions_rejected'),
+                    os.path.join(master_opts['cachedir'], 'jobs'),
+                    os.path.join(syndic_master_opts['pki_dir'], 'minions'),
+                    os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
+                    os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
+                    os.path.join(syndic_master_opts['cachedir'], 'jobs'),
+                    os.path.join(master_opts['pki_dir'], 'accepted'),
+                    os.path.join(master_opts['pki_dir'], 'rejected'),
+                    os.path.join(master_opts['pki_dir'], 'pending'),
+                    os.path.join(syndic_master_opts['pki_dir'], 'accepted'),
+                    os.path.join(syndic_master_opts['pki_dir'], 'rejected'),
+                    os.path.join(syndic_master_opts['pki_dir'], 'pending'),
+
+                    os.path.join(minion_opts['pki_dir'], 'accepted'),
+                    os.path.join(minion_opts['pki_dir'], 'rejected'),
+                    os.path.join(minion_opts['pki_dir'], 'pending'),
+                    os.path.join(sub_minion_opts['pki_dir'], 'accepted'),
+                    os.path.join(sub_minion_opts['pki_dir'], 'rejected'),
+                    os.path.join(sub_minion_opts['pki_dir'], 'pending'),
+                    os.path.dirname(master_opts['log_file']),
+                    #minion_opts['extension_modules'],
+                    #sub_minion_opts['extension_modules'],
+                    sub_minion_opts['pki_dir'],
+                    master_opts['sock_dir'],
+                    syndic_master_opts['sock_dir'],
+                    sub_minion_opts['sock_dir'],
+                    minion_opts['sock_dir'],
+                    TMP_STATE_TREE,
+                    TMP_PRODENV_STATE_TREE,
+                    TMP,
+                    ],
+                   running_tests_user)
+
+        print('555')
+
+        # <---- Verify Environment -----------------------------------------------------------------------------------
 
     def __exit__(self, type, value, traceback):
         '''
@@ -717,8 +732,8 @@ class TestDaemon(object):
             shutil.rmtree(self.sub_minion_opts['root_dir'])
         if os.path.isdir(self.master_opts['root_dir']):
             shutil.rmtree(self.master_opts['root_dir'])
-        if os.path.isdir(self.smaster_opts['root_dir']):
-            shutil.rmtree(self.smaster_opts['root_dir'])
+        if os.path.isdir(self.syndic_master_opts['root_dir']):
+            shutil.rmtree(self.syndic_master_opts['root_dir'])
 
         for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
