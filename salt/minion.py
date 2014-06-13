@@ -717,7 +717,7 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self):
+    def _load_modules(self, force_refresh=False):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -739,7 +739,7 @@ class Minion(MinionBase):
             if not HAS_RESOURCE:
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
-        self.opts['grains'] = salt.loader.grains(self.opts)
+        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
 
@@ -1301,15 +1301,15 @@ class Minion(MinionBase):
             self.publish_port = creds['publish_port']
         self.crypticle = salt.crypt.Crypticle(self.opts, self.aes)
 
-    def module_refresh(self):
+    def module_refresh(self, force_refresh=False):
         '''
         Refresh the functions and returners.
         '''
-        self.functions, self.returners = self._load_modules()
+        self.functions, self.returners = self._load_modules(force_refresh)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
-    def pillar_refresh(self):
+    def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
         '''
@@ -1319,7 +1319,7 @@ class Minion(MinionBase):
             self.opts['id'],
             self.opts['environment'],
         ).compile_pillar()
-        self.module_refresh()
+        self.module_refresh(force_refresh)
 
     def manage_schedule(self, package):
         '''
@@ -1510,7 +1510,7 @@ class Minion(MinionBase):
                             self.manage_schedule(package)
                         elif package.startswith('grains_refresh'):
                             if self.grains_cache != self.opts['grains']:
-                                self.pillar_refresh()
+                                self.pillar_refresh(force_refresh=True)
                                 self.grains_cache = self.opts['grains']
                         elif package.startswith('environ_setenv'):
                             self.environ_setenv(package)
