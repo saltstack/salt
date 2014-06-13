@@ -4412,3 +4412,15 @@ source_file = _build/locale/ref/modules/all/salt.modules.varnish.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.varnish.rst
 
+[salt.ref--modules--all--salt_modules_serverdensity_device]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.serverdensity_device.po
+source_file = _build/locale/ref/modules/all/salt.modules.serverdensity_device.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.serverdensity_device.rst
+
+[salt.ref--states--all--salt_states_serverdensity_device]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.serverdensity_device.po
+source_file = _build/locale/ref/states/all/salt.states.serverdensity_device.pot
+source_lang = en
+source_name = ref/states/all/salt.states.serverdensity_device.rst
+
