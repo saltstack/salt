@@ -903,6 +903,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if enabled:
         adapters[iface]['enabled'] = True
 
+    if opts.get('hotplug', False):
+        adapters[iface]['hotplug'] = True
+
     adapters[iface]['data']['inet']['inet_type'] = 'inet'
 
     if iface_type not in ['bridge']:
