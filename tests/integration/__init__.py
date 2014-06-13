@@ -581,8 +581,8 @@ class TestDaemon(object):
                     os.path.join(sub_minion_opts['pki_dir'], 'rejected'),
                     os.path.join(sub_minion_opts['pki_dir'], 'pending'),
                     os.path.dirname(master_opts['log_file']),
-                    #minion_opts['extension_modules'],
-                    #sub_minion_opts['extension_modules'],
+                    minion_opts['extension_modules'],
+                    sub_minion_opts['extension_modules'],
                     sub_minion_opts['pki_dir'],
                     master_opts['sock_dir'],
                     syndic_master_opts['sock_dir'],
@@ -593,9 +593,6 @@ class TestDaemon(object):
                     TMP,
                     ],
                    running_tests_user)
-
-        print('555')
-
         # <---- Verify Environment -----------------------------------------------------------------------------------
 
     def __exit__(self, type, value, traceback):
