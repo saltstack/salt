@@ -226,19 +226,19 @@ def get(key, default=''):
     '''
     ret = salt.utils.traverse_dict_and_list(__opts__, key, '_|-')
     if ret != '_|-':
-        return sdb_get(ret, __opts__)
+        return sdb_get(ret)
 
     ret = salt.utils.traverse_dict_and_list(__grains__, key, '_|-')
     if ret != '_|-':
-        return sdb_get(ret, __opts__)
+        return sdb_get(ret)
 
     ret = salt.utils.traverse_dict_and_list(__pillar__, key, '_|-')
     if ret != '_|-':
-        return sdb_get(ret, __opts__)
+        return sdb_get(ret)
 
     ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
     if ret != '_|-':
-        return sdb_get(ret, __opts__)
+        return sdb_get(ret)
 
     return default
 
