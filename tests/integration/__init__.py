@@ -153,18 +153,6 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
-        running_tests_user = pwd.getpwuid(os.getuid()).pw_name
-        self.master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
-        minion_config_path = os.path.join(TMP_CONF_DIR, 'minion')
-        self.minion_opts = salt.config.minion_config(minion_config_path)
-
-        self.syndic_opts = salt.config.syndic_config(
-            os.path.join(TMP_CONF_DIR, 'syndic'),
-            minion_config_path
-        )
-        self.sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
-        self.syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
-
         # Set up PATH to mockbin
         self._enter_mockbin()
 
@@ -172,26 +160,6 @@ class TestDaemon(object):
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
             self.start_raet_daemons()
-
-        if os.environ.get('DUMP_SALT_CONFIG', None) is not None:
-            from copy import deepcopy
-            try:
-                os.makedirs('/tmp/salttest/conf')
-            except OSError:
-                pass
-            master_opts = deepcopy(self.master_opts)
-            minion_opts = deepcopy(self.minion_opts)
-            master_opts.pop('conf_file', None)
-
-            minion_opts.pop('conf_file', None)
-            minion_opts.pop('grains', None)
-            minion_opts.pop('pillar', None)
-            open('/tmp/salttest/conf/master', 'w').write(
-                yaml.dump(master_opts)
-            )
-            open('/tmp/salttest/conf/minion', 'w').write(
-                yaml.dump(minion_opts)
-            )
 
         self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
@@ -557,7 +525,7 @@ class TestDaemon(object):
             minion_config_path
         )
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
-        syndic_master_opts_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
+        syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -593,6 +561,12 @@ class TestDaemon(object):
                     TMP,
                     ],
                    running_tests_user)
+
+        cls.master_opts = master_opts
+        cls.minion_opts = minion_opts
+        cls.sub_minion_opts = sub_minion_opts
+        cls.syndic_opts = syndic_opts
+        cls.syndic_master_opts = syndic_master_opts
         # <---- Verify Environment -----------------------------------------------------------------------------------
 
     def __exit__(self, type, value, traceback):
