@@ -18,6 +18,11 @@ information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
 
+.. note::
+
+    Grains resolve to lowercase letters. For example, ``FOO`` and ``foo``
+    target the same grain.
+
 Match all CentOS minions:
 
 .. code-block:: bash
