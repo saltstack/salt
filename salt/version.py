@@ -472,6 +472,7 @@ def versions_information(include_salt_cloud=False):
         ('msgpack-python', 'msgpack', 'version'),
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
+        ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version')
