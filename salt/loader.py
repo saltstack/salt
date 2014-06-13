@@ -408,6 +408,20 @@ def queues(opts):
     return load.gen_functions()
 
 
+def db(opts, functions=None, whitelist=None):
+    '''
+    Call out to a database
+    '''
+    load = _create_loader(opts, 'db', 'db')
+    pack = {'name': '__saltdb__',
+            'value': functions}
+    return LazyLoader(load,
+                      functions,
+                      pack,
+                      whitelist=whitelist,
+                      )
+
+
 def clouds(opts):
     '''
     Return the cloud functions
