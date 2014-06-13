@@ -47,13 +47,6 @@ class OverstateTestCase(TestCase,
 
     def setUp(self):
         self.master_config = master_config(self.get_config_file_path('master'))
-        for entry in ('root_dir', 'cachedir'):
-            if not os.path.isdir(self.master_config[entry]):
-                os.makedirs(self.master_config[entry])
-
-    def tearDown(self):
-        if os.path.isdir(self.master_config['root_dir']):
-            shutil.rmtree(self.master_config['root_dir'])
 
     @patch('salt.client.LocalClient.cmd')
     def test__stage_list(self, local_client_mock):
