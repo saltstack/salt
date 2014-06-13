@@ -226,17 +226,71 @@ def get(key, default=''):
     '''
     ret = salt.utils.traverse_dict_and_list(__opts__, key, '_|-')
     if ret != '_|-':
-        return ret
+        return db_get(ret, __opts__)
+
     ret = salt.utils.traverse_dict_and_list(__grains__, key, '_|-')
     if ret != '_|-':
-        return ret
+        return db_get(ret, __opts__)
+
     ret = salt.utils.traverse_dict_and_list(__pillar__, key, '_|-')
     if ret != '_|-':
-        return ret
+        return db_get(ret, __opts__)
+
     ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
     if ret != '_|-':
-        return ret
+        return db_get(ret, __opts__)
+
     return default
+
+
+def db_get(uri):
+    '''
+    Get a value from a db, using a uri in the form of db://<profile>/<key>. If
+    the uri provided does not start with db://, then it will be returned as-is.
+    '''
+    if not uri.startswith('db://'):
+        return uri
+
+    comps = uri.replace('db://', '').split('/')
+
+    if len(comps) < 2:
+        return uri
+
+    profile = __opts__.get(comps[0], {})
+    if not 'driver' in profile:
+        return uri
+
+    fun = '{0}.get'.format(profile['driver'])
+    query = comps[1]
+
+    import salt.loader
+    loaded_db = salt.loader.db(__opts__, fun)
+    return loaded_db[fun](query, profile=profile)
+
+
+def db_set(uri, value):
+    '''
+    Get a value from a db, using a uri in the form of db://<profile>/<key>. If
+    the uri provided does not start with db://, then it will be returned as-is.
+    '''
+    if not uri.startswith('db://'):
+        return False
+
+    comps = uri.replace('db://', '').split('/')
+
+    if len(comps) < 2:
+        return False
+
+    profile = __opts__.get(comps[0], {})
+    if not 'driver' in profile:
+        return False
+
+    fun = '{0}.set'.format(profile['driver'])
+    query = comps[1]
+
+    import salt.loader
+    loaded_db = salt.loader.db(__opts__, fun)
+    return loaded_db[fun](query, value, profile=profile)
 
 
 def dot_vals(value):
