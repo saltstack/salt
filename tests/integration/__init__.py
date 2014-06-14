@@ -591,7 +591,6 @@ class TestDaemon(object):
             pass
         self._exit_mockbin()
         self._exit_ssh()
-        self._clean()
 
     def pre_setup_minions(self):
         '''
@@ -693,19 +692,11 @@ class TestDaemon(object):
             pass
         os.environ['PATH'] = os.pathsep.join(path_items)
 
-    def _clean(self):
+    @classmethod
+    def clean(cls):
         '''
         Clean out the tmp files
         '''
-        if not self.parser.options.clean:
-            return
-        if os.path.isdir(self.sub_minion_opts['root_dir']):
-            shutil.rmtree(self.sub_minion_opts['root_dir'])
-        if os.path.isdir(self.master_opts['root_dir']):
-            shutil.rmtree(self.master_opts['root_dir'])
-        if os.path.isdir(self.syndic_master_opts['root_dir']):
-            shutil.rmtree(self.syndic_master_opts['root_dir'])
-
         for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname)
