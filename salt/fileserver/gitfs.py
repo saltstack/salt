@@ -341,7 +341,6 @@ def _get_tree_gitpython(repo, tgt_env):
             if isinstance(ref, (git.RemoteReference, git.TagReference)):
                 parted = ref.name.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                rspec = rspec.replace('/', '_')
                 if rspec == tgt_env:
                     return ref.commit.tree
 
@@ -369,7 +368,6 @@ def _get_tree_pygit2(repo, tgt_env):
             if rtype in ('remotes', 'tags'):
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                rspec = rspec.replace('/', '_')
                 if rspec == tgt_env and _env_is_exposed(rspec):
                     return repo['repo'].lookup_reference(ref).get_object().tree
 
@@ -399,7 +397,6 @@ def _get_tree_dulwich(repo, tgt_env):
         for ref in sorted(_dulwich_env_refs(refs)):
             # ref will be something like 'refs/heads/master'
             rtype, rspec = ref[5:].split('/', 1)
-            rspec = rspec.replace('/', '_')
             if rspec == tgt_env and _env_is_exposed(rspec):
                 if rtype == 'heads':
                     commit = repo['repo'].get_object(refs[ref])
@@ -919,7 +916,6 @@ def _envs_gitpython(repo):
     for ref in repo['repo'].refs:
         parted = ref.name.partition('/')
         rspec = parted[2] if parted[2] else parted[0]
-        rspec = rspec.replace('/', '_')
         if isinstance(ref, git.Head):
             if rspec == repo['base']:
                 rspec = 'base'
@@ -944,7 +940,6 @@ def _envs_pygit2(repo):
             if rspec not in stale_refs:
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                rspec = rspec.replace('/', '_')
                 if rspec == repo['base']:
                     rspec = 'base'
                 if _env_is_exposed(rspec):
@@ -963,7 +958,6 @@ def _envs_dulwich(repo):
     for ref in _dulwich_env_refs(repo['repo'].get_refs()):
         # ref will be something like 'refs/heads/master'
         rtype, rspec = ref[5:].split('/', 1)
-        rspec = rspec.replace('/', '_')
         if rtype == 'heads':
             if rspec == repo['base']:
                 rspec = 'base'
@@ -1179,8 +1173,14 @@ def _file_lists(load, form):
         except os.error:
             log.critical('Unable to make cachedir {0}'.format(list_cachedir))
             return []
-    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
-    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    list_cache = os.path.join(
+        list_cachedir,
+        '{0}.p'.format(load['saltenv'].replace(os.path.sep, '_|-'))
+    )
+    w_lock = os.path.join(
+        list_cachedir,
+        '.{0}.w'.format(load['saltenv'].replace(os.path.sep, '_|-'))
+    )
     cache_match, refresh_cache, save_cache = \
         salt.fileserver.check_file_list_cache(
             __opts__, form, list_cache, w_lock

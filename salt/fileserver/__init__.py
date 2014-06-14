@@ -4,12 +4,12 @@ File server pluggable modules and generic backend functions
 '''
 
 # Import python libs
-import os
-import re
+import errno
 import fnmatch
 import logging
+import os
+import re
 import time
-import errno
 
 # Import salt libs
 import salt.loader
@@ -21,8 +21,8 @@ log = logging.getLogger(__name__)
 def _lock_cache(w_lock):
     try:
         os.mkdir(w_lock)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
             raise
         return False
     else:
@@ -120,8 +120,8 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
         fp_.write(serial.dumps(data))
         try:
             os.rmdir(w_lock)
-        except OSError, e:
-            log.trace("Error removing lockfile {0}:  {1}".format(w_lock, e))
+        except OSError as exc:
+            log.trace('Error removing lockfile {0}: {1}'.format(w_lock, exc))
         log.trace('Lockfile {0} removed'.format(w_lock))
 
 
