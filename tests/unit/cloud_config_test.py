@@ -27,12 +27,12 @@ import integration
 from salt import config as cloudconfig
 
 
-class CloudConfigTestCase(TestCase):
+class CloudConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     def test_load_cloud_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
-        tempdir = tempfile.mkdtemp()
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         try:
             env_root_dir = os.path.join(tempdir, 'foo', 'env')
             os.makedirs(env_root_dir)
@@ -105,8 +105,7 @@ class CloudConfigTestCase(TestCase):
 
     def test_includes_load(self):
         '''cloud.{providers,profiles}.d directories are loaded even if not directly passed'''
-        config_path = os.path.join(integration.FILES, 'conf', 'cloud')
-        config = cloudconfig.cloud_config(config_path)
+        config = cloudconfig.cloud_config(self.get_config_file_path('cloud'))
         self.assertIn('ec2-config', config['providers'])
         self.assertIn('Ubuntu-13.04-AMD64', config['profiles'])
 
