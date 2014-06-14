@@ -40,7 +40,7 @@ class ForkMaint(ioflo.base.deeding.Deed):
         preloads = [('.salt.opts', dict(value=self.opts.value))]
         ioflo.app.run.start(
                 name='maintiance',
-                period=float(self.opts.value['ioflo_period']),
+                period=float(self.opts.value['loop_interval']),
                 stamp=0.0,
                 real=self.opts.value['ioflo_realtime'],
                 filepath=self.opts.value['maintinance_floscript'],
