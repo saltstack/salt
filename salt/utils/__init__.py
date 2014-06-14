@@ -1211,7 +1211,7 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         matchstr = delim.join(splits[idx:])
         log.debug('Attempting to match {0!r} in {1!r} using delimiter '
                   '{2!r}'.format(matchstr, key, delim))
-        match = traverse_dict(data, key, {}, delim=delim)
+        match = traverse_dict_and_list(data, key, {}, delim=delim)
         if match == {}:
             continue
         if isinstance(match, dict):
@@ -1553,7 +1553,7 @@ def option(value, default='', opts=None, pillar=None):
         (pillar, value),
     )
     for source, val in sources:
-        out = traverse_dict(source, val, default)
+        out = traverse_dict_and_list(source, val, default)
         if out is not default:
             return out
     return default
