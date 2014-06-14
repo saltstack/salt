@@ -73,4 +73,7 @@ class LocalClient(salt.client.LocalClient):
             time.sleep(0.01)
             stack.serviceAll()
             for msg in stack.rxMsgs:
-                return msg.get('return', {}).get('ret', {})
+                ret = msg.get('return', {})
+                if 'ret' in ret:
+                    return ret['ret']
+                return ret
