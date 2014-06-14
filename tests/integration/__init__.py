@@ -128,6 +128,7 @@ class TestDaemon(object):
     Set up the master and minion daemons, and run related cases
     '''
     MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
+    __cached_client__ = None
 
     def __init__(self, parser):
         self.parser = parser
@@ -537,9 +538,11 @@ class TestDaemon(object):
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
-        return salt.client.get_local_client(
-            mopts=self.master_opts
-        )
+        if self.__cached_client__ is None:
+            self.__cached_client__ = salt.client.get_local_client(
+                mopts=self.master_opts
+            )
+        return self.__cached_client__
 
     def __exit__(self, type, value, traceback):
         '''
@@ -922,22 +925,25 @@ class AdaptedConfigurationTestCaseMixIn(object):
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
+    __cached_client__ = None
     __slots__ = ('client', '_salt_client_config_file_name_')
 
     @property
     def client(self):
-        if TRANSPORT == 'raet':
-            mopts = salt.config.client_config(
-                    self.get_config_file_path(
-                        self._salt_client_config_file_name_
+        if self.__cached_client__ is None:
+            if TRANSPORT == 'raet':
+                mopts = salt.config.client_config(
+                        self.get_config_file_path(
+                            self._salt_client_config_file_name_
+                            )
                         )
-                    )
-            mopts['transport'] = 'raet'
-            mopts['raet_port'] = 64506
-            return salt.client.get_local_client(mopts=mopts)
-        return salt.client.get_local_client(
-            self.get_config_file_path(self._salt_client_config_file_name_)
-        )
+                mopts['transport'] = 'raet'
+                mopts['raet_port'] = 64506
+                self.__cached_client__ = salt.client.get_local_client(mopts=mopts)
+            self.__cached_client__ = salt.client.get_local_client(
+                self.get_config_file_path(self._salt_client_config_file_name_)
+            )
+        return self.__cached_client__
 
 
 class ModuleCase(TestCase, SaltClientTestCaseMixIn):
