@@ -196,7 +196,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         TestDaemon.transplant_configs(transport=self.options.transport)
 
     def post_execution_cleanup(self):
-        SaltTestsuiteParser.post_execution_cleanup(self)
+        SaltCoverageTestingParser.post_execution_cleanup(self)
         if self.options.clean:
             TestDaemon.clean()
 
