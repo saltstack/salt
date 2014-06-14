@@ -91,7 +91,7 @@ def _get_credentials():
     for item in ret:
         entry = 'tomcat-manager:{0}'.format(item)
         for struct in [__opts__, __grains__, __pillar__]:
-            ret[item] = salt.utils.traverse_dict(struct, entry, '_|-')
+            ret[item] = salt.utils.traverse_dict_and_list(struct, entry, '_|-')
             if ret[item] == '_|-':
                 ret[item] = False
             else:

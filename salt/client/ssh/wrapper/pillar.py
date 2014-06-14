@@ -30,7 +30,7 @@ def get(key, default=''):
 
         salt '*' pillar.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__pillar__, key, default)
+    return salt.utils.traverse_dict_and_list(__pillar__, key, default)
 
 
 def item(*args):

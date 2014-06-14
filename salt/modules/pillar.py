@@ -55,12 +55,12 @@ def get(key, default='', merge=False, delim=':'):
         salt '*' pillar.get pkg:apache
     '''
     if merge:
-        ret = salt.utils.traverse_dict(__pillar__, key, {}, delim)
+        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delim)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.traverse_dict(__pillar__, key, default, delim)
+    return salt.utils.traverse_dict_and_list(__pillar__, key, default, delim)
 
 
 def items(*args):

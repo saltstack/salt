@@ -218,6 +218,18 @@ class UtilsTestCase(TestCase):
                              utils.traverse_dict(test_two_level_dict, 'foo:bar:baz', {'not_found': 'nope'}))
         self.assertEqual('baz', utils.traverse_dict(test_two_level_dict, 'foo:bar', {'not_found': 'not_found'}))
 
+    def test_traverse_dict_and_list(self):
+        test_two_level_dict = {'foo': {'bar': 'baz'}}
+        test_two_level_dict_and_list = {'foo': ['bar', 'baz']}
+
+        self.assertDictEqual({'not_found': 'nope'},
+                             utils.traverse_dict_and_list(test_two_level_dict, 'foo:bar:baz', {'not_found': 'nope'}))
+        self.assertEqual('baz', utils.traverse_dict_and_list(test_two_level_dict, 'foo:bar', {'not_found': 'not_found'}))
+
+        self.assertDictEqual({'not_found': 'nope'},
+                             utils.traverse_dict_and_list(test_two_level_dict_and_list, 'foo:bar', {'not_found': 'nope'}))
+        self.assertEqual('baz', utils.traverse_dict_and_list(test_two_level_dict_and_list, 'foo:1', {'not_found': 'not_found'}))
+
     def test_clean_kwargs(self):
         self.assertDictEqual(utils.clean_kwargs(foo='bar'), {'foo': 'bar'})
         self.assertDictEqual(utils.clean_kwargs(__pub_foo='bar'), {})
