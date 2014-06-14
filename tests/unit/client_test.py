@@ -3,9 +3,6 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
-# Import Python libs
-import os
-
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -14,7 +11,7 @@ ensure_in_syspath('../')
 
 # Import Salt libs
 import integration
-from salt import client, config
+from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
 
 
