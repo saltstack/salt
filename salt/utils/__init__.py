@@ -1250,13 +1250,14 @@ def traverse_dict(data, key, default, delim=':'):
         return default
     return data
 
+
 def traverse_dict_and_list(data, key, default, delim=':'):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
-    using the "delim" param) target string. The target 'foo:bar:0' will 
+    using the "delim" param) target string. The target 'foo:bar:0' will
     return data['foo']['bar'][0] if this value exists, and will otherwise
     return the dict in the default argument.
-    Function will automatically determine the target type. 
+    Function will automatically determine the target type.
     The target 'foo:bar:0' will return data['foo']['bar'][0] if data like
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
@@ -1268,6 +1269,7 @@ def traverse_dict_and_list(data, key, default, delim=':'):
         # Encountered a non-indexable value in the middle of traversing
         return default
     return data
+
 
 def mkstemp(*args, **kwargs):
     '''
