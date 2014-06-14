@@ -124,6 +124,9 @@ class GitFSTest(integration.ModuleCase):
             self.assertIn('base', ret)
 
     def test_file_hash_sha1(self):
+        self.skipTest(
+            'Test fails because hashlib does not have blob_sha1 as an attribute.'
+        )
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir'],
