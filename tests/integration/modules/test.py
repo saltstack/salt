@@ -43,8 +43,7 @@ class TestModuleTest(integration.ModuleCase,
         '''
         test.get_opts
         '''
-        import salt.config
-        opts = salt.config.minion_config(
+        opts = config.minion_config(
             self.get_config_file_path('minion')
         )
         self.assertEqual(
