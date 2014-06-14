@@ -271,12 +271,7 @@ def _get_client(version=None, timeout=None):
     if not version:
         # set version that match docker deamon
         client._version = client.version()['ApiVersion']
-    if getattr(client, '_cfg', None) is None:
-        client._cfg = {
-            'Configs': {},
-            'rootPath': '/dev/null'
-        }
-    client._cfg.update(_merge_auth_bits())
+    client._auth_configs.update(_merge_auth_bits())
     return client
 
 
@@ -293,15 +288,13 @@ def _merge_auth_bits():
         finally:
             fic.close()
     except Exception:
-        config = {'rootPath': '/dev/null'}
-    if 'Configs' not in config:
-        config['Configs'] = {}
-    config['Configs'].update(
+        config = {}
+    config.update(
         __pillar__.get('docker-registries', {})
     )
     for k, data in __pillar__.items():
         if k.endswith('-docker-registries'):
-            config['Configs'].update(data)
+            config.update(data)
     return config
 
 
