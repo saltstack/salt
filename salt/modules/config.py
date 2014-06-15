@@ -265,7 +265,7 @@ def dot_vals(value):
     return ret
 
 
-def gather_bootstrap_script():
+def gather_bootstrap_script(bootstrap=None):
     '''
     Download the salt-bootstrap script, and return the first location
     downloaded to.
@@ -276,6 +276,6 @@ def gather_bootstrap_script():
 
         salt '*' config.gather_bootstrap_script
     '''
-    ret = salt.utils.cloud.update_bootstrap(__opts__)
+    ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]
