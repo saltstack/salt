@@ -126,18 +126,15 @@ class GitFSTest(integration.ModuleCase):
             self.assertIn('base', ret)
 
     def test_file_hash_sha1(self):
-        self.skipTest(
-            'Test fails because hashlib does not have blob_sha1 as an attribute.'
-        )
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir'],
                                          'hash_type': 'blob_sha1'}):
-            tmp_load = LOAD
+            tmp_load = LOAD.copy()
             tmp_load['path'] = 'testfile'
             fnd = {'rel': 'testfile',
                    'path': 'testfile'}
-            ret = gitfs.file_hash(LOAD, fnd)
+            ret = gitfs.file_hash(tmp_load, fnd)
             self.assertDictEqual({'hash_type': 'blob_sha1', 'hsum': '0d234303e6451128d756c5c259175de37d767742'}, ret)
 
     def test_serve_file(self):
