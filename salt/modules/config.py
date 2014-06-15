@@ -257,7 +257,7 @@ def sdb_get(uri):
         return uri
 
     profile = __opts__.get(comps[0], {})
-    if not 'driver' in profile:
+    if 'driver' not in profile:
         return uri
 
     fun = '{0}.get'.format(profile['driver'])
@@ -282,7 +282,7 @@ def sdb_set(uri, value):
         return False
 
     profile = __opts__.get(comps[0], {})
-    if not 'driver' in profile:
+    if 'driver' not in profile:
         return False
 
     fun = '{0}.set'.format(profile['driver'])
