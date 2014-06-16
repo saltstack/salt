@@ -73,6 +73,13 @@ STATE_INTERNAL_KEYWORDS = frozenset([
 ])
 
 
+def _odict_hashable(self):
+    return id(self)
+
+
+OrderedDict.__hash__ = _odict_hashable
+
+
 def split_low_tag(tag):
     '''
     Take a low tag and split it back into the low dict that it came from
@@ -482,9 +489,9 @@ class Compiler(object):
                         if isinstance(entry, dict):
                             low_name = entry.keys()[0]
                             live['name'] = low_name
-                            live.update(entry[low_name])
+                            live.update(entry[low_name][0])
                         else:
-                            live['name'] = entry 
+                            live['name'] = entry
                         live['name_order'] = name_order
                         name_order = name_order + 1
                         for fun in funcs:
@@ -1069,9 +1076,9 @@ class State(object):
                         if isinstance(entry, dict):
                             low_name = entry.keys()[0]
                             live['name'] = low_name
-                            live.update(entry[low_name])
+                            live.update(entry[low_name][0])
                         else:
-                            live['name'] = entry 
+                            live['name'] = entry
                         live['name_order'] = name_order
                         name_order = name_order + 1
                         for fun in funcs:
