@@ -1,5 +1,6 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+#!/usr/bin/env python
 '''
 This script is used to test Salt from a Jenkins server, specifically
 jenkins.saltstack.com.
@@ -39,7 +40,7 @@ except ImportError:
             0,
             os.path.join(SALT_LIB, 'salt', 'utils')
         )
-        from nb_popen import NonBlockingPopen  # pylint: disable=F0401
+        from nb_popen import NonBlockingPopen
 
 # Import 3rd-party libs
 import yaml
@@ -56,7 +57,7 @@ def build_pillar_data(options):
     '''
     Build a YAML formatted string to properly pass pillar data
     '''
-    pillar = {'test_transport': options.test_transport}
+    pillar = {}
     if options.test_git_commit is not None:
         pillar['test_git_commit'] = options.test_git_commit
     if options.test_git_url is not None:
@@ -96,21 +97,12 @@ def delete_vm(options):
     '''
     Stop a VM
     '''
-    cmd = []
-    if options.peer:
-        cmd.extend(['salt-call', 'publish.runner'])
-    else:
-        cmd.append('salt-run')
-    if options.lxc:
-        cmd.append('lxc.purge')
-    else:
-        cmd.append('cloud.destroy')
-    cmd.append(options.delete_vm)
-    print('Running CMD: {0!r}'.format(' '.join(cmd)))
+    cmd = 'salt-cloud -d {0} -y'.format(options.delete_vm)
+    print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
     proc = NonBlockingPopen(
-        ' '.join(cmd),
+        cmd,
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -126,25 +118,17 @@ def echo_parseable_environment(options):
     '''
     output = []
 
-    if options.lxc:
-        if options.platform:
-            name = generate_vm_name(options)
-            output.extend([
-                'JENKINS_LXC_VM_PLATFORM={0}'.format(options.platform),
-                'JENKINS_LXC_VM_NAME={0}'.format(name)
-            ])
-    else:
-        if options.platform:
-            name = generate_vm_name(options)
-            output.extend([
-                'JENKINS_SALTCLOUD_VM_PLATFORM={0}'.format(options.platform),
-                'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name)
-            ])
+    if options.platform:
+        name = generate_vm_name(options)
+        output.extend([
+            'JENKINS_SALTCLOUD_VM_PLATFORM={0}'.format(options.platform),
+            'JENKINS_SALTCLOUD_VM_NAME={0}'.format(name)
+        ])
 
-        if options.provider:
-            output.append(
-                'JENKINS_SALTCLOUD_VM_PROVIDER={0}'.format(options.provider)
-            )
+    if options.provider:
+        output.append(
+            'JENKINS_SALTCLOUD_VM_PROVIDER={0}'.format(options.provider)
+        )
 
     if options.pull_request:
         # This is a Jenkins triggered Pull Request
@@ -169,7 +153,6 @@ def echo_parseable_environment(options):
             sys.stdout.flush()
             return
 
-        # pylint: disable=C0103
         GITHUB = github.Github(open(github_access_token_path).read().strip())
         REPO = GITHUB.get_repo('saltstack/salt')
         try:
@@ -182,7 +165,6 @@ def echo_parseable_environment(options):
             options.test_git_commit = PR.head.sha
         except ValueError:
             print('# Failed to get the PR id from the environment')
-        # pylint: enable=C0103
 
     sys.stdout.write('\n\n{0}\n\n'.format('\n'.join(output)))
     sys.stdout.flush()
@@ -200,21 +182,16 @@ def download_unittest_reports(options):
     os.makedirs(xml_reports_path)
 
     cmds = (
-        '{0} {1} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
-        '{0} {1} cp.push /tmp/xml-test-reports.tar.gz',
-        'mv -f /var/cache/salt/master/minions/{2}/files/tmp/xml-test-reports.tar.gz {3} && '
-        'tar zxvf {3}/xml-test-reports.tar.gz -C {3}/xml-test-reports && '
-        'rm -f {3}/xml-test-reports.tar.gz'
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
+        'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
+        'mv -f /var/cache/salt/master/minions/{1}/files/tmp/xml-test-reports.tar.gz {2} && '
+        'tar zxvf {2}/xml-test-reports.tar.gz -C {2}/xml-test-reports && '
+        'rm -f {2}/xml-test-reports.tar.gz'
     )
 
     vm_name = options.download_unittest_reports
     for cmd in cmds:
-        cmd = cmd.format(
-            'salt-call publish.publish' if options.lxc else 'salt',
-            build_minion_target(options, vm_name),
-            vm_name,
-            workspace
-        )
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -247,19 +224,14 @@ def download_coverage_report(options):
         os.unlink(os.path.join(workspace, 'coverage.xml'))
 
     cmds = (
-        '{0} {1} archive.gzip /tmp/coverage.xml',
-        '{0} {1} cp.push /tmp/coverage.xml.gz',
-        'gunzip /var/cache/salt/master/minions/{2}/files/tmp/coverage.xml.gz',
-        'mv /var/cache/salt/master/minions/{2}/files/tmp/coverage.xml {3}'
+        'salt {0} archive.gzip /tmp/coverage.xml',
+        'salt {0} cp.push /tmp/coverage.xml.gz',
+        'gunzip /var/cache/salt/master/minions/{1}/files/tmp/coverage.xml.gz',
+        'mv /var/cache/salt/master/minions/{1}/files/tmp/coverage.xml {2}'
     )
 
     for cmd in cmds:
-        cmd = cmd.format(
-            'salt-call publish.publish' if options.lxc else 'salt',
-            build_minion_target(options, vm_name),
-            vm_name,
-            workspace
-        )
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -302,10 +274,10 @@ def download_remote_logs(options):
 
     for remote_log in options.remote_log_path:
         cmds.extend([
-            '{{0}} {{1}} archive.gzip {0}'.format(remote_log),
-            '{{0}} {{1}} cp.push {0}.gz'.format(remote_log),
-            'gunzip /var/cache/salt/master/minions/{{2}}/files{0}.gz'.format(remote_log),
-            'mv /var/cache/salt/master/minions/{{2}}/files{0} {{3}}/{1}'.format(
+            'salt {{0}} archive.gzip {0}'.format(remote_log),
+            'salt {{0}} cp.push {0}.gz'.format(remote_log),
+            'gunzip /var/cache/salt/master/minions/{{1}}/files{0}.gz'.format(remote_log),
+            'mv /var/cache/salt/master/minions/{{1}}/files{0} {{2}}/{1}'.format(
                 remote_log,
                 '{0}{1}'.format(
                     os.path.basename(remote_log),
@@ -315,12 +287,7 @@ def download_remote_logs(options):
         ])
 
     for cmd in cmds:
-        cmd = cmd.format(
-            'salt-call publish.publish' if options.lxc else 'salt',
-            build_minion_target(options, vm_name),
-            vm_name,
-            workspace
-        )
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -342,49 +309,46 @@ def download_remote_logs(options):
         time.sleep(0.25)
 
 
-def run(options):
+def run(opts):
     '''
     RUN!
     '''
     vm_name = os.environ.get(
-        'JENKINS_LXC_VM_NAME' if options.lxc else 'JENKINS_SALTCLOUD_VM_NAME',
-        generate_vm_name(options)
+        'JENKINS_SALTCLOUD_VM_NAME',
+        generate_vm_name(opts)
     )
 
-    if options.download_remote_reports:
-        options.download_coverage_report = vm_name
-        options.download_unittest_reports = vm_name
+    if opts.download_remote_reports:
+        opts.download_coverage_report = vm_name
+        opts.download_unittest_reports = vm_name
 
-    cmd = []
-    if options.peer:
-        cmd.extend(['salt-call', 'publish.runner'])
+    if opts.bootstrap_salt_commit is not None:
+        if opts.bootstrap_salt_url is None:
+            opts.bootstrap_salt_url = 'https://github.com/saltstack/salt.git'
+        cmd = (
+            'salt-cloud -l debug'
+            ' --script-args "-D -g {bootstrap_salt_url} -n git {1}"'
+            ' -p {provider}_{platform} {0}'.format(
+                vm_name,
+                os.environ.get(
+                    'SALT_MINION_BOOTSTRAP_RELEASE',
+                    opts.bootstrap_salt_commit
+                ),
+                **opts.__dict__
+            )
+        )
     else:
-        cmd.append('salt-run')
-
-    if options.lxc:
-        cmd.extend(['lxc.init', vm_name, 'template={provider}'])
-    else:
-        cmd.extend(['cloud.profile', '{provider}_{platform}', vm_name])
-
-    if not options.lxc:
-        if options.bootstrap_salt_commit is not None:
-            if options.bootstrap_salt_url is None:
-                options.bootstrap_salt_url = 'https://github.com/saltstack/salt.git'
-
-            if options.peer:
-                cmd.extend(['salt-call', 'publish.runner'])
-            else:
-                cmd.append('salt-run')
-
-            cmd.extend([
-                '--script-args',
-                '"-D -g {bootstrap_salt_url} -n git {bootstrap_salt_commit}"'
-            ])
-        else:
-            cmd.extend(['--script-args', '"-D"'])
-
-    cmd = ' '.join(cmd).format(**options.__dict__)
-
+        cmd = (
+            'salt-cloud -l debug'
+            ' --script-args "-D -n git {1}" -p {provider}_{platform} {0}'.format(
+                vm_name,
+                os.environ.get(
+                    'SALT_MINION_BOOTSTRAP_RELEASE',
+                    opts.bootstrap_salt_commit
+                ),
+                **opts.__dict__
+            )
+        )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -402,8 +366,8 @@ def run(options):
     if retcode != 0:
         print('Failed to bootstrap VM. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(options)
+        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+            delete_vm(opts)
         sys.exit(retcode)
 
     print('VM Bootstrapped. Exit code: {0}'.format(retcode))
@@ -413,77 +377,66 @@ def run(options):
     sys.stdout.flush()
     time.sleep(5)
 
-    if not options.lxc:
-        if options.bootstrap_salt_commit is not None:
-            # Let's find out if the installed version matches the passed in pillar
-            # information
-            print('Grabbing bootstrapped minion version information ... ')
-            cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(options, vm_name))
-            print('Running CMD: {0}'.format(cmd))
+    if opts.bootstrap_salt_commit is not None:
+        # Let's find out if the installed version matches the passed in pillar
+        # information
+        print('Grabbing bootstrapped minion version information ... ')
+        cmd = 'salt -t 100 {0} --out json test.version'.format(build_minion_target(opts, vm_name))
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, _ = proc.communicate()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            proc = subprocess.Popen(
-                cmd,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
+            sys.exit(retcode)
+
+        if not stdout.strip():
+            print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
+            sys.exit(retcode)
+
+        try:
+            version_info = json.loads(stdout.strip())
+            bootstrap_minion_version = os.environ.get(
+                'SALT_MINION_BOOTSTRAP_RELEASE',
+                opts.bootstrap_salt_commit[:7]
             )
-            stdout, _ = proc.communicate()
-
-            retcode = proc.returncode
-            if retcode != 0:
-                print('Failed to get the bootstrapped minion version. Exit code: {0}'.format(retcode))
+            if bootstrap_minion_version not in version_info[vm_name]:
+                print('\n\nATTENTION!!!!\n')
+                print('The boostrapped minion version commit does not contain the desired commit:')
+                print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], bootstrap_minion_version))
+                print('\n\n')
                 sys.stdout.flush()
-                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(options)
-                sys.exit(retcode)
-
-            if not stdout.strip():
-                print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
-                sys.stdout.flush()
-                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(options)
-                sys.exit(retcode)
-
-            try:
-                version_info = json.loads(stdout.strip())
-                bootstrap_minion_version = os.environ.get(
-                    'SALT_MINION_BOOTSTRAP_RELEASE',
-                    options.bootstrap_salt_commit[:7]
-                )
-                if bootstrap_minion_version not in version_info[vm_name]:
-                    print('\n\nATTENTION!!!!\n')
-                    print('The boostrapped minion version commit does not contain the desired commit:')
-                    print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], bootstrap_minion_version))
-                    print('\n\n')
-                    sys.stdout.flush()
-                    #if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    #    delete_vm(options)
-                    #sys.exit(retcode)
-                else:
-                    print('matches!')
-            except ValueError:
-                print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
+                #if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                #    delete_vm(opts)
+                #sys.exit(retcode)
+            else:
+                print('matches!')
+        except ValueError:
+            print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
     # Run preparation SLS
     time.sleep(3)
-    cmd = []
-    if options.peer:
-        cmd.append('salt-call')
-        if options.no_color:
-            cmd.append('--no-color')
-        cmd.append('publish.publish')
-    else:
-        cmd.extend(['salt', '-t', '1800'])
-        if options.no_color:
-            cmd.append('--no-color')
-
-    cmd.extend([
-        '{target}', 'state.sls', '{prep_sls}', 'pillar="{pillar}"'
-    ])
-
-    cmd = ' '.join(cmd).format(target=build_minion_target(options, vm_name),
-                               prep_sls=options.prep_sls,
-                               pillar=build_pillar_data(options))
+    cmd = (
+        'salt -t 1800 {target} state.sls {prep_sls} pillar="{pillar}" '
+        '--no-color'.format(
+            target=build_minion_target(opts, vm_name),
+            prep_sls=opts.prep_sls,
+            pillar=build_pillar_data(opts),
+        )
+    )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -506,32 +459,22 @@ def run(options):
     if retcode != 0:
         print('Failed to execute the preparation SLS file. Exit code: {0}'.format(retcode))
         sys.stdout.flush()
-        if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-            delete_vm(options)
+        if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+            delete_vm(opts)
         sys.exit(retcode)
 
-    if options.prep_sls_2 is not None:
+    if opts.prep_sls_2 is not None:
         time.sleep(3)
 
         # Run the 2nd preparation SLS
-        cmd = []
-        if options.peer:
-            cmd.append('salt-call')
-            if options.no_color:
-                cmd.append('--no-color')
-            cmd.append('publish.publish')
-        else:
-            cmd.extend(['salt', '-t', '30'])
-            if options.no_color:
-                cmd.append('--no-color')
-
-        cmd.extend([
-            '{target}', 'state.sls', '{prep_sls_2}', 'pillar="{pillar}"'
-        ])
-
-        cmd = ' '.join(cmd).format(target=build_minion_target(options, vm_name),
-                                   prep_sls_2=options.prep_sls_2,
-                                   pillar=build_pillar_data(options))
+        cmd = (
+            'salt -t 30 {target} state.sls {prep_sls_2} pillar="{pillar}" '
+            '--no-color'.format(
+                prep_sls_2=opts.prep_sls_2,
+                pillar=build_pillar_data(opts),
+                target=build_minion_target(opts, vm_name),
+            )
+        )
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
 
@@ -554,29 +497,17 @@ def run(options):
         if retcode != 0:
             print('Failed to execute the 2nd preparation SLS file. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(options)
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
             sys.exit(retcode)
 
     # Run remote checks
-    if options.test_git_url is not None:
+    if opts.test_git_url is not None:
         time.sleep(1)
         # Let's find out if the cloned repository if checked out from the
         # desired repository
         print('Grabbing the cloned repository remotes information ... ')
-        cmd = []
-        if options.peer:
-            cmd.extend(['salt-call', '--out=json', 'publish.publish'])
-        else:
-            cmd.extend(['salt', '-t', '100', '--out=json'])
-
-        cmd.extend([
-            build_minion_target(options, vm_name),
-            'git.remote_get', '/testing'
-        ])
-
-        cmd = ' '.join(cmd)
-
+        cmd = 'salt -t 100 {0} --out json git.remote_get /testing'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
         proc = subprocess.Popen(
@@ -592,54 +523,37 @@ def run(options):
         if retcode != 0:
             print('Failed to get the cloned repository remote. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(options)
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository remote(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(options)
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
             sys.exit(retcode)
 
         try:
             remotes_info = json.loads(stdout.strip())
-            if remotes_info is None or remotes_info[vm_name] is None or options.test_git_url not in remotes_info[vm_name]:
+            if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
                 print('The cloned repository remote is not the desired one:')
-                print(' {0!r} is not in {1}'.format(options.test_git_url, remotes_info))
+                print(' {0!r} is not in {1}'.format(opts.test_git_url, remotes_info))
                 sys.stdout.flush()
-                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(options)
+                if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    if options.test_git_commit is not None:
+    if opts.test_git_commit is not None:
         time.sleep(1)
 
         # Let's find out if the cloned repository is checked out at the desired
         # commit
         print('Grabbing the cloned repository commit information ... ')
-        cmd = []
-        if options.peer:
-            cmd.extend(['salt-call', '--out=json'])
-            if options.no_color:
-                cmd.append('--no-color')
-            cmd.append('publish.publish')
-        else:
-            cmd.extend(['salt', '-t', '100', '--out=json'])
-            if options.no_color:
-                cmd.append('--no-color')
-
-        cmd.extend([
-            build_minion_target(options, vm_name),
-            'git.revision', '/testing'
-        ])
-
-        cmd = ' '.join(cmd)
-
+        cmd = 'salt -t 100 {0} --out json git.revision /testing'.format(build_minion_target(opts, vm_name))
         print('Running CMD: {0}'.format(cmd))
         sys.stdout.flush()
         proc = subprocess.Popen(
@@ -655,25 +569,25 @@ def run(options):
         if retcode != 0:
             print('Failed to get the cloned repository revision. Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(options)
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
             sys.exit(retcode)
 
         if not stdout:
             print('Failed to get the cloned repository revision(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
-            if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                delete_vm(options)
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
             sys.exit(retcode)
 
         try:
             revision_info = json.loads(stdout.strip())
-            if revision_info[vm_name][7:] != options.test_git_commit[7:]:
+            if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
                 print('The cloned repository commit is not the desired one:')
-                print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], options.test_git_commit[:7]))
+                print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
                 sys.stdout.flush()
-                if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-                    delete_vm(options)
+                if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                    delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
@@ -681,26 +595,13 @@ def run(options):
 
     # Run tests here
     time.sleep(3)
-    cmd = []
-    if options.peer:
-        cmd.append('salt-call')
-        if options.no_color:
-            cmd.append('--no-color')
-        cmd.append('publish.publish')
-    else:
-        cmd.extend(['salt', '-t', '100'])
-        if options.no_color:
-            cmd.append('--no-color')
-
-    cmd.extend([
-        build_minion_target(options, vm_name),
-        'state.sls',
-        options.sls,
-        'pillar="{0}"'.format(build_pillar_data(options))
-    ])
-
-    cmd = ' '.join(cmd)
-
+    cmd = (
+        'salt -t 1800 {target} state.sls {sls} pillar="{pillar}" --no-color'.format(
+            sls=opts.sls,
+            pillar=build_pillar_data(opts),
+            target=build_minion_target(opts, vm_name),
+        )
+    )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -735,14 +636,14 @@ def run(options):
             # Anything else, raise the exception
             raise
 
-    if options.download_remote_reports:
+    if opts.download_remote_reports:
         # Download unittest reports
-        download_unittest_reports(options)
+        download_unittest_reports(opts)
         # Download coverage report
-        download_coverage_report(options)
+        download_coverage_report(opts)
 
-    if options.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
-        delete_vm(options)
+    if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+        delete_vm(opts)
     return retcode
 
 
@@ -790,11 +691,6 @@ def parse():
         '--test-git-commit',
         default=None,
         help='The testing git commit to track')
-    parser.add_option(
-        '--test-transport',
-        default='zeromq',
-        choices=('zeromq', 'raet'),
-        help='Set to raet to run integration tests with raet transport. Default: %default')
     parser.add_option(
         '--prep-sls',
         default='git.salt',
@@ -868,26 +764,8 @@ def parse():
         default=[],
         help='Match minions using compound matchers, the minion ID, plus the passed grain.'
     )
-    parser.add_option(
-        '--no-color', '--no-colors',
-        dest='no_color',
-        action='store_true',
-        default=False,
-        help='Disable any couloured output'
-    )
-    parser.add_option(
-        '--peer',
-        action='store_true',
-        default=False,
-        help='Run commands through Salt\'s peer system'
-    )
-    parser.add_option(
-        '--lxc',
-        action='store_true',
-        default=False,
-        help='Use LXC instead of Cloud deployments'
-    )
-    options, _ = parser.parse_args()
+
+    options, args = parser.parse_args()
 
     if options.delete_vm is not None and not options.test_git_commit:
         delete_vm(options)
@@ -905,7 +783,7 @@ def parse():
         download_remote_logs(options)
         parser.exit(0)
 
-    if not options.lxc and not options.platform and not options.pull_request:
+    if not options.platform and not options.pull_request:
         parser.exit('--platform or --pull-request is required')
 
     if not options.provider and not options.pull_request:
