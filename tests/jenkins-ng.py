@@ -269,11 +269,12 @@ def to_cli_yaml(data):
     '''
     return yaml.dump(data, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
 
+
 def build_pillar_data(options):
     '''
     Build a YAML formatted string to properly pass pillar data
     '''
-    pillar = {}
+    pillar = {'test_transport': options.test_transport}
     if options.test_git_commit is not None:
         pillar['test_git_commit'] = options.test_git_commit
     if options.test_git_url is not None:
@@ -786,6 +787,11 @@ def main():
         'executed on'
     )
     testing_source_options.add_argument(
+        '--test-transport',
+        default='zeromq',
+        choices=('zeromq', 'raet'),
+        help='Set to raet to run integration tests with raet transport. Default: %default')
+    testing_source_options.add_argument(
         '--test-git-url',
         default=None,
         help='The testing git repository url')
@@ -1262,7 +1268,7 @@ def main():
 
     if options.delete_vm:
         delete_vm(options)
-    return proc.returncode
+    parser.exit(proc.returncode)
 
 
 if __name__ == '__main__':
