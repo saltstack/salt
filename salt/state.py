@@ -477,9 +477,14 @@ class Compiler(object):
                                 chunk.update(arg)
                 if names:
                     name_order = 1
-                    for low_name in names:
+                    for entry in names:
                         live = copy.deepcopy(chunk)
-                        live['name'] = low_name
+                        if isinstance(entry, dict):
+                            low_name = entry.keys()[0]
+                            live['name'] = low_name
+                            live.update(entry[low_name])
+                        else:
+                            live['name'] = entry 
                         live['name_order'] = name_order
                         name_order = name_order + 1
                         for fun in funcs:
@@ -1059,9 +1064,14 @@ class State(object):
                                 chunk[key] = val
                 if names:
                     name_order = 1
-                    for low_name in names:
+                    for entry in names:
                         live = copy.deepcopy(chunk)
-                        live['name'] = low_name
+                        if isinstance(entry, dict):
+                            low_name = entry.keys()[0]
+                            live['name'] = low_name
+                            live.update(entry[low_name])
+                        else:
+                            live['name'] = entry 
                         live['name_order'] = name_order
                         name_order = name_order + 1
                         for fun in funcs:
