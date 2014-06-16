@@ -7,10 +7,12 @@ Module for manging the Salt schedule on a minion
 '''
 
 # Import Python libs
+import difflib
 import os
 import yaml
 
 import salt.utils
+import salt.utils.odict
 
 __proxyenabled__ = ['*']
 
@@ -23,6 +25,8 @@ __func_alias__ = {
 }
 
 SCHEDULE_CONF = [
+        'name',
+        'maxrunning',
         'function',
         'splay',
         'range',
@@ -40,7 +44,7 @@ SCHEDULE_CONF = [
         ]
 
 
-def list_(show_all=False):
+def list_(show_all=False, return_yaml=True):
     '''
     List the jobs currently scheduled on the minion
 
@@ -81,9 +85,12 @@ def list_(show_all=False):
             del schedule[job]['_seconds']
 
     if schedule:
-        tmp = {'schedule': schedule}
-        yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
-        return yaml_out
+        if return_yaml:
+            tmp = {'schedule': schedule}
+            yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
+            return yaml_out
+        else:
+            return schedule
     else:
         return None
 
@@ -147,7 +154,6 @@ def delete(name):
             ret['comment'] = 'Failed to delete job {0} from schedule.'.format(name)
             ret['result'] = False
     elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
-        log.debug('found job in pillar')
         out = __salt__['event.fire']({'name': name, 'where': 'pillar', 'func': 'delete'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
@@ -158,6 +164,75 @@ def delete(name):
         ret['comment'] = 'Job {0} does not exist.'.format(name)
         ret['result'] = False
     return ret
+
+
+def build_schedule_item(name, **kwargs):
+    '''
+    Build a schedule job
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.build_schedule_item job1 function='test.ping' seconds=3600
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if not name:
+        ret['comment'] = 'Job name is required.'
+        ret['result'] = False
+
+    schedule = {}
+    schedule[name] = salt.utils.odict.OrderedDict()
+    schedule[name]['function'] = kwargs['function']
+
+    time_conflict = False
+    for item in ['seconds', 'minutes', 'hours', 'days']:
+        if item in kwargs and 'when' in kwargs:
+            time_conflict = True
+
+    if time_conflict:
+        return 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+
+    for item in ['seconds', 'minutes', 'hours', 'days']:
+        if item in kwargs:
+            schedule[name][item] = kwargs[item]
+
+    if 'job_args' in kwargs:
+        schedule[name]['args'] = kwargs['job_args']
+
+    if 'job_kwargs' in kwargs:
+        schedule[name]['kwargs'] = kwargs['job_kwargs']
+
+    if 'maxrunning' in kwargs:
+        schedule[name]['maxrunning'] = kwargs['maxrunning']
+    else:
+        schedule[name]['maxrunning'] = 1
+
+    if 'name' in kwargs:
+        schedule[name]['name'] = kwargs['name']
+    else:
+        schedule[name]['name'] = name
+
+    if 'jid_include' not in kwargs or kwargs['jid_include']:
+        schedule[name]['jid_include'] = True
+
+    if 'splay' in kwargs:
+        if isinstance(kwargs['splay'], dict):
+            # Ensure ordering of start and end arguments
+            schedule[name]['splay'] = salt.utils.odict.OrderedDict()
+            schedule[name]['splay']['start'] = kwargs['splay']['start']
+            schedule[name]['splay']['end'] = kwargs['splay']['end']
+        else:
+            schedule[name]['splay'] = kwargs['splay']
+
+    for item in ['range', 'when', 'returner']:
+        if item in kwargs:
+            schedule[name][item] = kwargs[item]
+
+    return schedule[name]
 
 
 def add(name, **kwargs):
@@ -187,30 +262,19 @@ def add(name, **kwargs):
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
 
-    schedule = {}
-    schedule[name] = {'function': kwargs['function']}
-
     time_conflict = False
     for item in ['seconds', 'minutes', 'hours', 'days']:
         if item in kwargs and 'when' in kwargs:
             time_conflict = True
 
     if time_conflict:
-        return 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        ret['result'] = False
+        ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
 
-    for item in ['seconds', 'minutes', 'hours', 'days']:
-        if item in kwargs:
-            schedule[name][item] = kwargs[item]
+    _new = build_schedule_item(name, **kwargs)
 
-    if 'job_args' in kwargs:
-        schedule[name]['args'] = kwargs['job_args']
-
-    if 'job_kwargs' in kwargs:
-        schedule[name]['kwargs'] = kwargs['job_kwargs']
-
-    for item in ['splay', 'range', 'when', 'returner', 'jid_include']:
-        if item in kwargs:
-            schedule[name][item] = kwargs[item]
+    schedule = {}
+    schedule[name] = _new
 
     out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'func': 'add'}, 'manage_schedule')
     if out:
@@ -232,8 +296,18 @@ def modify(name, **kwargs):
         salt '*' schedule.modify job1 function='test.ping' seconds=3600
     '''
 
-    ret = {'comment': [],
+    ret = {'comment': '',
+           'changes': {},
            'result': True}
+
+    time_conflict = False
+    for item in ['seconds', 'minutes', 'hours', 'days']:
+        if item in kwargs and 'when' in kwargs:
+            time_conflict = True
+
+    if time_conflict:
+        ret['result'] = False
+        ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
 
     current_schedule = __opts__['schedule'].copy()
     if 'schedule' in __pillar__:
@@ -244,39 +318,33 @@ def modify(name, **kwargs):
         ret['result'] = False
         return ret
 
-    schedule = {'function': kwargs['function']}
+    _current = current_schedule[name]
+    if '_seconds' in _current:
+        _current['seconds'] = _current['_seconds']
+        del _current['_seconds']
 
-    time_conflict = False
-    for item in ['seconds', 'minutes', 'hours', 'days']:
-        if item in kwargs and 'when' in kwargs:
-            time_conflict = True
+    _new = build_schedule_item(name, **kwargs)
+    if _new == _current:
+        ret['comment'] = 'Job {0} in correct state'.format(name)
+        return ret
 
-    if time_conflict:
-        return 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+    _current_lines = ['%s:%s\n' % (key, value)
+                      for (key, value) in sorted(_current.items())]
+    _new_lines = ['%s:%s\n' % (key, value)
+                  for (key, value) in sorted(_new.items())]
+    _diff = difflib.unified_diff(_current_lines, _new_lines)
 
-    for item in ['seconds', 'minutes', 'hours', 'days']:
-        if item in kwargs:
-            schedule[item] = kwargs[item]
-
-    if 'job_args' in kwargs:
-        schedule['args'] = kwargs['job_args']
-
-    if 'job_kwargs' in kwargs:
-        schedule['kwargs'] = kwargs['job_kwargs']
-
-    for item in ['splay', 'range', 'when', 'returner', 'jid_include']:
-        if item in kwargs:
-            schedule[item] = kwargs[item]
+    ret['changes']['diff'] = ''.join(_diff)
 
     if name in __opts__['schedule']:
-        out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'func': 'modify'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'schedule': _new, 'func': 'modify'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Modified job: {0} in schedule.'.format(name)
         else:
             ret['comment'] = 'Failed to modify job {0} in schedule.'.format(name)
             ret['result'] = False
     elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
-        out = __salt__['event.fire']({'name': name, 'schedule': schedule, 'where': 'pillar', 'func': 'modify'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'schedule': _new, 'where': 'pillar', 'func': 'modify'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Modified job: {0} in schedule.'.format(name)
         else:
@@ -424,26 +492,7 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    schedule = __opts__['schedule']
-    for job in schedule.keys():
-        if job == 'enabled':
-            continue
-        if job.startswith('_'):
-            del schedule[job]
-            continue
-
-        for item in schedule[job].keys():
-            if item not in SCHEDULE_CONF:
-                del schedule[job][item]
-                continue
-            if schedule[job][item] == 'true':
-                schedule[job][item] = True
-            if schedule[job][item] == 'false':
-                schedule[job][item] = False
-
-        if '_seconds' in schedule[job].keys():
-            schedule[job]['seconds'] = schedule[job]['_seconds']
-            del schedule[job]['_seconds']
+    schedule = list_(return_yaml=False)
 
     # move this file into an configurable opt
     sfn = '{0}/{1}/schedule.conf'.format(__opts__['config_dir'], os.path.dirname(__opts__['default_include']))
