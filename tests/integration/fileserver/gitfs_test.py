@@ -129,14 +129,13 @@ class GitFSTest(integration.ModuleCase):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir'],
-                                         'hash_type': 'blob_sha1'}):
+                                         'hash_type': 'sha1'}):
             tmp_load = LOAD.copy()
-            tmp_load['loc'] = 0
             tmp_load['path'] = 'testfile'
             fnd = {'rel': 'testfile',
                    'path': 'testfile'}
             ret = gitfs.file_hash(tmp_load, fnd)
-            self.assertDictEqual({'hash_type': 'blob_sha1', 'hsum': '0d234303e6451128d756c5c259175de37d767742'}, ret)
+            self.assertDictEqual({'hash_type': 'sha1', 'hsum': '6b18d04b61238ba13b5e4626b13ac5fb7432b5e2'}, ret)
 
     def test_serve_file(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
