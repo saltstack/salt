@@ -153,6 +153,38 @@ def _salt(fun, *args, **kw):
         rkwargs['timeout'] = timeout
         rkwargs.setdefault('expr_form', 'list')
         kwargs.setdefault('expr_form', 'list')
+        ping_retries = 0
+        # the target(s) have environ one minute to respond
+        # we call 60 ping request, this prevent us
+        # from blindly send commands to unmatched minions
+        ping_max_retries = 60
+        ping = True
+        # do not check ping... if we are pinguing
+        if fun == 'test.ping':
+            ping_retries = ping_max_retries + 1
+        # be sure that the executors are alive
+        while ping_retries <= ping_max_retries:
+            try:
+                if ping_retries > 0:
+                    time.sleep(1)
+                pings = conn.cmd(tgt=target,
+                                 timeout=10,
+                                 fun='test.ping')
+                values = pings.values()
+                if not values:
+                    ping = False
+                for v in values:
+                    if v is not True:
+                        ping = False
+                if not ping:
+                    raise ValueError('Unreachable')
+                break
+            except Exception:
+                ping = False
+                ping_retries += 1
+                log.error('{0} unreachable, retrying'.format(target))
+        if not ping:
+            raise SaltCloudSystemExit('Target {0} unreachable'.format(target))
         jid = conn.cmd_async(tgt=target,
                              fun=fun,
                              arg=args,
@@ -363,342 +395,38 @@ def create(vm_, call=None):
     '''Create an lxc Container.
     This function is idempotent and will try to either provision
     or finish the provision of an lxc container.
+
+    NOTE: Most of the initialisation code has been moved and merged
+    with the lxc runner and lxc.init functions
     '''
-    mopts = _master_opts()
-    if not get_configured_provider(vm_):
-        return
     __grains__ = _salt('grains.items')
-    name = vm_['name']
-    if 'minion' not in vm_:
-        vm_['minion'] = {}
-    minion = vm_['minion']
-
-    from_container = vm_.get('from_container', None)
-    image = vm_.get('image', None)
-    vgname = vm_.get('vgname', None)
-    backing = vm_.get('backing', None)
-    snapshot = vm_.get('snapshot', False)
+    prov = get_configured_provider(vm_)
+    if not prov:
+        return
     profile = vm_.get('profile', None)
-    fstype = vm_.get('fstype', None)
-    dnsservers = vm_.get('dnsservers', [])
-    lvname = vm_.get('lvname', None)
-    ip = vm_.get('ip', None)
-    mac = vm_.get('mac', None)
-    netmask = vm_.get('netmask', '24')
-    bridge = vm_.get('bridge', 'lxcbr0')
-    gateway = vm_.get('gateway', 'auto')
-    autostart = vm_.get('autostart', True)
-    if autostart:
-        autostart = "1"
-    else:
-        autostart = "0"
-    size = vm_.get('size', '10G')
-    ssh_username = vm_.get('ssh_username', 'user')
-    sudo = vm_.get('sudo', True)
-    password = vm_.get('password', 'user')
-    lxc_conf_unset = vm_.get('lxc_conf_unset', [])
-    lxc_conf = vm_.get('lxc_conf', [])
-    stopped = vm_.get('stopped', False)
-    master = vm_.get('master', None)
-    script = vm_.get('script', None)
-    script_args = vm_.get('script_args', None)
-    users = vm_.get('users', None)
-    # some backends wont support some parameters
-    if backing not in ['lvm']:
-        lvname = vgname = None
-    if backing in ['dir', 'overlayfs']:
-        fstype = None
-        size = None
-    if backing in ['dir']:
-        snapshot = False
-    for k in ['password',
-              'ssh_username']:
-        vm_[k] = locals()[k]
-
+    if not profile:
+        profile = {}
     salt.utils.cloud.fire_event(
-        'event',
-        'starting create',
+        'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-        },
-        transport=__opts__['transport']
-    )
-    if not dnsservers:
-        dnsservers = ['8.8.8.8', '4.4.4.4']
-    changes = {}
-    changed = False
-    ret = {'name': name,
-           'changes': changes,
-           'result': True,
-           'comment': ''}
-    if not users:
-        users = ['root']
-        if (
-            __grains__['os'] in ['Ubuntu']
-            and 'ubuntu' not in users
-        ):
-            users.append('ubuntu')
-    if ssh_username not in users:
-        users.append(ssh_username)
-    if not users:
-        users = []
-    if not lxc_conf:
-        lxc_conf = []
-    if not lxc_conf_unset:
-        lxc_conf_unset = []
-    if from_container:
-        method = 'clone'
-    else:
-        method = 'create'
-    if ip is not None:
-        lxc_conf.append({'lxc.network.ipv4': '{0}/{1}'.format(ip, netmask)})
-        if mac is not None:
-            lxc_conf.append({'lxc.network.hwaddr': mac})
-        if gateway is not None:
-            lxc_conf.append({'lxc.network.ipv4.gateway': gateway})
-        if bridge is not None:
-            lxc_conf.append({'lxc.network.link': bridge})
-    lxc_conf.append({'lxc.start.auto': autostart})
-    changes['100_creation'] = ''
-    created = False
-    cret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    exists = _salt('lxc.exists', name)
-    if exists:
-        cret['comment'] = 'Container already exists'
-        cret['result'] = True
-    elif method == 'clone':
-        oexists = _salt('lxc.exists', from_container)
-        if not oexists:
-            cret['result'] = False
-            cret['comment'] = (
-                'container could not be cloned: {0}, '
-                '{1} does not exist'.format(name, from_container))
-        else:
-            nret = _salt('lxc.clone',
-                         name,
-                         orig=from_container,
-                         snapshot=snapshot,
-                         size=size,
-                         backing=backing,
-                         profile=profile)
-            if nret.get('error', ''):
-                cret['result'] = False
-                cret['comment'] = '{0}\n{1}'.format(
-                    nret['error'], 'Container cloning error')
-            else:
-                cret['result'] = (
-                    nret['cloned']
-                    or 'already exist' in cret.get('comment', ''))
-                cret['comment'] += 'Container cloned\n'
-                cret['changes']['status'] = 'cloned'
-    elif method == 'create':
-        nret = _salt('lxc.create',
-                     name,
-                     template=image,
-                     profile=profile,
-                     fstype=fstype,
-                     vgname=vgname,
-                     size=size,
-                     lvname=lvname,
-                     backing=backing)
-        if nret.get('error', ''):
-            cret['result'] = False
-            cret['comment'] = nret['error']
-        else:
-            exists = (
-                nret['created']
-                or 'already exist' in nret.get('comment', ''))
-            cret['comment'] += 'Container created\n'
-            cret['changes']['status'] = 'Created'
-    changes['100_creation'] = cret['comment']
-    ret['comment'] = changes['100_creation']
-    if not cret['result']:
+        {'name': vm_['name'], 'profile': vm_['profile'],
+         'provider': vm_['provider'], },
+        transport=__opts__['transport'])
+    ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
+    if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+        log.debug('Generating minion keys for {0}'.format(vm_['name']))
+        vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
+            salt.config.get_cloud_config_value(
+                'keysize', vm_, __opts__))
+    # get the minion key pair to distribute back to the container
+    kwarg = copy.deepcopy(vm_)
+    kwarg['host'] = prov['target']
+    cret = _runner().cmd('lxc.cloud_init', [vm_['name']], kwarg=kwarg)
+    ret['runner_return'] = cret
+    if cret['result']:
         ret['result'] = False
-        ret['comment'] = cret['comment']
-    _checkpoint(ret)
-    if cret['changes']:
-        created = changed = True
-
-    # edit lxc conf if any
-    changes['150_conf'] = ''
-    cret['result'] = False
-    cret = _salt('lxc.update_lxc_conf',
-                 name,
-                 lxc_conf=lxc_conf,
-                 lxc_conf_unset=lxc_conf_unset)
-    if not cret['result']:
-        ret['result'] = False
-        ret['comment'] = cret['comment']
-    _checkpoint(ret)
-    if cret['changes']:
-        changed = True
-    changes['150_conf'] = 'lxc conf ok'
-
-    # start
-    changes['200_start'] = 'started'
-    ret['comment'] = changes['200_start']
-    # reboot if conf has changed
-    cret = _salt('lxc.start', name, restart=changed)
-    if not cret['result']:
-        ret['result'] = False
-        changes['200_start'] = cret['comment']
-        ret['comment'] = changes['200_start']
-    _checkpoint(ret)
-    if cret['changes']:
-        changed = True
-
-    # first time provisionning only, set the default user/password
-    changes['250_password'] = 'Passwords in place'
-    ret['comment'] = changes['250_password']
-    gid = '/.lxc.{0}.initial_pass'.format(name, False)
-    lxcret = _salt('lxc.run_cmd',
-                   name, 'test -e {0}'.format(gid),
-                   stdout=False, stderr=False)
-    if lxcret:
-        cret = _salt('lxc.set_pass',
-                     name,
-                     password=password, users=users)
-        changes['250_password'] = 'Password updated'
-        if not cret['result']:
-            ret['result'] = False
-            changes['250_password'] = 'Failed to update passwords'
-        ret['comment'] = changes['250_password']
-        _checkpoint(ret)
-        try:
-            lxcret = int(
-                _salt('lxc.run_cmd',
-                      name,
-                      'sh -c \'touch "{0}"; '
-                      'test -e "{0}";echo ${{?}}\''.format(gid)))
-        except ValueError:
-            lxcret = 1
-        ret['result'] = not bool(lxcret)
-        if not cret['result']:
-            changes['250_password'] = 'Failed to test password file marker'
-        _checkpoint(ret)
-        changed = True
-
-    def wait_for_ip():
-        '''
-        Wait for the IP address to become available
-        '''
-        try:
-            data = show_instance(vm_['name'], call='full')
-        except Exception:
-            data = {'private_ips': [], 'public_ips': []}
-        ips = data['private_ips'] + data['public_ips']
-        if ips:
-            if ip and ip in ips:
-                return ip
-            return ips[0]
-        time.sleep(1)
-        return False
-    ip = salt.utils.cloud.wait_for_fun(
-        wait_for_ip,
-        timeout=config.get_cloud_config_value(
-            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60))
-    changes['300_ipattrib'] = 'Got ip {0}'.format(ip)
-    if not ip:
-        changes['300_ipattrib'] = 'Cant get ip'
-        ret['result'] = False
-    ret['comment'] = changes['300_ipattrib']
-    _checkpoint(ret)
-
-    # set dns servers
-    changes['350_dns'] = 'DNS in place'
-    ret['comment'] = changes['350_dns']
-    gid = 'lxc.{0}.initial_dns'.format(name, False)
-    lxcret = _salt('lxc.run_cmd',
-                   name,
-                   'test -e {0}'.format(gid),
-                   stdout=False, stderr=False,)
-    if dnsservers and not lxcret:
-        cret = _salt('lxc.set_dns',
-                     name,
-                     dnsservers=dnsservers)
-        changes['350_dns'] = 'DNS updated'
-        ret['comment'] = changes['350_dns']
-        if not cret['result']:
-            ret['result'] = False
-            changes['350_dns'] = 'DNS provisionning error'
-            ret['comment'] = changes['350_dns']
-        try:
-            lxcret = int(
-                _salt('lxc.run_cmd',
-                      name,
-                      'sh -c \'touch "{0}"; '
-                      'test -e "{0}";echo ${{?}}\''.format(gid)))
-        except ValueError:
-            lxcret = 1
-        ret['result'] = not lxcret
-        if not cret['result']:
-            changes['250_password'] = 'Failed to test DNS set marker'
-        _checkpoint(ret)
-        changed = True
-    _checkpoint(ret)
-
-    # provision salt on the fresh container
-    if 'master' in minion:
-        changes['400_salt'] = 'This vm is a salt minion'
-
-        def testping(*args):
-            ping = _salt('test.ping', **{'salt_target': vm_['name']})
-            time.sleep(1)
-            if ping:
-                return 'OK'
-            raise Exception('Unresponsive {0}'.format(vm_['name']))
-        # if already created, test to ping before bindly go to saltify
-        # we ping for 1 minute
-        skip = False
-        if not created:
-            ping = salt.utils.cloud.wait_for_fun(testping, timeout=10)
-            if ping == 'OK':
-                skip = True
-
-        if not skip:
-            minion['master_port'] = mopts.get('ret_port', '4506')
-            vm_['ssh_host'] = ip
-            vm_['sudo'] = sudo
-            vm_['sudo_password'] = password
-            svm_ = copy.deepcopy(vm_)
-            if 'gateway' in svm_:
-                del svm_['gateway']
-            if 'ssh_gateway' in vm_:
-                svm_['gateway'] = ssh_gateway_opts = {}
-                for k in ['ssh_gateway_key',
-                          'ssh_gateway',
-                          'ssh_gateway_user',
-                          'ssh_gateway_port']:
-                    val = vm_.get(k, None)
-                    if val:
-                        ssh_gateway_opts[ssh_gateway_opts.get(k, k)] = val
-            sret = __salt__['saltify.create'](svm_)
-            changes['400_salt'] = 'This vm is now a salt minion'
-            if 'Error' in sret:
-                ret['result'] = False
-                changes['400_salt'] = pformat(sret['Error'])
-            else:
-                changed = True
-        ret['comment'] = changes['400_salt']
-        _checkpoint(ret)
-
-        changes['401_salt'] = 'Minion is alive for salt commands'
-        ping = salt.utils.cloud.wait_for_fun(testping, timeout=60)
-        if ping != 'OK':
-            ret['result'] = False
-            changes['401_salt'] = 'Unresponsive minion!'
-        ret['comment'] = changes['401_salt']
-        _checkpoint(ret)
-
-    sret = _checkpoint(ret)
     if not ret['result']:
-        ret['Error'] = 'Error while creating {0}'.format(vm_['name'])
-    if not changed and ret['result']:
-        ret['changes'] = {}
-        ret['comment'] = '\n{0}'.format(sret)
+        ret['Error'] = 'Error while creating {0},'.format(vm_['name'])
     return ret
 
 

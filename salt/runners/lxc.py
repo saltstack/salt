@@ -7,12 +7,21 @@ Control Linux Containers via Salt
 
 # Import python libs
 from __future__ import print_function
+import time
+import os
+import copy
+import logging
 
 # Import Salt libs
+from salt.utils.odict import OrderedDict
 import salt.client
+import salt.output
 import salt.utils.virt
+import salt.utils.cloud
 import salt.key
 
+
+log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
 __func_alias__ = {
@@ -106,11 +115,10 @@ def find_guests(names):
     return ret
 
 
-def init(names,
-         host=None,
-         **kwargs):
+def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     '''
     Initialize a new container
+
 
     .. code-block:: bash
 
@@ -128,6 +136,10 @@ def init(names,
 
     host
         Minion to start the container on. Required.
+
+    saltcloud_mode
+        init the container with the saltcloud opts format instead
+        See lxc.init_interface module documentation
 
     cpuset
         cgroups cpuset.
@@ -152,84 +164,179 @@ def init(names,
 
     nic_opts
         Extra options for network interfaces. E.g:
-        {"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}
+        {"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1",
+         "ipv6": "2001:db8::ff00:42:8329"}}
 
     start
         Start the newly created container.
 
     seed
-        Seed the container with the minion config and autosign its key. Default: true
+        Seed the container with the minion config and autosign its key.
+        Default: true
 
     install
         If salt-minion is not already installed, install it. Default: true
 
     config
-        Optional config parameters. By default, the id is set to the name of the
-        container.
+        Optional config parameters. By default, the id is set to
+        the name of the container.
     '''
+    ret = {'comment': '', 'result': True}
     if host is None:
-        #TODO: Support selection of host based on available memory/cpu/etc.
-        print('A host must be provided')
-        return False
-    names = names.split(',')
-    print('Searching for LXC Hosts')
+        # TODO: Support selection of host based on available memory/cpu/etc.
+        ret['A host must be provided']
+        ret['result'] = False
+        return ret
+    if isinstance(names, basestring):
+        names = names.split(',')
+    if not isinstance(names, list):
+        ret['comment'] = 'Container names are not formed as a list'
+        ret['result'] = False
+        return ret
+    log.info('Searching for LXC Hosts')
     data = __salt__['lxc.list'](host, quiet=True)
     for host, containers in data.items():
         for name in names:
             if name in sum(containers.values(), []):
-                print('Container \'{0}\' already exists on host \'{1}\''.format(
-                      name, host))
-                return False
-
+                log.info('Container \'{0}\' already exists'
+                         ' on host \'{1}\','
+                         ' init can be a NO-OP'.format(
+                             name, host))
     if host not in data:
-        print('Host \'{0}\' was not found'.format(host))
-        return False
-
-    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
-    approve_key = kw.get('approve_key', True)
-    if approve_key:
-        for name in names:
-            kv = salt.utils.virt.VirtKey(host, name, __opts__)
-            if kv.authorize():
-                print('Container key will be preauthorized')
-            else:
-                print('Container key preauthorization failed')
-                return False
+        ret['comment'] = 'Host \'{0}\' was not found'.format(host)
+        ret['result'] = False
+        return ret
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
-    print('Creating container(s) \'{0}\' on host \'{1}\''.format(names, host))
+    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    pub_key = kw.get('pub_key', None)
+    priv_key = kw.get('priv_key', None)
+    explicit_auth = pub_key and priv_key
+    approve_key = kw.get('approve_key', True)
+    if approve_key and not explicit_auth:
+        for name in names:
+            ping = client.cmd(name, 'test.ping', timeout=20)
+            if ping:
+                # container already seeded
+                continue
+            kv = salt.utils.virt.VirtKey(host, name, __opts__)
+            if kv.authorize():
+                log.info('Container key will be preauthorized')
+            else:
+                ret['comment'] = 'Container key preauthorization failed'
+                ret['result'] = False
+                return ret
+
+    log.info('Creating container(s) \'{0}\''
+             ' on host \'{1}\''.format(names, host))
 
     cmds = []
-    ret = {}
     for name in names:
         args = [name]
-        cmds.append(client.cmd_iter(host,
-                                  'lxc.init',
-                                  args,
-                                  kwarg=kwargs,
-                                  timeout=600))
-    ret = {}
-    for cmd in cmds:
+        kw = kwargs
+        if saltcloud_mode:
+            kw = copy.deepcopy(kw)
+            kw['name'] = name
+            kw = client.cmd(
+                host, 'lxc.cloud_init_interface', args + [kw],
+                expr_form='list', timeout=600).get(host, {})
+        name = kw.pop('name', name)
+        cmds.append(
+            (host,
+             name,
+             client.cmd_iter(host, 'lxc.init', args, kwarg=kw, timeout=600)))
+    done = ret.setdefault('done', [])
+    errors = ret.setdefault('errors', OrderedDict())
+
+    for ix, acmd in enumerate(cmds):
+        hst, container_name, cmd = acmd
+        containers = ret.setdefault(hst, [])
+        herrs = errors.setdefault(hst, OrderedDict())
+        serrs = herrs.setdefault(container_name, [])
         sub_ret = next(cmd)
-        if sub_ret and host in sub_ret:
-            if host in ret:
-                ret[host].append(sub_ret[host]['ret'])
+        error = None
+        if isinstance(sub_ret, dict) and host in sub_ret:
+            j_ret = sub_ret[hst]
+            container = j_ret.get('ret', {})
+            if container and isinstance(container, dict):
+                if not container.get('result', False):
+                    error = container
             else:
-                ret[host] = [sub_ret[host]['ret']]
+                error = 'Invalid return for {0}'.format(container_name)
         else:
-            ret = {}
+            error = sub_ret
+            if not error:
+                error = 'unknown error (no return)'
+        if error:
+            ret['result'] = False
+            serrs.append(error)
+        else:
+            container['container_name'] = name
+            containers.append(container)
+            done.append(container)
 
-    for host, returns in ret.items():
-        for j_ret in returns:
-            if j_ret.get('created', False) or j_ret.get('cloned', False):
-                print('Container \'{0}\' initialized on host \'{1}\''.format(
-                    j_ret.get('name'), host))
-            else:
-                error = j_ret.get('error', 'unknown error')
-                print('Container \'{0}\' was not initialized: {1}'.format(j_ret.get(name), error))
-    return ret or None
+    # marking ping status as True only and only if we have at
+    # least provisionned one container
+    ret['ping_status'] = bool(len(done))
 
+    # for all provisionned containers, last job is to verify
+    # - the key status
+    # - we can reach them
+    for container in done:
+        # explicitly check and update
+        # the minion key/pair stored on the master
+        container_name = container['container_name']
+        key = os.path.join(__opts__['pki_dir'], 'minions', container_name)
+        if explicit_auth:
+            fcontent = ''
+            if os.path.exists(key):
+                with open(key) as fic:
+                    fcontent = fic.read().strip()
+            if pub_key.strip() != fcontent:
+                with open(key, 'w') as fic:
+                    fic.write(pub_key)
+                    fic.flush()
+        mid = j_ret.get('mid', None)
+        if not mid:
+            continue
+
+        def testping(**args):
+            ping = client.cmd(mid, 'test.ping', timeout=20)
+            time.sleep(1)
+            if ping:
+                return 'OK'
+            raise Exception('Unresponsive {0}'.format(mid))
+        ping = salt.utils.cloud.wait_for_fun(testping, timeout=21)
+        if ping != 'OK':
+            ret['ping_status'] = False
+            ret['result'] = False
+
+    # if no lxc detected as touched (either inited or verified
+    # we result to False
+    if not done:
+        ret['result'] = False
+    if not quiet:
+        salt.output.display_output(ret, '', __opts__)
+    return ret
+
+
+def cloud_init(names, host=None, quiet=False, **kwargs):
+    '''
+    Wrapper for using lxc.init in saltcloud compatibility mode
+
+    names
+        Name of the containers, supports a single name or a comma delimited
+        list of names.
+
+    host
+        Minion to start the container on. Required.
+
+    saltcloud_mode
+        init the container with the saltcloud opts format instead
+    '''
+    return __salt__['lxc.init'](names=names, host=host,
+                                saltcloud_mode=True, quiet=quiet, **kwargs)
 
 def _list_iter(host=None):
     '''
