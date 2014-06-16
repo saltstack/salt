@@ -264,6 +264,44 @@ class Schedule(object):
                 self.delete_job(name)
             self.opts['schedule'][name] = schedule
 
+    def run_job(self, name, where):
+        '''
+        Run a schedule job now
+        '''
+        if where == 'pillar':
+            data = self.opts['pillar']['schedule'][name]
+        else:
+            data = self.opts['schedule'][name]
+
+        if 'function' in data:
+            func = data['function']
+        elif 'func' in data:
+            func = data['func']
+        elif 'fun' in data:
+            func = data['fun']
+        else:
+            func = None
+        if func not in self.functions:
+            log.info(
+                'Invalid function: {0} in job {1}. Ignoring.'.format(
+                    func, name
+                )
+            )
+        else:
+            if 'name' not in data:
+                data['name'] = name
+            log.info(
+                'Running Job: {0}.'.format(name)
+            )
+            if self.opts.get('multiprocessing', True):
+                thread_cls = multiprocessing.Process
+            else:
+                thread_cls = threading.Thread
+            proc = thread_cls(target=self.handle_func, args=(func, data))
+            proc.start()
+            if self.opts.get('multiprocessing', True):
+                proc.join()
+
     def enable_schedule(self):
         '''
         Enable the scheduler.

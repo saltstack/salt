@@ -106,15 +106,15 @@ def purge():
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for job in schedule.keys():
-        if job.startswith('_'):
+    for name in schedule.keys():
+        if name.startswith('__'):
             continue
 
-        out = __salt__['event.fire']({'job': job, 'func': 'delete'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_schedule')
         if out:
-            ret['comment'].append('Deleted job: {0} from schedule.'.format(job))
+            ret['comment'].append('Deleted job: {0} from schedule.'.format(name))
         else:
-            ret['comment'].append('Failed to delete job {0} from schedule.'.format(job))
+            ret['comment'].append('Failed to delete job {0} from schedule.'.format(name))
             ret['result'] = False
     return ret
 
@@ -138,7 +138,7 @@ def delete(name):
         ret['result'] = False
 
     if name in __opts__['schedule']:
-        out = __salt__['event.fire']({'job': name, 'func': 'delete'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
         else:
@@ -146,7 +146,7 @@ def delete(name):
             ret['result'] = False
     elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
         log.debug('found job in pillar')
-        out = __salt__['event.fire']({'job': name, 'where': 'pillar', 'func': 'delete'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'where': 'pillar', 'func': 'delete'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
         else:
@@ -283,6 +283,55 @@ def modify(name, **kwargs):
     return ret
 
 
+def run_job(name, force=False):
+    '''
+    Run a scheduled job on the minion immediately
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.run_job job1
+
+        salt '*' schedule.run_job job1 force=True
+        Force the job to run even if it is disabled.
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if not name:
+        ret['comment'] = 'Job name is required.'
+        ret['result'] = False
+
+    if name in __opts__['schedule']:
+        data = __opts__['schedule'][name]
+        if 'enabled' in data and not data['enabled'] and not force:
+            ret['comment'] = 'Job {0} is disabled.'.format(name)
+        else:
+            out = __salt__['event.fire']({'name': name, 'func': 'run_job'}, 'manage_schedule')
+            if out:
+                ret['comment'] = 'Scheduling Job {0} on minion.'.format(name)
+            else:
+                ret['comment'] = 'Failed to run job {0} on minion.'.format(name)
+                ret['result'] = False
+    elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
+        data = __pillar__['schedule'][name]
+        if 'enabled' in data and not data['enabled'] and not force:
+            ret['comment'] = 'Job {0} is disabled.'.format(name)
+        else:
+            out = __salt__['event.fire']({'name': name, 'where': 'pillar', 'func': 'run_job'}, 'manage_schedule')
+            if out:
+                ret['comment'] = 'Scheduling Job {0} on minion.'.format(name)
+            else:
+                ret['comment'] = 'Failed to run job {0} on minion.'.format(name)
+                ret['result'] = False
+    else:
+        ret['comment'] = 'Job {0} does not exist.'.format(name)
+        ret['result'] = False
+    return ret
+
+
 def enable_job(name):
     '''
     Enable a job in the minion's schedule
@@ -302,14 +351,14 @@ def enable_job(name):
         ret['result'] = False
 
     if name in __opts__['schedule']:
-        out = __salt__['event.fire']({'job': name, 'func': 'enable_job'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'func': 'enable_job'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
         else:
             ret['comment'] = 'Failed to enable job {0} from schedule.'.format(name)
             ret['result'] = False
     elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
-        out = __salt__['event.fire']({'job': name, 'where': 'pillar', 'func': 'enable_job'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'where': 'pillar', 'func': 'enable_job'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Enabled Job {0} in schedule.'.format(name)
         else:
@@ -340,14 +389,14 @@ def disable_job(name):
         ret['result'] = False
 
     if name in __opts__['schedule']:
-        out = __salt__['event.fire']({'job': name, 'func': 'disable_job'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'func': 'disable_job'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
         else:
             ret['comment'] = 'Failed to disable job {0} from schedule.'.format(name)
             ret['result'] = False
     elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
-        out = __salt__['event.fire']({'job': name, 'where': 'pillar', 'func': 'disable_job'}, 'manage_schedule')
+        out = __salt__['event.fire']({'name': name, 'where': 'pillar', 'func': 'disable_job'}, 'manage_schedule')
         if out:
             ret['comment'] = 'Disabled Job {0} in schedule.'.format(name)
         else:

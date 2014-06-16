@@ -1327,33 +1327,27 @@ class Minion(MinionBase):
         '''
         tag, data = salt.utils.event.MinionEvent.unpack(package)
         func = data.get('func', None)
+        name = data.get('name', None)
+        schedule = data.get('schedule', None)
+        where = data.get('where', None)
 
         if func == 'delete':
-            job = data.get('job', None)
-            self.schedule.delete_job(job)
+            self.schedule.delete_job(name)
         elif func == 'add':
-            name = data.get('name', None)
-            schedule = data.get('schedule', None)
             self.schedule.add_job(schedule)
         elif func == 'modify':
-            name = data.get('name', None)
-            schedule = data.get('schedule', None)
-            where = data.get('where', None)
             self.schedule.modify_job(name, schedule, where)
         elif func == 'enable':
             self.schedule.enable_schedule()
         elif func == 'disable':
             self.schedule.disable_schedule()
         elif func == 'enable_job':
-            job = data.get('job', None)
-            where = data.get('where', None)
-            self.schedule.enable_job(job, where)
+            self.schedule.enable_job(name, where)
+        elif func == 'run_job':
+            self.schedule.run_job(name, where)
         elif func == 'disable_job':
-            job = data.get('job', None)
-            where = data.get('where', None)
-            self.schedule.disable_job(job, where)
+            self.schedule.disable_job(name, where)
         elif func == 'reload':
-            schedule = data.get('schedule', None)
             self.schedule.reload(schedule)
 
     def environ_setenv(self, package):
