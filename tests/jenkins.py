@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 This script is used to test Salt from a Jenkins server, specifically
 jenkins.saltstack.com.
