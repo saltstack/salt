@@ -26,4 +26,3 @@ framer backends be active first start
 framer sceduler be active first start
     frame start
         do schedule
-        period 60
