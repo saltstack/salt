@@ -63,3 +63,33 @@ And the URI used to reference the password might look like:
 .. code-block:: yaml
 
     sdb://kevinopenstack/password
+
+
+Writing SDB Modules
+===================
+There is currently one function that MUST exist in any SDB module (``get()``)
+and one that MAY exist (``set_()``). If using a (``set_()``) function, a
+``__func_alias__`` dictionary MUST be declared in the module as well:
+
+.. code-block:: python
+
+    __func_alias__ = {
+        'set_': 'set',
+    }
+
+This is because ``set`` is a Python built-in, and therefore functions should not
+be created which are called ``set()``. The ``__func_alias__`` functionality is
+provided via Salt's loader interfaces, and allows legally-named functions to be
+referred to using names that would otherwise be unwise to use.
+
+The ``get()`` function is required, as it will be called via functions in other
+areas of the code which make use of the ``sdb://`` URI. For example, the
+``config.get`` function in the ``config`` execution module uses this function.
+
+The ``set_()`` function may be provided, but is not required, as some sources
+may be read-only, or may be otherwise unwise to access via a URI (for instance,
+because of SQL injection attacks).
+
+A simple example of an SDB module is ``salt/sdb/keyring_db.py``, as it provides
+basic examples of most, if not all, of the types of functionality that are
+available not only for SDB modules, but for Salt modules in general.
