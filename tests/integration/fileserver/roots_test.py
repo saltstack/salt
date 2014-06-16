@@ -108,6 +108,14 @@ class RootsTest(integration.ModuleCase):
     def test_file_list_emptydirs(self):
         if integration.TMP_STATE_TREE not in self.master_opts['file_roots']['base']:
             self.skipTest('This test fails when using tests/runtests.py. salt-runtests will be available soon.')
+
+        empty_dir = os.path.join(integration.TMP_STATE_TREE, 'empty_dir')
+        if not os.path.isdir(empty_dir):
+            # There's no use creating the empty-directory ourselves at this
+            # point, the minions have already synced, it wouldn't get pushed to
+            # them
+            self.skipTest('This test fails when using tests/runtests.py. salt-runtests will be available soon.')
+
         with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'file_roots': self.master_opts['file_roots'],
                                          'fileserver_ignoresymlinks': False,
@@ -118,8 +126,17 @@ class RootsTest(integration.ModuleCase):
             self.assertIn('empty_dir', ret)
 
     def test_dir_list(self):
+        empty_dir = os.path.join(integration.TMP_STATE_TREE, 'empty_dir')
         if integration.TMP_STATE_TREE not in self.master_opts['file_roots']['base']:
             self.skipTest('This test fails when using tests/runtests.py. salt-runtests will be available soon.')
+
+        empty_dir = os.path.join(integration.TMP_STATE_TREE, 'empty_dir')
+        if not os.path.isdir(empty_dir):
+            # There's no use creating the empty-directory ourselves at this
+            # point, the minions have already synced, it wouldn't get pushed to
+            # them
+            self.skipTest('This test fails when using tests/runtests.py. salt-runtests will be available soon.')
+
         with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'file_roots': self.master_opts['file_roots'],
                                          'fileserver_ignoresymlinks': False,
@@ -163,4 +180,4 @@ class RootsLimitTraversalTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(RootsLimitTraversalTest)
+    run_tests(RootsTest, RootsLimitTraversalTest)

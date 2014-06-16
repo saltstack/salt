@@ -128,6 +128,8 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
     if salt_name:
         name = params_from_salt.pop('name')
         ret['name'] = name
+    else:
+        params_from_salt.pop('name')
 
     if group:
         params['group'] = group

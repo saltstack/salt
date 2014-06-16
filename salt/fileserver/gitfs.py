@@ -1103,7 +1103,15 @@ def serve_file(load, fnd):
 
     ret = {'data': '',
            'dest': ''}
-    if not all(x in load for x in ('path', 'loc', 'saltenv')):
+    required_load_keys = set(['path', 'loc', 'saltenv'])
+    if not all(x in load for x in required_load_keys):
+        log.debug(
+            'Not all of the required key in load are present. Missing: {0}'.format(
+                ', '.join(
+                    required_load_keys.difference(load.keys())
+                )
+            )
+        )
         return ret
     if not fnd['path']:
         return ret

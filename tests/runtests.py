@@ -192,6 +192,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             source=[os.path.join(SALT_ROOT, 'salt')],
         )
 
+        # Transplant configuration
+        TestDaemon.transplant_configs(transport=self.options.transport)
+
+    def post_execution_cleanup(self):
+        SaltCoverageTestingParser.post_execution_cleanup(self)
+        if self.options.clean:
+            TestDaemon.clean()
+
     def run_integration_suite(self, suite_folder, display_name):
         '''
         Run an integration test suite

@@ -29,7 +29,7 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'gitfs_env_blacklist': []
 }
 
-load = {'saltenv': 'base'}
+LOAD = {'saltenv': 'base'}
 
 GITFS_AVAILABLE = None
 try:
@@ -46,6 +46,8 @@ if not gitfs.__virtual__():
 @skipIf(not GITFS_AVAILABLE, "GitFS could not be loaded. Skipping GitFS tests!")
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitFSTest(integration.ModuleCase):
+    maxDiff = None
+
     def setUp(self):
         '''
         We don't want to check in another .git dir into GH because that just gets messy.
@@ -84,7 +86,7 @@ class GitFSTest(integration.ModuleCase):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir']}):
-            ret = gitfs.file_list(load)
+            ret = gitfs.file_list(LOAD)
             self.assertIn('testfile', ret)
 
     def test_find_file(self):
@@ -105,7 +107,7 @@ class GitFSTest(integration.ModuleCase):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir']}):
-            ret = gitfs.dir_list(load)
+            ret = gitfs.dir_list(LOAD)
             self.assertIn('grail', ret)
 
     @skipIf(True, 'This test is failing and for good reason! See #9193')
@@ -113,7 +115,7 @@ class GitFSTest(integration.ModuleCase):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir']}):
-            ret = gitfs.file_list_emptydirs(load)
+            ret = gitfs.file_list_emptydirs(LOAD)
             self.assertIn('empty_dir', ret)
 
     def test_envs(self):
@@ -128,11 +130,12 @@ class GitFSTest(integration.ModuleCase):
                                          'gitfs_remotes': ['file://' + self.tmp_repo_git],
                                          'sock_dir': self.master_opts['sock_dir'],
                                          'hash_type': 'blob_sha1'}):
-            tmp_load = load
+            tmp_load = LOAD.copy()
+            tmp_load['loc'] = 0
             tmp_load['path'] = 'testfile'
             fnd = {'rel': 'testfile',
                    'path': 'testfile'}
-            ret = gitfs.file_hash(load, fnd)
+            ret = gitfs.file_hash(tmp_load, fnd)
             self.assertDictEqual({'hash_type': 'blob_sha1', 'hsum': '0d234303e6451128d756c5c259175de37d767742'}, ret)
 
     def test_serve_file(self):
@@ -143,10 +146,11 @@ class GitFSTest(integration.ModuleCase):
             fnd = {'rel': 'testfile',
                    'path': 'testfile'}
 
-            tmp_load = load
+            tmp_load = LOAD.copy()
             tmp_load['loc'] = 0
+            tmp_load['path'] = 'testfile'
 
-            ret = gitfs.serve_file(load, fnd)
+            ret = gitfs.serve_file(tmp_load, fnd)
             self.assertDictEqual({
                 'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ARTHUR:  '
                         'And this enchanter of whom you speak, he has seen the grail?\n  '
