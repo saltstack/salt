@@ -38,6 +38,8 @@ def _list_hosts():
                 continue
             if line.startswith('#'):
                 continue
+            if '#' in line:
+                line = line[:line.index('#')].strip()
             comps = line.split()
             ip = comps.pop(0)
             ret.setdefault(ip, []).extend(comps)
