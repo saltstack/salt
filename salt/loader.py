@@ -413,7 +413,7 @@ def sdb(opts, functions=None, whitelist=None):
     Make a very small database call
     '''
     load = _create_loader(opts, 'sdb', 'sdb')
-    pack = {'name': '__saltdb__',
+    pack = {'name': '__sdb__',
             'value': functions}
     return LazyLoader(load,
                       functions,
