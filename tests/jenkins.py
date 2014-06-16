@@ -57,7 +57,7 @@ def build_pillar_data(options):
     '''
     Build a YAML formatted string to properly pass pillar data
     '''
-    pillar = {}
+    pillar = {'test_transport': options.test_transport}
     if options.test_git_commit is not None:
         pillar['test_git_commit'] = options.test_git_commit
     if options.test_git_url is not None:
@@ -691,6 +691,11 @@ def parse():
         '--test-git-commit',
         default=None,
         help='The testing git commit to track')
+    parser.add_option(
+        '--test-transport',
+        default='zeromq',
+        choices=('zeromq', 'raet'),
+        help='Set to raet to run integration tests with raet transport. Default: %default')
     parser.add_option(
         '--prep-sls',
         default='git.salt',
