@@ -202,7 +202,7 @@ import functools
 import logging
 import json
 import time
-from multiprocessing import Process
+from multiprocessing import Process, Pipe
 
 # Import third-party libs
 import cherrypy
@@ -217,6 +217,8 @@ import salt.utils.event
 # Import salt-api libs
 import saltapi
 
+logger = logging.getLogger(__name__)
+
 # Imports related to websocket
 try:
     from .tools import websockets
@@ -225,6 +227,8 @@ try:
 
     HAS_WEBSOCKETS = True
 except ImportError:
+    logger.debug('Error setting up websockets', exc_info=True)
+
     websockets = type('websockets', (object,), {
         'SynchronizingWebsocket': None,
         'SynchronizingHandler': None,
@@ -232,8 +236,6 @@ except ImportError:
 
     HAS_WEBSOCKETS = False
 
-
-logger = logging.getLogger(__name__)
 
 
 def salt_token_tool():
@@ -1870,27 +1872,27 @@ class API(object):
         '''
         if HAS_WEBSOCKETS:
             self.url_map.update({
-                'formatted_events': websockets.WebsocketEndpoint,
-                'all_events': websockets.AllEvents,
+                'formatted_events': WebsocketEndpoint,
+                'all_events': AllEvents,
             })
 
         # Allow the Webhook URL to be overridden from the conf.
         self.url_map.update({
-            self.apiopts.get('webhook_url', 'hook').lstrip('/'): Webhook(),
+            self.apiopts.get('webhook_url', 'hook').lstrip('/'): Webhook,
         })
 
         # Enable the single-page JS app URL.
         if 'app' in self.apiopts:
             self.url_map.update({
-                self.apiopts.get('app_path', 'app').lstrip('/'): App(),
+                self.apiopts.get('app_path', 'app').lstrip('/'): App,
             })
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
         self.apiopts = cherrypy.config['apiopts']
 
-        self._setattr_url_map()
         self._update_url_map()
+        self._setattr_url_map()
 
     def get_conf(self):
         '''
