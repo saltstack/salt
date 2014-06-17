@@ -52,7 +52,8 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
   cloud service providers using a unified API
 * `Requests`_ - HTTP library
 
-Depending on the chosen Salt transport, ZeroMQ or RAET, dependencies vary:
+Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies 
+vary:
 
 * ZeroMQ:
   * `ZeroMQ`_ >= 3.2.0
@@ -64,6 +65,16 @@ Depending on the chosen Salt transport, ZeroMQ or RAET, dependencies vary:
   * `libnacl`_ - Python bindings to `libsodium`_
   * `ioflo`_ - The flo programming interface raet and salt-raet is built on
   * `RAET`_ - The worlds most awesome UDP protocol
+
+Salt defaults to the `ZeroMQ`_ transport, and the choice can be made at install 
+time, for example:
+
+.. code-block:: console
+
+    python setup.py --salt-transport=raet install
+
+This way, only the required dependencies are pulled by the setup script if need 
+be.
 
 Optional Dependencies
 ---------------------
