@@ -1860,12 +1860,13 @@ class API(object):
         'stats': Stats,
     }
 
+    def _setattr_url_map(self):
+        for url, cls in self.url_map.items():
+            setattr(self, url, cls())
+
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
         self.apiopts = cherrypy.config['apiopts']
-
-        for url, cls in self.url_map.items():
-            setattr(self, url, cls())
 
         if HAS_WEBSOCKETS:
             url_map.extend({
@@ -1878,6 +1879,8 @@ class API(object):
 
         if 'app' in self.apiopts:
             setattr(self, self.apiopts.get('app_path', 'app').lstrip('/'), App())
+
+        _setattr_url_map()
 
     def get_conf(self):
         '''
