@@ -338,6 +338,7 @@ def cloud_init(names, host=None, quiet=False, **kwargs):
     return __salt__['lxc.init'](names=names, host=host,
                                 saltcloud_mode=True, quiet=quiet, **kwargs)
 
+
 def _list_iter(host=None):
     '''
     Return a generator iterating over hosts

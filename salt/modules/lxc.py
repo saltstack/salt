@@ -1917,7 +1917,7 @@ def bootstrap(name, config=None, approve_key=True,
         cfg_files = __salt__['seed.mkconfig'](
             config, tmp=tmp, id_=name, approve_key=approve_key,
             priv_key=priv_key, pub_key=pub_key)
-        if (needs_install or force_install or unconditionnal_install):
+        if needs_install or force_install or unconditionnal_install:
             if install:
                 rstr = __salt__['test.rand_str']()
                 configdir = '/tmp/.c_{0}'.format(rstr)
