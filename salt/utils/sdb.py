@@ -25,7 +25,7 @@ def sdb_get(uri, opts):
     fun = '{0}.get'.format(profile['driver'])
     query = comps[1]
 
-    loaded_db = salt.loader.db(opts, fun)
+    loaded_db = salt.loader.sdb(opts, fun)
     return loaded_db[fun](query, profile=profile)
 
 
@@ -49,5 +49,5 @@ def sdb_set(uri, value, opts):
     fun = '{0}.set'.format(profile['driver'])
     query = comps[1]
 
-    loaded_db = salt.loader.db(opts, fun)
+    loaded_db = salt.loader.sdb(opts, fun)
     return loaded_db[fun](query, value, profile=profile)
