@@ -1198,7 +1198,8 @@ class RemoteClient(Client):
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts}
-        load['tok'] = self.auth.gen_token('salt')
+        if self.auth:
+            load['tok'] = self.auth.gen_token('salt')
         try:
             channel = self._get_channel()
             return channel.send(load)
