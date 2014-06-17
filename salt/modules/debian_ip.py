@@ -117,7 +117,7 @@ _DEB_CONFIG_BRIDGEING_OPTS = [
     'pathcost', 'portprio', 'ports',
     'stp', 'waitport'
 ]
-_DEB_CONFIG_PPPOE_OPTS = { 
+_DEB_CONFIG_PPPOE_OPTS = {
     'user': 'user',
     'password': 'password',
     'provider': 'provider',
@@ -146,7 +146,7 @@ _DEB_NETWORK_CONF_FILES = '/etc/modprobe.d'
 _DEB_NETWORKING_FILE = '/etc/default/networking'
 _DEB_HOSTNAME_FILE = '/etc/hostname'
 _DEB_RESOLV_FILE = '/etc/resolv.conf'
-_DEB_PPP_DIR = '/etc/ppp/peers' 
+_DEB_PPP_DIR = '/etc/ppp/peers'
 
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
@@ -475,6 +475,7 @@ def _parse_ethtool_opts(opts, iface):
 
     return config
 
+
 def _parse_ethtool_pppoe_opts(opts, iface):
     '''
     Filters given options and outputs valid settings for ETHTOOLS_PPPOE_OPTS
@@ -487,15 +488,15 @@ def _parse_ethtool_pppoe_opts(opts, iface):
     for opt in _DEB_CONFIG_PPPOE_OPTS:
         if opt in opts:
             config[opt] = opts[opt]
-    
+
     if 'provider' in opts:
         if opts['provider']:
             pass
         else:
             _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
-    
+
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for option in ( 'noipdefault','usepeerdns', 'defaultroute', 'hide-password', 'noauth', 'persist', 'noaccomp'):
+    for option in ('noipdefault', 'usepeerdns', 'defaultroute', 'hide-password', 'noauth', 'persist', 'noaccomp'):
         if option in opts:
             if opts[option] in _CONFIG_TRUE:
                 config.update({option: 'True'})
@@ -505,6 +506,7 @@ def _parse_ethtool_pppoe_opts(opts, iface):
                 _raise_error_iface(iface, option, valid)
 
     return config
+
 
 def _parse_settings_bond(opts, iface):
     '''
@@ -991,7 +993,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         adapters[iface]['data']['inet']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
 
     if iface_type == 'pppoe':
-        tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface) 
+        tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
         if tmp_ethtool:
             for item in tmp_ethtool:
                 adapters[iface]['data']['inet'][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
@@ -1265,7 +1267,7 @@ def _write_file_ppp_ifaces(iface, data):
     tmp = template.render({'data': adapters[iface]})
     ifcfg = tmp + ifcfg
 
-    filename = _DEB_PPP_DIR + '/' + adapters[iface]['data']['inet']['provider'] 
+    filename = _DEB_PPP_DIR + '/' + adapters[iface]['data']['inet']['provider']
     if not os.path.exists(os.path.dirname(filename)):
         msg = '{0} cannot be written.'
         msg = msg.format(os.path.dirname(filename))
@@ -1352,7 +1354,7 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     if iface_type == 'pppoe':
         settings['pppoe'] = 'yes'
-	if not __salt__['pkg.version']("ppp"):
+        if not __salt__['pkg.version']("ppp"):
             inst = __salt__['pkg.install']("ppp")
 
     if iface_type is 'bond':
@@ -1375,7 +1377,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         return _read_temp_ifaces(iface, opts[iface])
 
     ifcfg = _write_file_ifaces(iface, opts[iface])
-    
+
     if iface_type == 'pppoe':
         _write_file_ppp_ifaces(iface, opts[iface])
 
