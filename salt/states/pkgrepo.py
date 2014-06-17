@@ -82,7 +82,6 @@ def managed(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
-
     For yum-based systems, take note of the following configuration values:
 
     humanname
@@ -148,8 +147,13 @@ def managed(name, **kwargs):
                 - name: deb http://us.archive.ubuntu.com/ubuntu precise main
 
     disabled
-        On apt-based systems, disabled toggles whether or not the repo is
-        used for resolving dependencies and/or installing packages
+        Toggles whether or not the repo is used for resolving dependencies
+        and/or installing packages.
+
+    enabled
+        Enables the repository, even if the repository has been disabled, in
+        order for the respective package requiring the repository can be found
+        and installed.
 
     comps
         On apt-based systems, comps dictate the types of packages to be
