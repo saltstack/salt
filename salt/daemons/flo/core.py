@@ -116,6 +116,7 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
+        self.stack.value.JoinentTimeout = 0.0
 
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
