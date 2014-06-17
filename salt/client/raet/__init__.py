@@ -52,7 +52,7 @@ class LocalClient(salt.client.LocalClient):
                 timeout=timeout,
                 **kwargs)
         yid = salt.utils.gen_jid()
-        basedirpath = os.path.join(self.opts['cachedir'],  'raet')
+        basedirpath = os.path.join(self.opts['cachedir'], 'raet')
         stack = LaneStack(
                 name=('client' + yid),
                 yid=yid,
