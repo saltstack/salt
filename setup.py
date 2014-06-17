@@ -446,15 +446,6 @@ VER = __version__  # pylint: disable=E0602
 DESC = ('Portable, distributed, remote execution and '
         'configuration management system')
 
-REQUIREMENTS = []
-with open(SALT_REQS) as rfh:
-    for line in rfh.readlines():
-        if not line or line.startswith('#'):
-            continue
-        if IS_WINDOWS_PLATFORM and 'libcloud' in line:
-            continue
-        REQUIREMENTS.append(line.strip())
-
 SETUP_KWARGS = {'name': NAME,
                 'version': VER,
                 'description': DESC,
@@ -538,8 +529,9 @@ SETUP_KWARGS = {'name': NAME,
                                 ['doc/man/salt.7',
                                  ]),
                                ],
-                # Required for esky builds
-                'install_requires': REQUIREMENTS,
+                # Required for esky builds, ZeroMQ or RAET deps will be added
+                # at install time
+                'install_requires': _parse_requirements_file(SALT_REQS),
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
@@ -548,8 +540,8 @@ SETUP_KWARGS = {'name': NAME,
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
     SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
-    #SETUP_KWARGS['packages'].extend(['salt.cloud',
-    #                                 'salt.cloud.clouds'])
+    # SETUP_KWARGS['packages'].extend(['salt.cloud',
+    #                                  'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
     SETUP_KWARGS['data_files'][0][1].extend([
         'doc/man/salt-master.1',
