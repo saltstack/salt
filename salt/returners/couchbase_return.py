@@ -18,13 +18,19 @@ JID
 ===
 load: load obj
 tgt_minions: list of minions targeted
-ret_minions: list of minions that have returned data
 nocache: should we not cache the return data
 
 JID/MINION_ID
 =============
 return: return_data
 out: out_data
+
+
+TODO: remove
+
+Administrator
+password
+
 
 '''
 import logging
@@ -34,6 +40,9 @@ try:
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
+
+# Import salt libs
+import salt.utils
 
 # TODO: try to import faster json libs, and use them with:
 # >>> couchbase.set_json_converters(yajl.dumps, yajl.loads)
@@ -48,6 +57,9 @@ __virtualname__ = 'couchbase'
 def __virtual__():
     if not HAS_DEPS:
         return False
+
+    # TODO: verify bucket exists
+    # TODO: verify/create view
     return __virtualname__
 
 
@@ -56,24 +68,9 @@ def _get_options():
     Get the couchbase options from salt. Apply defaults
     if required.
     '''
-    server_host = __salt__['config.option']('couchbase.host')
-    if not server_host:
-        log.debug("Using default host.")
-        server_host = "salt"
-
-    server_port = __salt__['config.option']('couchbase.port')
-    if not server_port:
-        log.debug("Using default port.")
-        server_host = 8091
-
-    bucket_name = __salt__['config.option']('couchbase.bucket')
-    if not bucket_name:
-        log.debug("Using default bucket.")
-        bucket_name = "salt"
-
-    return {'host': server_host,
-            'port': server_port,
-            'bucket': bucket_name}
+    return {'host': __opts__.get('couchbase.host', 'salt'),
+            'port': __opts__.get('couchbase.port', 8091),
+            'bucket': __opts__.get('couchbase.bucket', 'salt')}
 
 COUCHBASE_CONN = None
 
@@ -81,9 +78,10 @@ def _get_connection():
     '''
     Global function to access the couchbase connection (and make it if its closed)
     '''
+    global COUCHBASE_CONN
     if COUCHBASE_CONN is None:
         opts = _get_options()
-        COUCHBASE_CONN = Couchbase.connect(host=opts['host'],
+        COUCHBASE_CONN = couchbase.Couchbase.connect(host=opts['host'],
                                            port=opts['port'],
                                            bucket=opts['bucket'])
     return COUCHBASE_CONN
@@ -112,65 +110,53 @@ def returner(load):
     '''
     Return data to the local job cache
     '''
-    serial = salt.payload.Serial(__opts__)
-    jid_dir = _jid_dir(load['jid'])
-    if os.path.exists(os.path.join(jid_dir, 'nocache')):
-        return
+    cb = _get_connection()
+    try:
+        jid_doc = cb.get(load['jid'])
+        if jid_doc.value['nocache'] is True:
+            return
+    except couchbase.exceptions.NotFoundError:
+        log.error(
+            'An inconsistency occurred, a job was received with a job id '
+            'that is not present in the local cache: {jid}'.format(**load)
+        )
+        return False
 
+    # TODO:??? This doens't make a lot of sense...
+    '''
     # do we need to rewrite the load?
     if load['jid'] == 'req' and bool(load.get('nocache', True)):
         with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as fp_:
             serial.dump(load, fp_)
+    '''
 
-    hn_dir = os.path.join(jid_dir, load['id'])
-
+    hn_key = '{0}/{1}'.format(load['jid'], load['id'])
     try:
-        os.mkdir(hn_dir)
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            # Minion has already returned this jid and it should be dropped
-            log.error(
+        ret_doc = {'return': load['return']}
+        if 'out' in load:
+            ret_doc['out'] = load['out']
+
+        cb.add(hn_key, ret_doc)
+    except couchbase.exceptions.KeyExistsError:
+        log.error(
                 'An extra return was detected from minion {0}, please verify '
                 'the minion, this could be a replay attack'.format(
                     load['id']
                 )
             )
-            return False
-        elif e.errno == errno.ENOENT:
-            log.error(
-                'An inconsistency occurred, a job was received with a job id '
-                'that is not present in the local cache: {jid}'.format(**load)
-            )
-            return False
-        raise
-
-    serial.dump(
-        load['return'],
-        # Use atomic open here to avoid the file being read before it's
-        # completely written to. Refs #1935
-        salt.utils.atomicfile.atomic_open(
-            os.path.join(hn_dir, RETURN_P), 'w+b'
-        )
-    )
-
-    if 'out' in load:
-        serial.dump(
-            load['out'],
-            # Use atomic open here to avoid the file being read before
-            # it's completely written to. Refs #1935
-            salt.utils.atomicfile.atomic_open(
-                os.path.join(hn_dir, OUT_P), 'w+b'
-            )
-        )
-
+        return False
 
 def save_load(jid, clear_load):
     '''
     Save the load to the specified jid
     '''
-    jid_dir = _jid_dir(jid)
+    cb = _get_connection()
 
-    serial = salt.payload.Serial(__opts__)
+    try:
+        jid_doc = cb.get(jid)
+    except couchbase.exceptions.NotFoundError:
+        log.warning('Could not write job cache file for minions: {0}'.format(minions))
+        return False
 
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load:
@@ -181,42 +167,36 @@ def save_load(jid, clear_load):
                 clear_load.get('tgt_type', 'glob')
                 )
         # save the minions to a cache so we can see in the UI
-        try:
-            serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
-                )
-        except IOError:
-            log.warning('Could not write job cache file for minions: {0}'.format(minions))
+        jid_doc.value['minions'] = minions
 
-    # Save the invocation information
-    try:
-        serial.dump(
-            clear_load,
-            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
-            )
-    except IOError:
-        log.warning('Could not write job cache file for minions: {0}'.format(minions))
+    jid_doc.value['load'] = clear_load
+
+    cb.replace(jid,
+               jid_doc.value,
+               cas=jid_doc.cas,
+               )
+
 
 
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    jid_dir = _jid_dir(jid)
-    if not os.path.exists(jid_dir):
-        return {}
-    serial = salt.payload.Serial(__opts__)
+    cb = _get_connection()
 
-    ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb'))
+    try:
+        jid_doc = cb.get(jid)
+    except couchbase.exceptions.NotFoundError:
+        log.warning('Could not write job cache file for minions: {0}'.format(minions))
+        return False
 
-    minions_path = os.path.join(jid_dir, MINIONS_P)
-    if os.path.isfile(minions_path):
-        ret['Minions'] = serial.load(salt.utils.fopen(minions_path, 'rb'))
+    ret = jid_doc.value['load']
+    if 'minions' in jid_doc.value:
+        ret['Minions'] = jid_doc.value['minions']
 
     return ret
 
-
+# TODO: view (index)
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
@@ -248,7 +228,7 @@ def get_jid(jid):
                     pass
     return ret
 
-
+# TODO: view (index)
 def get_jids():
     '''
     Return a list of all job ids
