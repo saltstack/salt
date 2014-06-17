@@ -1524,7 +1524,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             )
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
-                    # # change provider details '-only-extendable-' to extended provider name
+                    # change provider details '-only-extendable-' to extended provider name
                     details['provider'] = provider
                 elif providers.get(extends) and len(providers[extends]) > 1:
                     raise salt.cloud.exceptions.SaltCloudConfigError(

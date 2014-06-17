@@ -53,6 +53,46 @@ MOCK_ETC_HOSTS = (
 )
 MOCK_ETC_HOSTNAME = '{0}\n'.format(MOCK_HOSTNAME)
 
+MOCK_CLOUD_CONFIG = (
+    'my-dev-envs:\n'
+    '  - id: ABCDEFGHIJKLMNOP\n'
+    '    key: supersecretkeysupersecretkey\n'
+    '    keyname: test\n'
+    '    security-group: quick-start\n'
+    '    private_key: /root/test.pem\n'
+    '    location: ap-southeast-1\n'
+    '    provider: ec2\n'
+    '\n'
+    '  - apikey: abcdefghijklmnopqrstuvwxyz\n'
+    '    password: supersecret\n'
+    '    provider: linode\n'
+    '\n'
+    'my-production-envs:\n'
+    '  - extends: my-develop-envs:ec2\n'
+    '    location: us-east-1\n'
+    '    user: my-production-user@mycorp.com'
+)
+
+OVERRIDES = {'my-production-envs':
+                 [{'extends': 'my-dev-envs:ec2',
+                   'location': 'us-east-1',
+                   'user': 'my-production-user@mycorp.com'
+                  }],
+             'my-dev-envs':
+                 [{'private_key': '/root/test.pem',
+                   'security-group': 'quick-start',
+                   'keyname': 'test',
+                   'location': 'ap-southeast-1',
+                   'key': 'supersecretkeysupersecretkey',
+                   'provider': 'ec2',
+                   'id': 'ABCDEFGHIJKLMNOP',
+                   'user': 'user@mycorp.com'},
+                  {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                   'password': 'supersecret',
+                   'provider': 'linode'
+                  }],
+             'conf_file': MOCK_CLOUD_CONFIG}
+
 
 def _unhandled_mock_read(filename):
     '''
@@ -467,6 +507,41 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             self.assertEqual(
                 sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
+
+    def test_apply_cloud_providers_config(self):
+        ret = {'my-production-envs':
+                   {'ec2':
+                        {'private_key': '/root/test.pem',
+                         'security-group': 'quick-start',
+                         'profiles': {},
+                         'keyname': 'test',
+                         'location': 'us-east-1',
+                         'key': 'supersecretkeysupersecretkey',
+                         'provider': 'ec2',
+                         'id': 'ABCDEFGHIJKLMNOP',
+                         'user': 'my-production-user@mycorp.com'
+                        }
+                   },
+               'my-dev-envs':
+                   {'linode':
+                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                         'password': 'supersecret',
+                         'profiles': {},
+                         'provider': 'linode'
+                        },
+                    'ec2':
+                        {'private_key': '/root/test.pem',
+                         'security-group': 'quick-start',
+                         'profiles': {},
+                         'keyname': 'test',
+                         'location': 'ap-southeast-1',
+                         'key': 'supersecretkeysupersecretkey',
+                         'provider': 'ec2',
+                         'id': 'ABCDEFGHIJKLMNOP',
+                         'user': 'user@mycorp.com'
+                        }
+                   }}
+        self.assertEqual(ret, sconfig.apply_cloud_providers_config(OVERRIDES))
 
 
 if __name__ == '__main__':
