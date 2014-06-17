@@ -480,6 +480,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
+    HAS_CHECK = False
     if '--check' in salt_cmd.run('iptables --help', output_loglevel='quiet'):
         HAS_CHECK = True
 
