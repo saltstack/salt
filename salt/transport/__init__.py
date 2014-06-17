@@ -93,12 +93,19 @@ class RAETChannel(Channel):
         '''
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['yard0'])
+        tried = 1
+        start = time.time()
         while True:
             time.sleep(0.01)
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 for msg in self.stack.rxMsgs:
                     return msg.get('return', {})
+            if time.time() - start > timeout:
+                if tried >= tries:
+                    raise ValueError
+                self.stack.transmit(msg, self.stack.uids['yard0'])
+                tried += 1
 
 
 class ZeroMQChannel(Channel):
