@@ -5,7 +5,7 @@ A REST API for Salt
 .. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
 
 :depends:   - CherryPy Python module
-:depends:   - ws4py Python module
+:optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system. Be sure that it is enabled and the user you are
     authenticating as has permissions for all the functions you will be
@@ -201,6 +201,8 @@ import itertools
 import functools
 import logging
 import json
+import time
+from multiprocessing import Process
 
 # Import third-party libs
 import cherrypy
@@ -216,11 +218,20 @@ import salt.utils.event
 import saltapi
 
 # Imports related to websocket
-import time
-import event_processor
-from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-from ws4py.websocket import WebSocket
-from multiprocessing import Process, Lock, Pipe
+try:
+    from .tools import websockets
+    import event_processor
+    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+
+    HAS_WEBSOCKETS = True
+except ImportError:
+    websockets = type('websockets', (object,), {
+        'SynchronizingWebsocket': None,
+        'SynchronizingHandler': None,
+    })
+
+    HAS_WEBSOCKETS = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -1262,67 +1273,6 @@ class Events(object):
         return listen()
 
 
-class SynchronizingWebsocket(WebSocket):
-    '''
-    Class to handle requests sent to this websocket connection.
-    Each instance of this class represents a Salt websocket connection.
-    Waits to receive a ``ready`` message fom the client.
-    Calls send on it's end of the pipe to signal to the sender on receipt
-    of ``ready``.
-
-    This class also kicks off initial information probing jobs when clients
-    initially connect. These jobs help gather information about minions, jobs,
-    and documentation.
-    '''
-    def __init__(self, *args, **kwargs):
-        super(SynchronizingWebsocket, self).__init__(*args, **kwargs)
-
-        '''
-        This pipe needs to represent the parent end of a pipe.
-        Clients need to ensure that the pipe assigned to ``self.pipe`` is
-        the ``parent end`` of a
-        `pipe <https://docs.python.org/2/library/multiprocessing.html#exchanging-objects-between-processes>`_.
-        '''
-        self.pipe = None
-
-        '''
-        The token that we can use to make API calls.
-        There are times when we would like to kick off jobs,
-        examples include trying to obtain minions connected.
-        '''
-        self.token = None
-
-        '''
-        Options represent ``salt`` options defined in the configs.
-        '''
-        self.opts = None
-
-    def received_message(self, message):
-        '''
-        Checks if the client has sent a ready message.
-        A ready message causes ``send()`` to be called on the
-        ``parent end`` of the pipe.
-
-        Clients need to ensure that the pipe assigned to ``self.pipe`` is
-        the ``parent end`` of a pipe.
-
-        This ensures completion of the underlying websocket connection
-        and can be used to synchronize parallel senders.
-        '''
-        if message.data == 'websocket client ready':
-            self.pipe.send(message)
-            client = saltapi.APIClient(self.opts)
-            client.run({
-                'fun': 'grains.items',
-                'tgt': '*',
-                'token': self.token,
-                'mode': 'client',
-                'async': 'local_async',
-                'client': 'local'
-                })
-        self.send('server received message', False)
-
-
 class WebsocketEndpoint(object):
     '''
     Exposes formatted results from Salt's event bus.
@@ -1374,7 +1324,7 @@ class WebsocketEndpoint(object):
         'tools.hypermedia_in.on': False,
         'tools.hypermedia_out.on': False,
         'tools.websocket.on': True,
-        'tools.websocket.handler_cls': SynchronizingWebsocket,
+        'tools.websocket.handler_cls': websockets.SynchronizingWebsocket,
     })
 
     def __init__(self):
@@ -1525,54 +1475,6 @@ class WebsocketEndpoint(object):
         proc.start()
 
 
-
-class SynchronizingHandler(WebSocket):
-    '''
-    Class to handle requests sent to this websocket connection.
-    Each instance of this class represents a Salt websocket connection.
-    Waits to receive a ``ready`` message fom the client.
-    Calls send on it's end of the pipe to signal to the sender on receipt
-    of ``ready``.
-
-    This class also kicks off initial information probing jobs when clients
-    initially connect. These jobs help gather information about minions, jobs,
-    and documentation.
-    '''
-    def __init__(self, *args, **kwargs):
-        super(SynchronizingHandler, self).__init__(*args, **kwargs)
-
-        '''
-        This pipe needs to represent the parent end of a pipe.
-        Clients need to ensure that the pipe assigned to ``self.pipe`` is
-        the ``parent end`` of a
-        `pipe <https://docs.python.org/2/library/multiprocessing.html#exchanging-objects-between-processes>`_.
-        '''
-        self.pipe = None
-
-        '''
-        The token that we can use to make API calls.
-        There are times when we would like to kick off jobs,
-        examples include trying to obtain minions connected.
-        '''
-        self.token = None
-
-    def received_message(self, message):
-        '''
-        Checks if the client has sent a ready message.
-        A ready message causes ``send()`` to be called on the
-        ``parent end`` of the pipe.
-
-        Clients need to ensure that the pipe assigned to ``self.pipe`` is
-        the ``parent end`` of a pipe.
-
-        This ensures completion of the underlying websocket connection
-        and can be used to synchronize parallel senders.
-        '''
-        if message.data == 'websocket client ready':
-            self.pipe.send(message)
-        self.send('server received message', False)
-
-
 class AllEvents(object):
     '''
     Exposes ``all`` events from Salt's event bus on a websocket connection.
@@ -1624,7 +1526,7 @@ class AllEvents(object):
         'tools.hypermedia_in.on': False,
         'tools.hypermedia_out.on': False,
         'tools.websocket.on': True,
-        'tools.websocket.handler_cls': SynchronizingHandler,
+        'tools.websocket.handler_cls': websockets.SynchronizingHandler,
     })
 
     def __init__(self):
@@ -1956,8 +1858,6 @@ class API(object):
         'jobs': Jobs,
         'events': Events,
         'stats': Stats,
-        'formatted_events': WebsocketEndpoint,
-        'all_events': AllEvents,
     }
 
     def __init__(self):
@@ -1967,14 +1867,17 @@ class API(object):
         for url, cls in self.url_map.items():
             setattr(self, url, cls())
 
+        if HAS_WEBSOCKETS:
+            url_map.extend({
+                'formatted_events': websockets.WebsocketEndpoint,
+                'all_events': websockets.AllEvents,
+            })
+
         # Allow the Webhook URL to be overridden from the conf.
         setattr(self, self.apiopts.get('webhook_url', 'hook').lstrip('/'), Webhook())
 
         if 'app' in self.apiopts:
             setattr(self, self.apiopts.get('app_path', 'app').lstrip('/'), App())
-
-        cherrypy.tools.websocket = WebSocketTool()
-        WebSocketPlugin(cherrypy.engine).subscribe()
 
     def get_conf(self):
         '''
