@@ -102,6 +102,7 @@ def out_format(data, out, opts=None):
     '''
     return get_printout(out, opts)(data).rstrip()
 
+
 def strip_esc_sequence(txt):
     '''
     Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
