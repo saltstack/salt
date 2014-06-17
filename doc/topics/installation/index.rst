@@ -44,20 +44,26 @@ Dependencies
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
 * `Python 2.6`_ >= 2.6 <3.0
-* `ZeroMQ`_ >= 3.2.0
-* `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
-* `PyCrypto`_ - The Python cryptography toolkit
-* `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
 * `MarkupSafe`_ - Implements a XML/HTML/XHTML Markup safe string for Python
 * `apache-libcloud`_ - Python lib for interacting with many of the popular
   cloud service providers using a unified API
-
-The upcoming feature release will include a new dependency:
-
 * `Requests`_ - HTTP library
+
+Depending on the chosen Salt transport, ZeroMQ or RAET, dependencies vary:
+
+* ZeroMQ:
+  * `ZeroMQ`_ >= 3.2.0
+  * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
+  * `PyCrypto`_ - The Python cryptography toolkit
+  * `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
+
+* RAET:
+  * `libnacl`_ - Python bindings to `libsodium`_
+  * `ioflo`_ - The flo programming interface raet and salt-raet is built on
+  * `RAET`_ - The worlds most awesome UDP protocol
 
 Optional Dependencies
 ---------------------
@@ -79,6 +85,10 @@ Optional Dependencies
 .. _`Cython`: http://cython.org/
 .. _`apache-libcloud`: http://libcloud.apache.org
 .. _`Requests`: http://docs.python-requests.org/en/latest
+.. _`libnacl`: https://github.com/saltstack/libnacl
+.. _`ioflo`: https://github.com/ioflo/ioflo
+.. _`RAET`: https://github.com/saltstack/raet
+.. _`libsodium`: https://github.com/jedisct1/libsodium
 
 
 Upgrading Salt
