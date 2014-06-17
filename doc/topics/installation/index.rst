@@ -76,6 +76,14 @@ time, for example:
 This way, only the required dependencies are pulled by the setup script if need 
 be.
 
+If installing using pip, the ``--salt-transport`` global option can be provided 
+like:
+
+.. code-block:: console
+
+  pip install --global-option="--salt-transport=raet" salt
+
+
 Optional Dependencies
 ---------------------
 
