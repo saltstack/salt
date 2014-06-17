@@ -107,6 +107,8 @@ def purge():
         schedule.update(__pillar__['schedule'])
 
     for name in schedule.keys():
+        if name == 'enabled':
+            continue
         if name.startswith('__'):
             continue
 
