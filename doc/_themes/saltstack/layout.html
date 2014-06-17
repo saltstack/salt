@@ -92,7 +92,6 @@
     {% endif %}
     <link rel="stylesheet" href="{{ pathto('_static/basic.css', 1) }}">
     <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}">
-
     <link rel="stylesheet" href="{{ pathto('_static/css/bootstrap.css', 1) }}">
     <style>
         body { padding-top: 20px; }
@@ -118,6 +117,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="google-site-verification" content="1Y-ojT3ndjxA9coB77iUDyXPWxeuQ3T4_r0j-QG6QHg" />
 
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,600,700,800,300' rel='stylesheet' type='text/css'>
         {{ css() }}
 
         {%- if not embedded %}
@@ -159,7 +159,6 @@
         {%- endblock %}
 
         {%- block extrahead %} {% endblock %}
-        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,800italic,300,800' rel='stylesheet' type='text/css'>
         <script src="{{ pathto('_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js', 1) }}"></script>
 
         {%- block analytics %}
@@ -262,7 +261,7 @@
         <script src="{{ pathto('_static/js/main.js', 1) }}"></script>
 
         {% if on_saltstack %}
-        <script type="text/javascript" language="javascript">llactid=23943</script> 
+        <script type="text/javascript" language="javascript">llactid=23943</script>
         <script type="text/javascript" language="javascript" src="http://t6.trackalyzer.com/trackalyze.js"></script>
 
         <script>
