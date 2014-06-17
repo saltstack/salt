@@ -1150,6 +1150,8 @@ def file_hash(load, fnd):
                             '{0}.hash.{1}'.format(relpath,
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
+        if not os.path.exists(os.path.dirname(hashdest)):
+            os.makedirs(os.path.dirname(hashdest))
         with salt.utils.fopen(path, 'rb') as fp_:
             ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
                 fp_.read()).hexdigest()

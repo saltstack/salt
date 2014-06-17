@@ -131,6 +131,7 @@ class GitFSTest(integration.ModuleCase):
                                          'sock_dir': self.master_opts['sock_dir'],
                                          'hash_type': 'sha1'}):
             tmp_load = LOAD.copy()
+            tmp_load['loc'] = 0
             tmp_load['path'] = 'testfile'
             fnd = {'rel': 'testfile',
                    'path': 'testfile'}
