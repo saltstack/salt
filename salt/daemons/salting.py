@@ -14,7 +14,7 @@ from ioflo.base.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from raet import raeting, nacling, keeping
+from raet import raeting, nacling
 from raet.road.keeping import RoadKeep
 
 from salt.key import RaetKey
@@ -152,12 +152,9 @@ class SaltSafe(object):
 
     def clearRemote(self, remote):
         '''
-        Clear the remote estate file
-        Override this in sub class to change uid
+        Salt level keys should not be auto removed with cache changes
         '''
-        #mid = str(remote.eid)
-        mid = remote.name
-        self.saltRaetKey.delete_key(mid)
+        pass
 
     def statusRemote(self, remote, verhex, pubhex, main=True):
         '''
