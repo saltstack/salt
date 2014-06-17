@@ -144,7 +144,7 @@
 # Works like autosign_file, but instead allows you to specify minion IDs for
 # which keys will automatically be rejected. Will override both membership in
 # the autosign_file and the auto_accept setting.
-#autosign_file: /etc/salt/autosign.conf
+#autoreject_file: /etc/salt/autoreject.conf
 
 # Enable permissive access to the salt keys.  This allows you to run the
 # master or minion as root, but have a non-root group be given access to
