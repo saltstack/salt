@@ -17,6 +17,7 @@ from datetime import datetime
 # pylint: disable=E0611
 from distutils import log
 from distutils.cmd import Command
+from distutils.errors import DistutilsArgError
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
@@ -337,6 +338,9 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
+        ('salt-transport=', None,
+         'The transport to prepare salt for. Choices are \'zeromq\' '
+         'and \'raet\'. Defaults to \'zeromq\''),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -361,7 +365,10 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
+        if not hasattr(self.distribution, 'install_requires'):
+            self.distribution.install_requires = _parse_requirements_file(SALT_REQS)
         # pylint: disable=E0602
+        self.salt_transport = 'zeromq'
         self.salt_root_dir = ROOT_DIR
         self.salt_config_dir = CONFIG_DIR
         self.salt_cache_dir = CACHE_DIR
@@ -382,12 +389,27 @@ class Install(install):
                         'logs_dir', 'pidfile_dir'):
             optvalue = getattr(self, 'salt_{0}'.format(optname))
             if not optvalue:
-                raise RuntimeError(
+                raise DistutilsArgError(
                     'The value of --salt-{0} needs a proper path value'.format(
                         optname.replace('_', '-')
                     )
                 )
             setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
+
+        if self.salt_transport not in ('zeromq', 'raet'):
+            raise DistutilsArgError(
+                'The value of --salt-transport needs be \'zeromq\' or \'raet\', not {0!r}'.format(
+                    self.salt_transport
+                )
+            )
+        elif self.salt_transport == 'zeromq':
+            self.distribution.install_requires.extend(
+                _parse_requirements_file(SALT_ZEROMQ_REQS)
+            )
+        elif self.salt_transport == 'raet':
+            self.distribution.install_requires.extend(
+                _parse_requirements_file(SALT_RAET_REQS)
+            )
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
