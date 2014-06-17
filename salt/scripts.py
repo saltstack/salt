@@ -8,6 +8,8 @@ from __future__ import print_function
 import os
 import sys
 import time
+import traceback
+import logging
 
 # Import salt libs
 import salt
@@ -21,12 +23,22 @@ except ImportError:
     HAS_SALTCLOUD = False
 
 
-def _handle_interrupt(exc, original_exc, hardfail=False):
+log = logging.getLogger(__name__)
+
+
+def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
     '''
-    if hardfalling raise the original exception
+    if hardfalling:
+        If we got the original stacktrace, log it
+        If all cases, raise the original exception
+        but this is logically part the initial
+        stack.
     else just let salt exit gracefully
+
     '''
     if hardfail:
+        if trace:
+            log.error(trace)
         raise original_exc
     else:
         raise exc
@@ -81,6 +93,7 @@ def salt_key():
         client = salt.cli.SaltKey()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -88,7 +101,7 @@ def salt_key():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
 
 
 def salt_cp():
@@ -101,6 +114,7 @@ def salt_cp():
         client = salt.cli.SaltCP()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -108,7 +122,7 @@ def salt_cp():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
 
 
 def salt_call():
@@ -123,6 +137,7 @@ def salt_call():
         client = salt.cli.SaltCall()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -130,7 +145,7 @@ def salt_call():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
 
 
 def salt_run():
@@ -144,6 +159,7 @@ def salt_run():
         client = salt.cli.SaltRun()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -151,7 +167,7 @@ def salt_run():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
 
 
 def salt_ssh():
@@ -165,6 +181,7 @@ def salt_ssh():
         client = salt.cli.SaltSSH()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -172,8 +189,9 @@ def salt_ssh():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
     except salt.exceptions.SaltClientError as err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -181,7 +199,7 @@ def salt_ssh():
         _handle_interrupt(
             SystemExit(err),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
 
 
 def salt_cloud():
@@ -200,6 +218,7 @@ def salt_cloud():
         client = salt.cloud.cli.SaltCloud()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -207,7 +226,7 @@ def salt_cloud():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
 
 
 def salt_main():
@@ -222,6 +241,7 @@ def salt_main():
         client = salt.cli.SaltCMD()
         client.run()
     except KeyboardInterrupt, err:
+        trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
         except (AttributeError, KeyError):
@@ -229,4 +249,4 @@ def salt_main():
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
-            hardcrash)
+            hardcrash, trace=trace)
