@@ -1864,23 +1864,33 @@ class API(object):
         for url, cls in self.url_map.items():
             setattr(self, url, cls())
 
-    def __init__(self):
-        self.opts = cherrypy.config['saltopts']
-        self.apiopts = cherrypy.config['apiopts']
-
+    def _update_url_map(self):
+        '''
+        Assemble any dynamic or configurable URLs
+        '''
         if HAS_WEBSOCKETS:
-            url_map.extend({
+            self.url_map.update({
                 'formatted_events': websockets.WebsocketEndpoint,
                 'all_events': websockets.AllEvents,
             })
 
         # Allow the Webhook URL to be overridden from the conf.
-        setattr(self, self.apiopts.get('webhook_url', 'hook').lstrip('/'), Webhook())
+        self.url_map.update({
+            self.apiopts.get('webhook_url', 'hook').lstrip('/'): Webhook(),
+        })
 
+        # Enable the single-page JS app URL.
         if 'app' in self.apiopts:
-            setattr(self, self.apiopts.get('app_path', 'app').lstrip('/'), App())
+            self.url_map.update({
+                self.apiopts.get('app_path', 'app').lstrip('/'): App(),
+            })
 
-        _setattr_url_map()
+    def __init__(self):
+        self.opts = cherrypy.config['saltopts']
+        self.apiopts = cherrypy.config['apiopts']
+
+        self._setattr_url_map()
+        self._update_url_map()
 
     def get_conf(self):
         '''
