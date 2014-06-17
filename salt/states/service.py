@@ -434,14 +434,12 @@ def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    verb = ''
-    past_participle = ''
 
     if sfun == 'dead':
+        verb = 'stop'
+        past_participle = verb + 'ped'
         if __salt__['service.status'](name, sig):
             func = __salt__['service.stop']
-            verb = 'stop'
-            past_participle = verb + 'ped'
         else:
             ret['result'] = True
             ret['comment'] = 'Service is already {0}'.format(past_participle)
