@@ -71,7 +71,7 @@ time, for example:
 
 .. code-block:: console
 
-    python setup.py install --salt-transport=raet install
+    python setup.py install --salt-transport=raet
 
 This way, only the required dependencies are pulled by the setup script if need 
 be.
