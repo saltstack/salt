@@ -10,7 +10,7 @@ def sdb_get(uri, opts):
     Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
     the uri provided does not start with sdb://, then it will be returned as-is.
     '''
-    if not uri.startswith('sdb://'):
+    if not str(uri).startswith('sdb://'):
         return uri
 
     comps = uri.replace('sdb://', '').split('/')
@@ -34,7 +34,7 @@ def sdb_set(uri, value, opts):
     Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
     the uri provided does not start with sdb://, then it will be returned as-is.
     '''
-    if not uri.startswith('sdb://'):
+    if not str(uri).startswith('sdb://'):
         return False
 
     comps = uri.replace('sdb://', '').split('/')
