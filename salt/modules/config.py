@@ -11,6 +11,7 @@ import os
 import salt.utils
 import salt._compat
 import salt.syspaths as syspaths
+import salt.utils.sdb as sdb
 
 __proxyenabled__ = ['*']
 
@@ -226,16 +227,20 @@ def get(key, default=''):
     '''
     ret = salt.utils.traverse_dict_and_list(__opts__, key, '_|-')
     if ret != '_|-':
-        return ret
+        return sdb.sdb_get(ret, __opts__)
+
     ret = salt.utils.traverse_dict_and_list(__grains__, key, '_|-')
     if ret != '_|-':
-        return ret
+        return sdb.sdb_get(ret, __opts__)
+
     ret = salt.utils.traverse_dict_and_list(__pillar__, key, '_|-')
     if ret != '_|-':
-        return ret
+        return sdb.sdb_get(ret, __opts__)
+
     ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
     if ret != '_|-':
-        return ret
+        return sdb.sdb_get(ret, __opts__)
+
     return default
 
 

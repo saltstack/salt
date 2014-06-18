@@ -408,6 +408,20 @@ def queues(opts):
     return load.gen_functions()
 
 
+def sdb(opts, functions=None, whitelist=None):
+    '''
+    Make a very small database call
+    '''
+    load = _create_loader(opts, 'sdb', 'sdb')
+    pack = {'name': '__sdb__',
+            'value': functions}
+    return LazyLoader(load,
+                      functions,
+                      pack,
+                      whitelist=whitelist,
+                      )
+
+
 def clouds(opts):
     '''
     Return the cloud functions
