@@ -96,6 +96,7 @@ except ImportError:
 SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), '_requirements.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'zeromq-requirements.txt')
+SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'cloud-requirements.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'raet-requirements.txt')
 SALT_SYSPATHS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py')
 
@@ -340,7 +341,7 @@ class Install(install):
     user_options = install.user_options + [
         ('salt-transport=', None,
          'The transport to prepare salt for. Choices are \'zeromq\' '
-         'and \'raet\'. Defaults to \'zeromq\''),
+         '\'raet\' or \'both\'. Defaults to \'zeromq\''),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -366,6 +367,7 @@ class Install(install):
     def initialize_options(self):
         install.initialize_options(self)
         if not hasattr(self.distribution, 'install_requires'):
+            # Non setuptools installation
             self.distribution.install_requires = _parse_requirements_file(SALT_REQS)
         # pylint: disable=E0602
         self.salt_transport = 'zeromq'
@@ -396,20 +398,23 @@ class Install(install):
                 )
             setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
 
-        if self.salt_transport not in ('zeromq', 'raet'):
+        if self.salt_transport not in ('zeromq', 'raet', 'both'):
             raise DistutilsArgError(
                 'The value of --salt-transport needs be \'zeromq\' or \'raet\', not {0!r}'.format(
                     self.salt_transport
                 )
             )
-        elif self.salt_transport == 'zeromq':
+        if self.salt_transport in ('zeromq', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_ZEROMQ_REQS)
             )
-        elif self.salt_transport == 'raet':
+        if self.salt_transport in ('raet', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_RAET_REQS)
             )
+            if self.salt_transport == 'raet':
+                for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
+                    self.distribution.install_requires.remove(requirement)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
@@ -532,6 +537,10 @@ SETUP_KWARGS = {'name': NAME,
                 # Required for esky builds, ZeroMQ or RAET deps will be added
                 # at install time
                 'install_requires': _parse_requirements_file(SALT_REQS),
+                'extras_require': {
+                    'RAET': _parse_requirements_file(SALT_RAET_REQS),
+                    'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)
+                },
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
