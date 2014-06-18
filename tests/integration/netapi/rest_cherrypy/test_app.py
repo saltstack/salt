@@ -90,6 +90,9 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
         '''
         Auth can be disabled for requests to the webhook URL
         '''
+        # Mock fire_event() since we're only testing auth here.
+        self.get_event.return_value.fire_event.return_value = True
+
         body = urllib.urlencode({'foo': 'Foo!'})
         request, response = self.request('/hook', method='POST', body=body,
             headers={
