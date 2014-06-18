@@ -34,8 +34,9 @@ def echo(text):
 
 def ping():
     '''
-    Just used to make sure the minion is up and responding
-    Return True
+    Used to make sure the minion is up and responding. Not an ICMP ping.
+
+    Returns ``True``.
 
     CLI Example:
 
