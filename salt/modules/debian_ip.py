@@ -117,6 +117,26 @@ _DEB_CONFIG_BRIDGEING_OPTS = [
     'pathcost', 'portprio', 'ports',
     'stp', 'waitport'
 ]
+_DEB_CONFIG_PPPOE_OPTS = {
+    'user': 'user',
+    'password': 'password',
+    'provider': 'provider',
+    'pppoe_iface': 'pppoe_iface',
+    'noipdefault': 'noipdefault',
+    'usepeerdns': 'usepeerdns',
+    'defaultroute': 'defaultroute',
+    'holdoff': 'holdoff',
+    'maxfail': 'maxfail',
+    'hide-password': 'hide-password',
+    'lcp-echo-interval': 'lcp-echo-interval',
+    'lcp-echo-failure': 'lcp-echo-failure',
+    'connect': 'connect',
+    'noauth': 'noauth',
+    'persist': 'persist',
+    'mtu': 'mtu',
+    'noaccomp': 'noaccomp',
+}
+
 _DEB_ROUTES_FILE = '/etc/network/routes'
 _DEB_NETWORK_FILE = '/etc/network/interfaces'
 _DEB_NETWORK_DIR = '/etc/network/interfaces.d'
@@ -126,12 +146,13 @@ _DEB_NETWORK_CONF_FILES = '/etc/modprobe.d'
 _DEB_NETWORKING_FILE = '/etc/default/networking'
 _DEB_HOSTNAME_FILE = '/etc/hostname'
 _DEB_RESOLV_FILE = '/etc/resolv.conf'
+_DEB_PPP_DIR = '/etc/ppp/peers'
 
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
-    'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
+    'ipsec', 'dialup', 'bridge', 'slave', 'vlan', 'pppoe',
 ]
 
 
@@ -339,6 +360,9 @@ def _parse_interfaces():
                         if sline[0] == 'vlan-raw-device':
                             adapters[iface_name]['data'][context]['vlan_raw_device'] = sline[1]
 
+                        if sline[0] == 'provider':
+                            adapters[iface_name]['data'][context]['provider'] = sline[1]
+
                         if sline[0] in _REV_ETHTOOL_CONFIG_OPTS:
                             ethtool_key = sline[0]
                             if 'ethtool' not in adapters[iface_name]['data'][context]:
@@ -446,6 +470,38 @@ def _parse_ethtool_opts(opts, iface):
                 config.update({option: 'on'})
             elif opts[option] in _CONFIG_FALSE:
                 config.update({option: 'off'})
+            else:
+                _raise_error_iface(iface, option, valid)
+
+    return config
+
+
+def _parse_ethtool_pppoe_opts(opts, iface):
+    '''
+    Filters given options and outputs valid settings for ETHTOOLS_PPPOE_OPTS
+    If an option has a value that is not expected, this
+    function will log what the Interface, Setting and what it was
+    expecting.
+    '''
+    config = {}
+
+    for opt in _DEB_CONFIG_PPPOE_OPTS:
+        if opt in opts:
+            config[opt] = opts[opt]
+
+    if 'provider' in opts:
+        if opts['provider']:
+            pass
+        else:
+            _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
+
+    valid = _CONFIG_TRUE + _CONFIG_FALSE
+    for option in ('noipdefault', 'usepeerdns', 'defaultroute', 'hide-password', 'noauth', 'persist', 'noaccomp'):
+        if option in opts:
+            if opts[option] in _CONFIG_TRUE:
+                config.update({option: 'True'})
+            elif opts[option] in _CONFIG_FALSE:
+                config.update({option: 'False'})
             else:
                 _raise_error_iface(iface, option, valid)
 
@@ -936,6 +992,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'vlan':
         adapters[iface]['data']['inet']['vlan_raw_device'] = re.sub(r'\.\d*', '', iface)
 
+    if iface_type == 'pppoe':
+        tmp_ethtool = _parse_ethtool_pppoe_opts(opts, iface)
+        if tmp_ethtool:
+            for item in tmp_ethtool:
+                adapters[iface]['data']['inet'][_DEB_CONFIG_PPPOE_OPTS[item]] = tmp_ethtool[item]
+
     if iface_type == 'bridge':
         bridgeing = _parse_bridge_opts(opts, iface)
         if bridgeing:
@@ -943,7 +1005,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             adapters[iface]['data']['inet']['bridgeing_keys'] = sorted(bridgeing.keys())
 
     if 'proto' in opts:
-        valid = ['bootp', 'dhcp', 'none', 'static', 'manual', 'loopback']
+        valid = ['bootp', 'dhcp', 'none', 'static', 'manual', 'loopback', 'ppp']
         if opts['proto'] in valid:
             # no 'none' proto for Debian, set to static
             if opts['proto'] == 'none':
@@ -1188,6 +1250,37 @@ def _write_file_ifaces(iface, data):
     return saved_ifcfg.split('\n')
 
 
+def _write_file_ppp_ifaces(iface, data):
+    '''
+    Writes a file to disk
+    '''
+    try:
+        template = JINJA.get_template('debian_ppp_eth.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template debian_ppp_eth.jinja')
+        return ''
+
+    adapters = _parse_interfaces()
+    adapters[iface] = data
+
+    ifcfg = ''
+    tmp = template.render({'data': adapters[iface]})
+    ifcfg = tmp + ifcfg
+
+    filename = _DEB_PPP_DIR + '/' + adapters[iface]['data']['inet']['provider']
+    if not os.path.exists(os.path.dirname(filename)):
+        msg = '{0} cannot be written.'
+        msg = msg.format(os.path.dirname(filename))
+        log.error(msg)
+        raise AttributeError(msg)
+    fout = salt.utils.fopen(filename, 'w')
+    fout.write(ifcfg)
+    fout.close()
+
+    # Return as a array so the difflib works
+    return filename
+
+
 def build_bond(iface, **settings):
     '''
     Create a bond script in /etc/modprobe.d with the passed settings
@@ -1259,6 +1352,11 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'vlan':
         settings['vlan'] = 'yes'
 
+    if iface_type == 'pppoe':
+        settings['pppoe'] = 'yes'
+        if not __salt__['pkg.version']("ppp"):
+            inst = __salt__['pkg.install']("ppp")
+
     if iface_type is 'bond':
         if 'slaves' not in settings:
             msg = 'slaves is a required setting for bond interfaces'
@@ -1272,13 +1370,16 @@ def build_interface(iface, iface_type, enabled, **settings):
             raise AttributeError(msg)
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'pppoe']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
 
     if 'test' in settings and settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
     ifcfg = _write_file_ifaces(iface, opts[iface])
+
+    if iface_type == 'pppoe':
+        _write_file_ppp_ifaces(iface, opts[iface])
 
     # ensure lines in list end with newline, so difflib works
     return [item + '\n' for item in ifcfg]

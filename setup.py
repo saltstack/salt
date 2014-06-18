@@ -18,9 +18,11 @@ from datetime import datetime
 from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build
+from distutils.command.check import check
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
+from distutils.dist import Distribution as BaseDistribution
 # pylint: enable=E0611
 
 try:
@@ -63,6 +65,7 @@ WITH_SETUPTOOLS = False
 if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
+        from setuptools.dist import Distribution as BaseDistribution
         from setuptools.command.install import install
         from setuptools.command.sdist import sdist
         WITH_SETUPTOOLS = True
@@ -92,17 +95,11 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-SALT_VERSION = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
-)
-
-SALT_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), 'requirements.txt'
-)
-
-SALT_SYSPATHS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py'
-)
+SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py')
+SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), '_requirements.txt')
+SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'zeromq-requirements.txt')
+SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'raet-requirements.txt')
+SALT_SYSPATHS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py')
 
 # pylint: disable=W0122
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
@@ -110,12 +107,24 @@ exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 # pylint: enable=W0122
 
 
+# ----- Helper Functions -------------------------------------------------------------------------------------------->
+def _parse_requirements_file(requirements_file):
+    parsed_requirements = []
+    with open(requirements_file) as rfh:
+        for line in rfh.readlines():
+            line = line.strip()
+            if not line or line.startswith(('#', '-r')):
+                continue
+            if IS_WINDOWS_PLATFORM and 'libcloud' in line:
+                continue
+            parsed_requirements.append(line)
+    return parsed_requirements
+# <---- Helper Functions ---------------------------------------------------------------------------------------------
+
+
+# ----- Custom Distutils/Setuptools Commands ------------------------------------------------------------------------>
 class CloudSdist(sdist):
     user_options = sdist.user_options + [
-        ('skip-bootstrap-download', None,
-         '[DEPRECATED] Skip downloading the bootstrap-salt.sh script. This '
-         'can also be triggered by having `SKIP_BOOTSTRAP_DOWNLOAD=1` as an '
-         'environment variable.'),
         ('download-bootstrap-script', None,
          'Download the latest stable bootstrap-salt.sh script. This '
          'can also be triggered by having `DOWNLOAD_BOOTSTRAP_SCRIPT=1` as an '
@@ -123,21 +132,15 @@ class CloudSdist(sdist):
 
     ]
     boolean_options = sdist.boolean_options + [
-        'skip-bootstrap-download',
         'download-bootstrap-script'
     ]
 
     def initialize_options(self):
         sdist.initialize_options(self)
-        self.skip_bootstrap_download = True
         self.download_bootstrap_script = False
 
     def finalize_options(self):
         sdist.finalize_options(self)
-        if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
-                '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
-
         if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:
             download_bootstrap_script = os.environ.get(
                 'DOWNLOAD_BOOTSTRAP_SCRIPT', '0'
@@ -154,7 +157,6 @@ class CloudSdist(sdist):
                     BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION
                 )
             )
-            req = urllib2.urlopen(url)
             deploy_path = os.path.join(
                 SETUP_DIRNAME,
                 'salt',
@@ -162,28 +164,45 @@ class CloudSdist(sdist):
                 'deploy',
                 'bootstrap-salt.sh'
             )
-            if req.getcode() == 200:
-                try:
-                    log.info(
-                        'Updating bootstrap-salt.sh.'
-                        '\n\tSource:      {0}'
-                        '\n\tDestination: {1}'.format(
-                            url,
-                            deploy_path
+            log.info(
+                'Updating bootstrap-salt.sh.'
+                '\n\tSource:      {0}'
+                '\n\tDestination: {1}'.format(
+                    url,
+                    deploy_path
+                )
+            )
+
+            try:
+                import requests
+                req = requests.get(url)
+                if req.status_code == 200:
+                    script_contents = req.text.encode(req.encoding)
+                else:
+                    log.error(
+                        'Failed to update the bootstrap-salt.sh script. HTTP '
+                        'Error code: {0}'.format(
+                            req.status_code
                         )
                     )
-                    with open(deploy_path, 'w') as fp_:
-                        fp_.write(req.read())
-                except (OSError, IOError) as err:
+            except ImportError:
+                req = urllib2.urlopen(url)
+
+                if req.getcode() == 200:
+                    script_contents = req.read()
+                else:
                     log.error(
-                        'Failed to write the updated script: {0}'.format(err)
+                        'Failed to update the bootstrap-salt.sh script. HTTP '
+                        'Error code: {0}'.format(
+                            req.getcode()
+                        )
                     )
-            else:
+            try:
+                with open(deploy_path, 'w') as fp_:
+                    fp_.write(script_contents)
+            except (OSError, IOError) as err:
                 log.error(
-                    'Failed to update the bootstrap-salt.sh script. HTTP '
-                    'Error code: {0}'.format(
-                        req.getcode()
-                    )
+                    'Failed to write the updated script: {0}'.format(err)
                 )
 
         # Let's the rest of the build command
@@ -403,32 +422,122 @@ class InstallLib(install_lib):
             os.chmod(filename, 0755)
 
 
+class Check(check):
+    '''
+    Since check is always executed, or at least on most of the commands we use
+    we simply override it to adapt the install_requires distribution parameter
+    based on the chosen salt transport
+    '''
+    def run(self):
+        if self.distribution.salt_transport == 'zeromq':
+            self.distribution.install_requires.extend(_parse_requirements_file(SALT_ZEROMQ_REQS))
+        elif self.distribution.salt_transport == 'raet':
+            self.distribution.install_requires.extend(_parse_requirements_file(SALT_RAET_REQS))
+        return check.run(self)
+# <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
+
+
+class SaltDistribution(BaseDistribution):
+
+    global_options = BaseDistribution.global_options + [
+        ('salt-transport=', None,
+         'The transport to prepare salt for. Choices are \'zeromq\' '
+         'and \'raet\'. Defaults to \'zeromq\''),
+    ]
+
+    def __init__(self, attrs=None):
+        BaseDistribution.__init__(self, attrs=attrs)
+
+        # At this point options haven't been parsed yet. Provide defaults
+        self.salt_transport = 'zeromq'
+
+        # This flag is required to tweak the salt paths at install time
+        self.running_salt_install = False
+
+        self.cmdclass['check'] = Check
+        self.cmdclass['test'] = TestCommand
+        self.cmdclass['clean'] = Clean
+        self.cmdclass['build'] = Build
+        self.cmdclass['install'] = Install
+        if IS_WINDOWS_PLATFORM is False:
+            self.cmdclass['sdist'] = CloudSdist
+            self.cmdclass['install_lib'] = InstallLib
+
+        self.setup_requires = ['requests']
+        self.install_requires = _parse_requirements_file(SALT_REQS)
+
+        if IS_WINDOWS_PLATFORM is False:
+            # self.packages.extend(['salt.cloud',
+            #                       'salt.cloud.clouds'])
+            self.package_data['salt.cloud'] = ['deploy/*.sh']
+
+            self.data_files[0][1].extend([
+                'doc/man/salt-master.1',
+                'doc/man/salt-key.1',
+                'doc/man/salt.1',
+                'doc/man/salt-syndic.1',
+                'doc/man/salt-run.1',
+                'doc/man/salt-ssh.1',
+                'doc/man/salt-cloud.1'
+            ])
+        else:
+            self.install_requires.append('WMI')
+
+        if WITH_SETUPTOOLS:
+            self.entry_points = {
+                'console_scripts': ['salt-call = salt.scripts:salt_call',
+                                    'salt-cp = salt.scripts:salt_cp',
+                                    'salt-minion = salt.scripts:salt_minion',
+                                    ]
+            }
+            if IS_WINDOWS_PLATFORM is False:
+                self.entry_points['console_scripts'].extend([
+                    'salt = salt.scripts:salt_main',
+                    'salt-cloud = salt.scripts:salt_cloud',
+                    'salt-key = salt.scripts:salt_key',
+                    'salt-master = salt.scripts:salt_master',
+                    'salt-run = salt.scripts:salt_run',
+                    'salt-ssh = salt.scripts:salt_ssh',
+                    'salt-syndic = salt.scripts:salt_syndic',
+                ])
+
+            # Required for running the tests suite
+            self.dependency_links = [
+                'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
+            ]
+            self.tests_require = ['SaltTesting']
+        else:
+            self.scripts = [
+                'scripts/salt-call',
+                'scripts/salt-cp',
+                'scripts/salt-minion',
+                'scripts/salt-unity',
+            ]
+
+            if IS_WINDOWS_PLATFORM is False:
+                self.scripts.extend([
+                    'scripts/salt',
+                    'scripts/salt-cloud',
+                    'scripts/salt-key',
+                    'scripts/salt-master',
+                    'scripts/salt-run',
+                    'scripts/salt-ssh',
+                    'scripts/salt-syndic',
+                ])
+
+
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
-DESC = ('Portable, distributed, remote execution and '
-        'configuration management system')
+DESC = 'Portable, distributed, remote execution and configuration management system'
 
-REQUIREMENTS = []
-with open(SALT_REQS) as rfh:
-    for line in rfh.readlines():
-        if not line or line.startswith('#'):
-            continue
-        if IS_WINDOWS_PLATFORM and 'libcloud' in line:
-            continue
-        REQUIREMENTS.append(line.strip())
-
-SETUP_KWARGS = {'name': NAME,
+SETUP_KWARGS = {'distclass': SaltDistribution,
+                'name': NAME,
                 'version': VER,
                 'description': DESC,
                 'author': 'Thomas S Hatch',
                 'author_email': 'thatch45@gmail.com',
                 'url': 'http://saltstack.org',
-                'cmdclass': {
-                    'test': TestCommand,
-                    'clean': Clean,
-                    'build': Build,
-                    'install': Install
-                },
+                'license': 'Apache Software License, Version 2.0',
                 'classifiers': ['Programming Language :: Python',
                                 'Programming Language :: Cython',
                                 'Programming Language :: Python :: 2.6',
@@ -500,28 +609,10 @@ SETUP_KWARGS = {'name': NAME,
                                 ['doc/man/salt.7',
                                  ]),
                                ],
-                # Required for esky builds
-                'install_requires': REQUIREMENTS,
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
                 }
-
-if IS_WINDOWS_PLATFORM is False:
-    SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
-    SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
-    #SETUP_KWARGS['packages'].extend(['salt.cloud',
-    #                                 'salt.cloud.clouds'])
-    SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
-    SETUP_KWARGS['data_files'][0][1].extend([
-        'doc/man/salt-master.1',
-        'doc/man/salt-key.1',
-        'doc/man/salt.1',
-        'doc/man/salt-syndic.1',
-        'doc/man/salt-run.1',
-        'doc/man/salt-ssh.1',
-        'doc/man/salt-cloud.1'
-    ])
 
 
 # bbfreeze explicit includes
@@ -575,7 +666,6 @@ if IS_WINDOWS_PLATFORM:
         'site',
         'psutil',
     ])
-    SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
     FREEZER_INCLUDES.append('spwd')
     try:
@@ -590,10 +680,10 @@ elif sys.platform.startswith('sunos'):
     try:
         from bbfreeze.modulegraph.modulegraph import ModuleGraph
         mf = ModuleGraph(sys.path[:])
-        for arg in glob.glob("salt/modules/*.py"):
+        for arg in glob.glob('salt/modules/*.py'):
                 mf.run_script(arg)
         for mod in mf.flatten():
-            if type(mod).__name__ != "Script" and mod.filename:
+            if type(mod).__name__ != 'Script' and mod.filename:
                 FREEZER_INCLUDES.append(str(os.path.basename(mod.identifier)))
     except ImportError:
         pass
@@ -610,46 +700,6 @@ if HAS_ESKY:
     }
     SETUP_KWARGS['options'] = OPTIONS
 
-if WITH_SETUPTOOLS:
-    SETUP_KWARGS['entry_points'] = {
-        'console_scripts': ['salt-call = salt.scripts:salt_call',
-                            'salt-cp = salt.scripts:salt_cp',
-                            'salt-minion = salt.scripts:salt_minion',
-                            ]
-    }
-    if IS_WINDOWS_PLATFORM is False:
-        SETUP_KWARGS['entry_points']['console_scripts'].extend([
-            'salt = salt.scripts:salt_main',
-            'salt-cloud = salt.scripts:salt_cloud',
-            'salt-key = salt.scripts:salt_key',
-            'salt-master = salt.scripts:salt_master',
-            'salt-run = salt.scripts:salt_run',
-            'salt-ssh = salt.scripts:salt_ssh',
-            'salt-syndic = salt.scripts:salt_syndic',
-        ])
-
-    # Required for running the tests suite
-    SETUP_KWARGS['dependency_links'] = [
-        'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
-    ]
-    SETUP_KWARGS['tests_require'] = ['SaltTesting']
-else:
-    SETUP_KWARGS['scripts'] = ['scripts/salt-call',
-                               'scripts/salt-cp',
-                               'scripts/salt-minion',
-                               'scripts/salt-unity',
-                               ]
-
-    if IS_WINDOWS_PLATFORM is False:
-        SETUP_KWARGS['scripts'].extend([
-            'scripts/salt',
-            'scripts/salt-cloud',
-            'scripts/salt-key',
-            'scripts/salt-master',
-            'scripts/salt-run',
-            'scripts/salt-ssh',
-            'scripts/salt-syndic',
-        ])
 
 if __name__ == '__main__':
     setup(**SETUP_KWARGS)

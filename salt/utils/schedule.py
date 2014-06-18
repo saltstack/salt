@@ -319,6 +319,9 @@ class Schedule(object):
         Reload the schedule from saved schedule file.
         '''
 
+        # Remove all jobs from self.intervals
+        self.intervals = {}
+
         if 'schedule' in self.opts:
             self.opts['schedule'].update(schedule['schedule'])
         else:

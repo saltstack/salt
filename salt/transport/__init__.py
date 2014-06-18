@@ -62,12 +62,12 @@ class RAETChannel(Channel):
         '''
         yid = salt.utils.gen_jid()
         stackname = self.opts['id'] + yid
-        dirpath = os.path.join(self.opts['cachedir'], stackname)
+        dirpath = os.path.join(self.opts['cachedir'], 'raet')
         self.stack = LaneStack(
                 name=stackname,
                 lanename=self.opts['id'],
                 yid=yid,
-                dirpath=dirpath,
+                basedirpath=dirpath,
                 sockdirpath=self.opts['sock_dir'])
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = yarding.RemoteYard(
@@ -93,12 +93,19 @@ class RAETChannel(Channel):
         '''
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['yard0'])
+        tried = 1
+        start = time.time()
         while True:
             time.sleep(0.01)
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 for msg in self.stack.rxMsgs:
                     return msg.get('return', {})
+            if time.time() - start > timeout:
+                if tried >= tries:
+                    raise ValueError
+                self.stack.transmit(msg, self.stack.uids['yard0'])
+                tried += 1
 
 
 class ZeroMQChannel(Channel):

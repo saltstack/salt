@@ -14,7 +14,7 @@ from ioflo.base.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from raet import raeting, nacling, keeping
+from raet import raeting, nacling
 from raet.road.keeping import RoadKeep
 
 from salt.key import RaetKey
@@ -134,10 +134,16 @@ class SaltSafe(object):
         Load and Return the data from the remote estate file
         Override this in sub class to change uid
         '''
-        status='accepted'
+        #status = raeting.ACCEPTANCE_NAMES.get(remote.acceptance, 'accepted')
+        #status='accepted'
 
         mid = remote.name
-        keydata = self.saltRaetKey.read_remote(mid, status)
+        statae = raeting.ACCEPTANCES.keys()
+        for status in statae:
+            keydata = self.saltRaetKey.read_remote(mid, status)
+            if keydata:
+                break
+            
         if not keydata:
             return None
 
@@ -152,12 +158,25 @@ class SaltSafe(object):
 
     def clearRemote(self, remote):
         '''
-        Clear the remote estate file
-        Override this in sub class to change uid
+        Salt level keys should not be auto removed with cache changes
         '''
-        #mid = str(remote.eid)
-        mid = remote.name
-        self.saltRaetKey.delete_key(mid)
+        pass
+
+    def replaceRemote(self, remote, old):
+        '''
+        Replace the safe keep key file at old name given remote.name has changed
+        Assumes name uniqueness already taken care of
+        '''
+        new = remote.name
+        if new != old:
+            self.dumpRemote(remote) #will be pending by default unless autoaccept
+            # manually fix up acceptance if not pending
+            if remote.acceptance == raeting.acceptances.accepted:
+                self.acceptRemote(remote)
+            elif remote.acceptance == raeting.acceptances.rejected:
+                self.rejectRemote(remote)
+                
+            self.saltRaetKey.delete_key(old) #now delete old key file
 
     def statusRemote(self, remote, verhex, pubhex, main=True):
         '''
