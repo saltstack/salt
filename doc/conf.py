@@ -46,6 +46,7 @@ MOCK_MODULES = [
     'cheroot.wsgi',
     'cherrypy',
     'cherrypy.lib',
+    'cherrypy.process',
     'cherrypy.wsgiserver',
     'cherrypy.wsgiserver.ssl_builtin',
 
@@ -56,6 +57,11 @@ MOCK_MODULES = [
     'tornado.ioloop',
     'tornado.web',
 
+    'ws4py',
+    'multiprocessing',
+    'ws4py.server',
+    'ws4py.server.cherrypyserver',
+    'ws4py.websocket',
     'yaml',
     'zmq',
 
