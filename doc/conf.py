@@ -34,16 +34,6 @@ class Mock(object):
 
 MOCK_MODULES = [
     # third-party libs (for netapi modules)
-    'flask',
-    'flask.globals',
-    'flask.views',
-    'werkzeug',
-    'werkzeug.exceptions',
-    'cheroot.ssllib',
-    'cheroot.ssllib.ssl_builtin',
-
-    'cheroot',
-    'cheroot.wsgi',
     'cherrypy',
     'cherrypy.lib',
     'cherrypy.process',
@@ -59,10 +49,10 @@ MOCK_MODULES = [
     'tornado.websocket',    
 
     'ws4py',
-    'multiprocessing',
     'ws4py.server',
     'ws4py.server.cherrypyserver',
     'ws4py.websocket',
+
     'yaml',
     'zmq',
 
