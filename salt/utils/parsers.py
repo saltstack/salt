@@ -1458,12 +1458,17 @@ class CloudCredentialsMixIn(object):
                   ' PROVIDER can be specified with or without a driver, for example:'
                   ' "--set-password bob rackspace"'
                   ' or more specific'
-                  ' "--set-password bob rackspace:openstack"')
+                  ' "--set-password bob rackspace:openstack"'
+                  ' DEPRECATED!')
         )
         self.add_option_group(group)
 
     def process_set_password(self):
         if self.options.set_password:
+            raise RuntimeError(
+                    'This functionality is not supported; '
+                    'please see the keyring module at http://docs.saltstack.com/en/latest/topics/sdb/'
+            )
             self.credential_username, self.credential_provider = self.options.set_password
             if self.credential_provider.startswith('-') or \
                     '=' in self.credential_provider:
