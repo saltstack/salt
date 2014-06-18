@@ -163,7 +163,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.join(mha=self.mha, timeout=0.0)
+            stack.join(ha=self.mha, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
