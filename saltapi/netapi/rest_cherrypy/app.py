@@ -1315,14 +1315,14 @@ class WebsocketEndpoint(object):
 
             **Example request**::
 
-                curl -NsS \
-                    -H 'X-Auth-Token: ffedf49d' \
-                    -H 'Host: localhost:8000' \
-                    -H 'Connection: Upgrade' \
-                    -H 'Upgrade: websocket' \
-                    -H 'Origin: http://localhost:8000' \
-                    -H 'Sec-WebSocket-Version: 13' \
-                    -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \
+                curl -NsS \\
+                    -H 'X-Auth-Token: ffedf49d' \\
+                    -H 'Host: localhost:8000' \\
+                    -H 'Connection: Upgrade' \\
+                    -H 'Upgrade: websocket' \\
+                    -H 'Origin: http://localhost:8000' \\
+                    -H 'Sec-WebSocket-Version: 13' \\
+                    -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                     localhost:8000/ws
 
             .. code-block:: http
