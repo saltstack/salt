@@ -398,22 +398,33 @@ class Install(install):
                 )
             setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
 
-        if self.salt_transport not in ('zeromq', 'raet', 'both'):
+        if self.salt_transport not in ('zeromq', 'raet', 'both', 'none'):
             raise DistutilsArgError(
-                'The value of --salt-transport needs be \'zeromq\' or \'raet\', not {0!r}'.format(
+                'The value of --salt-transport needs be \'zeromq\', '
+                '\'raet\', \'both\' or \'none\' not {0!r}'.format(
                     self.salt_transport
                 )
             )
+        if self.salt_transport == 'none':
+            for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
+                if requirement not in self.distribution.install_requires:
+                    continue
+                self.distribution.install_requires.remove(requirement)
+            return
+
         if self.salt_transport in ('zeromq', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_ZEROMQ_REQS)
             )
+
         if self.salt_transport in ('raet', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_RAET_REQS)
             )
             if self.salt_transport == 'raet':
                 for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
+                    if requirement not in self.distribution.install_requires:
+                        continue
                     self.distribution.install_requires.remove(requirement)
 
     def run(self):
