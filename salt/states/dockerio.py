@@ -445,8 +445,11 @@ def present(name):
     '''
     ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
+    if 'id' in cinfos:
+      cid = cinfos['id']
+    else:
+        cid = name
     if cinfos['status']:
-        cid = cinfos['id']
         return _valid(comment='Container {0} exists'.format(cid))
     else:
         return _invalid(comment='Container {0} not found'.format(cid or name))
