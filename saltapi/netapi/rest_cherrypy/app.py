@@ -1263,10 +1263,7 @@ class Events(object):
         cherrypy.response.headers['Connection'] = 'keep-alive'
 
         def listen():
-            event = salt.utils.event.get_event(
-                    'master',
-                    self.opts['sock_dir'],
-                    self.opts['transport'])
+            event = salt.utils.event.get_event('master', opts=self.opts)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1427,10 +1424,7 @@ class WebsocketEndpoint(object):
         def event_stream(handler, pipe):
             pipe.recv()  # blocks until send is called on the parent end of this pipe.
 
-            event = salt.utils.event.get_event(
-                    'master',
-                    self.opts['sock_dir'],
-                    self.opts['transport'])
+            event = salt.utils.event.get_event('master', opts=self.opts)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
@@ -1509,10 +1503,7 @@ class Webhook(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
-        self.event = salt.utils.event.get_event(
-                'master',
-                self.opts.get('sock_dir', ''),
-                self.opts.get('transport', 'zeromq'))
+        self.event = salt.utils.event.get_event('master', opts=self.opts)
 
         if cherrypy.config['apiopts'].get('webhook_disable_auth'):
             self._cp_config['tools.salt_token.on'] = False
