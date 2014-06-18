@@ -58,6 +58,7 @@ VALID_OPTS = {
     'master_finger': str,
     'master_shuffle': bool,
     'master_alive_interval': int,
+    'master_sign_key_name': str,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -516,6 +517,7 @@ DEFAULT_MASTER_OPTS = {
     'queue_dirs': [],
     'cli_summary': False,
     'max_minions': 0,
+    'master_sign_key_name': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

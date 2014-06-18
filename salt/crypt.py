@@ -152,6 +152,14 @@ class MasterKeys(dict):
         self.opts = opts
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
+
+        # generate signing key-pair
+        if opts['master_sign_key_name']:
+            self.pub_sign_path = os.path.join(self.opts['pki_dir'], 
+                                              opts['master_sign_key_name'] + '.pub')
+            self.rsa_sign_path = os.path.join(self.opts['pki_dir'], 
+                                              opts['master_sign_key_name'] + '.pem')
+
         self.key = self.__get_keys()
         self.token = self.__gen_token()
 
@@ -169,6 +177,19 @@ class MasterKeys(dict):
                      self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
+
+        # generate signing key-pair
+        if self.opts['master_sign_key_name']:
+            if os.path.exists(self.rsa_sign_path):
+                sign_key = RSA.load_key(self.rsa_sign_path)
+                log.debug('Loaded master signing key: {0}'.format(self.rsa_sign_path))
+            else:
+                log.info('Generating master signing keys: {0}'.format(self.opts['pki_dir']))
+                gen_keys(self.opts['pki_dir'],
+                         self.opts['master_sign_key_name'],
+                         self.opts['keysize'],
+                         self.opts.get('user'))
+                sign_key = RSA.load_key(self.rsa_path)
         return key
 
     def __gen_token(self):
