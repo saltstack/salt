@@ -3,6 +3,7 @@
 Basic functions for accessing the SDB interface
 '''
 import salt.loader
+from salt._compat import string_types
 
 
 def sdb_get(uri, opts):
@@ -10,7 +11,10 @@ def sdb_get(uri, opts):
     Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
     the uri provided does not start with sdb://, then it will be returned as-is.
     '''
-    if not str(uri).startswith('sdb://'):
+    if not isinstance(uri, string_types):
+        return uri
+
+    if not uri.startswith('sdb://'):
         return uri
 
     comps = uri.replace('sdb://', '').split('/')
@@ -34,7 +38,10 @@ def sdb_set(uri, value, opts):
     Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
     the uri provided does not start with sdb://, then it will be returned as-is.
     '''
-    if not str(uri).startswith('sdb://'):
+    if not isinstance(uri, string_types):
+        return uri
+
+    if not uri.startswith('sdb://'):
         return False
 
     comps = uri.replace('sdb://', '').split('/')
