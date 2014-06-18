@@ -53,7 +53,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.setup_logfile_logger()
 
         try:
-            local = salt.client.get_local_client(self.get_config_file_path())
+            # We don't need to bail on config file permission errors
+            # if the CLI
+            # process is run with the -a flag
+            skip_perm_errors = self.options.eauth != ''
+
+            local = salt.client.get_local_client(
+                self.get_config_file_path(),
+                skip_perm_errors=skip_perm_errors)
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return

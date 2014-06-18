@@ -341,7 +341,7 @@ def list_path_traversal(path):
     return out
 
 
-def check_path_traversal(path, user='root'):
+def check_path_traversal(path, user='root', skip_perm_errors=False):
     '''
     Walk from the root up to a directory and verify that the current
     user has access to read each directory. This is used for  making
@@ -362,6 +362,12 @@ def check_path_traversal(path, user='root'):
                 else:
                     msg += ' Please give {0} read permissions.'.format(user,
                                                                        tpath)
+
+            # We don't need to bail on config file permission errors
+            # if the CLI
+            # process is run with the -a flag
+            if skip_perm_errors:
+                return
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)
