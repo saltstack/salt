@@ -393,7 +393,10 @@ class EventListener():
     def __init__(self, mod_opts, opts):
         self.mod_opts = mod_opts
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                opts['sock_dir'],
+                opts['transport'])
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -1100,7 +1103,10 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
             tag += tag_suffix
 
         # TODO: consolidate??
-        self.event = salt.utils.event.MasterEvent(self.application.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.application.opts['sock_dir'],
+                self.application.opts['transport'])
 
         ret = self.event.fire_event({
             'post': self.raw_data,
