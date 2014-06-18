@@ -10,12 +10,10 @@ framer masterudpstack be active first setup
     frame setup
         enter
             do salt manor lane setup
-
-
-#        go spawnmaint
-#    frame spawnmaint
-#        enter
-#            do fork maint
+        go spawnmaint
+    frame spawnmaint
+        enter
+            do fork maint
         go spawnworkers
     frame spawnworkers
         enter

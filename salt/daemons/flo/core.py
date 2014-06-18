@@ -111,11 +111,12 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 localname=localname,
                 auto=auto,
                 main=main,
-                dirpath=dirpath,
+                basedirpath=dirpath,
                 safe=safe,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
+        self.stack.value.JoinentTimeout = 0.0
 
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -721,13 +722,13 @@ class NixExecutor(ioflo.base.deeding.Deed):
         Send the return data back via the uxd socket
         '''
         stackname = self.opts['id'] + ret['jid']
-        dirpath = os.path.join(self.opts['cachedir'], stackname)
+        dirpath = os.path.join(self.opts['cachedir'], 'raet')
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=self.opts['id'],
                 yid=ret['jid'],
                 sockdirpath=self.opts['sock_dir'],
-                dirpath=dirpath)
+                basedirpath=dirpath)
 
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(

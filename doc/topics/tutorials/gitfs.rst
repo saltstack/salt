@@ -90,11 +90,10 @@ master:
     gitfs_remotes:
       - https://github.com/saltstack-formulas/salt-formula.git
 
-3. *Restart the master* so that the git repository cache on the master
-   is updated, and
-   new ``salt://`` requests will send the latest files from
-   the remote git repository.
-   This step is not necessary with a standalone minion configuration.
+3. Restart the master so that the git repository cache on the master is
+   updated, and new ``salt://`` requests will send the latest files from the
+   remote git repository.  This step is not necessary with a standalone minion
+   configuration.
 
 .. note::
 

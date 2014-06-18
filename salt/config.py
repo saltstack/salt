@@ -1438,6 +1438,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
             break
 
     providers = {}
+    ext_count = 0
     for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
@@ -1473,21 +1474,14 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
         for entry in val:
             if 'provider' not in entry:
-                entry['provider'] = '-only-extendable-'
+                entry['provider'] = '-only-extendable-{0}'.format(ext_count)
+                ext_count += 1
 
             if key not in providers:
                 providers[key] = {}
 
             provider = entry['provider']
-            if provider in providers[key] and provider == '-only-extendable-':
-                raise salt.cloud.exceptions.SaltCloudConfigError(
-                    'There\'s multiple entries under {0!r} which do not set '
-                    'a provider setting. This is most likely just a holder '
-                    'for data to be extended from, however, there can be '
-                    'only one entry which does not define it\'s \'provider\' '
-                    'setting.'.format(key)
-                )
-            elif provider not in providers[key]:
+            if provider not in providers[key]:
                 providers[key][provider] = entry
 
     # Is any provider extending data!?
@@ -1530,6 +1524,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             )
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
+                    # # change provider details '-only-extendable-' to extended provider name
+                    details['provider'] = provider
                 elif providers.get(extends) and len(providers[extends]) > 1:
                     raise salt.cloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
@@ -1549,12 +1545,11 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     )
                 else:
-                    provider = providers.get(extends)
                     if driver in providers.get(extends):
                         details['extends'] = '{0}:{1}'.format(extends, driver)
-                    elif '-only-extendable-' in providers.get(extends):
+                    elif providers.get(extends).startswith('-only-extendable-'):
                         details['extends'] = '{0}:{1}'.format(
-                            extends, '-only-extendable-'
+                            extends, '-only-extendable-{0}'.format(ext_count)
                         )
                     else:
                         # We're still not aware of what we're trying to extend
@@ -1590,6 +1585,11 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 extended.update(details)
                 # Update the providers dictionary with the merged data
                 providers[alias][driver] = extended
+                # Update name of the driver, now that it's populated with extended information
+                if driver.startswith('-only-extendable-'):
+                    providers[alias][ext_driver] = providers[alias][driver]
+                    # Delete driver with old name to maintain dictionary size
+                    del providers[alias][driver]
 
         if not keep_looping:
             break
@@ -1598,7 +1598,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     # extend from
     for provider_alias, entries in providers.copy().items():
         for driver, details in entries.copy().iteritems():
-            if driver != '-only-extendable-':
+            if not driver.startswith('-only-extendable-'):
                 continue
 
             log.info(

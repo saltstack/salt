@@ -15,7 +15,7 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
-import json
+import msgpack
 import traceback
 import copy
 import re
@@ -1869,10 +1869,10 @@ def request_minion_cachedir(
         'provider': provider,
     }
 
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.pp'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
     with salt.utils.fopen(path, 'w') as fh_:
-        json.dump(data, fh_)
+        msgpack.dump(data, fh_)
 
 
 def change_minion_cachedir(
@@ -1900,16 +1900,16 @@ def change_minion_cachedir(
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.pp'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.fopen(path, 'r') as fh_:
-        cache_data = json.load(fh_)
+        cache_data = msgpack.load(fh_)
 
     cache_data.update(data)
 
     with salt.utils.fopen(path, 'w') as fh_:
-        json.dump(cache_data, fh_)
+        msgpack.dump(cache_data, fh_)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -1921,7 +1921,7 @@ def activate_minion_cachedir(minion_id, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.pp'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
     dst = os.path.join(base, 'active')
     shutil.move(src, dst)
@@ -1940,7 +1940,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
     driver = opts['providers'][provider].keys()[0]
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.pp'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
@@ -2079,9 +2079,9 @@ def cache_node_list(nodes, provider, opts):
 
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
-        path = os.path.join(prov_dir, '{0}.json'.format(node))
+        path = os.path.join(prov_dir, '{0}.pp'.format(node))
         with salt.utils.fopen(path, 'w') as fh_:
-            json.dump(nodes[node], fh_)
+            msgpack.dump(nodes[node], fh_)
 
 
 def cache_node(node, provider, opts):
@@ -2101,9 +2101,9 @@ def cache_node(node, provider, opts):
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
-    path = os.path.join(prov_dir, '{0}.json'.format(node['name']))
+    path = os.path.join(prov_dir, '{0}.pp'.format(node['name']))
     with salt.utils.fopen(path, 'w') as fh_:
-        json.dump(node, fh_)
+        msgpack.dump(node, fh_)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -2122,7 +2122,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
     '''
     cached_nodes = []
     for node in os.listdir(prov_dir):
-        cached_nodes.append(node.replace('.json', ''))
+        cached_nodes.append(node.replace('.pp', ''))
 
     log.debug(sorted(cached_nodes))
     log.debug(sorted(node_list))
@@ -2157,7 +2157,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
         return
 
     path = os.path.join(prov_dir, node)
-    path = '{0}.json'.format(path)
+    path = '{0}.pp'.format(path)
 
     if not os.path.exists(path):
         event_data = _strip_cache_events(new_data, opts)
@@ -2173,7 +2173,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.fopen(path, 'r') as fh_:
         try:
-            cache_data = json.load(fh_)
+            cache_data = msgpack.load(fh_)
         except ValueError as exc:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}

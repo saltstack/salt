@@ -52,10 +52,12 @@ class LocalClient(salt.client.LocalClient):
                 timeout=timeout,
                 **kwargs)
         yid = salt.utils.gen_jid()
+        basedirpath = os.path.join(self.opts['cachedir'], 'raet')
         stack = LaneStack(
                 name=('client' + yid),
                 yid=yid,
                 lanename='master',
+                basedirpath=basedirpath,
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
@@ -73,4 +75,7 @@ class LocalClient(salt.client.LocalClient):
             time.sleep(0.01)
             stack.serviceAll()
             for msg in stack.rxMsgs:
-                return msg.get('return', {}).get('ret', {})
+                ret = msg.get('return', {})
+                if 'ret' in ret:
+                    return ret['ret']
+                return ret
