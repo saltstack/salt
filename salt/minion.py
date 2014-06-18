@@ -556,7 +556,7 @@ class Minion(MinionBase):
     and loads all of the functions into the minion
     '''
 
-    def __init__(self, opts, timeout=60, safe=True):
+    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -638,7 +638,6 @@ class Minion(MinionBase):
                       '(Likely not a problem)'.format(self.opts['id']))
 
         # __init__() from MinionBase is called in Minion.eval_master()
-        # pylint: disable=W0231
 
     def eval_master(self,
                     opts,
