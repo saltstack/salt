@@ -1469,13 +1469,6 @@ class CloudCredentialsMixIn(object):
                     'This functionality is not supported; '
                     'please see the keyring module at http://docs.saltstack.com/en/latest/topics/sdb/'
             )
-            self.credential_username, self.credential_provider = self.options.set_password
-            if self.credential_provider.startswith('-') or \
-                    '=' in self.credential_provider:
-                self.error(
-                    '--set-password expects two arguments: <username> '
-                    '<provider>'
-                )
 
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
