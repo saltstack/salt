@@ -56,6 +56,7 @@ MOCK_ETC_HOSTNAME = '{0}\n'.format(MOCK_HOSTNAME)
 PATH = 'path/to/some/cloud/conf/file'
 DEFAULT = {'default_include': PATH}
 
+
 def _unhandled_mock_read(filename):
     '''
     Raise an error because we should not be calling salt.utils.fopen()
