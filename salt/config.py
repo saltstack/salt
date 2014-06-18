@@ -905,8 +905,8 @@ def apply_sdb(sdb_opts):
     elif isinstance(sdb_opts, list):
         for key, value in enumerate(sdb_opts):
             sdb_opts[key] = apply_sdb(value)
-    elif isinstance(value, str) and value.startswith('sdb://'):
-        sdb_opts[key] = salt.utils.sdb.sdb_get(value)
+    elif isinstance(sdb_opts, str) and sdb_opts.startswith('sdb://'):
+        sdb_opts = salt.utils.sdb.sdb_get(sdb_opts)
 
     return sdb_opts
 
