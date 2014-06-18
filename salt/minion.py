@@ -490,11 +490,7 @@ class MultiMinion(MinionBase):
         Bind to the masters
         '''
         self._prepare_minion_event_system()
-
         self.poller.register(self.epull_sock, zmq.POLLIN)
-
-        module_refresh = False
-        pillar_refresh = False
 
         # Prepare the minion generators
         minions = self.minions()
@@ -504,6 +500,8 @@ class MultiMinion(MinionBase):
         max_wait = auth_wait * 6
 
         while True:
+            module_refresh = False
+            pillar_refresh = False
             for minion in minions.values():
                 if isinstance(minion, dict):
                     minion = minion['minion']
