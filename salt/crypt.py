@@ -170,8 +170,7 @@ class MasterKeys(dict):
         Returns a key object for a key in the pki-dir
         '''
         path = os.path.join(self.opts['pki_dir'],
-                            name,
-                            '.pem')
+                            name + '.pem')
         if os.path.exists(path):
             key = RSA.load_key(path)
             log.debug('Loaded {0} key: {1}'.format(path))
