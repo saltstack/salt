@@ -4,6 +4,7 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python libs
+from __future__ import generators
 import glob
 import os
 import re
@@ -894,6 +895,22 @@ def syndic_config(master_config_path,
 
 
 # ----- Salt Cloud Configuration Functions ---------------------------------->
+def apply_sdb(sdb_opts):
+    '''
+    Recurse for sdb:// links for opts
+    '''
+    if isinstance(sdb_opts, dict):
+        for key, value in sdb_opts.items():
+            sdb_opts[key] = apply_sdb(value)
+    elif isinstance(sdb_opts, list):
+        for key, value in enumerate(sdb_opts):
+            sdb_opts[key] = apply_sdb(value)
+    elif isinstance(value, str) and value.startswith('sdb://'):
+        sdb_opts[key] = salt.utils.sdb.sdb_get(value)
+
+    return sdb_opts
+
+
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
@@ -1140,6 +1157,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         profiles_config = vm_profiles_config(profiles_config_path,
                                              providers_config)
     opts['profiles'] = profiles_config
+
+    # recurse opts for sdb configs
+    apply_sdb(opts)
 
     # Return the final options
     return opts
