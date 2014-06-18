@@ -3,6 +3,7 @@
 '''
 Sphinx documentation for salt-api
 '''
+import functools
 import os
 import sys
 
@@ -22,7 +23,10 @@ class Mock(object):
         pass
 
     def __call__(self, *args, **kwargs):
-        return Mock()
+        ret = Mock()
+        if args and callable(args[0]):
+            functools.update_wrapper(ret, args[0])
+        return ret
 
     @classmethod
     def __getattr__(cls, name):
