@@ -577,7 +577,7 @@ class Minion(MinionBase):
         opts['grains'] = salt.loader.grains(opts)
 
         # evaluate the master to connect to and authenticate with it
-        opts['master'] = self.eval_master(opts, 
+        opts['master'] = self.eval_master(opts,
                                           timeout,
                                           safe)
 
@@ -617,7 +617,7 @@ class Minion(MinionBase):
                     'seconds': opts['master_alive_interval'],
                     'jid_include': True,
                     'maxrunning': 1,
-                    'args' : [True]
+                    'args': [True]
                 }
             })
 
@@ -639,6 +639,8 @@ class Minion(MinionBase):
             log.debug('I am {0} and I am not supposed to start any proxies. '
                       '(Likely not a problem)'.format(self.opts['id']))
 
+        # __init__() from MinionBase is called in Minion.eval_master()
+        # pylint: disable=W0231
 
     def eval_master(self,
                     opts,
@@ -648,15 +650,15 @@ class Minion(MinionBase):
         '''
         Evaluates and returns the current master address. In standard mode, just calls
         authenticate() with the given master address.
-        
+
         With master_type=func evaluates the current master address from the given
         module and then calls authenticate().
 
         With master_type=failover takes the list of masters and loops through them.
         The first one that allows the minion to connect is used to authenticate() and
-        then returned. If this function is called outside the minions initialisation 
+        then returned. If this function is called outside the minions initialisation
         phase (for example from the minions main event-loop when a master connection
-        loss was detected), 'failed' should be set to True. The current 
+        loss was detected), 'failed' should be set to True. The current
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
@@ -686,7 +688,7 @@ class Minion(MinionBase):
                     if opts['master_shuffle']:
                         shuffle(opts['master'])
 
-                # if failed=True, the minion was previously connected 
+                # if failed=True, the minion was previously connected
                 # we're probably called from the minions main-event-loop
                 # because a master connection loss was detected. remove
                 # the possibly failed master from the list of masters.
@@ -751,7 +753,6 @@ class Minion(MinionBase):
                 sys.exit(1)
             else:
                 return opts['master']
-
 
     def _prep_mod_opts(self):
         '''
@@ -1577,12 +1578,12 @@ class Minion(MinionBase):
 
                                 # modify the __master_alive job to only fire,
                                 # once the connection was re-established
-                                schedule={
+                                schedule = {
                                    'function': 'status.master',
                                    'seconds': self.opts['master_alive_interval'],
                                    'jid_include': True,
                                    'maxrunning': 2,
-                                   'kwargs' : {'connected': False }
+                                   'kwargs': {'connected': False}
                                 }
                                 self.schedule.modify_job(name='__master_alive',
                                                          schedule=schedule)
@@ -1595,12 +1596,12 @@ class Minion(MinionBase):
                                 self.connected = True
                                 # modify the __master_alive job to only fire,
                                 # if the connection is lost again
-                                schedule={
+                                schedule = {
                                    'function': 'status.master',
                                    'seconds': self.opts['master_alive_interval'],
                                    'jid_include': True,
                                    'maxrunning': 2,
-                                   'kwargs' : {'connected': True }
+                                   'kwargs': {'connected': True}
                                 }
 
                                 self.schedule.modify_job(name='__master_alive',
