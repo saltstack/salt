@@ -56,6 +56,7 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.ioloop',
     'tornado.web',
+    'tornado.websocket',    
 
     'ws4py',
     'multiprocessing',
