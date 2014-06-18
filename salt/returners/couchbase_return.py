@@ -99,7 +99,7 @@ def prep_jid(nocache=False):
 
     jid = salt.utils.gen_jid()
     try:
-        cb.add(jid, {'nocache': nocache})
+        cb.add(str(jid), {'nocache': nocache})
     except couchbase.exceptions.KeyExistsError:
         return prep_jid(nocache=nocache)
 
@@ -153,7 +153,7 @@ def save_load(jid, clear_load):
     cb = _get_connection()
 
     try:
-        jid_doc = cb.get(jid)
+        jid_doc = cb.get(str(jid))
     except couchbase.exceptions.NotFoundError:
         log.warning('Could not write job cache file for minions: {0}'.format(minions))
         return False
@@ -171,7 +171,7 @@ def save_load(jid, clear_load):
 
     jid_doc.value['load'] = clear_load
 
-    cb.replace(jid,
+    cb.replace(str(jid),
                jid_doc.value,
                cas=jid_doc.cas,
                )
@@ -185,7 +185,7 @@ def get_load(jid):
     cb = _get_connection()
 
     try:
-        jid_doc = cb.get(jid)
+        jid_doc = cb.get(str(jid))
     except couchbase.exceptions.NotFoundError:
         log.warning('Could not write job cache file for minions: {0}'.format(minions))
         return False
@@ -196,44 +196,44 @@ def get_load(jid):
 
     return ret
 
-# TODO: view (index)
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    jid_dir = _jid_dir(jid)
-    serial = salt.payload.Serial(__opts__)
+    cb = _get_connection()
 
     ret = {}
-    # Check to see if the jid is real, if not return the empty dict
-    if not os.path.isdir(jid_dir):
-        return ret
-    for fn_ in os.listdir(jid_dir):
-        if fn_.startswith('.'):
-            continue
-        if fn_ not in ret:
-            retp = os.path.join(jid_dir, fn_, RETURN_P)
-            outp = os.path.join(jid_dir, fn_, OUT_P)
-            if not os.path.isfile(retp):
-                continue
-            while fn_ not in ret:
-                try:
-                    ret_data = serial.load(
-                        salt.utils.fopen(retp, 'rb'))
-                    ret[fn_] = {'return': ret_data}
-                    if os.path.isfile(outp):
-                        ret[fn_]['out'] = serial.load(
-                            salt.utils.fopen(outp, 'rb'))
-                except Exception:
-                    pass
+
+    for result in cb.query('jid_returns', 'jid_returns', key=str(jid), include_docs=True):
+        ret[result.value] = result.doc.value
+
     return ret
 
-# TODO: view (index)
 def get_jids():
     '''
     Return a list of all job ids
     '''
+    cb = _get_connection()
+
     ret = {}
-    for jid, job, t_path, final in _walk_through(_job_dir()):
-        ret[jid] = _format_jid_instance(jid, job)
+
+    for result in cb.query('jids', 'jids', include_docs=True):
+        ret[result.key] = _format_jid_instance(result.key, result.doc.value['load'])
+
+    return ret
+
+
+
+def _format_job_instance(job):
+    return {'Function': job.get('fun', 'unknown-function'),
+            'Arguments': list(job.get('arg', [])),
+            # unlikely but safeguard from invalid returns
+            'Target': job.get('tgt', 'unknown-target'),
+            'Target-type': job.get('tgt_type', []),
+            'User': job.get('user', 'root')}
+
+
+def _format_jid_instance(jid, job):
+    ret = _format_job_instance(job)
+    ret.update({'StartTime': salt.utils.jid_to_time(jid)})
     return ret
