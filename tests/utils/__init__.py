@@ -18,15 +18,18 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     @mock.patch('saltapi.APIClient', autospec=True)
     @mock.patch('salt.auth.Resolver', autospec=True)
     @mock.patch('salt.auth.LoadAuth', autospec=True)
-    def setUp(self, LoadAuth, Resolver, APIClient):
+    @mock.patch('salt.utils.event.get_event', autospec=True)
+    def setUp(self, get_event, LoadAuth, Resolver, APIClient):
         app.saltapi.APIClient = APIClient
         app.salt.auth.Resolver = Resolver
         app.salt.auth.LoadAuth = LoadAuth
+        app.salt.utils.event.get_event = get_event
 
         # Make local references to mocked objects so individual tests can
         # access and modify the mocked interfaces.
         self.Resolver = Resolver
         self.APIClient = APIClient
+        self.get_event = get_event
 
         __opts__ = self.__opts__ or {
             'external_auth': {
