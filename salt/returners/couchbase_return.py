@@ -32,6 +32,25 @@ Administrator
 password
 
 
+# TODO: auto-create the views (if you have passwords)
+
+jid_returns
+===========
+function (doc, meta) {
+  if (meta.id.indexOf('/') > -1){
+    key_parts = meta.id.split('/');
+    emit(key_parts[0], key_parts[1]);
+  }
+}
+
+jids
+=====
+function (doc, meta) {
+  if (meta.id.indexOf('/') === -1 && doc.load){
+    emit(meta.id, null)
+  }
+}
+
 '''
 import logging
 
