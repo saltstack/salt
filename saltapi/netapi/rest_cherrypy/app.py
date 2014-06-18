@@ -1240,6 +1240,8 @@ class Events(object):
 
         :status 200: success
         :status 401: could not authenticate using provided credentials
+
+        :resheader Content-Type: this depends on :mailheader:`Accept` header of request
         '''
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
@@ -1309,31 +1311,30 @@ class WebsocketEndpoint(object):
 
         .. versionadded:: 0.8.6
 
-        An authentication token may be passed as part of the URL in order to
-        bypass CORS restrictions with certain browsers.
-
-        .. http:get:: /ws
+        .. http:get:: /ws/(token)
 
             **Example request**::
 
                 curl -NsS \
+                    -H 'X-Auth-Token: ffedf49d' \
                     -H 'Host: localhost:8000' \
                     -H 'Connection: Upgrade' \
                     -H 'Upgrade: websocket' \
                     -H 'Origin: http://localhost:8000' \
                     -H 'Sec-WebSocket-Version: 13' \
                     -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \
-                    localhost:8000/ws/ffedf49d
+                    localhost:8000/ws
 
             .. code-block:: http
 
-                GET /ws/ffedf49d9a3156bd8ace7f70d17fefbcfee51479 HTTP/1.1
+                GET /ws HTTP/1.1
                 Connection: Upgrade
                 Upgrade: websocket
                 Host: localhost:8000
                 Origin: http://localhost:8000
                 Sec-WebSocket-Version: 13
                 Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
+                X-Auth-Token: ffedf49d
 
             **Example response**:
 
@@ -1344,6 +1345,22 @@ class WebsocketEndpoint(object):
                 Connection: Upgrade
                 Sec-WebSocket-Accept: mWZjBV9FCglzn1rIKJAxrTFlnJE=
                 Sec-WebSocket-Version: 13
+
+        An authentication token **may optionally** be passed as part of the URL
+        for browsers that cannot be configured to send the authentication
+        header or cookie::
+
+                curl -NsS <...snip...> localhost:8000/ws/ffedf49d
+
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included in
+            the request. This can be useful to avoid formatting on the
+            client-side::
+
+                curl -NsS <...snip...> localhost:8000/ws?format_events
+
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
         :status 101: switching to the websockets protocol
         :status 401: could not authenticate using provided credentials
@@ -1393,7 +1410,7 @@ class WebsocketEndpoint(object):
 
         # Manually verify the token
         if not salt_token or not self.auth.get_tok(salt_token):
-            raise cherrypy.HTTPError(401)  # unauthorized
+            raise cherrypy.HTTPError(401)
 
         # Release the session lock before starting the long-running response
         cherrypy.session.release_lock()
