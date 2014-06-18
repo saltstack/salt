@@ -236,6 +236,8 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 This function triggers the minion to asynchronously refresh the pillar and will
 always return ``None``.
 
+.. _targeting-pillar:
+
 Targeting with Pillar
 =====================
 
