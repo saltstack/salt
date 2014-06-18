@@ -900,7 +900,7 @@ def apply_sdb(opts, sdb_opts=None):
     Recurse for sdb:// links for opts
     '''
     if sdb_opts is None:
-        sdb_opts = deepcopy(opts)
+        sdb_opts = opts
     if isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():
             sdb_opts[key] = apply_sdb(value, opts)
@@ -1161,7 +1161,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     opts['profiles'] = profiles_config
 
     # recurse opts for sdb configs
-    opts = apply_sdb(opts)
+    apply_sdb(opts)
 
     # Return the final options
     return opts
