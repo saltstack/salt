@@ -146,6 +146,8 @@ class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
     authentication by the master.
+    
+    It also generates a signing key-pair if enbaled with master_sign_key_name.
     '''
     def __init__(self, opts):
         super(MasterKeys, self).__init__()
@@ -153,43 +155,33 @@ class MasterKeys(dict):
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
 
-        # generate signing key-pair
-        if opts['master_sign_key_name']:
-            self.pub_sign_path = os.path.join(self.opts['pki_dir'], 
-                                              opts['master_sign_key_name'] + '.pub')
-            self.rsa_sign_path = os.path.join(self.opts['pki_dir'], 
-                                              opts['master_sign_key_name'] + '.pem')
-
         self.key = self.__get_keys()
         self.token = self.__gen_token()
 
-    def __get_keys(self):
+        if opts['master_sign_key_name']:
+            self.pub_sign_path = os.path.join(self.opts['pki_dir'],
+                                              opts['master_sign_key_name'] + '.pub')
+            self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
+                                              opts['master_sign_key_name'] + '.pem')
+            self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+
+    def __get_keys(self, name='master'):
         '''
-        Returns a key objects for the master
+        Returns a key object for a key in the pki-dir
         '''
-        if os.path.exists(self.rsa_path):
-            key = RSA.load_key(self.rsa_path)
-            log.debug('Loaded master key: {0}'.format(self.rsa_path))
+        path = os.path.join(self.opts['pki_dir'],
+                            name,
+                            '.pem')
+        if os.path.exists(path):
+            key = RSA.load_key(path)
+            log.debug('Loaded {0} key: {1}'.format(path))
         else:
-            log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
+            log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
-                     'master',
+                     name,
                      self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
-
-        # generate signing key-pair
-        if self.opts['master_sign_key_name']:
-            if os.path.exists(self.rsa_sign_path):
-                sign_key = RSA.load_key(self.rsa_sign_path)
-                log.debug('Loaded master signing key: {0}'.format(self.rsa_sign_path))
-            else:
-                log.info('Generating master signing keys: {0}'.format(self.opts['pki_dir']))
-                gen_keys(self.opts['pki_dir'],
-                         self.opts['master_sign_key_name'],
-                         self.opts['keysize'],
-                         self.opts.get('user'))
-                sign_key = RSA.load_key(self.rsa_path)
         return key
 
     def __gen_token(self):
@@ -198,14 +190,17 @@ class MasterKeys(dict):
         '''
         return self.key.private_encrypt('salty bacon', 5)
 
-    def get_pub_str(self):
+    def get_pub_str(self, name='master'):
         '''
-        Return the string representation of the public key
+        Return the string representation of a public key
+        in the pki-directory
         '''
-        if not os.path.isfile(self.pub_path):
+        path = os.path.join(self.opts['pki_dir'],
+                            name + '.pub')
+        if not os.path.isfile(path):
             key = self.__get_keys()
-            key.save_pub_key(self.pub_path)
-        return salt.utils.fopen(self.pub_path, 'r').read()
+            key.save_pub_key(path)
+        return salt.utils.fopen(path, 'r').read()
 
 
 class Auth(object):
