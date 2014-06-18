@@ -23,6 +23,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -478,7 +479,12 @@ def config(name,
            'comment': ''}
 
     # get old value
-    oval = __salt__['git.config_get'](setting_name=name, cwd=repo, user=user)
+    try:
+        oval = __salt__['git.config_get'](setting_name=name,
+                                          cwd=repo,
+                                          user=user)
+    except CommandExecutionError:
+        oval = 'None'
 
     if value == oval:
         ret['comment'] = 'No changes made'
