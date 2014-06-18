@@ -903,12 +903,12 @@ def apply_sdb(opts, sdb_opts=None):
         sdb_opts = opts
     if isinstance(sdb_opts, dict):
         for key, value in sdb_opts.items():
-            sdb_opts[key] = apply_sdb(value, opts)
+            sdb_opts[key] = apply_sdb(opts, value)
     elif isinstance(sdb_opts, list):
         for key, value in enumerate(sdb_opts):
-            sdb_opts[key] = apply_sdb(value, opts)
+            sdb_opts[key] = apply_sdb(opts, value)
     elif isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
-        return salt.utils.sdb.sdb_get(sdb_opts, opts)
+        return salt.utils.sdb.sdb_get(opts, sdb_opts)
 
     return sdb_opts
 
