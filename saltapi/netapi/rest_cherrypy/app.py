@@ -231,7 +231,6 @@ except ImportError:
 
     websockets = type('websockets', (object,), {
         'SynchronizingWebsocket': None,
-        'SynchronizingHandler': None,
     })
 
     HAS_WEBSOCKETS = False
@@ -1277,41 +1276,12 @@ class Events(object):
 
 class WebsocketEndpoint(object):
     '''
-    Exposes formatted results from Salt's event bus.
+    Open a WebSocket connection to Salt's event bus
+
     The event bus on the Salt master exposes a large variety of things, notably
     when executions are started on the master and also when minions ultimately
     return their results. This URL provides a real-time window into a running
     Salt infrastructure. Uses websocket as the transport mechanism.
-
-    Exposes GET method to return websocket connections.
-    All requests should include an auth token.
-    A way to obtain obtain authentication tokens is shown below.
-
-    .. code-block:: bash
-
-        % curl -si localhost:8000/login \\
-            -H "Accept: application/json" \\
-            -d username='salt' \\
-            -d password='salt' \\
-            -d eauth='pam'
-
-    Which results in the response
-
-    .. code-block:: json
-
-        {
-            "return": [{
-                "perms": [".*", "@runner", "@wheel"],
-                "start": 1400556492.277421,
-                "token": "d0ce6c1a37e99dcc0374392f272fe19c0090cca7",
-                "expire": 1400599692.277422,
-                "user": "salt",
-                "eauth": "pam"
-            }]
-        }
-
-    In this example the ``token`` returned is ``d0ce6c1a37e99dcc0374392f272fe19c0090cca7`` and can be included
-    in subsequent websocket requests (perhaps as part of the URL).
     '''
     exposed = True
 
@@ -1333,41 +1303,49 @@ class WebsocketEndpoint(object):
         self.opts = cherrypy.config['saltopts']
         self.auth = salt.auth.LoadAuth(self.opts)
 
-    def GET(self, token=None):
+    def GET(self, token=None, **kwargs):
         '''
-        Return a websocket connection to Salt
-        representing Salt's formatted "real time" event stream.
+        Return a websocket connection of Salt's event stream
 
-        Makes use of Salt's ``presence
-        events`` to track minions connected. Presence events are OFF by default and
-        can be turned on using the ``presence_events`` and ``loop_interval`` options
-        in the Salt master :ref:`config file <configuration-salt-master>`.
+        .. versionadded:: 0.8.6
 
-        Provides a convenient way for clients to make an HTTP
-        call and obtain a websocket connection.
+        An authentication token may be passed as part of the URL in order to
+        bypass CORS restrictions with certain browsers.
 
-        .. http:get:: /formatted_events
+        .. http:get:: /ws
+
+            **Example request**::
+
+                curl -NsS \
+                    -H 'Host: localhost:8000' \
+                    -H 'Connection: Upgrade' \
+                    -H 'Upgrade: websocket' \
+                    -H 'Origin: http://localhost:8000' \
+                    -H 'Sec-WebSocket-Version: 13' \
+                    -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \
+                    localhost:8000/ws/ffedf49d
+
+            .. code-block:: http
+
+                GET /ws/ffedf49d9a3156bd8ace7f70d17fefbcfee51479 HTTP/1.1
+                Connection: Upgrade
+                Upgrade: websocket
+                Host: localhost:8000
+                Origin: http://localhost:8000
+                Sec-WebSocket-Version: 13
+                Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
 
             **Example response**:
 
             .. code-block:: http
 
-                Request URL:ws://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7
-                Request Method:GET
-                Status Code:101 Switching Protocols
-                Host:localhost:8000
-                Origin:http://localhost:8000
-                Pragma:no-cache
-                Sec-WebSocket-Extensions:permessage-deflate; client_max_window_bits, x-webkit-deflate-frame
-                Sec-WebSocket-Key:Bdp7VlCtPvkieC3epOiIgA==
-                Sec-WebSocket-Version:13
-                Upgrade:websocket
-                Connection:Upgrade
-                Content-Type:text/plain;charset=utf-8
-                Date:Tue, 20 May 2014 02:03:08 GMT
-                Server:CherryPy/3.2.3
-                Upgrade:websocket
+                HTTP/1.1 101 Switching Protocols
+                Upgrade: websocket
+                Connection: Upgrade
+                Sec-WebSocket-Accept: mWZjBV9FCglzn1rIKJAxrTFlnJE=
+                Sec-WebSocket-Version: 13
 
+        :status 101: switching to the websockets protocol
         :status 401: could not authenticate using provided credentials
 
         The event stream can be easily consumed via JavaScript:
@@ -1375,20 +1353,12 @@ class WebsocketEndpoint(object):
         .. code-block:: javascript
 
             // Note, you must be authenticated!
-
-            // Get the Websocket connection to Salt
-            var source = new Websocket('ws://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
-
-            // Get Salt's "real time" event stream.
-            source.onopen = function() { source.send('websocket client ready'); };
-
-            // Other handlers
+            var source = new Websocket('ws://localhost:8000/ws/d0ce6c1a');
             source.onerror = function(e) { console.debug('error!', e); };
-
-            // e.data represents Salt's "real time" event data as serialized JSON.
             source.onmessage = function(e) { console.debug(e.data); };
 
-            // Terminates websocket connection and Salt's "real time" event stream on the server.
+            source.send('websocket client ready')
+
             source.close();
 
         Or via Python, using the Python module
@@ -1400,23 +1370,18 @@ class WebsocketEndpoint(object):
 
             from websocket import create_connection
 
-            # Get the Websocket connection to Salt
-            ws = create_connection('ws://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
-
-            # Get Salt's "real time" event stream.
+            ws = create_connection('ws://localhost:8000/ws/d0ce6c1a')
             ws.send('websocket client ready')
 
-
-            # Simple listener to print results of Salt's "real time" event stream.
             # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
             while listening_to_events:
-                print ws.recv()       #  Salt's "real time" event data as serialized JSON.
+                print ws.recv()
 
-            # Terminates websocket connection and Salt's "real time" event stream on the server.
             ws.close()
 
-        Above examples show how to establish a websocket connection to Salt and activating
-        real time updates from Salt's event stream by signaling ``websocket client ready``.
+        Above examples show how to establish a websocket connection to Salt and
+        activating real time updates from Salt's event stream by signaling
+        ``websocket client ready``.
         '''
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
@@ -1431,25 +1396,13 @@ class WebsocketEndpoint(object):
             raise cherrypy.HTTPError(401)  # unauthorized
 
         # Release the session lock before starting the long-running response
-
-
         cherrypy.session.release_lock()
-
 
         '''
         A handler is the server side end of the websocket connection.
         Each request spawns a new instance of this handler
         '''
         handler = cherrypy.request.ws_handler
-
-
-        minions = {
-            'fun': 'grains.items',
-            'tgt': '*',
-            'expr_type': 'glob',
-            'mode': 'async',
-            'token': salt_token
-        }
 
         def event_stream(handler, pipe):
             pipe.recv()  # blocks until send is called on the parent end of this pipe.
@@ -1458,12 +1411,13 @@ class WebsocketEndpoint(object):
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
-                # data =  client.get_event(wait=0.025, tag='salt/', full=True)
                 data = stream.next()
                 if data:
                     try: #work around try to decode catch unicode errors
-                        SaltInfo.process(data, salt_token, self.opts)
-                        # handler.send('data: {0}\n\n'.format(json.dumps(data)), False)
+                        if 'format_events' in kwargs:
+                            SaltInfo.process(data, salt_token, self.opts)
+                        else:
+                            handler.send('data: {0}\n\n'.format(json.dumps(data)), False)
                     except UnicodeDecodeError as ex:
                         logger.error("Error: Salt event has non UTF-8 data:\n{0}".format(data))
                 time.sleep(0.1)
@@ -1471,191 +1425,6 @@ class WebsocketEndpoint(object):
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe
         handler.opts = self.opts
-        # Process to handle async push to a client.
-        # Each GET request causes a process to be kicked off.
-        proc = Process(target=event_stream, args=(handler,child_pipe))
-        proc.start()
-
-
-class AllEvents(object):
-    '''
-    Exposes ``all`` events from Salt's event bus on a websocket connection.
-    The event bus on the Salt master exposes a large variety of things, notably
-    when executions are started on the master and also when minions ultimately
-    return their results. This URL provides a real-time window into a running
-    Salt infrastructure. Uses websocket as the transport mechanism.
-
-    Exposes GET method to return websocket connections.
-    All requests should include an auth token.
-    A way to obtain obtain authentication tokens is shown below.
-
-    .. code-block:: bash
-
-        % curl -si localhost:8000/login \\
-            -H "Accept: application/json" \\
-            -d username='salt' \\
-            -d password='salt' \\
-            -d eauth='pam'
-
-    Which results in the response
-
-    .. code-block:: json
-
-        {
-            "return": [{
-                "perms": [".*", "@runner", "@wheel"],
-                "start": 1400556492.277421,
-                "token": "d0ce6c1a37e99dcc0374392f272fe19c0090cca7",
-                "expire": 1400599692.277422,
-                "user": "salt",
-                "eauth": "pam"
-            }]
-        }
-
-    In this example the ``token`` returned is ``d0ce6c1a37e99dcc0374392f272fe19c0090cca7`` and can be included
-    in subsequent websocket requests (perhaps as part of the URL).
-    '''
-    exposed = True
-
-    _cp_config = dict(LowDataAdapter._cp_config, **{
-        'response.stream': True,
-        'tools.encode.encoding': 'utf-8',
-
-        # Auth handled manually below
-        'tools.salt_token.on': True,
-        'tools.salt_auth.on': False,
-
-        'tools.hypermedia_in.on': False,
-        'tools.hypermedia_out.on': False,
-        'tools.websocket.on': True,
-        'tools.websocket.handler_cls': websockets.SynchronizingHandler,
-    })
-
-    def __init__(self):
-        self.opts = cherrypy.config['saltopts']
-        self.auth = salt.auth.LoadAuth(self.opts)
-
-    def GET(self, token=None):
-        '''
-        Return a websocket connection to Salt
-        representing Salt's "real time" event stream.
-
-        Provides a convenient way for clients to make an HTTP
-        call and obtain a websocket connection.
-
-        .. http:get:: /all_events
-
-            **Example response**:
-
-            .. code-block:: http
-
-                Request URL:ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7
-                Request Method:GET
-                Status Code:101 Switching Protocols
-                Host:localhost:8000
-                Origin:http://localhost:8000
-                Pragma:no-cache
-                Sec-WebSocket-Extensions:permessage-deflate; client_max_window_bits, x-webkit-deflate-frame
-                Sec-WebSocket-Key:Bdp7VlCtPvkieC3epOiIgA==
-                Sec-WebSocket-Version:13
-                Upgrade:websocket
-                Connection:Upgrade
-                Content-Type:text/plain;charset=utf-8
-                Date:Tue, 20 May 2014 02:03:08 GMT
-                Server:CherryPy/3.2.3
-                Upgrade:websocket
-
-        :status 401: could not authenticate using provided credentials
-
-        The event stream can be easily consumed via JavaScript:
-
-        .. code-block:: javascript
-
-            // Note, you must be authenticated!
-
-            // Get the Websocket connection to Salt
-            var source = new Websocket('ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
-
-            // Get Salt's "real time" event stream.
-            source.onopen = function() { source.send('websocket client ready'); };
-
-            // Other handlers
-            source.onerror = function(e) { console.debug('error!', e); };
-
-            // e.data represents Salt's "real time" event data as serialized JSON.
-            source.onmessage = function(e) { console.debug(e.data); };
-
-            // Terminates websocket connection and Salt's "real time" event stream on the server.
-            source.close();
-
-        Or via Python, using the Python module
-        `websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
-
-        .. code-block:: python
-
-            # Note, you must be authenticated!
-
-            from websocket import create_connection
-
-            # Get the Websocket connection to Salt
-            ws = create_connection('ws://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
-
-            # Get Salt's "real time" event stream.
-            ws.send('websocket client ready')
-
-
-            # Simple listener to print results of Salt's "real time" event stream.
-            # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
-            while listening_to_events:
-                print ws.recv()       #  Salt's "real time" event data as serialized JSON.
-
-            # Terminates websocket connection and Salt's "real time" event stream on the server.
-            ws.close()
-
-        Above examples show how to establish a websocket connection to Salt and activating
-        real time updates from Salt's event stream by signaling ``websocket client ready``.
-        '''
-        # Pulling the session token from an URL param is a workaround for
-        # browsers not supporting CORS in the EventSource API.
-        if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
-        else:
-            salt_token = cherrypy.session.get('token')
-
-        # Manually verify the token
-        if not salt_token or not self.auth.get_tok(salt_token):
-            raise cherrypy.HTTPError(401)  # unauthorized
-
-        # Release the session lock before starting the long-running response
-
-
-        cherrypy.session.release_lock()
-
-
-        '''
-        A handler is the server side end of the websocket connection.
-        Each request spawns a new instance of this handler
-        '''
-        handler = cherrypy.request.ws_handler
-
-        def event_stream(handler, pipe):
-            pipe.recv()  # blocks until send is called on the parent end of this pipe.
-
-            event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
-            stream = event.iter_events(full=True)
-
-            while True:
-                data = stream.next()
-                if data:
-                    try: #work around try to decode catch unicode errors
-                        handler.send('data: {0}\n\n'.format(json.dumps(data)), False)
-                    except UnicodeDecodeError as ex:
-                        logger.error("Error: Salt event has non UTF-8 data:\n{0}".format(data))
-                time.sleep(0.1)
-
-        parent_pipe, child_pipe = Pipe()
-        handler.pipe = parent_pipe
         # Process to handle async push to a client.
         # Each GET request causes a process to be kicked off.
         proc = Process(target=event_stream, args=(handler,child_pipe))
@@ -1872,8 +1641,7 @@ class API(object):
         '''
         if HAS_WEBSOCKETS:
             self.url_map.update({
-                'formatted_events': WebsocketEndpoint,
-                'all_events': AllEvents,
+                'ws': WebsocketEndpoint,
             })
 
         # Allow the Webhook URL to be overridden from the conf.
