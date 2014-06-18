@@ -50,7 +50,7 @@ class APIClient(object):
 
         :return: job ID
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
+        local = salt.client.get_local_client(self.opts['conf_file'])
         return local.run_job(*args, **kwargs)
 
     def local(self, *args, **kwargs):
@@ -61,7 +61,7 @@ class APIClient(object):
 
         :return: Returns the result from the execution module
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
+        local = salt.client.get_local_client(self.opts['conf_file'])
         return local.cmd(*args, **kwargs)
 
     def local_batch(self, *args, **kwargs):
@@ -75,7 +75,7 @@ class APIClient(object):
         :return: Returns the result from the exeuction module for each batch of
             returns
         '''
-        local = salt.client.LocalClient(self.opts['conf_file'])
+        local = salt.client.get_local_client(self.opts['conf_file'])
         return local.cmd_batch(*args, **kwargs)
 
     def runner(self, fun, **kwargs):

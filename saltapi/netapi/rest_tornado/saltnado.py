@@ -360,10 +360,10 @@ The clients rest_cherrypi supports. We want to mimic the interface, but not
 
 
 # TODO: refreshing clients using cachedict
-saltclients = {'local': salt.client.LocalClient().run_job,
+saltclients = {'local': salt.client.get_local_client().run_job,
                # not the actual client we'll use.. but its what we'll use to get args
-               'local_batch': salt.client.LocalClient().cmd_batch,
-               'local_async': salt.client.LocalClient().run_job,
+               'local_batch': salt.client.get_local_client().cmd_batch,
+               'local_async': salt.client.get_local_client().run_job,
                'runner': salt.runner.RunnerClient(salt.config.master_config('/etc/salt/master')).async,
                }
 
