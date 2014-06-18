@@ -173,7 +173,7 @@ class MasterKeys(dict):
                             name + '.pem')
         if os.path.exists(path):
             key = RSA.load_key(path)
-            log.debug('Loaded {0} key: {1}'.format(path))
+            log.debug('Loaded {0} key: {1}'.format(name, path))
         else:
             log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
