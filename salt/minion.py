@@ -557,6 +557,7 @@ class Minion(MinionBase):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
+
     def __init__(self, opts, timeout=60, safe=True):
         '''
         Pass in the options dict
@@ -575,79 +576,10 @@ class Minion(MinionBase):
         # module
         opts['grains'] = salt.loader.grains(opts)
 
-        # check if master_type was altered from its default
-        if opts['master_type'] != 'str':
-            # check for a valid keyword
-            if opts['master_type'] == 'func':
-                # split module and function and try loading the module
-                mod, fun = opts['master'].split('.')
-                try:
-                    master_mod = salt.loader.raw_mod(opts, mod, fun)
-                    if not master_mod:
-                        raise TypeError
-                    # we take whatever the module returns as master address
-                    opts['master'] = master_mod[mod + '.' + fun]()
-                except TypeError:
-                    msg = ('Failed to evaluate master address from '
-                           'module \'{0}\''.format(opts['master']))
-                    log.error(msg)
-                    sys.exit(1)
-                log.info('Evaluated master from module: {0}'.format(master_mod))
-
-            # if failover is set, master has to be of type list
-            elif opts['master_type'] == 'failover':
-                if type(opts['master']) is list:
-                    log.info('Got list of available master addresses:'
-                             ' {0}'.format(opts['master']))
-                else:
-                    msg = ('master_type set to \'failover\' but \'master\' '
-                           'is not of type list but of type '
-                           '{0}'.format(type(opts['master'])))
-                    log.error(msg)
-                    sys.exit(1)
-            else:
-                msg = ('Invalid keyword \'{0}\' for variable '
-                       '\'master_type\''.format(opts['master_type']))
-                log.error(msg)
-                sys.exit(1)
-
-        # if we have a list of masters, loop through them and be
-        # happy with the first one that allows us to connect
-        if type(opts['master']) is list:
-            conn = False
-            # shuffle the masters and then loop through them
-            local_masters = copy.copy(opts['master'])
-            if opts['master_shuffle']:
-                shuffle(local_masters)
-
-            for master in local_masters:
-                opts['master'] = master
-                opts.update(resolve_dns(opts))
-                super(Minion, self).__init__(opts)
-                try:
-                    if self.authenticate(timeout, safe) != 'full':
-                        conn = True
-                        break
-                except SaltClientError:
-                    msg = ('Master {0} could not be reached, trying '
-                           'next master (if any)'.format(opts['master']))
-                    log.info(msg)
-                    continue
-
-            if not conn:
-                msg = ('No master could be reached or all masters denied '
-                       'the minions connection attempt.')
-                log.error(msg)
-
-        # single master sign in
-        else:
-            opts.update(resolve_dns(opts))
-            super(Minion, self).__init__(opts)
-            if self.authenticate(timeout, safe) == 'full':
-                msg = ('master {0} rejected the minions connection because too '
-                       'many minions are already connected.'.format(opts['master']))
-                log.error(msg)
-                sys.exit(1)
+        # evaluate the master to connect to and authenticate with it
+        opts['master'] = self.eval_master(opts,
+                                          timeout,
+                                          safe)
 
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
@@ -684,7 +616,8 @@ class Minion(MinionBase):
                     'function': 'status.master',
                     'seconds': opts['master_alive_interval'],
                     'jid_include': True,
-                    'maxrunning': 2
+                    'maxrunning': 1,
+                    'args': [True]
                 }
             })
 
@@ -705,6 +638,121 @@ class Minion(MinionBase):
         else:
             log.debug('I am {0} and I am not supposed to start any proxies. '
                       '(Likely not a problem)'.format(self.opts['id']))
+
+        # __init__() from MinionBase is called in Minion.eval_master()
+        # pylint: disable=W0231
+
+    def eval_master(self,
+                    opts,
+                    timeout=60,
+                    safe=True,
+                    failed=False):
+        '''
+        Evaluates and returns the current master address. In standard mode, just calls
+        authenticate() with the given master address.
+
+        With master_type=func evaluates the current master address from the given
+        module and then calls authenticate().
+
+        With master_type=failover takes the list of masters and loops through them.
+        The first one that allows the minion to connect is used to authenticate() and
+        then returned. If this function is called outside the minions initialisation
+        phase (for example from the minions main event-loop when a master connection
+        loss was detected), 'failed' should be set to True. The current
+        (possibly failed) master will then be removed from the list of masters.
+        '''
+        # check if master_type was altered from its default
+        if opts['master_type'] != 'str':
+            # check for a valid keyword
+            if opts['master_type'] == 'func':
+                # split module and function and try loading the module
+                mod, fun = opts['master'].split('.')
+                try:
+                    master_mod = salt.loader.raw_mod(opts, mod, fun)
+                    if not master_mod:
+                        raise TypeError
+                    # we take whatever the module returns as master address
+                    opts['master'] = master_mod[mod + '.' + fun]()
+                except TypeError:
+                    msg = ('Failed to evaluate master address from '
+                           'module \'{0}\''.format(opts['master']))
+                    log.error(msg)
+                    sys.exit(1)
+                log.info('Evaluated master from module: {0}'.format(master_mod))
+
+            # if failover is set, master has to be of type list
+            elif opts['master_type'] == 'failover':
+                if isinstance(opts['master'], list):
+                    log.info('Got list of available master addresses:'
+                             ' {0}'.format(opts['master']))
+                    if opts['master_shuffle']:
+                        shuffle(opts['master'])
+
+                # if failed=True, the minion was previously connected
+                # we're probably called from the minions main-event-loop
+                # because a master connection loss was detected. remove
+                # the possibly failed master from the list of masters.
+                elif failed:
+                    log.info('Removing possibly failed master {0} from list of'
+                             ' masters'.format(opts['master']))
+                    # create new list of master with the possibly failed one removed
+                    opts['master'] = [x for x in opts['master_list'] if opts['master'] != x]
+
+                else:
+                    msg = ('master_type set to \'failover\' but \'master\' '
+                           'is not of type list but of type '
+                           '{0}'.format(type(opts['master'])))
+                    log.error(msg)
+                    sys.exit(1)
+            else:
+                msg = ('Invalid keyword \'{0}\' for variable '
+                       '\'master_type\''.format(opts['master_type']))
+                log.error(msg)
+                sys.exit(1)
+
+        # if we have a list of masters, loop through them and be
+        # happy with the first one that allows us to connect
+        if isinstance(opts['master'], list):
+            conn = False
+            # shuffle the masters and then loop through them
+            local_masters = copy.copy(opts['master'])
+
+            for master in local_masters:
+                opts['master'] = master
+                opts.update(resolve_dns(opts))
+                super(Minion, self).__init__(opts)
+
+                # make a backup of the master list for later use
+                self.opts['master_list'] = local_masters
+
+                try:
+                    if self.authenticate(timeout, safe) != 'full':
+                        conn = True
+                        break
+                except SaltClientError:
+                    msg = ('Master {0} could not be reached, trying '
+                           'next master (if any)'.format(opts['master']))
+                    log.info(msg)
+                    continue
+
+            if not conn:
+                msg = ('No master could be reached or all masters denied '
+                       'the minions connection attempt.')
+                log.error(msg)
+            else:
+                return opts['master']
+
+        # single master sign in
+        else:
+            opts.update(resolve_dns(opts))
+            super(Minion, self).__init__(opts)
+            if self.authenticate(timeout, safe) == 'full':
+                msg = ('master {0} rejected the minions connection because too '
+                       'many minions are already connected.'.format(opts['master']))
+                log.error(msg)
+                sys.exit(1)
+            else:
+                return opts['master']
 
     def _prep_mod_opts(self):
         '''
@@ -1476,6 +1524,7 @@ class Minion(MinionBase):
 
         ping_interval = self.opts.get('ping_interval', 0) * 60
         ping_at = None
+        self.connected = True
         while self._running is True:
             loop_interval = self.process_schedule(self, loop_interval)
             try:
@@ -1512,9 +1561,46 @@ class Minion(MinionBase):
                             tag, data = salt.utils.event.MinionEvent.unpack(package)
                             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
                             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-                        elif package.startswith('__master_disconnect'):
-                            log.debug('handling master disconnect')
+                        elif package.startswith('__master_disconnected'):
+                            # handle this event only once. otherwise it will polute the log
+                            if self.connected:
+                                log.info('Connection to master {0} lost'.format(self.opts['master']))
+                                if self.opts['master_type'] == 'failover':
+                                    log.info('Trying to tune in to next master from master-list')
+                                    self.eval_master(opts=self.opts,
+                                                     failed=True)
 
+                                # modify the __master_alive job to only fire,
+                                # once the connection was re-established
+                                schedule = {
+                                   'function': 'status.master',
+                                   'seconds': self.opts['master_alive_interval'],
+                                   'jid_include': True,
+                                   'maxrunning': 2,
+                                   'kwargs': {'connected': False}
+                                }
+                                self.schedule.modify_job(name='__master_alive',
+                                                         schedule=schedule)
+                                self.connected = False
+
+                        elif package.startswith('__master_connected'):
+                            # handle this event only once. otherwise it will polute the log
+                            if not self.connected:
+                                log.info('Connection to master {0} re-established'.format(self.opts['master']))
+                                self.connected = True
+                                # modify the __master_alive job to only fire,
+                                # if the connection is lost again
+                                schedule = {
+                                   'function': 'status.master',
+                                   'seconds': self.opts['master_alive_interval'],
+                                   'jid_include': True,
+                                   'maxrunning': 2,
+                                   'kwargs': {'connected': True}
+                                }
+
+                                self.schedule.modify_job(name='__master_alive',
+                                                         schedule=schedule)
+                                self.connected = True
                         self.epub_sock.send(package)
                     except Exception:
                         log.debug('Exception while handling events', exc_info=True)

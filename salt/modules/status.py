@@ -545,7 +545,7 @@ def version():
     return ret
 
 
-def master():
+def master(connected=True):
     '''
     .. versionadded:: Helium
 
@@ -562,6 +562,11 @@ def master():
     port = int(__salt__['config.option']('publish_port'))
     ips = _remote_port_tcp(port)
 
-    if ip not in ips:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': ip}, '__master_disconnected')
+    if connected:
+        if ip not in ips:
+            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+            event.fire_event({'master': ip}, '__master_disconnected')
+    else:
+        if ip in ips:
+            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+            event.fire_event({'master': ip}, '__master_connected')
