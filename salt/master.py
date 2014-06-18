@@ -1151,9 +1151,9 @@ class AESFuncs(object):
             return False
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
 
-	if 'loc' in load and load['loc'] < 0:
-	    log.error("load['loc'] is < 0, this should not happen.")
-	    return False
+        if 'loc' in load and load['loc'] < 0:
+            log.error("load['loc'] is < 0, this should not happen.")
+            return False
 
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
