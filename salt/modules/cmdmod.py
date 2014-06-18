@@ -1223,14 +1223,16 @@ def exec_code(lang, code, cwd=None):
 
 def run_chroot(root, cmd):
     '''
-    Chroot into a directory and run a cmd, this routines calls cmd.run_all
-    wrapped in `chroot` with dev and proc mounted in the chroot
+    .. versionadded:: Helium
+
+    This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
+    within a chroot, with dev and proc mounted in the chroot
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' cmd.chroot_run /var/lib/lxc/container_name/rootfs 'sh /tmp/bootstrap.sh'
+        salt '*' cmd.run_chroot /var/lib/lxc/container_name/rootfs 'sh /tmp/bootstrap.sh'
     '''
     __salt__['mount.mount'](
         os.path.join(root, 'dev'),
