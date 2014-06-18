@@ -184,7 +184,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     ret = {'comment': '', 'result': True}
     if host is None:
         # TODO: Support selection of host based on available memory/cpu/etc.
-        ret['A host must be provided']
+        ret['comment'] = 'A host must be provided'
         ret['result'] = False
         return ret
     if isinstance(names, basestring):
@@ -301,13 +301,14 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if not mid:
             continue
 
-        def testping(**args):
-            ping = client.cmd(mid, 'test.ping', timeout=20)
+        def testping(**kw):
+            mid_ = kw['mid']
+            ping = client.cmd(mid_, 'test.ping', timeout=20)
             time.sleep(1)
             if ping:
                 return 'OK'
-            raise Exception('Unresponsive {0}'.format(mid))
-        ping = salt.utils.cloud.wait_for_fun(testping, timeout=21)
+            raise Exception('Unresponsive {0}'.format(mid_))
+        ping = salt.utils.cloud.wait_for_fun(testping, timeout=21, mid=mid)
         if ping != 'OK':
             ret['ping_status'] = False
             ret['result'] = False
