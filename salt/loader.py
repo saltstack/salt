@@ -455,12 +455,7 @@ def netapi(opts):
     '''
     Return the network api functions
     '''
-    load = salt.loader._create_loader(
-            opts,
-            'netapi',
-            'netapi',
-            base_path=os.path.join(SALT_BASE_PATH, 'netapi'),
-            )
+    load = salt.loader._create_loader(opts, 'netapi', 'netapi')
     return load.gen_functions()
 
 
