@@ -237,8 +237,8 @@ def _parse_domainname():
     for item in contents:
         match = prog.match(item)
         if match:
-            return match.group("domain_name")
-    return ""
+            return match.group('domain_name')
+    return ''
 
 
 def _parse_hostname():
@@ -268,7 +268,7 @@ def _parse_current_network_settings():
     domainname = _parse_domainname()
 
     if domainname:
-        hostname = "{0}.{1}".format(hostname, domainname)
+        hostname = '{0}.{1}'.format(hostname, domainname)
 
     opts['hostname'] = hostname
     return opts
@@ -279,19 +279,19 @@ def _parse_current_network_settings():
 
 
 def __ipv4_quad(value):
-    """validate an IPv4 address"""
+    '''validate an IPv4 address'''
     return (salt.utils.validate.net.ipv4_addr(value), value,
             'dotted IPv4 address')
 
 
 def __ipv6(value):
-    """validate an IPv6 address"""
+    '''validate an IPv6 address'''
     return (salt.utils.validate.net.ipv6_addr(value), value,
             'IPv6 address')
 
 
 def __mac(value):
-    """validate a mac address"""
+    '''validate a mac address'''
     return (salt.utils.validate.net.mac(value), value,
             'MAC address')
 
@@ -301,7 +301,7 @@ def __anything(value):
 
 
 def __int(value):
-    """validate an integer"""
+    '''validate an integer'''
     valid, _value = False, value
     try:
         _value = int(value)
@@ -312,7 +312,7 @@ def __int(value):
 
 
 def __float(value):
-    """validate a float"""
+    '''validate a float'''
     valid, _value = False, value
     try:
         _value = float(value)
@@ -323,8 +323,8 @@ def __float(value):
 
 
 def __ipv4_netmask(value):
-    """validate an IPv4 dotted quad or integer CIDR netmask"""
-    valid, errmsg = False, "dotted quad or integer CIDR (0->32)"
+    '''validate an IPv4 dotted quad or integer CIDR netmask'''
+    valid, errmsg = False, 'dotted quad or integer CIDR (0->32)'
     valid, value, _ = __int(value)
     if not (valid and 0 <= value <= 32):
         valid = salt.utils.validate.net.netmask(value)
@@ -332,7 +332,7 @@ def __ipv4_netmask(value):
 
 
 def __ipv6_netmask(value):
-    """validate an IPv6 integer netmask"""
+    '''validate an IPv6 integer netmask'''
     valid, errmsg = False, 'IPv6 netmask (0->127)'
     valid, value, _ = __int(value)
     valid = (valid and 0 <= value <= 127)
@@ -340,7 +340,7 @@ def __ipv6_netmask(value):
 
 
 def __within2(value, within=None, errmsg=None, dtype=None):
-    """validate that a value is in ``within`` and optionally a ``dtype``"""
+    '''validate that a value is in ``within`` and optionally a ``dtype``'''
     valid, _value = False, value
     if dtype:
         try:
@@ -355,9 +355,9 @@ def __within2(value, within=None, errmsg=None, dtype=None):
             typename = getattr(dtype, '__name__',
                                hasattr(dtype, '__class__')
                                and getattr(dtype.__class__, 'name', dtype))
-            errmsg = "%s within %r" % (typename, within)
+            errmsg = '%s within %r' % (typename, within)
         else:
-            errmsg = "within %r" % within
+            errmsg = 'within %r' % within
     return (valid, _value, errmsg)
 
 
@@ -367,8 +367,8 @@ def __within(within=None, errmsg=None, dtype=None):
 
 
 def __space_delimited_list(value):
-    """validate that a value contains one or more space-delimited values"""
-    valid, _value, errmsg = False, value, "space-delimited string"
+    '''validate that a value contains one or more space-delimited values'''
+    valid, _value, errmsg = False, value, 'space-delimited string'
     try:
         if hasattr(value, '__iter__'):
             valid = True  # TODO:
@@ -468,18 +468,18 @@ IPV6_ATTR_MAP = {
 
 
 WIRELESS_ATTR_MAP = {
-    "wireless-essid": __anything,
-    "wireless-mode":  __anything,  # TODO
-    "wpa-ap-scan": __within([0, 1, 2], dtype=int),  # TODO
-    "wpa-conf": __anything,
-    "wpa-driver": __anything,
-    "wpa-group": __anything,
-    "wpa-key-mgmt": __anything,
-    "wpa-pairwise": __anything,
-    "wpa-psk": __anything,
-    "wpa-proto": __anything,  # partial(__within,
-    "wpa-roam": __anything,
-    "wpa-ssid": __anything,  # TODO
+    'wireless-essid': __anything,
+    'wireless-mode':  __anything,  # TODO
+    'wpa-ap-scan': __within([0, 1, 2], dtype=int),  # TODO
+    'wpa-conf': __anything,
+    'wpa-driver': __anything,
+    'wpa-group': __anything,
+    'wpa-key-mgmt': __anything,
+    'wpa-pairwise': __anything,
+    'wpa-psk': __anything,
+    'wpa-proto': __anything,  # partial(__within,
+    'wpa-roam': __anything,
+    'wpa-ssid': __anything,  # TODO
 }
 
 ATTRMAPS = {
@@ -489,13 +489,13 @@ ATTRMAPS = {
 
 
 def _validate_interface_option(attr, value, addrfam='inet'):
-    """lookup the validation function for a [addrfam][attr] and
+    '''lookup the validation function for a [addrfam][attr] and
     return the results
 
     :param attr: attribute name
     :param value: raw setting value
     :param addrfam: address family (inet, inet6,
-    """
+    '''
     valid, _value, errmsg = False, value, 'Unknown validator'
     attrmaps = ATTRMAPS.get(addrfam, [])
     for attrmap in attrmaps:
@@ -520,8 +520,8 @@ def _parse_interfaces(interface_files=None):
     if interface_files is None:
         interface_files = []
         # Add this later.
-        # if os.path.exists("/etc/network/interfaces.d/"):
-        #    interface_files += os.listdir("/etc/network/interfaces.d/")
+        # if os.path.exists('/etc/network/interfaces.d/'):
+        #    interface_files += os.listdir('/etc/network/interfaces.d/')
 
         if os.path.isfile(_DEB_NETWORK_FILE):
             interface_files.insert(0, _DEB_NETWORK_FILE)
@@ -1106,7 +1106,7 @@ def _parse_bridge_opts(opts, iface):
 
     if 'hw' in opts:
         # match 12 hex digits with either : or - as separators between pairs
-        if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$",
+        if re.match('[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$',
                     opts['hw'].lower()):
             config.update({'hw': opts['hw']})
         else:
@@ -1527,8 +1527,8 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     elif iface_type == 'pppoe':
         settings['pppoe'] = 'yes'
-        if not __salt__['pkg.version']("ppp"):
-            inst = __salt__['pkg.install']("ppp")
+        if not __salt__['pkg.version']('ppp'):
+            inst = __salt__['pkg.install']('ppp')
 
     elif iface_type is 'bond':
         if 'slaves' not in settings:
@@ -1762,11 +1762,11 @@ def build_network_settings(**settings):
         else:
             service_cmd = 'service.disable'
 
-        if __salt__['service.available']("NetworkManager"):
-            __salt__[service_cmd]("NetworkManager")
+        if __salt__['service.available']('NetworkManager'):
+            __salt__[service_cmd]('NetworkManager')
 
-        if __salt__['service.available']("networking"):
-            __salt__[service_cmd]("networking")
+        if __salt__['service.available']('networking'):
+            __salt__[service_cmd]('networking')
     else:
         try:
             template = JINJA.get_template('network.jinja')
@@ -1782,7 +1782,7 @@ def build_network_settings(**settings):
 
     # Write hostname to /etc/hostname
     sline = opts['hostname'].split('.', 1)
-    hostname = "{0}\n" . format(sline[0])
+    hostname = '{0}\n' . format(sline[0])
     _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     # Write domainname to /etc/resolv.conf
@@ -1791,23 +1791,23 @@ def build_network_settings(**settings):
         domainname = sline[1]
 
         contents = _parse_resolve()
-        pattern = r"domain\s+(?P<domain_name>\S+)"
+        pattern = r'domain\s+(?P<domain_name>\S+)'
         prog = re.compile(pattern)
         new_contents = []
         found_domain = False
         for item in contents:
             match = prog.match(item)
             if match:
-                new_contents.append("domain {0}\n" . format(domainname))
+                new_contents.append('domain {0}\n' . format(domainname))
                 found_domain = True
             else:
                 new_contents.append(item)
 
         # Not found add to beginning
         if not found_domain:
-            new_contents.insert(0, "domain {0}\n" . format(domainname))
+            new_contents.insert(0, 'domain {0}\n' . format(domainname))
 
-        new_resolv = "".join(new_contents)
+        new_resolv = ''.join(new_contents)
 
         _write_file_network(new_resolv, _DEB_RESOLV_FILE)
 
