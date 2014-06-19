@@ -5,6 +5,7 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 from __future__ import print_function
+import logging
 import os
 import sys
 
@@ -27,6 +28,7 @@ from salt.exceptions import (
     EauthAuthenticationError,
 )
 
+log = logging.getLogger(__name__)
 
 class SaltCMD(parsers.SaltCMDOptionParser):
     '''
@@ -440,3 +442,47 @@ class SaltSSH(parsers.SaltSSHOptionParser):
 
         ssh = salt.client.ssh.SSH(self.config)
         ssh.run()
+
+
+class SaltAPI(parsers.OptionParser, parsers.ConfigDirMixIn,
+        parsers.LogLevelMixIn, parsers.PidfileMixin, parsers.DaemonMixIn,
+        parsers.MergeConfigMixIn):
+    '''
+    The cli parser object used to fire up the salt api system.
+    '''
+    __metaclass__ = parsers.OptionParserMeta
+
+    VERSION = salt.version.__version__
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/api'
+
+    def setup_config(self):
+        return salt.config.api_config(self.get_config_file_path())
+
+    def run(self):
+        '''
+        Run the api
+        '''
+        self.parse_args()
+        try:
+            if self.config['verify_env']:
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
+                    # Logfile is not using Syslog, verify
+                    salt.utils.verify.verify_files(
+                        [logfile], self.config['user']
+                    )
+        except OSError as err:
+            log.error(err)
+            sys.exit(err.errno)
+
+        self.setup_logfile_logger()
+        client = salt.client.netapi.NetapiClient(self.config)
+        self.daemonize_if_required()
+        self.set_pidfile()
+        client.run()

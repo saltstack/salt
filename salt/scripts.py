@@ -15,6 +15,7 @@ import logging
 import salt
 import salt.exceptions
 import salt.cli
+import salt.cli.saltapi
 try:
     import salt.cloud.cli
     HAS_SALTCLOUD = True
@@ -227,6 +228,14 @@ def salt_cloud():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
+
+
+def salt_api():
+    '''
+    The main function for salt-api
+    '''
+    sapi = salt.cli.saltapi.SaltAPI()
+    sapi.run()
 
 
 def salt_main():

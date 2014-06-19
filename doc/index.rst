@@ -225,8 +225,12 @@ Salt is many splendid things.
     Controlling devices and machines unable to run a salt-minion.
 
 :ref:`Python API interface <python-api>`
-    Use Salt programmatically from scripts and programs easily and
+    Use Salt locally from scripts and programs easily and
     simply via ``import salt``.
+
+:ref:`External API interfaces <netapi-introduction>`
+    Expose a Salt API such as REST, XMPP, WebSockets, and more using netapi
+    modules. See the :ref:`full list of netapi modules <all-netapi-modules>`.
 
 :doc:`Automatic Updates and Frozen Binary Deployments <topics/tutorials/esky>`
     Use a frozen install to make deployments easier (Even on Windows!). Or
