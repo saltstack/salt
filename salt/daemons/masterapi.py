@@ -596,7 +596,7 @@ class RemoteFuncs(object):
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        if any(key not in load for key in ('jid', 'id', 'tok')):
+        if any(key not in load for key in ('jid', 'id')):
             return {}
         # Check that this minion can access this data
         auth_cache = os.path.join(
