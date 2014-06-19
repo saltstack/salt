@@ -355,9 +355,9 @@ def __within2(value, within=None, errmsg=None, dtype=None):
             typename = getattr(dtype, '__name__',
                                hasattr(dtype, '__class__')
                                and getattr(dtype.__class__, 'name', dtype))
-            errmsg = '%s within %r' % (typename, within)
+            errmsg = '{0} within {1!r}'.format(typename, within)
         else:
-            errmsg = 'within %r' % within
+            errmsg = 'within {0!r}'.format(within)
     return (valid, _value, errmsg)
 
 
@@ -605,7 +605,7 @@ def _parse_interfaces(interface_files=None):
                     elif attr in ['up', 'pre-up', 'post-up',
                                   'down', 'pre-down', 'post-down']:
                         cmd = valuestr
-                        cmd_key = '%s_cmds' % (re.sub('-', '_', attr))
+                        cmd_key = '{0}_cmds'.format(re.sub('-', '_', attr))
                         if cmd_key not in iface_dict:
                             iface_dict[cmd_key] = []
                         iface_dict[cmd_key].append(cmd)
@@ -1232,7 +1232,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _optname, valuestr, addrfam=addrfam)
 
             if not valid:
-                _raise_error_iface(iface, '%r %r' % (opt, valuestr), [errmsg])  # TODO
+                _raise_error_iface(iface, '{0!r} {1!r}'.format(opt, valuestr), [errmsg])  # TODO
 
             # replace dashes with underscores for jinja
             _optname = _optname.replace('-', '_')
