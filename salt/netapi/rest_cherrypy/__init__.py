@@ -8,8 +8,6 @@ This is run by ``salt-api`` and started in a multiprocess.
 # Import Python libs
 import logging
 import os
-import signal
-import sys
 
 # Import CherryPy without traceback so we can provide an intelligent log
 # message in the __virtual__ function
@@ -89,10 +87,5 @@ def start():
         cherrypy.server.ssl_module = 'builtin'
         cherrypy.server.ssl_certificate = apiopts['ssl_crt']
         cherrypy.server.ssl_private_key = apiopts['ssl_key']
-
-    def signal_handler(*args):
-        cherrypy.engine.exit()
-        sys.exit(0)
-    signal.signal(signal.SIGINT, signal_handler)
 
     cherrypy.quickstart(root, apiopts.get('root_prefix', '/'), conf)
