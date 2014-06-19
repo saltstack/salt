@@ -51,7 +51,7 @@ def __virtual__():
                     __name__, error_msg)
 
         # Missing port config
-        if not 'port' in mod_opts:
+        if 'port' not in mod_opts:
             logger.error("Not loading '%s'. 'port' not specified in config",
                     __name__)
 
@@ -79,7 +79,7 @@ def start():
     root, apiopts, conf = app.get_app(__opts__)
 
     if not apiopts.get('disable_ssl', False):
-        if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
+        if 'ssl_crt' not in apiopts or 'ssl_key' not in apiopts:
             logger.error("Not starting '%s'. Options 'ssl_crt' and "
                     "'ssl_key' are required if SSL is not disabled.",
                     __name__)

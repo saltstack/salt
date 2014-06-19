@@ -4,19 +4,7 @@ import urllib
 
 import yaml
 
-from salt.netapi.rest_cherrypy import app
-
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-
-# Import 3rd-party libs
-try:
-    import cherrypy
-    HAS_CHERRYPY = True
-except ImportError:
-    HAS_CHERRYPY = False
-
-from tests.utils import BaseRestCherryPyTest, BaseToolsTest
+from tests.utils import BaseToolsTest
 
 
 class TestOutFormats(BaseToolsTest):

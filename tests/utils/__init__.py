@@ -35,7 +35,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     @mock.patch('salt.auth.Resolver', autospec=True)
     @mock.patch('salt.auth.LoadAuth', autospec=True)
     @mock.patch('salt.utils.event.get_event', autospec=True)
-    def setUp(self, get_event, LoadAuth, Resolver, NetapiClient):
+    def setUp(self, get_event, LoadAuth, Resolver, NetapiClient):  # pylint: disable=W0221
         app.salt.netapi.NetapiClient = NetapiClient
         app.salt.auth.Resolver = Resolver
         app.salt.auth.LoadAuth = LoadAuth
@@ -89,7 +89,7 @@ class Root(object):
 
 
 if HAS_CHERRYPY:
-    class BaseToolsTest(BaseCherryPyTestCase):
+    class BaseToolsTest(BaseCherryPyTestCase):  # pylint: disable=E0102
         '''
         A base class so tests can selectively turn individual tools on for testing
         '''

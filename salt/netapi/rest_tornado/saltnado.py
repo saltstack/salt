@@ -657,7 +657,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):
                  }
 
         token = self.application.auth.mk_token(creds)
-        if not 'token' in token:
+        if 'token' not in token:
             # TODO: nicer error message
             # 'Could not authenticate using provided credentials')
             self.send_error(401)

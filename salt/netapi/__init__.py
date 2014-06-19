@@ -31,10 +31,10 @@ class NetapiClient(object):
         Execute the specified function in the specified client by passing the
         lowstate
         '''
-        if not 'client' in low:
+        if 'client' not in low:
             raise SaltException('No client specified')
 
-        if not ('token' in low or 'eauth' in low):
+        if 'token' not in low or 'eauth' not in low:
             raise EauthAuthenticationError(
                     'No authentication credentials given')
 

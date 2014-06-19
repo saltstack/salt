@@ -249,7 +249,7 @@ def saltenviron(environ):
     '''
     Make Salt's opts dict and the APIClient available in the WSGI environ
     '''
-    if not '__opts__' in locals():
+    if '__opts__' not in locals():
         import salt.config
         __opts__ = salt.config.client_config(
                 os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
@@ -311,7 +311,7 @@ def start():
     from wsgiref.simple_server import make_server
 
     # When started outside of salt-api __opts__ will not be injected
-    if not '__opts__' in globals():
+    if '__opts__' not in globals():
         globals()['__opts__'] = get_opts()
 
         if __virtual__() is False:

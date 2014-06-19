@@ -251,7 +251,7 @@ def salt_ip_verify_tool():
                 logger.debug("Found IP list: {0}".format(auth_ip_list))
                 rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
                 logger.debug("Request from IP: {0}".format(rem_ip))
-                if not rem_ip in auth_ip_list:
+                if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: {0}".format(rem_ip))
                     cherrypy.response.status = 403
                     return {
@@ -1000,7 +1000,7 @@ class Login(LowDataAdapter):
             creds = cherrypy.serving.request.lowstate
 
         token = self.auth.mk_token(creds)
-        if not 'token' in token:
+        if 'token' not in token:
             raise cherrypy.HTTPError(401,
                     'Could not authenticate using provided credentials')
 
