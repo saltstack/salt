@@ -56,12 +56,14 @@ Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
 vary:
 
 * ZeroMQ:
+
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
   * `PyCrypto`_ - The Python cryptography toolkit
   * `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
 
 * RAET:
+
   * `libnacl`_ - Python bindings to `libsodium`_
   * `ioflo`_ - The flo programming interface raet and salt-raet is built on
   * `RAET`_ - The worlds most awesome UDP protocol
