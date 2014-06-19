@@ -229,6 +229,14 @@ def salt_cloud():
             hardcrash, trace=trace)
 
 
+def salt_api():
+    '''
+    The main function for salt-api
+    '''
+    sapi = salt.cli.SaltAPI()
+    sapi.run()
+
+
 def salt_main():
     '''
     Publish commands to the salt system from the command line on the

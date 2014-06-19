@@ -213,6 +213,7 @@ class CloudSdist(sdist):
             for filename in self.filelist.files[:]:
                 if filename in ('scripts/salt',
                                 'scripts/salt-cloud',
+                                'scripts/salt-api',
                                 'scripts/salt-key',
                                 'scripts/salt-master',
                                 'scripts/salt-run',
@@ -455,12 +456,12 @@ class InstallLib(install_lib):
         for idx in chmod:
             filename = out[idx]
             os.chmod(filename, 0755)
+# <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
 
 
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
-DESC = ('Portable, distributed, remote execution and '
-        'configuration management system')
+DESC = 'Portable, distributed, remote execution and configuration management system'
 
 SETUP_KWARGS = {'name': NAME,
                 'version': VER,
@@ -506,6 +507,7 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.log',
                              'salt.log.handlers',
                              'salt.modules',
+                             'salt.netapi',
                              'salt.output',
                              'salt.pillar',
                              'salt.proxy',

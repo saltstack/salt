@@ -15,6 +15,7 @@ Reference
     file_server/all/index
     internals/index
     modules/all/index
+    netapi/all/index
     output/all/index 
     peer
     pillar/index
@@ -28,4 +29,3 @@ Reference
     tops/index
     tops/all/index
     wheel/all/index
-

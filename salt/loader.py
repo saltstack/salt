@@ -451,6 +451,14 @@ def clouds(opts):
     return functions
 
 
+def netapi(opts):
+    '''
+    Return the network api functions
+    '''
+    load = salt.loader._create_loader(opts, 'netapi', 'netapi')
+    return load.gen_functions()
+
+
 def _generate_module(name):
     if name in sys.modules:
         return
