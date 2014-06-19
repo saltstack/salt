@@ -306,7 +306,7 @@ def start():
 
     mod_opts = __opts__.get(__virtualname__, {})
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     httpd = make_server('localhost', mod_opts['port'], application)
 
     try:
