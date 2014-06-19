@@ -314,6 +314,40 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
+    def _ext_nodes(self, load):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        if 'id' not in load:
+            log.error('Received call for external nodes without an id')
+            return {}
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return {}
+        # Evaluate all configured master_tops interfaces
+
+        opts = {}
+        grains = {}
+        if 'opts' in load:
+            opts = load['opts']
+            if 'grains' in load['opts']:
+                grains = load['opts']['grains']
+        for fun in self.tops:
+            if fun not in self.opts.get('master_tops', {}):
+                continue
+            try:
+                ret.update(self.tops[fun](opts=opts, grains=grains))
+            except Exception as exc:
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    'Top function {0} failed with error {1} for minion '
+                    '{2}'.format(
+                        fun, exc, load['id']
+                    )
+                )
+        return ret
+
+
     def _mine_get(self, load):
         '''
         Gathers the data from the specified minions' mine
