@@ -1,6 +1,13 @@
 .. _netapi-introduction:
 
-==============================
+==================
+``netapi`` modules
+==================
+
+.. toctree:: Contents
+
+    writing
+
 Introduction to netapi modules
 ==============================
 
@@ -23,6 +30,8 @@ Communication with Salt and Salt satellite projects is done using Salt's own
     Prior to Salt's Helium release, netapi modules lived in the separate sister
     projected ``salt-api``. That project has been merged into the main Salt
     project.
+
+.. seealso:: :ref:`The full list of netapi modules <all-netapi-modules>`
 
 Client interfaces
 =================
