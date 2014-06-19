@@ -876,34 +876,6 @@ class AESFuncs(object):
             return {}
         load.pop('tok')
         ret = {}
-        # The old ext_nodes method is set to be deprecated in 0.10.4
-        # and should be removed within 3-5 releases in favor of the
-        # "master_tops" system
-        if self.opts['external_nodes']:
-            if not salt.utils.which(self.opts['external_nodes']):
-                log.error(('Specified external nodes controller {0} is not'
-                           ' available, please verify that it is installed'
-                           '').format(self.opts['external_nodes']))
-                return {}
-            cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-            ndata = yaml.safe_load(
-                    subprocess.Popen(
-                        cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])
-            if 'environment' in ndata:
-                saltenv = ndata['environment']
-            else:
-                saltenv = 'base'
-
-            if 'classes' in ndata:
-                if isinstance(ndata['classes'], dict):
-                    ret[saltenv] = list(ndata['classes'])
-                elif isinstance(ndata['classes'], list):
-                    ret[saltenv] = ndata['classes']
-                else:
-                    return ret
         # Evaluate all configured master_tops interfaces
 
         opts = {}
