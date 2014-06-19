@@ -24,7 +24,7 @@ import jinja2.exceptions
 import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
-from salt.utils.odict import OrderedDict
+import salt.utils.odict
 
 
 # Set up logging
@@ -253,7 +253,7 @@ def _parse_current_network_settings():
     '''
     Parse /etc/default/networking and return current configuration
     '''
-    opts = OrderedDict()
+    opts = salt.utils.odict.OrderedDict()
     opts['networking'] = ''
 
     if os.path.isfile(_DEB_NETWORKING_FILE):
@@ -526,7 +526,7 @@ def _parse_interfaces(interface_files=None):
         if os.path.isfile(_DEB_NETWORK_FILE):
             interface_files.insert(0, _DEB_NETWORK_FILE)
 
-    adapters = OrderedDict()
+    adapters = salt.utils.odict.OrderedDict()
     method = -1
 
     for interface_file in interface_files:
@@ -553,14 +553,14 @@ def _parse_interfaces(interface_files=None):
 
                     # Create item in dict, if not already there
                     if iface_name not in adapters:
-                        adapters[iface_name] = OrderedDict()
+                        adapters[iface_name] = salt.utils.odict.OrderedDict()
 
                     # Create item in dict, if not already there
                     if 'data' not in adapters[iface_name]:
-                        adapters[iface_name]['data'] = OrderedDict()
+                        adapters[iface_name]['data'] = salt.utils.odict.OrderedDict()
 
                     if addrfam not in adapters[iface_name]['data']:
-                        adapters[iface_name]['data'][addrfam] = OrderedDict()
+                        adapters[iface_name]['data'][addrfam] = salt.utils.odict.OrderedDict()
 
                     iface_dict = adapters[iface_name]['data'][addrfam]
 
@@ -587,19 +587,19 @@ def _parse_interfaces(interface_files=None):
 
                     elif attr in _REV_ETHTOOL_CONFIG_OPTS:
                         if 'ethtool' not in iface_dict:
-                            iface_dict['ethtool'] = OrderedDict()
+                            iface_dict['ethtool'] = salt.utils.odict.OrderedDict()
                         iface_dict['ethtool'][attr] = valuestr
 
                     elif attr.startswith('bond'):
                         opt = attr.split('_', 1)[1]
                         if 'bonding' not in iface_dict:
-                            iface_dict['bonding'] = OrderedDict()
+                            iface_dict['bonding'] = salt.utils.odict.OrderedDict()
                         iface_dict['bonding'][opt] = valuestr
 
                     elif attr.startswith('bridge'):
                         opt = attr.split('_', 1)[1]
                         if 'bridging' not in iface_dict:
-                            iface_dict['bridging'] = OrderedDict()
+                            iface_dict['bridging'] = salt.utils.odict.OrderedDict()
                         iface_dict['bridging'][opt] = valuestr
 
                     elif attr in ['up', 'pre-up', 'post-up',
@@ -613,13 +613,13 @@ def _parse_interfaces(interface_files=None):
                 elif line.startswith('auto'):
                     for word in line.split()[1:]:
                         if word not in adapters:
-                            adapters[word] = OrderedDict()
+                            adapters[word] = salt.utils.odict.OrderedDict()
                         adapters[word]['enabled'] = True
 
                 elif line.startswith('allow-hotplug'):
                     for word in line.split()[1:]:
                         if word not in adapters:
-                            adapters[word] = OrderedDict()
+                            adapters[word] = salt.utils.odict.OrderedDict()
                         adapters[word]['hotplug'] = True
 
     # Return a sorted list of the keys for bond, bridge and ethtool options to
@@ -1152,14 +1152,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     Filters given options and outputs valid settings for a
     network interface.
     '''
-    adapters = OrderedDict()
-    adapters[iface] = OrderedDict()
+    adapters = salt.utils.odict.OrderedDict()
+    adapters[iface] = salt.utils.odict.OrderedDict()
 
     adapters[iface]['type'] = iface_type
 
-    adapters[iface]['data'] = OrderedDict()
+    adapters[iface]['data'] = salt.utils.odict.OrderedDict()
     iface_data = adapters[iface]['data']
-    iface_data['inet'] = OrderedDict()
+    iface_data['inet'] = salt.utils.odict.OrderedDict()
 
     if enabled:
         adapters[iface]['enabled'] = True
