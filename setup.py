@@ -17,12 +17,11 @@ from datetime import datetime
 # pylint: disable=E0611
 from distutils import log
 from distutils.cmd import Command
+from distutils.errors import DistutilsArgError
 from distutils.command.build import build
-from distutils.command.check import check
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
-from distutils.dist import Distribution as BaseDistribution
 # pylint: enable=E0611
 
 try:
@@ -65,7 +64,6 @@ WITH_SETUPTOOLS = False
 if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
-        from setuptools.dist import Distribution as BaseDistribution
         from setuptools.command.install import install
         from setuptools.command.sdist import sdist
         WITH_SETUPTOOLS = True
@@ -98,6 +96,7 @@ except ImportError:
 SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), '_requirements.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'zeromq-requirements.txt')
+SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'cloud-requirements.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'raet-requirements.txt')
 SALT_SYSPATHS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py')
 
@@ -340,6 +339,9 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
+        ('salt-transport=', None,
+         'The transport to prepare salt for. Choices are \'zeromq\' '
+         '\'raet\' or \'both\'. Defaults to \'zeromq\''),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -364,7 +366,11 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
+        if not hasattr(self.distribution, 'install_requires'):
+            # Non setuptools installation
+            self.distribution.install_requires = _parse_requirements_file(SALT_REQS)
         # pylint: disable=E0602
+        self.salt_transport = 'zeromq'
         self.salt_root_dir = ROOT_DIR
         self.salt_config_dir = CONFIG_DIR
         self.salt_cache_dir = CACHE_DIR
@@ -385,12 +391,41 @@ class Install(install):
                         'logs_dir', 'pidfile_dir'):
             optvalue = getattr(self, 'salt_{0}'.format(optname))
             if not optvalue:
-                raise RuntimeError(
+                raise DistutilsArgError(
                     'The value of --salt-{0} needs a proper path value'.format(
                         optname.replace('_', '-')
                     )
                 )
             setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
+
+        if self.salt_transport not in ('zeromq', 'raet', 'both', 'none'):
+            raise DistutilsArgError(
+                'The value of --salt-transport needs be \'zeromq\', '
+                '\'raet\', \'both\' or \'none\' not {0!r}'.format(
+                    self.salt_transport
+                )
+            )
+        if self.salt_transport == 'none':
+            for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
+                if requirement not in self.distribution.install_requires:
+                    continue
+                self.distribution.install_requires.remove(requirement)
+            return
+
+        if self.salt_transport in ('zeromq', 'both'):
+            self.distribution.install_requires.extend(
+                _parse_requirements_file(SALT_ZEROMQ_REQS)
+            )
+
+        if self.salt_transport in ('raet', 'both'):
+            self.distribution.install_requires.extend(
+                _parse_requirements_file(SALT_RAET_REQS)
+            )
+            if self.salt_transport == 'raet':
+                for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
+                    if requirement not in self.distribution.install_requires:
+                        continue
+                    self.distribution.install_requires.remove(requirement)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
@@ -422,122 +457,23 @@ class InstallLib(install_lib):
             os.chmod(filename, 0755)
 
 
-class Check(check):
-    '''
-    Since check is always executed, or at least on most of the commands we use
-    we simply override it to adapt the install_requires distribution parameter
-    based on the chosen salt transport
-    '''
-    def run(self):
-        if self.distribution.salt_transport == 'zeromq':
-            self.distribution.install_requires.extend(_parse_requirements_file(SALT_ZEROMQ_REQS))
-        elif self.distribution.salt_transport == 'raet':
-            self.distribution.install_requires.extend(_parse_requirements_file(SALT_RAET_REQS))
-        return check.run(self)
-# <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
-
-
-class SaltDistribution(BaseDistribution):
-
-    global_options = BaseDistribution.global_options + [
-        ('salt-transport=', None,
-         'The transport to prepare salt for. Choices are \'zeromq\' '
-         'and \'raet\'. Defaults to \'zeromq\''),
-    ]
-
-    def __init__(self, attrs=None):
-        BaseDistribution.__init__(self, attrs=attrs)
-
-        # At this point options haven't been parsed yet. Provide defaults
-        self.salt_transport = 'zeromq'
-
-        # This flag is required to tweak the salt paths at install time
-        self.running_salt_install = False
-
-        self.cmdclass['check'] = Check
-        self.cmdclass['test'] = TestCommand
-        self.cmdclass['clean'] = Clean
-        self.cmdclass['build'] = Build
-        self.cmdclass['install'] = Install
-        if IS_WINDOWS_PLATFORM is False:
-            self.cmdclass['sdist'] = CloudSdist
-            self.cmdclass['install_lib'] = InstallLib
-
-        self.setup_requires = ['requests']
-        self.install_requires = _parse_requirements_file(SALT_REQS)
-
-        if IS_WINDOWS_PLATFORM is False:
-            # self.packages.extend(['salt.cloud',
-            #                       'salt.cloud.clouds'])
-            self.package_data['salt.cloud'] = ['deploy/*.sh']
-
-            self.data_files[0][1].extend([
-                'doc/man/salt-master.1',
-                'doc/man/salt-key.1',
-                'doc/man/salt.1',
-                'doc/man/salt-syndic.1',
-                'doc/man/salt-run.1',
-                'doc/man/salt-ssh.1',
-                'doc/man/salt-cloud.1'
-            ])
-        else:
-            self.install_requires.append('WMI')
-
-        if WITH_SETUPTOOLS:
-            self.entry_points = {
-                'console_scripts': ['salt-call = salt.scripts:salt_call',
-                                    'salt-cp = salt.scripts:salt_cp',
-                                    'salt-minion = salt.scripts:salt_minion',
-                                    ]
-            }
-            if IS_WINDOWS_PLATFORM is False:
-                self.entry_points['console_scripts'].extend([
-                    'salt = salt.scripts:salt_main',
-                    'salt-cloud = salt.scripts:salt_cloud',
-                    'salt-key = salt.scripts:salt_key',
-                    'salt-master = salt.scripts:salt_master',
-                    'salt-run = salt.scripts:salt_run',
-                    'salt-ssh = salt.scripts:salt_ssh',
-                    'salt-syndic = salt.scripts:salt_syndic',
-                ])
-
-            # Required for running the tests suite
-            self.dependency_links = [
-                'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
-            ]
-            self.tests_require = ['SaltTesting']
-        else:
-            self.scripts = [
-                'scripts/salt-call',
-                'scripts/salt-cp',
-                'scripts/salt-minion',
-                'scripts/salt-unity',
-            ]
-
-            if IS_WINDOWS_PLATFORM is False:
-                self.scripts.extend([
-                    'scripts/salt',
-                    'scripts/salt-cloud',
-                    'scripts/salt-key',
-                    'scripts/salt-master',
-                    'scripts/salt-run',
-                    'scripts/salt-ssh',
-                    'scripts/salt-syndic',
-                ])
-
-
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
-DESC = 'Portable, distributed, remote execution and configuration management system'
+DESC = ('Portable, distributed, remote execution and '
+        'configuration management system')
 
-SETUP_KWARGS = {'distclass': SaltDistribution,
-                'name': NAME,
+SETUP_KWARGS = {'name': NAME,
                 'version': VER,
                 'description': DESC,
                 'author': 'Thomas S Hatch',
                 'author_email': 'thatch45@gmail.com',
                 'url': 'http://saltstack.org',
-                'license': 'Apache Software License, Version 2.0',
+                'cmdclass': {
+                    'test': TestCommand,
+                    'clean': Clean,
+                    'build': Build,
+                    'install': Install
+                },
                 'classifiers': ['Programming Language :: Python',
                                 'Programming Language :: Cython',
                                 'Programming Language :: Python :: 2.6',
@@ -609,10 +545,33 @@ SETUP_KWARGS = {'distclass': SaltDistribution,
                                 ['doc/man/salt.7',
                                  ]),
                                ],
+                # Required for esky builds, ZeroMQ or RAET deps will be added
+                # at install time
+                'install_requires': _parse_requirements_file(SALT_REQS),
+                'extras_require': {
+                    'RAET': _parse_requirements_file(SALT_RAET_REQS),
+                    'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)
+                },
                 # The dynamic module loading in salt.modules makes this
                 # package zip unsafe. Required for esky builds
                 'zip_safe': False
                 }
+
+if IS_WINDOWS_PLATFORM is False:
+    SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
+    SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
+    # SETUP_KWARGS['packages'].extend(['salt.cloud',
+    #                                  'salt.cloud.clouds'])
+    SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
+    SETUP_KWARGS['data_files'][0][1].extend([
+        'doc/man/salt-master.1',
+        'doc/man/salt-key.1',
+        'doc/man/salt.1',
+        'doc/man/salt-syndic.1',
+        'doc/man/salt-run.1',
+        'doc/man/salt-ssh.1',
+        'doc/man/salt-cloud.1'
+    ])
 
 
 # bbfreeze explicit includes
@@ -666,6 +625,7 @@ if IS_WINDOWS_PLATFORM:
         'site',
         'psutil',
     ])
+    SETUP_KWARGS['install_requires'].append('WMI')
 elif sys.platform.startswith('linux'):
     FREEZER_INCLUDES.append('spwd')
     try:
@@ -700,6 +660,46 @@ if HAS_ESKY:
     }
     SETUP_KWARGS['options'] = OPTIONS
 
+if WITH_SETUPTOOLS:
+    SETUP_KWARGS['entry_points'] = {
+        'console_scripts': ['salt-call = salt.scripts:salt_call',
+                            'salt-cp = salt.scripts:salt_cp',
+                            'salt-minion = salt.scripts:salt_minion',
+                            ]
+    }
+    if IS_WINDOWS_PLATFORM is False:
+        SETUP_KWARGS['entry_points']['console_scripts'].extend([
+            'salt = salt.scripts:salt_main',
+            'salt-cloud = salt.scripts:salt_cloud',
+            'salt-key = salt.scripts:salt_key',
+            'salt-master = salt.scripts:salt_master',
+            'salt-run = salt.scripts:salt_run',
+            'salt-ssh = salt.scripts:salt_ssh',
+            'salt-syndic = salt.scripts:salt_syndic',
+        ])
+
+    # Required for running the tests suite
+    SETUP_KWARGS['dependency_links'] = [
+        'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
+    ]
+    SETUP_KWARGS['tests_require'] = ['SaltTesting']
+else:
+    SETUP_KWARGS['scripts'] = ['scripts/salt-call',
+                               'scripts/salt-cp',
+                               'scripts/salt-minion',
+                               'scripts/salt-unity',
+                               ]
+
+    if IS_WINDOWS_PLATFORM is False:
+        SETUP_KWARGS['scripts'].extend([
+            'scripts/salt',
+            'scripts/salt-cloud',
+            'scripts/salt-key',
+            'scripts/salt-master',
+            'scripts/salt-run',
+            'scripts/salt-ssh',
+            'scripts/salt-syndic',
+        ])
 
 if __name__ == '__main__':
     setup(**SETUP_KWARGS)
