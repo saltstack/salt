@@ -560,7 +560,7 @@ class RemoteFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        if any(key not in load for key in ('fun', 'arg', 'id', 'tok')):
+        if any(key not in load for key in ('fun', 'arg', 'id')):
             return {}
         perms = set()
         for match in self.opts['peer_run']:
