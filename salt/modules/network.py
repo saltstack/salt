@@ -444,6 +444,7 @@ def hw_addr(iface):
 # Alias hwaddr to preserve backward compat
 hwaddr = hw_addr
 
+
 def interface(iface):
     '''
     Return the inet address for a given interface
@@ -456,6 +457,7 @@ def interface(iface):
     '''
     return salt.utils.network.interface(iface)
 
+
 def interface_ip(iface):
     '''
     Return the inet address for a given interface
@@ -467,6 +469,7 @@ def interface_ip(iface):
         salt '*' network.interface_ip eth0
     '''
     return salt.utils.network.interface_ip(iface)
+
 
 def subnets():
     '''

@@ -708,11 +708,13 @@ def hw_addr(iface):
     '''
     return interfaces().get(iface, {}).get('hwaddr', '')
 
+
 def interface(iface):
     '''
     Return the the interface details
     '''
     return interfaces().get(iface, {}).get('inet', '')
+
 
 def interface_ip(iface):
     '''
