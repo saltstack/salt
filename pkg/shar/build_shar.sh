@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # Name:     build_shar.sh
 # Requires: python-virtualenv, gcc, gcc-c++, swig, sharutils, and the
