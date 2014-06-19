@@ -1,3 +1,4 @@
+# encoding: utf-8
 '''
 A minimalist REST API for Salt
 ==============================
