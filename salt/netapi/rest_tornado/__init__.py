@@ -20,7 +20,6 @@ except ImportError as err:
 import salt.auth
 
 
-
 def __virtual__():
     mod_opts = __opts__.get(__virtualname__, {})
 
@@ -95,7 +94,6 @@ def start():
         print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
         raise SystemExit(1)
     tornado.ioloop.IOLoop.instance().add_callback(application.event_listener.iter_events)
-
 
     try:
         tornado.ioloop.IOLoop.instance().start()

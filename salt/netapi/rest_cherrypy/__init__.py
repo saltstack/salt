@@ -24,6 +24,7 @@ cpy_min = '3.2.2'
 
 __virtualname__ = 'rest'
 
+
 def __virtual__():
     short_name = __name__.rsplit('.')[-1]
     mod_opts = __opts__.get(short_name, {})
@@ -38,7 +39,7 @@ def __virtual__():
 
         # CherryPy wasn't imported; explain why
         if cpy_error:
-            from distutils.version import LooseVersion as V # pylint: disable=E0611
+            from distutils.version import LooseVersion as V  # pylint: disable=E0611
 
             if 'cherrypy' in globals() and V(cherrypy.__version__) < V(cpy_min):
                 error_msg = ("Required version of CherryPy is {0} or "
@@ -56,6 +57,7 @@ def __virtual__():
 
     return False
 
+
 def verify_certs(*args):
     '''
     Sanity checking for the specified SSL certificates
@@ -67,6 +69,7 @@ def verify_certs(*args):
     for arg in args:
         if not os.path.exists(arg):
             raise Exception(msg.format(arg))
+
 
 def start():
     '''

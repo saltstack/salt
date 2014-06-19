@@ -377,7 +377,7 @@ class Any(Future):
     '''
     Future that wraps other futures to "block" until one is done
     '''
-    def __init__(self, futures): # pylint: disable=E1002
+    def __init__(self, futures):  # pylint: disable=E1002
         super(Any, self).__init__()
         for future in futures:
             future.add_done_callback(self.done_callback)
@@ -892,7 +892,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):
     Handler for /minion requests
     '''
     @tornado.web.asynchronous
-    def get(self, mid): # pylint: disable=W0221
+    def get(self, mid):  # pylint: disable=W0221
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
@@ -922,7 +922,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):
     Handler for /minion requests
     '''
     @tornado.web.asynchronous
-    def get(self, jid=None): # pylint: disable=W0221
+    def get(self, jid=None):  # pylint: disable=W0221
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
@@ -1089,7 +1089,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
     '''
     Handler for /run requests
     '''
-    def post(self, tag_suffix=None): # pylint: disable=W0221
+    def post(self, tag_suffix=None):  # pylint: disable=W0221
         if not self._verify_auth():
             self.redirect('/login')
             return

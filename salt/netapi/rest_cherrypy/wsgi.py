@@ -49,6 +49,7 @@ import os
 
 import cherrypy
 
+
 def bootstrap_app():
     '''
     Grab the opts dict of the master config by trying to import Salt

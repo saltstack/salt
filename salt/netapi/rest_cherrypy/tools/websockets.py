@@ -20,7 +20,7 @@ class SynchronizingWebsocket(WebSocket):
     initially connect. These jobs help gather information about minions, jobs,
     and documentation.
     '''
-    def __init__(self, *args, **kwargs): # pylint: disable=E1002
+    def __init__(self, *args, **kwargs):  # pylint: disable=E1002
         super(SynchronizingWebsocket, self).__init__(*args, **kwargs)
 
         # This pipe needs to represent the parent end of a pipe.

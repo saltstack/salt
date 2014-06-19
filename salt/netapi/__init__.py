@@ -13,6 +13,7 @@ import salt.wheel
 import salt.utils
 from salt.exceptions import SaltException, EauthAuthenticationError
 
+
 class NetapiClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
