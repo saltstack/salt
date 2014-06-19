@@ -102,10 +102,14 @@ Available Functions
 
 '''
 import functools
+import logging
 
 # Import salt libs
 from salt._compat import string_types
 import salt.utils
+
+# Enable proper logging
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'docker'
@@ -394,8 +398,8 @@ def installed(name,
     changes = 'Container created'
     try:
         cid = out['out']['info']['id']
-    except Exception:
-        pass
+    except Exception, e:
+        log.debug(str(e))
     else:
         changes = 'Container {0} created'.format(cid)
         out['comment'] = changes
@@ -624,6 +628,8 @@ def running(name, container=None, port_bindings=None, binds=None,
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
     '''
+    if not container and name:
+       container = name
     is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
@@ -637,6 +643,8 @@ def running(name, container=None, port_bindings=None, binds=None,
         )
         if check_is_running:
             is_running = __salt__['docker.is_running'](container)
+            log.debug("Docker-io running:" + str(started))
+            log.debug("Docker-io running:" + str(is_running))
             if is_running:
                 return _valid(
                     comment='Container {0!r} started.\n'.format(container),
