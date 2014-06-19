@@ -67,6 +67,10 @@ def salt_minion():
         if ret == 'reconnect':
             del minion
             minion = None
+            #### TODO: this dont seem to clear out the parsers.MinionOptionParser 
+            #### in __init__ : class Minion(parsers.MinionOptionParser):
+            #### this leads issues in utils/parsers.py LogLevelMixIn: process_log_level()
+            #### because _mixin_after_parsed_funcs gets extra appended values on each restart.
             # give extra time for resources like ZMQ to close.
             time.sleep(10)
             reconnect = True
