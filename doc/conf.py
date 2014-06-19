@@ -166,7 +166,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
-    'sphinxcontrib.httpdomain',
+    'httpdomain',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc
     'shorturls',
