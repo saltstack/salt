@@ -61,7 +61,7 @@ class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
-        client = saltapi.client.SaltAPIClient(self.config)
+        client = salt.netapi.client.SaltNetapiClient(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
         client.run()

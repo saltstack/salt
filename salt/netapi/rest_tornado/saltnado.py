@@ -1064,7 +1064,7 @@ class FormattedEventsHandler(AllEventsHandler):
             self.connected = True
 
             evt_processor = event_processor.SaltInfo(self)
-            client = saltapi.APIClient(self.application.opts)
+            client = salt.netapi.NetapiClient(self.application.opts)
             client.run({
                 'fun': 'grains.items',
                 'tgt': '*',

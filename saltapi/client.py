@@ -10,7 +10,7 @@ import saltapi.loader
 
 logger = logging.getLogger(__name__)
 
-class SaltAPIClient(object):
+class SaltNetapiClient(object):
     '''
     '''
     def __init__(self, opts):

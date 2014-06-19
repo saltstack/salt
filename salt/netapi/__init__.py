@@ -12,12 +12,12 @@ import salt.wheel
 import salt.utils
 from salt.exceptions import SaltException, EauthAuthenticationError
 
-class APIClient(object):
+class NetapiClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
 
-    >>> client = APIClient(__opts__)
+    >>> client = NetapiClient(__opts__)
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
     '''

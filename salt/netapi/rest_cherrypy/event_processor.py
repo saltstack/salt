@@ -167,7 +167,7 @@ class SaltInfo:
 
         if tgt:
             changed = True
-            client = saltapi.APIClient(opts)
+            client = salt.netapi.NetapiClient(opts)
             client.run(
                 {
                     'fun': 'grains.items',

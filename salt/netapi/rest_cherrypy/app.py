@@ -511,7 +511,7 @@ class LowDataAdapter(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
-        self.api = saltapi.APIClient(self.opts)
+        self.api = salt.netapi.NetapiClient(self.opts)
 
     def exec_lowstate(self, client=None, token=None):
         '''
@@ -585,7 +585,7 @@ class LowDataAdapter(object):
         import inspect
 
         # Grab all available client interfaces
-        clients = [name for name, _ in inspect.getmembers(saltapi.APIClient,
+        clients = [name for name, _ in inspect.getmembers(salt.netapi.NetapiClient,
             predicate=inspect.ismethod) if not name.startswith('__')]
         clients.remove('run') # run method calls client interfaces
 

@@ -15,12 +15,12 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     '''
     __opts__ = None
 
-    @mock.patch('saltapi.APIClient', autospec=True)
+    @mock.patch('salt.netapi.NetapiClient', autospec=True)
     @mock.patch('salt.auth.Resolver', autospec=True)
     @mock.patch('salt.auth.LoadAuth', autospec=True)
     @mock.patch('salt.utils.event.get_event', autospec=True)
-    def setUp(self, get_event, LoadAuth, Resolver, APIClient):
-        app.saltapi.APIClient = APIClient
+    def setUp(self, get_event, LoadAuth, Resolver, NetapiClient):
+        app.salt.netapi.NetapiClient = NetapiClient
         app.salt.auth.Resolver = Resolver
         app.salt.auth.LoadAuth = LoadAuth
         app.salt.utils.event.get_event = get_event
@@ -28,7 +28,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
         # Make local references to mocked objects so individual tests can
         # access and modify the mocked interfaces.
         self.Resolver = Resolver
-        self.APIClient = APIClient
+        self.NetapiClient = NetapiClient
         self.get_event = get_event
 
         __opts__ = self.__opts__ or {
