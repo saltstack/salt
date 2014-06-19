@@ -322,7 +322,9 @@ class Auth(object):
         additional checks and return a bool
         '''
         if self.opts['master_sign_key_name']:
-            res = verify_signature(self.opts['master_sign_key_name'],
+            path = os.path.join(self.opts['pki_dir'],
+                                self.opts['master_sign_key_name'] + '.pub')
+            res = verify_signature(path,
                                    message,
                                    sig)
             if res == 1:
