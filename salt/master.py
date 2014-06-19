@@ -1642,6 +1642,14 @@ class ClearFuncs(object):
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port']}
+
+        if self.opts['master_sign_key_name']:
+            if self.opts['master_sign_pubkey']:
+                log.debug("Signing master public key before sending")
+                pub_sign = salt.crypt.sign_message(self.master_key.get_sign_paths()[1],
+                                                   ret['pub_key'])
+                ret.update({'pub_sig' : pub_sign})
+
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:
