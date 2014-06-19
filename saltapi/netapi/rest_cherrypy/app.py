@@ -111,6 +111,8 @@ A REST API for Salt
 
         .. versionadded:: 0.8.4
 
+.. _rest_cherrypy-auth:
+
 Authentication
 --------------
 
@@ -185,6 +187,18 @@ The following example (in JSON format) causes Salt to execute two commands::
       Ruby on Rails) will automatically append empty brackets onto repeated
       parameters. E.g., ``arg=one``, ``arg=two`` will be sent as ``arg[]=one``,
       ``arg[]=two``. This is not supported; send JSON or YAML instead.
+
+
+.. |req_token| replace:: a session token from :py:class:`~Login`.
+.. |req_accept| replace:: the desired response format.
+.. |req_ct| replace:: the format of the request body.
+
+.. |res_ct| replace:: the format of the response body; depends on the
+    :mailheader:`Accept` request header.
+
+.. |200| replace:: success
+.. |401| replace:: authentication required
+.. |406| replace:: requested Content-Type not available
 '''
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
@@ -497,9 +511,8 @@ cherrypy.tools.salt_ip_verify = cherrypy.Tool('before_handler',
 
 class LowDataAdapter(object):
     '''
-    The primary entry point to the REST API. All functionality is available
-    through this URL. The other available URLs provide convenience wrappers
-    around this URL.
+    The primary entry point to Salt's REST API
+
     '''
     exposed = True
 
@@ -561,9 +574,15 @@ class LowDataAdapter(object):
 
     def GET(self):
         '''
+        An explanation of the API with links of where to go next
+
         .. http:get:: /
 
-            An explanation of the API with links of where to go next.
+            :reqheader Accept: |req_accept|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -581,10 +600,6 @@ class LowDataAdapter(object):
 
                 HTTP/1.1 200 OK
                 Content-Type: application/json
-
-        :status 200: success
-        :status 401: authentication required
-        :status 406: requested Content-Type not available
         '''
         import inspect
 
@@ -602,9 +617,22 @@ class LowDataAdapter(object):
     @cherrypy.tools.salt_auth()
     def POST(self, **kwargs):
         '''
-        The primary execution interface for the rest of the API
+        Send one or more Salt commands in the request body
 
         .. http:post:: /
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+            :reqheader Content-Type: |req_ct|
+
+            :resheader Content-Type: |res_ct|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+            :term:`lowstate` data describing Salt commands must be sent in the
+            request body.
 
             **Example request**::
 
@@ -642,16 +670,6 @@ class LowDataAdapter(object):
                   ms-2: true
                   ms-3: true
                   ms-4: true
-
-        :form lowstate: A list of :term:`lowstate` data appropriate for the
-            :ref:`client <client-apis>` interface you are calling.
-
-            Lowstate may be supplied in any supported format by specifying the
-            :mailheader:`Content-Type` header in the request. Supported formats
-            are listed in the :mailheader:`Alternates` response header.
-        :status 200: success
-        :status 401: authentication required
-        :status 406: requested Content-Type not available
         '''
         return {
             'return': list(self.exec_lowstate(
@@ -671,6 +689,13 @@ class Minions(LowDataAdapter):
         details
 
         .. http:get:: /minions/(mid)
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             Get grains, modules, functions, and inline function documentation
             for all minions or a single minion
@@ -697,11 +722,6 @@ class Minions(LowDataAdapter):
                 - ms-3:
                     grains.items:
                       ...
-
-        :param mid: (optional) a minion id
-        :status 200: success
-        :status 401: authentication required
-        :status 406: requested Content-Type not available
         '''
         cherrypy.request.lowstate = [{
             'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
@@ -717,9 +737,19 @@ class Minions(LowDataAdapter):
 
         .. http:post:: /minions
 
-            You must pass low-data in the request body either from an HTML form
-            or as JSON or YAML. The ``client`` option is pre-set to
-            ``local_async``.
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+            :reqheader Content-Type: |req_ct|
+
+            :resheader Content-Type: |res_ct|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+            :term:`lowstate` data describing Salt commands must be sent in the
+            request body. The ``client`` option will be set to
+            :py:meth:`~salt.client.LocalClient.local_async`.
 
             **Example request**::
 
@@ -752,17 +782,6 @@ class Minions(LowDataAdapter):
                 _links:
                   jobs:
                   - href: /jobs/20130603122505459265
-
-        :form lowstate: lowstate data for the
-            :py:mod:`~salt.client.LocalClient`; the ``client`` parameter will
-            be set to ``local_async``
-
-            Lowstate may be supplied in any supported format by specifying the
-            :mailheader:`Content-Type` header in the request. Supported formats
-            are listed in the :mailheader:`Alternates` response header.
-        :status 202: success
-        :status 401: authentication required
-        :status 406: requested :mailheader:`Content-Type` not available
         '''
         job_data = list(self.exec_lowstate(client='local_async',
             token=cherrypy.session.get('token')))
@@ -790,8 +809,11 @@ class Jobs(LowDataAdapter):
 
         .. http:get:: /jobs/(jid)
 
-            Get grains, modules, functions, and inline function documentation
-            for all minions or a single minion
+            List jobs or show a single job from the job cache.
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -856,11 +878,6 @@ class Jobs(LowDataAdapter):
                     - 1
                     - 2
                   - 6.9141387939453125e-06
-
-        :param mid: (optional) a minion id
-        :status 200: success
-        :status 401: authentication required
-        :status 406: requested Content-Type not available
         '''
         lowstate = [{
             'client': 'runner',
@@ -892,19 +909,9 @@ class Jobs(LowDataAdapter):
 
 class Login(LowDataAdapter):
     '''
-    All interactions with this REST API must be authenticated. Authentication
-    is performed through Salt's eauth system. You must set the eauth backend
-    and allowed users by editing the :conf_master:`external_auth` section in
-    your master config.
+    Log in to recieve a session token
 
-    Authentication credentials are passed to the REST API via a session id in
-    one of two ways:
-
-    If the request is initiated from a browser it must pass a session id via a
-    cookie and that session must be valid and active.
-
-    If the request is initiated programmatically, the request must contain a
-    :mailheader:`X-Auth-Token` header with valid and active session id.
+    :ref:`Authentication information <rest_cherrypy-auth>`.
     '''
 
     def __init__(self, *args, **kwargs):
@@ -919,6 +926,10 @@ class Login(LowDataAdapter):
         .. http:get:: /login
 
             An explanation of how to log in.
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -936,9 +947,6 @@ class Login(LowDataAdapter):
 
                 HTTP/1.1 200 OK
                 Content-Type: text/html
-
-        :status 401: authentication required
-        :status 406: requested Content-Type not available
         '''
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
@@ -949,7 +957,7 @@ class Login(LowDataAdapter):
 
     def POST(self, **kwargs):
         '''
-        Authenticate against Salt's eauth system
+        :ref:`Authenticate  <rest_cherrypy-auth>` against Salt's eauth system
 
         .. versionchanged:: 0.8.0
             No longer returns a 302 redirect on success.
@@ -958,6 +966,18 @@ class Login(LowDataAdapter):
             Returns 401 on authentication failure
 
         .. http:post:: /login
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+            :reqheader Content-Type: |req_ct|
+
+            :form eauth: the eauth backend configured for the user
+            :form username: username
+            :form password: password
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -1000,13 +1020,6 @@ class Login(LowDataAdapter):
                         "test.*"
                     ]
                 }}
-
-        :form eauth: the eauth backend configured in your master config
-        :form username: username
-        :form password: password
-        :status 200: success
-        :status 401: could not authenticate using provided credentials
-        :status 406: requested Content-Type not available
         '''
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
@@ -1068,7 +1081,8 @@ class Run(LowDataAdapter):
 
     def POST(self, **kwargs):
         '''
-        Run commands bypassing the normal session handling
+        Run commands bypassing the :ref:`normal session handling
+        <rest_cherrypy-auth>`
 
         .. versionadded:: 0.8.0
 
@@ -1076,7 +1090,14 @@ class Run(LowDataAdapter):
 
             This entry point is primarily for "one-off" commands. Each request
             must pass full Salt authentication credentials. Otherwise this URL
-            is identical to the root (``/``) execution URL.
+            is identical to the :py:meth:`root URL (/) <LowDataAdapter.POST>`.
+
+            :term:`lowstate` data describing Salt commands must be sent in the
+            request body.
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -1113,13 +1134,6 @@ class Run(LowDataAdapter):
                   ms-2: true
                   ms-3: true
                   ms-4: true
-
-        :form lowstate: A list of :term:`lowstate` data appropriate for the
-            :ref:`client <client-apis>` specified client interface. Full
-            external authentication credentials must be included.
-        :status 200: success
-        :status 401: authentication failed
-        :status 406: requested Content-Type not available
         '''
         return {
             'return': list(self.exec_lowstate()),
@@ -1128,10 +1142,14 @@ class Run(LowDataAdapter):
 
 class Events(object):
     '''
+    Expose the Salt event bus
+
     The event bus on the Salt master exposes a large variety of things, notably
     when executions are started on the master and also when minions ultimately
     return their results. This URL provides a real-time window into a running
     Salt infrastructure.
+
+    .. seealso:: :ref:`events`
     '''
     exposed = True
 
@@ -1153,8 +1171,10 @@ class Events(object):
 
     def GET(self, token=None):
         '''
-        Return an HTTP stream of the Salt master event bus; this stream is
-        formatted per the Server Sent Events (SSE) spec
+        An HTTP stream of the Salt master event bus
+
+        This stream is formatted per the Server Sent Events (SSE) spec. Each
+        event is formatted as JSON.
 
         .. versionadded:: 0.8.3
 
@@ -1166,6 +1186,10 @@ class Events(object):
             % curl -NsS localhost:8000/events/6d1b722e
 
         .. http:get:: /events
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -1231,11 +1255,6 @@ class Events(object):
             data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
             tag: 20140112010149808995
             data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
-
-        :status 200: success
-        :status 401: could not authenticate using provided credentials
-
-        :resheader Content-Type: this depends on :mailheader:`Accept` header of request
         '''
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
@@ -1278,6 +1297,8 @@ class WebsocketEndpoint(object):
     when executions are started on the master and also when minions ultimately
     return their results. This URL provides a real-time window into a running
     Salt infrastructure. Uses websocket as the transport mechanism.
+
+    .. seealso:: :ref:`events`
     '''
     exposed = True
 
@@ -1306,6 +1327,20 @@ class WebsocketEndpoint(object):
         .. versionadded:: 0.8.6
 
         .. http:get:: /ws/(token)
+
+            :query format_events: The event stream will undergo server-side
+                formatting if the ``format_events`` URL parameter is included
+                in the request. This can be useful to avoid formatting on the
+                client-side::
+
+                    curl -NsS <...snip...> localhost:8000/ws?format_events
+
+            :reqheader X-Auth-Token: an authentication token from
+                :py:class:`~Login`.
+
+            :status 101: switching to the websockets protocol
+            :status 401: |401|
+            :status 406: |406|
 
             **Example request**::
 
@@ -1345,19 +1380,6 @@ class WebsocketEndpoint(object):
         header or cookie::
 
                 curl -NsS <...snip...> localhost:8000/ws/ffedf49d
-
-        :query format_events: The event stream will undergo server-side
-            formatting if the ``format_events`` URL parameter is included in
-            the request. This can be useful to avoid formatting on the
-            client-side::
-
-                curl -NsS <...snip...> localhost:8000/ws?format_events
-
-        :reqheader X-Auth-Token: an authentication token from
-            :py:class:`~Login`.
-
-        :status 101: switching to the websockets protocol
-        :status 401: could not authenticate using provided credentials
 
         The event stream can be easily consumed via JavaScript:
 
@@ -1469,8 +1491,7 @@ class Webhook(object):
     The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
     appended to the end. For example, a ``POST`` request sent to
     ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
-    ``salt/netapi/hook/mycompany/myapp/mydata``. See the :ref:`Salt Reactor
-    <reactor>` documentation for how to react to events with various tags.
+    ``salt/netapi/hook/mycompany/myapp/mydata``.
 
     The following is an example ``.travis.yml`` file to send notifications to
     Salt of successful test runs:
@@ -1482,6 +1503,7 @@ class Webhook(object):
         after_success:
             - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
 
+    .. seealso:: :ref:`events`, :ref:`reactor`
     '''
     exposed = True
     tag_base = ['salt', 'netapi', 'hook']
@@ -1510,6 +1532,11 @@ class Webhook(object):
         .. versionadded:: 0.8.4
 
         .. http:post:: /hook
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+            :status 413: request body is too large
 
             **Example request**::
 
@@ -1579,10 +1606,6 @@ class Webhook(object):
                     pillar:
                       revision: {{ revision }}
             {% endif %}
-
-        :status 200: success
-        :status 406: requested Content-Type not available
-        :status 413: request body is too large
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.unserialized_data
@@ -1610,8 +1633,16 @@ class Stats(object):
         '''
         Return a dump of statistics collected from the CherryPy server
 
-        :status 200: success
-        :status 406: requested Content-Type not available
+        .. http:get:: /stats
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+
+            :resheader Content-Type: |res_ct|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
         '''
         if hasattr(logging, 'statistics'):
             return cpstats.extrapolate_statistics(logging.statistics)
@@ -1622,6 +1653,19 @@ class Stats(object):
 class App(object):
     exposed = True
     def GET(self, *args):
+        '''
+        Serve a single static file ignoring the remaining path
+
+        This is useful in combination with a browser-based app using the HTML5
+        history API.
+
+        .. http::get:: /app
+
+            :reqheader X-Auth-Token: |req_token|
+
+            :status 200: |200|
+            :status 401: |401|
+        '''
         apiopts = cherrypy.config['apiopts']
         return cherrypy.lib.static.serve_file(apiopts['app'])
 
