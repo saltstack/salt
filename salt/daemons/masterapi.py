@@ -573,6 +573,13 @@ class RemoteFuncs(object):
             if re.match(perm, load['fun']):
                 good = True
         if not good:
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                    'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                    )
+            )
             return {}
         # Prepare the runner object
         opts = {'fun': load['fun'],
