@@ -89,7 +89,7 @@ def clean_proc(proc, wait_for_kill=10):
                         proc.pid
                     )
                 )
-                os.kill(signal.SIGKILL, proc.pid)
+                os.kill(proc.pid, signal.SIGKILL)
     except (AssertionError, AttributeError):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
@@ -1150,6 +1150,11 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+
+        if 'loc' in load and load['loc'] < 0:
+            log.error('Should not happen: load[loc] < 0')
+            return False
+
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
                 'Exceeding file_recv_max_size limit: {0}'.format(

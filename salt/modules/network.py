@@ -445,6 +445,32 @@ def hw_addr(iface):
 hwaddr = hw_addr
 
 
+def interface(iface):
+    '''
+    Return the inet address for a given interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.interface eth0
+    '''
+    return salt.utils.network.interface(iface)
+
+
+def interface_ip(iface):
+    '''
+    Return the inet address for a given interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.interface_ip eth0
+    '''
+    return salt.utils.network.interface_ip(iface)
+
+
 def subnets():
     '''
     Returns a list of subnets to which the host belongs

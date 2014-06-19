@@ -29,6 +29,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.output
 from salt._compat import string_types
 
 
@@ -65,7 +66,7 @@ class NestDisplay(object):
                         ' ' * indent,
                         self.colors['GREEN'],
                         prefix,
-                        line,
+                        salt.output.strip_esc_sequence(line),
                         self.colors['ENDC'])
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
