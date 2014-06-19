@@ -179,6 +179,11 @@ The following example (in JSON format) causes Salt to execute two commands::
     caveats below. It is the default format for HTML forms, many JavaScript
     libraries, and the :command:`curl` command.
 
+    For example, the equivalent to running ``salt '*' test.ping`` is sending
+    ``fun=test.ping&arg&client=local&tgt=*`` in the HTTP request body.
+
+    Caveats:
+
     * Only a single command may be sent per HTTP request.
     * Repeating the ``arg`` parameter multiple times will cause those
       parameters to be combined into a single list.
