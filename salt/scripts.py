@@ -15,7 +15,6 @@ import logging
 import salt
 import salt.exceptions
 import salt.cli
-import salt.cli.saltapi
 try:
     import salt.cloud.cli
     HAS_SALTCLOUD = True
@@ -234,7 +233,7 @@ def salt_api():
     '''
     The main function for salt-api
     '''
-    sapi = salt.cli.saltapi.SaltAPI()
+    sapi = salt.cli.SaltAPI()
     sapi.run()
 
 
