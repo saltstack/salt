@@ -20,6 +20,7 @@ Salt Table of Contents
     topics/topology/index
     topics/windows/index
     topics/cloud/index
+    topics/netapi/index
     topics/virt/index
     topics/yaml/index
     topics/master_tops/index
