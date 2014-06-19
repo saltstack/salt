@@ -216,8 +216,6 @@ try:
 
     HAS_WEBSOCKETS = True
 except ImportError:
-    logger.debug('Error setting up websockets', exc_info=True)
-
     websockets = type('websockets', (object,), {
         'SynchronizingWebsocket': None,
     })
