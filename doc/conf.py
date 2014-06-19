@@ -3,6 +3,7 @@
 '''
 Sphinx documentation for Salt
 '''
+import functools
 import sys
 import os
 import types
