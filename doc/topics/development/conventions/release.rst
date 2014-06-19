@@ -54,7 +54,7 @@ release can be cut:
    release is announced on the ``salt-users`` mailing list.
 
 
-Cherry-picking Process for Bugfixes
+Cherry-Picking Process for Bugfixes
 ===================================
 
 Bugfixes should be made on the ``develop`` branch.  If the bug also applies to
