@@ -55,6 +55,7 @@ import pprint
 
 # Import salt libs
 import salt.utils
+import salt.output
 
 
 def output(data):
@@ -79,8 +80,9 @@ def _format_host(host, data):
         hstrs.append(('    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
+            sanitized_err = salt.output.strip_esc_sequence(err)
             hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
-                          .format(hcolor, err, colors)))
+                          .format(hcolor, sanitized_err, colors)))
     if isinstance(data, dict):
         # Strip out the result: True, without changes returns if
         # state_verbose is False
@@ -248,7 +250,7 @@ def _format_host(host, data):
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
-    hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
+    hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, salt.output.strip_esc_sequence(host), colors)))
     return '\n'.join(hstrs), nchanges > 0
 
 
