@@ -2,6 +2,8 @@
 A REST API for Salt
 ===================
 
+.. versionaddedd:: Helium
+
 .. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
 
 :depends:   - CherryPy Python module
@@ -40,8 +42,6 @@ A REST API for Salt
         The port for the webserver to listen on.
     host : ``0.0.0.0``
         The socket interface for the HTTP server to listen on.
-
-        .. versionadded:: 0.8.2
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
@@ -52,37 +52,21 @@ A REST API for Salt
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
-
-        .. versionadded:: 0.8.3
     webhook_disable_auth : False
         The :py:class:`Webhook` URL requires authentication by default but
         external services cannot always be configured to send authentication.
         See the Webhook documentation for suggestions on securing this
         interface.
-
-        .. versionadded:: 0.8.4.1
     webhook_url : /hook
         Configure the URL endpoint for the :py:class:`Webhook` entry point.
-
-        .. versionadded:: 0.8.4.1
     thread_pool : ``100``
         The number of worker threads to start up in the pool.
-
-        .. versionchanged:: 0.8.4
-            Previous versions defaulted to a pool of ``10``
     socket_queue_size : ``30``
         Specify the maximum number of HTTP connections to queue.
-
-        .. versionchanged:: 0.8.4
-            Previous versions defaulted to ``5`` connections.
     max_request_body_size : ``1048576``
-        .. versionchanged:: 0.8.4
-            Previous versions defaulted to ``104857600`` for the size of the
-            request body
+        Maximum size for the HTTP request body.
     collect_stats : False
         Collect and report statistics about the CherryPy server
-
-        .. versionadded:: 0.8.4
 
         Reports are available via the :py:class:`Stats` URL.
     static
@@ -90,26 +74,18 @@ A REST API for Salt
     static_path : ``/static``
         The URL prefix to use when serving static assets out of the directory
         specified in the ``static`` setting.
-
-        .. versionadded:: 0.8.2
     app
         A filesystem path to an HTML file that will be served as a static file.
         This is useful for bootstrapping a single-page JavaScript app.
-
-        .. versionadded:: 0.8.2
     app_path : ``/app``
         The URL prefix to use for serving the HTML file specified in the ``app``
         setting. This should be a simple name containing no slashes.
 
         Any path information after the specified path is ignored; this is
         useful for apps that utilize the HTML5 history API.
-
-        .. versionadded:: 0.8.2
     root_prefix : ``/``
         A URL path to the main entry point for the application. This is useful
         for serving multiple applications from the same URL.
-
-        .. versionadded:: 0.8.4
 
 .. _rest_cherrypy-auth:
 
@@ -961,12 +937,6 @@ class Login(LowDataAdapter):
         '''
         :ref:`Authenticate  <rest_cherrypy-auth>` against Salt's eauth system
 
-        .. versionchanged:: 0.8.0
-            No longer returns a 302 redirect on success.
-
-        .. versionchanged:: 0.8.1
-            Returns 401 on authentication failure
-
         .. http:post:: /login
 
             :reqheader X-Auth-Token: |req_token|
@@ -1067,8 +1037,6 @@ class Logout(LowDataAdapter):
     def POST(self):
         '''
         Destroy the currently active session and expire the session cookie
-
-        .. versionadded:: 0.8.0
         '''
         cherrypy.lib.sessions.expire() # set client-side to expire
         cherrypy.session.regenerate() # replace server-side with new
@@ -1085,8 +1053,6 @@ class Run(LowDataAdapter):
         '''
         Run commands bypassing the :ref:`normal session handling
         <rest_cherrypy-auth>`
-
-        .. versionadded:: 0.8.0
 
         .. http:post:: /run
 
@@ -1177,8 +1143,6 @@ class Events(object):
 
         This stream is formatted per the Server Sent Events (SSE) spec. Each
         event is formatted as JSON.
-
-        .. versionadded:: 0.8.3
 
         Browser clients currently lack Cross-origin resource sharing (CORS)
         support for the ``EventSource()`` API. Cross-domain requests from a
@@ -1325,8 +1289,6 @@ class WebsocketEndpoint(object):
     def GET(self, token=None, **kwargs):
         '''
         Return a websocket connection of Salt's event stream
-
-        .. versionadded:: 0.8.6
 
         .. http:get:: /ws/(token)
 
@@ -1530,8 +1492,6 @@ class Webhook(object):
     def POST(self, *args, **kwargs):
         '''
         Fire an event in Salt with a custom event tag and data
-
-        .. versionadded:: 0.8.4
 
         .. http:post:: /hook
 
