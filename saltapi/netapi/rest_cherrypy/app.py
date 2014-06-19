@@ -584,22 +584,22 @@ class LowDataAdapter(object):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                % curl -i localhost:8000
+            % curl -i localhost:8000
 
-            .. code-block:: http
+        .. code-block:: http
 
-                GET / HTTP/1.1
-                Host: localhost:8000
-                Accept: application/json
+            GET / HTTP/1.1
+            Host: localhost:8000
+            Accept: application/json
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Type: application/json
+            HTTP/1.1 200 OK
+            Content-Type: application/json
         '''
         import inspect
 
@@ -634,42 +634,42 @@ class LowDataAdapter(object):
             :term:`lowstate` data describing Salt commands must be sent in the
             request body.
 
-            **Example request**::
+        **Example request**::
 
-                % curl -si https://localhost:8000 \\
-                        -H "Accept: application/x-yaml" \\
-                        -H "X-Auth-Token: d40d1e1e" \\
-                        -d client=local \\
-                        -d tgt='*' \\
-                        -d fun='test.ping' \\
-                        -d arg
+            % curl -si https://localhost:8000 \\
+                    -H "Accept: application/x-yaml" \\
+                    -H "X-Auth-Token: d40d1e1e" \\
+                    -d client=local \\
+                    -d tgt='*' \\
+                    -d fun='test.ping' \\
+                    -d arg
 
-            .. code-block:: http
+        .. code-block:: http
 
-                POST / HTTP/1.1
-                Host: localhost:8000
-                Accept: application/x-yaml
-                X-Auth-Token: d40d1e1e
-                Content-Length: 36
-                Content-Type: application/x-www-form-urlencoded
+            POST / HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            X-Auth-Token: d40d1e1e
+            Content-Length: 36
+            Content-Type: application/x-www-form-urlencoded
 
-                fun=test.ping&arg&client=local&tgt=*
+            fun=test.ping&arg&client=local&tgt=*
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Length: 200
-                Allow: GET, HEAD, POST
-                Content-Type: application/x-yaml
+            HTTP/1.1 200 OK
+            Content-Length: 200
+            Allow: GET, HEAD, POST
+            Content-Type: application/x-yaml
 
-                return:
-                - ms-0: true
-                  ms-1: true
-                  ms-2: true
-                  ms-3: true
-                  ms-4: true
+            return:
+            - ms-0: true
+                ms-1: true
+                ms-2: true
+                ms-3: true
+                ms-4: true
         '''
         return {
             'return': list(self.exec_lowstate(
@@ -697,31 +697,28 @@ class Minions(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            Get grains, modules, functions, and inline function documentation
-            for all minions or a single minion
+        **Example request**::
 
-            **Example request**::
+            % curl -i localhost:8000/minions/ms-3
 
-                % curl -i localhost:8000/minions/ms-3
+        .. code-block:: http
 
-            .. code-block:: http
+            GET /minions/ms-3 HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
 
-                GET /minions/ms-3 HTTP/1.1
-                Host: localhost:8000
-                Accept: application/x-yaml
+        **Example response**:
 
-            **Example response**:
+        .. code-block:: http
 
-            .. code-block:: http
+            HTTP/1.1 200 OK
+            Content-Length: 129005
+            Content-Type: application/x-yaml
 
-                HTTP/1.1 200 OK
-                Content-Length: 129005
-                Content-Type: application/x-yaml
-
-                return:
-                - ms-3:
-                    grains.items:
-                      ...
+            return:
+            - ms-3:
+                grains.items:
+                    ...
         '''
         cherrypy.request.lowstate = [{
             'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
@@ -751,37 +748,37 @@ class Minions(LowDataAdapter):
             request body. The ``client`` option will be set to
             :py:meth:`~salt.client.LocalClient.local_async`.
 
-            **Example request**::
+        **Example request**::
 
-                % curl -sSi localhost:8000/minions \\
-                    -H "Accept: application/x-yaml" \\
-                    -d tgt='*' \\
-                    -d fun='status.diskusage'
+            % curl -sSi localhost:8000/minions \\
+                -H "Accept: application/x-yaml" \\
+                -d tgt='*' \\
+                -d fun='status.diskusage'
 
-            .. code-block:: http
+        .. code-block:: http
 
-                POST /minions HTTP/1.1
-                Host: localhost:8000
-                Accept: application/x-yaml
-                Content-Length: 26
-                Content-Type: application/x-www-form-urlencoded
+            POST /minions HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            Content-Length: 26
+            Content-Type: application/x-www-form-urlencoded
 
-                tgt=*&fun=status.diskusage
+            tgt=*&fun=status.diskusage
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 202 Accepted
-                Content-Length: 86
-                Content-Type: application/x-yaml
+            HTTP/1.1 202 Accepted
+            Content-Length: 86
+            Content-Type: application/x-yaml
 
-                return:
-                - jid: '20130603122505459265'
-                  minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
-                _links:
-                  jobs:
-                  - href: /jobs/20130603122505459265
+            return:
+            - jid: '20130603122505459265'
+                minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
+            _links:
+                jobs:
+                - href: /jobs/20130603122505459265
         '''
         job_data = list(self.exec_lowstate(client='local_async',
             token=cherrypy.session.get('token')))
@@ -815,69 +812,69 @@ class Jobs(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                % curl -i localhost:8000/jobs
+            % curl -i localhost:8000/jobs
 
-            .. code-block:: http
+        .. code-block:: http
 
-                GET /jobs HTTP/1.1
-                Host: localhost:8000
-                Accept: application/x-yaml
+            GET /jobs HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Length: 165
-                Content-Type: application/x-yaml
+            HTTP/1.1 200 OK
+            Content-Length: 165
+            Content-Type: application/x-yaml
 
-                return:
-                - '20121130104633606931':
-                    Arguments:
-                    - '3'
-                    Function: test.fib
-                    Start Time: 2012, Nov 30 10:46:33.606931
-                    Target: jerry
-                    Target-type: glob
+            return:
+            - '20121130104633606931':
+                Arguments:
+                - '3'
+                Function: test.fib
+                Start Time: 2012, Nov 30 10:46:33.606931
+                Target: jerry
+                Target-type: glob
 
-            **Example request**::
+        **Example request**::
 
-                % curl -i localhost:8000/jobs/20121130104633606931
+            % curl -i localhost:8000/jobs/20121130104633606931
 
-            .. code-block:: http
+        .. code-block:: http
 
-                GET /jobs/20121130104633606931 HTTP/1.1
-                Host: localhost:8000
-                Accept: application/x-yaml
+            GET /jobs/20121130104633606931 HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Length: 73
-                Content-Type: application/x-yaml
+            HTTP/1.1 200 OK
+            Content-Length: 73
+            Content-Type: application/x-yaml
 
-                info:
-                - Arguments:
-                  - '3'
-                  Function: test.fib
-                  Minions:
-                  - jerry
-                  Start Time: 2012, Nov 30 10:46:33.606931
-                  Target: '*'
-                  Target-type: glob
-                  User: saltdev
-                  jid: '20121130104633606931'
-                return:
-                - jerry:
-                  - - 0
-                    - 1
-                    - 1
-                    - 2
-                  - 6.9141387939453125e-06
+            info:
+            - Arguments:
+                - '3'
+                Function: test.fib
+                Minions:
+                - jerry
+                Start Time: 2012, Nov 30 10:46:33.606931
+                Target: '*'
+                Target-type: glob
+                User: saltdev
+                jid: '20121130104633606931'
+            return:
+            - jerry:
+                - - 0
+                - 1
+                - 1
+                - 2
+                - 6.9141387939453125e-06
         '''
         lowstate = [{
             'client': 'runner',
@@ -931,22 +928,22 @@ class Login(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                % curl -i localhost:8000/login
+            % curl -i localhost:8000/login
 
-            .. code-block:: http
+        .. code-block:: http
 
-                GET /login HTTP/1.1
-                Host: localhost:8000
-                Accept: text/html
+            GET /login HTTP/1.1
+            Host: localhost:8000
+            Accept: text/html
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Type: text/html
+            HTTP/1.1 200 OK
+            Content-Type: text/html
         '''
         cherrypy.response.headers['WWW-Authenticate'] = 'Session'
 
@@ -979,47 +976,47 @@ class Login(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                % curl -si localhost:8000/login \\
-                        -H "Accept: application/json" \\
-                        -d username='saltuser' \\
-                        -d password='saltpass' \\
-                        -d eauth='pam'
+            % curl -si localhost:8000/login \\
+                    -H "Accept: application/json" \\
+                    -d username='saltuser' \\
+                    -d password='saltpass' \\
+                    -d eauth='pam'
 
-            .. code-block:: http
+        .. code-block:: http
 
-                POST / HTTP/1.1
-                Host: localhost:8000
-                Content-Length: 42
-                Content-Type: application/x-www-form-urlencoded
-                Accept: application/json
+            POST / HTTP/1.1
+            Host: localhost:8000
+            Content-Length: 42
+            Content-Type: application/x-www-form-urlencoded
+            Accept: application/json
 
-                username=saltuser&password=saltpass&eauth=pam
+            username=saltuser&password=saltpass&eauth=pam
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Type: application/json
-                Content-Length: 206
-                X-Auth-Token: 6d1b722e
-                Set-Cookie: session_id=6d1b722e; expires=Sat, 17 Nov 2012 03:23:52 GMT; Path=/
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+            Content-Length: 206
+            X-Auth-Token: 6d1b722e
+            Set-Cookie: session_id=6d1b722e; expires=Sat, 17 Nov 2012 03:23:52 GMT; Path=/
 
-                {"return": {
-                    "token": "6d1b722e",
-                    "start": 1363805943.776223,
-                    "expire": 1363849143.776224,
-                    "user": "saltuser",
-                    "eauth": "pam",
-                    "perms": [
-                        "grains.*",
-                        "status.*",
-                        "sys.*",
-                        "test.*"
-                    ]
-                }}
+            {"return": {
+                "token": "6d1b722e",
+                "start": 1363805943.776223,
+                "expire": 1363849143.776224,
+                "user": "saltuser",
+                "eauth": "pam",
+                "perms": [
+                    "grains.*",
+                    "status.*",
+                    "sys.*",
+                    "test.*"
+                ]
+            }}
         '''
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
@@ -1099,41 +1096,41 @@ class Run(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                % curl -sS localhost:8000/run \\
-                    -H 'Accept: application/x-yaml' \\
-                    -d client='local' \\
-                    -d tgt='*' \\
-                    -d fun='test.ping' \\
-                    -d username='saltdev' \\
-                    -d password='saltdev' \\
-                    -d eauth='pam'
+            % curl -sS localhost:8000/run \\
+                -H 'Accept: application/x-yaml' \\
+                -d client='local' \\
+                -d tgt='*' \\
+                -d fun='test.ping' \\
+                -d username='saltdev' \\
+                -d password='saltdev' \\
+                -d eauth='pam'
 
-            .. code-block:: http
+        .. code-block:: http
 
-                POST /run HTTP/1.1
-                Host: localhost:8000
-                Accept: application/x-yaml
-                Content-Length: 75
-                Content-Type: application/x-www-form-urlencoded
+            POST /run HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            Content-Length: 75
+            Content-Type: application/x-www-form-urlencoded
 
-                client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
+            client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Length: 73
-                Content-Type: application/x-yaml
+            HTTP/1.1 200 OK
+            Content-Length: 73
+            Content-Type: application/x-yaml
 
-                return:
-                - ms-0: true
-                  ms-1: true
-                  ms-2: true
-                  ms-3: true
-                  ms-4: true
+            return:
+            - ms-0: true
+                ms-1: true
+                ms-2: true
+                ms-3: true
+                ms-4: true
         '''
         return {
             'return': list(self.exec_lowstate()),
@@ -1191,70 +1188,70 @@ class Events(object):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                % curl -NsS localhost:8000/events
+            % curl -NsS localhost:8000/events
 
-            .. code-block:: http
+        .. code-block:: http
 
-                GET /events HTTP/1.1
-                Host: localhost:8000
+            GET /events HTTP/1.1
+            Host: localhost:8000
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Connection: keep-alive
-                Cache-Control: no-cache
-                Content-Type: text/event-stream;charset=utf-8
+            HTTP/1.1 200 OK
+            Connection: keep-alive
+            Cache-Control: no-cache
+            Content-Type: text/event-stream;charset=utf-8
 
-                retry: 400
-                data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
+            retry: 400
+            data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
 
-                data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
+            data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
 
-        The event stream can be easily consumed via JavaScript:
+    The event stream can be easily consumed via JavaScript:
 
-        .. code-block:: javascript
+    .. code-block:: javascript
 
-            # Note, you must be authenticated!
-            var source = new EventSource('/events');
-            source.onopen = function() { console.debug('opening') };
-            source.onerror = function(e) { console.debug('error!', e) };
-            source.onmessage = function(e) { console.debug(e.data) };
+        # Note, you must be authenticated!
+        var source = new EventSource('/events');
+        source.onopen = function() { console.debug('opening') };
+        source.onerror = function(e) { console.debug('error!', e) };
+        source.onmessage = function(e) { console.debug(e.data) };
 
-        It is also possible to consume the stream via the shell.
+    It is also possible to consume the stream via the shell.
 
-        Records are separated by blank lines; the ``data:`` and ``tag:``
-        prefixes will need to be removed manually before attempting to
-        unserialize the JSON.
+    Records are separated by blank lines; the ``data:`` and ``tag:``
+    prefixes will need to be removed manually before attempting to
+    unserialize the JSON.
 
-        curl's ``-N`` flag turns off input buffering which is required to
-        process the stream incrementally.
+    curl's ``-N`` flag turns off input buffering which is required to
+    process the stream incrementally.
 
-        Here is a basic example of printing each event as it comes in:
+    Here is a basic example of printing each event as it comes in:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            % curl -NsS localhost:8000/events |\\
-                    while IFS= read -r line ; do
-                        echo $line
-                    done
+        % curl -NsS localhost:8000/events |\\
+                while IFS= read -r line ; do
+                    echo $line
+                done
 
-        Here is an example of using awk to filter events based on tag:
+    Here is an example of using awk to filter events based on tag:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            % curl -NsS localhost:8000/events |\\
-                    awk '
-                        BEGIN { RS=""; FS="\\n" }
-                        $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
-                    '
-            tag: salt/job/20140112010149808995/new
-            data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
-            tag: 20140112010149808995
-            data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
+        % curl -NsS localhost:8000/events |\\
+                awk '
+                    BEGIN { RS=""; FS="\\n" }
+                    $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
+                '
+        tag: salt/job/20140112010149808995/new
+        data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
+        tag: 20140112010149808995
+        data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
         '''
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
@@ -1342,38 +1339,38 @@ class WebsocketEndpoint(object):
             :status 401: |401|
             :status 406: |406|
 
-            **Example request**::
+        **Example request**::
 
-                curl -NsS \\
-                    -H 'X-Auth-Token: ffedf49d' \\
-                    -H 'Host: localhost:8000' \\
-                    -H 'Connection: Upgrade' \\
-                    -H 'Upgrade: websocket' \\
-                    -H 'Origin: http://localhost:8000' \\
-                    -H 'Sec-WebSocket-Version: 13' \\
-                    -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
-                    localhost:8000/ws
+            curl -NsS \\
+                -H 'X-Auth-Token: ffedf49d' \\
+                -H 'Host: localhost:8000' \\
+                -H 'Connection: Upgrade' \\
+                -H 'Upgrade: websocket' \\
+                -H 'Origin: http://localhost:8000' \\
+                -H 'Sec-WebSocket-Version: 13' \\
+                -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
+                localhost:8000/ws
 
-            .. code-block:: http
+        .. code-block:: http
 
-                GET /ws HTTP/1.1
-                Connection: Upgrade
-                Upgrade: websocket
-                Host: localhost:8000
-                Origin: http://localhost:8000
-                Sec-WebSocket-Version: 13
-                Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
-                X-Auth-Token: ffedf49d
+            GET /ws HTTP/1.1
+            Connection: Upgrade
+            Upgrade: websocket
+            Host: localhost:8000
+            Origin: http://localhost:8000
+            Sec-WebSocket-Version: 13
+            Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
+            X-Auth-Token: ffedf49d
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 101 Switching Protocols
-                Upgrade: websocket
-                Connection: Upgrade
-                Sec-WebSocket-Accept: mWZjBV9FCglzn1rIKJAxrTFlnJE=
-                Sec-WebSocket-Version: 13
+            HTTP/1.1 101 Switching Protocols
+            Upgrade: websocket
+            Connection: Upgrade
+            Sec-WebSocket-Accept: mWZjBV9FCglzn1rIKJAxrTFlnJE=
+            Sec-WebSocket-Version: 13
 
         An authentication token **may optionally** be passed as part of the URL
         for browsers that cannot be configured to send the authentication
@@ -1538,28 +1535,28 @@ class Webhook(object):
             :status 406: |406|
             :status 413: request body is too large
 
-            **Example request**::
+        **Example request**::
 
-                % curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
+            % curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
 
-            .. code-block:: http
+        .. code-block:: http
 
-                POST /hook HTTP/1.1
-                Host: localhost:8000
-                Content-Length: 16
-                Content-Type: application/x-www-form-urlencoded
+            POST /hook HTTP/1.1
+            Host: localhost:8000
+            Content-Length: 16
+            Content-Type: application/x-www-form-urlencoded
 
-                foo=Foo&bar=Bar!
+            foo=Foo&bar=Bar!
 
-            **Example response**:
+        **Example response**:
 
-            .. code-block:: http
+        .. code-block:: http
 
-                HTTP/1.1 200 OK
-                Content-Length: 14
-                Content-Type: application/json
+            HTTP/1.1 200 OK
+            Content-Length: 14
+            Content-Type: application/json
 
-                {"success": true}
+            {"success": true}
 
         As a practical example, an internal continuous-integration build
         server could send an HTTP POST request to the URL
