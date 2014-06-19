@@ -146,8 +146,8 @@ class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
     authentication by the master.
-    
-    It also generates a signing key-pair if enbaled with master_sign_key_name.
+
+    It also generates a signing key-pair if enabled with master_sign_key_name.
     '''
     def __init__(self, opts):
         super(MasterKeys, self).__init__()
@@ -357,7 +357,8 @@ class Auth(object):
                             aes, token = self.decrypt_aes(payload, False)
                             return aes
                         else:
-                            log.info('Received signed master pubkey but signature verification failed!')
+                            log.error('Received signed master pubkey from master {0} '
+                                      'but signature verification failed!'.format(self.opts['master']))
                             return ''
                     except KeyError, IndexError:
                         log.error('Received new master key from master {0} but the message '
@@ -368,7 +369,7 @@ class Auth(object):
                                  'verification (verify_master_pub_sig) is not enabled.')
                         return ''
 
-                    # This is not the last master we connected to
+                # This is not the last master we connected to
                 log.error('The master key has changed, the salt master could '
                           'have been subverted, verify salt master\'s public '
                           'key')
