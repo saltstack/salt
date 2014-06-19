@@ -2018,6 +2018,8 @@ class ClearFuncs(object):
                'publish_port': self.opts['publish_port'],
               }
 
+        # sign the masters pubkey (if enabled) before it is
+        # send to the minion that has just authenticated
         if self.opts['master_sign_key_name']:
             if self.opts['master_sign_pubkey']:
                 log.debug("Signing master public key before sending")
