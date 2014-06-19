@@ -446,7 +446,7 @@ def present(name):
     ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
     if 'id' in cinfos:
-      cid = cinfos['id']
+        cid = cinfos['id']
     else:
         cid = name
     if cinfos['status']:
