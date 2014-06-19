@@ -56,7 +56,7 @@ OpenStack account. The profile might look like:
 
     kevinopenstack:
       driver: keyring
-      service salt.cloud.openstack.kevin
+      service: salt.cloud.openstack.kevin
 
 And the URI used to reference the password might look like:
 

@@ -1,12 +1,20 @@
 # coding: utf-8
-import cgi
-import json
 import urllib
 
-import cherrypy
 import yaml
 
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+
 from tests.utils import BaseRestCherryPyTest
+
+# Import 3rd-party libs
+try:
+    import cherrypy
+    HAS_CHERRYPY = True
+except ImportError:
+    HAS_CHERRYPY = False
+
 
 class TestAuth(BaseRestCherryPyTest):
     def test_get_root_noauth(self):
@@ -36,6 +44,7 @@ class TestAuth(BaseRestCherryPyTest):
         '''
         self.assertRaisesRegexp(cherrypy.InternalRedirect, '\/login',
                 self.request, '/hook', method='POST', data={})
+
 
 class TestLogin(BaseRestCherryPyTest):
     auth_creds = (
@@ -76,6 +85,7 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '401 Unauthorized')
+
 
 class TestWebhookDisableAuth(BaseRestCherryPyTest):
     __opts__ = {

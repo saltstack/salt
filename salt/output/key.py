@@ -8,6 +8,7 @@ The ``salt-key`` command makes use of this outputter to format its output.
 
 # Import salt libs
 import salt.utils
+import salt.output
 
 
 def output(data):
@@ -51,12 +52,12 @@ def output(data):
             if isinstance(data[status], list):
                 ret += '{0}{1}{2}\n'.format(
                         cmap[status],
-                        key,
+                        salt.output.strip_esc_sequence(key),
                         color['ENDC'])
             if isinstance(data[status], dict):
                 ret += '{0}{1}:  {2}{3}\n'.format(
                         cmap[status],
-                        key,
+                        salt.output.strip_esc_sequence(key),
                         data[status][key],
                         color['ENDC'])
     return ret
