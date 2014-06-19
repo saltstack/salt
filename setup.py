@@ -214,6 +214,7 @@ class CloudSdist(sdist):
             for filename in self.filelist.files[:]:
                 if filename in ('scripts/salt',
                                 'scripts/salt-cloud',
+                                'scripts/salt-api',
                                 'scripts/salt-key',
                                 'scripts/salt-master',
                                 'scripts/salt-run',
@@ -478,7 +479,8 @@ class SaltDistribution(BaseDistribution):
                 'doc/man/salt-syndic.1',
                 'doc/man/salt-run.1',
                 'doc/man/salt-ssh.1',
-                'doc/man/salt-cloud.1'
+                'doc/man/salt-cloud.1',
+                'doc/man/salt-api.1',
             ])
         else:
             self.install_requires.append('WMI')
@@ -494,6 +496,7 @@ class SaltDistribution(BaseDistribution):
                 self.entry_points['console_scripts'].extend([
                     'salt = salt.scripts:salt_main',
                     'salt-cloud = salt.scripts:salt_cloud',
+                    'salt-api = salt.scripts:salt_api',
                     'salt-key = salt.scripts:salt_key',
                     'salt-master = salt.scripts:salt_master',
                     'salt-run = salt.scripts:salt_run',
@@ -518,6 +521,7 @@ class SaltDistribution(BaseDistribution):
                 self.scripts.extend([
                     'scripts/salt',
                     'scripts/salt-cloud',
+                    'scripts/salt-api',
                     'scripts/salt-key',
                     'scripts/salt-master',
                     'scripts/salt-run',
@@ -570,6 +574,7 @@ SETUP_KWARGS = {'distclass': SaltDistribution,
                              'salt.log',
                              'salt.log.handlers',
                              'salt.modules',
+                             'salt.netapi',
                              'salt.output',
                              'salt.pillar',
                              'salt.proxy',
