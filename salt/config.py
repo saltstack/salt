@@ -963,7 +963,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         vm_config_path = None
 
     # Load the cloud configuration
-    overrides = salt.config.load_config(
+    overrides = load_config(
         path,
         env_var,
         os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')

@@ -474,6 +474,76 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
+    def test_cloud_config_vm_profiles_config(self):
+        '''
+        Tests passing in vm_config and profiles_config.
+        This scenario is a bad use of the API.
+        '''
+        self.assertRaises(RuntimeError, sconfig.cloud_config, PATH,
+                          vm_config='test', profiles_config='test')
+
+    def test_cloud_config_vm_profiles_config_path(self):
+        '''
+        Tests passing in vm_config_path and profiles_config_path.
+        This scenario is a bad use of the API.
+        '''
+        self.assertRaises(RuntimeError, sconfig.cloud_config, PATH,
+                          vm_config_path='test', profiles_config_path='test')
+
+    @patch('salt.config.load_config',
+           MagicMock(return_value={'vm_config': 'foo', 'profiles_config': 'bar'}))
+    def test_cloud_config_overrides_bad_api(self):
+        '''
+        Tests passing in vm_config and profiles_config through the overrides
+        cloud config path
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH)
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    def test_cloud_config_double_master_path(self):
+        '''
+        Tests passing in master_config_path and master_config kwargs.
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          master_config_path='foo', master_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    def test_cloud_config_double_providers_path(self):
+        '''
+        Tests passing in providers_config_path and providers_config kwargs.
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          providers_config_path='foo', providers_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    def test_cloud_config_double_profiles_path(self):
+        '''
+        Tests passing in profiles_config_path and profiles_config kwargs.
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          profiles_config_path='foo', profiles_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    @patch('salt.config.apply_cloud_config', MagicMock(return_value={'providers': 'foo'}))
+    def test_cloud_config_providers_in_opts(self):
+        '''
+        Tests mixing old cloud providers with pre-configured providers configurations
+        using the providers_config kwarg
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          providers_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    @patch('salt.config.apply_cloud_config', MagicMock(return_value={'providers': 'foo'}))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    def test_cloud_config_providers_in_opts_path(self):
+        '''
+        Tests mixing old cloud providers with pre-configured providers configurations
+        using the providers_config_path kwarg
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          providers_config_path='bar')
+
     def test_load_cloud_config_from_environ_var(self):
         original_environ = os.environ.copy()
 
