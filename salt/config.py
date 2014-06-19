@@ -1524,14 +1524,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             )
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
-                    # # change provider details '-only-extendable-' to extended provider name
+                    # change provider details '-only-extendable-' to extended provider name
                     details['provider'] = provider
-                elif providers.get(extends) and len(providers[extends]) > 1:
+                elif providers.get(extends):
                     raise salt.cloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
-                        'to extend from {2!r} which has multiple entries '
-                        'and no provider is being specified. Not '
-                        'extending!'.format(
+                        'to extend from {2!r} and no provider was specified. '
+                        'Not extending!'.format(
                             details['provider'], provider_alias, extends
                         )
                     )
@@ -1547,7 +1546,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 else:
                     if driver in providers.get(extends):
                         details['extends'] = '{0}:{1}'.format(extends, driver)
-                    elif providers.get(extends).startswith('-only-extendable-'):
+                    elif '-only-extendable-' in providers.get(extends):
                         details['extends'] = '{0}:{1}'.format(
                             extends, '-only-extendable-{0}'.format(ext_count)
                         )
