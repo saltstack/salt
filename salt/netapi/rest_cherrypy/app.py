@@ -1143,7 +1143,7 @@ class Events(object):
         self.auth = salt.auth.LoadAuth(self.opts)
 
     def GET(self, token=None):
-        '''
+        r'''
         An HTTP stream of the Salt master event bus
 
         This stream is formatted per the Server Sent Events (SSE) spec. Each
@@ -1208,7 +1208,7 @@ class Events(object):
 
     .. code-block:: bash
 
-        % curl -NsS localhost:8000/events |\\
+        % curl -NsS localhost:8000/events |\
                 while IFS= read -r line ; do
                     echo $line
                 done
@@ -1217,7 +1217,7 @@ class Events(object):
 
     .. code-block:: bash
 
-        % curl -NsS localhost:8000/events |\\
+        % curl -NsS localhost:8000/events |\
                 awk '
                     BEGIN { RS=""; FS="\\n" }
                     $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
