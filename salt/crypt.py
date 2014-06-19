@@ -201,6 +201,11 @@ class MasterKeys(dict):
             key.save_pub_key(path)
         return salt.utils.fopen(path, 'r').read()
 
+    def get_mkey_paths(self):
+        return self.pub_path, self.rsa_path
+
+    def get_sign_paths(self):
+        return self.pub_sign_path, self.rsa_sign_path
 
 class Auth(object):
     '''
@@ -311,6 +316,25 @@ class Auth(object):
                 return key_str, ''
         return '', ''
 
+    def verify_pubkey_sig(self, message, sig):
+        '''
+        wraps the verify_signature method so we have
+        additional checks and return a bool
+        '''
+        if self.opts['master_sign_key_name']:
+            res = verify_signature(self.opts['master_sign_key_name'],
+                                   message,
+                                   sig)
+            if res == 1:
+                return True
+            else:
+                return False
+        else:
+            log.error('Failed to verify the signature of the message because '
+                      'the verification key-pairs name is not defined. Please '
+                      'make sure, master_sign_key_name is defined.')
+            return False
+
     def verify_master(self, payload):
         '''
         Verify that the master is the same one that was previously accepted.
@@ -318,9 +342,33 @@ class Auth(object):
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
-            if payload['pub_key'] != local_master_pub:
 
-                # This is not the last master we connected to
+            if payload['pub_key'] != local_master_pub:
+                # if we receive a new pubkey from the master, try to verify
+                # its signature if the payload contains one
+                if self.opts['verify_master_pub_sig']:
+                    try:
+                        if self.verify_pubkey_sig(payload['pub_key'],
+                                                  payload['pub_sig']):
+                            log.info('Received signed and verified master pubkey '
+                                     'from master {0}'.format(self.opts['master']))
+                            m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+                            salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                            aes, token = self.decrypt_aes(payload, False)
+                            return aes
+                        else:
+                            log.info('Received signed master pubkey but signature verification failed!')
+                            return ''
+                    except KeyError, IndexError:
+                        log.error('Received new master key from master {0} but the message '
+                                 'does not contain the pubkeys signature'.format(self.opts['master']))
+                else:
+                    if 'pub_sig' in payload:
+                        log.error('Received signed master pubkey, rejecting key because signature '
+                                 'verification (verify_master_pub_sig) is not enabled.')
+                        return ''
+
+                    # This is not the last master we connected to
                 log.error('The master key has changed, the salt master could '
                           'have been subverted, verify salt master\'s public '
                           'key')
