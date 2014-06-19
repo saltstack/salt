@@ -1,10 +1,13 @@
+# encoding: utf-8
 import json
 import logging
+
+import salt.netapi
 
 logger = logging.getLogger(__name__)
 
 
-class SaltInfo:
+class SaltInfo(object):
     '''
     Class to  handle processing and publishing of "real time" Salt upates.
     '''
@@ -16,15 +19,10 @@ class SaltInfo:
         '''
         self.handler = handler
 
-        '''
-        These represent a "real time" view into Salt's jobs.
-        '''
+        # These represent a "real time" view into Salt's jobs.
         self.jobs = {}
 
-        '''
-        This represents a "real time" view of minions connected to
-        Salt.
-        '''
+        # This represents a "real time" view of minions connected to Salt.
         self.minions = {}
 
     def publish_minions(self):
@@ -121,9 +119,6 @@ class SaltInfo:
         self.publish('jobs', self.jobs)
 
     def process_key_event(self, event_data):
-        tag = event_data['tag']
-        event_info = event_data['data']
-
         '''
         Tag: salt/key
         Data:
@@ -133,6 +128,9 @@ class SaltInfo:
          'result': True}
         '''
 
+        tag = event_data['tag']
+        event_info = event_data['data']
+
         if event_info['act'] == 'delete':
             self.minions.pop(event_info['id'], None)
         elif event_info['act'] == 'accept':
@@ -140,7 +138,7 @@ class SaltInfo:
 
         self.publish_minions()
 
-    def process_presense_events(salt_data, token, opts):
+    def process_presense_events(self, event_data, token, opts):
         '''
         Check if any minions have connected or dropped.
         Send a message to the client if they have.
