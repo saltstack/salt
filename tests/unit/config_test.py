@@ -32,6 +32,9 @@ from salt import config as sconfig, version as salt_version
 from salt.version import SaltStackVersion
 from salt.cloud.exceptions import SaltCloudConfigError
 
+# Import Third-Party Libs
+import yaml
+
 log = logging.getLogger(__name__)
 
 # mock hostname should be more complex than the systems FQDN
@@ -471,6 +474,89 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
+    def test_load_cloud_config_from_environ_var(self):
+        original_environ = os.environ.copy()
+
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            env_root_dir = os.path.join(tempdir, 'foo', 'env')
+            os.makedirs(env_root_dir)
+            env_fpath = os.path.join(env_root_dir, 'config-env')
+
+            salt.utils.fopen(env_fpath, 'w').write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(env_root_dir, env_fpath)
+            )
+
+            os.environ['SALT_CLOUD_CONFIG'] = env_fpath
+            # Should load from env variable, not the default configuration file
+            config = sconfig.cloud_config('/etc/salt/cloud')
+            self.assertEqual(config['log_file'], env_fpath)
+            os.environ.clear()
+            os.environ.update(original_environ)
+
+            root_dir = os.path.join(tempdir, 'foo', 'bar')
+            os.makedirs(root_dir)
+            fpath = os.path.join(root_dir, 'config')
+            salt.utils.fopen(fpath, 'w').write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+            # Let's set the environment variable, yet, since the configuration
+            # file path is not the default one, ie, the user has passed an
+            # alternative configuration file form the CLI parser, the
+            # environment variable will be ignored.
+            os.environ['SALT_CLOUD_CONFIG'] = env_fpath
+            config = sconfig.cloud_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
+        finally:
+            # Reset the environ
+            os.environ.clear()
+            os.environ.update(original_environ)
+
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_deploy_search_path_as_string(self):
+        temp_conf_dir = os.path.join(integration.TMP, 'issue-8863')
+        config_file_path = os.path.join(temp_conf_dir, 'cloud')
+        deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
+        try:
+            for directory in (temp_conf_dir, deploy_dir_path):
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+
+            default_config = sconfig.cloud_config(config_file_path)
+            default_config['deploy_scripts_search_path'] = deploy_dir_path
+            with salt.utils.fopen(config_file_path, 'w') as cfd:
+                cfd.write(yaml.dump(default_config))
+
+            default_config = sconfig.cloud_config(config_file_path)
+
+            # Our custom deploy scripts path was correctly added to the list
+            self.assertIn(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path']
+            )
+
+            # And it's even the first occurrence as it should
+            self.assertEqual(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path'][0]
+            )
+        finally:
+            if os.path.isdir(temp_conf_dir):
+                shutil.rmtree(temp_conf_dir)
+
+    def test_includes_load(self):
+        '''
+        Tests that cloud.{providers,profiles}.d directories are loaded, even if not
+        directly passed in through path
+        '''
+        config = sconfig.cloud_config(self.get_config_file_path('cloud'))
+        self.assertIn('ec2-config', config['providers'])
+        self.assertIn('Ubuntu-13.04-AMD64', config['profiles'])
+
     def test_apply_cloud_providers_config_same_providers(self):
         '''
         Tests when two providers are given with the same provider name
@@ -626,6 +712,9 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                           DEFAULT)
 
     def test_apply_cloud_providers_config_extends_no_provider(self):
+        '''
+        Tests when no provider is supplied in the extends statement
+        '''
         overrides = {'my-production-envs':
                          [{'extends': 'my-dev-envs',
                            'location': 'us-east-1',
