@@ -32,5 +32,5 @@ values that are mapped to function arguments. This allows calling functions
 simply by creating a data structure. (And this is exactly how much of Salt's
 own internals work!)
 
-.. autoclass:: salt.netapi.APIClient
+.. autoclass:: salt.netapi.NetapiClient
     :members: local, local_async, local_batch, runner, wheel

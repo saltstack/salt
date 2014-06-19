@@ -52,7 +52,7 @@ Event tag: ``salt/netapi/hook/some/tag``. Event data:
 Batch mode
 ----------
 
-The :py:meth:`~salt.APIClient.local_batch` client exposes Salt's batch mode
+The :py:meth:`~salt.netapi.NetapiClient.local_batch` client exposes Salt's batch mode
 for executing commands on incremental subsets of minions.
 
 Tests!
