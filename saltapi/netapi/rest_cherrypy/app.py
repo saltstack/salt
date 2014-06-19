@@ -7,11 +7,10 @@ A REST API for Salt
 :depends:   - CherryPy Python module
 :optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
-    <acl-eauth>` system. Be sure that it is enabled and the user you are
-    authenticating as has permissions for all the functions you will be
-    running.
+    <acl-eauth>` system which requires additional configuration not described
+    here.
 
-    Example production configuration block; add to the Salt master config file:
+    Example production-ready configuration; add to the Salt master config file:
 
     .. code-block:: yaml
 
@@ -20,12 +19,12 @@ A REST API for Salt
           ssl_crt: /etc/pki/tls/certs/localhost.crt
           ssl_key: /etc/pki/tls/certs/localhost.key
 
-    The REST interface strongly recommends a secure HTTPS connection since Salt
-    authentication credentials will be sent over the wire. If you don't already
-    have a certificate and don't wish to buy one, you can generate a
-    self-signed certificate using the
+    Using only a secure HTTPS connection is strongly recommended since Salt
+    authentication credentials will be sent over the wire.
+
+    A self-signed certificate can be generated using the
     :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
-    the dependencies for this module):
+    the dependencies for this module).
 
     .. code-block:: bash
 
@@ -115,34 +114,36 @@ A REST API for Salt
 Authentication
 --------------
 
-Authentication is performed by passing a session token with each request. The
-token may be sent either via a custom header named :mailheader:`X-Auth-Token`
-or sent inside a cookie. (The result is the same but browsers and some HTTP
-clients handle cookies automatically and transparently so it is a convenience.)
+Authentication is performed by passing a session token with each request.
+Tokens are generated via the :py:class:`Login` URL.
 
-Token are generated via the :py:class:`Login` URL.
+The token may be sent in one of two ways:
+
+* Include a custom header named :mailheader:`X-Auth-Token`.
+* Sent via a cookie. This option is a convenience for HTTP clients that
+  automatically handle cookie support (such as browsers).
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
 Usage
 -----
 
-You access a running Salt master via this module by sending HTTP requests to
-the URLs detailed below.
+Commands are sent to a running Salt master via this module by sending HTTP
+requests to the URLs detailed below.
 
 .. admonition:: Content negotiation
 
     This REST interface is flexible in what data formats it will accept as well
     as what formats it will return (e.g., JSON, YAML, x-www-form-urlencoded).
 
-    * Specify the format of data you are sending in a request by including the
+    * Specify the format of data in the request body by including the
       :mailheader:`Content-Type` header.
-    * Specify your desired output format for the response with the
+    * Specify the desired data format for the response body with the
       :mailheader:`Accept` header.
 
-This REST interface expects data sent in :http:method:`post` and
-:http:method:`put` requests  to be in the format of a list of lowstate
-dictionaries. This allows you to specify multiple commands in a single request.
+Data sent in :http:method:`post` and :http:method:`put` requests  must be in
+the format of a list of lowstate dictionaries. This allows multiple commands to
+be executed in a single HTTP request.
 
 .. glossary::
 
@@ -155,42 +156,35 @@ dictionaries. This allows you to specify multiple commands in a single request.
         command data between functions. Salt also uses lowstate for the
         :ref:`LocalClient() <python-api>` Python API interface.
 
-For example (in JSON format)::
+The following example (in JSON format) causes Salt to execute two commands::
 
     [{
-        'client': 'local',
-        'tgt': '*',
-        'fun': 'test.fib',
-        'arg': ['10'],
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.fib",
+        "arg": ["10"]
+    },
+    {
+        "client": "runner",
+        "fun": "jobs.lookup_jid",
+        "jid": "20130603122505459265"
     }]
 
 .. admonition:: x-www-form-urlencoded
 
-    This REST interface accepts data in the x-www-form-urlencoded format. This
-    is the format used by HTML forms, the default format used by
-    :command:`curl`, the default format used by many JavaScript AJAX libraries
-    (such as jQuery), etc. This format will be converted to the
-    :term:`lowstate` format as best as possible with the caveats below. It is
-    always preferable to format data in the lowstate format directly in a more
-    capable format such as JSON or YAML.
+    Sending JSON or YAML in the request body is simple and most flexible,
+    however sending data in urlencoded format is also supported with the
+    caveats below. It is the default format for HTML forms, many JavaScript
+    libraries, and the :command:`curl` command.
 
-    * Only a single command may be sent in this format per HTTP request.
-    * Multiple ``arg`` params will be sent as a single list of params.
+    * Only a single command may be sent per HTTP request.
+    * Repeating the ``arg`` parameter multiple times will cause those
+      parameters to be combined into a single list.
 
       Note, some popular frameworks and languages (notably jQuery, PHP, and
       Ruby on Rails) will automatically append empty brackets onto repeated
-      parameters. E.g., arg=one, arg=two will be sent as arg[]=one, arg[]=two.
-      Again, it is preferable to send lowstate via JSON or YAML directly by
-      specifying the :mailheader:`Content-Type` header in the request.
-
-URL reference
--------------
-
-The main entry point is the :py:class:`root URL (/) <LowDataAdapter>` and all
-functionality is available at that URL. The other URLs are largely convenience
-URLs that wrap that main entry point with shorthand or specialized
-functionality.
-
+      parameters. E.g., ``arg=one``, ``arg=two`` will be sent as ``arg[]=one``,
+      ``arg[]=two``. This is not supported; send JSON or YAML instead.
 '''
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
