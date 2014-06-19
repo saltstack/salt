@@ -52,3 +52,20 @@ release can be cut:
    they can create packages for all the major operating systems.
 #. After the packagers have been given a few days to compile the packages, the
    release is announced on the ``salt-users`` mailing list.
+
+
+Cherry-picking Process for Bugfixes
+===================================
+
+Bugfixes should be made on the ``develop`` branch.  If the bug also applies to
+the current release branch, then on the pull request against ``develop``, the
+user should mention ``@basepi`` and ask for the pull request to be
+cherry-picked.  If it is verified that the fix is a bugfix, then the
+``Bugfix -- Cherry-Pick`` label will be applied to the pull request.  When
+those commits are cherry-picked, the label will be switched to the
+``Bugfix -- [Done] Cherry-Pick`` label.  This allows easy recognition of which
+pull requests have been cherry-picked, and which are still pending to be
+cherry-picked.  All cherry-picked commits will be present in the next release.
+
+Features will not be cherry-picked, and will be present in the next feature
+release.
