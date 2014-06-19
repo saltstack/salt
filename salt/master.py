@@ -2025,7 +2025,7 @@ class ClearFuncs(object):
                 log.debug("Signing master public key before sending")
                 pub_sign = salt.crypt.sign_message(self.master_key.get_sign_paths()[1],
                                                    ret['pub_key'])
-                ret.update({'pub_sig' : pub_sign})
+                ret.update({'pub_sig': pub_sign})
 
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:

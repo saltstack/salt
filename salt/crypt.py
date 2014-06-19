@@ -207,6 +207,7 @@ class MasterKeys(dict):
     def get_sign_paths(self):
         return self.pub_sign_path, self.rsa_sign_path
 
+
 class Auth(object):
     '''
     The Auth class provides the sequence for setting up communication with
