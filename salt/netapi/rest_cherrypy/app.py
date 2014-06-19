@@ -211,8 +211,7 @@ logger = logging.getLogger(__name__)
 # Imports related to websocket
 try:
     from .tools import websockets
-    import event_processor
-    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+    from . import event_processor
 
     HAS_WEBSOCKETS = True
 except ImportError:
@@ -258,7 +257,6 @@ def salt_ip_verify_tool():
                         'status': cherrypy.response.status,
                         'return': "Bad IP",
                     }
-    request = cherrypy.serving.request
     cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
 
 
@@ -295,7 +293,7 @@ def hypermedia_handler(*args, **kwargs):
     # to handle (auth & HTTP errors). Reformat any errors we don't know how to
     # handle as a data structure.
     try:
-        cherrypy.response.processors = dict(ct_out_map) # handlers may modify this
+        cherrypy.response.processors = dict(ct_out_map)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
     except salt.exceptions.EauthAuthenticationError:
         raise cherrypy.InternalRedirect('/login')
@@ -344,7 +342,7 @@ def process_request_body(fn):
     '''
     A decorator to skip a processor function if process_request_body is False
     '''
-    def wrapped(*args, **kwargs):
+    def wrapped(*args, **kwargs): # pylint: disable=C0111
         if cherrypy.request.process_request_body != False:
             fn(*args, **kwargs)
     return wrapped
@@ -456,11 +454,10 @@ def lowdata_fmt():
     if cherrypy.request.method.upper() != 'POST':
         return
 
-    # TODO: call lowdata validation routines from here
-
     data = cherrypy.request.unserialized_data
 
-    if cherrypy.request.headers['Content-Type'] == 'application/x-www-form-urlencoded':
+    if (cherrypy.request.headers['Content-Type']
+            == 'application/x-www-form-urlencoded'):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -657,6 +654,9 @@ class LowDataAdapter(object):
 
 
 class Minions(LowDataAdapter):
+    '''
+    Convenience URLs for working with minions
+    '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
@@ -1027,6 +1027,9 @@ class Login(LowDataAdapter):
 
 
 class Logout(LowDataAdapter):
+    '''
+    Class to remove or invalidate sessions
+    '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
@@ -1043,6 +1046,9 @@ class Logout(LowDataAdapter):
 
 
 class Run(LowDataAdapter):
+    '''
+    Class to run commands without normal session handling
+    '''
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.sessions.on': False,
     })
@@ -1240,6 +1246,9 @@ class Events(object):
         cherrypy.response.headers['Connection'] = 'keep-alive'
 
         def listen():
+            '''
+            An iterator to yield Salt events
+            '''
             event = salt.utils.event.get_event('master', opts=self.opts)
             stream = event.iter_events(full=True)
 
@@ -1356,8 +1365,8 @@ class WebsocketEndpoint(object):
 
             source.close();
 
-        Or via Python, using the Python module
-        `websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
+        Or via Python, using the Python module `websocket-client
+        <https://pypi.python.org/pypi/websocket-client/>`_ for example.
 
         .. code-block:: python
 
@@ -1368,7 +1377,8 @@ class WebsocketEndpoint(object):
             ws = create_connection('ws://localhost:8000/ws/d0ce6c1a')
             ws.send('websocket client ready')
 
-            # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
+            # Look at https://pypi.python.org/pypi/websocket-client/ for more
+            # examples.
             while listening_to_events:
                 print ws.recv()
 
@@ -1393,14 +1403,16 @@ class WebsocketEndpoint(object):
         # Release the session lock before starting the long-running response
         cherrypy.session.release_lock()
 
-        '''
-        A handler is the server side end of the websocket connection.
-        Each request spawns a new instance of this handler
-        '''
+        # A handler is the server side end of the websocket connection. Each
+        # request spawns a new instance of this handler
         handler = cherrypy.request.ws_handler
 
         def event_stream(handler, pipe):
-            pipe.recv()  # blocks until send is called on the parent end of this pipe.
+            '''
+            An iterator to return Salt events (and optionally format them)
+            '''
+            # blocks until send is called on the parent end of this pipe.
+            pipe.recv()
 
             event = salt.utils.event.get_event('master', opts=self.opts)
             stream = event.iter_events(full=True)
@@ -1412,9 +1424,12 @@ class WebsocketEndpoint(object):
                         if 'format_events' in kwargs:
                             SaltInfo.process(data, salt_token, self.opts)
                         else:
-                            handler.send('data: {0}\n\n'.format(json.dumps(data)), False)
-                    except UnicodeDecodeError as ex:
-                        logger.error("Error: Salt event has non UTF-8 data:\n{0}".format(data))
+                            handler.send('data: {0}\n\n'.format(
+                                json.dumps(data)), False)
+                    except UnicodeDecodeError:
+                        logger.error(
+                                "Error: Salt event has non UTF-8 data:\n{0}"
+                                .format(data))
                 time.sleep(0.1)
 
         parent_pipe, child_pipe = Pipe()
@@ -1422,7 +1437,7 @@ class WebsocketEndpoint(object):
         handler.opts = self.opts
         # Process to handle async push to a client.
         # Each GET request causes a process to be kicked off.
-        proc = Process(target=event_stream, args=(handler,child_pipe))
+        proc = Process(target=event_stream, args=(handler, child_pipe))
         proc.start()
 
 
@@ -1611,6 +1626,9 @@ class Stats(object):
 
 
 class App(object):
+    '''
+    Class to serve HTML5 apps
+    '''
     exposed = True
     def GET(self, *args):
         '''
@@ -1646,6 +1664,11 @@ class API(object):
     }
 
     def _setattr_url_map(self):
+        '''
+        Set an attribute on the local instance for each key/val in url_map
+
+        CherryPy uses class attributes to resolve URLs.
+        '''
         for url, cls in self.url_map.items():
             setattr(self, url, cls())
 
@@ -1687,7 +1710,8 @@ class API(object):
                 'server.socket_port': self.apiopts.get('port', 8000),
                 'server.thread_pool': self.apiopts.get('thread_pool', 100),
                 'server.socket_queue_size': self.apiopts.get('queue_size', 30),
-                'max_request_body_size': self.apiopts.get('max_request_body_size', 1048576),
+                'max_request_body_size': self.apiopts.get(
+                    'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
             },
             '/': {
