@@ -463,6 +463,8 @@ class RemoteFuncs(object):
         if os.path.isabs(load['path']) or '../' in load['path']:
             # Can overwrite master files!!
             return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
