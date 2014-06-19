@@ -1,3 +1,4 @@
+# encoding: utf-8
 '''
 A REST API for Salt
 ===================
@@ -287,10 +288,7 @@ add the following to your salt master config file.
         debug: False
         disable_ssl: False
 
-'''
 
-
-'''
 Notes
 =====
 
@@ -309,6 +307,7 @@ Notes
 
     {"return": [{"perms": ["*.*"], "start": 1396151398.373983, "token": "cb86b805e8915c84bceb0d466026caab", "expire": 1396194598.373983, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$
 '''
+# pylint: disable=W0232
 
 import logging
 from copy import copy
@@ -323,7 +322,7 @@ import tornado.web
 import tornado.gen
 import tornado.websocket
 from tornado.concurrent import Future
-import event_processor
+from . import event_processor
 
 from collections import defaultdict
 
@@ -345,18 +344,16 @@ import salt.auth
 
 logger = logging.getLogger()
 
-'''
-The clients rest_cherrypi supports. We want to mimic the interface, but not
-    necessarily use the same API under the hood
-# all of these require coordinating minion stuff
- - "local" (done)
- - "local_async" (done)
- - "local_batch" (done)
+# The clients rest_cherrypi supports. We want to mimic the interface, but not
+#     necessarily use the same API under the hood
+# # all of these require coordinating minion stuff
+#  - "local" (done)
+#  - "local_async" (done)
+#  - "local_batch" (done)
 
-# master side
- - "runner" (done)
- - "wheel" (need async api...)
-'''
+# # master side
+#  - "runner" (done)
+#  - "wheel" (need async api...)
 
 
 # TODO: refreshing clients using cachedict
@@ -380,7 +377,7 @@ class Any(Future):
     '''
     Future that wraps other futures to "block" until one is done
     '''
-    def __init__(self, futures):
+    def __init__(self, futures): # pylint: disable=E1002
         super(Any, self).__init__()
         for future in futures:
             future.add_done_callback(self.done_callback)
@@ -389,7 +386,7 @@ class Any(Future):
         self.set_result(future)
 
 
-class EventListener():
+class EventListener(object):
     def __init__(self, mod_opts, opts):
         self.mod_opts = mod_opts
         self.opts = opts
@@ -733,7 +730,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         self.client = client
 
         for low in self.lowstate:
-            if (not self._verify_auth() or 'eauth' in low):
+            if not self._verify_auth() or 'eauth' in low:
                 # TODO: better error?
                 self.set_status(401)
                 self.finish()
@@ -895,7 +892,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):
     Handler for /minion requests
     '''
     @tornado.web.asynchronous
-    def get(self, mid):
+    def get(self, mid): # pylint: disable=W0221
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
@@ -925,7 +922,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):
     Handler for /minion requests
     '''
     @tornado.web.asynchronous
-    def get(self, jid=None):
+    def get(self, jid=None): # pylint: disable=W0221
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
@@ -1014,7 +1011,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         These messages make up salt's
         "real time" event stream.
         """
-        logger.debug('Got websocket message {}'.format(message))
+        logger.debug('Got websocket message {0}'.format(message))
         if message == 'websocket client ready':
             if self.connected:
                 # TBD: Add ability to run commands in this branch
@@ -1028,7 +1025,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
                     event = yield self.application.event_listener.get_event(self)
                     self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
                 except Exception as err:
-                    logger.info('Error! Ending server side websocket connection. Reason = {}'.format(str(err)))
+                    logger.info('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
                     break
 
             self.close()
@@ -1054,7 +1051,7 @@ class FormattedEventsHandler(AllEventsHandler):
         These messages make up salt's
         "real time" event stream.
         """
-        logger.debug('Got websocket message {}'.format(message))
+        logger.debug('Got websocket message {0}'.format(message))
         if message == 'websocket client ready':
             if self.connected:
                 # TBD: Add ability to run commands in this branch
@@ -1079,7 +1076,7 @@ class FormattedEventsHandler(AllEventsHandler):
                     evt_processor.process(event, self.token, self.application.opts)
                     # self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
                 except Exception as err:
-                    logger.debug('Error! Ending server side websocket connection. Reason = {}'.format(str(err)))
+                    logger.debug('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
                     break
 
             self.close()
@@ -1092,7 +1089,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
     '''
     Handler for /run requests
     '''
-    def post(self, tag_suffix=None):
+    def post(self, tag_suffix=None): # pylint: disable=W0221
         if not self._verify_auth():
             self.redirect('/login')
             return
