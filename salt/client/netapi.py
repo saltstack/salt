@@ -11,6 +11,7 @@ import salt.loader
 
 logger = logging.getLogger(__name__)
 
+
 class NetapiClient(object):
     '''
     Start each netapi module that is configured to run

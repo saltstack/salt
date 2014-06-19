@@ -31,6 +31,7 @@ from salt.exceptions import (
 
 log = logging.getLogger(__name__)
 
+
 class SaltCMD(parsers.SaltCMDOptionParser):
     '''
     The execution of a salt command happens here
