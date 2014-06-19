@@ -2,32 +2,17 @@
 A minimalist REST API for Salt
 ==============================
 
-This ``rest_wsgi`` module provides a no-frills REST interface to a running Salt
-master. There are no dependencies.
+This ``rest_wsgi`` module provides a no-frills REST interface for sending
+commands to the Salt master. There are no dependencies.
 
-Please read this introductory section in entirety before deploying this module.
+Extra care must be taken when deploying this module into production. Please
+read this documentation in entirety.
 
-:configuration: All authentication is done through Salt's :ref:`external auth
-    <acl-eauth>` system. Be sure that it is enabled and the user you are
-    authenticating as has permissions for all the functions you will be
-    running.
+All authentication is done through Salt's :ref:`external auth <acl-eauth>`
+system.
 
-    The configuration options for this module resides in the Salt master config
-    file. All available options are detailed below.
-
-    port
-        **Required**
-
-        The port for the webserver to listen on.
-
-    Example configuration:
-
-    .. code-block:: yaml
-
-        rest_wsgi:
-          port: 8001
-
-This API is not very "RESTful"; please note the following:
+Usage
+=====
 
 * All requests must be sent to the root URL (``/``).
 * All requests must be sent as a POST request with JSON content in the request
@@ -45,30 +30,36 @@ Deployment
 The ``rest_wsgi`` netapi module is a standard Python WSGI app. It can be
 deployed one of two ways.
 
-:program:`salt-api` using a development-only server
----------------------------------------------------
-
-If run directly via salt-api it uses the `wsgiref.simple_server()`__ that ships
-in the Python standard library. This is a single-threaded server that is
-intended for testing and development. This server does **not** use encryption;
-please note that raw Salt authentication credentials must be sent with every
-HTTP request.
-
-**Running this module via salt-api is not recommended for most use!**
-
-.. __: http://docs.python.org/2/library/wsgiref.html#module-wsgiref.simple_server
-
 Using a WSGI-compliant web server
 ---------------------------------
 
 This module may be run via any WSGI-compliant production server such as Apache
 with mod_wsgi or Nginx with FastCGI.
 
-It is highly recommended that this app be used with a server that supports
+It is strongly recommended that this app be used with a server that supports
 HTTPS encryption since raw Salt authentication credentials must be sent with
 every request. Any apps that access Salt through this interface will need to
 manually manage authentication credentials (either username and password or a
 Salt token). Tread carefully.
+
+:program:`salt-api` using a development-only server
+---------------------------------------------------
+
+If run directly via the salt-api daemon it uses the `wsgiref.simple_server()`__
+that ships in the Python standard library. This is a single-threaded server
+that is intended for testing and development. **This server does not use
+encryption**; please note that raw Salt authentication credentials must be sent
+with every HTTP request.
+
+**Running this module via salt-api is not recommended!**
+
+In order to start this module via the ``salt-api`` daemon the following must be
+put into the Salt master config::
+
+    rest_wsgi:
+        port: 8001
+
+.. __: http://docs.python.org/2/library/wsgiref.html#module-wsgiref.simple_server
 
 Usage examples
 ==============
