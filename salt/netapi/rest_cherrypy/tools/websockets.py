@@ -1,5 +1,3 @@
-import saltapi
-
 import cherrypy
 
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool

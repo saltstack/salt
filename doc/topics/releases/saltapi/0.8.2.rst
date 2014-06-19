@@ -10,7 +10,7 @@ compatibility issue with changes in Salt 0.15.9.
     Requires Salt 0.15.9 or greater
 
 The following changes have been made to the :py:mod:`rest_cherrypy
-<saltapi.netapi.rest_cherrypy.app>` netapi module that provides a RESTful
+<salt.netapi.rest_cherrypy.app>` netapi module that provides a RESTful
 interface for a running Salt system:
 
 * Fixed issue #87 which caused the Salt master's PID file to be overwritten.

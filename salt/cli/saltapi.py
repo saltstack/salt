@@ -17,9 +17,9 @@ from salt.utils.parsers import (
     PidfileMixin)
 
 # Import salt-api libs
-import saltapi.client
+import salt.netapi
 import saltapi.config
-import saltapi.version
+import salt.version
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class SaltAPI(OptionParser, ConfigDirMixIn, LogLevelMixIn, PidfileMixin,
     '''
     __metaclass__ = OptionParserMeta
 
-    VERSION = saltapi.version.__version__
+    VERSION = salt.version.__version__
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'

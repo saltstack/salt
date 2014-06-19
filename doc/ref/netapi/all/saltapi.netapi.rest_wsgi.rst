@@ -2,6 +2,6 @@
 rest_wsgi
 =========
 
-.. automodule:: saltapi.netapi.rest_wsgi
+.. automodule:: salt.netapi.rest_wsgi
 
-.. py:currentmodule:: saltapi.netapi.rest_wsgi
+.. py:currentmodule:: salt.netapi.rest_wsgi

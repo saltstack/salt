@@ -38,7 +38,7 @@ An example Apache virtual host configuration::
 
         DocumentRoot /var/www/example.com/htdocs
 
-        WSGIScriptAlias / /path/to/saltapi/netapi/rest_cherrypy/wsgi.py
+        WSGIScriptAlias / /path/to/salt/netapi/rest_cherrypy/wsgi.py
     </VirtualHost>
 
 '''
@@ -52,7 +52,7 @@ def bootstrap_app():
     '''
     Grab the opts dict of the master config by trying to import Salt
     '''
-    from saltapi.netapi.rest_cherrypy import app
+    from salt.netapi.rest_cherrypy import app
     import salt.config
 
     __opts__ = salt.config.client_config(

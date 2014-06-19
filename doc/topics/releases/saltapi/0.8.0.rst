@@ -5,7 +5,7 @@ salt-api 0.8.0
 We are happy to announce the release of :program:`salt-api` 0.8.0.
 
 This release encompasses bugfixes and new features for the
-:py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` netapi module that
+:py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module that
 provides a RESTful interface for a running Salt system.
 
 .. note::
@@ -54,7 +54,7 @@ Authentication information on login
 
 .. warning:: Backward incompatible change
 
-    The :py:class:`/login <saltapi.netapi.rest_cherrypy.app.Login>` URL no
+    The :py:class:`/login <salt.netapi.rest_cherrypy.app.Login>` URL no
     longer responds with a 302 redirect for success.
 
     Although this is behavior is common in the browser world it is not useful
@@ -91,7 +91,7 @@ Bypass session handling
 -----------------------
 
 A convenience URL has been added
-(:py:class:`/run <saltapi.netapi.rest_cherrypy.app.Run>`) to bypass the normal
+(:py:class:`/run <salt.netapi.rest_cherrypy.app.Run>`) to bypass the normal
 session-handling process.
 
 The REST interface uses the concept of "lowstate" data to specify what function
@@ -123,14 +123,14 @@ Logout
 ------
 
 An URL has been added
-(:py:class:`/logout <saltapi.netapi.rest_cherrypy.app.Logout>`) that will cause
+(:py:class:`/logout <salt.netapi.rest_cherrypy.app.Logout>`) that will cause
 the client-side to expire the session cookie and the server-side session to be
 invalidated.
 
 Running the REST interface via any WSGI-compliant server
 --------------------------------------------------------
 
-The :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` netapi module is
+The :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module is
 a regular WSGI application written using the CherryPy framework. It was written
 with the intent of also running from any WSGI-compliant server such as Apache
 and mod_wsgi, Gunicorn, uWSGI, Nginx and FastCGI, etc.
@@ -153,7 +153,7 @@ For example, an Apache virtual host configuration::
 
         DocumentRoot /var/www/example.com/htdocs
 
-        WSGIScriptAlias / /path/to/saltapi/netapi/rest_cherrypy/wsgi.py
+        WSGIScriptAlias / /path/to/salt/netapi/rest_cherrypy/wsgi.py
     </VirtualHost>
 
 Participation

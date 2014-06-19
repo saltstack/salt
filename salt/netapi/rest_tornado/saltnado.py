@@ -2,7 +2,7 @@
 A REST API for Salt
 ===================
 
-.. py:currentmodule:: saltapi.netapi.rest_tornado.saltnado
+.. py:currentmodule:: salt.netapi.rest_tornado.saltnado
 
 :depends:   - tornado Python module
 
@@ -335,7 +335,7 @@ import zmq
 import fnmatch
 
 # salt imports
-import saltapi
+import salt.netapi
 import salt.utils
 import salt.utils.event
 from salt.utils.event import tagify

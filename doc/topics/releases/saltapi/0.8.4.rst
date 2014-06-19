@@ -3,20 +3,20 @@ salt-api 0.8.4
 ==============
 
 :program:`salt-api` 0.8.4 sees a number of new features and feature
-enhancements in the :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>`
+enhancements in the :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>`
 netapi module.
 
 Work to merge :program:`salt-api` into the main Salt distribution continues and
 it is likely to be included in Salt's Helium release.
 
-:py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` changes
+:py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` changes
 ==================================================================
 
 Web hooks
 ---------
 
 This release adds a :py:class:`new URL /hook
-<saltapi.netapi.rest_cherrypy.app.Webhook>` that allows salt-api to serve as a
+<salt.netapi.rest_cherrypy.app.Webhook>` that allows salt-api to serve as a
 generic web hook interface for Salt. POST requests to the URL trigger events on
 Salt's event bus.
 
@@ -52,7 +52,7 @@ Event tag: ``salt/netapi/hook/some/tag``. Event data:
 Batch mode
 ----------
 
-The :py:meth:`~saltapi.APIClient.local_batch` client exposes Salt's batch mode
+The :py:meth:`~salt.APIClient.local_batch` client exposes Salt's batch mode
 for executing commands on incremental subsets of minions.
 
 Tests!
@@ -71,7 +71,7 @@ CherryPy server stats and configuration
 
 A number of settings have been added to better configure the performance of the
 CherryPy web server. In addition, a :py:class:`new URL /stats
-<saltapi.netapi.rest_cherrypy.app.Stats>` has been added to expose metrics on
+<salt.netapi.rest_cherrypy.app.Stats>` has been added to expose metrics on
 the health of the CherryPy web server.
 
 Improvements for running with external WSGI servers
@@ -88,7 +88,7 @@ More information in the jobs URLs
 ---------------------------------
 
 The output for the :py:class:`/jobs/<jid> URLs
-<saltapi.netapi.rest_cherrypy.app.Jobs>` has been augmented with more
+<salt.netapi.rest_cherrypy.app.Jobs>` has been augmented with more
 information about the job such as which minions are expected to return for that
 job. This same output will be added to the other salt-api URLs in the next
 release.
@@ -97,6 +97,6 @@ Improvements to the Server Sent Events stream
 ---------------------------------------------
 
 Event tags have been added to :py:class:`the HTTP event stream
-<saltapi.netapi.rest_cherrypy.app.Event>` as SSE tags which allows JavaScript
+<salt.netapi.rest_cherrypy.app.Event>` as SSE tags which allows JavaScript
 or other consumers to more easily match on certain tags without having to
 inspect the whole event.

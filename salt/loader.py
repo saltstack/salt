@@ -6,7 +6,8 @@ import os
 
 # Import Salt libs
 import salt.loader
-import saltapi
+import salt.netapi
+import salt
 
 
 def netapi(opts):
@@ -17,7 +18,7 @@ def netapi(opts):
             opts,
             'netapi',
             'netapi',
-            base_path=os.path.dirname(saltapi.__file__)
+            base_path=os.path.dirname(salt.netapi.__file__)
             )
     return load.gen_functions()
 

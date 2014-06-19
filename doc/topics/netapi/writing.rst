@@ -2,7 +2,7 @@
 Writing netapi modules
 ======================
 
-:py:mod:`~saltapi.netapi` modules, put simply, bind a port and start a service.
+:py:mod:`~salt.netapi` modules, put simply, bind a port and start a service.
 They are purposefully open-ended and can be used to present a variety of
 external interfaces to Salt, and even present multiple interfaces at once.
 
@@ -11,7 +11,7 @@ external interfaces to Salt, and even present multiple interfaces at once.
 Configuration
 =============
 
-All :py:mod:`~saltapi.netapi` configuration is done in the :ref:`Salt master
+All :py:mod:`~salt.netapi` configuration is done in the :ref:`Salt master
 config <configuration-salt-master>` and takes a form similar to the following:
 
 .. code-block:: yaml
@@ -25,7 +25,7 @@ config <configuration-salt-master>` and takes a form similar to the following:
 The ``__virtual__`` function
 ============================
 
-Like all module types in Salt, :py:mod:`~saltapi.netapi` modules go through
+Like all module types in Salt, :py:mod:`~salt.netapi` modules go through
 Salt's loader interface to determine if they should be loaded into memory and
 then executed.
 
@@ -36,7 +36,7 @@ module raises an ``ImportError`` or any other errors, it will not be loaded.
 The ``start`` function
 ======================
 
-The ``start()`` function will be called for each :py:mod:`~saltapi.netapi`
+The ``start()`` function will be called for each :py:mod:`~salt.netapi`
 module that is loaded. This function should contain the server loop that
 actually starts the service. This is started in a multiprocess.
 
@@ -45,10 +45,10 @@ Inline documentation
 
 As with the rest of Salt, it is a best-practice to include liberal inline
 documentation in the form of a module docstring and docstrings on any classes,
-methods, and functions in your :py:mod:`~saltapi.netapi` module.
+methods, and functions in your :py:mod:`~salt.netapi` module.
 
 Loader “magic” methods
 ======================
 
 The loader makes the ``__opts__`` data structure available to any function in
-a :py:mod:`~saltapi.netapi` module.
+a :py:mod:`~salt.netapi` module.

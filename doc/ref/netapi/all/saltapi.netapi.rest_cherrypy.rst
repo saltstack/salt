@@ -2,16 +2,16 @@
 rest_cherrypy
 =============
 
-.. automodule:: saltapi.netapi.rest_cherrypy.app
+.. automodule:: salt.netapi.rest_cherrypy.app
 
-.. automodule:: saltapi.netapi.rest_cherrypy.wsgi
+.. automodule:: salt.netapi.rest_cherrypy.wsgi
 
 .. ............................................................................
 
 REST URI Reference
 ==================
 
-.. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
+.. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
 .. contents::
     :local:

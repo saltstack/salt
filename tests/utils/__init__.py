@@ -2,7 +2,7 @@
 import cherrypy
 import mock
 
-from saltapi.netapi.rest_cherrypy import app
+from salt.netapi.rest_cherrypy import app
 
 from . cptestcase import BaseCherryPyTestCase
 

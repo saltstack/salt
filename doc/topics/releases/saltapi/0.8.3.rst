@@ -3,7 +3,7 @@ salt-api 0.8.3
 ==============
 
 :program:`salt-api` 0.8.3 is a small release largely concerning changes and
-fixes to the :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` netapi
+fixes to the :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi
 module.
 
 This release will likely be the final salt-api release as a separate project.
@@ -22,7 +22,7 @@ Going forward, Salt will ship with the same REST interface that salt-api
 currently provides. This will have the side benefit of not having to coordinate
 incompatible Salt and salt-api releases.
 
-:py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` changes
+:py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` changes
 ==================================================================
 
 An HTTP stream of Salt's event bus has been added. This stream conforms to the

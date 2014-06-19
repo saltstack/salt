@@ -19,9 +19,9 @@ Usage
   body.
 * All responses are in JSON.
 
-.. seealso:: :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>`
+.. seealso:: :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>`
 
-    The :py:mod:`rest_cherrypy <saltapi.netapi.rest_cherrypy.app>` module is
+    The :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` module is
     more full-featured, production-ready, and has builtin security features.
 
 Deployment
@@ -127,7 +127,7 @@ import os
 
 # Import salt libs
 import salt
-import saltapi
+import salt.netapi
 
 # HTTP response codes to response headers map
 H = {
@@ -244,7 +244,7 @@ def saltenviron(environ):
                 os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
 
     environ['SALT_OPTS'] = __opts__
-    environ['SALT_APIClient'] = saltapi.APIClient(__opts__)
+    environ['SALT_APIClient'] = salt.netapi.NetapiClient(__opts__)
 
 def application(environ, start_response):
     '''

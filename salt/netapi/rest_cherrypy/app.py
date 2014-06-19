@@ -4,7 +4,7 @@ A REST API for Salt
 
 .. versionaddedd:: Helium
 
-.. py:currentmodule:: saltapi.netapi.rest_cherrypy.app
+.. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
 :depends:   - CherryPy Python module
 :optdepends:    - ws4py Python module for websockets support.
@@ -204,7 +204,7 @@ import salt.auth
 import salt.utils.event
 
 # Import salt-api libs
-import saltapi
+import salt.netapi
 
 logger = logging.getLogger(__name__)
 

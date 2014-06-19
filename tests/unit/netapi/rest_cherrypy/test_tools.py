@@ -5,7 +5,7 @@ import urllib
 import cherrypy
 import yaml
 
-from saltapi.netapi.rest_cherrypy import app
+from salt.netapi.rest_cherrypy import app
 
 from tests.utils import BaseRestCherryPyTest, BaseToolsTest
 

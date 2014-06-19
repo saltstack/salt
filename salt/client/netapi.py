@@ -6,7 +6,7 @@ import logging
 import multiprocessing
 
 # Import salt-api libs
-import saltapi.loader
+import salt.loader
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class SaltNetapiClient(object):
         '''
         Load and start all available api modules
         '''
-        netapi = saltapi.loader.netapi(self.opts)
+        netapi = salt.loader.netapi(self.opts)
         for fun in netapi:
             if fun.endswith('.start'):
                 logger.info("Starting '{0}' api module".format(fun))
