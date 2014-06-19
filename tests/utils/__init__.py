@@ -1,10 +1,26 @@
 # coding: utf-8
-import cherrypy
+
+try:
+    import cherrypy
+    HAS_CHERRYPY = True
+except ImportError:
+    HAS_CHERRYPY = False
+
 import mock
 
-from salt.netapi.rest_cherrypy import app
+if HAS_CHERRYPY:
+    from . cptestcase import BaseCherryPyTestCase
+    from salt.netapi.rest_cherrypy import app
+else:
+    from salttesting.unit import TestCase, skipIf
 
-from . cptestcase import BaseCherryPyTestCase
+    @skipIf(HAS_CHERRYPY is False, 'The CherryPy python package needs to be installed')
+    class BaseCherryPyTestCase(TestCase):
+        pass
+
+    class BaseToolsTest(BaseCherryPyTestCase):
+        pass
+
 
 class BaseRestCherryPyTest(BaseCherryPyTestCase):
     '''
@@ -56,6 +72,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     def tearDown(self):
         cherrypy.engine.exit()
 
+
 class Root(object):
     '''
     The simplest CherryPy app needed to test individual tools
@@ -70,24 +87,25 @@ class Root(object):
     def POST(self, *args, **kwargs):
         return {'return': [{'args': args}, {'kwargs': kwargs}]}
 
-class BaseToolsTest(BaseCherryPyTestCase):
-    '''
-    A base class so tests can selectively turn individual tools on for testing
-    '''
-    conf = {
-        '/': {
-            'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
-        },
-    }
 
-    def setUp(self):
-        Root._cp_config = self._cp_config
-        root = Root()
+if HAS_CHERRYPY:
+    class BaseToolsTest(BaseCherryPyTestCase):
+        '''
+        A base class so tests can selectively turn individual tools on for testing
+        '''
+        conf = {
+            '/': {
+                'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
+            },
+        }
 
-        cherrypy.tree.mount(root, '/', self.conf)
-        cherrypy.server.unsubscribe()
-        cherrypy.engine.start()
+        def setUp(self):
+            Root._cp_config = self._cp_config
+            root = Root()
 
-    def tearDown(self):
-        cherrypy.engine.exit()
+            cherrypy.tree.mount(root, '/', self.conf)
+            cherrypy.server.unsubscribe()
+            cherrypy.engine.start()
 
+        def tearDown(self):
+            cherrypy.engine.exit()
