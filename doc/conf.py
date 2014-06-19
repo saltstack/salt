@@ -27,8 +27,8 @@ class Mock(object):
     def __call__(self, *args, **kwargs):
         ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
-        if args and callable(args[0]):
-            functools.update_wrapper(ret, args[0])
+        # if args and callable(args[-1]):
+        #     functools.update_wrapper(ret, args[0])
         return ret
 
     @classmethod
