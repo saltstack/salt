@@ -709,6 +709,20 @@ def hw_addr(iface):
     return interfaces().get(iface, {}).get('hwaddr', '')
 
 
+def interface(iface):
+    '''
+    Return the the interface details
+    '''
+    return interfaces().get(iface, {}).get('inet', '')
+
+
+def interface_ip(iface):
+    '''
+    Return the the interface details
+    '''
+    return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
+
+
 def subnets():
     '''
     Returns a list of subnets to which the host belongs
