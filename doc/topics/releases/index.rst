@@ -17,3 +17,5 @@ Archive
     *
 
 .. seealso:: :doc:`Legacy salt-cloud release docs <../cloud/releases/index>`
+
+.. seealso:: :doc:`Legacy salt-api release docs <saltapi/index>`

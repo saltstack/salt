@@ -399,7 +399,8 @@ class HTTPDomain(Domain):
         'trace': {}
     }
 
-    indices = [HTTPIndex]
+    # indices = [HTTPIndex]
+    indices = []
 
     @property
     def routes(self):

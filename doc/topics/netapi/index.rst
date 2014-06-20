@@ -1,6 +1,13 @@
 .. _netapi-introduction:
 
-==============================
+==================
+``netapi`` modules
+==================
+
+.. toctree:: Contents
+
+    writing
+
 Introduction to netapi modules
 ==============================
 
@@ -24,6 +31,8 @@ Communication with Salt and Salt satellite projects is done using Salt's own
     projected ``salt-api``. That project has been merged into the main Salt
     project.
 
+.. seealso:: :ref:`The full list of netapi modules <all-netapi-modules>`
+
 Client interfaces
 =================
 
@@ -32,5 +41,5 @@ values that are mapped to function arguments. This allows calling functions
 simply by creating a data structure. (And this is exactly how much of Salt's
 own internals work!)
 
-.. autoclass:: salt.netapi.APIClient
+.. autoclass:: salt.netapi.NetapiClient
     :members: local, local_async, local_batch, runner, wheel

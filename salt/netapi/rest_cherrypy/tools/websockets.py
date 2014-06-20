@@ -1,8 +1,8 @@
+# encoding: utf-8
 import cherrypy
 
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
-from multiprocessing import Lock, Pipe
 
 cherrypy.tools.websocket = WebSocketTool()
 WebSocketPlugin(cherrypy.engine).subscribe()
@@ -20,27 +20,21 @@ class SynchronizingWebsocket(WebSocket):
     initially connect. These jobs help gather information about minions, jobs,
     and documentation.
     '''
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # pylint: disable=E1002
         super(SynchronizingWebsocket, self).__init__(*args, **kwargs)
 
-        '''
-        This pipe needs to represent the parent end of a pipe.
-        Clients need to ensure that the pipe assigned to ``self.pipe`` is
-        the ``parent end`` of a
-        `pipe <https://docs.python.org/2/library/multiprocessing.html#exchanging-objects-between-processes>`_.
-        '''
+        # This pipe needs to represent the parent end of a pipe.
+        # Clients need to ensure that the pipe assigned to ``self.pipe`` is
+        # the ``parent end`` of a
+        # `pipe <https://docs.python.org/2/library/multiprocessing.html#exchanging-objects-between-processes>`_.
         self.pipe = None
 
-        '''
-        The token that we can use to make API calls.
-        There are times when we would like to kick off jobs,
-        examples include trying to obtain minions connected.
-        '''
+        # The token that we can use to make API calls.
+        # There are times when we would like to kick off jobs,
+        # examples include trying to obtain minions connected.
         self.token = None
 
-        '''
-        Options represent ``salt`` options defined in the configs.
-        '''
+        # Options represent ``salt`` options defined in the configs.
         self.opts = None
 
     def received_message(self, message):

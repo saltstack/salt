@@ -1,3 +1,4 @@
+# encoding: utf-8
 '''
 The main entry point for salt-api
 '''
@@ -10,8 +11,10 @@ import salt.loader
 
 logger = logging.getLogger(__name__)
 
+
 class NetapiClient(object):
     '''
+    Start each netapi module that is configured to run
     '''
     def __init__(self, opts):
         self.opts = opts

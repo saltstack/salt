@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 '''
 Deployment
 ==========
@@ -47,6 +48,7 @@ An example Apache virtual host configuration::
 import os
 
 import cherrypy
+
 
 def bootstrap_app():
     '''

@@ -1,3 +1,4 @@
+# encoding: utf-8
 '''
 A REST API for Salt
 ===================
@@ -222,7 +223,6 @@ except ImportError:
     HAS_WEBSOCKETS = False
 
 
-
 def salt_token_tool():
     '''
     If the custom authentication header is supplied, put it in the cookie dict
@@ -233,6 +233,7 @@ def salt_token_tool():
     # X-Auth-Token header trumps session cookie
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
+
 
 def salt_ip_verify_tool():
     '''
@@ -250,7 +251,7 @@ def salt_ip_verify_tool():
                 logger.debug("Found IP list: {0}".format(auth_ip_list))
                 rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
                 logger.debug("Request from IP: {0}".format(rem_ip))
-                if not rem_ip in auth_ip_list:
+                if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: {0}".format(rem_ip))
                     cherrypy.response.status = 403
                     return {
@@ -265,7 +266,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Redirect to the login page if the session hasn't been authed
-    if not cherrypy.session.has_key('token'):
+    if not cherrypy.session.has_key('token'):  # pylint: disable=W8601
         raise cherrypy.InternalRedirect('/login')
 
     # Session is authenticated; inform caches
@@ -279,6 +280,7 @@ ct_out_map = (
     ('application/x-yaml', functools.partial(
         yaml.safe_dump, default_flow_style=False)),
 )
+
 
 def hypermedia_handler(*args, **kwargs):
     '''
@@ -342,8 +344,8 @@ def process_request_body(fn):
     '''
     A decorator to skip a processor function if process_request_body is False
     '''
-    def wrapped(*args, **kwargs): # pylint: disable=C0111
-        if cherrypy.request.process_request_body != False:
+    def wrapped(*args, **kwargs):  # pylint: disable=C0111
+        if cherrypy.request.process_request_body is not False:
             fn(*args, **kwargs)
     return wrapped
 
@@ -494,7 +496,7 @@ class LowDataAdapter(object):
 
     _cp_config = {
         'tools.sessions.on': True,
-        'tools.sessions.timeout': 60 * 10, # 10 hours
+        'tools.sessions.timeout': 60 * 10,  # 10 hours
 
         # 'tools.autovary.on': True,
 
@@ -582,7 +584,7 @@ class LowDataAdapter(object):
         # Grab all available client interfaces
         clients = [name for name, _ in inspect.getmembers(salt.netapi.NetapiClient,
             predicate=inspect.ismethod) if not name.startswith('__')]
-        clients.remove('run') # run method calls client interfaces
+        clients.remove('run')  # run method calls client interfaces
 
         return {
             'return': "Welcome",
@@ -998,7 +1000,7 @@ class Login(LowDataAdapter):
             creds = cherrypy.serving.request.lowstate
 
         token = self.auth.mk_token(creds)
-        if not 'token' in token:
+        if 'token' not in token:
             raise cherrypy.HTTPError(401,
                     'Could not authenticate using provided credentials')
 
@@ -1010,7 +1012,7 @@ class Login(LowDataAdapter):
         try:
             perms = self.opts['external_auth'][token['eauth']][token['name']]
         except (AttributeError, IndexError):
-            logger.debug("Configuration for external_auth malformed for "\
+            logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)
             raise cherrypy.HTTPError(500,
@@ -1039,8 +1041,8 @@ class Logout(LowDataAdapter):
         '''
         Destroy the currently active session and expire the session cookie
         '''
-        cherrypy.lib.sessions.expire() # set client-side to expire
-        cherrypy.session.regenerate() # replace server-side with new
+        cherrypy.lib.sessions.expire()  # set client-side to expire
+        cherrypy.session.regenerate()  # replace server-side with new
 
         return {'return': "Your token has been cleared"}
 
@@ -1142,7 +1144,7 @@ class Events(object):
         self.auth = salt.auth.LoadAuth(self.opts)
 
     def GET(self, token=None):
-        '''
+        r'''
         An HTTP stream of the Salt master event bus
 
         This stream is formatted per the Server Sent Events (SSE) spec. Each
@@ -1207,7 +1209,7 @@ class Events(object):
 
     .. code-block:: bash
 
-        % curl -NsS localhost:8000/events |\\
+        % curl -NsS localhost:8000/events |\
                 while IFS= read -r line ; do
                     echo $line
                 done
@@ -1216,7 +1218,7 @@ class Events(object):
 
     .. code-block:: bash
 
-        % curl -NsS localhost:8000/events |\\
+        % curl -NsS localhost:8000/events |\
                 awk '
                     BEGIN { RS=""; FS="\\n" }
                     $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
@@ -1420,7 +1422,7 @@ class WebsocketEndpoint(object):
             while True:
                 data = stream.next()
                 if data:
-                    try: #work around try to decode catch unicode errors
+                    try:  # work around try to decode catch unicode errors
                         if 'format_events' in kwargs:
                             SaltInfo.process(data, salt_token, self.opts)
                         else:
@@ -1630,6 +1632,7 @@ class App(object):
     Class to serve HTML5 apps
     '''
     exposed = True
+
     def GET(self, *args):
         '''
         Serve a single static file ignoring the remaining path
@@ -1724,7 +1727,7 @@ class API(object):
             },
         }
 
-        if self.apiopts.get('debug', False) == False:
+        if self.apiopts.get('debug', False) is False:
             conf['global']['environment'] = 'production'
 
         # Serve static media if the directory has been set in the configuration
@@ -1744,13 +1747,13 @@ def get_app(opts):
     '''
     Returns a WSGI app and a configuration dictionary
     '''
-    apiopts = opts.get(__name__.rsplit('.', 2)[-2], {}) # rest_cherrypy opts
+    apiopts = opts.get(__name__.rsplit('.', 2)[-2], {})  # rest_cherrypy opts
 
     # Add Salt and salt-api config options to the main CherryPy config dict
     cherrypy.config['saltopts'] = opts
     cherrypy.config['apiopts'] = apiopts
 
-    root = API() # cherrypy app
-    cpyopts = root.get_conf() # cherrypy app opts
+    root = API()  # cherrypy app
+    cpyopts = root.get_conf()  # cherrypy app opts
 
     return root, apiopts, cpyopts

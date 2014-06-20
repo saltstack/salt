@@ -1,3 +1,4 @@
+# encoding: utf-8
 import json
 import logging
 
@@ -6,7 +7,7 @@ import salt.netapi
 logger = logging.getLogger(__name__)
 
 
-class SaltInfo:
+class SaltInfo(object):
     '''
     Class to  handle processing and publishing of "real time" Salt upates.
     '''
@@ -18,15 +19,11 @@ class SaltInfo:
         '''
         self.handler = handler
 
-        '''
-        These represent a "real time" view into Salt's jobs.
-        '''
+        # These represent a "real time" view into Salt's jobs.
         self.jobs = {}
 
-        '''
-        This represents a "real time" view of minions connected to
-        Salt.
-        '''
+        # This represents a "real time" view of minions connected to
+        # Salt.
         self.minions = {}
 
     def publish_minions(self):
@@ -46,14 +43,14 @@ class SaltInfo:
             minions[minion] = curr_minion
         logger.debug('ended loop')
         ret = {'minions': minions}
-        self.handler.write_message(u'{}\n\n'.format(json.dumps(ret)))
+        self.handler.write_message(u'{0}\n\n'.format(json.dumps(ret)))
 
     def publish(self, key, data):
         '''
         Publishes the data to the event stream.
         '''
         publish_data = {key: data}
-        pub = u'{}\n\n'.format(json.dumps(publish_data))
+        pub = u'{0}\n\n'.format(json.dumps(publish_data))
         self.handler.write_message(pub)
 
     def process_minion_update(self, event_data):
@@ -71,7 +68,7 @@ class SaltInfo:
         minion = self.minions[mid]
 
         minion.update({'grains': event_info['return']})
-        logger.debug("In process minion grains update with minions={}".format(self.minions.keys()))
+        logger.debug("In process minion grains update with minions={0}".format(self.minions.keys()))
         self.publish_minions()
 
     def process_ret_job_event(self, event_data):
@@ -128,9 +125,6 @@ class SaltInfo:
         self.publish('jobs', self.jobs)
 
     def process_key_event(self, event_data):
-        tag = event_data['tag']
-        event_info = event_data['data']
-
         '''
         Tag: salt/key
         Data:
@@ -139,6 +133,9 @@ class SaltInfo:
          'id': 'compute.home',
          'result': True}
         '''
+
+        tag = event_data['tag']
+        event_info = event_data['data']
 
         if event_info['act'] == 'delete':
             self.minions.pop(event_info['id'], None)
@@ -163,7 +160,7 @@ class SaltInfo:
 
         for minion in dropped_minions:
             changed = True
-            logger.debug('Popping {}'.format(minion))
+            logger.debug('Popping {0}'.format(minion))
             self.minions.pop(minion, None)
 
         # check if any new connections were made
@@ -205,7 +202,7 @@ class SaltInfo:
         Process events and publish data
         '''
         import threading
-        logger.debug('In process {}'.format(threading.current_thread()))
+        logger.debug('In process {0}'.format(threading.current_thread()))
         logger.debug(salt_data['tag'])
         logger.debug(salt_data)
 

@@ -30,7 +30,6 @@
 
 from StringIO import StringIO
 import unittest
-import urllib
 
 import cherrypy
 
@@ -47,6 +46,7 @@ local = cherrypy.lib.httputil.Host('127.0.0.1', 50000, "")
 remote = cherrypy.lib.httputil.Host('127.0.0.1', 50001, "")
 
 __all__ = ['BaseCherryPyTestCase']
+
 
 class BaseCherryPyTestCase(unittest.TestCase):
     def request(self, path='/', method='GET', app_path='', scheme='http',

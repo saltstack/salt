@@ -1,11 +1,6 @@
 # coding: utf-8
 import urllib
 
-import yaml
-
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-
 from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
@@ -28,7 +23,7 @@ class TestAuth(BaseRestCherryPyTest):
         '''
         POST requests to the root URL redirect to login
         '''
-        self.assertRaisesRegexp(cherrypy.InternalRedirect, '\/login',
+        self.assertRaisesRegexp(cherrypy.InternalRedirect, '/login',
                 self.request, '/', method='POST', data={})
 
     def test_login_noauth(self):
@@ -42,7 +37,7 @@ class TestAuth(BaseRestCherryPyTest):
         '''
         Requests to the webhook URL require auth by default
         '''
-        self.assertRaisesRegexp(cherrypy.InternalRedirect, '\/login',
+        self.assertRaisesRegexp(cherrypy.InternalRedirect, '/login',
                 self.request, '/hook', method='POST', data={})
 
 

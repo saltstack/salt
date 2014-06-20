@@ -1,3 +1,4 @@
+# encoding: utf-8
 '''
 A script to start the CherryPy WSGI server
 
@@ -23,6 +24,7 @@ cpy_min = '3.2.2'
 
 __virtualname__ = 'rest'
 
+
 def __virtual__():
     short_name = __name__.rsplit('.')[-1]
     mod_opts = __opts__.get(short_name, {})
@@ -37,7 +39,7 @@ def __virtual__():
 
         # CherryPy wasn't imported; explain why
         if cpy_error:
-            from distutils.version import LooseVersion as V
+            from distutils.version import LooseVersion as V  # pylint: disable=E0611
 
             if 'cherrypy' in globals() and V(cherrypy.__version__) < V(cpy_min):
                 error_msg = ("Required version of CherryPy is {0} or "
@@ -49,11 +51,12 @@ def __virtual__():
                     __name__, error_msg)
 
         # Missing port config
-        if not 'port' in mod_opts:
+        if 'port' not in mod_opts:
             logger.error("Not loading '%s'. 'port' not specified in config",
                     __name__)
 
     return False
+
 
 def verify_certs(*args):
     '''
@@ -67,6 +70,7 @@ def verify_certs(*args):
         if not os.path.exists(arg):
             raise Exception(msg.format(arg))
 
+
 def start():
     '''
     Start the server loop
@@ -75,7 +79,7 @@ def start():
     root, apiopts, conf = app.get_app(__opts__)
 
     if not apiopts.get('disable_ssl', False):
-        if not 'ssl_crt' in apiopts or not 'ssl_key' in apiopts:
+        if 'ssl_crt' not in apiopts or 'ssl_key' not in apiopts:
             logger.error("Not starting '%s'. Options 'ssl_crt' and "
                     "'ssl_key' are required if SSL is not disabled.",
                     __name__)

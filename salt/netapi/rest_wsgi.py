@@ -1,3 +1,4 @@
+# encoding: utf-8
 '''
 A minimalist REST API for Salt
 ==============================
@@ -144,6 +145,7 @@ __virtualname__ = 'rest_wsgi'
 
 logger = logging.getLogger(__virtualname__)
 
+
 def __virtual__():
     mod_opts = __opts__.get(__virtualname__, {})
 
@@ -151,6 +153,7 @@ def __virtual__():
         return __virtualname__
 
     return False
+
 
 class HTTPError(Exception):
     '''
@@ -160,6 +163,7 @@ class HTTPError(Exception):
         self.code = code
         Exception.__init__(self, '{0}: {1}'.format(code, message))
 
+
 def mkdir_p(path):
     '''
     mkdir -p
@@ -167,10 +171,12 @@ def mkdir_p(path):
     '''
     try:
         os.makedirs(path)
-    except OSError as exc: # Python >2.5
+    except OSError as exc:  # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
-        else: raise
+        else:
+            raise
+
 
 def read_body(environ):
     '''
@@ -180,6 +186,7 @@ def read_body(environ):
     length = 0 if length == '' else int(length)
 
     return environ['wsgi.input'].read(length)
+
 
 def get_json(environ):
     '''
@@ -193,6 +200,7 @@ def get_json(environ):
         return json.loads(read_body(environ))
     except ValueError as exc:
         raise HTTPError(400, exc)
+
 
 def get_headers(data, extra_headers=None):
     '''
@@ -208,6 +216,7 @@ def get_headers(data, extra_headers=None):
 
     return response_headers.items()
 
+
 def run_chunk(environ, lowstate):
     '''
     Expects a list of lowstate dictionaries that are executed and returned in
@@ -217,6 +226,7 @@ def run_chunk(environ, lowstate):
 
     for chunk in lowstate:
         yield client.run(chunk)
+
 
 def dispatch(environ):
     '''
@@ -234,17 +244,19 @@ def dispatch(environ):
     else:
         raise HTTPError(405, 'Method Not Allowed')
 
+
 def saltenviron(environ):
     '''
     Make Salt's opts dict and the APIClient available in the WSGI environ
     '''
-    if not '__opts__' in locals():
+    if '__opts__' not in locals():
         import salt.config
         __opts__ = salt.config.client_config(
                 os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
 
     environ['SALT_OPTS'] = __opts__
     environ['SALT_APIClient'] = salt.netapi.NetapiClient(__opts__)
+
 
 def application(environ, start_response):
     '''
@@ -281,6 +293,7 @@ def application(environ, start_response):
     }))
     return (ret,)
 
+
 def get_opts():
     '''
     Return the Salt master config as __opts__
@@ -290,6 +303,7 @@ def get_opts():
     return salt.config.client_config(
             os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
 
+
 def start():
     '''
     Start simple_server()
@@ -297,21 +311,22 @@ def start():
     from wsgiref.simple_server import make_server
 
     # When started outside of salt-api __opts__ will not be injected
-    if not '__opts__' in globals():
+    if '__opts__' not in globals():
         globals()['__opts__'] = get_opts()
 
-        if __virtual__() == False:
+        if __virtual__() is False:
             raise SystemExit(1)
 
     mod_opts = __opts__.get(__virtualname__, {})
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     httpd = make_server('localhost', mod_opts['port'], application)
 
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         raise SystemExit(0)
+
 
 if __name__ == '__main__':
     start()
