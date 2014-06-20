@@ -1194,7 +1194,7 @@ def script_retcode(source,
                    reset_system_locale=True,
                    __env__=None,
                    saltenv='base',
-                   output_loglevel='info',
+                   output_loglevel='debug',
                    use_vt=False,
                    **kwargs):
     '''

@@ -352,7 +352,7 @@ def wait(name,
          env=(),
          stateful=False,
          umask=None,
-         output_loglevel='info',
+         output_loglevel='debug',
          use_vt=False,
          **kwargs):
     '''
@@ -449,7 +449,7 @@ def wait_script(name,
                 stateful=False,
                 umask=None,
                 use_vt=False,
-                output_loglevel='info',
+                output_loglevel='debug',
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -547,7 +547,7 @@ def run(name,
         env=None,
         stateful=False,
         umask=None,
-        output_loglevel='info',
+        output_loglevel='debug',
         quiet=False,
         timeout=None,
         use_vt=False,
@@ -733,7 +733,7 @@ def script(name,
            umask=None,
            timeout=None,
            use_vt=False,
-           output_loglevel='info',
+           output_loglevel='debug',
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -923,7 +923,7 @@ def call(name,
          onlyif=None,
          unless=None,
          creates=None,
-         output_loglevel='info',
+         output_loglevel='debug',
          use_vt=False,
          **kwargs):
     '''
@@ -1004,7 +1004,7 @@ def wait_call(name,
               creates=None,
               stateful=False,
               use_vt=False,
-              output_loglevel='info',
+              output_loglevel='debug',
               **kwargs):
     # Ignoring our arguments is intentional.
     return {'name': name,
