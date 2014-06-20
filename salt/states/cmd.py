@@ -733,6 +733,7 @@ def script(name,
            umask=None,
            timeout=None,
            use_vt=False,
+           output_loglevel='info',
            **kwargs):
     '''
     Download a script and execute it with specified arguments.

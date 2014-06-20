@@ -514,7 +514,7 @@ def _run(cmd,
                 except vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
-                        exc_info=log.isEnabledFor(logging.INFO))
+                        exc_info=log.isEnabledFor(logging.DEBUG))
                     ret = {'retcode': 1, 'pid': '2'}
                     break
                 # only set stdout on sucess as we already mangled in other
