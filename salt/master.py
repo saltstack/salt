@@ -718,8 +718,6 @@ class AESFuncs(object):
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         self.ckminions = salt.utils.minions.CkMinions(opts)
-        # Create the tops dict for loading external top data
-        self.tops = salt.loader.tops(self.opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Create the master minion to access the external job cache
