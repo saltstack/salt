@@ -1274,6 +1274,7 @@ class ClearFuncs(object):
                 rend=False)
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
+        self.masterapi = salt.masterapi.LocalFuncs(opts, key)
 
     def __check_permissions(self, filename):
         '''
