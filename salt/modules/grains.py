@@ -473,7 +473,7 @@ def get_or_set_hash(name,
           mysql_user:
             - present
             - host: localhost
-            - password: {{ grains.get_or_set_hash('mysql:some_mysql_user') }}
+            - password: {{ salt['grains.get_or_set_hash']('mysql:some_mysql_user') }}
 
     CLI Example:
 
