@@ -112,10 +112,12 @@ VERIFIED_VIEWS = False
 
 def _verify_views():
     '''
-    verify that you have the views you need
+    Verify that you have the views you need. This can be disabled by
+    adding couchbase.skip_verify_views: True in config
     '''
     global VERIFIED_VIEWS
-    if VERIFIED_VIEWS:
+
+    if VERIFIED_VIEWS or __opts__.get('couchbase.skip_verify_views', False):
         return
     cb = _get_connection()
     ddoc = {'views': {'jids': {'map': "function (doc, meta) { if (meta.id.indexOf('/') === -1 && doc.load){ emit(meta.id, null) } }"},
@@ -168,14 +170,6 @@ def returner(load):
             'that is not present in the local cache: {jid}'.format(**load)
         )
         return False
-
-    # TODO:??? This doens't make a lot of sense...
-    '''
-    # do we need to rewrite the load?
-    if load['jid'] == 'req' and bool(load.get('nocache', True)):
-        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as fp_:
-            serial.dump(load, fp_)
-    '''
 
     hn_key = '{0}/{1}'.format(load['jid'], load['id'])
     try:
