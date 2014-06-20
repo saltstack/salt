@@ -1366,7 +1366,7 @@ def _exec_ssh_cmd(cmd,
         trace = traceback.format_exc()
         log.error(error_msg.format(cmd, err, trace))
     finally:
-        proc.close(force=True)
+        proc.close(terminate=True, kill=True)
     # Signal an error
     return 1
 
