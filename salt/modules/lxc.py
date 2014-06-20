@@ -905,7 +905,7 @@ def init(name,
     # set dns servers if any, only the first time
     if dnsservers:
         changes['350_dns'] = 'DNS in place\n'
-        gid = '/lxc.{0}.initial_dns'.format(name)
+        gid = '/.lxc.{0}.initial_dns'.format(name)
         lxcret = __salt__['lxc.run_cmd'](
             name, 'test -e {0}'.format(gid), stdout=False, stderr=False)
         if lxcret:
@@ -2038,6 +2038,9 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,
+                                   log_stdin_level='info',
+                                   log_stdout_level='info',
+                                   log_stderr_level='info',
                                    log_stdout=True,
                                    log_stderr=True,
                                    stream_stdout=True,
@@ -2058,9 +2061,6 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        out = (cstdout + cstderr).strip()
-                        if out:
-                            log.info(out)
                         # done by vt itself
                         # if stdout:
                         #     log.debug(stdout)
