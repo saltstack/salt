@@ -117,6 +117,13 @@ def _verify_views():
     VERIFIED_VIEWS = True
 
 
+def _get_ttl():
+    '''
+    Return the TTL that we should store our objects with
+    '''
+    return __opts__['keep_jobs'] * 60 * 60, #  keep_jobs is in hours
+
+
 #TODO: add to returner docs-- this is a new one
 def prep_jid(nocache=False):
     '''
@@ -130,7 +137,7 @@ def prep_jid(nocache=False):
     try:
         cb.add(str(jid),
                {'nocache': nocache},
-               ttl=__opts__['keep_jobs'] * 60 * 60, #  keep_jobs is in hours
+               ttl=_get_ttl(),
                )
     except couchbase.exceptions.KeyExistsError:
         return prep_jid(nocache=nocache)
@@ -161,8 +168,8 @@ def returner(load):
             ret_doc['out'] = load['out']
 
         cb.add(hn_key,
-               ret_doc
-               ttl=__opts__['keep_jobs'] * 60 * 60, #  keep_jobs is in hours
+               ret_doc,
+               ttl=_get_ttl(),
                )
     except couchbase.exceptions.KeyExistsError:
         log.error(
@@ -202,6 +209,7 @@ def save_load(jid, clear_load):
     cb.replace(str(jid),
                jid_doc.value,
                cas=jid_doc.cas,
+               ttl=_get_ttl()
                )
 
 
