@@ -313,7 +313,7 @@ import logging
 from copy import copy
 
 import time
-
+import os
 import sys
 
 import tornado.httpserver
@@ -341,6 +341,7 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
+from salt import syspaths
 
 logger = logging.getLogger()
 
@@ -356,13 +357,23 @@ logger = logging.getLogger()
 #  - "wheel" (need async api...)
 
 
-# TODO: refreshing clients using cachedict
-saltclients = {'local': salt.client.get_local_client().run_job,
-               # not the actual client we'll use.. but its what we'll use to get args
-               'local_batch': salt.client.get_local_client().cmd_batch,
-               'local_async': salt.client.get_local_client().run_job,
-               'runner': salt.runner.RunnerClient(salt.config.master_config('/etc/salt/master')).async,
-               }
+class SaltClientsMixIn(object):
+
+    @property
+    def saltclients(self):
+        if not hasattr(self, '__saltclients'):
+            # TODO: refreshing clients using cachedict
+            self.__saltclients = {
+                'local': salt.client.get_local_client().run_job,
+                # not the actual client we'll use.. but its what we'll use to get args
+                'local_batch': salt.client.get_local_client().cmd_batch,
+                'local_async': salt.client.get_local_client().run_job,
+                'runner': salt.runner.RunnerClient(
+                    salt.config.master_config(
+                        os.path.join(syspaths.CONF_DIR, 'master')
+                    )).async,
+                }
+        return self.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -489,7 +500,7 @@ def get_batch_size(batch, num_minions):
                'of %10, 10% or 3').format(batch))
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler):
+class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
     ct_out_map = (
         ('application/json', json.dumps),
         ('application/x-yaml', functools.partial(
@@ -500,7 +511,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
         '''
         Verify that the client is in fact one we have
         '''
-        if client not in saltclients:
+        if client not in self.saltclients:
             self.set_status(400)
             self.write('We don\'t serve your kind here')
             self.finish()
@@ -687,7 +698,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):
         self.finish()
 
 
-class SaltAPIHandler(BaseSaltAPIHandler):
+class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     '''
     Main API handler for base "/"
     '''
@@ -695,7 +706,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         '''
         return data about what clients you have
         '''
-        ret = {"clients": saltclients.keys(),
+        ret = {"clients": self.saltclients.keys(),
                "return": "Welcome"}
         self.write(self.serialize(ret))
         self.finish()
@@ -751,7 +762,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         self.ret = []
 
         for chunk in self.lowstate:
-            f_call = salt.utils.format_call(saltclients['local_batch'], chunk)
+            f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
 
             timeout = float(chunk.get('timeout', self.application.opts['timeout']))
             # set the timeout
@@ -759,7 +770,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
             # ping all the minions (to see who we have to talk to)
             # TODO: actually ping them all? this just gets the pub data
-            minions = saltclients['local'](chunk['tgt'],
+            minions = self.saltclients['local'](chunk['tgt'],
                                            'test.ping',
                                            [],
                                            expr_form=f_call['kwargs']['expr_form'])['minions']
@@ -775,8 +786,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                     f_call['args'][0] = minion_id
                     # TODO: list??
                     f_call['kwargs']['expr_form'] = 'glob'
-                    pub_data = saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-                    print pub_data
+                    pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
                     tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
                     future = self.application.event_listener.get_event(self, tag=tag)
                     inflight_futures.append(future)
@@ -787,7 +797,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                     event = finished_future.result()
                 except TimeoutException:
                     break
-                print event
                 chunk_ret[event['data']['id']] = event['data']['return']
                 inflight_futures.remove(finished_future)
 
@@ -818,9 +827,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
             chunk_ret = {}
 
-            f_call = salt.utils.format_call(saltclients[self.client], chunk)
+            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
             # fire a job off
-            pub_data = saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
             # get the tag that we are looking for
             tag = tagify([pub_data['jid'], 'ret'], 'job')
@@ -850,9 +859,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         '''
         ret = []
         for chunk in self.lowstate:
-            f_call = salt.utils.format_call(saltclients[self.client], chunk)
+            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
             # fire a job off
-            pub_data = saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
             ret.append(pub_data)
 
         self.write(self.serialize({'return': ret}))
@@ -871,7 +880,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
             timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
 
             f_call = {'args': [chunk['fun'], chunk]}
-            pub_data = saltclients[self.client](chunk['fun'], chunk)
+            pub_data = self.saltclients[self.client](chunk['fun'], chunk)
             tag = pub_data['tag'] + '/ret'
             try:
                 event = yield self.application.event_listener.get_event(self, tag=tag)
