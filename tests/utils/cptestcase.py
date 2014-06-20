@@ -29,9 +29,10 @@
 # https://bitbucket.org/Lawouach/cherrypy-recipes/src/50aff88dc4e24206518ec32e1c32af043f2729da/testing/unit/serverless/cptestcase.py
 
 from StringIO import StringIO
-import unittest
 
 import cherrypy
+
+from salttesting.case import TestCase
 
 # Not strictly speaking mandatory but just makes sense
 cherrypy.config.update({'environment': "test_suite"})
@@ -48,7 +49,7 @@ remote = cherrypy.lib.httputil.Host('127.0.0.1', 50001, "")
 __all__ = ['BaseCherryPyTestCase']
 
 
-class BaseCherryPyTestCase(unittest.TestCase):
+class BaseCherryPyTestCase(TestCase):
     def request(self, path='/', method='GET', app_path='', scheme='http',
                 proto='HTTP/1.1', body=None, qs=None, headers=None, **kwargs):
         """
