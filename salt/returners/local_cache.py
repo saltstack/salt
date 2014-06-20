@@ -112,14 +112,14 @@ def returner(load):
     Return data to the local job cache
     '''
     serial = salt.payload.Serial(__opts__)
+
+    # if a minion is returning a standalone job, get a jobid
+    if load['jid'] == 'req':
+        load['jid'] = prep_jid(nocache=load.get('nocache', False))
+
     jid_dir = _jid_dir(load['jid'])
     if os.path.exists(os.path.join(jid_dir, 'nocache')):
         return
-
-    # do we need to rewrite the load?
-    if load['jid'] == 'req' and bool(load.get('nocache', True)):
-        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as fp_:
-            serial.dump(load, fp_)
 
     hn_dir = os.path.join(jid_dir, load['id'])
 
