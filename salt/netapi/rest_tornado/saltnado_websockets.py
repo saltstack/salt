@@ -295,8 +295,10 @@ from . import event_processor
 
 import tornado.gen
 
-import json
+import salt.utils
 import salt.netapi
+
+json = salt.utils.import_json()
 
 import logging
 logger = logging.getLogger()

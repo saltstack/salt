@@ -55,14 +55,8 @@ def __virtual__():
         return False
 
     # try to load some faster json libraries. In order of fastest to slowest
-    for fast_json in ('ujson', 'yajl'):
-        try:
-            mod = __import__(fast_json)
-            couchbase.set_json_converters(mod.dumps, mod.loads)
-            log.info('loaded {0} json lib'.format(fast_json))
-            break
-        except ImportError:
-            continue
+    json = salt.utils.import_json()
+    couchbase.set_json_converters(json.dumps, json.loads)
 
     return __virtualname__
 

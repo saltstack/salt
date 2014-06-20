@@ -63,7 +63,6 @@ from collections import defaultdict
 
 import math
 import functools
-import json
 import yaml
 import zmq
 import fnmatch
@@ -78,6 +77,8 @@ import salt.runner
 import salt.auth
 from salt import syspaths
 
+
+json = salt.utils.import_json()
 logger = logging.getLogger()
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
