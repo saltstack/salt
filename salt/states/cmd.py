@@ -417,7 +417,7 @@ def wait(name,
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged at loglevel INFO
+        Note that the command being run will still be logged (loglevel: DEBUG)
         regardless, unless ``quiet`` is used for this value.
 
     use_vt
@@ -525,7 +525,7 @@ def wait_script(name,
 
      output_loglevel
         Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged at loglevel INFO
+        Note that the command being run will still be logged (loglevel: DEBUG)
         regardless, unless ``quiet`` is used for this value.
 
     '''
@@ -610,7 +610,7 @@ def run(name,
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged at loglevel INFO
+        Note that the command being run will still be logged (loglevel: DEBUG)
         regardless, unless ``quiet`` is used for this value.
 
     quiet
@@ -822,7 +822,7 @@ def script(name,
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged at loglevel INFO
+        Note that the command being run will still be logged (loglevel: DEBUG)
         regardless, unless ``quiet`` is used for this value.
 
     '''
