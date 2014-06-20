@@ -128,7 +128,10 @@ def prep_jid(nocache=False):
 
     jid = salt.utils.gen_jid()
     try:
-        cb.add(str(jid), {'nocache': nocache})
+        cb.add(str(jid),
+               {'nocache': nocache},
+               ttl=__opts__['keep_jobs'] * 60 * 60, #  keep_jobs is in hours
+               )
     except couchbase.exceptions.KeyExistsError:
         return prep_jid(nocache=nocache)
 
@@ -157,7 +160,10 @@ def returner(load):
         if 'out' in load:
             ret_doc['out'] = load['out']
 
-        cb.add(hn_key, ret_doc)
+        cb.add(hn_key,
+               ret_doc
+               ttl=__opts__['keep_jobs'] * 60 * 60, #  keep_jobs is in hours
+               )
     except couchbase.exceptions.KeyExistsError:
         log.error(
             'An extra return was detected from minion {0}, please verify '
