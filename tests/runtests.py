@@ -49,6 +49,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Print some system information.'
         )
+        # Just so it does not throw an error
+        self.add_option(
+            '--transport',
+            default='zeromq',
+            dest='transport',
+            help='Not applicable in 2014.x.x')
 
         self.test_selection_group.add_option(
             '-m',
