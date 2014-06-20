@@ -352,6 +352,7 @@ def wait(name,
          env=(),
          stateful=False,
          umask=None,
+         output_loglevel='info',
          use_vt=False,
          **kwargs):
     '''
@@ -414,9 +415,15 @@ def wait(name,
 
         .. versionadded:: Helium
 
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged at loglevel INFO
+        regardless, unless ``quiet`` is used for this value.
+
     use_vt
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
+        This is experimental.
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -442,6 +449,7 @@ def wait_script(name,
                 stateful=False,
                 umask=None,
                 use_vt=False,
+                output_loglevel='info',
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -513,6 +521,13 @@ def wait_script(name,
     use_vt
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
+        This is experimental.
+
+     output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged at loglevel INFO
+        regardless, unless ``quiet`` is used for this value.
+
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -616,6 +631,7 @@ def run(name,
     use_vt
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
+        This is experimental.
 
     .. note::
 
@@ -801,6 +817,13 @@ def script(name,
     use_vt
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
+        This is experimental.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged at loglevel INFO
+        regardless, unless ``quiet`` is used for this value.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -836,6 +859,7 @@ def script(name,
                        'template': template,
                        'umask': umask,
                        'timeout': timeout,
+                       'output_loglevel': output_loglevel,
                        'use_vt': use_vt,
                        'saltenv': __env__})
 
@@ -898,6 +922,7 @@ def call(name,
          onlyif=None,
          unless=None,
          creates=None,
+         output_loglevel='info',
          use_vt=False,
          **kwargs):
     '''
@@ -942,6 +967,7 @@ def call(name,
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env'),
                   'use_vt': use_vt,
+                  'output_loglevel': output_loglevel,
                   'umask': kwargs.get('umask')}
     if HAS_GRP:
         pgid = os.getegid()
@@ -977,6 +1003,7 @@ def wait_call(name,
               creates=None,
               stateful=False,
               use_vt=False,
+              output_loglevel='info',
               **kwargs):
     # Ignoring our arguments is intentional.
     return {'name': name,

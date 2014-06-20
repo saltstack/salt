@@ -475,6 +475,9 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                env=env,
+                               log_stdin_level=output_loglevel,
+                               log_stdout_level=output_loglevel,
+                               log_stderr_level=output_loglevel,
                                stream_stdout=True,
                                stream_stderr=True)
             # consume output
@@ -496,9 +499,6 @@ def _run(cmd,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        out = (cstdout + cstderr).strip()
-                        if out:
-                            log.info(out)
                         if not cstdout and not cstderr and not proc.isalive():
                             finished = True
                         if timeout and (time.time() > will_timeout):
@@ -511,9 +511,10 @@ def _run(cmd,
                         ret['stderr'] = 'SALT: User break\n{0}'.format(stderr)
                         ret['retcode'] = 1
                         break
-                except vt.TerminalException:
-                    trace = traceback.format_exc()
-                    log.error(trace)
+                except vt.TerminalException as exc:
+                    log.error(
+                        'VT: {0}'.format(exc),
+                        exc_info=log.isEnabledFor(logging.INFO))
                     ret = {'retcode': 1, 'pid': '2'}
                     break
                 # only set stdout on sucess as we already mangled in other
@@ -524,7 +525,7 @@ def _run(cmd,
                     ret['retcode'] = proc.exitstatus
                 ret['pid'] = proc.pid
         finally:
-            proc.terminate()
+            proc.close(terminate=True, kill=True)
     try:
         __context__['retcode'] = ret['retcode']
     except NameError:
@@ -1193,6 +1194,7 @@ def script_retcode(source,
                    reset_system_locale=True,
                    __env__=None,
                    saltenv='base',
+                   output_loglevel='info',
                    use_vt=False,
                    **kwargs):
     '''
@@ -1242,6 +1244,7 @@ def script_retcode(source,
                   timeout=timeout,
                   reset_system_locale=reset_system_locale,
                   saltenv=saltenv,
+                  output_loglevel=output_loglevel,
                   use_vt=use_vt,
                   **kwargs)['retcode']
 
