@@ -51,7 +51,6 @@ except ImportError:
     pass
 log = logging.getLogger(__name__)
 
-
 class SaltRaetRoadStack(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -114,7 +113,9 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 basedirpath=dirpath,
                 safe=safe,
                 txMsgs=txMsgs,
-                rxMsgs=rxMsgs)
+                rxMsgs=rxMsgs,
+                period=3.0,
+                offset=0.5)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
         self.stack.value.JoinentTimeout = 0.0
 
@@ -243,6 +244,25 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
             if stack.remotes:
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
+
+class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
+    '''
+    Runs the manage method of RoadStack
+    FloScript:
+        do salt raet road stack manager
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Manage the presence of any remotes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, RoadStack):
+            stack.manage(cascade=True)
 
 
 class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
@@ -425,7 +445,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             self.stack.value.server.close()
 
 
-class SaltRoadService(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
     '''
     Process the udp traffic
     FloScript:
@@ -444,7 +464,7 @@ class SaltRoadService(ioflo.base.deeding.Deed):
         self.udp_stack.value.serviceAll()
 
 
-class Rx(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
     FloScript:
@@ -465,7 +485,7 @@ class Rx(ioflo.base.deeding.Deed):
         self.uxd_stack.value.serviceAllRx()
 
 
-class Tx(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
     FloScript:
