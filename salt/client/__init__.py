@@ -212,8 +212,8 @@ class LocalClient(object):
         if not pub_data:
             # Failed to autnenticate, this could be a bunch of things
             raise EauthAuthenticationError(
-                'Failed to authenticate!  This is mostly likely because this '
-                'user is not permitted to execute commands, but there\'s a '
+                'Failed to authenticate!  This is most likely because this '
+                'user is not permitted to execute commands, but there is a '
                 'small possibility that a disk error ocurred (check '
                 'disk/inode usage).'
             )
