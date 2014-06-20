@@ -212,6 +212,7 @@ class CloudSdist(sdist):
             # Remove un-necessary scripts grabbed by MANIFEST.in
             for filename in self.filelist.files[:]:
                 if filename in ('scripts/salt',
+                                'scripts/salt-api',
                                 'scripts/salt-cloud',
                                 'scripts/salt-api',
                                 'scripts/salt-key',
@@ -672,6 +673,7 @@ if WITH_SETUPTOOLS:
     if IS_WINDOWS_PLATFORM is False:
         SETUP_KWARGS['entry_points']['console_scripts'].extend([
             'salt = salt.scripts:salt_main',
+            'salt-api = salt.scripts:salt_api',
             'salt-cloud = salt.scripts:salt_cloud',
             'salt-key = salt.scripts:salt_key',
             'salt-master = salt.scripts:salt_master',
@@ -695,6 +697,7 @@ else:
     if IS_WINDOWS_PLATFORM is False:
         SETUP_KWARGS['scripts'].extend([
             'scripts/salt',
+            'scripts/salt-api',
             'scripts/salt-cloud',
             'scripts/salt-key',
             'scripts/salt-master',
