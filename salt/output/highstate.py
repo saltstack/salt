@@ -74,15 +74,17 @@ def _format_host(host, data):
     hcolor = colors['GREEN']
     hstrs = []
     nchanges = 0
+    strip_colors = __opts__.get('strip_colors', True)
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors['RED_BOLD']
         hstrs.append(('    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
-            sanitized_err = salt.output.strip_esc_sequence(err)
+            if strip_colors:
+                err = salt.output.strip_esc_sequence(err)
             hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
-                          .format(hcolor, sanitized_err, colors)))
+                          .format(hcolor, err, colors)))
     if isinstance(data, dict):
         # Strip out the result: True, without changes returns if
         # state_verbose is False
@@ -250,7 +252,9 @@ def _format_host(host, data):
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
-    hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, salt.output.strip_esc_sequence(host), colors)))
+    if strip_colors:
+        host = salt.output.strip_esc_sequence(host)
+    hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
     return '\n'.join(hstrs), nchanges > 0
 
 
