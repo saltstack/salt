@@ -1263,6 +1263,7 @@ class LocalClient(object):
                 )
             tgt = salt.utils.minions.nodegroup_comp(tgt,
                                                     self.opts['nodegroups'])
+            tgt = tgt[:-3]
             expr_form = 'compound'
 
         # Convert a range expression to a list of nodes and change expression
