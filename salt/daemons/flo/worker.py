@@ -102,7 +102,6 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
                                   'worker',
                                   self.yid.value)
-        localname = name
         lanename = self.opts.value.get('id', self.main.data.lanename)
         basedirpath = os.path.abspath(
                 os.path.join(self.opts.value['cachedir'], 'raet'))
@@ -132,6 +131,11 @@ class WorkerSetup(ioflo.base.deeding.Deed):
                 }
         self.stack.value.transmit(init, self.stack.value.uids.get(manor_yard.name))
         self.stack.value.serviceAll()
+
+    def __del__(self):
+        self.stack.server.close()
+        self.stack.clearLocal()
+        self.stack.clearRemoteKeeps()
 
 
 class WorkerRouter(ioflo.base.deeding.Deed):
