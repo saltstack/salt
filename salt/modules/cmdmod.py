@@ -7,6 +7,7 @@ access to the master root execution access to all salt minions
 '''
 
 # Import python libs
+import time
 import functools
 import json
 import glob
@@ -16,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import traceback
+from salt.utils import vt
 
 # Import salt libs
 import salt.utils
@@ -242,7 +244,8 @@ def _run(cmd,
          timeout=None,
          with_communicate=True,
          reset_system_locale=True,
-         saltenv='base'):
+         saltenv='base',
+         use_vt=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -423,38 +426,106 @@ def _run(cmd,
             .format(cwd)
         )
 
-    # This is where the magic happens
-    try:
-        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
-    except (OSError, IOError) as exc:
-        raise CommandExecutionError(
-            'Unable to run command {0!r} with the context {1!r}, reason: {2}'
-            .format(cmd, kwargs, exc)
-        )
+    if not use_vt:
+        # This is where the magic happens
+        try:
+            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                'Unable to run command {0!r} with the context {1!r}, reason: {2}'
+                .format(cmd, kwargs, exc)
+            )
 
-    try:
-        proc.wait(timeout)
-    except TimedProcTimeoutError as exc:
-        ret['stdout'] = str(exc)
-        ret['stderr'] = ''
-        ret['retcode'] = None
+        try:
+            proc.wait(timeout)
+        except TimedProcTimeoutError as exc:
+            ret['stdout'] = str(exc)
+            ret['stderr'] = ''
+            ret['retcode'] = None
+            ret['pid'] = proc.process.pid
+            # ok return code for timeouts?
+            ret['retcode'] = 1
+            return ret
+
+        out, err = proc.stdout, proc.stderr
+
+        if rstrip:
+            if out is not None:
+                out = out.rstrip()
+            if err is not None:
+                err = err.rstrip()
         ret['pid'] = proc.process.pid
-        # ok return code for timeouts?
-        ret['retcode'] = 1
-        return ret
-
-    out, err = proc.stdout, proc.stderr
-
-    if rstrip:
-        if out is not None:
-            out = out.rstrip()
-        if err is not None:
-            err = err.rstrip()
-
-    ret['stdout'] = out
-    ret['stderr'] = err
-    ret['pid'] = proc.process.pid
-    ret['retcode'] = proc.process.returncode
+        ret['retcode'] = proc.process.returncode
+        ret['stdout'] = out
+        ret['stderr'] = err
+    else:
+        to = ''
+        if timeout:
+            to = ' (timeout: {0}s)'.format(timeout)
+        log.debug('Running {0} in VT{1}'.format(cmd, to))
+        stdout, stderr = '', ''
+        now = time.time()
+        if timeout:
+            will_timeout = now + timeout
+        else:
+            will_timeout = -1
+        try:
+            proc = vt.Terminal(cmd,
+                               shell=True,
+                               log_stdout=True,
+                               log_stderr=True,
+                               env=env,
+                               log_stdin_level=output_loglevel,
+                               log_stdout_level=output_loglevel,
+                               log_stderr_level=output_loglevel,
+                               stream_stdout=True,
+                               stream_stderr=True)
+            # consume output
+            finished = False
+            ret['pid'] = proc.pid
+            while not finished:
+                try:
+                    try:
+                        time.sleep(0.5)
+                        try:
+                            cstdout, cstderr = proc.recv()
+                        except IOError:
+                            cstdout, cstderr = '', ''
+                        if cstdout:
+                            stdout += cstdout
+                        else:
+                            cstdout = ''
+                        if cstderr:
+                            stderr += cstderr
+                        else:
+                            cstderr = ''
+                        if not cstdout and not cstderr and not proc.isalive():
+                            finished = True
+                        if timeout and (time.time() > will_timeout):
+                            ret['stderr'] = (
+                                'SALT: Timeout after {0}s\n{1}').format(
+                                    timeout, stderr)
+                            ret['retcode'] = None
+                            break
+                    except KeyboardInterrupt:
+                        ret['stderr'] = 'SALT: User break\n{0}'.format(stderr)
+                        ret['retcode'] = 1
+                        break
+                except vt.TerminalException as exc:
+                    log.error(
+                        'VT: {0}'.format(exc),
+                        exc_info=log.isEnabledFor(logging.DEBUG))
+                    ret = {'retcode': 1, 'pid': '2'}
+                    break
+                # only set stdout on sucess as we already mangled in other
+                # cases
+                ret['stdout'] = stdout
+                if finished:
+                    ret['stderr'] = stderr
+                    ret['retcode'] = proc.exitstatus
+                ret['pid'] = proc.pid
+        finally:
+            proc.close(terminate=True, kill=True)
     try:
         __context__['retcode'] = ret['retcode']
     except NameError:
@@ -542,6 +613,7 @@ def run(cmd,
         reset_system_locale=True,
         ignore_retcode=False,
         saltenv='base',
+        use_vt=False,
         **kwargs):
     '''
     Execute the passed command and return the output as a string
@@ -602,7 +674,8 @@ def run(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
 
     if 'pid' in ret and '__pub_jid' in kwargs:
         # Stuff the child pid in the JID file
@@ -651,6 +724,7 @@ def run_stdout(cmd,
                reset_system_locale=True,
                ignore_retcode=False,
                saltenv='base',
+               use_vt=False,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -695,7 +769,8 @@ def run_stdout(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
@@ -732,6 +807,7 @@ def run_stderr(cmd,
                reset_system_locale=True,
                ignore_retcode=False,
                saltenv='base',
+               use_vt=False,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -776,6 +852,7 @@ def run_stderr(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               use_vt=use_vt,
                saltenv=saltenv)
 
     lvl = _check_loglevel(output_loglevel, quiet)
@@ -813,6 +890,7 @@ def run_all(cmd,
             reset_system_locale=True,
             ignore_retcode=False,
             saltenv='base',
+            use_vt=False,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -857,7 +935,8 @@ def run_all(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
@@ -893,6 +972,7 @@ def retcode(cmd,
             reset_system_locale=True,
             ignore_retcode=False,
             saltenv='base',
+            use_vt=False,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
@@ -937,7 +1017,8 @@ def retcode(cmd,
               quiet=quiet,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
-              saltenv=saltenv)
+              saltenv=saltenv,
+              use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
@@ -968,6 +1049,7 @@ def _retcode_quiet(cmd,
                    reset_system_locale=True,
                    ignore_retcode=False,
                    saltenv='base',
+                   use_vt=False,
                    **kwargs):
     '''
     Helper for running commands quietly for minion startup.
@@ -988,6 +1070,7 @@ def _retcode_quiet(cmd,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
                    saltenv=saltenv,
+                   use_vt=use_vt,
                    **kwargs)
 
 
@@ -1007,6 +1090,7 @@ def script(source,
            reset_system_locale=True,
            __env__=None,
            saltenv='base',
+           use_vt=False,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1091,7 +1175,8 @@ def script(source,
                umask=umask,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
     _cleanup_tempfile(path)
     return ret
 
@@ -1109,6 +1194,8 @@ def script_retcode(source,
                    reset_system_locale=True,
                    __env__=None,
                    saltenv='base',
+                   output_loglevel='debug',
+                   use_vt=False,
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1157,6 +1244,8 @@ def script_retcode(source,
                   timeout=timeout,
                   reset_system_locale=reset_system_locale,
                   saltenv=saltenv,
+                  output_loglevel=output_loglevel,
+                  use_vt=use_vt,
                   **kwargs)['retcode']
 
 

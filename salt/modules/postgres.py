@@ -238,7 +238,11 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                password=None, runas=None):
     '''
     Run an SQL-Query and return the results as a list. This command
-    only supports SELECT statements.
+    only supports SELECT statements.  This limitation can be worked around
+    with a query like this:
+    
+    WITH updated AS (UPDATE pg_authid SET rolconnlimit = 2000 WHERE 
+    rolname = 'rolename' RETURNING rolconnlimit) SELECT * FROM updated;
 
     CLI Example:
 
