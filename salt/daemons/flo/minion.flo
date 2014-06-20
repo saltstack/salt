@@ -23,7 +23,7 @@ framer minionudpstack be active first setup
 
 framer inbound be active first start
     frame start
-        do rx
+        do salt raet road stack service rx
 
 framer bootstrap be active first join
     frame join
@@ -73,9 +73,13 @@ framer functionmanager be active first checkexec
     frame checkexec
         do nix executor
 
+#framer manager be active first start at 1.0
+#    frame start
+#         do salt raet road stack manager per inode ".raet.udp.stack"
+
 framer outbound be active first start
     frame start
-        do tx
+        do salt raet road stack service tx
 
 #framer scheduler be active first start
 #    frame start
