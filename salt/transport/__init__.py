@@ -107,6 +107,14 @@ class RAETChannel(Channel):
                 self.stack.transmit(msg, self.stack.uids['yard0'])
                 tried += 1
 
+    def __del__(self):
+        '''
+        Clean up the stack when finished
+        '''
+        self.stack.server.close()
+        self.stack.clearLocal()
+        self.stack.clearRemoteKeeps()
+
 
 class ZeroMQChannel(Channel):
     '''
