@@ -83,7 +83,7 @@ class BaseCherryPyTestCase(unittest.TestCase):
         # let's make sure we have the content-length set
         fd = None
         if body is not None:
-            h['content-length'] = '%d' % len(body)
+            h['content-length'] = '{0}'.format(len(body))
             fd = StringIO(body)
 
         if headers is not None:
@@ -93,7 +93,7 @@ class BaseCherryPyTestCase(unittest.TestCase):
         app = cherrypy.tree.apps.get(app_path)
         if not app:
             # XXX: perhaps not the best exception to raise?
-            raise AssertionError("No application mounted at '%s'" % app_path)
+            raise AssertionError("No application mounted at '{0}'".format(app_path))
 
         # Cleanup any previous returned response
         # between calls to this method

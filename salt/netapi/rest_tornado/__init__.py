@@ -40,7 +40,7 @@ def start():
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
 
-    token_pattern = r"([0-9A-Fa-f]{%s})" % len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest())
+    token_pattern = r"([0-9A-Fa-f]{0})".format(len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest()))
 
     all_events_pattern = r"/all_events/{0}".format(token_pattern)
     formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
