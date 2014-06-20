@@ -208,8 +208,8 @@ class SaltEvent(object):
 
     def delete(self):
         self.stack.server.close()
-        self.stackstack.clearLocal()
-        self.stackstack.clearRemoteKeeps()
+        self.stack.clearLocal()
+        self.stack.clearRemoteKeeps()
 
     def __del__(self):
         self.destroy()
