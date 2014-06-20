@@ -298,6 +298,7 @@ import tornado.gen
 import logging
 logger = logging.getLogger()
 
+
 class AllEventsHandler(tornado.websocket.WebSocketHandler):
     '''
     Server side websocket handler.

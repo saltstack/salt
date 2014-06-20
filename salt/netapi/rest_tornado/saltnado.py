@@ -145,9 +145,9 @@ class EventListener(object):
         self.mod_opts = mod_opts
         self.opts = opts
         self.event = salt.utils.event.get_event(
-                'master',
-                opts['sock_dir'],
-                opts['transport'])
+            'master',
+            opts['sock_dir'],
+            opts['transport'])
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -425,8 +425,8 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             perms = self.application.opts['external_auth'][token['eauth']][token['name']]
         except (AttributeError, IndexError):
             logging.debug("Configuration for external_auth malformed for "
-                         "eauth '{0}', and user '{1}'."
-                         .format(token.get('eauth'), token.get('name')), exc_info=True)
+                          "eauth '{0}', and user '{1}'."
+                          .format(token.get('eauth'), token.get('name')), exc_info=True)
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
 
@@ -516,9 +516,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             # ping all the minions (to see who we have to talk to)
             # TODO: actually ping them all? this just gets the pub data
             minions = self.saltclients['local'](chunk['tgt'],
-                                           'test.ping',
-                                           [],
-                                           expr_form=f_call['kwargs']['expr_form'])['minions']
+                                                'test.ping',
+                                                [],
+                                                expr_form=f_call['kwargs']['expr_form'])['minions']
 
             chunk_ret = {}
             maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
@@ -753,9 +753,9 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
 
         # TODO: consolidate??
         self.event = salt.utils.event.get_event(
-                'master',
-                self.application.opts['sock_dir'],
-                self.application.opts['transport'])
+            'master',
+            self.application.opts['sock_dir'],
+            self.application.opts['transport'])
 
         ret = self.event.fire_event({
             'post': self.raw_data,
