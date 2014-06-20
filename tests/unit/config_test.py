@@ -30,6 +30,10 @@ import salt.utils.network
 import integration
 from salt import config as sconfig, version as salt_version
 from salt.version import SaltStackVersion
+from salt.cloud.exceptions import SaltCloudConfigError
+
+# Import Third-Party Libs
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +56,8 @@ MOCK_ETC_HOSTS = (
     'ff00::0        ip6-mcastprefix\n'
 )
 MOCK_ETC_HOSTNAME = '{0}\n'.format(MOCK_HOSTNAME)
+PATH = 'path/to/some/cloud/conf/file'
+DEFAULT = {'default_include': PATH}
 
 
 def _unhandled_mock_read(filename):
@@ -468,6 +474,352 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
             )
 
+    def test_cloud_config_vm_profiles_config(self):
+        '''
+        Tests passing in vm_config and profiles_config.
+        This scenario is a bad use of the API.
+        '''
+        self.assertRaises(RuntimeError, sconfig.cloud_config, PATH,
+                          vm_config='test', profiles_config='test')
+
+    def test_cloud_config_vm_profiles_config_path(self):
+        '''
+        Tests passing in vm_config_path and profiles_config_path.
+        This scenario is a bad use of the API.
+        '''
+        self.assertRaises(RuntimeError, sconfig.cloud_config, PATH,
+                          vm_config_path='test', profiles_config_path='test')
+
+    @patch('salt.config.load_config',
+           MagicMock(return_value={'vm_config': 'foo', 'profiles_config': 'bar'}))
+    def test_cloud_config_overrides_bad_api(self):
+        '''
+        Tests passing in vm_config and profiles_config through the overrides
+        cloud config path
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH)
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    def test_cloud_config_double_master_path(self):
+        '''
+        Tests passing in master_config_path and master_config kwargs.
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          master_config_path='foo', master_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    def test_cloud_config_double_providers_path(self):
+        '''
+        Tests passing in providers_config_path and providers_config kwargs.
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          providers_config_path='foo', providers_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    def test_cloud_config_double_profiles_path(self):
+        '''
+        Tests passing in profiles_config_path and profiles_config kwargs.
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          profiles_config_path='foo', profiles_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    @patch('salt.config.apply_cloud_config', MagicMock(return_value={'providers': 'foo'}))
+    def test_cloud_config_providers_in_opts(self):
+        '''
+        Tests mixing old cloud providers with pre-configured providers configurations
+        using the providers_config kwarg
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          providers_config='bar')
+
+    @patch('salt.config.load_config', MagicMock(return_value={}))
+    @patch('salt.config.apply_cloud_config', MagicMock(return_value={'providers': 'foo'}))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    def test_cloud_config_providers_in_opts_path(self):
+        '''
+        Tests mixing old cloud providers with pre-configured providers configurations
+        using the providers_config_path kwarg
+        '''
+        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
+                          providers_config_path='bar')
+
+    def test_load_cloud_config_from_environ_var(self):
+        original_environ = os.environ.copy()
+
+        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        try:
+            env_root_dir = os.path.join(tempdir, 'foo', 'env')
+            os.makedirs(env_root_dir)
+            env_fpath = os.path.join(env_root_dir, 'config-env')
+
+            salt.utils.fopen(env_fpath, 'w').write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(env_root_dir, env_fpath)
+            )
+
+            os.environ['SALT_CLOUD_CONFIG'] = env_fpath
+            # Should load from env variable, not the default configuration file
+            config = sconfig.cloud_config('/etc/salt/cloud')
+            self.assertEqual(config['log_file'], env_fpath)
+            os.environ.clear()
+            os.environ.update(original_environ)
+
+            root_dir = os.path.join(tempdir, 'foo', 'bar')
+            os.makedirs(root_dir)
+            fpath = os.path.join(root_dir, 'config')
+            salt.utils.fopen(fpath, 'w').write(
+                'root_dir: {0}\n'
+                'log_file: {1}\n'.format(root_dir, fpath)
+            )
+            # Let's set the environment variable, yet, since the configuration
+            # file path is not the default one, ie, the user has passed an
+            # alternative configuration file form the CLI parser, the
+            # environment variable will be ignored.
+            os.environ['SALT_CLOUD_CONFIG'] = env_fpath
+            config = sconfig.cloud_config(fpath)
+            self.assertEqual(config['log_file'], fpath)
+        finally:
+            # Reset the environ
+            os.environ.clear()
+            os.environ.update(original_environ)
+
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_deploy_search_path_as_string(self):
+        temp_conf_dir = os.path.join(integration.TMP, 'issue-8863')
+        config_file_path = os.path.join(temp_conf_dir, 'cloud')
+        deploy_dir_path = os.path.join(temp_conf_dir, 'test-deploy.d')
+        try:
+            for directory in (temp_conf_dir, deploy_dir_path):
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+
+            default_config = sconfig.cloud_config(config_file_path)
+            default_config['deploy_scripts_search_path'] = deploy_dir_path
+            with salt.utils.fopen(config_file_path, 'w') as cfd:
+                cfd.write(yaml.dump(default_config))
+
+            default_config = sconfig.cloud_config(config_file_path)
+
+            # Our custom deploy scripts path was correctly added to the list
+            self.assertIn(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path']
+            )
+
+            # And it's even the first occurrence as it should
+            self.assertEqual(
+                deploy_dir_path,
+                default_config['deploy_scripts_search_path'][0]
+            )
+        finally:
+            if os.path.isdir(temp_conf_dir):
+                shutil.rmtree(temp_conf_dir)
+
+    def test_includes_load(self):
+        '''
+        Tests that cloud.{providers,profiles}.d directories are loaded, even if not
+        directly passed in through path
+        '''
+        config = sconfig.cloud_config(self.get_config_file_path('cloud'))
+        self.assertIn('ec2-config', config['providers'])
+        self.assertIn('Ubuntu-13.04-AMD64', config['profiles'])
+
+    def test_apply_cloud_providers_config_same_providers(self):
+        '''
+        Tests when two providers are given with the same provider name
+        '''
+        overrides = {'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'ec2'},
+                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                           'password': 'supersecret',
+                           'provider': 'ec2'}],
+                     'conf_file': PATH}
+        self.assertRaises(SaltCloudConfigError,
+                          sconfig.apply_cloud_providers_config,
+                          overrides,
+                          DEFAULT)
+
+    def test_apply_cloud_providers_config_extend(self):
+        '''
+        Tests the successful extension of a cloud provider
+        '''
+        overrides = {'my-production-envs':
+                         [{'extends': 'my-dev-envs:ec2',
+                           'location': 'us-east-1',
+                           'user': 'ec2-user@mycorp.com'
+                          }],
+                     'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'user': 'user@mycorp.com',
+                           'location': 'ap-southeast-1',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'ec2'
+                          },
+                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                           'password': 'supersecret',
+                           'provider': 'linode'
+                          }],
+                     'conf_file': PATH}
+        ret = {'my-production-envs':
+                   {'ec2':
+                        {'profiles': {},
+                         'location': 'us-east-1',
+                         'key': 'supersecretkeysupersecretkey',
+                         'provider': 'ec2',
+                         'id': 'ABCDEFGHIJKLMNOP',
+                         'user': 'ec2-user@mycorp.com'}},
+               'my-dev-envs':
+                   {'linode':
+                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                         'password': 'supersecret',
+                         'profiles': {},
+                         'provider': 'linode'},
+                    'ec2':
+                        {'profiles': {},
+                         'location': 'ap-southeast-1',
+                         'key': 'supersecretkeysupersecretkey',
+                         'provider': 'ec2',
+                         'id': 'ABCDEFGHIJKLMNOP',
+                         'user': 'user@mycorp.com'}}}
+        self.assertEqual(ret, sconfig.apply_cloud_providers_config(overrides, defaults=DEFAULT))
+
+    def test_apply_cloud_providers_config_extend_multiple(self):
+        '''
+        Tests the successful extension of two cloud providers
+        '''
+        overrides = {'my-production-envs':
+                         [{'extends': 'my-dev-envs:ec2',
+                           'location': 'us-east-1',
+                           'user': 'ec2-user@mycorp.com'},
+                          {'password': 'new-password',
+                           'extends': 'my-dev-envs:linode',
+                           'location': 'Salt Lake City'
+                          }],
+                     'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'user': 'user@mycorp.com',
+                           'location': 'ap-southeast-1',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'ec2'},
+                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                           'password': 'supersecret',
+                           'provider': 'linode'}],
+                     'conf_file': PATH}
+        ret = {'my-production-envs':
+                   {'linode':
+                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                         'profiles': {},
+                         'location': 'Salt Lake City',
+                         'provider': 'linode',
+                         'password': 'new-password'},
+                    'ec2':
+                        {'user': 'ec2-user@mycorp.com',
+                         'key': 'supersecretkeysupersecretkey',
+                         'provider': 'ec2',
+                         'id': 'ABCDEFGHIJKLMNOP',
+                         'profiles': {},
+                         'location': 'us-east-1'}},
+               'my-dev-envs':
+                   {'linode':
+                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                         'password': 'supersecret',
+                         'profiles': {},
+                         'provider': 'linode'},
+                    'ec2':
+                        {'profiles': {},
+                         'user': 'user@mycorp.com',
+                         'key': 'supersecretkeysupersecretkey',
+                         'provider': 'ec2',
+                         'id': 'ABCDEFGHIJKLMNOP',
+                         'location': 'ap-southeast-1'}}}
+        self.assertEqual(ret, sconfig.apply_cloud_providers_config(
+            overrides,
+            defaults=DEFAULT))
+
+    def test_apply_cloud_providers_config_extends_bad_alias(self):
+        '''
+        Tests when the extension contains an alias not found in providers list
+        '''
+        overrides = {'my-production-envs':
+                         [{'extends': 'test-alias:ec2',
+                           'location': 'us-east-1',
+                           'user': 'ec2-user@mycorp.com'}],
+                     'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'user': 'user@mycorp.com',
+                           'location': 'ap-southeast-1',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'ec2'}],
+                     'conf_file': PATH}
+        self.assertRaises(SaltCloudConfigError,
+                          sconfig.apply_cloud_providers_config,
+                          overrides,
+                          DEFAULT)
+
+    def test_apply_cloud_providers_config_extends_bad_provider(self):
+        '''
+        Tests when the extension contains a provider not found in providers list
+        '''
+        overrides = {'my-production-envs':
+                         [{'extends': 'my-dev-envs:linode',
+                           'location': 'us-east-1',
+                           'user': 'ec2-user@mycorp.com'}],
+                     'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'user': 'user@mycorp.com',
+                           'location': 'ap-southeast-1',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'ec2'}],
+                     'conf_file': PATH}
+        self.assertRaises(SaltCloudConfigError,
+                          sconfig.apply_cloud_providers_config,
+                          overrides,
+                          DEFAULT)
+
+    def test_apply_cloud_providers_config_extends_no_provider(self):
+        '''
+        Tests when no provider is supplied in the extends statement
+        '''
+        overrides = {'my-production-envs':
+                         [{'extends': 'my-dev-envs',
+                           'location': 'us-east-1',
+                           'user': 'ec2-user@mycorp.com'}],
+                     'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'user': 'user@mycorp.com',
+                           'location': 'ap-southeast-1',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'linode'}],
+                     'conf_file': PATH}
+        self.assertRaises(SaltCloudConfigError,
+                          sconfig.apply_cloud_providers_config,
+                          overrides,
+                          DEFAULT)
+
+    def test_apply_cloud_providers_extends_not_in_providers(self):
+        '''
+        Tests when extends is not in the list of providers
+        '''
+        overrides = {'my-production-envs':
+                         [{'extends': 'my-dev-envs ec2',
+                           'location': 'us-east-1',
+                           'user': 'ec2-user@mycorp.com'}],
+                     'my-dev-envs':
+                         [{'id': 'ABCDEFGHIJKLMNOP',
+                           'user': 'user@mycorp.com',
+                           'location': 'ap-southeast-1',
+                           'key': 'supersecretkeysupersecretkey',
+                           'provider': 'linode'}],
+                     'conf_file': PATH}
+        self.assertRaises(SaltCloudConfigError,
+                          sconfig.apply_cloud_providers_config,
+                          overrides,
+                          DEFAULT)
 
 if __name__ == '__main__':
     from integration import run_tests

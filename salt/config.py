@@ -4,6 +4,7 @@ All salt configuration loading and defaults should be in this module
 '''
 
 # Import python libs
+from __future__ import generators
 import glob
 import os
 import re
@@ -538,6 +539,13 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_granular_levels': {},
 }
 
+DEFAULT_API_OPTS = {
+    # ----- Salt master settings overridden by Salt-API --------------------->
+    'pidfile': '/var/run/salt-api.pid',
+    'logfile': '/var/log/salt/api',
+    # <---- Salt master settings overridden by Salt-API ----------------------
+}
+
 VM_CONFIG_DEFAULTS = {
     'default_include': 'cloud.profiles.d/*.conf',
 }
@@ -894,6 +902,28 @@ def syndic_config(master_config_path,
 
 
 # ----- Salt Cloud Configuration Functions ---------------------------------->
+def apply_sdb(opts, sdb_opts=None):
+    '''
+    Recurse for sdb:// links for opts
+    '''
+    if sdb_opts is None:
+        sdb_opts = opts
+    if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
+        return salt.utils.sdb.sdb_get(sdb_opts, opts)
+    elif isinstance(sdb_opts, dict):
+        for key, value in sdb_opts.items():
+            if value is None:
+                continue
+            sdb_opts[key] = apply_sdb(opts, value)
+    elif isinstance(sdb_opts, list):
+        for key, value in enumerate(sdb_opts):
+            if value is None:
+                continue
+            sdb_opts[key] = apply_sdb(opts, value)
+
+    return sdb_opts
+
+
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
@@ -933,7 +963,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         vm_config_path = None
 
     # Load the cloud configuration
-    overrides = salt.config.load_config(
+    overrides = load_config(
         path,
         env_var,
         os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
@@ -1140,6 +1170,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         profiles_config = vm_profiles_config(profiles_config_path,
                                              providers_config)
     opts['profiles'] = profiles_config
+
+    # recurse opts for sdb configs
+    apply_sdb(opts)
 
     # Return the final options
     return opts
@@ -1524,14 +1557,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             )
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
-                    # # change provider details '-only-extendable-' to extended provider name
+                    # change provider details '-only-extendable-' to extended provider name
                     details['provider'] = provider
-                elif providers.get(extends) and len(providers[extends]) > 1:
+                elif providers.get(extends):
                     raise salt.cloud.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
-                        'to extend from {2!r} which has multiple entries '
-                        'and no provider is being specified. Not '
-                        'extending!'.format(
+                        'to extend from {2!r} and no provider was specified. '
+                        'Not extending!'.format(
                             details['provider'], provider_alias, extends
                         )
                     )
@@ -1547,7 +1579,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 else:
                     if driver in providers.get(extends):
                         details['extends'] = '{0}:{1}'.format(extends, driver)
-                    elif providers.get(extends).startswith('-only-extendable-'):
+                    elif '-only-extendable-' in providers.get(extends):
                         details['extends'] = '{0}:{1}'.format(
                             extends, '-only-extendable-{0}'.format(ext_count)
                         )
@@ -2097,3 +2129,16 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Return the client options
     _validate_opts(opts)
     return opts
+
+
+def api_config(path):
+    '''
+    Read in the salt master config file and add additional configs that
+    need to be stubbed out for salt-api
+    '''
+    # Let's grab a copy of salt's master default opts
+    defaults = DEFAULT_MASTER_OPTS
+    # Let's override them with salt-api's required defaults
+    defaults.update(DEFAULT_API_OPTS)
+
+    return master_config(path, defaults=defaults)

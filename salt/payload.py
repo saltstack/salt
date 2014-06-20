@@ -178,8 +178,12 @@ class SREQ(object):
         delete socket if you have it
         '''
         if hasattr(self, '_socket'):
-            if self._socket in self.poller:
-                self.poller.unregister(self._socket)
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    self.poller.unregister(socket[0])
             del self._socket
 
     def send(self, enc, load, tries=1, timeout=60):

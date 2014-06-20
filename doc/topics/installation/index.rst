@@ -56,12 +56,14 @@ Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
 vary:
 
 * ZeroMQ:
+
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
   * `PyCrypto`_ - The Python cryptography toolkit
   * `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
 
 * RAET:
+
   * `libnacl`_ - Python bindings to `libsodium`_
   * `ioflo`_ - The flo programming interface raet and salt-raet is built on
   * `RAET`_ - The worlds most awesome UDP protocol
@@ -71,17 +73,17 @@ time, for example:
 
 .. code-block:: console
 
-    python setup.py --salt-transport=raet install
+    python setup.py install --salt-transport=raet
 
 This way, only the required dependencies are pulled by the setup script if need 
 be.
 
-If installing using pip, the ``--salt-transport`` global option can be provided 
-like:
+If installing using pip, the ``--salt-transport`` install option can be 
+provided like:
 
 .. code-block:: console
 
-  pip install --global-option="--salt-transport=raet" salt
+  pip install --install-option="--salt-transport=raet" salt
 
 
 Optional Dependencies

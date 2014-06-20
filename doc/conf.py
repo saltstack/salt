@@ -3,6 +3,7 @@
 '''
 Sphinx documentation for Salt
 '''
+import functools
 import sys
 import os
 import types
@@ -24,10 +25,14 @@ class Mock(object):
         pass
 
     def __call__(self, *args, **kwargs):
-        return Mock()
+        ret = Mock()
+        # If mocked function is used as a decorator, expose decorated function.
+        # if args and callable(args[-1]):
+        #     functools.update_wrapper(ret, args[0])
+        return ret
 
     @classmethod
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         if name in ('__file__', '__path__'):
             return '/dev/null'
         else:
@@ -48,7 +53,8 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.scanner',
     'zmq',
-    # salt.cloud
+
+    # third-party libs for cloud modules
     'libcloud',
     'libcloud.compute',
     'libcloud.compute.base',
@@ -60,6 +66,27 @@ MOCK_MODULES = [
     'libcloud.loadbalancer.providers',
     'libcloud.common',
     'libcloud.common.google',
+
+    # third-party libs for netapi modules
+    'cherrypy',
+    'cherrypy.lib',
+    'cherrypy.process',
+    'cherrypy.wsgiserver',
+    'cherrypy.wsgiserver.ssl_builtin',
+
+    'tornado',
+    'tornado.concurrent',
+    'tornado.gen',
+    'tornado.httpserver',
+    'tornado.ioloop',
+    'tornado.web',
+    'tornado.websocket',
+
+    'ws4py',
+    'ws4py.server',
+    'ws4py.server.cherrypyserver',
+    'ws4py.websocket',
+
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
@@ -122,7 +149,7 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.4'
+release = '2014.1.5'
 
 language = 'en'
 locale_dirs = [
@@ -139,6 +166,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
+    'httpdomain',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc
     'shorturls',

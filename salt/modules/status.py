@@ -570,4 +570,3 @@ def master(connected=True):
         if ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
             event.fire_event({'master': ip}, '__master_connected')
- 

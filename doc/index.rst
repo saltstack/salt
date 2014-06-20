@@ -109,23 +109,30 @@ arbitrary commands on remote hosts.
 Targeting
 ---------
 
-:doc:`Targeting </topics/targeting/index>` is specifying which minions
-should execute commands or manage server configuration.
+:ref:`Targeting <targeting>` is the method of specifying which minions should
+execute commands or manage server configuration.
 
-:doc:`Globbing and regex </topics/targeting/globbing>`
+:ref:`Globbing and regex <targeting-glob>`
     Match minions using globbing and regular expressions.
 
-:doc:`Grains </topics/targeting/grains>`
+:ref:`Grains <targeting-grains>`
     Match minions using bits of static information about the minion such as
     OS, software versions, virtualization, CPU, memory, and much more.
 
-:doc:`Node groups </topics/targeting/nodegroups>`
-    Statically define groups of minions.
+:ref:`Pillar <targeting-pillar>`
+    Match minions using user-defined variables.
 
-:doc:`Compound matchers </topics/targeting/compound>`
-    Combine the above matchers as a single target.
+:ref:`Subnet/IP Address <targeting-ipcidr>`
+    Match minions by Subnet or IP address (currently IPv4 only).
 
-:doc:`Batching execution </topics/targeting/batch>`
+:ref:`Compound matching <targeting-compound>`
+    Combine any of the above matchers into a single expression.
+
+:ref:`Node groups <targeting-nodegroups>`
+    Statically define groups of minions in the master config file using the
+    :ref:`compound <targeting-compound>` matching syntax.
+
+:ref:`Batching execution <targeting-batch>`
     Loop through all matching minions so that only a subset are executing a
     command at one time.
 
@@ -218,8 +225,12 @@ Salt is many splendid things.
     Controlling devices and machines unable to run a salt-minion.
 
 :ref:`Python API interface <python-api>`
-    Use Salt programmatically from scripts and programs easily and
+    Use Salt locally from scripts and programs easily and
     simply via ``import salt``.
+
+:ref:`External API interfaces <netapi-introduction>`
+    Expose a Salt API such as REST, XMPP, WebSockets, and more using netapi
+    modules. See the :ref:`full list of netapi modules <all-netapi-modules>`.
 
 :doc:`Automatic Updates and Frozen Binary Deployments <topics/tutorials/esky>`
     Use a frozen install to make deployments easier (Even on Windows!). Or
