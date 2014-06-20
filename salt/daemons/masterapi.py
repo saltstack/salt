@@ -349,7 +349,6 @@ class RemoteFuncs(object):
                 )
         return ret
 
-
     def _mine_get(self, load):
         '''
         Gathers the data from the specified minions' mine
