@@ -181,6 +181,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
+                                                alived=False,
+                                                rejected=False,
                                                 idle=False, )))
 
     def action(self, **kwa):
@@ -193,6 +195,39 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
             if stack.remotes:
                 joined = stack.remotes.values()[0].joined
         self.status.update(joined=joined)
+
+
+class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
+    '''
+    Updates status with rejected of .acceptance of zeroth remote estate (master)
+    FloScript:
+
+    do salt raet road stack rejected
+    go next if rejected in .raet.udp.stack.status
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                alived=False,
+                                                rejected=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        rejected = False
+        if stack and isinstance(stack, RoadStack):
+            if stack.remotes:
+                rejected = (stack.remotes.values()[0].acceptance
+                                == raeting.acceptances.rejected)
+            else: #no remotes so assume rejected
+                rejected = True
+        self.status.update(rejected=rejected)
 
 
 class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
@@ -214,7 +249,7 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.allow()
+            stack.allow(timeout=0.0)
         return None
 
 
@@ -232,6 +267,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
+                                                alived=False,
+                                                rejected=False,
                                                 idle=False, )))
 
     def action(self, **kwa):
