@@ -71,9 +71,9 @@ def nodegroup_comp(group, nodegroups, skip=None):
         return ''
     gstr = nodegroups[group]
     ret = ''
-    for comp in gstr.split(','):
+    for comp in gstr.split():
         if not comp.startswith('N@'):
-            ret += '{0} or '.format(comp)
+            ret += '{0} '.format(comp)
             continue
         ngroup = comp[2:]
         if ngroup in skip:
