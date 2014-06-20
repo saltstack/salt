@@ -42,7 +42,8 @@ __func_alias__ = {
 
 
 DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth'}}
-SEED_MARKER = '/lxc.{0}.initial_seed'
+SEED_MARKER = '/lxc.initial_seed'
+_marker = object()
 
 
 def _ip_sort(ip):
@@ -766,9 +767,12 @@ def init(name,
     profile = copy.deepcopy(profile)
 
     def select(k, default=None):
-        kw = kwargs.pop(k, None)
+        kw = kwargs.pop(k, _marker)
         p = profile.pop(k, default)
-        return kw or p
+        # let kwargs be really be the preferred choice
+        if kw is _marker:
+            kw = p
+        return kw
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
@@ -834,9 +838,9 @@ def init(name,
         if old_chunks != chunks:
             to_reboot = True
     if remove_seed_marker:
-        gid = SEED_MARKER.format(name)
         lxcret = __salt__['lxc.run_cmd'](
-            name, 'rm -f \"{0}\"'.format(gid), stdout=False, stderr=False)
+            name, 'rm -f \"{0}\"'.format(SEED_MARKER),
+            stdout=False, stderr=False)
 
     # last time to be sure any of our property is correctly applied
     cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
@@ -876,10 +880,17 @@ def init(name,
     # set the default user/password, only the first time
     if password:
         changes['250_password'] = 'Passwords in place\n'
-        gid = '/.lxc.{0}.initial_pass'.format(name)
-        lxcret = __salt__['lxc.run_cmd'](
-            name, 'test -e {0}'.format(gid), stdout=False, stderr=False)
-        if lxcret:
+        gid = '/.lxc.initial_pass'.format(name)
+        gids = [gid,
+                '/lxc.initial_pass',
+                '/.lxc.{0}.initial_pass'.format(name)]
+        lxcrets = []
+        for ogid in gids:
+            lxcrets.append(
+                bool(__salt__['lxc.run_cmd'](
+                    name, 'test -e {0}'.format(gid),
+                    stdout=False, stderr=False)))
+        if True not in lxcrets:
             cret = __salt__['lxc.set_pass'](name,
                                             password=password, users=users)
             changes['250_password'] = 'Password updated\n'
@@ -905,10 +916,18 @@ def init(name,
     # set dns servers if any, only the first time
     if dnsservers:
         changes['350_dns'] = 'DNS in place\n'
-        gid = '/.lxc.{0}.initial_dns'.format(name)
-        lxcret = __salt__['lxc.run_cmd'](
-            name, 'test -e {0}'.format(gid), stdout=False, stderr=False)
-        if lxcret:
+        # retro compatibility, test also old markers
+        gid = '/.lxc.initial_dns'
+        gids = [gid,
+                '/lxc.initial_dns',
+                '/lxc.{0}.initial_dns'.format(name)]
+        lxcrets = []
+        for ogid in gids:
+            lxcrets.append(bool(
+                __salt__['lxc.run_cmd'](
+                    name, 'test -e {0}'.format(ogid),
+                    stdout=False, stderr=False)))
+        if True not in lxcrets:
             cret = __salt__['lxc.set_dns'](name, dnsservers=dnsservers)
             changes['350_dns'] = 'DNS updated\n'
             if not cret['result']:
@@ -931,7 +950,6 @@ def init(name,
             return ret
 
     if seed or seed_cmd:
-        # seed only if we do not found a sucessfull seed marker
         changes['450_seed'] = 'Container seeded\n'
         if seed:
             ret['seeded'] = __salt__['lxc.bootstrap'](
@@ -956,6 +974,9 @@ def init(name,
             ret['comment'] = comment
             ret['result'] = False
             return ret
+    else:
+        ret['seeded'] = True
+
     if not start_:
         stop(name)
         ret['state'] = 'stopped'
@@ -1035,9 +1056,12 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     profile = copy.deepcopy(profile)
 
     def select(k, default=None):
-        kw = kwargs.pop(k, None)
+        kw = kwargs.pop(k, _marker)
         p = profile.pop(k, default)
-        return kw or p
+        # let kwargs be really be the preferred choice
+        if kw is _marker:
+            kw = p
+        return kw
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
@@ -1157,9 +1181,13 @@ def clone(name,
                 'error': 'original container \'{0}\' is running'.format(orig)}
 
     def select(k, default=None):
-        kw = kwargs.pop(k, None)
+        kw = kwargs.pop(k, _marker)
         p = profile.pop(k, default)
-        return kw or p
+        # let kwargs be really be the preferred choice
+        if kw is _marker:
+            kw = p
+        return kw
+
     backing = select('backing')
     if backing in ['dir']:
         snapshot = False
@@ -1906,9 +1934,8 @@ def bootstrap(name, config=None, approve_key=True,
         needs_install = bool(__salt__['lxc.run_cmd'](name, cmd, stdout=False))
     else:
         needs_install = True
-    gid = SEED_MARKER.format(name)
     seeded = not __salt__['lxc.run_cmd'](
-        name, 'test -e \"{0}\"'.format(gid), stdout=False, stderr=False)
+        name, 'test -e \"{0}\"'.format(SEED_MARKER), stdout=False, stderr=False)
     tmp = tempfile.mkdtemp()
     if seeded and not unconditionnal_install:
         res = True
@@ -1960,7 +1987,7 @@ def bootstrap(name, config=None, approve_key=True,
         # mark seeded upon sucessful install
         if res:
             __salt__['lxc.run_cmd'](
-                name, 'sh -c \'touch "{0}";\''.format(gid))
+                name, 'sh -c \'touch "{0}";\''.format(SEED_MARKER))
     return res
 
 

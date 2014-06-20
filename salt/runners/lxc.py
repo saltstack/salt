@@ -214,12 +214,18 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
     approve_key = kw.get('approve_key', True)
+    seeds = {}
     if approve_key and not explicit_auth:
         for name in names:
-            ping = client.cmd(name, 'test.ping', timeout=20)
-            if ping:
-                # container already seeded
-                continue
+            seeds[name] = kwargs.get('seed', True)
+            try:
+                ping = client.cmd(name, 'test.ping', timeout=20).get(name, None)
+            except (TypeError, KeyError):
+                ping = False
+            curkey = os.path.join(__opts__['pki_dir'], 'minions', name)
+            # be sure not to seed an alrady seeded host
+            if ping or os.path.exists(curkey):
+                seeds[name] = False
             kv = salt.utils.virt.VirtKey(host, name, __opts__)
             if kv.authorize():
                 log.info('Container key will be preauthorized')
@@ -242,6 +248,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 host, 'lxc.cloud_init_interface', args + [kw],
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
+        # be sure not to seed an alrady seeded host
+        kw['seed'] = seeds[name]
+        if not kw['seed']:
+            kw.pop('seed_cmd', '')
         cmds.append(
             (host,
              name,
