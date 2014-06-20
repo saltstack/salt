@@ -871,6 +871,13 @@ class AESFuncs(object):
                 )
         return ret
 
+    def _ext_nodes(self, load):
+        '''
+        Stub out until 2014.1.5 minion installed
+        '''
+        return {}
+
+
     def _master_opts(self, load):
         '''
         Return the master options to the minion
