@@ -19,13 +19,11 @@ try:
 except ImportError:  # This is in case windows minion is importing
     pass
 import resource
-import subprocess
 import multiprocessing
 import sys
 
 # Import third party libs
 import zmq
-import yaml
 from M2Crypto import RSA
 
 # Import salt libs

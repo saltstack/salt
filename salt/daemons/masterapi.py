@@ -328,6 +328,8 @@ class RemoteFuncs(object):
 
         opts = {}
         grains = {}
+        ret = {}
+
         if 'opts' in load:
             opts = load['opts']
             if 'grains' in load['opts']:
