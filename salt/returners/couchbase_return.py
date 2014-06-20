@@ -44,6 +44,11 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'couchbase'
 
+# some globals
+COUCHBASE_CONN = None
+DESIGN_NAME = 'couchbase_returner'
+VERIFIED_VIEWS = False
+
 
 def __virtual__():
     if not HAS_DEPS:
@@ -71,7 +76,6 @@ def _get_options():
             'port': __opts__.get('couchbase.port', 8091),
             'bucket': __opts__.get('couchbase.bucket', 'salt')}
 
-COUCHBASE_CONN = None
 
 def _get_connection():
     '''
@@ -84,10 +88,6 @@ def _get_connection():
                                                      port=opts['port'],
                                                      bucket=opts['bucket'])
     return COUCHBASE_CONN
-
-
-DESIGN_NAME = 'couchbase_returner'
-VERIFIED_VIEWS = False
 
 
 def _verify_views():
@@ -160,11 +160,11 @@ def returner(load):
         cb.add(hn_key, ret_doc)
     except couchbase.exceptions.KeyExistsError:
         log.error(
-                'An extra return was detected from minion {0}, please verify '
-                'the minion, this could be a replay attack'.format(
-                    load['id']
-                )
+            'An extra return was detected from minion {0}, please verify '
+            'the minion, this could be a replay attack'.format(
+                load['id']
             )
+        )
         return False
 
 
@@ -185,9 +185,9 @@ def save_load(jid, clear_load):
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Retrieve the minions list
         minions = ckminions.check_minions(
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob')
-                )
+            clear_load['tgt'],
+            clear_load.get('tgt_type', 'glob')
+            )
         # save the minions to a cache so we can see in the UI
         jid_doc.value['minions'] = minions
 
