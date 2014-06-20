@@ -177,7 +177,7 @@ def save_load(jid, clear_load):
     try:
         jid_doc = cb.get(str(jid))
     except couchbase.exceptions.NotFoundError:
-        log.warning('Could not write job cache file for minions: {0}'.format(minions))
+        log.warning('Could not write job cache file for jid: {0}'.format(jid))
         return False
 
     # if you have a tgt, save that for the UI etc
@@ -208,8 +208,7 @@ def get_load(jid):
     try:
         jid_doc = cb.get(str(jid))
     except couchbase.exceptions.NotFoundError:
-        log.warning('Could not write job cache file for minions: {0}'.format(minions))
-        return False
+        return {}
 
     ret = jid_doc.value['load']
     if 'minions' in jid_doc.value:
