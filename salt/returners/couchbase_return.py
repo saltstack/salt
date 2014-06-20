@@ -6,6 +6,7 @@ settings are listed below, along with sane defaults.
 couchbase.host:   'salt'
 couchbase.port:   8091
 couchbase.bucket: 'salt'
+couchbase.skip_verify_views: False
 
   To use the couchbase returner, append '--return couchbase' to the salt command. ex:
 
@@ -24,34 +25,8 @@ JID/MINION_ID
 =============
 return: return_data
 out: out_data
-
-
-TODO: remove
-
-Administrator
-password
-
-
-# TODO: auto-create the views (if you have passwords)
-
-jid_returns
-===========
-function (doc, meta) {
-  if (meta.id.indexOf('/') > -1){
-    key_parts = meta.id.split('/');
-    emit(key_parts[0], key_parts[1]);
-  }
-}
-
-jids
-=====
-function (doc, meta) {
-  if (meta.id.indexOf('/') === -1 && doc.load){
-    emit(meta.id, null)
-  }
-}
-
 '''
+
 import logging
 
 try:
@@ -63,11 +38,8 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
-# TODO: try to import faster json libs, and use them with:
-# >>> couchbase.set_json_converters(yajl.dumps, yajl.loads)
-
-
 log = logging.getLogger(__name__)
+
 
 # Define the module's virtual name
 __virtualname__ = 'couchbase'
@@ -77,8 +49,16 @@ def __virtual__():
     if not HAS_DEPS:
         return False
 
-    # TODO: verify bucket exists
-    # TODO: verify/create view
+    # try to load some faster json libraries. In order of fastest to slowest
+    for fast_json in ('ujson', 'yajl'):
+        try:
+            mod = __import__(fast_json)
+            couchbase.set_json_converters(mod.dumps, mod.loads)
+            log.info('loaded {0} json lib'.format(fast_json))
+            break
+        except ImportError:
+            continue
+
     return __virtualname__
 
 
@@ -101,8 +81,8 @@ def _get_connection():
     if COUCHBASE_CONN is None:
         opts = _get_options()
         COUCHBASE_CONN = couchbase.Couchbase.connect(host=opts['host'],
-                                           port=opts['port'],
-                                           bucket=opts['bucket'])
+                                                     port=opts['port'],
+                                                     bucket=opts['bucket'])
     return COUCHBASE_CONN
 
 
