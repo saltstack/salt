@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The core bahaviuors ued by minion and master
+The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
