@@ -19,13 +19,11 @@ try:
 except ImportError:  # This is in case windows minion is importing
     pass
 import resource
-import subprocess
 import multiprocessing
 import sys
 
 # Import third party libs
 import zmq
-import yaml
 from M2Crypto import RSA
 
 # Import salt libs
@@ -876,34 +874,6 @@ class AESFuncs(object):
             return {}
         load.pop('tok')
         ret = {}
-        # The old ext_nodes method is set to be deprecated in 0.10.4
-        # and should be removed within 3-5 releases in favor of the
-        # "master_tops" system
-        if self.opts['external_nodes']:
-            if not salt.utils.which(self.opts['external_nodes']):
-                log.error(('Specified external nodes controller {0} is not'
-                           ' available, please verify that it is installed'
-                           '').format(self.opts['external_nodes']))
-                return {}
-            cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-            ndata = yaml.safe_load(
-                    subprocess.Popen(
-                        cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])
-            if 'environment' in ndata:
-                saltenv = ndata['environment']
-            else:
-                saltenv = 'base'
-
-            if 'classes' in ndata:
-                if isinstance(ndata['classes'], dict):
-                    ret[saltenv] = list(ndata['classes'])
-                elif isinstance(ndata['classes'], list):
-                    ret[saltenv] = ndata['classes']
-                else:
-                    return ret
         # Evaluate all configured master_tops interfaces
 
         opts = {}
@@ -1152,7 +1122,7 @@ class AESFuncs(object):
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
 
         if 'loc' in load and load['loc'] < 0:
-            log.error('Should not happen: load[loc] < 0')
+            log.error('Invalid file pointer: load[loc] < 0')
             return False
 
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
@@ -1505,7 +1475,7 @@ class AESFuncs(object):
                 load['timeout'] = int(clear_load['timeout'])
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
-                        clear_load['tmo'])
+                        clear_load['timeout'])
                 log.warn(msg)
                 return {}
         if 'tgt_type' in clear_load:
