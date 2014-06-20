@@ -78,7 +78,7 @@ if WITH_SETUPTOOLS is False:
     # pylint: enable=E0611
     warnings.filterwarnings(
         'ignore',
-        'Unknown distribution option: \'(tests_require|install_requires|zip_safe)\'',
+        'Unknown distribution option: \'(extras_require|tests_require|install_requires|zip_safe)\'',
         UserWarning,
         'distutils.dist'
     )
