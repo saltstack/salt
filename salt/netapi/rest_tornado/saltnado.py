@@ -787,7 +787,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                     # TODO: list??
                     f_call['kwargs']['expr_form'] = 'glob'
                     pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-                    print pub_data
                     tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
                     future = self.application.event_listener.get_event(self, tag=tag)
                     inflight_futures.append(future)
@@ -798,7 +797,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                     event = finished_future.result()
                 except TimeoutException:
                     break
-                print event
                 chunk_ret[event['data']['id']] = event['data']['return']
                 inflight_futures.remove(finished_future)
 
