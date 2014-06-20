@@ -121,7 +121,7 @@ def _get_ttl():
     '''
     Return the TTL that we should store our objects with
     '''
-    return __opts__['keep_jobs'] * 60 * 60, #  keep_jobs is in hours
+    return __opts__['keep_jobs'] * 60 * 60,  # keep_jobs is in hours
 
 
 #TODO: add to returner docs-- this is a new one
