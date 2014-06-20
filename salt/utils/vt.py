@@ -46,6 +46,7 @@ else:
 
 # Import salt libs
 from salt._compat import string_types
+from salt.log.setup import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
@@ -98,8 +99,11 @@ class Terminal(object):
 
                  # Logging options
                  log_stdin=None,
+                 log_stdin_level='debug',
                  log_stdout=None,
+                 log_stdout_level='debug',
                  log_stderr=None,
+                 log_stderr_level='debug',
 
                  # sys.stdXYZ streaming options
                  stream_stdout=None,
@@ -214,6 +218,7 @@ class Terminal(object):
 
         # ----- Setup Logging ----------------------------------------------->
         # Setup logging after spawned in order to have a pid value
+        self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
             self.stdin_logger = logging.getLogger(
                 '{0}.{1}.PID-{2}.STDIN'.format(
@@ -221,15 +226,15 @@ class Terminal(object):
                 )
             )
         elif log_stdin is not None:
-            if not hasattr(log_stdin, 'debug'):
+            if not isinstance(log_stdin, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stdin\' needs to have at least the \'debug()\' '
-                    'method.'
+                    '\'log_stdin\' needs to subclass `logging.Logger`'
                 )
             self.stdin_logger = log_stdin
         else:
             self.stdin_logger = None
 
+        self.stdout_logger_level = LOG_LEVELS.get(log_stdout_level, log_stdout_level)
         if log_stdout is True:
             self.stdout_logger = logging.getLogger(
                 '{0}.{1}.PID-{2}.STDOUT'.format(
@@ -237,15 +242,15 @@ class Terminal(object):
                 )
             )
         elif log_stdout is not None:
-            if not hasattr(log_stdout, 'debug'):
+            if not isinstance(log_stdout, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stdout\' needs to have at least the \'debug()\' '
-                    'method.'
+                    '\'log_stdout\' needs to subclass `logging.Logger`'
                 )
             self.stdout_logger = log_stdout
         else:
             self.stdout_logger = None
 
+        self.stderr_logger_level = LOG_LEVELS.get(log_stderr_level, log_stderr_level)
         if log_stderr is True:
             self.stderr_logger = logging.getLogger(
                 '{0}.{1}.PID-{2}.STDERR'.format(
@@ -253,10 +258,9 @@ class Terminal(object):
                 )
             )
         elif log_stderr is not None:
-            if not hasattr(log_stderr, 'debug'):
+            if not isinstance(log_stderr, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stderr\' needs to have at least the \'debug()\' '
-                    'method.'
+                    '\'log_stderr\' needs to subclass `logging.Logger`'
                 )
             self.stderr_logger = log_stderr
         else:
@@ -289,9 +293,12 @@ class Terminal(object):
             maxsize = 1
         return self._recv(maxsize)
 
-    def close(self, force=False):
+    def close(self, terminate=True, kill=False):
         '''
-        Close the communication with the terminal's child and terminate it.
+        Close the communication with the terminal's child.
+        If ``terminate`` is ``True`` then additionally try to terminate the
+        terminal, and if ``kill`` is also ``True``, kill the terminal if
+        terminating it was not enough.
         '''
         if not self.closed:
             if self.child_fd is not None:
@@ -299,8 +306,9 @@ class Terminal(object):
             if self.child_fde is not None:
                 os.close(self.child_fde)
             time.sleep(0.1)
-            if not self.terminate(force):
-                raise TerminalException('Failed to terminate child process.')
+            if terminate:
+                if not self.terminate(kill):
+                    raise TerminalException('Failed to terminate child process.')
             self.child_fd = self.child_fde = None
             self.closed = True
 
@@ -533,7 +541,7 @@ class Terminal(object):
 
             try:
                 if self.stdin_logger:
-                    self.stdin_logger.debug(data)
+                    self.stdin_logger.log(self.stdin_logger_level, data)
                 written = os.write(self.child_fd, data)
             except OSError as why:
                 if why.errno == errno.EPIPE:  # broken pipe
@@ -621,7 +629,7 @@ class Terminal(object):
                             if stripped.startswith(os.linesep):
                                 stripped = stripped[len(os.linesep):]
                             if stripped:
-                                self.stderr_logger.debug(stripped)
+                                self.stderr_logger.log(self.stderr_logger_level, stripped)
                 except OSError:
                     os.close(self.child_fde)
                     self.child_fde = None
@@ -651,7 +659,7 @@ class Terminal(object):
                             if stripped.startswith(os.linesep):
                                 stripped = stripped[len(os.linesep):]
                             if stripped:
-                                self.stdout_logger.debug(stripped)
+                                self.stdout_logger.log(self.stdout_logger_level, stripped)
                 except OSError:
                     os.close(self.child_fd)
                     self.child_fd = None
@@ -818,6 +826,8 @@ class Terminal(object):
             returns True if the child was terminated. This returns False if the
             child could not be terminated.
             '''
+            if not self.closed:
+                self.close(terminate=False)
 
             if not self.isalive():
                 return True
