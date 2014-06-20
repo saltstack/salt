@@ -903,29 +903,15 @@ class AESFuncs(object):
             return {}
         return self.masterapi._mine(load, skip_verify=True)
 
-    def _mine_delete(self, load, skip_verify=False):
+    def _mine_delete(self, load):
         '''
         Allow the minion to delete a specific function from its own mine
         '''
         load = self.__verify_load(load, ('id', 'fun', 'tok'))
         if load is False:
             return {}
-        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                return True
-            datap = os.path.join(cdir, 'mine.p')
-            if os.path.isfile(datap):
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        mine_data = self.serial.load(fp_)
-                    if isinstance(mine_data, dict):
-                        if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+b') as fp_:
-                                fp_.write(self.serial.dumps(mine_data))
-                except OSError:
-                    return False
-        return True
+        else:
+            return self.masterapi._mine_delete(load)
 
     def _mine_flush(self, load):
         '''
@@ -1113,34 +1099,11 @@ class AESFuncs(object):
         '''
         Execute a runner from a minion, return the runner's function data
         '''
-        if 'peer_run' not in self.opts:
-            return {}
-        if not isinstance(self.opts['peer_run'], dict):
-            return {}
         load = self.__verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
         if load is False:
             return {}
-        perms = set()
-        for match in self.opts['peer_run']:
-            if re.match(match, clear_load['id']):
-                # This is the list of funcs/modules!
-                if isinstance(self.opts['peer_run'][match], list):
-                    perms.update(self.opts['peer_run'][match])
-        good = False
-        for perm in perms:
-            if re.match(perm, clear_load['fun']):
-                good = True
-        if not good:
-            return {}
-        # Prepare the runner object
-        opts = {'fun': clear_load['fun'],
-                'arg': clear_load['arg'],
-                'id': clear_load['id'],
-                'doc': False,
-                'conf_file': self.opts['conf_file']}
-        opts.update(self.opts)
-        runner = salt.runner.Runner(opts)
-        return runner.run()
+        else:
+            return self.masterapi.minion_runner(clear_load)
 
     def pub_ret(self, load):
         '''

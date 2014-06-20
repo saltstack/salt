@@ -420,7 +420,22 @@ class RemoteFuncs(object):
         '''
         if 'id' not in load or 'fun' not in load:
             return False
-        return self.masterapi._mine_delete(load, skip_verify=True)
+        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
+            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            if not os.path.isdir(cdir):
+                return True
+            datap = os.path.join(cdir, 'mine.p')
+            if os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        mine_data = self.serial.load(fp_)
+                    if isinstance(mine_data, dict):
+                        if mine_data.pop(load['fun'], False):
+                            with salt.utils.fopen(datap, 'w+b') as fp_:
+                                fp_.write(self.serial.dumps(mine_data))
+                except OSError:
+                    return False
+        return True
 
 
     def _mine_flush(self, load, skip_verify=False):
