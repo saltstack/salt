@@ -32,8 +32,10 @@ framer bootstrap be active first join
             do salt raet road stack joiner per inode ".raet.udp.stack."
         recur
             do salt raet road stack joined per inode ".raet.udp.stack."
+            do salt raet road stack rejected per inode ".raet.udp.stack."
 
         go next if joined in .raet.udp.stack.status
+        go abort if rejected in .raet.udp.stack.status
         #go abort if elapsed >= 10
 
     frame joined
@@ -48,7 +50,7 @@ framer bootstrap be active first join
             do salt raet road stack allowed per inode ".raet.udp.stack."
 
         go next if allowed in .raet.udp.stack.status
-        go abort if elapsed >= 5
+        #go abort if elapsed >= 5
 
     frame allowed
         print Allowed
