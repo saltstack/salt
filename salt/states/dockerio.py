@@ -629,7 +629,7 @@ def running(name, container=None, port_bindings=None, binds=None,
         e.g. nginx <- static-files
     '''
     if not container and name:
-       container = name
+        container = name
     is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
