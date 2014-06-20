@@ -823,55 +823,6 @@ class LocalFuncs(object):
         '''
         Send a master control function back to the runner system
         '''
-        # All runner ops pass through eauth
-        if 'token' in load:
-            try:
-                token = self.loadauth.get_tok(load['token'])
-            except Exception as exc:
-                msg = 'Exception occurred when generating auth token: {0}'.format(
-                        exc)
-                log.error(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if not token:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.runner_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
-                    load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['name'])
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-
-            try:
-                fun = load.pop('fun')
-                runner_client = salt.runner.RunnerClient(self.opts)
-                return runner_client.async(
-                        fun,
-                        load.get('kwarg', {}),
-                        token['name'])
-            except Exception as exc:
-                log.error('Exception occurred while '
-                        'introspecting {0}: {1}'.format(fun, exc))
-                return dict(error=dict(name=exc.__class__.__name__,
-                                       args=exc.args,
-                                       message=exc.message))
-
         if 'eauth' not in load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(load.get('username', 'UNKNOWN'))
