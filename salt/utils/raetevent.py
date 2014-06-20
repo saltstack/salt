@@ -213,3 +213,14 @@ class SaltEvent(object):
 
     def __del__(self):
         self.destroy()
+
+    def  destroy(self):
+        '''
+        Need to fix this
+        Exception AttributeError: "'SaltEvent' object has no attribute 'destroy'"
+        in <bound method SaltEvent.__del__ of
+        <salt.utils.raetevent.SaltEvent object at 0x103f5c990>> ignored
+
+
+        '''
+        pass
