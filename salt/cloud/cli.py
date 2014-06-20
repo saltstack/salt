@@ -44,9 +44,12 @@ class SaltCloud(parsers.SaltCloudParser):
         salt_master_user = self.config.get('user', salt.utils.get_user())
         if salt_master_user is not None and not check_user(salt_master_user):
             self.error(
-                'salt-cloud needs to run as the same user as salt-master, '
-                '{0!r}, but was unable to switch credentials. Please run '
-                'salt-cloud as root or as {0!r}'.format(salt_master_user)
+                'If salt-cloud is running on a master machine, salt-cloud '
+                'needs to run as the same user as the salt-master, {0!r}. If '
+                'salt-cloud is not running on a salt-master, the appropriate '
+                'write permissions must be granted to /etc/salt/. Please run '
+                'salt-cloud as root, {0!r}, or change permissions for '
+                '/etc/salt/.'.format(salt_master_user)
             )
 
         try:

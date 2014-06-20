@@ -173,7 +173,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
     if not opts:
         opts = ''
-    cmd = 'git clone {0} {1} {2}'.format(repository, cwd, opts)
+    cmd = 'git clone {0} {1!r} {2}'.format(repository, cwd, opts)
 
     return _git_run(cmd, runas=user, identity=identity)
 

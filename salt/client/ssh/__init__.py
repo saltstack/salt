@@ -749,10 +749,10 @@ class Single(object):
         return stdout, stderr, retcode
 
     def categorize_shim_errors(self, stdout, stderr, retcode):
-        if re.search(RSTR_RE, stdout):
+        if re.search(RSTR_RE, stdout) and stdout != RSTR+'\n':
             # RSTR was found in stdout which means that the shim
             # functioned without *errors* . . . but there may be shim
-            # commands
+            # commands, unless the only thing we found is RSTR
             return None
 
         if re.search(RSTR_RE, stderr):

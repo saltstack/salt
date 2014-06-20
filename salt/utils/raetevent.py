@@ -205,3 +205,11 @@ class SaltEvent(object):
                                        'job'))
                 except Exception:
                     pass
+
+    def delete(self):
+        self.stack.server.close()
+        self.stack.clearLocal()
+        self.stack.clearRemoteKeeps()
+
+    def __del__(self):
+        self.destroy()

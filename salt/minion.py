@@ -465,8 +465,9 @@ class MultiMinion(MinionBase):
             s_opts['master'] = master
             try:
                 minions.append(Minion(s_opts, 5, False))
-            except SaltClientError:
-                minions.append(s_opts)
+            except SaltClientError as exc:
+                log.error('Error while bring up minion for multi-master. Is master responding?')
+                raise
         return minions
 
     def minions(self):
@@ -490,11 +491,7 @@ class MultiMinion(MinionBase):
         Bind to the masters
         '''
         self._prepare_minion_event_system()
-
         self.poller.register(self.epull_sock, zmq.POLLIN)
-
-        module_refresh = False
-        pillar_refresh = False
 
         # Prepare the minion generators
         minions = self.minions()
@@ -504,6 +501,8 @@ class MultiMinion(MinionBase):
         max_wait = auth_wait * 6
 
         while True:
+            module_refresh = False
+            pillar_refresh = False
             for minion in minions.values():
                 if isinstance(minion, dict):
                     minion = minion['minion']
@@ -558,7 +557,7 @@ class Minion(MinionBase):
     and loads all of the functions into the minion
     '''
 
-    def __init__(self, opts, timeout=60, safe=True):
+    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -640,7 +639,6 @@ class Minion(MinionBase):
                       '(Likely not a problem)'.format(self.opts['id']))
 
         # __init__() from MinionBase is called in Minion.eval_master()
-        # pylint: disable=W0231
 
     def eval_master(self,
                     opts,

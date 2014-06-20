@@ -144,6 +144,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  'SSH server on your machine. In certain environments, this '
                  'may be insecure! Default: False'
         )
+        self.test_selection_group.add_option(
+            '-A',
+            '--api-tests',
+            dest='api',
+            action='store_true',
+            default=False,
+            help='Run salt-api tests'
+        )
         self.output_options_group.add_option(
             '--no-colors',
             '--no-colours',
@@ -173,10 +181,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         # Set test suite defaults if no specific suite options are provided
         if not any((self.options.module, self.options.client,
                     self.options.shell, self.options.unit, self.options.state,
-                    self.options.runner, self.options.loader,
-                    self.options.name, self.options.outputter,
-                    self.options.cloud_provider_tests,
-                    self.options.fileserver)):
+                    self.options.runner, self.options.loader, self.options.name,
+                    self.options.outputter, self.options.cloud_provider_tests,
+                    self.options.fileserver, self.options.api)):
             self.options.module = True
             self.options.client = True
             self.options.shell = True
@@ -186,6 +193,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.loader = True
             self.options.outputter = True
             self.options.fileserver = True
+            self.options.api = True
 
         self.start_coverage(
             branch=True,
@@ -280,7 +288,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.state, self.options.loader,
                     self.options.outputter, self.options.name,
                     self.options.cloud_provider_tests,
-                    self.options.fileserver]):
+                    self.options.api, self.options.fileserver]):
             return status
 
         with TestDaemon(self):
@@ -308,6 +316,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('fileserver', 'Fileserver'))
             if self.options.cloud_provider_tests:
                 status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
+            if self.options.api:
+                status.append(self.run_integration_suite('netapi', 'NetAPI'))
         return status
 
     def run_unit_tests(self):
