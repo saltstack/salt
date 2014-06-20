@@ -206,21 +206,10 @@ class SaltEvent(object):
                 except Exception:
                     pass
 
-    def delete(self):
+    def destroy(self):
         self.stack.server.close()
         self.stack.clearLocal()
         self.stack.clearRemoteKeeps()
 
     def __del__(self):
         self.destroy()
-
-    def  destroy(self):
-        '''
-        Need to fix this
-        Exception AttributeError: "'SaltEvent' object has no attribute 'destroy'"
-        in <bound method SaltEvent.__del__ of
-        <salt.utils.raetevent.SaltEvent object at 0x103f5c990>> ignored
-
-
-        '''
-        pass
