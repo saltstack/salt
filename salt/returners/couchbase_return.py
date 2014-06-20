@@ -106,6 +106,34 @@ def _get_connection():
     return COUCHBASE_CONN
 
 
+DESIGN_NAME = 'couchbase_returner'
+VERIFIED_VIEWS = False
+
+
+def _verify_views():
+    '''
+    verify that you have the views you need
+    '''
+    global VERIFIED_VIEWS
+    if VERIFIED_VIEWS:
+        return
+    cb = _get_connection()
+    ddoc = {'views': {'jids': {'map': "function (doc, meta) { if (meta.id.indexOf('/') === -1 && doc.load){ emit(meta.id, null) } }"},
+                      'jid_returns': {'map': "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts = meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"}
+                      }
+            }
+
+    try:
+        curr_ddoc = cb.design_get(DESIGN_NAME, use_devmode=False).value
+        if curr_ddoc['views'] == ddoc['views']:
+            VERIFIED_VIEWS = True
+            return
+    except couchbase.exceptions.HTTPError:
+        pass
+
+    cb.design_create(DESIGN_NAME, ddoc, use_devmode=False)
+    VERIFIED_VIEWS = True
+
 
 #TODO: add to returner docs-- this is a new one
 def prep_jid(nocache=False):
@@ -165,6 +193,7 @@ def returner(load):
             )
         return False
 
+
 def save_load(jid, clear_load):
     '''
     Save the load to the specified jid
@@ -196,7 +225,6 @@ def save_load(jid, clear_load):
                )
 
 
-
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
@@ -215,32 +243,35 @@ def get_load(jid):
 
     return ret
 
+
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
     cb = _get_connection()
+    _verify_views()
 
     ret = {}
 
-    for result in cb.query('jid_returns', 'jid_returns', key=str(jid), include_docs=True):
+    for result in cb.query(DESIGN_NAME, 'jid_returns', key=str(jid), include_docs=True):
         ret[result.value] = result.doc.value
 
     return ret
+
 
 def get_jids():
     '''
     Return a list of all job ids
     '''
     cb = _get_connection()
+    _verify_views()
 
     ret = {}
 
-    for result in cb.query('jids', 'jids', include_docs=True):
+    for result in cb.query(DESIGN_NAME, 'jids', include_docs=True):
         ret[result.key] = _format_jid_instance(result.key, result.doc.value['load'])
 
     return ret
-
 
 
 def _format_job_instance(job):
