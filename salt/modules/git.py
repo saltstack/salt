@@ -800,7 +800,7 @@ def stash(cwd, opts=None, user=None):
     return _git_run('git stash {0}'.format(opts), cwd=cwd, runas=user)
 
 
-def config_set(setting_name, setting_value, cwd=None, user=None, is_global=False):
+def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_global=False):
     '''
     Set a key in the git configuration file (.git/config) of the repository or
     globally.
@@ -829,6 +829,8 @@ def config_set(setting_name, setting_value, cwd=None, user=None, is_global=False
 
         salt '*' git.config_set user.email me@example.com /path/to/repo
     '''
+    if setting_name is None or setting_value is None:
+        raise TypeError
     if cwd is None and not is_global:
         raise SaltInvocationError('Either `is_global` must be set to True or '
                                   'you must provide `cwd`')
@@ -843,7 +845,7 @@ def config_set(setting_name, setting_value, cwd=None, user=None, is_global=False
                     cwd=cwd, runas=user)
 
 
-def config_get(setting_name, cwd=None, user=None):
+def config_get(cwd=None, setting_name=None, user=None):
     '''
     Get a key or keys from the git configuration file (.git/config).
 
@@ -866,6 +868,8 @@ def config_get(setting_name, cwd=None, user=None):
         salt '*' git.config_get user.email
         salt '*' git.config_get user.name cwd=/path/to/repo user=arthur
     '''
+    if setting_name is None:
+        raise TypeError
     _check_git()
 
     return _git_run('git config {0}'.format(setting_name), cwd=cwd, runas=user)
