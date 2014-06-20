@@ -94,6 +94,10 @@
 # to False
 #color: True
 
+# Do not strip off the colored output from nested results and states outputs
+# (true by default)
+# strip_colors: false
+
 # Set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/master
 
