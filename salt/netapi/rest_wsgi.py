@@ -83,7 +83,7 @@ Usage examples
 
         {"return": [{"ms--4": true, "ms--3": true, "ms--2": true, "ms--1": true, "ms--0": true}]}
 
-    **Example request** for an asyncronous ``test.ping``::
+    **Example request** for an asynchronous ``test.ping``::
 
         % curl -sS -i \\
                 -H 'Content-Type: application/json' \\
