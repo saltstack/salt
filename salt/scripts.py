@@ -46,7 +46,7 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
 
 def salt_master():
     '''
-    Start the salt-master.
+    Start the salt master.
     '''
     master = salt.Master()
     master.start()
@@ -54,27 +54,18 @@ def salt_master():
 
 def salt_minion():
     '''
-    Kick off a salt minion daemon.
+    Start the salt minion.
     '''
     if '' in sys.path:
         sys.path.remove('')
 
-    reconnect = True
-    while reconnect:
-        reconnect = False
-        minion = salt.Minion()
-        ret = minion.start()
-        if ret == 'reconnect':
-            del minion
-            minion = None
-            # give extra time for resources like ZMQ to close.
-            time.sleep(10)
-            reconnect = True
+    minion = salt.Minion()
+    minion.start()
 
 
 def salt_syndic():
     '''
-    Kick off a salt syndic daemon.
+    Start the salt syndic.
     '''
     pid = os.getpid()
     try:
