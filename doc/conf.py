@@ -327,6 +327,7 @@ man_pages = [
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
     ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
     ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
+    ('ref/cli/salt-api', 'salt-api', 'salt-api Command', authors, 1),
 ]
 
 
