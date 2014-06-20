@@ -7,7 +7,6 @@ This module contains the function calls to execute command line scripts
 from __future__ import print_function
 import os
 import sys
-import time
 import traceback
 import logging
 

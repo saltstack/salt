@@ -162,7 +162,6 @@ class Minion(parsers.MinionOptionParser):
 
             super(YourSubClass, self).prepare()
         '''
-        
         if not hasattr(self, 'config'):
             self.parse_args()
 
