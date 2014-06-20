@@ -1653,6 +1653,18 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             action='store_true',
             help=('Display summary information about a salt command')
         )
+        self.add_option(
+            '--username',
+            dest='username',
+            nargs=1,
+            help=('Username for external authentication')
+        )
+        self.add_option(
+            '--password',
+            dest='password',
+            nargs=1,
+            help=('Password for external authentication')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
