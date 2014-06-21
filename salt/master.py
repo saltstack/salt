@@ -478,10 +478,6 @@ class ReqServer(object):
                                            self.master_key,
                                            self.key,
                                            self.crypticle,
-<<<<<<< HEAD
-=======
-                                           tracker=self.tracker
->>>>>>> de0b66d... Massive pylint
                                            )
                                    )
 
