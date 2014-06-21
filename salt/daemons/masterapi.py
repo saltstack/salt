@@ -437,7 +437,6 @@ class RemoteFuncs(object):
                     return False
         return True
 
-
     def _mine_flush(self, load, skip_verify=False):
         '''
         Allow the minion to delete all of its own mine contents
@@ -648,7 +647,6 @@ class RemoteFuncs(object):
                 return {}
         else:
             return self.masterapi.pub_ret(load, skip_verify=True)
-
 
     def minion_pub(self, load):
         '''
