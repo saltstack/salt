@@ -7,7 +7,6 @@
 '''
 
 # Import Salt Testing libs
-from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
@@ -33,7 +32,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
         '''
         # find the globals
         global_vars = None
-        for key, val in mod_dict.iteritems():
+        for val in mod_dict.itervalues():
             if hasattr(val, '__globals__'):
                 global_vars = val.__globals__
                 break
@@ -129,7 +128,6 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __opts__ # Minion configuration options
         '''
         self._verify_globals(salt.loader.render(self.master_opts, {}))
-
 
 
 if __name__ == '__main__':
