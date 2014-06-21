@@ -478,6 +478,10 @@ class ReqServer(object):
                                            self.master_key,
                                            self.key,
                                            self.crypticle,
+<<<<<<< HEAD
+=======
+                                           tracker=self.tracker
+>>>>>>> de0b66d... Massive pylint
                                            )
                                    )
 
@@ -1277,7 +1281,7 @@ class ClearFuncs(object):
             rend=False)
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
-        self.masterapi = salt.masterapi.LocalFuncs(opts, key)
+        self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
 
     def __check_permissions(self, filename):
         '''
