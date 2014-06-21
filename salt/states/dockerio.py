@@ -556,7 +556,7 @@ def script(*args, **kw):
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
             privileged=False, dns=None, volumes_from=None,
-            check_is_running=True):
+            network_mode=None, check_is_running=True):
     '''
     Ensure that a container is running. (`docker inspect`)
 
@@ -623,6 +623,16 @@ def running(name, container=None, port_bindings=None, binds=None,
             - dns:
                 - name_other_container
 
+    network_mode
+        - 'bridge': creates a new network stack for the container on the docker bridge
+        - 'none': no networking for this container
+        - 'container:[name|id]': reuses another container network stack)
+        - 'host': use the host network stack inside the container
+
+        .. code-block:: yaml
+
+            - network_mode: host
+
     check_is_running
         Enable checking if a container should run or not.
         Useful for data-only containers that must be linked to another one.
@@ -639,7 +649,7 @@ def running(name, container=None, port_bindings=None, binds=None,
             container, binds=binds, port_bindings=port_bindings,
             lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
             links=links, privileged=privileged,
-            dns=dns, volumes_from=volumes_from,
+            dns=dns, volumes_from=volumes_from, network_mode=network_mode,
         )
         if check_is_running:
             is_running = __salt__['docker.is_running'](container)
@@ -651,9 +661,13 @@ def running(name, container=None, port_bindings=None, binds=None,
                     changes={name: True})
             else:
                 return _invalid(
-                    comment=('Container {0!r}'
-                            ' cannot be started\n{0!s}').format(container,
-                                                                started['out']))
+                    comment=(
+                        'Container {0!r} cannot be started\n{0!s}'
+                        .format(
+                            container,
+                            started['out']
+                        )
+                    )
         else:
             return _valid(
                 comment='Container {0!r} started.\n'.format(container),
