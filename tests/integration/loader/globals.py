@@ -32,7 +32,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
         '''
         # find the globals
         global_vars = None
-        for key, val in mod_dict.iteritems():
+        for val in mod_dict.itervalues():
             if hasattr(val, '__globals__'):
                 global_vars = val.__globals__
                 break
