@@ -721,6 +721,15 @@ def bootstrap(directory='.',
         bootstrap_args += ' --accept-buildout-test-releases'
     if config and '"-c"' in content:
         bootstrap_args += ' -c {0}'.format(config)
+    # be sure that the bootstrap belongs to the running user
+    try:
+        if runas:
+            uid = __salt__['user.info'](runas)['uid']
+            gid = __salt__['user.info'](runas)['gid']
+            os.chown('bootstrap.py', uid, gid)
+    except (IOError, OSError):
+        # dont block here, try to execute it if can pass
+        pass
     cmd = '{0} bootstrap.py {1}'.format(python, bootstrap_args)
     ret = _Popen(cmd, directory=directory, runas=runas, env=env)
     output = ret['output']
