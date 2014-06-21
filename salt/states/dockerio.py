@@ -665,9 +665,10 @@ def running(name, container=None, port_bindings=None, binds=None,
                         'Container {0!r} cannot be started\n{0!s}'
                         .format(
                             container,
-                            started['out']
+                            started['out'],
                         )
                     )
+                )
         else:
             return _valid(
                 comment='Container {0!r} started.\n'.format(container),
