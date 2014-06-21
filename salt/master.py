@@ -475,7 +475,6 @@ class ReqServer(object):
         for ind in range(int(self.opts['worker_threads'])):
             self.work_procs.append(MWorker(self.opts,
                                            self.master_key,
-                                           self.master_key,
                                            self.key,
                                            self.crypticle,
                                            )
