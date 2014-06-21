@@ -518,9 +518,20 @@ class LocalClient(object):
         if not pub_data:
             return pub_data
 
-        return self.get_returns(pub_data['jid'],
-                                pub_data['minions'],
-                                self._get_timeout(timeout))
+        ret = {}
+        for fn_ret in self.get_cli_event_returns(
+                pub_data['jid'],
+                pub_data['minions'],
+                self._get_timeout(timeout),
+                tgt,
+                expr_form,
+                **kwargs):
+
+            if fn_ret:
+                for mid, data in fn_ret.items():
+                    ret[mid] = data.get('ret', {})
+
+        return ret
 
     def cmd_cli(
             self,
