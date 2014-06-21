@@ -1149,7 +1149,7 @@ class AESFuncs(object):
         if not self.__verify_minion_publish(clear_load):
             return {}
         else:
-            return self.masterapi.minion_pub(load)
+            return self.masterapi.minion_pub(clear_load)
 
     def minion_publish(self, clear_load):
         '''
