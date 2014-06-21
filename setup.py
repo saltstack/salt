@@ -407,19 +407,13 @@ class Install(install):
                     self.salt_transport
                 )
             )
-        if self.salt_transport == 'none':
+        elif self.salt_transport == 'none':
             for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
                 if requirement not in self.distribution.install_requires:
                     continue
                 self.distribution.install_requires.remove(requirement)
-            return
 
-        if self.salt_transport in ('zeromq', 'both'):
-            self.distribution.install_requires.extend(
-                _parse_requirements_file(SALT_ZEROMQ_REQS)
-            )
-
-        if self.salt_transport in ('raet', 'both'):
+        elif self.salt_transport in ('raet', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_RAET_REQS)
             )
@@ -550,7 +544,9 @@ SETUP_KWARGS = {'name': NAME,
                                ],
                 # Required for esky builds, ZeroMQ or RAET deps will be added
                 # at install time
-                'install_requires': _parse_requirements_file(SALT_REQS),
+                'install_requires':
+                    _parse_requirements_file(SALT_REQS) +
+                    _parse_requirements_file(SALT_ZEROMQ_REQS),
                 'extras_require': {
                     'RAET': _parse_requirements_file(SALT_RAET_REQS),
                     'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)
