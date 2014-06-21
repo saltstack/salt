@@ -226,7 +226,7 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
             if stack.remotes:
                 rejected = (stack.remotes.values()[0].acceptance
                                 == raeting.acceptances.rejected)
-            else:  #no remotes so assume rejected
+            else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
 
