@@ -49,7 +49,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
     'BOOTSTRAP_SCRIPT_VERSION',
     # If no bootstrap-script version was provided from the environment, let's
     # provide the one we define.
-    'v2014.06.19'
+    'v2014.06.21'
 )
 
 # Store a reference to the executing platform
