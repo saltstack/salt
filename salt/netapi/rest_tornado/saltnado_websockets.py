@@ -304,7 +304,7 @@ import logging
 logger = logging.getLogger()
 
 
-class AllEventsHandler(tornado.websocket.WebSocketHandler):
+class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W0232
     '''
     Server side websocket handler.
     '''
@@ -362,7 +362,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):
         self.close()
 
 
-class FormattedEventsHandler(AllEventsHandler):
+class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0232
 
     @tornado.gen.coroutine
     def on_message(self, message):
