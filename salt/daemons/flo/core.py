@@ -51,6 +51,7 @@ except ImportError:
     pass
 log = logging.getLogger(__name__)
 
+
 class SaltRaetRoadStack(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -225,7 +226,8 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
             if stack.remotes:
                 rejected = (stack.remotes.values()[0].acceptance
                                 == raeting.acceptances.rejected)
-            else: #no remotes so assume rejected
+            else: 
+		#no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
 
@@ -281,6 +283,7 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
             if stack.remotes:
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
+
 
 class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
     '''
