@@ -2333,3 +2333,16 @@ def total_seconds(td):
     method which does not exist in versions of Python < 2.7.
     '''
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
+def import_json():
+    '''
+    Import a json module, starting with the quick ones and going down the list)
+    '''
+    for fast_json in ('ujson', 'yajl', 'json'):
+        try:
+            mod = __import__(fast_json)
+            log.info('loaded {0} json lib'.format(fast_json))
+            return mod
+        except ImportError:
+            continue
