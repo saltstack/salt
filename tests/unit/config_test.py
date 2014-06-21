@@ -524,7 +524,8 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                           profiles_config_path='foo', profiles_config='bar')
 
     @patch('salt.config.load_config', MagicMock(return_value={}))
-    @patch('salt.config.apply_cloud_config', MagicMock(return_value={'providers': 'foo'}))
+    @patch('salt.config.apply_cloud_config',
+           MagicMock(return_value={'providers': 'foo'}))
     def test_cloud_config_providers_in_opts(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -534,7 +535,8 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                           providers_config='bar')
 
     @patch('salt.config.load_config', MagicMock(return_value={}))
-    @patch('salt.config.apply_cloud_config', MagicMock(return_value={'providers': 'foo'}))
+    @patch('salt.config.apply_cloud_config',
+           MagicMock(return_value={'providers': 'foo'}))
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_cloud_config_providers_in_opts_path(self):
         '''
@@ -686,7 +688,10 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                          'provider': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'user': 'user@mycorp.com'}}}
-        self.assertEqual(ret, sconfig.apply_cloud_providers_config(overrides, defaults=DEFAULT))
+        self.assertEqual(ret,
+                         sconfig.apply_cloud_providers_config(
+                             overrides,
+                             defaults=DEFAULT))
 
     def test_apply_cloud_providers_config_extend_multiple(self):
         '''
@@ -820,6 +825,79 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                           sconfig.apply_cloud_providers_config,
                           overrides,
                           DEFAULT)
+
+    def test_is_provider_configured_no_alias(self):
+        '''
+        Tests when provider alias is not in opts
+        '''
+        opts = {'providers': 'test'}
+        provider = 'foo:bar'
+        self.assertFalse(sconfig.is_provider_configured(opts, provider))
+
+    def test_is_provider_configured_no_driver(self):
+        '''
+        Tests when provider driver is not in opts
+        '''
+        opts = {'providers': {'foo': 'baz'}}
+        provider = 'foo:bar'
+        self.assertFalse(sconfig.is_provider_configured(opts, provider))
+
+    def test_is_provider_configured_key_is_none(self):
+        '''
+        Tests when a required configuration key is not set
+        '''
+        opts = {'providers': {'foo': {'bar': {'api_key': None}}}}
+        provider = 'foo:bar'
+        self.assertFalse(
+            sconfig.is_provider_configured(opts,
+                                           provider,
+                                           required_keys=('api_key',)))
+
+    def test_is_provider_configured_success(self):
+        '''
+        Tests successful cloud provider configuration
+        '''
+        opts = {'providers': {'foo': {'bar': {'api_key': 'baz'}}}}
+        provider = 'foo:bar'
+        ret = {'api_key': 'baz'}
+        self.assertEqual(
+            sconfig.is_provider_configured(opts,
+                                           provider,
+                                           required_keys=('api_key',)), ret)
+
+    def test_is_provider_configured_multiple_driver_not_provider(self):
+        '''
+        Tests when the drive is not the same as the provider when
+        searching through multiple providers
+        '''
+        opts = {'providers': {'foo': {'bar': {'api_key': 'baz'}}}}
+        provider = 'foo'
+        self.assertFalse(sconfig.is_provider_configured(opts, provider))
+
+    def test_is_provider_configured_multiple_key_is_none(self):
+        '''
+        Tests when a required configuration key is not set when
+        searching through multiple providers
+        '''
+        opts = {'providers': {'foo': {'bar': {'api_key': None}}}}
+        provider = 'bar'
+        self.assertFalse(
+            sconfig.is_provider_configured(opts,
+                                           provider,
+                                           required_keys=('api_key',)))
+
+    def test_is_provider_configured_multiple_success(self):
+        '''
+        Tests successful cloud provider configuration when searching
+        through multiple providers
+        '''
+        opts = {'providers': {'foo': {'bar': {'api_key': 'baz'}}}}
+        provider = 'bar'
+        ret = {'api_key': 'baz'}
+        self.assertEqual(
+            sconfig.is_provider_configured(opts,
+                                           provider,
+                                           required_keys=('api_key',)), ret)
 
 if __name__ == '__main__':
     from integration import run_tests
