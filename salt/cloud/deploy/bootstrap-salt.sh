@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.06.19"
+__ScriptVersion="2014.06.21"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -418,6 +418,7 @@ fi
 # Export the http_proxy configuration to our current environment
 if [ "x${_HTTP_PROXY}" != "x" ]; then
     export http_proxy="$_HTTP_PROXY"
+    export https_proxy="$_HTTP_PROXY"
 fi
 
 # Let's discover how we're being called
@@ -427,9 +428,8 @@ CALLER=$(ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' ' | cut -d ' ' -f 
 if [ "${CALLER}x" = "${0}x" ]; then
     CALLER="PIPED THROUGH"
 fi
-
 echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
-#echowarn "Running the unstable version of ${__ScriptName}"
+echowarn "Running the unstable version of ${__ScriptName}"
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __exit_cleanup
@@ -679,6 +679,9 @@ __gather_linux_system_info() {
             DISTRO_NAME="suse"
         elif [ "${DISTRO_NAME}" = "EnterpriseEnterpriseServer" ]; then
             # This the Oracle Linux Enterprise ID before ORACLE LINUX 5 UPDATE 3
+            DISTRO_NAME="Oracle Linux"
+        elif [ "${DISTRO_NAME}" = "OracleServer" ]; then
+            # This the Oracle Linux Server 6.5
             DISTRO_NAME="Oracle Linux"
         fi
         rv=$(lsb_release -sr)
@@ -1055,7 +1058,7 @@ fi
 
 # Only RedHat based distros have testing support
 if [ ${ITYPE} = "testing" ]; then
-    if [ "$(echo ${DISTRO_NAME_L} | egrep '(centos|red_hat|amazon)')x" = "x" ]; then
+    if [ "$(echo ${DISTRO_NAME_L} | egrep '(centos|red_hat|amazon|oracle)')x" = "x" ]; then
         echoerror "${DISTRO_NAME} does not have testing packages support"
         exit 1
     fi
@@ -2380,7 +2383,14 @@ install_centos_stable_deps() {
         fi
     fi
 
-    yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+        # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
+        for package in ${packages}; do
+            yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
+        done
+    else
+        yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    fi
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
@@ -2393,7 +2403,14 @@ install_centos_stable_deps() {
 
     if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
-        yum install -y ${_EXTRA_PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
+        if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+            # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
+            for package in ${_EXTRA_PACKAGES}; do
+                yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
+            done
+        else
+            yum install -y ${_EXTRA_PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
+        fi
     fi
 
     return 0
@@ -2407,7 +2424,14 @@ install_centos_stable() {
     if [ $_INSTALL_MASTER -eq $BS_TRUE ] || [ $_INSTALL_SYNDIC -eq $BS_TRUE ]; then
         packages="${packages} salt-master"
     fi
-    yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+        # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
+        for package in ${packages}; do
+            yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
+        done
+    else
+        yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    fi
     return 0
 }
 
@@ -2427,7 +2451,12 @@ install_centos_stable_post() {
 
 install_centos_git_deps() {
     install_centos_stable_deps || return 1
-    yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+        # try both ways --enablerepo=X disables ALL OTHER REPOS!!!!
+        yum -y install git || yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    else
+        yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    fi
 
     __git_clone_and_checkout || return 1
 
@@ -3409,11 +3438,11 @@ install_smartos_deps() {
         # Let's download, since they were not provided, the default configuration files
         if [ ! -f $_SALT_ETC_DIR/minion ] && [ ! -f $_TEMP_CONFIG_DIR/minion ]; then
             curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/minion -L \
-                https://raw.github.com/saltstack/salt/develop/conf/minion || return 1
+                https://raw.githubusercontent.com/saltstack/salt/develop/conf/minion || return 1
         fi
         if [ ! -f $_SALT_ETC_DIR/master ] && [ ! -f $_TEMP_CONFIG_DIR/master ]; then
             curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/master -L \
-                https://raw.github.com/saltstack/salt/develop/conf/master || return 1
+                https://raw.githubusercontent.com/saltstack/salt/develop/conf/master || return 1
         fi
     fi
 
@@ -3465,7 +3494,7 @@ install_smartos_post() {
         if [ $? -eq 1 ]; then
             if [ ! -f $_TEMP_CONFIG_DIR/salt-$fname.xml ]; then
                 curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/salt-$fname.xml -L \
-                    https://raw.github.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml
+                    https://raw.githubusercontent.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml
             fi
             svccfg import $_TEMP_CONFIG_DIR/salt-$fname.xml
             if [ "${VIRTUAL_TYPE}" = "global" ]; then
@@ -3761,7 +3790,7 @@ install_suse_11_stable_deps() {
                 # Let's download, since they were not provided, the default configuration files
                 if [ ! -f $_SALT_ETC_DIR/$fname ] && [ ! -f $_TEMP_CONFIG_DIR/$fname ]; then
                     curl $_CURL_ARGS -s -o $_TEMP_CONFIG_DIR/$fname -L \
-                        https://raw.github.com/saltstack/salt/develop/conf/$fname || return 1
+                        https://raw.githubusercontent.com/saltstack/salt/develop/conf/$fname || return 1
                 fi
             done
         fi
