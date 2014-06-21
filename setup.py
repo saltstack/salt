@@ -570,6 +570,7 @@ if IS_WINDOWS_PLATFORM is False:
         'doc/man/salt-master.1',
         'doc/man/salt-key.1',
         'doc/man/salt.1',
+        'doc/man/salt-api.1',
         'doc/man/salt-syndic.1',
         'doc/man/salt-run.1',
         'doc/man/salt-ssh.1',
