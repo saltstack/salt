@@ -39,8 +39,10 @@ def __virtual__():
 # Import python libs
 import os
 import re
+import logging
 import sys
 import traceback
+import copy
 import urllib2
 
 # Import salt libs
@@ -67,12 +69,18 @@ _URL_VERSIONS = {
     2: u'http://downloads.buildout.org/2/bootstrap.py',
 }
 DEFAULT_VER = 2
+_logger = logging.getLogger(__name__)
 
 
-def _salt_callback(func):
+def _salt_callback(func, **kwargs):
     LOG.clear()
 
     def _call_callback(*a, **kw):
+        # cleanup the module kwargs before calling it from the
+        # decorator
+        kw = copy.deepcopy(kw)
+        for k in [ar for ar in kw if '__pub' in ar]:
+            kw.pop(k, None)
         st = BASE_STATUS.copy()
         directory = kw.get('directory', '.')
         onlyif = kw.get('onlyif', None)
@@ -727,9 +735,11 @@ def bootstrap(directory='.',
             uid = __salt__['user.info'](runas)['uid']
             gid = __salt__['user.info'](runas)['gid']
             os.chown('bootstrap.py', uid, gid)
-    except (IOError, OSError):
+    except (IOError, OSError) as exc:
         # dont block here, try to execute it if can pass
-        pass
+        _logger.error('BUILDOUT bootstrap permissions error:'
+                      ' {0}'.format(exc),
+                  exc_info=_logger.isEnabledFor(logging.DEBUG))
     cmd = '{0} bootstrap.py {1}'.format(python, bootstrap_args)
     ret = _Popen(cmd, directory=directory, runas=runas, env=env)
     output = ret['output']
