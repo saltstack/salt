@@ -280,7 +280,7 @@ def append(key, val, convert=False):
 
         salt '*' grains.append key val
     '''
-    grains = get(key)
+    grains = get(key, [])
     if not isinstance(grains, list) and convert is True:
         grains = [grains]
     if not isinstance(grains, list):
