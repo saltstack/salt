@@ -133,7 +133,9 @@ def installed(name,
               debug=False,
               verbose=False,
               unless=None,
-              onlyif=None):
+              onlyif=None,
+              use_vt=False,
+              loglevel='debug'):
     '''
     Install buildout in a specific directory
 
@@ -198,6 +200,12 @@ def installed(name,
     verbose
         run buildout in verbose mode (-vvvvv)
 
+    use_vt
+        Use the new salt VT to stream output [experimental]
+
+    loglevel
+        loglevel for buildout commands
+
     '''
     ret = {}
 
@@ -248,6 +256,7 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
+        use_vt=use_vt
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret
