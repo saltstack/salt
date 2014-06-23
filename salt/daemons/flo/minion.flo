@@ -62,6 +62,7 @@ framer bootstrap be active first join
         go next
 
     frame router
+        bid start manager #start alive presence from minion side
         do router
 
     frame abort
@@ -75,9 +76,9 @@ framer functionmanager be active first checkexec
     frame checkexec
         do nix executor
 
-#framer manager be active first start at 1.0
-#    frame start
-#         do salt raet road stack manager per inode ".raet.udp.stack"
+framer manager be inactive first start at 1.0
+    frame start
+         do salt raet road stack manager per inode ".raet.udp.stack"
 
 framer outbound be active first start
     frame start
