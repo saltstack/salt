@@ -260,7 +260,9 @@ def _Popen(command,
            directory='.',
            runas=None,
            env=(),
-           exitcode=0):
+           exitcode=0,
+           use_vt=False,
+           loglevel=None):
     '''
     Run a command.
 
@@ -280,13 +282,20 @@ def _Popen(command,
         fails if cmd does not return this exit code
         (set to None to disable check)
 
+    use_vt
+        Use the new salt VT to stream output [experimental]
+
     '''
     ret = None
     directory = os.path.abspath(directory)
     if isinstance(command, list):
         command = ' '.join(command)
     LOG.debug(u'Running {0}'.format(command))
-    ret = __salt__['cmd.run_all'](command, cwd=directory, runas=runas, env=env)
+    if not loglevel:
+        loglevel = 'debug'
+    ret = __salt__['cmd.run_all'](
+        command, cwd=directory, output_loglevel=loglevel,
+        runas=runas, env=env, use_vt=use_vt)
     out = ret['stdout'] + '\n\n' + ret['stderr']
     if (exitcode is not None) and (ret['retcode'] != exitcode):
         raise _BuildoutError(out)
@@ -551,7 +560,9 @@ def bootstrap(directory='.',
               buildout_ver=None,
               test_release=False,
               offline=False,
-              new_st=None):
+              new_st=None,
+              use_vt=False,
+              loglevel=None):
     '''
     Run the buildout bootstrap dance (python bootstrap.py).
 
@@ -590,6 +601,9 @@ def bootstrap(directory='.',
 
     unless
         Do not execute cmd if statement on the host return 0
+
+    use_vt
+        Use the new salt VT to stream output [experimental]
 
     CLI Example:
 
@@ -741,7 +755,8 @@ def bootstrap(directory='.',
                       ' {0}'.format(exc),
                   exc_info=_logger.isEnabledFor(logging.DEBUG))
     cmd = '{0} bootstrap.py {1}'.format(python, bootstrap_args)
-    ret = _Popen(cmd, directory=directory, runas=runas, env=env)
+    ret = _Popen(cmd, directory=directory, runas=runas, loglevel=loglevel,
+                 env=env, use_vt=use_vt)
     output = ret['output']
     return {'comment': cmd, 'out': output}
 
@@ -757,7 +772,9 @@ def run_buildout(directory='.',
                  runas=None,
                  env=(),
                  verbose=False,
-                 debug=False):
+                 debug=False,
+                 use_vt=False,
+                 loglevel=None):
     '''
     Run a buildout in a directory.
 
@@ -790,6 +807,9 @@ def run_buildout(directory='.',
 
     verbose
         run buildout in verbose mode (-vvvvv)
+
+    use_vt
+        Use the new salt VT to stream output [experimental]
 
     CLI Example:
 
@@ -828,7 +848,9 @@ def run_buildout(directory='.',
                     cmd, directory=directory,
                     runas=runas,
                     env=env,
-                    output=True)
+                    output=True,
+                    loglevel=loglevel,
+                    use_vt=use_vt)
             )
     else:
         LOG.info(u'Installing all buildout parts')
@@ -836,7 +858,9 @@ def run_buildout(directory='.',
             bcmd, config, ' '.join(argv))
         cmds.append(cmd)
         outputs.append(
-            _Popen(cmd, directory=directory, runas=runas, env=env, output=True)
+            _Popen(
+                cmd, directory=directory, runas=runas, loglevel=loglevel,
+                env=env, output=True, use_vt=use_vt)
         )
 
     return {'comment': '\n'.join(cmds),
@@ -907,7 +931,9 @@ def buildout(directory='.',
              debug=False,
              verbose=False,
              onlyif=None,
-             unless=None):
+             unless=None,
+             use_vt=False,
+             loglevel=None):
     '''
     Run buildout in a directory.
 
@@ -958,6 +984,8 @@ def buildout(directory='.',
     verbose
         run buildout in verbose mode (-vvvvv)
 
+    use_vt
+        Use the new salt VT to stream output [experimental]
 
     CLI Example:
 
@@ -975,7 +1003,9 @@ def buildout(directory='.',
                          env=env,
                          runas=runas,
                          distribute=distribute,
-                         python=python)
+                         python=python,
+                         use_vt=use_vt,
+                         loglevel=loglevel)
     buildout_ret = run_buildout(directory=directory,
                                 config=config,
                                 parts=parts,
@@ -984,7 +1014,9 @@ def buildout(directory='.',
                                 runas=runas,
                                 env=env,
                                 verbose=verbose,
-                                debug=debug)
+                                debug=debug,
+                                use_vt=use_vt,
+                                loglevel=loglevel)
     # signal the decorator or our return
     return _merge_statuses([boot_ret, buildout_ret])
 
