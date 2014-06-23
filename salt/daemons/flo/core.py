@@ -302,6 +302,11 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
             stack.manage(cascade=True)
+            # stack.alloweds now has dict keyed by name of available remotes for messages
+            # stack.changeds is dict with sets of {plus: plus, minus: minus} names of
+            # remotes that that are newly allowed plus and newly disallowed minus
+            # need to copy reference to stack.alloweds to data store
+            # need to queue presence event message if either plus or minus is not empty
 
 
 class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
