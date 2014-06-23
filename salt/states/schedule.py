@@ -220,7 +220,7 @@ def absent(name, **kwargs):
         else:
             ret['comment'].append('Removed job {0} from schedule'.format(name))
     else:
-            ret['comment'].append('Job {0} not present in schedule'.format(name))
+        ret['comment'].append('Job {0} not present in schedule'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
