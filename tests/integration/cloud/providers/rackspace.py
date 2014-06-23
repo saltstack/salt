@@ -6,15 +6,15 @@
 # Import Python Libs
 import os
 
-# Import Salt Libs
-import integration
-from salt.config import cloud_providers_config
-
 # Import Salt Testing Libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
+
+# Import Salt Libs
+import integration
+from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
 try:
@@ -30,6 +30,7 @@ class RackspaceTest(integration.ShellCase):
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -63,7 +64,6 @@ class RackspaceTest(integration.ShellCase):
                 .format(provider)
             )
 
-    @expensiveTest
     def test_instance(self):
         '''
         Test creating an instance on rackspace with the openstack driver
