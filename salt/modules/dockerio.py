@@ -876,7 +876,8 @@ def start(container,
           links=None,
           privileged=False,
           dns=None,
-          volumes_from=None):
+          volumes_from=None,
+          network_mode=None):
     '''
     Restart the specified container
 
@@ -923,7 +924,8 @@ def start(container,
                              links=links,
                              privileged=privileged,
                              dns=dns,
-                             volumes_from=volumes_from)
+                             volumes_from=volumes_from,
+                             network_mode=network_mode)
             except TypeError:
                 # maybe older version of docker-py <= 0.3.1 dns and
                 # volumes_from are not accepted
