@@ -1342,6 +1342,11 @@ class LocalClient(object):
         # Make sure the publisher is running by checking the unix socket
         if not os.path.exists(os.path.join(self.opts['sock_dir'],
                                            'publish_pull.ipc')):
+            log.error(
+                'Unable to connect to the publisher! '
+                'You do not have permissions to access '
+                '{0}'.format(self.opts['sock_dir'])
+            )
             return {'jid': '0', 'minions': []}
 
         payload_kwargs = self._prep_pub(
