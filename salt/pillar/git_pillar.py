@@ -102,9 +102,9 @@ class GitPillar(object):
         self.working_dir = ''
         self.repo = None
 
-        needle = '{0} {1}'.format(self.branch, self.rp_location)
         for idx, opts_dict in enumerate(self.opts['ext_pillar']):
-            if opts_dict.get('git', '').startswith(needle):
+            lopts = opts_dict.get('git', '').split()
+            if len(lopts) >= 2 and lopts[:2] == [self.branch, self.rp_location]:
                 rp_ = os.path.join(self.opts['cachedir'],
                                    'pillar_gitfs', str(idx))
 
