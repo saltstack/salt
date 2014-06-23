@@ -77,8 +77,8 @@ localtime.
             - Thursday 3:00pm
             - Friday 5:00pm
 
-This will schedule the command: state.sls httpd test=True at 5pm on Monday, Wednesday
-and Friday, and 3pm on Tuesday and Thursday.
+This will schedule the command: state.sls httpd test=True at 5pm on Monday,
+Wednesday and Friday, and 3pm on Tuesday and Thursday.
 
     schedule:
       job1:
@@ -92,7 +92,6 @@ and Friday, and 3pm on Tuesday and Thursday.
             start: 8:00am
             end: 5:00pm
 
-w
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.

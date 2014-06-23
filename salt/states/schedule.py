@@ -1,115 +1,47 @@
 # -*- coding: utf-8 -*-
 '''
-Management of cron, the Unix command scheduler
+Management of the Salt scheduler
 ==============================================
 
-Cron declarations require a number of parameters. The following are the
-parameters used by Salt to define the various timing values for a cron job:
-
-* ``minute``
-* ``hour``
-* ``daymonth``
-* ``month``
-* ``dayweek`` (0 to 6 are Sunday through Saturday, 7 can also be used for
-  Sunday)
-
-.. warning::
-
-    Any timing arguments not specified take a value of ``*``. This means that
-    setting ``hour`` to ``5``, while not defining the ``minute`` param, will
-    result in Salt adding a job that will execute every minute between 5 and 6
-    A.M.!
-
-    Additionally, the default user for these states is ``root``. Therefore, if
-    the cron job is for another user, it is necessary to specify that user with
-    the ``user`` parameter.
-
-A long time ago (before 2014.2), when making changes to an existing cron job,
-the name declaration is the parameter used to uniquely identify the job,
-so if an existing cron that looks like this:
-
 .. code-block:: yaml
 
-    date > /tmp/crontest:
-      cron.present:
-        - user: root
-        - minute: 5
+    job3:
+      schedule.present:
+        - function: test.ping
+        - seconds: 3600
+        - splay: 10
 
-Is changed to this:
+    This will schedule the command: test.ping every 3600 seconds
+    (every hour) splaying the time between 0 and 10 seconds
 
-.. code-block:: yaml
+    job2:
+      schedule.present:
+        - function: test.ping
+        - seconds: 15
+        - splay:
+            - start: 10
+            - end: 20
 
-    date > /tmp/crontest:
-      cron.present:
-        - user: root
-        - minute: 7
-        - hour: 2
+    This will schedule the command: test.ping every 3600 seconds
+    (every hour) splaying the time between 10 and 20 seconds
 
-Then the existing cron will be updated, but if the cron command is changed,
-then a new cron job will be added to the user's crontab.
+    job1:
+      schedule.present:
+        - function: state.sls
+        - args:
+          - httpd
+        - kwargs:
+          test: True
+        - when:
+            - Monday 5:00pm
+            - Tuesday 3:00pm
+            - Wednesday 5:00pm
+            - Thursday 3:00pm
+            - Friday 5:00pm
 
-The current behavior is still relying on that mechanism, but you can also
-specify an identifier to identify your crontabs:
-.. versionadded:: 2014.2
-.. code-block:: yaml
+    This will schedule the command: state.sls httpd test=True at 5pm on Monday,
+    Wednesday and Friday, and 3pm on Tuesday and Thursday.
 
-    date > /tmp/crontest:
-      cron.present:
-        - identifier: SUPERCRON
-        - user: root
-        - minute: 7
-        - hour: 2
-
-And, some months later, you modify it:
-.. versionadded:: 2014.2
-.. code-block:: yaml
-
-    superscript > /tmp/crontest:
-      cron.present:
-        - identifier: SUPERCRON
-        - user: root
-        - minute: 3
-        - hour: 4
-
-The old **date > /tmp/crontest** will be replaced by
-**superscript > /tmp/crontest**.
-
-Additionally, Salt also supports running a cron every ``x minutes`` very similarly to the Unix
-convention of using ``*/5`` to have a job run every five minutes. In Salt, this
-looks like:
-
-.. code-block:: yaml
-
-    date > /tmp/crontest:
-      cron.present:
-        - user: root
-        - minute: '*/5'
-
-The job will now run every 5 minutes.
-
-Additionally, the temporal parameters (minute, hour, etc.) can be randomized by
-using ``random`` instead of using a specific value. For example, by using the
-``random`` keyword in the ``minute`` parameter of a cron state, the same cron
-job can be pushed to hundreds or thousands of hosts, and they would each use a
-randomly-generated minute. This can be helpful when the cron job accesses a
-network resource, and it is not desirable for all hosts to run the job
-concurrently.
-
-.. code-block:: yaml
-
-    /path/to/cron/script:
-      cron.present:
-        - user: root
-        - minute: random
-        - hour: 2
-
-.. versionadded:: 0.16.0
-
-Since Salt assumes a value of ``*`` for unspecified temporal parameters, adding
-a parameter to the state and setting it to ``random`` will change that value
-from ``*`` to a randomized numeric value. However, if that field in the cron
-entry on the minion already contains a numeric value, then using the ``random``
-keyword will not modify it.
 '''
 
 import logging
@@ -119,38 +51,57 @@ log = logging.getLogger(__name__)
 def present(name,
             **kwargs):
     '''
-    Verifies that the specified cron job is present for the specified user.
-    For more advanced information about what exactly can be set in the cron
-    timing parameters, check your cron system's documentation. Most Unix-like
-    systems' cron documentation can be found via the crontab man page:
-    ``man 5 crontab``.
+    Ensure a job is present in the schedule
 
     name
-        The command that should be executed by the cron job.
+        The unique name that is given to the scheduled job.
 
-    minute
-        The information to be set into the minute section, this can be any
-        string supported by your cron system's the minute field. Default is
-        ``*``
+    seconds
+        The scheduled job will be executed after the specified
+        number of seconds have passed.
 
-    hour
-        The information to be set in the hour section. Default is ``*``
+    minutes
+        The scheduled job will be executed after the specified
+        number of minutes have passed.
 
-    daymonth
-        The information to be set in the day of month section. Default is ``*``
+    hours
+        The scheduled job will be executed after the specified
+        number of hours have passed.
 
-    month
-        The information to be set in the month section. Default is ``*``
+    days
+        The scheduled job will be executed after the specified
+        number of days have passed.
 
-    dayweek
-        The information to be set in the day of week section. Default is ``*``
+    when
+        This will schedule the job at the specified time(s).
+        The when parameter must be a single value or a dictionary
+        with the date string(s) using the dateutil format.
 
-    comment
-        User comment to be added on line previous the cron job
+    function
+        The function that should be executed by the scheduled job.
 
-    identifier
-        Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+    job_args
+        The arguments that will be used by the scheduled job.
+
+    job_kwargs
+        The keyword arguments that will be used by the scheduled job.
+
+    maxrunning
+        Ensure that there are no more than N copies of a particular job running.
+
+    jid_include
+        Include the job into the job cache.
+
+    splay
+        The amount of time in seconds to splay a scheduled job.
+        Can be specified as a single value in seconds or as a dictionary
+        range with 'start' and 'end' values.
+
+    range
+        This will schedule the command within the range specified.
+        The range parameter must be a dictionary with the date strings
+        using the dateutil format.
+
     '''
 
     ret = {'name': name,
@@ -188,19 +139,11 @@ def present(name,
 
 def absent(name, **kwargs):
     '''
-    Verifies that the specified cron job is absent for the specified user; only
-    the name is matched when removing a cron job.
+    Ensure a job is absent from the schedule
 
     name
-        The command that should be absent in the user crontab.
+        The unique name that is given to the scheduled job.
 
-    user
-        The name of the user whose crontab needs to be modified, defaults to
-        the root user
-
-    identifier
-        Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
