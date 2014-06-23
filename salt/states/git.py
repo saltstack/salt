@@ -484,7 +484,7 @@ def config(name,
                                           cwd=repo,
                                           user=user)
     except CommandExecutionError:
-        oval = 'None'
+        oval = None
 
     if value == oval:
         ret['comment'] = 'No changes made'
@@ -503,6 +503,9 @@ def config(name,
             nval = __salt__['git.config_get'](setting_name=name,
                                               cwd=repo,
                                               user=user)
+
+        if oval is None:
+            oval = 'None'
 
         ret['changes'][name] = '{0} => {1}'.format(oval, nval)
 
