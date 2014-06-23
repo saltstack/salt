@@ -37,6 +37,9 @@ def start():
 
     mod_opts = __opts__.get(__virtualname__, {})
 
+    if mod_opts.get('websockets', False):
+        from . import saltnado_websockets
+
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
 
@@ -46,7 +49,7 @@ def start():
     formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
     logger.debug("All events URL pattern is {0}".format(all_events_pattern))
 
-    application = tornado.web.Application([
+    paths = [
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
         (r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
@@ -56,14 +59,21 @@ def start():
         (r"/run", saltnado.RunSaltAPIHandler),
         (r"/events", saltnado.EventsSaltAPIHandler),
         (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
-        # Matches /all_events/[0-9A-Fa-f]{n}
-        # Where n is the length of hexdigest
-        # for the current hashing algorithm.
-        # This algorithm is specified in the
-        # salt master config file.
-        (all_events_pattern, saltnado.AllEventsHandler),
-        (formatted_events_pattern, saltnado.FormattedEventsHandler),
-    ], debug=mod_opts.get('debug', False))
+    ]
+
+    # if you have enabled websockets, add them!
+    if mod_opts.get('websockets', False):
+        paths += [
+            # Matches /all_events/[0-9A-Fa-f]{n}
+            # Where n is the length of hexdigest
+            # for the current hashing algorithm.
+            # This algorithm is specified in the
+            # salt master config file.
+            (all_events_pattern, saltnado_websockets.AllEventsHandler),
+            (formatted_events_pattern, saltnado_websockets.FormattedEventsHandler),
+        ]
+
+    application = tornado.web.Application(paths, debug=mod_opts.get('debug', False))
 
     application.opts = __opts__
     application.mod_opts = mod_opts

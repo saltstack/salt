@@ -158,7 +158,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-How do I create a environment from a pillar map?
+How do I create an environment from a pillar map?
 -------------------------------------------------------------------------------
 
 The map that comes from a pillar cannot be directly consumed by the env option.

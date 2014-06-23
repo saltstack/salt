@@ -49,7 +49,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
     'BOOTSTRAP_SCRIPT_VERSION',
     # If no bootstrap-script version was provided from the environment, let's
     # provide the one we define.
-    'v2014.06.19'
+    'v2014.06.21'
 )
 
 # Store a reference to the executing platform
@@ -407,19 +407,13 @@ class Install(install):
                     self.salt_transport
                 )
             )
-        if self.salt_transport == 'none':
+        elif self.salt_transport == 'none':
             for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
                 if requirement not in self.distribution.install_requires:
                     continue
                 self.distribution.install_requires.remove(requirement)
-            return
 
-        if self.salt_transport in ('zeromq', 'both'):
-            self.distribution.install_requires.extend(
-                _parse_requirements_file(SALT_ZEROMQ_REQS)
-            )
-
-        if self.salt_transport in ('raet', 'both'):
+        elif self.salt_transport in ('raet', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_RAET_REQS)
             )
@@ -550,7 +544,9 @@ SETUP_KWARGS = {'name': NAME,
                                ],
                 # Required for esky builds, ZeroMQ or RAET deps will be added
                 # at install time
-                'install_requires': _parse_requirements_file(SALT_REQS),
+                'install_requires':
+                    _parse_requirements_file(SALT_REQS) +
+                    _parse_requirements_file(SALT_ZEROMQ_REQS),
                 'extras_require': {
                     'RAET': _parse_requirements_file(SALT_RAET_REQS),
                     'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)
@@ -570,6 +566,7 @@ if IS_WINDOWS_PLATFORM is False:
         'doc/man/salt-master.1',
         'doc/man/salt-key.1',
         'doc/man/salt.1',
+        'doc/man/salt-api.1',
         'doc/man/salt-syndic.1',
         'doc/man/salt-run.1',
         'doc/man/salt-ssh.1',
