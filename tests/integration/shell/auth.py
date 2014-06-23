@@ -21,18 +21,45 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+from salttesting import skipIf
+
 
 class AuthTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt'
 
-    def test_cp_testfile(self):
+    is_root = os.geteuid() != 0
+
+    @skipIf(is_root, 'You must be logged in as root to run this test')
+    def test_pam_auth_valid_user(self):
         '''
-        test salt-cp
+        test pam auth mechanism is working with a valid user
         '''
-        print self.run_salt('-a pam \* test.ping --username ubuntu --password ubuntu')
-        print self.run_salt('\* test.ping')
-        self.assertTrue(False)
+        cmd = '-a pam \* test.ping --username saltdev --password ubuntu'
+        resp = self.run_salt(cmd)
+        self.assertTrue(
+            'minion:' in resp
+        )
+
+    @skipIf(is_root, 'You must be logged in as root to run this test')
+    def test_pam_auth_invalid_user(self):
+        '''
+        test pam auth mechanism errors for an invalid user
+        '''
+        cmd = '-a pam \* test.ping --username nouser --password ubuntu'
+        resp = self.run_salt(cmd)
+        self.assertTrue(
+            'Failed to authenticate' in ''.join(resp)
+        )
+
+
+    # def test_cp_testfile(self):
+    #     '''
+    #     test salt-cp
+    #     '''
+    #     print self.run_salt('-a pam \* test.ping --username ubuntu --password ubuntu')
+    #     print self.run_salt('\* test.ping')
+    #     self.assertTrue(False)
         # minions = []
 
         # for line in self.run_salt('--out yaml "*" test.ping'):
