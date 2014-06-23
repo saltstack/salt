@@ -85,6 +85,7 @@ def state_doc(*args):
         salt '*' sys.state_doc service.running ipables.append
     '''
     st_ = salt.state.State(__opts__)
+
     docs = {}
     if not args:
         for fun in st_.states:
@@ -100,6 +101,7 @@ def state_doc(*args):
             target_mod = ''
         for fun in st_.states:
             if fun == module or fun.startswith(target_mod):
+                docs[module.replace('.', '')] = st_.states[fun].__globals__['__doc__']
                 docs[fun] = st_.states[fun].__doc__
     return _strip_rst(docs)
 
