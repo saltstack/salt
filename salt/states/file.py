@@ -30,6 +30,17 @@ the jinja templating system would look like this:
             custom_var: "override"
     {% endif %}
 
+It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
+templating option. The template would be a python script which would need to
+contain a function called ``run()``, which returns a string. The returned
+string will be the contents of the managed file. For example:
+
+.. code-block:: python
+
+    def run():
+        lines = ('foo', 'bar', 'baz')
+        return '\n\n'.join(lines)
+
 .. note::
 
     When using both the ``defaults`` and ``context`` arguments, note the extra
