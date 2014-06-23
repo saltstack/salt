@@ -550,6 +550,16 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
 
+    # apply_vm_profiles_config tests
+
+    def test_apply_vm_profiles_config_bad_profile_format(self):
+        '''
+        Tests passing in a bad profile format in overrides
+        '''
+        overrides = {'foo': 'bar', 'conf_file': PATH}
+        self.assertRaises(SaltCloudConfigError, sconfig.apply_vm_profiles_config,
+                          PATH, overrides, defaults=DEFAULT)
+
     # apply_cloud_providers_config tests
 
     def test_apply_cloud_providers_config_same_providers(self):
