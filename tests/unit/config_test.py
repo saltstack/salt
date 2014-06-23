@@ -560,6 +560,54 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.apply_vm_profiles_config,
                           PATH, overrides, defaults=DEFAULT)
 
+    def test_apply_vm_profiles_config_success(self):
+        '''
+        Tests passing in valid provider and profile config files successfully
+        '''
+        providers = {'test-provider':
+                         {'digital_ocean':
+                              {'provider': 'digital_ocean', 'profiles': {}}}}
+        overrides = {'test-profile':
+                         {'provider': 'test-provider',
+                          'image': 'Ubuntu 12.10 x64',
+                          'size': '512MB'},
+                     'conf_file': PATH}
+        ret = {'test-profile':
+                   {'profile': 'test-profile',
+                    'provider': 'test-provider:digital_ocean',
+                    'image': 'Ubuntu 12.10 x64',
+                    'size': '512MB'}}
+        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+                                                          overrides,
+                                                          defaults=DEFAULT), ret)
+
+    def test_apply_vm_profiles_config_extend_success(self):
+        '''
+        Tests profile extends functionality with valid provider and profile configs
+        '''
+        providers = {'test-config': {'ec2': {'profiles': {}, 'provider': 'ec2'}}}
+        overrides = {'Amazon': {'image': 'test-image-1',
+                                'extends': 'dev-instances'},
+                     'Fedora': {'image': 'test-image-2',
+                                'extends': 'dev-instances'},
+                     'conf_file': PATH,
+                     'dev-instances': {'ssh_username': 'test_user',
+                                       'provider': 'test-config'}}
+        ret = {'Amazon': {'profile': 'Amazon',
+                          'ssh_username': 'test_user',
+                          'image': 'test-image-1',
+                          'provider': 'test-config:ec2'},
+               'Fedora': {'profile': 'Fedora',
+                          'ssh_username': 'test_user',
+                          'image': 'test-image-2',
+                          'provider': 'test-config:ec2'},
+               'dev-instances': {'profile': 'dev-instances',
+                                 'ssh_username': 'test_user',
+                                 'provider': 'test-config:ec2'}}
+        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+                                                          overrides,
+                                                          defaults=DEFAULT), ret)
+
     # apply_cloud_providers_config tests
 
     def test_apply_cloud_providers_config_same_providers(self):
