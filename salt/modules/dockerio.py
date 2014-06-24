@@ -1557,7 +1557,7 @@ def _parse_image_multilogs_string(ret, repo):
         # search last layer grabbed
         for l in image_logs:
             if isinstance(l, dict):
-                if l.get('status') == 'Download complete' and l.get('Id'):
+                if l.get('status') == 'Download complete' and l.get('id'):
                     infos = _get_image_infos(repo)
                     break
     return image_logs, infos
