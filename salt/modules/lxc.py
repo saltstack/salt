@@ -791,10 +791,10 @@ def init(name,
         clone_from = get_base(vgname=vgname, **kwargs)
         if not kwargs.get('snapshot') is False:
             kwargs['snapshot'] = True
-    exists = __salt__['lxc.exists'](name)
+    does_exist = __salt__['lxc.exists'](name)
     to_reboot = False
     remove_seed_marker = False
-    if exists:
+    if does_exist:
         comment += 'Container already exists\n'
     elif clone_from:
         remove_seed_marker = True
@@ -868,9 +868,9 @@ def init(name,
         comment += 'Container created\n'
     ret[inner] = True
     if (
-        not exists
+        not does_exist
         or (
-            exists
+            does_exist
             and __salt__['lxc.state'](name) != 'running'
         )
     ):
