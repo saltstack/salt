@@ -283,8 +283,8 @@ def create(vm_):
 
     if key_filename is None:
         raise SaltCloudConfigError(
-            'The Digital Ocean driver requires a ssh_key_file because it does not supply a root password '
-            'upon building the server'
+            'The Digital Ocean driver requires an ssh_key_file and an ssh_key_name '
+            'because it does not supply a root password upon building the server.'
         )
 
     private_networking = config.get_cloud_config_value(

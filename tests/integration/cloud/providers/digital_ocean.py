@@ -29,7 +29,6 @@ except ImportError:
     HAS_REQUESTS = False
 
 
-@skipIf(True, 'waiting on bug report fixes from #13232')
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
 @skipIf(HAS_REQUESTS is False, 'salt-cloud requires python requests library')
 class DigitalOceanTest(integration.ShellCase):
@@ -61,12 +60,17 @@ class DigitalOceanTest(integration.ShellCase):
                             'cloud.providers.d',
                             provider + '.conf')
         config = cloud_providers_config(path)
+
         api = config['digitalocean-config']['digital_ocean']['api_key']
         client = config['digitalocean-config']['digital_ocean']['client_key']
-        if api == '' or client == '':
+        ssh_file = config['digitalocean-config']['digital_ocean']['ssh_key_file']
+        ssh_name = config['digitalocean-config']['digital_ocean']['ssh_key_name']
+
+        if api == '' or client == '' or ssh_file == '' or ssh_name == '':
             self.skipTest(
-                'A client key and an api key must be provided to run these tests. '
-                'Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                'A client key, an api key, an ssh key file, and an ssh key name '
+                'must be provided to run these tests. Check '
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(provider)
             )
 
