@@ -63,6 +63,9 @@ execute a function. Here's a sample ``overstate.sls``:
         - mysql
         - webservers
 
+.. note::
+   The ``match`` argument uses :ref:`compound matching <targeting-compound>`
+
 Given the above setup, the OverState will be carried out as follows:
 
 1. The ``mysql`` stage will be executed first because it is required by the
