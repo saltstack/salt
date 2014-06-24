@@ -723,7 +723,10 @@ class RaetKey(Key):
         '''
         import libnacl.public
         d_key = libnacl.dual.SecretKey()
-        d_key.save(self.opts['gen_keys_dir'], self.opts['gen_keys'])
+        path = '{0}.key'.format(os.path.join(
+            self.opts['gen_keys_dir'],
+            self.opts['gen_keys']))
+        d_key.save(path)
 
     def check_master(self):
         '''
