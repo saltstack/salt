@@ -820,12 +820,12 @@ def volume_create(name, size=100, snapshot=None, voltype=None, **kwargs):
     Create block storage device
     '''
     conn = get_conn()
-    return conn.volume_create(
-        name,
-        size,
-        snapshot,
-        voltype
-    )
+    create_kwargs = {'name': name,
+                     'size': size,
+                     'snapshot': snapshot,
+                     'voltype': voltype}
+    create_kwargs['availability_zone'] = kwargs.get('availability_zone', None)
+    return conn.volume_create(**create_kwargs)
 
 
 def volume_delete(name, **kwargs):
