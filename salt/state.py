@@ -1845,6 +1845,38 @@ class State(object):
             self.event(running[tag], len(chunks))
         return running
 
+    def call_listen(self, chunks, running):
+        '''
+        Find all of the lesten routines and call the associated mod_match runs
+        '''
+        listeners = []
+        crefs = {}
+        for chunk in chunks:
+            crefs[(chunk['state'], chunk['name'])] = chunk
+            crefs[(chunk['state'], chunk['__id__'])] = chunk
+            if 'listen' in chunk:
+                listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
+            if 'listen_in' in chunk:
+                for l_in in chunk['listen_in']:
+                    for key, val in l_in.items():
+                        listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
+        mod_watchers = []
+        for l_dict in listeners:
+            for key, val in l_dict.items():
+                for listen_to in val:
+                    for lkey, lval in listen_to.items():
+                        to_tag = _gen_tag(crefs[(lkey, lval)])
+                        if running[to_tag]['changes']:
+                            chunk = crefs[(key, val)]
+                            low = chunk.copy()
+                            low['sfun'] = chunk['fun']
+                            low['fun'] = 'mod_watch'
+                            low['__id__'] = 'listener_{0}'.format(low['__id__'])
+                            mod_watchers.append(low)
+        ret = self.call_chunks(mod_watchers)
+        running.update(ret)
+        return running
+
     def call_high(self, high):
         '''
         Process a high data call and ensure the defined states.
@@ -1869,6 +1901,7 @@ class State(object):
         if errors:
             return errors
         ret = self.call_chunks(chunks)
+        ret = self.call_listen(chunks, ret)
         return ret
 
     def render_template(self, high, template):
