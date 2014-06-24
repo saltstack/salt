@@ -1867,7 +1867,7 @@ class State(object):
                     for lkey, lval in listen_to.items():
                         to_tag = _gen_tag(crefs[(lkey, lval)])
                         if running[to_tag]['changes']:
-                            chunk = crefs[(key, val)]
+                            chunk = crefs[key]
                             low = chunk.copy()
                             low['sfun'] = chunk['fun']
                             low['fun'] = 'mod_watch'
