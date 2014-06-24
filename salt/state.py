@@ -2683,9 +2683,9 @@ class BaseHighState(object):
         if not isinstance(whitelist, list):
             whitelist = whitelist.split(',')
         for env in matches:
-            for sls in env:
+            for sls in matches[env]:
                 if sls in whitelist:
-                    ret_matches[env] = ret_matches[env] if ret_matches[env] else []
+                    ret_matches[env] = ret_matches[env] if env in ret_matches else []
                     ret_matches[env].append(sls)
         return ret_matches
 
