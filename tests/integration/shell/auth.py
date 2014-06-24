@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-
-
-    tests.integration.shell.cp
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tests.integration.shell.auth
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
@@ -14,7 +11,10 @@ import pipes
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import (
+    ensure_in_syspath,
+    destructiveTest,
+    with_system_user)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -23,19 +23,42 @@ import salt.utils
 
 from salttesting import skipIf
 
+import random
 
-class AuthTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+
+class AuthTest(integration.ShellCase):
+    '''
+    Test auth mechanisms
+    '''
 
     _call_binary_ = 'salt'
 
     is_root = os.geteuid() != 0
 
+    @destructiveTest
     @skipIf(is_root, 'You must be logged in as root to run this test')
+    # @with_system_user('saltdev') - doesn't work with ShellCase
     def test_pam_auth_valid_user(self):
         '''
         test pam auth mechanism is working with a valid user
         '''
-        cmd = '-a pam \* test.ping --username saltdev --password ubuntu'
+        alphabet = ('abcdefghijklmnopqrstuvwxyz'
+                    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        self.password = ''
+        # generate password
+        for _ in range(20):
+            next_index = random.randrange(len(alphabet))
+            self.password = self.password + alphabet[next_index]
+
+        # hash the password
+        from salt.utils.pycrypto import gen_hash
+
+        pwd = gen_hash('salt', self.password, 'sha512')
+        self.run_call("shadow.set_password saltdev '{0}'".format(pwd))
+        cmd = ('-a pam "*"'
+               ' test.ping --username {0}'
+               ' --password {1}'.format('saltdev', self.password))
+
         resp = self.run_salt(cmd)
         self.assertTrue(
             'minion:' in resp
@@ -46,96 +69,13 @@ class AuthTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         test pam auth mechanism errors for an invalid user
         '''
-        cmd = '-a pam \* test.ping --username nouser --password ubuntu'
+        cmd = ('-a pam'
+               ' * test.ping --username nouser'
+               ' --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
         self.assertTrue(
             'Failed to authenticate' in ''.join(resp)
         )
-
-
-    # def test_cp_testfile(self):
-    #     '''
-    #     test salt-cp
-    #     '''
-    #     print self.run_salt('-a pam \* test.ping --username ubuntu --password ubuntu')
-    #     print self.run_salt('\* test.ping')
-    #     self.assertTrue(False)
-        # minions = []
-
-        # for line in self.run_salt('--out yaml "*" test.ping'):
-        #     if not line:
-        #         continue
-        #     data = yaml.load(line)
-        #     minions.extend(data.keys())
-
-        # self.assertNotEqual(minions, [])
-
-        # testfile = os.path.abspath(
-        #     os.path.join(
-        #         os.path.dirname(os.path.dirname(__file__)),
-        #         'files', 'file', 'base', 'testfile'
-        #     )
-        # )
-        # testfile_contents = salt.utils.fopen(testfile, 'r').read()
-
-        # for idx, minion in enumerate(minions):
-        #     ret = self.run_salt(
-        #         '--out yaml {0} file.directory_exists {1}'.format(
-        #             pipes.quote(minion), integration.TMP
-        #         )
-        #     )
-        #     data = yaml.load('\n'.join(ret))
-        #     if data[minion] is False:
-        #         ret = self.run_salt(
-        #             '--out yaml {0} file.makedirs {1}'.format(
-        #                 pipes.quote(minion),
-        #                 integration.TMP
-        #             )
-        #         )
-
-        #         data = yaml.load('\n'.join(ret))
-        #         self.assertTrue(data[minion])
-
-        #     minion_testfile = os.path.join(
-        #         integration.TMP, 'cp_{0}_testfile'.format(idx)
-        #     )
-
-        #     ret = self.run_cp('{0} {1} {2}'.format(
-        #         pipes.quote(minion),
-        #         pipes.quote(testfile),
-        #         pipes.quote(minion_testfile)
-        #     ))
-
-        #     data = yaml.load('\n'.join(ret))
-        #     for part in data.values():
-        #         self.assertTrue(part[minion_testfile])
-
-        #     ret = self.run_salt(
-        #         '--out yaml {0} file.file_exists {1}'.format(
-        #             pipes.quote(minion),
-        #             pipes.quote(minion_testfile)
-        #         )
-        #     )
-        #     data = yaml.load('\n'.join(ret))
-        #     self.assertTrue(data[minion])
-
-        #     ret = self.run_salt(
-        #         '--out yaml {0} file.contains {1} {2}'.format(
-        #             pipes.quote(minion),
-        #             pipes.quote(minion_testfile),
-        #             pipes.quote(testfile_contents)
-        #         )
-        #     )
-        #     data = yaml.load('\n'.join(ret))
-        #     self.assertTrue(data[minion])
-        #     ret = self.run_salt(
-        #         '--out yaml {0} file.remove {1}'.format(
-        #             pipes.quote(minion),
-        #             pipes.quote(minion_testfile)
-        #         )
-        #     )
-        #     data = yaml.load('\n'.join(ret))
-        #     self.assertTrue(data[minion])
 
 if __name__ == '__main__':
     from integration import run_tests
