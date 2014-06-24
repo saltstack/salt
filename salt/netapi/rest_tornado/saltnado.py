@@ -108,7 +108,7 @@ class SaltClientsMixIn(object):
                 'local_async': salt.client.get_local_client().run_job,
                 'runner': salt.runner.RunnerClient(
                     salt.config.master_config(
-                        os.path.join(syspaths.CONF_DIR, 'master')
+                        os.path.join(syspaths.CONFIG_DIR, 'master')
                     )).async,
                 }
         return self.__saltclients
