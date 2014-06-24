@@ -143,6 +143,21 @@ def _get_repo_options(**kwargs):
     return repo_arg
 
 
+def _get_branch_option(**kwargs):
+    '''
+    Returns a string of '--branch' option to be used in the yum command,
+    based on the kwargs. This feature requires 'branch' plugin for YUM.
+    '''
+    # Get branch option from the kwargs
+    branch = kwargs.get('branch', '')
+
+    branch_arg = ''
+    if branch:
+        log.info('Adding branch {0!r}'.format(branch))
+        branch_arg = ('--branch={0!r}'.format(branch))
+    return branch_arg
+
+
 def _check_32(arch):
     '''
     Returns True if both the OS arch and the passed arch are 32-bit
@@ -704,6 +719,7 @@ def install(name=None,
                         'package targets')
 
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    branch_arg = _get_branch_option(**kwargs)
 
     old = list_pkgs()
     downgrade = []
@@ -735,16 +751,18 @@ def install(name=None,
         targets = pkg_params
 
     if targets:
-        cmd = 'yum -y {repo} {gpgcheck} install {pkg}'.format(
+        cmd = 'yum -y {repo} {branch} {gpgcheck} install {pkg}'.format(
             repo=repo_arg,
+            branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
         __salt__['cmd.run'](cmd, output_loglevel='debug')
 
     if downgrade:
-        cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
+        cmd = 'yum -y {repo} {branch} {gpgcheck} downgrade {pkg}'.format(
             repo=repo_arg,
+            branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
@@ -758,7 +776,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -775,8 +793,9 @@ def upgrade(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
+    branch_arg = _get_branch_option(**kwargs)
     old = list_pkgs()
-    cmd = 'yum -q -y upgrade'
+    cmd = 'yum -q -y upgrade {0}'.format(branch_arg)
     __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
