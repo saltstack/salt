@@ -328,9 +328,9 @@ def modify(name, **kwargs):
         ret['comment'] = 'Job {0} in correct state'.format(name)
         return ret
 
-    _current_lines = ['%s:%s\n' % (key, value)
+    _current_lines = ['{0}:{1}\n'.format(key, value)
                       for (key, value) in sorted(_current.items())]
-    _new_lines = ['%s:%s\n' % (key, value)
+    _new_lines = ['{0}:{1}\n'.format(key, value)
                   for (key, value) in sorted(_new.items())]
     _diff = difflib.unified_diff(_current_lines, _new_lines)
 
