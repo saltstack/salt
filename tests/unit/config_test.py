@@ -550,6 +550,50 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
 
+    # apply_cloud_config tests
+
+    def test_apply_cloud_config_no_provider_detail_list(self):
+        '''
+        Tests when the provider is not contained in a list of details
+        '''
+        overrides = {'providers': {'foo': [{'bar': 'baz'}]}}
+        self.assertRaises(SaltCloudConfigError, sconfig.apply_cloud_config,
+                          overrides, defaults=DEFAULT)
+
+    def test_apply_cloud_config_no_provider_detail_dict(self):
+        '''
+        Tests when the provider is not contained in the details dictionary
+        '''
+        overrides = {'providers': {'foo': {'bar': 'baz'}}}
+        self.assertRaises(SaltCloudConfigError, sconfig.apply_cloud_config,
+                          overrides, defaults=DEFAULT)
+
+    @patch('salt.config.old_to_new',
+           MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
+                                   'providers': {'foo': {'bar': {
+                                       'provider': 'foo:bar'}}}}))
+    def test_apply_cloud_config_success_list(self):
+        '''
+        Tests success when valid data is passed into the function as a list
+        '''
+        overrides = {'providers': {'foo': [{'provider': 'bar'}]}}
+        ret = {'default_include': 'path/to/some/cloud/conf/file',
+               'providers': {'foo': {'bar': {'provider': 'foo:bar'}}}}
+        self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+
+    @patch('salt.config.old_to_new',
+           MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
+                                   'providers': {'foo': {'bar': {
+                                       'provider': 'foo:bar'}}}}))
+    def test_apply_cloud_config_success_dict(self):
+        '''
+        Tests success when valid data is passed into function as a dictionary
+        '''
+        overrides = {'providers': {'foo': {'provider': 'bar'}}}
+        ret = {'default_include': 'path/to/some/cloud/conf/file',
+               'providers': {'foo': {'bar': {'provider': 'foo:bar'}}}}
+        self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+
     # apply_vm_profiles_config tests
 
     def test_apply_vm_profiles_config_bad_profile_format(self):
