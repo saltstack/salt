@@ -277,21 +277,9 @@ def _get_client(version=None, timeout=None):
 
 def _merge_auth_bits():
     '''
-    Merge the local docker authentication file
-    with the pillar configuration
+    Get the pillar configuration
     '''
-    cfg = os.path.expanduser('~/.dockercfg')
-    try:
-        fic = open(cfg)
-        try:
-            config = json.loads(fic.read())
-        finally:
-            fic.close()
-    except Exception:
-        config = {}
-    config.update(
-        __pillar__.get('docker-registries', {})
-    )
+    config = __pillar__.get('docker-registries', {})
     for k, data in __pillar__.items():
         if k.endswith('-docker-registries'):
             config.update(data)
