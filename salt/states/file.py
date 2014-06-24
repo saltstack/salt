@@ -2826,7 +2826,7 @@ def copy(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            __salt__['file.makedirs'](dname)
+            __salt__['file.makedirs'](name)
         else:
             return _error(
                 ret,
@@ -2912,7 +2912,7 @@ def rename(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            __salt__['file.makedirs'](dname)
+            __salt__['file.makedirs'](name)
         else:
             return _error(
                 ret,
