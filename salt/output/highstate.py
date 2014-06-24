@@ -68,6 +68,9 @@ def output(data):
 
 
 def _format_host(host, data):
+    #import pdb
+    #pdb.set_trace()
+
     colors = salt.utils.get_colors(__opts__.get('color'))
     tabular = __opts__.get('state_tabular', False)
     rcounts = {}
@@ -106,6 +109,11 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
+
+            # Skip this state if it was successfull & diff output was requested
+            if __opts__.get('state_diff', False) and ret['result']:
+                continue
+
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
