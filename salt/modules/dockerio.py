@@ -357,8 +357,8 @@ def _get_container_infos(container):
             'an existing container'.format(
                 container)
         )
-    if 'id' not in status['out'] and 'ID' in status['out']:
-        status['out']['id'] = status['out']['ID']
+    if 'id' not in status['out'] and 'Id' in status['out']:
+        status['out']['id'] = status['out']['Id']
     return status['out']
 
 
