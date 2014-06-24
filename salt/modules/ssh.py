@@ -824,6 +824,8 @@ def set_known_host(user=None,
 
     if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
+    os.chmod(full, 0644)
+
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 
 
