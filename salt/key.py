@@ -281,7 +281,7 @@ class KeyCLI(object):
         Run the logic for saltkey
         '''
         if self.opts['gen_keys']:
-            self.gen_keys()
+            self.key.gen_keys()
             return
         if self.opts['list']:
             self.list_status(self.opts['list'])
