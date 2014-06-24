@@ -2672,8 +2672,25 @@ class BaseHighState(object):
             return False
         return True
 
+    def matches_whitelist(self, matches, whitelist):
+        '''
+        Reads over the matches and returns a matches dict with just the ones
+        that are in the whitelist
+        '''
+        if not whitelist:
+            return matches
+        ret_matches = {}
+        if not isinstance(whitelist, list):
+            whitelist = whitelist.split(',')
+        for env in matches:
+            for sls in env:
+                if sls in whitelist:
+                    ret_matches[env] = ret_matches[env] if ret_matches[env] else []
+                    ret_matches[env].append(sls)
+        return ret_matches
+
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
-                       force=False):
+                       force=False, whitelist=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -2713,6 +2730,7 @@ class BaseHighState(object):
             msg = ('No Top file or external nodes data matches found')
             ret[tag_name]['comment'] = msg
             return ret
+        matches = self.matches_whitelist(matches, whitelist)
         self.load_dynamic(matches)
         if not self._check_pillar(force):
             err += ['Pillar failed to render with the following messages:']
