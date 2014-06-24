@@ -39,7 +39,7 @@ string will be the contents of the managed file. For example:
 
     def run():
         lines = ('foo', 'bar', 'baz')
-        return '\n\n'.join(lines)
+        return '\\n\\n'.join(lines)
 
 .. note::
 
