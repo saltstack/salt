@@ -390,9 +390,23 @@ class Auth(object):
                 return ''
             return aes
         else:
-            salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-            aes, token = self.decrypt_aes(payload, False)
-            return aes
+            # verify the masters pubkey signature if the minion
+            # has not received any masters pubkey before
+            if self.opts['verify_master_pub']:
+                if self.verify_pubkey_sig(payload['pub_key'],
+                                          payload['pub_sig']):
+                    log.info('Received signed and verified master pubkey '
+                             'from master {0}'.format(self.opts['master']))
+                    m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+                    salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                    aes, token = self.decrypt_aes(payload, False)
+                    return aes
+            # the minion has not received any masters pubkey yet, write
+            # the newly received pubkey to minion_master.pub
+            else:
+                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                aes, token = self.decrypt_aes(payload, False)
+                return aes
 
     def sign_in(self, timeout=60, safe=True, tries=1):
         '''
