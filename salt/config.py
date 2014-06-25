@@ -544,6 +544,9 @@ DEFAULT_MASTER_OPTS = {
     'zmq_filtering': False,
 }
 
+# Default delimiter for multi-level traversal in targeting
+DEFAULT_TARGET_DELIM = ':'
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 CLOUD_CONFIG_DEFAULTS = {
     'verify_env': True,
