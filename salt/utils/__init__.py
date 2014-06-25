@@ -1263,12 +1263,29 @@ def traverse_dict_and_list(data, key, default, delim=':'):
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
-    try:
-        for each in key.split(delim):
-            data = data[int(each)] if isinstance(data, list) else data[each]
-    except (KeyError, IndexError, TypeError, ValueError):
-        # Encountered a non-indexable value in the middle of traversing
-        return default
+    for each in key.split(delim):
+        if isinstance(data, list):
+            try:
+                idx = int(each)
+            except ValueError:
+                # Index was not numeric, lets look at any embedded dicts
+                for embedded in (x for x in data if isinstance(x, dict)):
+                    try:
+                        data = embedded[each]
+                    except KeyError:
+                        pass
+                # No embedded dicts matched, return the default
+                return default
+            else:
+                try:
+                    data = data[idx]
+                except IndexError:
+                    return default
+        else:
+            try:
+                data = data[each]
+            except KeyError:
+                return default
     return data
 
 
