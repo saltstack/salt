@@ -700,7 +700,7 @@ def clean_proc_dir(opts):
 
     for basefilename in os.listdir(salt.minion.get_proc_dir(opts['cachedir'])):
         fn_ = os.path.join(salt.minion.get_proc_dir(opts['cachedir']), basefilename)
-        with salt.utils.fopen(fn_, 'r') as fp_:
+        with salt.utils.fopen(fn_, 'rb') as fp_:
             job = None
             try:
                 job = salt.payload.Serial(opts).load(fp_)
