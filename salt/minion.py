@@ -1179,7 +1179,7 @@ class Minion(MinionBase):
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
-                   'overloaded. If the master is running consider incresing '
+                   'overloaded. If the master is running consider increasing '
                    'the worker_threads value.').format(jid)
             log.warn(msg)
             return ''
