@@ -237,6 +237,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         salt '*' state.highstate
 
+        salt '*' state.highstate whitelist=sls1_to_run,sls2_to_run
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
