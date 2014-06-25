@@ -12,6 +12,8 @@ from collections import defaultdict
 import salt.payload
 import salt.auth
 import salt.utils
+from re import match
+
 try:
     from raet import raeting, nacling
     from raet.road.stacking import RoadStack
@@ -139,7 +141,15 @@ class ZeroMQChannel(Channel):
     @property
     def sreq(self):
         key = self.sreq_key
+
         if key not in ZeroMQChannel.sreq_cache:
+            if self.opts['master_type'] == 'failover':
+                # remove all cached sreqs to the old master
+                for check_key in self.sreq_cache.keys():
+                    if self.opts['master_uri'] != check_key[0]:
+                        del self.sreq_cache[check_key]
+                        print("removed {0}".format(check_key))
+
             ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
 
         return ZeroMQChannel.sreq_cache[key]
