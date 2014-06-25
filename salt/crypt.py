@@ -392,7 +392,7 @@ class Auth(object):
         else:
             # verify the masters pubkey signature if the minion
             # has not received any masters pubkey before
-            if self.opts['verify_master_pub']:
+            if self.opts['verify_master_pub_sig']:
                 if self.verify_pubkey_sig(payload['pub_key'],
                                           payload['pub_sig']):
                     log.info('Received signed and verified master pubkey '
