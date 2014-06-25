@@ -558,7 +558,6 @@ def master(master_ip=None, connected=True):
 
         salt '*' status.master
     '''
-    print("\n\nip {0}, connected {1} \n\n".format(master_ip, connected))
     port = int(__salt__['config.option']('publish_port'))
     ips = _remote_port_tcp(port)
 

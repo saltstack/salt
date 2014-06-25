@@ -1593,7 +1593,8 @@ class Minion(MinionBase):
                                     self.opts['master'] = self.eval_master(opts=self.opts,
                                                                            failed=True)
                                     if self.connected:
-                                        log.info('Re-initialising subsystems for new master')
+                                        log.info('Re-initialising subsystems for new '
+                                                 'master {0}'.format(self.opts['master']))
                                         # re-init the subsystems to work with the new master
                                         del self.socket
                                         del self.context

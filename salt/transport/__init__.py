@@ -12,6 +12,9 @@ from collections import defaultdict
 import salt.payload
 import salt.auth
 import salt.utils
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     from raet import raeting
@@ -25,6 +28,9 @@ except ImportError:
 
 
 class Channel(object):
+    '''
+    Factory class to create communication-channels for different transport
+    '''
     @staticmethod
     def factory(opts, **kwargs):
         # Default to ZeroMQ for now
@@ -142,12 +148,14 @@ class ZeroMQChannel(Channel):
         key = self.sreq_key
 
         if key not in ZeroMQChannel.sreq_cache:
+            # remove all cached sreqs to the old master to prevent
+            # zeromq from reconnecting to old masters automagically
             if self.opts['master_type'] == 'failover':
-                # remove all cached sreqs to the old master
                 for check_key in self.sreq_cache.keys():
                     if self.opts['master_uri'] != check_key[0]:
                         del self.sreq_cache[check_key]
-                        print("removed {0}".format(check_key))
+                        log.debug('Removed obsolete sreq-object from '
+                                  'sreq_cache for master {0}'.format(check_key[0]))
 
             ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
 
