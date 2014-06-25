@@ -27,7 +27,7 @@ def _check_error(result, success_message):
     ret = {}
 
     if 'ERROR' in result:
-        if 'already running' in result:
+        if 'already started' in result:
             ret['comment'] = success_message
         elif 'not running' in result:
             ret['comment'] = success_message
