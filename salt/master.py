@@ -360,6 +360,7 @@ class Halite(multiprocessing.Process):
         '''
         Fire up halite!
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         halite.start(self.hopts)
 
 
@@ -376,6 +377,7 @@ class Publisher(multiprocessing.Process):
         '''
         Bind to the interface specified in the configuration file
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -576,6 +578,7 @@ class MWorker(multiprocessing.Process):
         self.key = key
         self.k_mtime = 0
 
+
     def __bind(self):
         '''
         Bind to the local port
@@ -694,6 +697,7 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         self.clear_funcs = ClearFuncs(
                 self.opts,
                 self.key,

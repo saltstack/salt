@@ -88,6 +88,12 @@ except ImportError:
     # pwd is not available on windows
     HAS_PWD = False
 
+try:
+    import setproctitle
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
 # Import salt libs
 import salt._compat
 import salt.log
@@ -2346,3 +2352,10 @@ def import_json():
             return mod
         except ImportError:
             continue
+
+def appendproctitle(name):
+    '''
+    Append "name" to the current process title
+    '''
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)
