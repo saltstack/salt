@@ -12,7 +12,6 @@ from collections import defaultdict
 import salt.payload
 import salt.auth
 import salt.utils
-from re import match
 
 try:
     from raet import raeting
