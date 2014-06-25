@@ -818,6 +818,7 @@ class AESFuncs(object):
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
 
+
     def _ext_nodes(self, load):
         '''
         Return the results from an external node classifier if one is
@@ -847,11 +848,13 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
-        ret = {}
+
         # Evaluate all configured master_tops interfaces
 
+        ret = {}
         opts = {}
         grains = {}
+
         if 'opts' in load:
             opts = load['opts']
             if 'grains' in load['opts']:
@@ -870,6 +873,7 @@ class AESFuncs(object):
                     )
                 )
         return ret
+
 
     def _master_opts(self, load):
         '''
