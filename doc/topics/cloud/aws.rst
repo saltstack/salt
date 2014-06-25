@@ -864,4 +864,70 @@ This function removes the key pair from Amazon.
 
     salt-cloud -f delete_keypair ec2 keyname=mykeypair
 
+Launching instances into a VPC
+==============================
 
+Simple launching into a VPC
+---------------------------
+
+In the amazon web interface, identify the id of the subnet into which your
+image should be created. Then, edit your cloud.profiles file like so:-
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      subnetid: subnet-XXXXXXXX
+      image: ami-XXXXXXXX
+      size: m1.medium
+      ssh_username: ubuntu
+      securitygroupid:
+        - sg-XXXXXXXX
+
+Specifying interface properties
+-------------------------------
+
+Launching into a VPC allows you to specify more complex configurations for
+the network interfaces of your virtual machines, for example:-
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      image: ami-XXXXXXXX
+      size: m1.medium
+      ssh_username: ubuntu
+
+      # Do not include either 'subnetid' or 'securitygroupid' here if you are
+      # going to manually specify interface configuration
+      #
+      network_interfaces:
+        - DeviceIndex: 0
+          SubnetId: subnet-XXXXXXXX
+          SecurityGroupId:
+            - sg-XXXXXXXX
+
+          # Uncomment this to associate an existing Elastic IP Address with
+          # this network interface:
+          #
+          # associate_eip: eni-XXXXXXXX
+
+          # You can allocate more than one IP address to an interface. Use the
+          # 'ip addr list' command to see them.
+          #
+          # SecondaryPrivateIpAddressCount: 2
+
+          # Uncomment this to allocate a new Elastic IP Address to this
+          # interface (will be associated with the primary private ip address
+          # of the interface
+          #
+          # allocation_new_eip: True
+
+          # Uncomment this instead to allocate a new Elastic IP Address to
+          # both the primary private ip address and each of the secondary ones
+          #
+          allocate_new_eips: True
+
+Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
+profile where the interfaces are manually configured like this. These are both
+really properties of each network interface, not of the machine itself.
