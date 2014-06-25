@@ -116,22 +116,33 @@ def present(name,
         if new_item == current_schedule[name]:
             ret['comment'].append('Job {0} in correct state'.format(name))
         else:
-            result = __salt__['schedule.modify'](name, **kwargs)
+            if 'test' in __opts__ and __opts__['test']:
+                kwargs['test'] = True
+                result = __salt__['schedule.modify'](name, **kwargs)
+                ret['comment'].append(result['comment'])
+                ret['changes'] = result['changes']
+            else:
+                result = __salt__['schedule.modify'](name, **kwargs)
+                if not result['result']:
+                    ret['result'] = result['result']
+                    ret['comment'].append(result['comment'])
+                    return ret
+                else:
+                    ret['comment'].append('Modifying job {0} in schedule'.format(name))
+                    ret['changes'] = result['changes']
+    else:
+        if 'test' in __opts__ and __opts__['test']:
+            kwargs['test'] = True
+            result = __salt__['schedule.add'](name, **kwargs)
+            ret['comment'].append(result['comment'])
+        else:
+            result = __salt__['schedule.add'](name, **kwargs)
             if not result['result']:
                 ret['result'] = result['result']
                 ret['comment'].append(result['comment'])
                 return ret
             else:
-                ret['comment'].append('Modifying job {0} in schedule'.format(name))
-                ret['changes'] = result['changes']
-    else:
-        result = __salt__['schedule.add'](name, **kwargs)
-        if not result['result']:
-            ret['result'] = result['result']
-            ret['comment'].append(result['comment'])
-            return ret
-        else:
-            ret['comment'].append('Adding new job {0} to schedule'.format(name))
+                ret['comment'].append('Adding new job {0} to schedule'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
@@ -156,12 +167,17 @@ def absent(name, **kwargs):
 
     current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
     if name in current_schedule:
-        result = __salt__['schedule.delete'](name)
-        if not result['result']:
-            ret['result'] = result['result']
+        if 'test' in __opts__ and __opts__['test']:
+            kwargs['test'] = True
+            result = __salt__['schedule.delete'](name, **kwargs)
             ret['comment'].append(result['comment'])
         else:
-            ret['comment'].append('Removed job {0} from schedule'.format(name))
+            result = __salt__['schedule.delete'](name, **kwargs)
+            if not result['result']:
+                ret['result'] = result['result']
+                ret['comment'].append(result['comment'])
+            else:
+                ret['comment'].append('Removed job {0} from schedule'.format(name))
     else:
         ret['comment'].append('Job {0} not present in schedule'.format(name))
 
