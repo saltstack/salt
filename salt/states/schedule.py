@@ -113,6 +113,14 @@ def present(name,
 
     if name in current_schedule:
         new_item = __salt__['schedule.build_schedule_item'](name, **kwargs)
+
+        # See if the new_item is valid
+        if isinstance(new_item, dict):
+            if 'result' in new_item and not new_item['result']:
+                ret['result'] = new_item['result']
+                ret['comment'] = new_item['comment']
+                return ret
+
         if new_item == current_schedule[name]:
             ret['comment'].append('Job {0} in correct state'.format(name))
         else:
@@ -125,7 +133,7 @@ def present(name,
                 result = __salt__['schedule.modify'](name, **kwargs)
                 if not result['result']:
                     ret['result'] = result['result']
-                    ret['comment'].append(result['comment'])
+                    ret['comment'] = result['comment']
                     return ret
                 else:
                     ret['comment'].append('Modifying job {0} in schedule'.format(name))
@@ -139,7 +147,7 @@ def present(name,
             result = __salt__['schedule.add'](name, **kwargs)
             if not result['result']:
                 ret['result'] = result['result']
-                ret['comment'].append(result['comment'])
+                ret['comment'] = result['comment']
                 return ret
             else:
                 ret['comment'].append('Adding new job {0} to schedule'.format(name))
@@ -175,7 +183,8 @@ def absent(name, **kwargs):
             result = __salt__['schedule.delete'](name, **kwargs)
             if not result['result']:
                 ret['result'] = result['result']
-                ret['comment'].append(result['comment'])
+                ret['comment'] = result['comment']
+                return ret
             else:
                 ret['comment'].append('Removed job {0} from schedule'.format(name))
     else:

@@ -192,6 +192,7 @@ def build_schedule_item(name, **kwargs):
     if not name:
         ret['comment'] = 'Job name is required.'
         ret['result'] = False
+        return ret
 
     schedule = {}
     schedule[name] = salt.utils.odict.OrderedDict()
@@ -203,7 +204,9 @@ def build_schedule_item(name, **kwargs):
             time_conflict = True
 
     if time_conflict:
-        return 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        ret['result'] = False
+        ret['comment'] = 'Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        return ret
 
     for item in ['seconds', 'minutes', 'hours', 'days']:
         if item in kwargs:
@@ -279,6 +282,7 @@ def add(name, **kwargs):
     if time_conflict:
         ret['result'] = False
         ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        return ret
 
     _new = build_schedule_item(name, **kwargs)
 
@@ -320,6 +324,7 @@ def modify(name, **kwargs):
     if time_conflict:
         ret['result'] = False
         ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        return ret
 
     current_schedule = __opts__['schedule'].copy()
     if 'schedule' in __pillar__:
