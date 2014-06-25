@@ -65,8 +65,10 @@ def nodegroup_comp(group, nodegroups, skip=None):
     '''
     Take the nodegroup and the nodegroups and fill in nodegroup refs
     '''
+    k = 1
     if skip is None:
         skip = set([group])
+        k = 0
     if group not in nodegroups:
         return ''
     gstr = nodegroups[group]
@@ -80,7 +82,10 @@ def nodegroup_comp(group, nodegroups, skip=None):
             continue
         skip.add(ngroup)
         ret += nodegroup_comp(ngroup, nodegroups, skip)
-    return ret
+    if k == 1:
+        return ret
+    else:
+        return ret[:-3]
 
 
 class CkMinions(object):
