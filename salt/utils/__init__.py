@@ -1268,14 +1268,18 @@ def traverse_dict_and_list(data, key, default, delim=':'):
             try:
                 idx = int(each)
             except ValueError:
+                embed_match = False
                 # Index was not numeric, lets look at any embedded dicts
                 for embedded in (x for x in data if isinstance(x, dict)):
                     try:
                         data = embedded[each]
+                        embed_match = True
+                        break
                     except KeyError:
                         pass
-                # No embedded dicts matched, return the default
-                return default
+                if not embed_match:
+                    # No embedded dicts matched, return the default
+                    return default
             else:
                 try:
                     data = data[idx]
@@ -1284,7 +1288,7 @@ def traverse_dict_and_list(data, key, default, delim=':'):
         else:
             try:
                 data = data[each]
-            except KeyError:
+            except (KeyError, TypeError):
                 return default
     return data
 
