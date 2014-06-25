@@ -441,8 +441,7 @@ class RemoteFuncs(object):
         '''
         Allow the minion to delete all of its own mine contents
         '''
-        if not skip_verify:
-            if 'id' not in load:
+        if not skip_verify and 'id' not in load:
                 return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
