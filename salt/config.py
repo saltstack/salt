@@ -333,7 +333,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
-    'recon_max': 59000,
+    'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
     'random_reauth_delay': 60,
