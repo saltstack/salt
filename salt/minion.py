@@ -67,6 +67,7 @@ import salt.utils.event
 import salt.utils.schedule
 import salt.exitcodes
 
+from salt.config import DEFAULT_TARGET_DELIM
 from salt._compat import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
@@ -891,7 +892,13 @@ class Minion(MinionBase):
         if 'tgt_type' in data:
             match_func = getattr(self.matcher,
                                  '{0}_match'.format(data['tgt_type']), None)
-            if match_func is None or not match_func(data['tgt']):
+            if match_func is None:
+                return
+            if data['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
+                delim = data.get('delim', DEFAULT_TARGET_DELIM)
+                if not match_func(data['tgt'], delim=delim):
+                    return
+            elif not match_func(data['tgt']):
                 return
         else:
             if not self.matcher.glob_match(data['tgt']):
@@ -2352,7 +2359,7 @@ class Matcher(object):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
-    def grain_match(self, tgt, delim=':'):
+    def grain_match(self, tgt, delim=DEFAULT_TARGET_DELIM):
         '''
         Reads in the grains glob match
         '''
@@ -2363,7 +2370,7 @@ class Matcher(object):
             return False
         return salt.utils.subdict_match(self.opts['grains'], tgt, delim=delim)
 
-    def grain_pcre_match(self, tgt, delim=':'):
+    def grain_pcre_match(self, tgt, delim=DEFAULT_TARGET_DELIM):
         '''
         Matches a grain based on regex
         '''
@@ -2401,7 +2408,7 @@ class Matcher(object):
             comps[1],
         ))
 
-    def pillar_match(self, tgt, delim=':'):
+    def pillar_match(self, tgt, delim=DEFAULT_TARGET_DELIM):
         '''
         Reads in the pillar glob match
         '''
