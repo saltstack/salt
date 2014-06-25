@@ -838,6 +838,12 @@ class TargetOptionsMixIn(object):
                   'expression:\n"os:Arch*"')
         )
         group.add_option(
+            '--delim',
+            default=config.DEFAULT_TARGET_DELIM,
+            help=('Change the default delimiter for matching in multi-level '
+                  'data structures. default=\'%default\'')
+        )
+        group.add_option(
             '--grain-pcre',
             default=False,
             action='store_true',
