@@ -1866,6 +1866,8 @@ class State(object):
                 for listen_to in val:
                     for lkey, lval in listen_to.items():
                         to_tag = _gen_tag(crefs[(lkey, lval)])
+                        if to_tag not in running:
+                            continue
                         if running[to_tag]['changes']:
                             chunk = crefs[key]
                             low = chunk.copy()
