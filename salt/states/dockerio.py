@@ -236,7 +236,7 @@ def pulled(name, force=False, *args, **kwargs):
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
-    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
     returned = pull(name)
     if previous_id != returned['id']:
@@ -273,7 +273,7 @@ def built(name,
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
                 name, image_infos['out']['id']))
-    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     build = __salt__['docker.build']
     kw = dict(tag=name,
               path=path,
