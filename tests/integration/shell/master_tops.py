@@ -4,12 +4,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
-import os
-import yaml
-import signal
-import shutil
-
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
