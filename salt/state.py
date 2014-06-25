@@ -1845,6 +1845,38 @@ class State(object):
             self.event(running[tag], len(chunks))
         return running
 
+    def call_listen(self, chunks, running):
+        '''
+        Find all of the lesten routines and call the associated mod_match runs
+        '''
+        listeners = []
+        crefs = {}
+        for chunk in chunks:
+            crefs[(chunk['state'], chunk['name'])] = chunk
+            crefs[(chunk['state'], chunk['__id__'])] = chunk
+            if 'listen' in chunk:
+                listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
+            if 'listen_in' in chunk:
+                for l_in in chunk['listen_in']:
+                    for key, val in l_in.items():
+                        listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
+        mod_watchers = []
+        for l_dict in listeners:
+            for key, val in l_dict.items():
+                for listen_to in val:
+                    for lkey, lval in listen_to.items():
+                        to_tag = _gen_tag(crefs[(lkey, lval)])
+                        if running[to_tag]['changes']:
+                            chunk = crefs[key]
+                            low = chunk.copy()
+                            low['sfun'] = chunk['fun']
+                            low['fun'] = 'mod_watch'
+                            low['__id__'] = 'listener_{0}'.format(low['__id__'])
+                            mod_watchers.append(low)
+        ret = self.call_chunks(mod_watchers)
+        running.update(ret)
+        return running
+
     def call_high(self, high):
         '''
         Process a high data call and ensure the defined states.
@@ -1869,6 +1901,7 @@ class State(object):
         if errors:
             return errors
         ret = self.call_chunks(chunks)
+        ret = self.call_listen(chunks, ret)
         return ret
 
     def render_template(self, high, template):
@@ -2639,8 +2672,25 @@ class BaseHighState(object):
             return False
         return True
 
+    def matches_whitelist(self, matches, whitelist):
+        '''
+        Reads over the matches and returns a matches dict with just the ones
+        that are in the whitelist
+        '''
+        if not whitelist:
+            return matches
+        ret_matches = {}
+        if not isinstance(whitelist, list):
+            whitelist = whitelist.split(',')
+        for env in matches:
+            for sls in matches[env]:
+                if sls in whitelist:
+                    ret_matches[env] = ret_matches[env] if env in ret_matches else []
+                    ret_matches[env].append(sls)
+        return ret_matches
+
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
-                       force=False):
+                       force=False, whitelist=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
@@ -2680,6 +2730,7 @@ class BaseHighState(object):
             msg = ('No Top file or external nodes data matches found')
             ret[tag_name]['comment'] = msg
             return ret
+        matches = self.matches_whitelist(matches, whitelist)
         self.load_dynamic(matches)
         if not self._check_pillar(force):
             err += ['Pillar failed to render with the following messages:']

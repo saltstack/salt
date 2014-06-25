@@ -102,10 +102,14 @@ Available Functions
 
 '''
 import functools
+import logging
 
 # Import salt libs
 from salt._compat import string_types
 import salt.utils
+
+# Enable proper logging
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'docker'
@@ -232,7 +236,7 @@ def pulled(name, force=False, *args, **kwargs):
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
-    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
     returned = pull(name)
     if previous_id != returned['id']:
@@ -269,7 +273,7 @@ def built(name,
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
                 name, image_infos['out']['id']))
-    previous_id = image_infos['out']['id'] if image_infos['status'] else None
+    previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     build = __salt__['docker.build']
     kw = dict(tag=name,
               path=path,
@@ -394,8 +398,8 @@ def installed(name,
     changes = 'Container created'
     try:
         cid = out['out']['info']['id']
-    except Exception:
-        pass
+    except Exception, e:
+        log.debug(str(e))
     else:
         changes = 'Container {0} created'.format(cid)
         out['comment'] = changes
@@ -552,7 +556,7 @@ def script(*args, **kw):
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
             privileged=False, dns=None, volumes_from=None,
-            check_is_running=True):
+            network_mode=None, check_is_running=True):
     '''
     Ensure that a container is running. (`docker inspect`)
 
@@ -619,11 +623,23 @@ def running(name, container=None, port_bindings=None, binds=None,
             - dns:
                 - name_other_container
 
+    network_mode
+        - 'bridge': creates a new network stack for the container on the docker bridge
+        - 'none': no networking for this container
+        - 'container:[name|id]': reuses another container network stack)
+        - 'host': use the host network stack inside the container
+
+        .. code-block:: yaml
+
+            - network_mode: host
+
     check_is_running
         Enable checking if a container should run or not.
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
     '''
+    if not container and name:
+        container = name
     is_running = __salt__['docker.is_running'](container)
     if is_running:
         return _valid(
@@ -633,19 +649,26 @@ def running(name, container=None, port_bindings=None, binds=None,
             container, binds=binds, port_bindings=port_bindings,
             lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
             links=links, privileged=privileged,
-            dns=dns, volumes_from=volumes_from,
+            dns=dns, volumes_from=volumes_from, network_mode=network_mode,
         )
         if check_is_running:
             is_running = __salt__['docker.is_running'](container)
+            log.debug("Docker-io running:" + str(started))
+            log.debug("Docker-io running:" + str(is_running))
             if is_running:
                 return _valid(
                     comment='Container {0!r} started.\n'.format(container),
                     changes={name: True})
             else:
                 return _invalid(
-                    comment=('Container {0!r}'
-                            ' cannot be started\n{0!s}').format(container,
-                                                                started['out']))
+                    comment=(
+                        'Container {0!r} cannot be started\n{0!s}'
+                        .format(
+                            container,
+                            started['out'],
+                        )
+                    )
+                )
         else:
             return _valid(
                 comment='Container {0!r} started.\n'.format(container),

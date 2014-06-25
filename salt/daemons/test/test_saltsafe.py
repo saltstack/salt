@@ -271,13 +271,13 @@ class BasicTestCase(unittest.TestCase):
                  'name': 'remote1',
                  'ha': ['127.0.0.1', 7532],
                  'sid': 0,
-                 'rsid': 0},
+                 'joined': None,},
             '4':
                 {'uid': 4,
                  'name': 'remote2',
                  'ha': ['127.0.0.1', 7533],
                  'sid': 0,
-                 'rsid': 0}})
+                 'joined': None,}})
 
         # now recreate with saved data
         main.server.close()
@@ -355,13 +355,13 @@ class BasicTestCase(unittest.TestCase):
                  'name': 'remote3',
                  'ha': ['127.0.0.1', 7534],
                  'sid': 0,
-                 'rsid': 0},
+                 'joined': None,},
             '4':
                 {'uid': 4,
                  'name': 'remote4',
                  'ha': ['127.0.0.1', 7535],
                  'sid': 0,
-                 'rsid': 0}})
+                 'joined': None,}})
 
         main.server.close()
         other.server.close()

@@ -27,7 +27,7 @@ framer masterudpstack be active first setup
 
 framer inbound be active first start
     frame start
-        do rx
+        do salt raet road stack service rx
 
 framer uxdrouter be active first start
     frame start
@@ -41,6 +41,10 @@ framer publish be active first start
     frame start
         do publisher
 
+framer manager be active first start at 1.0
+    frame start
+         do salt raet road stack manager per inode ".raet.udp.stack"
+
 framer outbound be active first start
     frame start
-        do tx
+        do salt raet road stack service tx

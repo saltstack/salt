@@ -283,7 +283,8 @@ def highstate(test=None, queue=False, **kwargs):
                 exclude=kwargs.get('exclude', []),
                 cache=kwargs.get('cache', None),
                 cache_name=kwargs.get('cache_name', 'highstate'),
-                force=kwargs.get('force', False)
+                force=kwargs.get('force', False),
+                whitelist=kwargs.get('whitelist')
                 )
     finally:
         st_.pop_active()

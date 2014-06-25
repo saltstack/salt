@@ -23,6 +23,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -422,6 +423,91 @@ def present(name, bare=True, runas=None, user=None, force=False):
     log.info(message)
     ret['changes']['new repository'] = name
     ret['comment'] = message
+
+    return ret
+
+
+def config(name,
+           value,
+           repo=None,
+           user=None,
+           is_global=False):
+    '''
+    .. versionadded:: Helium
+
+    Manage a git config setting for a user or repository
+
+    name
+        Name of the git config value to set
+
+    value
+        Value to set
+
+    repo : None
+        An optional location of a git repository for local operations
+
+    user : None
+        Optional name of a user as whom `git config` will be run
+
+    is_global : False
+        Whether or not to pass the `--global` option to `git config`
+
+    Local config example:
+
+    .. code-block:: yaml
+
+        mylocalrepo:
+          git.config:
+            - name: user.email
+            - value: fester@bestertester.net
+            - repo: file://my/path/to/repo
+
+    Global config example:
+
+    .. code-block:: yaml
+
+        mylocalrepo:
+          git.config:
+            - name: user.name
+            - value: Esther Bestertester
+            - user: ebestertester
+            - is_global: True
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    # get old value
+    try:
+        oval = __salt__['git.config_get'](setting_name=name,
+                                          cwd=repo,
+                                          user=user)
+    except CommandExecutionError:
+        oval = None
+
+    if value == oval:
+        ret['comment'] = 'No changes made'
+    else:
+        if __opts__['test']:
+            nval = value
+        else:
+            # set new value
+            __salt__['git.config_set'](setting_name=name,
+                                       setting_value=value,
+                                       cwd=repo,
+                                       user=user,
+                                       is_global=is_global)
+
+            # get new value
+            nval = __salt__['git.config_get'](setting_name=name,
+                                              cwd=repo,
+                                              user=user)
+
+        if oval is None:
+            oval = 'None'
+
+        ret['changes'][name] = '{0} => {1}'.format(oval, nval)
 
     return ret
 

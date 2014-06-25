@@ -314,6 +314,41 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
+    def _ext_nodes(self, load):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        if 'id' not in load:
+            log.error('Received call for external nodes without an id')
+            return {}
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return {}
+        # Evaluate all configured master_tops interfaces
+
+        opts = {}
+        grains = {}
+        ret = {}
+
+        if 'opts' in load:
+            opts = load['opts']
+            if 'grains' in load['opts']:
+                grains = load['opts']['grains']
+        for fun in self.tops:
+            if fun not in self.opts.get('master_tops', {}):
+                continue
+            try:
+                ret.update(self.tops[fun](opts=opts, grains=grains))
+            except Exception as exc:
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    'Top function {0} failed with error {1} for minion '
+                    '{2}'.format(
+                        fun, exc, load['id']
+                    )
+                )
+        return ret
+
     def _mine_get(self, load):
         '''
         Gathers the data from the specified minions' mine
@@ -429,7 +464,14 @@ class RemoteFuncs(object):
         if os.path.isabs(load['path']) or '../' in load['path']:
             # Can overwrite master files!!
             return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+
+        if 'loc' in load and load['loc'] < 0:
+            log.error('Invalid file pointer: load[loc] < 0')
+            return False
+
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
                 'Exceeding file_recv_max_size limit: {0}'.format(
@@ -560,7 +602,7 @@ class RemoteFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        if any(key not in load for key in ('fun', 'arg', 'id', 'tok')):
+        if any(key not in load for key in ('fun', 'arg', 'id')):
             return {}
         perms = set()
         for match in self.opts['peer_run']:
@@ -573,6 +615,13 @@ class RemoteFuncs(object):
             if re.match(perm, load['fun']):
                 good = True
         if not good:
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                    'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                    )
+            )
             return {}
         # Prepare the runner object
         opts = {'fun': load['fun'],
@@ -589,7 +638,7 @@ class RemoteFuncs(object):
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        if any(key not in load for key in ('jid', 'id', 'tok')):
+        if any(key not in load for key in ('jid', 'id')):
             return {}
         # Check that this minion can access this data
         auth_cache = os.path.join(

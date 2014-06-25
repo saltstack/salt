@@ -34,7 +34,7 @@ import salt.utils.xdg
 from salt._compat import string_types
 
 import sys
-#can't use salt.utils.is_windows, because config.py is included from salt.utils
+# can't use salt.utils.is_windows, because config.py is included from salt.utils
 if not sys.platform.lower().startswith('win'):
     import salt.cloud.exceptions
 
@@ -546,6 +546,13 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_granular_levels': {},
 }
 
+DEFAULT_API_OPTS = {
+    # ----- Salt master settings overridden by Salt-API --------------------->
+    'pidfile': '/var/run/salt-api.pid',
+    'logfile': '/var/log/salt/api',
+    # <---- Salt master settings overridden by Salt-API ----------------------
+}
+
 VM_CONFIG_DEFAULTS = {
     'default_include': 'cloud.profiles.d/*.conf',
 }
@@ -649,6 +656,27 @@ def _read_conf_file(path):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
+
+
+def _absolute_path(path, relative_to=None):
+    '''
+    Return an absolute path. In case ``relative_to`` is passed and ``path`` is
+    not an absolute path, we try to prepend ``relative_to`` to ``path``and if
+    that path exists, return that one
+    '''
+
+    if path and os.path.isabs(path):
+        return path
+    if path and relative_to is not None:
+        _abspath = os.path.join(relative_to, path)
+        if os.path.isfile(_abspath):
+            log.debug(
+                'Relative path {0!r} converted to existing absolute path {1!r}'.format(
+                    path, _abspath
+                )
+            )
+            return _abspath
+    return path
 
 
 def load_config(path, env_var, default_path=None):
@@ -963,7 +991,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         vm_config_path = None
 
     # Load the cloud configuration
-    overrides = salt.config.load_config(
+    overrides = load_config(
         path,
         env_var,
         os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
@@ -1017,6 +1045,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # configuration file, and
         master_config_path = os.path.join(config_dir, 'master')
 
+    # Convert relative to absolute paths if necessary
+    master_config_path = _absolute_path(master_config_path, config_dir)
+
     if 'providers_config' in overrides and providers_config_path is None:
         # The configuration setting is being specified in the main cloud
         # configuration file
@@ -1025,6 +1056,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                                                 and not providers_config_path:
         providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
+    # Convert relative to absolute paths if necessary
+    providers_config_path = _absolute_path(providers_config_path, config_dir)
+
     if 'profiles_config' in overrides and profiles_config_path is None:
         # The configuration setting is being specified in the main cloud
         # configuration file
@@ -1032,6 +1066,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif 'profiles_config' not in overrides and not profiles_config \
             and not profiles_config_path:
         profiles_config_path = os.path.join(config_dir, 'cloud.profiles')
+
+    # Convert relative to absolute paths if necessary
+    profiles_config_path = _absolute_path(profiles_config_path, config_dir)
 
     # Prepare the deploy scripts search path
     deploy_scripts_search_path = overrides.get(
@@ -2129,3 +2166,16 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Return the client options
     _validate_opts(opts)
     return opts
+
+
+def api_config(path):
+    '''
+    Read in the salt master config file and add additional configs that
+    need to be stubbed out for salt-api
+    '''
+    # Let's grab a copy of salt's master default opts
+    defaults = DEFAULT_MASTER_OPTS
+    # Let's override them with salt-api's required defaults
+    defaults.update(DEFAULT_API_OPTS)
+
+    return master_config(path, defaults=defaults)

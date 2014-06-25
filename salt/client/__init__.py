@@ -212,9 +212,10 @@ class LocalClient(object):
         if not pub_data:
             # Failed to autnenticate, this could be a bunch of things
             raise EauthAuthenticationError(
-                'Failed to authenticate! This could be a number of issues:'
-                '1: Is this user permitted to execute commands?'
-                '2: A disk error may have occured, check disk usage and inode usage.'
+                'Failed to authenticate!  This is most likely because this '
+                'user is not permitted to execute commands, but there is a '
+                'small possibility that a disk error ocurred (check '
+                'disk/inode usage).'
             )
 
         # Failed to connect to the master and send the pub
@@ -517,9 +518,20 @@ class LocalClient(object):
         if not pub_data:
             return pub_data
 
-        return self.get_returns(pub_data['jid'],
-                                pub_data['minions'],
-                                self._get_timeout(timeout))
+        ret = {}
+        for fn_ret in self.get_cli_event_returns(
+                pub_data['jid'],
+                pub_data['minions'],
+                self._get_timeout(timeout),
+                tgt,
+                expr_form,
+                **kwargs):
+
+            if fn_ret:
+                for mid, data in fn_ret.items():
+                    ret[mid] = data.get('ret', {})
+
+        return ret
 
     def cmd_cli(
             self,

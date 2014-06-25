@@ -530,14 +530,14 @@ def _virtual(osdata):
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
             with salt.utils.fopen('/proc/self/status') as status_file:
+                vz_re = re.compile(r'^envID:\s+(\d+)$')
                 for line in status_file:
-                    vz_re = re.compile(r'^envID:\s+(\d+)$')
                     vz_match = vz_re.match(line.rstrip('\n'))
                     if vz_match and int(vz_match.groups()[0]) != 0:
                         grains['virtual'] = 'openvzve'
                     elif vz_match and int(vz_match.groups()[0]) == 0:
                         grains['virtual'] = 'openvzhn'
-        elif isdir('/proc/sys/xen') or \
+        if isdir('/proc/sys/xen') or \
                 isdir('/sys/bus/xen') or isdir('/proc/xen'):
             if os.path.isfile('/proc/xen/xsd_kva'):
                 # Tested on CentOS 5.3 / 2.6.18-194.26.1.el5xen

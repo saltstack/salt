@@ -1676,17 +1676,23 @@ def get_network_settings():
 
         salt '*' ip.get_network_settings
     '''
+    skip_etc_default_networking = (
+        __grains__['osfullname'] == 'Ubuntu' and
+        int(__grains__['osrelease'].split('.')[0]) >= 12)
 
-    settings = _parse_current_network_settings()
-
-    try:
-        template = JINJA.get_template('network.jinja')
-    except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template network.jinja')
+    if skip_etc_default_networking:
         return ''
+    else:
+        settings = _parse_current_network_settings()
 
-    network = template.render(settings)
-    return _read_temp(network)
+        try:
+            template = JINJA.get_template('network.jinja')
+        except jinja2.exceptions.TemplateNotFound:
+            log.error('Could not load template network.jinja')
+            return ''
+
+        network = template.render(settings)
+        return _read_temp(network)
 
 
 def get_routes(iface):

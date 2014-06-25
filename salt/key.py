@@ -281,10 +281,7 @@ class KeyCLI(object):
         Run the logic for saltkey
         '''
         if self.opts['gen_keys']:
-            salt.crypt.gen_keys(
-                    self.opts['gen_keys_dir'],
-                    self.opts['gen_keys'],
-                    self.opts['keysize'])
+            self.key.gen_keys()
             return
         if self.opts['list']:
             self.list_status(self.opts['list'])
@@ -341,6 +338,16 @@ class Key(object):
         minions_rejected = os.path.join(self.opts['pki_dir'],
                                         'minions_rejected')
         return minions_accepted, minions_pre, minions_rejected
+
+    def gen_keys(self):
+        '''
+        Generate minion keys
+        '''
+        salt.crypt.gen_keys(
+                self.opts['gen_keys_dir'],
+                self.opts['gen_keys'],
+                self.opts['keysize'])
+        return
 
     def check_minion_cache(self):
         '''
@@ -709,6 +716,17 @@ class RaetKey(Key):
         pre = os.path.join(self.opts['pki_dir'], 'pending')
         rejected = os.path.join(self.opts['pki_dir'], 'rejected')
         return accepted, pre, rejected
+
+    def gen_keys(self):
+        '''
+        Use libnacl to generate and safely save a private key
+        '''
+        import libnacl.public
+        d_key = libnacl.dual.SecretKey()
+        path = '{0}.key'.format(os.path.join(
+            self.opts['gen_keys_dir'],
+            self.opts['gen_keys']))
+        d_key.save(path)
 
     def check_master(self):
         '''

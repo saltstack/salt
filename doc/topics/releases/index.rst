@@ -5,7 +5,7 @@ Release notes
 .. releasestree::
     :maxdepth: 1
 
-    2014.1.4
+    2014.1.5
 
 Archive
 =======
@@ -17,3 +17,5 @@ Archive
     *
 
 .. seealso:: :doc:`Legacy salt-cloud release docs <../cloud/releases/index>`
+
+.. seealso:: :doc:`Legacy salt-api release docs <saltapi/index>`

@@ -79,3 +79,6 @@ class LocalClient(salt.client.LocalClient):
                 if 'ret' in ret:
                     return ret['ret']
                 return ret
+        stack.server.close()
+        stack.clearLocal()
+        stack.clearRemoteKeeps()

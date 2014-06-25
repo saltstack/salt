@@ -216,6 +216,14 @@ def avail_sizes(call=None):
             'name': 'A7',
             'description': '8 cores, 56GB RAM',
         },
+        'A8': {
+            'name': 'A8',
+            'description': '8 cores, 56GB RAM, 40 Gbit/s InfiniBand',
+        },
+        'A9': {
+            'name': 'A9',
+            'description': '16 cores, 112GB RAM, 40 Gbit/s InfiniBand',
+        },
     }
 
 

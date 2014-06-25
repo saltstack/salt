@@ -49,7 +49,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
     'BOOTSTRAP_SCRIPT_VERSION',
     # If no bootstrap-script version was provided from the environment, let's
     # provide the one we define.
-    'v1.5.9'
+    'v2014.06.21'
 )
 
 # Store a reference to the executing platform
@@ -78,7 +78,7 @@ if WITH_SETUPTOOLS is False:
     # pylint: enable=E0611
     warnings.filterwarnings(
         'ignore',
-        'Unknown distribution option: \'(tests_require|install_requires|zip_safe)\'',
+        'Unknown distribution option: \'(extras_require|tests_require|install_requires|zip_safe)\'',
         UserWarning,
         'distutils.dist'
     )
@@ -212,7 +212,9 @@ class CloudSdist(sdist):
             # Remove un-necessary scripts grabbed by MANIFEST.in
             for filename in self.filelist.files[:]:
                 if filename in ('scripts/salt',
+                                'scripts/salt-api',
                                 'scripts/salt-cloud',
+                                'scripts/salt-api',
                                 'scripts/salt-key',
                                 'scripts/salt-master',
                                 'scripts/salt-run',
@@ -405,19 +407,13 @@ class Install(install):
                     self.salt_transport
                 )
             )
-        if self.salt_transport == 'none':
+        elif self.salt_transport == 'none':
             for requirement in _parse_requirements_file(SALT_ZEROMQ_REQS):
                 if requirement not in self.distribution.install_requires:
                     continue
                 self.distribution.install_requires.remove(requirement)
-            return
 
-        if self.salt_transport in ('zeromq', 'both'):
-            self.distribution.install_requires.extend(
-                _parse_requirements_file(SALT_ZEROMQ_REQS)
-            )
-
-        if self.salt_transport in ('raet', 'both'):
+        elif self.salt_transport in ('raet', 'both'):
             self.distribution.install_requires.extend(
                 _parse_requirements_file(SALT_RAET_REQS)
             )
@@ -455,12 +451,12 @@ class InstallLib(install_lib):
         for idx in chmod:
             filename = out[idx]
             os.chmod(filename, 0755)
+# <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
 
 
 NAME = 'salt'
 VER = __version__  # pylint: disable=E0602
-DESC = ('Portable, distributed, remote execution and '
-        'configuration management system')
+DESC = 'Portable, distributed, remote execution and configuration management system'
 
 SETUP_KWARGS = {'name': NAME,
                 'version': VER,
@@ -506,6 +502,7 @@ SETUP_KWARGS = {'name': NAME,
                              'salt.log',
                              'salt.log.handlers',
                              'salt.modules',
+                             'salt.netapi',
                              'salt.output',
                              'salt.pillar',
                              'salt.proxy',
@@ -547,7 +544,9 @@ SETUP_KWARGS = {'name': NAME,
                                ],
                 # Required for esky builds, ZeroMQ or RAET deps will be added
                 # at install time
-                'install_requires': _parse_requirements_file(SALT_REQS),
+                'install_requires':
+                    _parse_requirements_file(SALT_REQS) +
+                    _parse_requirements_file(SALT_ZEROMQ_REQS),
                 'extras_require': {
                     'RAET': _parse_requirements_file(SALT_RAET_REQS),
                     'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)
@@ -567,6 +566,7 @@ if IS_WINDOWS_PLATFORM is False:
         'doc/man/salt-master.1',
         'doc/man/salt-key.1',
         'doc/man/salt.1',
+        'doc/man/salt-api.1',
         'doc/man/salt-syndic.1',
         'doc/man/salt-run.1',
         'doc/man/salt-ssh.1',
@@ -670,6 +670,7 @@ if WITH_SETUPTOOLS:
     if IS_WINDOWS_PLATFORM is False:
         SETUP_KWARGS['entry_points']['console_scripts'].extend([
             'salt = salt.scripts:salt_main',
+            'salt-api = salt.scripts:salt_api',
             'salt-cloud = salt.scripts:salt_cloud',
             'salt-key = salt.scripts:salt_key',
             'salt-master = salt.scripts:salt_master',
@@ -693,6 +694,7 @@ else:
     if IS_WINDOWS_PLATFORM is False:
         SETUP_KWARGS['scripts'].extend([
             'scripts/salt',
+            'scripts/salt-api',
             'scripts/salt-cloud',
             'scripts/salt-key',
             'scripts/salt-master',

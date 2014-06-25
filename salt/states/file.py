@@ -6,11 +6,12 @@ Operations on regular files, special files, directories, and symlinks
 Salt States can aggressively manipulate files on a system. There are a number
 of ways in which files can be managed.
 
-Regular files can be enforced with the ``managed`` function. This function
-downloads files from the salt master and places them on the target system.
-The downloaded files can be rendered as a jinja, mako, or wempy template,
-adding a dynamic component to file management. An example of ``file.managed``
-which makes use of the jinja templating system would look like this:
+Regular files can be enforced with the :mod:`file.managed
+<salt.states.file.managed>` state. This state downloads files from the salt
+master and places them on the target system. Managed files can be rendered as a
+jinja, mako, or wempy template, adding a dynamic component to file management.
+An example of :mod:`file.managed <salt.states.file.managed>` which makes use of
+the jinja templating system would look like this:
 
 .. code-block:: yaml
 
@@ -28,6 +29,17 @@ which makes use of the jinja templating system would look like this:
         - context:
             custom_var: "override"
     {% endif %}
+
+It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
+templating option. The template would be a python script which would need to
+contain a function called ``run()``, which returns a string. The returned
+string will be the contents of the managed file. For example:
+
+.. code-block:: python
+
+    def run():
+        lines = ('foo', 'bar', 'baz')
+        return '\\n\\n'.join(lines)
 
 .. note::
 
@@ -3239,7 +3251,7 @@ def copy(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            __salt__['file.makedirs'](dname)
+            __salt__['file.makedirs'](name)
         else:
             return _error(
                 ret,
@@ -3325,7 +3337,7 @@ def rename(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            __salt__['file.makedirs'](dname)
+            __salt__['file.makedirs'](name)
         else:
             return _error(
                 ret,

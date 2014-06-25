@@ -291,3 +291,8 @@ salt-syndic
 
     salt-syndic
 
+salt-api
+========
+.. toctree::
+
+    salt-api

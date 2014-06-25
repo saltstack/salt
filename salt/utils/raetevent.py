@@ -205,3 +205,12 @@ class SaltEvent(object):
                                        'job'))
                 except Exception:
                     pass
+
+    def destroy(self):
+        if hasattr(self, 'stack'):
+            self.stack.server.close()
+            self.stack.clearLocal()
+            self.stack.clearRemoteKeeps()
+
+    def __del__(self):
+        self.destroy()

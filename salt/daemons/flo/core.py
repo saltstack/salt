@@ -114,7 +114,9 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 basedirpath=dirpath,
                 safe=safe,
                 txMsgs=txMsgs,
-                rxMsgs=rxMsgs)
+                rxMsgs=rxMsgs,
+                period=3.0,
+                offset=0.5)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
         self.stack.value.JoinentTimeout = 0.0
 
@@ -180,6 +182,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
+                                                alived=False,
+                                                rejected=False,
                                                 idle=False, )))
 
     def action(self, **kwa):
@@ -192,6 +196,39 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
             if stack.remotes:
                 joined = stack.remotes.values()[0].joined
         self.status.update(joined=joined)
+
+
+class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
+    '''
+    Updates status with rejected of .acceptance of zeroth remote estate (master)
+    FloScript:
+
+    do salt raet road stack rejected
+    go next if rejected in .raet.udp.stack.status
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                alived=False,
+                                                rejected=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        rejected = False
+        if stack and isinstance(stack, RoadStack):
+            if stack.remotes:
+                rejected = (stack.remotes.values()[0].acceptance
+                                == raeting.acceptances.rejected)
+            else:  # no remotes so assume rejected
+                rejected = True
+        self.status.update(rejected=rejected)
 
 
 class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
@@ -213,7 +250,7 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.allow()
+            stack.allow(timeout=0.0)
         return None
 
 
@@ -231,6 +268,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
+                                                alived=False,
+                                                rejected=False,
                                                 idle=False, )))
 
     def action(self, **kwa):
@@ -243,6 +282,31 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
             if stack.remotes:
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
+
+
+class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
+    '''
+    Runs the manage method of RoadStack
+    FloScript:
+        do salt raet road stack manager
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack', )
+
+    def action(self, **kwa):
+        '''
+        Manage the presence of any remotes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, RoadStack):
+            stack.manage(cascade=True)
+            # stack.alloweds now has dict keyed by name of available remotes for messages
+            # stack.changeds is dict with sets of {plus: plus, minus: minus} names of
+            # remotes that that are newly allowed plus and newly disallowed minus
+            # need to copy reference to stack.alloweds to data store
+            # need to queue presence event message if either plus or minus is not empty
 
 
 class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
@@ -425,7 +489,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             self.stack.value.server.close()
 
 
-class SaltRoadService(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
     '''
     Process the udp traffic
     FloScript:
@@ -444,7 +508,7 @@ class SaltRoadService(ioflo.base.deeding.Deed):
         self.udp_stack.value.serviceAll()
 
 
-class Rx(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
     FloScript:
@@ -465,7 +529,7 @@ class Rx(ioflo.base.deeding.Deed):
         self.uxd_stack.value.serviceAllRx()
 
 
-class Tx(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
     FloScript:

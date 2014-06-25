@@ -6,6 +6,7 @@ Create ssh executor system
 import os
 import copy
 import json
+import logging
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -16,6 +17,9 @@ import salt.roster
 import salt.state
 import salt.loader
 import salt.minion
+import salt.log
+
+log = logging.getLogger(__name__)
 
 
 def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
@@ -183,7 +187,12 @@ def highstate(test=None, **kwargs):
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
     stdout, stderr, _ = single.cmd_block()
-    return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    try:
+        stdout = json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception, e:
+        log.error("JSON Render failed for: {0}".format(stdout))
+        log.error(str(e))
+    return stdout
 
 
 def top(topfn, test=None, **kwargs):

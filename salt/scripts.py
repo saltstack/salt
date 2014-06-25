@@ -7,7 +7,6 @@ This module contains the function calls to execute command line scripts
 from __future__ import print_function
 import os
 import sys
-import time
 import traceback
 import logging
 
@@ -46,7 +45,7 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
 
 def salt_master():
     '''
-    Start the salt-master.
+    Start the salt master.
     '''
     master = salt.Master()
     master.start()
@@ -54,27 +53,18 @@ def salt_master():
 
 def salt_minion():
     '''
-    Kick off a salt minion daemon.
+    Start the salt minion.
     '''
     if '' in sys.path:
         sys.path.remove('')
 
-    reconnect = True
-    while reconnect:
-        reconnect = False
-        minion = salt.Minion()
-        ret = minion.start()
-        if ret == 'reconnect':
-            del minion
-            minion = None
-            # give extra time for resources like ZMQ to close.
-            time.sleep(10)
-            reconnect = True
+    minion = salt.Minion()
+    minion.start()
 
 
 def salt_syndic():
     '''
-    Kick off a salt syndic daemon.
+    Start the salt syndic.
     '''
     pid = os.getpid()
     try:
@@ -227,6 +217,14 @@ def salt_cloud():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
+
+
+def salt_api():
+    '''
+    The main function for salt-api
+    '''
+    sapi = salt.cli.SaltAPI()
+    sapi.run()
 
 
 def salt_main():

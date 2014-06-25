@@ -17,20 +17,21 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.04.16"
+__ScriptVersion="2014.06.21"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
 #  Environment variables taken into account.
 #----------------------------------------------------------------------------------------------------------------------
-#   * BS_COLORS:              If 0 disables colour support
-#   * BS_PIP_ALLOWED:         If 1 enable pip based installations(if needed)
-#   * BS_ECHO_DEBUG:          If 1 enable debug echo which can also be set by -D
-#   * BS_SALT_ETC_DIR:        Defaults to /etc/salt (Only tweak'able on git based installations)
-#   * BS_KEEP_TEMP_FILES:     If 1, don't move temporary files, instead copy them
-#   * BS_FORCE_OVERWRITE:     Force overriding copied files(config, init.d, etc)
-#   * BS_UPGRADE_SYS:         If 1 and an option, upgrade system. Default 0.
-#   * BS_GENTOO_USE_BINHOST:  If 1 add `--getbinpkg` to gentoo's emerge
+#   * BS_COLORS:                If 0 disables colour support
+#   * BS_PIP_ALLOWED:           If 1 enable pip based installations(if needed)
+#   * BS_ECHO_DEBUG:            If 1 enable debug echo which can also be set by -D
+#   * BS_SALT_ETC_DIR:          Defaults to /etc/salt (Only tweak'able on git based installations)
+#   * BS_KEEP_TEMP_FILES:       If 1, don't move temporary files, instead copy them
+#   * BS_FORCE_OVERWRITE:       Force overriding copied files(config, init.d, etc)
+#   * BS_UPGRADE_SYS:           If 1 and an option, upgrade system. Default 0.
+#   * BS_GENTOO_USE_BINHOST:    If 1 add `--getbinpkg` to gentoo's emerge
+#   * BS__SALT_MASTER_ADDRESS:  The IP or DNS name of the salt-master the minion should connect to
 #======================================================================================================================
 
 
@@ -225,6 +226,7 @@ usage() {
   -L  Install the Apache Libcloud package if possible(required for salt-cloud)
   -p  Extra-package to install while installing salt dependencies. One package
       per -p flag. You're responsible for providing the proper package name.
+  -H  Use the specified http proxy for the installation
 
 EOT
 }   # ----------  end of function usage  ----------
@@ -252,19 +254,21 @@ _PKI_DIR=${_SALT_ETC_DIR}/pki
 _FORCE_OVERWRITE=${BS_FORCE_OVERWRITE:-$BS_FALSE}
 _GENTOO_USE_BINHOST=${BS_GENTOO_USE_BINHOST:-$BS_FALSE}
 _EPEL_REPO=${BS_EPEL_REPO:-epel}
+__EPEL_REPOS_INSTALLED=${BS_FALSE}
 _UPGRADE_SYS=${BS_UPGRADE_SYS:-$BS_FALSE}
 _INSECURE_DL=${BS_INSECURE_DL:-$BS_FALSE}
 _WGET_ARGS=${BS_WGET_ARGS:-}
 _CURL_ARGS=${BS_CURL_ARGS:-}
 _FETCH_ARGS=${BS_FETCH_ARGS:-}
-_SALT_MASTER_ADDRESS="null"
+_SALT_MASTER_ADDRESS=${BS_SALT_MASTER_ADDRESS:-null}
 _SALT_MINION_ID="null"
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
 __SIMPLIFY_VERSION=$BS_TRUE
 _LIBCLOUD_MIN_VERSION="0.14.0"
 _EXTRA_PACKAGES=""
+_HTTP_PROXY=""
 
-while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:" opt
+while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:H:" opt
 do
   case "${opt}" in
 
@@ -306,6 +310,7 @@ do
     i )  _SALT_MINION_ID=$OPTARG                        ;;
     L )  _INSTALL_CLOUD=$BS_TRUE                        ;;
     p )  _EXTRA_PACKAGES="$_EXTRA_PACKAGES $OPTARG"     ;;
+    H )  _HTTP_PROXY="$OPTARG"                          ;;
 
 
     \?)  echo
@@ -410,15 +415,22 @@ if [ "$(${whoami})" != "root" ]; then
     exit 1
 fi
 
+# Export the http_proxy configuration to our current environment
+if [ "x${_HTTP_PROXY}" != "x" ]; then
+    export http_proxy="$_HTTP_PROXY"
+    export https_proxy="$_HTTP_PROXY"
+fi
+
 # Let's discover how we're being called
-CALLER="$(echo `ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' '` | cut -d ' ' -f 2)"
+# shellcheck disable=SC2009
+CALLER=$(ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' ' | cut -d ' ' -f 3)
+
 if [ "${CALLER}x" = "${0}x" ]; then
     CALLER="PIPED THROUGH"
 fi
 
 echoinfo "${CALLER} ${0} -- Version ${__ScriptVersion}"
 #echowarn "Running the unstable version of ${__ScriptName}"
-
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __exit_cleanup
@@ -455,6 +467,7 @@ __exit_cleanup() {
     rm -f $LOGPIPE
 
     # Kill tee when exiting, CentOS, at least requires this
+    # shellcheck disable=SC2009
     TEE_PID=$(ps ax | grep tee | grep $LOGFILE | awk '{print $1}')
 
     [ "x$TEE_PID" = "x" ] && exit $EXIT_CODE
@@ -631,7 +644,7 @@ __sort_release_files() {
     done
     # Now, least important goes last in the min_prio list
     min_prio="lsb-release"
-    for entry in $max_prio; do
+    for entry in $min_prio; do
         if [ "x$(echo ${primary_release_files} | grep $entry)" != "x" ]; then
             primary_release_files=$(echo ${primary_release_files} | sed -e "s:\(.*\)\($entry\)\(.*\):\1 \3 \2:g")
         fi
@@ -667,6 +680,9 @@ __gather_linux_system_info() {
             DISTRO_NAME="suse"
         elif [ "${DISTRO_NAME}" = "EnterpriseEnterpriseServer" ]; then
             # This the Oracle Linux Enterprise ID before ORACLE LINUX 5 UPDATE 3
+            DISTRO_NAME="Oracle Linux"
+        elif [ "${DISTRO_NAME}" = "OracleServer" ]; then
+            # This the Oracle Linux Server 6.5
             DISTRO_NAME="Oracle Linux"
         fi
         rv=$(lsb_release -sr)
@@ -883,7 +899,7 @@ __gather_system_info() {
 #                 functions by pretending to be Ubuntu (i.e. change global vars)
 #----------------------------------------------------------------------------------------------------------------------
 __ubuntu_derivatives_translation() {
-    UBUNTU_DERIVATIVES="(trisquel|linuxmint|linaro)"
+    UBUNTU_DERIVATIVES="(trisquel|linuxmint|linaro|elementary_os)"
     # Mappings
     trisquel_6_ubuntu_base="12.04"
     linuxmint_13_ubuntu_base="12.04"
@@ -893,18 +909,67 @@ __ubuntu_derivatives_translation() {
     # https://bugs.launchpad.net/linuxmint/+bug/1198751
 
     linuxmint_16_ubuntu_base="13.10"
-
     linaro_12_ubuntu_base="12.04"
+    elementary_os_02_ubuntu_base="12.04"
 
     # Translate Ubuntu derivatives to their base Ubuntu version
     match=$(echo $DISTRO_NAME_L | egrep ${UBUNTU_DERIVATIVES})
+
     if [ "x${match}" != "x" ]; then
-        _major="$(echo $DISTRO_VERSION | sed 's/^\([0-9]*\).*/\1/g')"
+        case $match in
+            "elementary_os")
+                _major="$(echo $DISTRO_VERSION | sed 's/\.//g')"
+                ;;
+            *)
+                _major="$(echo $DISTRO_VERSION | sed 's/^\([0-9]*\).*/\1/g')"
+                ;;
+        esac
+
         _ubuntu_version="$(eval echo \$${1}_${_major}_ubuntu_base)"
+
         if [ "x$_ubuntu_version" != "x" ]; then
             echodebug "Detected Ubuntu $_ubuntu_version derivative"
             DISTRO_NAME_L="ubuntu"
             DISTRO_VERSION="$_ubuntu_version"
+        fi
+    fi
+}
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __debian_derivatives_translation
+#   DESCRIPTION:  Map Debian derivatives to their Debian base versions.
+#                 If distro has a known Debian base version, use those install
+#                 functions by pretending to be Debian (i.e. change global vars)
+#----------------------------------------------------------------------------------------------------------------------
+__debian_derivatives_translation() {
+
+    # If the file does not exist, return
+    [ ! -f /etc/os-release ] && return
+
+    DEBIAN_DERIVATIVES="(kali)"
+    # Mappings
+    kali_1_debian_base="7.0"
+
+    # Detect derivates, Kali *only* for now
+    rv=$(grep ^ID= /etc/os-release | sed -e 's/.*=//')
+
+    # Translate Debian derivatives to their base Debian version
+    match=$(echo $rv | egrep ${DEBIAN_DERIVATIVES})
+
+    if [ "x${match}" != "x" ]; then
+        case $match in
+            kali)
+                _major="$(echo $DISTRO_VERSION | sed 's/^\([0-9]*\).*/\1/g')"
+                _debian_derivative="kali"
+                ;;
+        esac
+
+        _debian_version="$(eval echo \$${_debian_derivative}_${_major}_debian_base)"
+
+        if [ "x$_debian_version" != "x" ]; then
+            echodebug "Detected Debian $_debian_version derivative"
+            DISTRO_NAME_L="debian"
+            DISTRO_VERSION="$_debian_version"
         fi
     fi
 }
@@ -919,6 +984,11 @@ echoinfo "  OS Name:      ${OS_NAME}"
 echoinfo "  OS Version:   ${OS_VERSION}"
 echoinfo "  Distribution: ${DISTRO_NAME} ${DISTRO_VERSION}"
 echo
+
+# Let users know that we'll use a proxy
+if [ "x${_HTTP_PROXY}" != "x" ]; then
+    echoinfo "Using http proxy $_HTTP_PROXY"
+fi
 
 # Let users know what's going to be installed/configured
 if [ $_INSTALL_MINION -eq $BS_TRUE ]; then
@@ -957,7 +1027,10 @@ fi
 DISTRO_NAME_L=$(echo $DISTRO_NAME | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -re 's/([[:space:]])+/_/g')
 
 # For Ubuntu derivatives, pretend to be their Ubuntu base version
-__ubuntu_derivatives_translation "$DISTRO_NAME_L"
+__ubuntu_derivatives_translation
+
+# For Debian derivates, pretend to be their Debian base version
+__debian_derivatives_translation
 
 # Simplify version naming on functions
 if [ "x${DISTRO_VERSION}" = "x" ] || [ $__SIMPLIFY_VERSION -eq $BS_FALSE ]; then
@@ -986,7 +1059,7 @@ fi
 
 # Only RedHat based distros have testing support
 if [ ${ITYPE} = "testing" ]; then
-    if [ "$(echo ${DISTRO_NAME_L} | egrep '(centos|red_hat|amazon)')x" = "x" ]; then
+    if [ "$(echo ${DISTRO_NAME_L} | egrep '(centos|red_hat|amazon|oracle)')x" = "x" ]; then
         echoerror "${DISTRO_NAME} does not have testing packages support"
         exit 1
     fi
@@ -2264,7 +2337,10 @@ install_fedora_check_services() {
 #
 #   CentOS Install Functions
 #
-install_centos_stable_deps() {
+__install_epel_repository() {
+    if [ ${__EPEL_REPOS_INSTALLED} -eq $BS_TRUE ]; then
+        return 0
+    fi
     if [ $CPU_ARCH_L = "i686" ]; then
         EPEL_ARCH="i386"
     else
@@ -2274,10 +2350,18 @@ install_centos_stable_deps() {
         rpm -Uvh --force http://mirrors.kernel.org/fedora-epel/5/${EPEL_ARCH}/epel-release-5-4.noarch.rpm || return 1
     elif [ $DISTRO_MAJOR_VERSION -eq 6 ]; then
         rpm -Uvh --force http://mirrors.kernel.org/fedora-epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm || return 1
+    elif [ $DISTRO_MAJOR_VERSION -eq 7 ]; then
+        rpm -Uvh --force http://mirrors.kernel.org/fedora-epel/beta/7/${EPEL_ARCH}/epel-release-7-0.1.noarch.rpm || return 1
     else
         echoerror "Failed add EPEL repository support."
         return 1
     fi
+    __EPEL_REPOS_INSTALLED=${BS_TRUE}
+    return 0
+}
+
+install_centos_stable_deps() {
+    __install_epel_repository
 
     if [ $_UPGRADE_SYS -eq $BS_TRUE ]; then
         yum -y update || return 1
@@ -2300,7 +2384,14 @@ install_centos_stable_deps() {
         fi
     fi
 
-    yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+        # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
+        for package in ${packages}; do
+            yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
+        done
+    else
+        yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    fi
 
     if [ $_INSTALL_CLOUD -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
@@ -2313,7 +2404,14 @@ install_centos_stable_deps() {
 
     if [ "x${_EXTRA_PACKAGES}" != "x" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
-        yum install -y ${_EXTRA_PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
+        if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+            # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
+            for package in ${_EXTRA_PACKAGES}; do
+                yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
+            done
+        else
+            yum install -y ${_EXTRA_PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
+        fi
     fi
 
     return 0
@@ -2327,7 +2425,14 @@ install_centos_stable() {
     if [ $_INSTALL_MASTER -eq $BS_TRUE ] || [ $_INSTALL_SYNDIC -eq $BS_TRUE ]; then
         packages="${packages} salt-master"
     fi
-    yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+        # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
+        for package in ${packages}; do
+            yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
+        done
+    else
+        yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+    fi
     return 0
 }
 
@@ -2347,7 +2452,12 @@ install_centos_stable_post() {
 
 install_centos_git_deps() {
     install_centos_stable_deps || return 1
-    yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    if [ $DISTRO_NAME_L = "oracle_linux" ]; then
+        # try both ways --enablerepo=X disables ALL OTHER REPOS!!!!
+        yum -y install git || yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    else
+        yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+    fi
 
     __git_clone_and_checkout || return 1
 
@@ -2479,15 +2589,23 @@ install_centos_check_services() {
 #   RedHat Install Functions
 #
 install_red_hat_linux_stable_deps() {
-    if [ $CPU_ARCH_L = "i686" ]; then
-        OPTIONAL_ARCH="i386"
-    else
-        OPTIONAL_ARCH=$CPU_ARCH_L
+    __install_epel_repository
+
+    if [ $DISTRO_MAJOR_VERSION -eq 6 ] || [ $DISTRO_MAJOR_VERSION -gt 6 ]; then
+        # Let's enable package installation testing, kind of, --dry-run
+        echoinfo "Installing 'yum-tsflags' to test for package installation success"
+        yum install -y yum-tsflags --enablerepo=${_EPEL_REPO} || return 1
+
+        # Let's try installing the packages that usually require the optional repository
+        for package in python-jinja2; do
+            yum install -y --tsflags='test' ${package} --enablerepo=${_EPEL_REPO} >/dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                echoerror "Failed to install '${package}'. The optional repository or it's subscription might be missing."
+                return 1
+            fi
+        done
     fi
-    if [ $DISTRO_MAJOR_VERSION -eq 6 ] && case "X$(rhn-channel -l | grep optional)" in Xrhel-${OPTIONAL_ARCH}-server-optional-${DISTRO_MAJOR_VERSION}* ) false ;; * ) true ;; esac ; then
-      echoerror "Failed to find RHN optional repo, please enable it using the GUI or rhn-channel command."
-      return 1
-    fi
+
     install_centos_stable_deps || return 1
     return 0
 }
@@ -2495,6 +2613,11 @@ install_red_hat_linux_stable_deps() {
 install_red_hat_linux_git_deps() {
     install_centos_git_deps || return 1
     return 0
+}
+
+install_red_hat_enterprise_linux_7_stable_deps() {
+    echoerror "Stable version is not available on RHEL 7 Beta/RC. Please set installation type to git."
+    return 1
 }
 
 install_red_hat_enterprise_linux_stable_deps() {
@@ -4006,6 +4129,7 @@ preseed_master() {
     [ -d $SEED_DEST ] || mkdir -p $SEED_DEST && chmod 700 $SEED_DEST || return 1
 
     for keyfile in $_TEMP_KEYS_DIR/*; do
+        keyfile=$(basename "${keyfile}")
         src_keyfile="${_TEMP_KEYS_DIR}/${keyfile}"
         dst_keyfile="${SEED_DEST}/${keyfile}"
 
@@ -4039,6 +4163,7 @@ daemons_running() {
         [ $fname = "master" ] && [ $_INSTALL_MASTER -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ $_INSTALL_SYNDIC -eq $BS_FALSE ] && continue
 
+        # shellcheck disable=SC2009
         if [ "${DISTRO_NAME}" = "SmartOS" ]; then
             if [ "$(svcs -Ho STA salt-$fname)" != "ON" ]; then
                 echoerror "salt-$fname was not found running"
@@ -4162,8 +4287,6 @@ STARTDAEMONS_FUNC_NAMES="$STARTDAEMONS_FUNC_NAMES install_${DISTRO_NAME_L}_resta
 STARTDAEMONS_INSTALL_FUNC="null"
 for FUNC_NAME in $(__strip_duplicates $STARTDAEMONS_FUNC_NAMES); do
     if __function_defined $FUNC_NAME; then
-        echodebug "Waiting 3 seconds for processes to settle before checking for them"
-        sleep 3
         STARTDAEMONS_INSTALL_FUNC=$FUNC_NAME
         break
     fi
@@ -4183,8 +4306,6 @@ DAEMONS_RUNNING_FUNC_NAMES="$DAEMONS_RUNNING_FUNC_NAMES daemons_running"
 
 for FUNC_NAME in $(__strip_duplicates $DAEMONS_RUNNING_FUNC_NAMES); do
     if __function_defined $FUNC_NAME; then
-        echodebug "Waiting 3 seconds for processes to settle before checking for them"
-        sleep 3
         DAEMONS_RUNNING_FUNC=$FUNC_NAME
         break
     fi
@@ -4312,6 +4433,8 @@ fi
 # Run any start daemons function
 if [ "$STARTDAEMONS_INSTALL_FUNC" != "null" ]; then
     echoinfo "Running ${STARTDAEMONS_INSTALL_FUNC}()"
+    echodebug "Waiting 3 seconds for processes to settle before checking for them"
+    sleep 3
     $STARTDAEMONS_INSTALL_FUNC
     if [ $? -ne 0 ]; then
         echoerror "Failed to run ${STARTDAEMONS_INSTALL_FUNC}()!!!"
@@ -4321,8 +4444,9 @@ fi
 
 # Check if the installed daemons are running or not
 if [ "$DAEMONS_RUNNING_FUNC" != "null" ] && [ $_START_DAEMONS -eq $BS_TRUE ]; then
-    sleep 3  # Sleep a little bit to let daemons start
     echoinfo "Running ${DAEMONS_RUNNING_FUNC}()"
+    echodebug "Waiting 3 seconds for processes to settle before checking for them"
+    sleep 3  # Sleep a little bit to let daemons start
     $DAEMONS_RUNNING_FUNC
     if [ $? -ne 0 ]; then
         echoerror "Failed to run ${DAEMONS_RUNNING_FUNC}()!!!"

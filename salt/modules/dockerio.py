@@ -21,12 +21,12 @@ Installation prerequisites
 --------------------------
 
 - You will need the 'docker-py' python package in your python installation
-  running salt. The version of docker-py should support `version 1.6 of docker
+  running salt. The version of docker-py should support `version 1.12 of docker
   remote API.
-  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
-- For now, you need docker-py from sources:
+  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
+- For now, you need docker-py 0.3.2
 
-    https://github.com/dotcloud/docker-py
+    pip install docker-py==0.3.2
 
 Prerequisite pillar configuration for authentication
 ----------------------------------------------------
@@ -277,21 +277,9 @@ def _get_client(version=None, timeout=None):
 
 def _merge_auth_bits():
     '''
-    Merge the local docker authentication file
-    with the pillar configuration
+    Get the pillar configuration
     '''
-    cfg = os.path.expanduser('~/.dockercfg')
-    try:
-        fic = open(cfg)
-        try:
-            config = json.loads(fic.read())
-        finally:
-            fic.close()
-    except Exception:
-        config = {}
-    config.update(
-        __pillar__.get('docker-registries', {})
-    )
+    config = __pillar__.get('docker-registries', {})
     for k, data in __pillar__.items():
         if k.endswith('-docker-registries'):
             config.update(data)
@@ -357,8 +345,8 @@ def _get_container_infos(container):
             'an existing container'.format(
                 container)
         )
-    if 'id' not in status['out'] and 'ID' in status['out']:
-        status['out']['id'] = status['out']['ID']
+    if 'id' not in status['out'] and 'Id' in status['out']:
+        status['out']['id'] = status['out']['Id']
     return status['out']
 
 
@@ -876,7 +864,8 @@ def start(container,
           links=None,
           privileged=False,
           dns=None,
-          volumes_from=None):
+          volumes_from=None,
+          network_mode=None):
     '''
     Restart the specified container
 
@@ -923,7 +912,8 @@ def start(container,
                              links=links,
                              privileged=privileged,
                              dns=dns,
-                             volumes_from=volumes_from)
+                             volumes_from=volumes_from,
+                             network_mode=network_mode)
             except TypeError:
                 # maybe older version of docker-py <= 0.3.1 dns and
                 # volumes_from are not accepted
@@ -1567,7 +1557,7 @@ def _parse_image_multilogs_string(ret, repo):
         # search last layer grabbed
         for l in image_logs:
             if isinstance(l, dict):
-                if l.get('status') == 'Download complete' and l.get('Id'):
+                if l.get('status') == 'Download complete' and l.get('id'):
                     infos = _get_image_infos(repo)
                     break
     return image_logs, infos

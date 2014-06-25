@@ -475,6 +475,7 @@ class EventPublisher(Process):
         '''
         Bind the pub and pull sockets for events
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
@@ -620,6 +621,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
         for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
