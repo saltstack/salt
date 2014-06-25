@@ -90,7 +90,6 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        self.ip_addrs = salt.utils.network.ip_addrs()
         if self.opts['transport'] == 'zeromq':
             self.acc = 'minions'
         else:
@@ -406,8 +405,6 @@ class CkMinions(object):
             if not os.path.isdir(cdir):
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
-            if '127.0.0.1' in addrs:
-                addrs.update(self.ip_addrs)
             if subset:
                 search = subset
             else:
