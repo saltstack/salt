@@ -318,7 +318,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             result = requests.get(requesturl, params=params)
             log.debug(
                 'EC2 Response Status Code: {0}'.format(
-                    #result.getcode()
+                    # result.getcode()
                     result.status_code
                 )
             )
@@ -1012,39 +1012,118 @@ def _create_eni(interface, eip=None):
     '''
     params = {'Action': 'DescribeSubnets'}
     subnet_query = query(params, return_root=True)
+    found = False
+
     for subnet_query_result in subnet_query:
         if 'item' in subnet_query_result:
             for subnet in subnet_query_result['item']:
                 if subnet['subnetId'] == interface['SubnetId']:
-                    params = {'Action': 'CreateNetworkInterface',
-                              'SubnetId': interface['SubnetId']}
-                    if 'Description' in interface:
-                        params['Description'] = interface['Description']
-                    if 'PrivateIpAddress' in interface:
-                        params['PrivateIpAddress'] = interface['PrivateIpAddress']
-                    if 'PrivateIpAddresses' in interface:
-                        params.update(_param_from_config('PrivateIpAddresses', interface['PrivateIpAddresses']))
-                    if 'SecurityGroupId' in interface:
-                        params.update(_param_from_config('SecurityGroupId', interface['SecurityGroupId']))
-                    if 'AssociatePublicIpAddress' in interface:
-                        params['AssociatePublicIpAddress'] = interface['AssociatePublicIpAddress']
-                    if 'allocate_new_eip' in interface:
-                        if interface['allocate_new_eip']:
-                            if 'AssociatePublicIpAddress' in params:
-                                params.pop('AssociatePublicIpAddress')
-                    new_eni_query = query(params, return_root=True)
-                    for new_eni_query_result in new_eni_query:
-                        if 'networkInterfaceId' in new_eni_query_result:
-                            new_eni = new_eni_query_result['networkInterfaceId']
-                            if eip:
-                                params = {'Action': 'AssociateAddress',
-                                          'NetworkInterfaceId': new_eni,
-                                          'AllocationId': eip}
-                                new_eip_eni = query(params, return_root=True)
-                    return {'DeviceIndex': interface['DeviceIndex'],
-                               'NetworkInterfaceId': new_eni
-                             }
-    return None
+                    found = True
+                    break
+
+    if not found:
+        raise SaltCloudConfigError('No such subnet <%s>' %
+                                   interface['SubnetId'])
+
+    params = {'Action': 'CreateNetworkInterface',
+              'SubnetId': interface['SubnetId']}
+
+    for k in ('Description', 'PrivateIpAddress',
+              'SecondaryPrivateIpAddressCount'):
+        if k in interface:
+            params[k] = interface[k]
+
+    for k in ('PrivateIpAddresses', 'SecurityGroupId'):
+        if k in interface:
+            params.update(_param_from_config(k, interface[k]))
+
+    result = query(params, return_root=True)
+    eni_desc = result[1]
+    if not eni_desc or not eni_desc.get('networkInterfaceId'):
+        raise SaltCloudException('Failed to create interface: %s' % result)
+
+    eni_id = eni_desc.get('networkInterfaceId')
+    log.debug('Created network interface <%s> inst <%s>' %
+              (eni_id, interface['DeviceIndex']))
+
+    if interface.get('associate_eip'):
+        _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
+    elif interface.get('allocate_new_eip'):
+        _new_eip = _request_eip(interface)
+        _associate_eip_with_interface(eni_id, _new_eip)
+    elif interface.get('allocate_new_eips'):
+        addr_list = _list_interface_private_addresses(eni_desc)
+        eip_list = []
+        for idx, addr in enumerate(addr_list):
+            eip_list.append(_request_eip(interface))
+        for idx, addr in enumerate(addr_list):
+            _associate_eip_with_interface(eni_id, eip_list[idx], addr)
+
+    return {'DeviceIndex': interface['DeviceIndex'],
+            'NetworkInterfaceId': eni_id}
+
+
+def _list_interface_private_addresses(eni_desc):
+    """
+    Returns a list of all of the private IP addresses attached to a
+    network interface. The 'primary' address will be listed first.
+    """
+    primary = eni_desc.get('privateIpAddress')
+    if not primary:
+        return None
+
+    addresses = [primary]
+
+    lst = eni_desc.get('privateIpAddressesSet', {}).get('item', [])
+    if not isinstance(lst, list):
+        return addresses
+
+    for entry in lst:
+        if entry.get('primary') == 'true':
+            continue
+        if entry.get('privateIpAddress'):
+            addresses.append(entry.get('privateIpAddress'))
+
+    return addresses
+
+
+def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
+    """
+    Accept the id of a network interface, and the id of an elastic ip
+    address, and associate the two of them, such that traffic sent to the
+    elastic ip address will be forwarded (NATted) to this network interface.
+
+    Optionally specify the private (10.x.x.x) IP address that traffic should
+    be NATted to - useful if you have multiple IP addresses assigned to an
+    interface.
+    """
+    retries = 5
+    while retries > 0:
+        params = {'Action': 'AssociateAddress',
+                  'NetworkInterfaceId': eni_id,
+                  'AllocationId': eip_id}
+
+        if private_ip:
+            params['PrivateIpAddress'] = private_ip
+
+        retries = retries - 1
+        result = query(params, return_root=True)
+
+        if isinstance(result, dict) and result.get('error'):
+            time.sleep(1)
+            continue
+
+        if not result[2].get('associationId'):
+            break
+
+        log.debug('Associated ElasticIP address <%s> with interface <%s>' %
+                  (eip_id, eni_id))
+
+        return result[2].get('associationId')
+
+    raise SaltCloudException('Could not associate elastic ip address ' +
+                             '<%s> with network interface <%s>' %
+                             (eip_id, eni_id))
 
 
 def _update_enis(interfaces, instance):
@@ -1277,12 +1356,8 @@ def request_instance(vm_=None, call=None):
     if network_interfaces:
         eni_devices = []
         for interface in network_interfaces:
-            _new_eip = None
-            if 'allocate_new_eip' in interface and interface['allocate_new_eip']:
-                _new_eip = _request_eip(interface)
-            elif 'associate_eip' in interface and interface['associate_eip']:
-                _new_eip = interface['associate_eip']
-            _new_eni = _create_eni(interface, _new_eip)
+            log.debug('Create network interface: %s' % interface)
+            _new_eni = _create_eni(interface)
             eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',
                                          eni_devices))
