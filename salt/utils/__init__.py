@@ -97,6 +97,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 # Import salt libs
+from salt.config import DEFAULT_TARGET_DELIM
 import salt._compat
 import salt.log
 import salt.minion
@@ -1198,7 +1199,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     return ret
 
 
-def subdict_match(data, expr, delim=':', regex_match=False):
+def subdict_match(data, expr, delim=DEFAULT_TARGET_DELIM, regex_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1246,7 +1247,7 @@ def subdict_match(data, expr, delim=':', regex_match=False):
     return False
 
 
-def traverse_dict(data, key, default, delim=':'):
+def traverse_dict(data, key, default, delim=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict using a colon-delimited (or otherwise delimited, using
     the "delim" param) target string. The target 'foo:bar:baz' will return
@@ -1262,7 +1263,7 @@ def traverse_dict(data, key, default, delim=':'):
     return data
 
 
-def traverse_dict_and_list(data, key, default, delim=':'):
+def traverse_dict_and_list(data, key, default, delim=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
     using the "delim" param) target string. The target 'foo:bar:0' will
