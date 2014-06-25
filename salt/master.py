@@ -578,7 +578,6 @@ class MWorker(multiprocessing.Process):
         self.key = key
         self.k_mtime = 0
 
-
     def __bind(self):
         '''
         Bind to the local port
@@ -822,7 +821,6 @@ class AESFuncs(object):
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
 
-
     def _ext_nodes(self, load):
         '''
         Return the results from an external node classifier if one is
@@ -877,7 +875,6 @@ class AESFuncs(object):
                     )
                 )
         return ret
-
 
     def _master_opts(self, load):
         '''
