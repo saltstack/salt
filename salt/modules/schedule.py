@@ -542,7 +542,7 @@ def save():
     return ret
 
 
-def enable():
+def enable(**kwargs):
     '''
     Enable all scheduled jobs on the minion
 
@@ -568,7 +568,7 @@ def enable():
     return ret
 
 
-def disable():
+def disable(**kwargs):
     '''
     Disable all scheduled jobs on the minion
 
