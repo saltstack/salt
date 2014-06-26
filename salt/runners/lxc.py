@@ -164,8 +164,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
 
     nic_opts
         Extra options for network interfaces. E.g:
-        {"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1",
-         "ipv6": "2001:db8::ff00:42:8329"}}
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
 
     start
         Start the newly created container.
