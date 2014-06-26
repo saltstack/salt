@@ -56,14 +56,14 @@ framer bootstrap be active first join
         print Allowed
         go next
 
-    frame loading
-        enter
-            do load modules
-        go next
-
     frame pillar
         enter
             do load pillar
+        go next
+
+    frame loading
+        enter
+            do load modules
         go next
 
     frame router
