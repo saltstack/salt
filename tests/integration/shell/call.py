@@ -71,8 +71,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         src = os.path.join(integration.FILES, 'file/base/top.sls')
         dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
-        src_mt = os.path.join(integration.FILES, 'files/extension_modules/tops/master_tops_test.py')
-        dst_mt = os.path.join(integration.FILES, 'files/extension_modules/tops/master_tops_test.py.bak')
+        src_mt = os.path.join(integration.FILES, 'extension_modules/tops/master_tops_test.py')
+        dst_mt = os.path.join(integration.FILES, 'extension_modules/tops/master_tops_test.py.bak')
         shutil.move(src, dst)
         shutil.move(src_mt, dst_mt)
         expected_comment = 'No Top file or external nodes data matches found'
