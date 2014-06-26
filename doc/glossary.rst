@@ -99,6 +99,10 @@ Glossary
         A minion which does not require a Salt master to operate. All
         configuration is local. *See also*: :conf_minion:`file_client`.
 
+    Master Tops
+        A system for the master that allows hooks into external systems to
+        generate top file data.
+
     Mine
         A facility to collect arbitrary data from minions and store that data
         on the master. This data is then available to all other minions.
