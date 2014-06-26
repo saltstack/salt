@@ -24,7 +24,7 @@ import random
 
 # Import salt libs
 import salt
-from salt.utils.odict import OrderedDict
+import salt.utils.odict
 import salt.utils
 from salt.utils.dictupdate import update as dictupdate
 from salt.utils import vt
@@ -461,13 +461,13 @@ def _get_veths(net_data):
     to a dictionnary indexed by network interface'''
     if isinstance(net_data, dict):
         net_data = net_data.items()
-    nics = OrderedDict()
-    current_nic = OrderedDict()
+    nics = salt.utils.odict.OrderedDict()
+    current_nic = salt.utils.odict.OrderedDict()
     for item in net_data:
         if item and isinstance(item, dict):
             item = item.items()[0]
         if item[0] == 'lxc.network.type':
-            current_nic = OrderedDict()
+            current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
             nics[item[1].strip()] = current_nic
         current_nic[item[0].strip()] = item[1].strip()
