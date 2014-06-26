@@ -54,8 +54,11 @@ def __virtual__():
         'SUSE  Enterprise Server',
         'McAfee  OS Server'
     ))
-    osrelease = float(__grains__.get('osrelease', 0))
     if __grains__['os'] in enable:
+        try:
+            osrelease = float(__grains__.get('osrelease', 0))
+        except ValueError:
+            return False
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
                 return False
