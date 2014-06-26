@@ -44,6 +44,11 @@ Glossary
         :conf_master:`ext_job_cache`, :ref:`the list of returners
         <all-salt.returners>`.
 
+    External Pillar
+        A pillar that accepts arbitrary arguments and returns a dictionary of
+        pillar data. An external pillar will add items to an already existing
+        pillar for a minion.
+
     Event
         A notice emitted onto an event bus. Events are often driven by requests
         for actions to occur on a minion or master and the results of those
