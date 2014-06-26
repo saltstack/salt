@@ -14,6 +14,7 @@ import shutil
 import hashlib
 import logging
 import traceback
+import binascii
 
 # Import third party libs
 try:
@@ -157,13 +158,34 @@ class MasterKeys(dict):
 
         self.key = self.__get_keys()
         self.token = self.__gen_token()
+        self.pub_signature = None
 
-        if opts['master_sign_key_name']:
-            self.pub_sign_path = os.path.join(self.opts['pki_dir'],
-                                              opts['master_sign_key_name'] + '.pub')
-            self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
-                                              opts['master_sign_key_name'] + '.pem')
-            self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+        # set names for the signing key-pairs
+        if opts['master_sign_pubkey']:
+
+            # if only the signature is available, use that
+            if opts['master_use_pubkey_signature']:
+                self.sig_path = os.path.join(self.opts['pki_dir'],
+                                             opts['master_pubkey_signature'])
+                if os.path.isfile(self.sig_path):
+                    self.pub_signature = salt.utils.fopen(self.sig_path).read()
+                    log.info('Read {0}\'s signature from {1}'
+                             ''.format(os.path.basename(self.pub_path),
+                                       self.opts['master_pubkey_signature']))
+                else:
+                    log.error('Signing the master.pub key with a signature is enabled '
+                              'but no signature file found at the default location '
+                              '{0}'.format(self.sig_path))
+                    sys.exit(1)
+
+            # create a new signing key-pair to sign the masters 
+            # auth-replies when a minion tries to connect
+            else:
+                self.pub_sign_path = os.path.join(self.opts['pki_dir'],
+                                                  opts['master_sign_key_name'] + '.pub')
+                self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
+                                                  opts['master_sign_key_name'] + '.pem')
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
 
     def __get_keys(self, name='master'):
         '''
@@ -207,6 +229,12 @@ class MasterKeys(dict):
     def get_sign_paths(self):
         return self.pub_sign_path, self.rsa_sign_path
 
+    def pubkey_signature(self):
+        '''
+        returns the base64 encoded signature from the signature file
+        or None if the master has its own signing keys
+        '''
+        return self.pub_signature
 
 class Auth(object):
     '''
@@ -327,10 +355,14 @@ class Auth(object):
                                 self.opts['master_sign_key_name'] + '.pub')
             res = verify_signature(path,
                                    message,
-                                   sig)
-            if res == 1:
+                                   binascii.a2b_base64(sig))
+            if res:
+                log.debug('Successfully verified signature of new public with '
+                          'public key {0}'.format(self.opts['master_sign_key_name'] +
+                                                  '.pub'))
                 return True
             else:
+                log.debug('Failed to verify signature of new public key')
                 return False
         else:
             log.error('Failed to verify the signature of the message because '
