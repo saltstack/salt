@@ -343,6 +343,7 @@ class LoadModules(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
+               'grain_time': '.salt.var.grain_time',
                'returners': '.salt.loader.returners'}
 
     def postinitio(self):
@@ -356,6 +357,8 @@ class LoadModules(ioflo.base.deeding.Deed):
         Return the functions and the returners loaded up from the loader
         module
         '''
+        if self.grain_time.value is None:
+            self.grain_time.value = 0.0
         # if this is a *nix system AND modules_max_memory is set, lets enforce
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
@@ -376,7 +379,9 @@ class LoadModules(ioflo.base.deeding.Deed):
             if not HAS_RESOURCE:
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
-        self.opts.value['grains'] = salt.loader.grains(self.opts.value)
+        if time.time() - self.grain_time.value > 300.0:
+            self.opts.value['grains'] = salt.loader.grains(self.opts.value)
+            self.var.grain_time.value = time.time()
         self.grains.value = self.opts.value['grains']
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
