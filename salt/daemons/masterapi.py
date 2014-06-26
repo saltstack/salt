@@ -314,16 +314,17 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
-    def _ext_nodes(self, load):
+    def _ext_nodes(self, load, skip_verify=False):
         '''
         Return the results from an external node classifier if one is
         specified
         '''
-        if 'id' not in load:
-            log.error('Received call for external nodes without an id')
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return {}
+        if not skip_verify:
+            if 'id' not in load:
+                log.error('Received call for external nodes without an id')
+                return {}
+            if not salt.utils.verify.valid_id(self.opts, load['id']):
+                return {}
         # Evaluate all configured master_tops interfaces
 
         opts = {}
@@ -349,12 +350,13 @@ class RemoteFuncs(object):
                 )
         return ret
 
-    def _mine_get(self, load):
+    def _mine_get(self, load, skip_verify=False):
         '''
         Gathers the data from the specified minions' mine
         '''
-        if any(key not in load for key in ('id', 'tgt', 'fun')):
-            return {}
+        if not skip_verify:
+            if any(key not in load for key in ('id', 'tgt', 'fun')):
+                return {}
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -389,12 +391,13 @@ class RemoteFuncs(object):
                 continue
         return ret
 
-    def _mine(self, load):
+    def _mine(self, load, skip_verify=False):
         '''
         Return the mine data
         '''
-        if 'id' not in load or 'data' not in load:
-            return False
+        if not skip_verify:
+            if 'id' not in load or 'data' not in load:
+                return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -417,29 +420,16 @@ class RemoteFuncs(object):
         '''
         if 'id' not in load or 'fun' not in load:
             return False
-        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                return True
-            datap = os.path.join(cdir, 'mine.p')
-            if os.path.isfile(datap):
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        mine_data = self.serial.load(fp_)
-                    if isinstance(mine_data, dict):
-                        if mine_data.pop(load['fun'], False):
-                            with salt.utils.fopen(datap, 'w+b') as fp_:
-                                fp_.write(self.serial.dumps(mine_data))
-                except OSError:
-                    return False
-        return True
+        return self.masterapi._mine_delete(load, skip_verify=True)
 
-    def _mine_flush(self, load):
+
+    def _mine_flush(self, load, skip_verify=False):
         '''
         Allow the minion to delete all of its own mine contents
         '''
-        if 'id' not in load:
-            return False
+        if not skip_verify:
+            if 'id' not in load:
+                return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -633,25 +623,17 @@ class RemoteFuncs(object):
         runner = salt.runner.Runner(opts)
         return runner.run()
 
-    def pub_ret(self, load):
+    def pub_ret(self, load, skip_verify=False):
         '''
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        if any(key not in load for key in ('jid', 'id')):
-            return {}
-        # Check that this minion can access this data
-        auth_cache = os.path.join(
-                self.opts['cachedir'],
-                'publish_auth')
-        if not os.path.isdir(auth_cache):
-            os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, load['jid'])
-        with salt.utils.fopen(jid_fn, 'r') as fp_:
-            if not load['id'] == fp_.read():
+        if not skip_verify:
+            if any(key not in load for key in ('jid', 'id')):
                 return {}
-        # Grab the latest and return
-        return self.local.get_cache_returns(load['jid'])
+        else:
+            return self.masterapi.pub_ret(load, skip_verify=True)
+
 
     def minion_pub(self, load):
         '''
@@ -705,7 +687,7 @@ class RemoteFuncs(object):
             fp_.write(load['id'])
         return ret
 
-    def minion_publish(self, load):
+    def minion_publish(self, load, skip_verify=False):
         '''
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is

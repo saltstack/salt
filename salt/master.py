@@ -728,6 +728,7 @@ class AESFuncs(object):
                 states=False,
                 rend=False)
         self.__setup_fileserver()
+        self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
 
     def __setup_fileserver(self):
         '''
@@ -821,7 +822,7 @@ class AESFuncs(object):
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
 
-    def __verify_load(load, verify_keys):
+    def __verify_load(self, load, verify_keys):
         '''
         A utility function to perform common verification steps.
 
@@ -852,38 +853,15 @@ class AESFuncs(object):
             load.pop('tok')
         return load
 
-
     def _ext_nodes(self, load):
         '''
         Return the results from an external node classifier if one is
         specified
         '''
-        load = __verify_load(load, ('id', 'tok'))
+        load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
-        load.pop('tok')
-        ret = {}
-        opts = {}
-        grains = {}
-
-        if 'opts' in load:
-            opts = load['opts']
-            if 'grains' in load['opts']:
-                grains = load['opts']['grains']
-        for fun in self.tops:
-            if fun not in self.opts.get('master_tops', {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=opts, grains=grains))
-            except Exception as exc:
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    'Top function {0} failed with error {1} for minion '
-                    '{2}'.format(
-                        fun, exc, load['id']
-                    )
-                )
-        return ret
+        return self.masterapi._ext_nodes(load, skip_verify=True)
 
     def _master_opts(self, load):
         '''
@@ -912,71 +890,26 @@ class AESFuncs(object):
         '''
         Gathers the data from the specified minions' mine
         '''
-        load = __verify_load(load, ('id', 'tgt', 'fun', 'tok'))
+        load = self.__verify_load(load, ('id', 'tgt', 'fun', 'tok'))
         if load is False:
             return {}
-        if 'mine_get' in self.opts:
-            # If master side acl defined.
-            if not isinstance(self.opts['mine_get'], dict):
-                return {}
-            perms = set()
-            for match in self.opts['mine_get']:
-                if re.match(match, load['id']):
-                    if isinstance(self.opts['mine_get'][match], list):
-                        perms.update(self.opts['mine_get'][match])
-            if not any(re.match(perm, load['fun']) for perm in perms):
-                return {}
-        ret = {}
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return ret
-        checker = salt.utils.minions.CkMinions(self.opts)
-        minions = checker.check_minions(
-                load['tgt'],
-                load.get('expr_form', 'glob')
-                )
-        for minion in minions:
-            mine = os.path.join(
-                    self.opts['cachedir'],
-                    'minions',
-                    minion,
-                    'mine.p')
-            try:
-                with salt.utils.fopen(mine, 'rb') as fp_:
-                    fdata = self.serial.load(fp_).get(load['fun'])
-                    if fdata:
-                        ret[minion] = fdata
-            except Exception:
-                continue
-        return ret
+        else:
+            return self.masterapi._mine_get(load, skip_verify=True)
 
     def _mine(self, load):
         '''
         Return the mine data
         '''
-        load = __verify_load(load, ('id', 'data', 'tok'))
+        load = self.__verify_load(load, ('id', 'data', 'tok'))
         if load is False:
             return {}
-        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                os.makedirs(cdir)
-            datap = os.path.join(cdir, 'mine.p')
-            if not load.get('clear', False):
-                if os.path.isfile(datap):
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        new = self.serial.load(fp_)
-                    if isinstance(new, dict):
-                        new.update(load['data'])
-                        load['data'] = new
-            with salt.utils.fopen(datap, 'w+b') as fp_:
-                fp_.write(self.serial.dumps(load['data']))
-        return True
+        return self.masterapi._mine(load, skip_verify=True)
 
-    def _mine_delete(self, load):
+    def _mine_delete(self, load, skip_verify=False):
         '''
         Allow the minion to delete a specific function from its own mine
         '''
-        load = __verify_load(load, ('id', 'fun', 'tok'))
+        load = self.__verify_load(load, ('id', 'fun', 'tok'))
         if load is False:
             return {}
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
@@ -1000,20 +933,11 @@ class AESFuncs(object):
         '''
         Allow the minion to delete all of its own mine contents
         '''
-        load = __verify_load(load, ('id', 'tok'))
+        load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
-        if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
-            if not os.path.isdir(cdir):
-                return True
-            datap = os.path.join(cdir, 'mine.p')
-            if os.path.isfile(datap):
-                try:
-                    os.remove(datap)
-                except OSError:
-                    return False
-        return True
+        else:
+            return self.masterapi._mine_flush(load, skip_verify=True)
 
     def _file_recv(self, load):
         '''
@@ -1126,20 +1050,10 @@ class AESFuncs(object):
         Receive an event from the minion and fire it on the master event
         interface
         '''
-        load = __verify_load(load, ('id', 'tok'))
+        load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
-        if 'events' not in load and ('tag' not in load or 'data' not in load):
-            return False
-        if 'events' in load:
-            for event in load['events']:
-                self.event.fire_event(event, event['tag'])  # old dup event
-                if load.get('pretag') is not None:
-                    self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
-        else:
-            tag = load['tag']
-            self.event.fire_event(load, tag)
-        return True
+        self.masterapi._minion_event(load)
 
     def _return(self, load):
         '''
@@ -1205,7 +1119,7 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        load = __verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
+        load = self.__verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
         if load is False:
             return {}
         perms = set()
@@ -1235,7 +1149,7 @@ class AESFuncs(object):
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        load = __verify_load(load, ('jid', 'id', 'tok'))
+        load = self.__verify_load(load, ('jid', 'id', 'tok'))
         if load is False:
             return {}
         # Check that this minion can access this data
@@ -1271,39 +1185,8 @@ class AESFuncs(object):
         '''
         if not self.__verify_minion_publish(clear_load):
             return {}
-        # Set up the publication payload
-        load = {
-            'fun': clear_load['fun'],
-            'arg': clear_load['arg'],
-            'expr_form': clear_load.get('tgt_type', 'glob'),
-            'tgt': clear_load['tgt'],
-            'ret': clear_load['ret'],
-            'id': clear_load['id'],
-        }
-        if 'tgt_type' in clear_load:
-            if clear_load['tgt_type'].startswith('node'):
-                if clear_load['tgt'] in self.opts['nodegroups']:
-                    load['tgt'] = self.opts['nodegroups'][clear_load['tgt']]
-                    load['expr_form_type'] = 'compound'
-                    load['expr_form'] = clear_load['tgt_type']
-                else:
-                    return {}
-            else:
-                load['expr_form'] = clear_load['tgt_type']
-        ret = {}
-        ret['jid'] = self.local.cmd_async(**load)
-        ret['minions'] = self.ckminions.check_minions(
-                clear_load['tgt'],
-                load['expr_form'])
-        auth_cache = os.path.join(
-                self.opts['cachedir'],
-                'publish_auth')
-        if not os.path.isdir(auth_cache):
-            os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, ret['jid'])
-        with salt.utils.fopen(jid_fn, 'w+') as fp_:
-            fp_.write(clear_load['id'])
-        return ret
+        else:
+            return self.masterapi.minion_pub(load)
 
     def minion_publish(self, clear_load):
         '''
@@ -1325,70 +1208,18 @@ class AESFuncs(object):
         '''
         if not self.__verify_minion_publish(clear_load):
             return {}
-        # Set up the publication payload
-        load = {
-            'fun': clear_load['fun'],
-            'arg': clear_load['arg'],
-            'expr_form': clear_load.get('tgt_type', 'glob'),
-            'tgt': clear_load['tgt'],
-            'ret': clear_load['ret'],
-            'id': clear_load['id'],
-        }
-        if 'tmo' in clear_load:
-            try:
-                load['timeout'] = int(clear_load['tmo'])
-            except ValueError:
-                msg = 'Failed to parse timeout value: {0}'.format(
-                        clear_load['tmo'])
-                log.warn(msg)
-                return {}
-        if 'timeout' in clear_load:
-            try:
-                load['timeout'] = int(clear_load['timeout'])
-            except ValueError:
-                msg = 'Failed to parse timeout value: {0}'.format(
-                        clear_load['timeout'])
-                log.warn(msg)
-                return {}
-        if 'tgt_type' in clear_load:
-            if clear_load['tgt_type'].startswith('node'):
-                if clear_load['tgt'] in self.opts['nodegroups']:
-                    load['tgt'] = self.opts['nodegroups'][clear_load['tgt']]
-                    load['expr_form_type'] = 'compound'
-                else:
-                    return {}
-            else:
-                load['expr_form'] = clear_load['tgt_type']
-        load['raw'] = True
-        ret = {}
-        for minion in self.local.cmd_iter(**load):
-            if clear_load.get('form', '') == 'full':
-                data = minion
-                if 'jid' in minion:
-                    ret['__jid__'] = minion['jid']
-                data['ret'] = data.pop('return')
-                ret[minion['id']] = data
-            else:
-                ret[minion['id']] = minion['return']
-                if 'jid' in minion:
-                    ret['__jid__'] = minion['jid']
-        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
-            if key not in ret:
-                ret[key] = val
-        if clear_load.get('form', '') != 'full':
-            ret.pop('__jid__')
-        return ret
+        else:
+            return self.masterapi.minion_publish(clear_load, skip_verify=True)
 
     def revoke_auth(self, load):
         '''
         Allow a minion to request revocation of its own key
         '''
-        load = __verify_load(load, ('id', 'tok'))
+        load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return load
-        keyapi = salt.key.Key(self.opts)
-        keyapi.delete_key(load['id'])
-        return True
+        else:
+            return self.masterapi.revoke_auth(load)
 
     def run_func(self, func, load):
         '''
