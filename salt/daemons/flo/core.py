@@ -381,7 +381,7 @@ class LoadModules(ioflo.base.deeding.Deed):
 
         if time.time() - self.grain_time.value > 300.0:
             self.opts.value['grains'] = salt.loader.grains(self.opts.value)
-            self.var.grain_time.value = time.time()
+            self.grain_time.value = time.time()
         self.grains.value = self.opts.value['grains']
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
