@@ -288,7 +288,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
         salt '*' keystone.endpoint_create nova 'http://public/url'
             'http://internal/url' 'http://adminurl/url' region
     '''
-    kstone = auth(profile)
+    kstone = auth(profile, **connection_args)
     keystone_service = service_get(name=service, **connection_args)
     if not keystone_service or 'Error' in keystone_service:
         return {'Error': 'Could not find the specified service'}
@@ -310,7 +310,7 @@ def endpoint_delete(service, profile=None, **connection_args):
 
         salt '*' keystone.endpoint_delete nova
     '''
-    kstone = auth(profile)
+    kstone = auth(profile, **connection_args)
     endpoint = endpoint_get(service, profile, **connection_args)
     if not endpoint or 'Error' in endpoint:
         return {'Error': 'Could not find any endpoints for the service'}
