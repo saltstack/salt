@@ -38,7 +38,8 @@ if salt.utils.which('initctl'):
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on select distros which still use Red Hat's /usr/bin/service for
+    management of either sysvinit or a hybrid sysvinit/upstart init system.
     '''
     # Enable on these platforms only.
     enable = set((
@@ -54,8 +55,15 @@ def __virtual__():
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
+        try:
+            osrelease = float(__grains__.get('osrelease', 0))
+        except ValueError:
+            return False
         if __grains__['os'] == 'Fedora':
-            if __grains__.get('osrelease', 0) > 15:
+            if osrelease > 15:
+                return False
+        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux'):
+            if osrelease >= 7:
                 return False
         return __virtualname__
     return False
