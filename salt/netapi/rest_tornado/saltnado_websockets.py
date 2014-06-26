@@ -1,7 +1,7 @@
 # encoding: utf-8
 '''
 A Websockets add-on to saltnado
-===================
+===============================
 
 .. py:currentmodule:: salt.netapi.rest_tornado.saltnado
 

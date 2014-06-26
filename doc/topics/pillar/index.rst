@@ -117,6 +117,7 @@ target a minion to a pillar file and then list the keys and values in the
 pillar. Here is an example top file that illustrates this point:
 
 .. code-block:: yaml
+
     base:
       '*':
          - common_pillar
@@ -124,6 +125,7 @@ pillar. Here is an example top file that illustrates this point:
 And the actual pillar file at '/srv/salt/common_pillar.sls':
 
 .. code-block:: yaml
+
     foo: bar
     boo: baz 
 

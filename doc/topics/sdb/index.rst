@@ -14,7 +14,7 @@ should probably not be used in production.
 
 
 SDB Configuration
-================
+=================
 In order to use the SDB interface, a configuration profile must be set up in
 either the master or minion configuration file. The configuration stanza
 includes the name/ID that the profile will be referred to as, a ``driver``
