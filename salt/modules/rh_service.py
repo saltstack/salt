@@ -55,10 +55,10 @@ def __virtual__():
     ))
     if __grains__['os'] in enable:
         if __grains__['os'] == 'Fedora':
-            if __grains__.get('osrelease', 0) > 15:
+            if int(__grains__.get('osrelease', 0).split('.')[0]) > 15:
                 return False
         if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux'):
-            if __grains__.get('osrelease', 0) >= 7:
+            if int(__grains__.get('osrelease', 0).split('.')[0]) >= 7:
                 return False
         return __virtualname__
     return False
