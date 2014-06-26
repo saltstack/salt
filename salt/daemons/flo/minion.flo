@@ -61,6 +61,11 @@ framer bootstrap be active first join
             do load modules
         go next
 
+    frame pillar
+        enter
+            do load pillar
+        go next
+
     frame router
         bid start manager #start alive presence from minion side
         do router
