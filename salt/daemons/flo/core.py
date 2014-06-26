@@ -7,6 +7,7 @@ The core behaviors used by minion and master
 # Import python libs
 import os
 import sys
+import time
 import types
 import logging
 import multiprocessing
@@ -386,14 +387,29 @@ class LoadPillar(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'pillar': '.salt.pillar',
                'grains': '.salt.grains',
-               'modules': '.salt.loader.modules'}
+               'modules': '.salt.loader.modules',
+               'udp_stack': '.raet.udp.stack.stack'}
 
     def action(self):
         '''
         Initial pillar
         '''
-        self.pillar.value = self.modules.value['pillar.items']()
-        self.opts.value['pillar'] = self.pillar.value
+        route = {'src': (self.opts.value['id'], 0, None),
+                 'dst': ('master', None, 'remote_cmd')}
+        load = {'id': self.id_,
+                'grains': self.grains,
+                'saltenv': self.opts['environment'],
+                'ver': '2',
+                'cmd': '_pillar'}
+        self.udp_stack.value.transmit({'route': route, 'load': load})
+        self.stack.value.serviceAll()
+        while True:
+            time.sleep(0.01)
+            if self.udp_stack.rxMsgs:
+                for msg in self.udp_stack.rxMsgs:
+                    self.pillar.value = msg.get('return', {})
+            self.stack.value.serviceAll()
+
 
 
 class Schedule(ioflo.base.deeding.Deed):
