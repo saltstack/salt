@@ -821,16 +821,15 @@ class AESFuncs(object):
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
 
-    def _ext_nodes(self, load):
+    def __verify_load(load, verify_keys):
         '''
-        Return the results from an external node classifier if one is
-        specified
+        A utility function to perform common verification steps.
+
+        verify_keys: A list of strings that should be present in a 
+        given load.
         '''
-        if 'id' not in load:
-            log.error('Received call for external nodes without an id')
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return {}
+        if any(key not in load for key in verify_keys):
+            return False
         if 'tok' not in load:
             log.error(
                 'Received incomplete call from {0} for {1!r}, missing {2!r}'
@@ -848,11 +847,21 @@ class AESFuncs(object):
                     load['id']
                 )
             )
+            return False
+        if 'tok' in load:
+            load.pop('tok')
+        return load
+
+
+    def _ext_nodes(self, load):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        load = __verify_load(load, ('id', 'tok'))
+        if load is False:
             return {}
         load.pop('tok')
-
-        # Evaluate all configured master_tops interfaces
-
         ret = {}
         opts = {}
         grains = {}
@@ -903,27 +912,9 @@ class AESFuncs(object):
         '''
         Gathers the data from the specified minions' mine
         '''
-        if any(key not in load for key in ('id', 'tgt', 'fun')):
+        load = __verify_load(load, ('id', 'tgt', 'fun', 'tok'))
+        if load is False:
             return {}
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
-            return {}
-        load.pop('tok')
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -962,29 +953,9 @@ class AESFuncs(object):
         '''
         Return the mine data
         '''
-        if 'id' not in load or 'data' not in load:
-            return False
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return False
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
+        load = __verify_load(load, ('id', 'data', 'tok'))
+        if load is False:
             return {}
-        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1005,29 +976,9 @@ class AESFuncs(object):
         '''
         Allow the minion to delete a specific function from its own mine
         '''
-        if 'id' not in load or 'fun' not in load:
-            return False
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return False
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
+        load = __verify_load(load, ('id', 'fun', 'tok'))
+        if load is False:
             return {}
-        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1049,29 +1000,9 @@ class AESFuncs(object):
         '''
         Allow the minion to delete all of its own mine contents
         '''
-        if 'id' not in load:
-            return False
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return False
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
+        load = __verify_load(load, ('id', 'tok'))
+        if load is False:
             return {}
-        load.pop('tok')
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1195,29 +1126,9 @@ class AESFuncs(object):
         Receive an event from the minion and fire it on the master event
         interface
         '''
-        if 'id' not in load:
-            return False
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
-            return False
-        if 'tok' not in load:
-            log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
-                    load['id'],
-                    inspect_stack()['co_name'],
-                    'tok'
-                ))
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
+        load = __verify_load(load, ('id', 'tok'))
+        if load is False:
             return {}
-        load.pop('tok')
         if 'events' not in load and ('tag' not in load or 'data' not in load):
             return False
         if 'events' in load:
@@ -1294,18 +1205,9 @@ class AESFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        if any(key not in clear_load for key in ('fun', 'arg', 'id', 'tok')):
+        load = __verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
+        if load is False:
             return {}
-        if not self.__verify_minion(clear_load['id'], clear_load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    clear_load['id']
-                )
-            )
-            return {}
-        clear_load.pop('tok')
         perms = set()
         for match in self.opts['peer_run']:
             if re.match(match, clear_load['id']):
@@ -1333,18 +1235,9 @@ class AESFuncs(object):
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        if any(key not in load for key in ('jid', 'id', 'tok')):
+        load = __verify_load(load, ('jid', 'id', 'tok'))
+        if load is False:
             return {}
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                'Minion id {0} is not who it says it is!'.format(
-                    load['id']
-                )
-            )
-            return {}
-        load.pop('tok')
         # Check that this minion can access this data
         auth_cache = os.path.join(
                 self.opts['cachedir'],
@@ -1490,18 +1383,9 @@ class AESFuncs(object):
         '''
         Allow a minion to request revocation of its own key
         '''
-        if 'id' not in load or 'tok' not in load:
-            return False
-        if not self.__verify_minion(load['id'], load['tok']):
-            # The minion is not who it says it is!
-            # We don't want to listen to it!
-            log.warn(
-                (
-                    'Minion id {0} is not who it says it is and is attempting '
-                    'to revoke the key for {0}'
-                ).format(load['id'])
-            )
-            return False
+        load = __verify_load(load, ('id', 'tok'))
+        if load is False:
+            return load
         keyapi = salt.key.Key(self.opts)
         keyapi.delete_key(load['id'])
         return True
