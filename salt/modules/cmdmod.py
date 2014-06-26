@@ -64,91 +64,6 @@ def _chroot_pids(chroot):
     return pids
 
 
-def _chugid(runas):
-    uinfo = pwd.getpwnam(runas)
-    supgroups_seen = set()
-
-    # The line below used to exclude the current user's primary gid.
-    # However, when root belongs to more than one group
-    # this causes root's primary group of '0' to be dropped from
-    # his grouplist.  On FreeBSD, at least, this makes some
-    # command executions fail with 'access denied'.
-    #
-    # The Python documentation says that os.setgroups sets only
-    # the supplemental groups for a running process.  On FreeBSD
-    # this does not appear to be strictly true.
-
-    # supgroups = [
-    #     g.gr_gid for g in grp.getgrall()
-    #     if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
-    #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
-    # ]
-
-    group_list = __salt__['user.list_groups'](runas)
-    supgroups = []
-    for group_name in group_list:
-        gid = __salt__['group.info'](group_name)['gid']
-        if (gid not in supgroups_seen
-           and not supgroups_seen.add(gid)):
-            supgroups.append(gid)
-
-    # No logging can happen on this function
-    #
-    # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
-    #   File "/usr/lib/python2.7/logging/__init__.py", line 870, in emit
-    #     self.flush()
-    #   File "/usr/lib/python2.7/logging/__init__.py", line 832, in flush
-    #     self.stream.flush()
-    # IOError: [Errno 9] Bad file descriptor
-    # Logged from file cmdmod.py, line 59
-    # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
-    #
-    # apparently because we closed fd's on Popen, though if not closed, output
-    # would also go to its stderr
-
-    if os.getgid() != uinfo.pw_gid:
-        try:
-            os.setgid(uinfo.pw_gid)
-        except OSError as err:
-            raise CommandExecutionError(
-                'Failed to change from gid {0} to {1}. Error: {2}'.format(
-                    os.getgid(), uinfo.pw_gid, err
-                )
-            )
-
-    # Set supplemental groups
-    if sorted(os.getgroups()) != sorted(supgroups):
-        try:
-            os.setgroups(supgroups)
-        except OSError as err:
-            raise CommandExecutionError(
-                'Failed to set supplemental groups to {0}. Error: {1}'.format(
-                    supgroups, err
-                )
-            )
-
-    if os.getuid() != uinfo.pw_uid:
-        try:
-            os.setuid(uinfo.pw_uid)
-        except OSError as err:
-            raise CommandExecutionError(
-                'Failed to change from uid {0} to {1}. Error: {2}'.format(
-                    os.getuid(), uinfo.pw_uid, err
-                )
-            )
-
-
-def _chugid_and_umask(runas, umask):
-    '''
-    Helper method for for subprocess.Popen to initialise uid/gid and umask
-    for the new process.
-    '''
-    if runas is not None:
-        _chugid(runas)
-    if umask is not None:
-        os.umask(umask)
-
-
 def _render_cmd(cmd, cwd, template, saltenv='base'):
     '''
     If template is a valid template engine, process the cmd and cwd through
@@ -409,9 +324,9 @@ def _run(cmd,
 
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(
-                _chugid_and_umask,
-                runas,
-                _umask)
+            salt.utils.chugid_and_umask,
+            runas,
+            _umask)
 
     if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
@@ -475,6 +390,8 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                cwd=cwd,
+                               user=runas,
+                               umask=umask,
                                env=env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
