@@ -396,19 +396,21 @@ class LoadPillar(ioflo.base.deeding.Deed):
         '''
         route = {'src': (self.opts.value['id'], 0, None),
                  'dst': ('master', None, 'remote_cmd')}
-        load = {'id': self.id_,
-                'grains': self.grains,
-                'saltenv': self.opts['environment'],
+        load = {'id': self.opts.value['id'],
+                'grains': self.grains.value,
+                'saltenv': self.opts.value['environment'],
                 'ver': '2',
                 'cmd': '_pillar'}
         self.udp_stack.value.transmit({'route': route, 'load': load})
-        self.stack.value.serviceAll()
+        self.udp_stack.value.serviceAll()
         while True:
             time.sleep(0.01)
-            if self.udp_stack.rxMsgs:
-                for msg in self.udp_stack.rxMsgs:
+            if self.udp_stack.value.rxMsgs:
+                for msg in self.udp_stack.value.rxMsgs:
                     self.pillar.value = msg.get('return', {})
-            self.stack.value.serviceAll()
+                    self.opts.value['pillar'] = self.pillar.value
+                    return
+            self.udp_stack.value.serviceAll()
 
 
 
