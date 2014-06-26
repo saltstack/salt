@@ -41,6 +41,7 @@ class SaltEvent(object):
         self.__prep_stack()
 
     def __prep_stack(self):
+        time.sleep(0.01)  # Make sure the event jids don't collide
         self.yid = salt.utils.gen_jid()
         name = 'event' + self.yid
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
