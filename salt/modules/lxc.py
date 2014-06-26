@@ -26,7 +26,7 @@ import random
 import salt
 import salt.utils.odict
 import salt.utils
-from salt.utils.dictupdate import update as dictupdate
+import salt.utils.dictupdate
 from salt.utils import vt
 import salt.utils.cloud
 import salt.config
@@ -73,6 +73,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     WARNING: BE REALLY CAREFUL CHANGING DEFAULTS !!!
              IT'S A RETRO COMPATIBLE INTERFACE WITH
              THE SALT CLOUD DRIVER (ask kiorky).
+
+    CLI Example::
+
+        salt '*' lxc.cloud_init_interface foo
 
     name
         name of the lxc container to create
@@ -134,7 +138,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     if vm_ is None:
         vm_ = {}
     vm_ = copy.deepcopy(vm_)
-    vm_ = dictupdate(vm_, kwargs)
+    vm_ = salt.utils.dictupdate.update(vm_, kwargs)
     profile = _lxc_profile(vm_.get('profile', {}))
     if name is None:
         name = vm_['name']
@@ -311,7 +315,7 @@ def _lxc_profile(profile):
         default_profile = __salt__['config.option'](
             'lxc.profile', {}).get(profilename, {})
         # save the resulting profile in the context
-        rprofile = dictupdate(
+        rprofile = salt.utils.dictupdate.update(
             copy.deepcopy(default_profile),
             copy.deepcopy(profile))
         __context__[key] = rprofile
@@ -995,8 +999,12 @@ def init(name,
 
 
 def cloud_init(name, vm_=None, **kwargs):
-    '''Thin wrapper to lxc.init to be used from the saltcloud lxc driver
+    '''
+    Thin wrapper to lxc.init to be used from the saltcloud lxc driver
 
+    CLI Example::
+
+        salt '*' lxc.cloud_init foo
     name
         Name of the container
         may be None and then guessed from saltcloud mapping
