@@ -379,6 +379,23 @@ class LoadModules(ioflo.base.deeding.Deed):
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
 
+class LoadPillar(ioflo.base.deeding.Deed):
+    '''
+    Load up the initial pillar for the minion
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'pillar': '.salt.pillar',
+               'grains': '.salt.grains',
+               'modules': '.salt.loader.modules'}
+
+    def action(self):
+        '''
+        Initial pillar
+        '''
+        self.pillar.value = self.modules.value['pillar.items']()
+        self.opts.value['pillar'] = self.pillar.value
+
+
 class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the schedule
