@@ -110,7 +110,7 @@ def salt_refs(data):
     return ret
 
 
-def prep_trans_tar(opts, chunks, file_refs):
+def prep_trans_tar(opts, chunks, file_refs, pillar=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
@@ -119,6 +119,7 @@ def prep_trans_tar(opts, chunks, file_refs):
     trans_tar = salt.utils.mkstemp()
     file_client = salt.fileclient.LocalClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
+    pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [
             ['salt://_modules'],
             ['salt://_states'],
@@ -130,6 +131,9 @@ def prep_trans_tar(opts, chunks, file_refs):
             ]
     with open(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
+    if pillar:
+        with open(pillarfn, 'w+') as fp_:
+            fp_.write(json.dumps(pillar))
     for saltenv in file_refs:
         file_refs[saltenv].extend(sync_refs)
         env_root = os.path.join(gendir, saltenv)
