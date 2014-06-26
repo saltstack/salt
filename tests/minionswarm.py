@@ -159,6 +159,7 @@ class Swarm(object):
             data['transport'] = 'raet'
             data['sock_dir'] = os.path.join(dpath, 'sock')
             data['raet_port'] = self.raet_port
+            data['pki_dir'] = os.path.join(dpath, 'pki')
             self.raet_port += 1
 
         if self.opts['root_dir']:
