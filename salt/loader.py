@@ -1204,8 +1204,6 @@ class Loader(object):
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if key and fun == 'external_ip':
-                continue
             if key[key.index('.') + 1:] == 'core':
                 continue
             try:
