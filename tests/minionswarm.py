@@ -93,6 +93,7 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.raet_port = 4550
 
         # If given a root_dir, keep the tmp files there as well
         if opts['root_dir']:
@@ -157,6 +158,8 @@ class Swarm(object):
         elif self.opts['transport'] == 'raet':
             data['transport'] = 'raet'
             data['sock_dir'] = os.path.join(dpath, 'sock')
+            data['raet_port'] = self.raet_port
+            self.raet_port += 1
 
         if self.opts['root_dir']:
             data['root_dir'] = self.opts['root_dir']
