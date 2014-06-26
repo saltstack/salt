@@ -156,6 +156,7 @@ class Swarm(object):
             data['pki_dir'] = minion_pkidir
         elif self.opts['transport'] == 'raet':
             data['transport'] = 'raet'
+            data['sock_dir'] = os.path.join(dpath, 'sock')
 
         if self.opts['root_dir']:
             data['root_dir'] = self.opts['root_dir']
