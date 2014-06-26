@@ -61,12 +61,15 @@ def _ip_sort(ip):
 def cloud_init_interface(name, vm_=None, **kwargs):
     '''
     Interface between salt.cloud.lxc driver and lxc.init
-    vm_ is a mapping of vm opts in the salt.cloud format
+    ``vm_`` is a mapping of vm opts in the salt.cloud format
     as documented for the lxc driver.
+
     This can be used either:
-        - from the salt cloud driver
-        - because you find the argument to give easier here
-          than using directly lxc.init
+
+    - from the salt cloud driver
+    - because you find the argument to give easier here
+      than using directly lxc.init
+
     WARNING: BE REALLY CAREFUL CHANGING DEFAULTS !!!
              IT'S A RETRO COMPATIBLE INTERFACE WITH
              THE SALT CLOUD DRIVER (ask kiorky).
@@ -107,7 +110,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         mac for the primary nic
     netmask
         netmask for the primary nic (24)
-        = vm_.get('netmask', '24')
+        = ``vm_.get('netmask', '24')``
     bridge
         bridge^for the primary nic (lxcbr0)
     gateway
@@ -646,6 +649,7 @@ def init(name,
                 [bridge=lxcbr0] [gateway=10.0.3.1] \\
                 [dnsservers[dns1,dns2]] \\
                 [users=[foo]] password='secret'
+
     name
         Name of the container.
 
@@ -693,11 +697,13 @@ def init(name,
 
     nic_opts
         Extra options for network interfaces. E.g:
-        {"eth0": {"mac": "aa:bb:cc:dd:ee:ff",
-         "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
+
         or
-         {"eth0": {"mac": "aa:bb:cc:dd:ee:ff",
-         "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
+
     start
         Start the newly created container.
 
@@ -990,10 +996,11 @@ def init(name,
 
 def cloud_init(name, vm_=None, **kwargs):
     '''Thin wrapper to lxc.init to be used from the saltcloud lxc driver
+
     name
         Name of the container
         may be None and then guessed from saltcloud mapping
-    vm_
+    ``vm_``
         saltcloud mapping defaults for the vm
     '''
     init_interface = __salt__['lxc.cloud_init_interface'](name, vm_, **kwargs)
@@ -1872,7 +1879,7 @@ def bootstrap(name, config=None, approve_key=True,
         to the target host's master.
 
     approve_key
-         Request a pre-approval of the generated minion key. Requires
+        Request a pre-approval of the generated minion key. Requires
         that the salt-master be configured to either auto-accept all keys or
         expect a signing request from the target host. Default: ``True``
 
