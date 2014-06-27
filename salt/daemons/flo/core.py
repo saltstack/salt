@@ -735,6 +735,10 @@ class Eventer(ioflo.base.deeding.Deed):
         Fire an event to all subscribed yards
         '''
         rm_ = []
+        if event.get('tag') == 'pillar_refresh':
+            self.pillar_refresh.value = True
+        if event.get('tag') == 'module_refresh':
+            self.module_refresh.value = True
         for y_name in self.event_yards.value:
             if y_name not in self.uxd_stack.value.uids:
                 rm_.append(y_name)
