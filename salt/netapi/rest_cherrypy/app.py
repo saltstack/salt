@@ -267,7 +267,7 @@ def salt_auth_tool():
     '''
     # Redirect to the login page if the session hasn't been authed
     if not cherrypy.session.has_key('token'):  # pylint: disable=W8601
-        raise cherrypy.InternalRedirect('/login')
+        raise cherrypy.HTTPError(401)
 
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
@@ -298,7 +298,7 @@ def hypermedia_handler(*args, **kwargs):
         cherrypy.response.processors = dict(ct_out_map)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
     except salt.exceptions.EauthAuthenticationError:
-        raise cherrypy.InternalRedirect('/login')
+        raise cherrypy.HTTPError(401)
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
@@ -1238,7 +1238,7 @@ class Events(object):
 
         # Manually verify the token
         if not salt_token or not self.auth.get_tok(salt_token):
-            raise cherrypy.InternalRedirect('/login')
+            raise cherrypy.HTTPError(401)
 
         # Release the session lock before starting the long-running response
         cherrypy.session.release_lock()
