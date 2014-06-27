@@ -1043,8 +1043,11 @@ def _create_eni(interface, eip=None):
         raise SaltCloudException('Failed to create interface: %s' % result)
 
     eni_id = eni_desc.get('networkInterfaceId')
-    log.debug('Created network interface <%s> inst <%s>' %
-              (eni_id, interface['DeviceIndex']))
+    log.debug(
+        'Created network interface {0} inst {1}'.format(
+            eni_id, interface['DeviceIndex']
+        )
+    )
 
     if interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
@@ -1064,10 +1067,10 @@ def _create_eni(interface, eip=None):
 
 
 def _list_interface_private_addresses(eni_desc):
-    """
+    '''
     Returns a list of all of the private IP addresses attached to a
     network interface. The 'primary' address will be listed first.
-    """
+    '''
     primary = eni_desc.get('privateIpAddress')
     if not primary:
         return None
@@ -1088,7 +1091,7 @@ def _list_interface_private_addresses(eni_desc):
 
 
 def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
-    """
+    '''
     Accept the id of a network interface, and the id of an elastic ip
     address, and associate the two of them, such that traffic sent to the
     elastic ip address will be forwarded (NATted) to this network interface.
@@ -1096,7 +1099,7 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
     Optionally specify the private (10.x.x.x) IP address that traffic should
     be NATted to - useful if you have multiple IP addresses assigned to an
     interface.
-    """
+    '''
     retries = 5
     while retries > 0:
         params = {'Action': 'AssociateAddress',
@@ -1116,8 +1119,11 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
         if not result[2].get('associationId'):
             break
 
-        log.debug('Associated ElasticIP address <%s> with interface <%s>' %
-                  (eip_id, eni_id))
+        log.debug(
+            'Associated ElasticIP address {0} with interface {1}'.format(
+                eip_id, eni_id
+            )
+        )
 
         return result[2].get('associationId')
 
@@ -1356,7 +1362,7 @@ def request_instance(vm_=None, call=None):
     if network_interfaces:
         eni_devices = []
         for interface in network_interfaces:
-            log.debug('Create network interface: %s' % interface)
+            log.debug('Create network interface: {0}'.format(interface))
             _new_eni = _create_eni(interface)
             eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',
@@ -2443,7 +2449,7 @@ def reboot(name, call=None):
               'InstanceId.1': instance_id}
     result = query(params)
     if result == []:
-        log.info("Complete")
+        log.info('Complete')
 
     return {'Reboot': 'Complete'}
 
