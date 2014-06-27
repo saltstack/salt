@@ -46,6 +46,11 @@ def parse_argv(argv):
         help="Directory where salt thin is or will be installed.",
     )
     oparser.add_option(
+        "--sp", "--saltpkgdir",
+        dest="saltpkgdir",
+        help="Directory where salt thin tarball is or will be copied.",
+    )
+    oparser.add_option(
         "--sum", "--checksum",
         dest="checksum",
         help="Salt thin checksum",
@@ -68,6 +73,7 @@ def parse_argv(argv):
     for option in (
             'delimeter',
             'saltdir',
+            'saltpkgdir',
             'checksum',
             'version',
     ):
@@ -111,7 +117,7 @@ def unpack_thin(thin_path):
 def main(argv):
     parse_argv(argv)
 
-    thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
+    thin_path = os.path.join(OPTIONS.saltpkgdir, THIN_ARCHIVE)
     if os.path.exists(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
             os.unlink(thin_path)

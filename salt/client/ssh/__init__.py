@@ -45,6 +45,7 @@ except ImportError:
 
 # The directory where salt thin is deployed
 DEFAULT_THIN_DIR = '/tmp/.salt'
+DEFAULT_THIN_PKG_DIR = '/tmp'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -553,7 +554,7 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
             thin,
-            os.path.join(DEFAULT_THIN_DIR, 'salt-thin.tgz'),
+            os.path.join(DEFAULT_THIN_PKG_DIR, 'salt-thin.tgz'),
         )
         return True
 
@@ -664,6 +665,7 @@ class Single(object):
             '--config', self.minion_config,
             '--delimeter', RSTR,
             '--saltdir', DEFAULT_THIN_DIR,
+            '--saltpkgdir', DEFAULT_THIN_PKG_DIR,
             '--checksum', thin_sum,
             '--hashfunc', 'sha1',
             '--version', salt.__version__,
@@ -874,7 +876,7 @@ class Single(object):
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
         self.shell.send(
             trans_tar,
-            os.path.join(DEFAULT_THIN_DIR, 'salt_state.tgz'),
+            os.path.join(DEFAULT_THIN_PKG_DIR, 'salt_state.tgz'),
         )
         self.argv = ['state.pkg', '/tmp/salt_state.tgz', 'test={0}'.format(test)]
 
