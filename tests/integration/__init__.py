@@ -52,7 +52,6 @@ ensure_in_syspath(CODE_DIR, SALT_LIBS)
 import salt
 import salt._compat
 import salt.config
-import salt.master
 import salt.minion
 import salt.runner
 import salt.output
@@ -60,6 +59,12 @@ import salt.version
 import salt.utils
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
+
+try:
+    import salt.master
+except ImportError:
+    # Not required fro raet tests
+    pass
 
 # Import 3rd-party libs
 import yaml
