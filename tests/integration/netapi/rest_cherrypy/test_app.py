@@ -5,7 +5,7 @@ from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
 try:
-    import cherrypy
+    import cherrypy  # pylint: disable=W0611
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
