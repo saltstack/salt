@@ -220,9 +220,10 @@ def pulled(name, force=False, *args, **kwargs):
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
-        NOTE that We added saltack a way to identify yourself via pillar,
-        see in the salt.modules.dockerio execution module how to ident yourself
-        via the pillar.
+        NOTE that we added in SaltStack a way to authenticate yourself with the
+        Docker Hub Registry by supplying your credentials (username, email & password)
+        using pillars. For more information, see salt.modules.dockerio execution 
+        module.
 
     name
         Tag of the image
@@ -258,9 +259,10 @@ def pushed(name):
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
-        NOTE that We added saltack a way to identify yourself via pillar,
-        see in the salt.modules.dockerio execution module how to ident yourself
-        via the pillar.
+        NOTE that we added in SaltStack a way to authenticate yourself with the
+        Docker Hub Registry by supplying your credentials (username, email & password)
+        using pillars. For more information, see salt.modules.dockerio execution 
+        module.
 
     name
         Tag of the image
