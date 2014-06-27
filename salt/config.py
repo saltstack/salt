@@ -398,7 +398,7 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 4096,
     'salt_transport': 'zeromq',
-    'gather_job_timeout': 2,
+    'gather_job_timeout': 5,
     'enumerate_proxy_minions': False,
     'ssh_passwd': '',
     'ssh_port': '22',
