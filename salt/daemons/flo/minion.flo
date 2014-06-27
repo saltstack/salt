@@ -83,7 +83,7 @@ framer functionmanager be active first checkexec
     frame checkexec
         do nix executor
 
-framer manager be inactive first start at 1.0
+framer manager be inactive first start at 10.0
     frame start
          do salt raet road stack manager per inode ".raet.udp.stack"
 

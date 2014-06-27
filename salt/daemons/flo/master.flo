@@ -41,7 +41,7 @@ framer publish be active first start
     frame start
         do publisher
 
-framer manager be active first start at 1.0
+framer manager be active first start at 10.0
     frame start
          do salt raet road stack manager per inode ".raet.udp.stack"
 
