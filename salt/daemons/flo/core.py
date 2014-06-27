@@ -344,6 +344,7 @@ class LoadModules(ioflo.base.deeding.Deed):
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'grain_time': '.salt.var.grain_time',
+               'module_refresh': '.salt.var.module_refresh',
                'returners': '.salt.loader.returners'}
 
     def postinitio(self):
@@ -379,16 +380,17 @@ class LoadModules(ioflo.base.deeding.Deed):
             if not HAS_RESOURCE:
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
-        if time.time() - self.grain_time.value > 300.0:
+        if time.time() - self.grain_time.value > 300.0 or self.module_refresh.value:
             self.opts.value['grains'] = salt.loader.grains(self.opts.value)
             self.grain_time.value = time.time()
-        self.grains.value = self.opts.value['grains']
+            self.grains.value = self.opts.value['grains']
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
 
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
+        self.module_refresh.value = False
 
 
 class LoadPillar(ioflo.base.deeding.Deed):
@@ -399,6 +401,7 @@ class LoadPillar(ioflo.base.deeding.Deed):
                'pillar': '.salt.pillar',
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
+               'pillar_refresh': '.salt.var.pillar_refresh',
                'udp_stack': '.raet.udp.stack.stack'}
 
     def action(self):
@@ -422,6 +425,7 @@ class LoadPillar(ioflo.base.deeding.Deed):
                     self.opts.value['pillar'] = self.pillar.value
                     return
             self.udp_stack.value.serviceAll()
+        self.pillar_refresh.value = False
 
 
 class Schedule(ioflo.base.deeding.Deed):

@@ -69,6 +69,8 @@ framer bootstrap be active first join
     frame router
         bid start manager #start alive presence from minion side
         do router
+        go pillar if .salt.var.pillar_refresh
+        go loading if .salt.var.module_refreh
 
     frame abort
         bid stop all
