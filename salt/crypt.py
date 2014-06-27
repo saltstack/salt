@@ -453,6 +453,10 @@ class Auth(object):
                                 return ''
                             return aes
                         else:
+                            log.error('The masters public could not be verified. Is the '
+                                      'verification pubkey {0} up to date?'
+                                      ''.format(self.opts['master_sign_key_name'] + '.pub'))
+
                             return ''
             else:
                 if self.opts['verify_master_pubkey_sign']:
