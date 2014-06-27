@@ -357,12 +357,12 @@ class Auth(object):
                                    message,
                                    binascii.a2b_base64(sig))
             if res:
-                log.debug('Successfully verified signature of new public with '
-                          'public key {0}'.format(self.opts['master_sign_key_name'] +
-                                                  '.pub'))
+                log.debug('Successfully verified signature of master '
+                          'public key with verification public key '
+                          '{0}'.format(self.opts['master_sign_key_name'] + '.pub'))
                 return True
             else:
-                log.debug('Failed to verify signature of new public key')
+                log.debug('Failed to verify signature of public key')
                 return False
         else:
             log.error('Failed to verify the signature of the message because '
