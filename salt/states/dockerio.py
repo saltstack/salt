@@ -247,6 +247,42 @@ def pulled(name, force=False, *args, **kwargs):
     return _ret_status(returned, name, changes=changes)
 
 
+def pushed(name):
+    '''   
+    Push an image from a docker registry. (`docker push`)
+
+    .. note::
+
+        See first the documentation for `docker login`, `docker pull`,
+        `docker push`,
+        and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
+        (`docker import
+        <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
+        NOTE that We added saltack a way to identify yourself via pillar,
+        see in the salt.modules.dockerio execution module how to ident yourself
+        via the pillar.
+
+    name
+        Tag of the image
+    '''
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    #if image_infos['status']:
+    #    return _valid(
+    #        name=name,
+    #        comment='Image already pushed: {0}'.format(name))
+    previous_id = image_infos['out']['Id'] if image_infos['status'] else None
+    push = __salt__['docker.push']
+    returned = push(name)
+    log.debug("Returned: "+str(returned))
+    if previous_id != returned['id'] and returned['status']:
+        changes = {name: {'old': previous_id,
+                          'new': returned['id']}}
+    else:
+        changes = {}
+    return _ret_status(returned, name, changes=changes)
+
+
 def built(name,
           path=None,
           quiet=False,
