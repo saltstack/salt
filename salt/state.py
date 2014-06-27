@@ -99,6 +99,14 @@ def _gen_tag(low):
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
+def _l_tag(name, id_):
+    low = {'name': 'listen_{0}'.format(name),
+           '__id__': 'listen_{0}'.format(id_),
+           'state': 'Listen_Error',
+           'fun': 'Listen_Error'}
+    return _gen_tag(low)
+
+
 def trim_req(req):
     '''
     Trim any function off of a requisite
@@ -1861,12 +1869,31 @@ class State(object):
                     for key, val in l_in.items():
                         listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
         mod_watchers = []
+        errors = {}
         for l_dict in listeners:
             for key, val in l_dict.items():
                 for listen_to in val:
                     for lkey, lval in listen_to.items():
+                        if (lkey, lval) not in crefs:
+                            rerror = {_l_tag(lkey, lval):
+                                         {'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
+                                          'name': 'listen_{0}:{1}'.format(lkey, lval),
+                                          'result': False,
+                                          'changes': {}}}
+                            errors.update(rerror)
+                            continue
                         to_tag = _gen_tag(crefs[(lkey, lval)])
+                        if to_tag not in running:
+                            continue
                         if running[to_tag]['changes']:
+                            if key not in crefs:
+                                rerror = {_l_tag(key[0], key[1]):
+                                             {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
+                                              'name': 'listen_{0}:{1}'.format(key[0], key[1]),
+                                              'result': False,
+                                              'changes': {}}}
+                                errors.update(rerror)
+                                continue
                             chunk = crefs[key]
                             low = chunk.copy()
                             low['sfun'] = chunk['fun']
@@ -1875,6 +1902,10 @@ class State(object):
                             mod_watchers.append(low)
         ret = self.call_chunks(mod_watchers)
         running.update(ret)
+        for err in errors:
+            errors[err]['__run_num__'] = self.__run_num
+            self.__run_num += 1
+        running.update(errors)
         return running
 
     def call_high(self, high):

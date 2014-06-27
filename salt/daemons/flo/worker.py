@@ -5,6 +5,7 @@ The core behaviors used by minion and master
 # pylint: disable=W0232
 
 # Import python libs
+import time
 import os
 import multiprocessing
 
@@ -35,6 +36,7 @@ class WorkerFork(ioflo.base.deeding.Deed):
         Spin up a process for each worker thread
         '''
         for ind in range(int(self.opts.value['worker_threads'])):
+            time.sleep(0.01)
             proc = multiprocessing.Process(
                     target=self._worker, kwargs={'yid': ind + 1}
                     )

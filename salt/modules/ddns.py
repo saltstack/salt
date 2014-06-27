@@ -14,7 +14,7 @@ Support for RFC 2136 dynamic DNS updates.
     The keyring file needs to be in json format and the key name needs to end
     with an extra period in the file, similar to this:
 
-    .. code-block:: bash
+    .. code-block:: json
 
         {"keyname.": "keycontent"}
 '''

@@ -722,11 +722,11 @@ class RaetKey(Key):
         Use libnacl to generate and safely save a private key
         '''
         import libnacl.public
-        d_key = libnacl.dual.SecretKey()
+        d_key = libnacl.dual.DualSecret()
         path = '{0}.key'.format(os.path.join(
             self.opts['gen_keys_dir'],
             self.opts['gen_keys']))
-        d_key.save(path)
+        d_key.save(path, 'msgpack')
 
     def check_master(self):
         '''

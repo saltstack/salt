@@ -8,7 +8,6 @@ import time
 import logging
 
 # Import salt libs
-import salt.crypt
 import salt.payload
 import salt.transport
 import salt.utils.args
@@ -20,7 +19,7 @@ __virtualname__ = 'publish'
 
 
 def __virtual__():
-    return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
+    return __virtualname__ if __opts__.get('transport', '') == 'raet' else False
 
 
 def _publish(
@@ -58,16 +57,12 @@ def _publish(
     if len(arg) == 1 and arg[0] is None:
         arg = []
 
-    log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
     load = {'cmd': 'minion_pub',
             'fun': fun,
             'arg': arg,
             'tgt': tgt,
             'tgt_type': expr_form,
             'ret': returner,
-            'tok': tok,
             'tmo': timeout,
             'form': form,
             'id': __opts__['id']}
@@ -81,9 +76,9 @@ def _publish(
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
     time.sleep(float(timeout))
+    sreq = salt.transport.Channel.factory(__opts__)
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
-            'tok': tok,
             'jid': peer_data['jid']}
     ret = sreq.send(load)
     if form == 'clean':
@@ -200,15 +195,9 @@ def runner(fun, arg=None, timeout=5):
     if len(arg) == 1 and arg[0] is None:
         arg = []
 
-    if 'master_uri' not in __opts__:
-        return 'No access to master. If using salt-call with --local, please remove.'
-    log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',
             'fun': fun,
             'arg': arg,
-            'tok': tok,
             'tmo': timeout,
             'id': __opts__['id']}
 

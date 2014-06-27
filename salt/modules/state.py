@@ -237,6 +237,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         salt '*' state.highstate
 
+        salt '*' state.highstate whitelist=sls1_to_run,sls2_to_run
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
 
@@ -887,6 +888,12 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+    pillar_json = os.path.join(root, 'pillar.json')
+    if os.path.isfile(pillar_json):
+        with salt.utils.fopen(pillar_json, 'r') as fp_:
+            pillar = json.load(fp_)
+    else:
+        pillar = None
     popts = copy.deepcopy(__opts__)
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
@@ -900,7 +907,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         if not os.path.isdir(full):
             continue
         popts['file_roots'][fn_] = [full]
-    st_ = salt.state.State(popts)
+    st_ = salt.state.State(popts, pillar=pillar)
     st_.functions['saltutil.sync_all'](envs)
     st_.module_refresh()
     ret = st_.call_chunks(lowstate)

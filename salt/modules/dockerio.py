@@ -903,32 +903,16 @@ def start(container,
                         'port_bindings must be formatted as a dictionary of '
                         'dictionaries'
                     )
-            try:
-                client.start(dcontainer,
-                             binds=binds,
-                             port_bindings=bindings,
-                             lxc_conf=lxc_conf,
-                             publish_all_ports=publish_all_ports,
-                             links=links,
-                             privileged=privileged,
-                             dns=dns,
-                             volumes_from=volumes_from,
-                             network_mode=network_mode)
-            except TypeError:
-                # maybe older version of docker-py <= 0.3.1 dns and
-                # volumes_from are not accepted
-                # FIXME:
-                # Ideally we should write an explicit check based on
-                # version of docker-py package, but
-                # https://github.com/dotcloud/docker-py/issues/216
-                # prevents us to do it at the time I'm writing this.
-                client.start(dcontainer,
-                             binds=binds,
-                             port_bindings=bindings,
-                             lxc_conf=lxc_conf,
-                             publish_all_ports=publish_all_ports,
-                             links=links,
-                             privileged=privileged)
+            client.start(dcontainer,
+                         binds=binds,
+                         port_bindings=bindings,
+                         lxc_conf=lxc_conf,
+                         publish_all_ports=publish_all_ports,
+                         links=links,
+                         privileged=privileged,
+                         dns=dns,
+                         volumes_from=volumes_from,
+                         network_mode=network_mode)
 
             if is_running(dcontainer):
                 _valid(status,

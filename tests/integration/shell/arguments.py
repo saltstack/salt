@@ -23,7 +23,7 @@ class ArgumentTestCase(integration.ModuleCase):
         self.assertEqual(
             self.run_function('test.ping', ['foo=bar']),
             ("ERROR executing 'test.ping': The following keyword arguments "
-             "are not valid: foo=bar")
+             "are not valid: {'foo': 'bar'}")
         )
 
     def test_kwarg_name_containing_dashes(self):

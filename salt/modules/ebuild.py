@@ -716,7 +716,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     if not targets:
         return {}
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n' \
+    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n ' \
           '{0}'.format(' '.join(targets))
     __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)

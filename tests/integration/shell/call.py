@@ -72,7 +72,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         src = os.path.join(integration.FILES, 'file/base/top.sls')
         dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
         shutil.move(src, dst)
-        expected_comment = 'No Top file or external nodes data matches found'
+        expected_comment = 'No matching sls found for'
         try:
             stdout, retcode = self.run_call(
                 '-l quiet --retcode-passthrough state.highstate',

@@ -671,6 +671,8 @@ class RemoteFuncs(object):
         This configuration will only allow the minion foo.example.com to
         execute commands from the test module
         '''
+        if not self.__verify_minion_publish(load):
+            return {}
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],

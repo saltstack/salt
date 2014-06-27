@@ -272,7 +272,7 @@ def built(name,
         return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
-                name, image_infos['out']['id']))
+                name, image_infos['out']['Id']))
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     build = __salt__['docker.build']
     kw = dict(tag=name,
