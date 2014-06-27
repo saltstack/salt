@@ -14,7 +14,7 @@ from __future__ import print_function
 import salt.utils.thin
 
 
-def generate(extra_mods='', overwrite=False):
+def generate(extra_mods='', overwrite=False, so_mods=''):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
@@ -29,4 +29,4 @@ def generate(extra_mods='', overwrite=False):
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     '''
-    print(salt.utils.thin.gen_thin(__opts__['cachedir'], extra_mods, overwrite))
+    print(salt.utils.thin.gen_thin(__opts__['cachedir'], extra_mods, overwrite, so_mods))
