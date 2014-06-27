@@ -487,7 +487,15 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     '''
     Make a web call to Digital Ocean
     '''
-    path = 'https://api.digitalocean.com/{0}/'.format(method)
+    base_path = str(config.get_cloud_config_value(
+        'api_root',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='https://api.digitalocean.com/v1'
+    ))
+
+    path = '{0}/{1}/'.format(base_path, method)
 
     if droplet_id:
         path += '{0}/'.format(droplet_id)
