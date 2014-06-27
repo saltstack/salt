@@ -110,9 +110,9 @@ if [ -n "$DEBUG" ]; then
     set -x
 fi
 
-SUDO=""
-if [ -n "{{SUDO}}" ]; then
-    SUDO="sudo root -c"
+SUDO="{{SUDO}}"
+if [ -n "$SUDO" ]; then
+    SUDO="sudo -u root"
 fi
 
 EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}    # Python interpreter is too old and incompatible

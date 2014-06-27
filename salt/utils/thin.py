@@ -3,6 +3,8 @@
 Generate the salt thin tarball from the installed python files
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import tarfile
@@ -10,6 +12,7 @@ import tarfile
 # Import third party libs
 import jinja2
 import yaml
+import backports
 import msgpack
 import requests
 try:
@@ -92,6 +95,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
+            os.path.dirname(backports.__file__),
             os.path.dirname(msgpack.__file__),
             os.path.dirname(requests.__file__)
             ]
