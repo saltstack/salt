@@ -104,13 +104,13 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     else:
         cmd = '{0} "{1}" | {2} {3}'.format(echo_cmd, job, binary, timespec)
 
-    if runas:
-        luser = __salt__['user.info'](runas)
+    if user:
+        luser = __salt__['user.info'](user)
         if not luser:
-            ret['comment'] = 'User: {0} is not exists'.format(runas)
+            ret['comment'] = 'User: {0} is not exists'.format(user)
             ret['result'] = False
             return ret
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=runas)
+        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=user)
     else:
         ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd))
 
