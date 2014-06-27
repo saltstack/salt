@@ -8,7 +8,6 @@ import time
 import logging
 
 # Import salt libs
-import salt.crypt
 import salt.payload
 import salt.transport
 import salt.utils.args
@@ -20,7 +19,7 @@ __virtualname__ = 'publish'
 
 
 def __virtual__():
-    return True if __opts__.get('transport', '') == 'raet' else False
+    return __virtualname__ if __opts__.get('transport', '') == 'raet' else False
 
 
 def _publish(
