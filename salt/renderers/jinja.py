@@ -186,6 +186,8 @@ Debugging
 The ``show_full_context`` function can be used to output all variables present
 in the current Jinja context.
 
+.. versionadded:: Helium
+
 .. code-block:: yaml
 
     Context is: {{ show_full_context }}
