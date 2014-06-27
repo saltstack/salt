@@ -381,7 +381,7 @@ class Auth(object):
             if payload['pub_key'] != local_master_pub:
                 # if we receive a new pubkey from the master, try to verify
                 # its signature if the payload contains one
-                if self.opts['verify_master_pub_sig']:
+                if self.opts['verify_master_pubkey_sign']:
                     try:
                         if self.verify_pubkey_sig(payload['pub_key'],
                                                   payload['pub_sig']):
@@ -396,36 +396,65 @@ class Auth(object):
                                       'but signature verification failed!'.format(self.opts['master']))
                             return ''
                     except KeyError, IndexError:
-                        log.error('Received new master key from master {0} but the message '
-                                 'does not contain the pubkeys signature'.format(self.opts['master']))
-                else:
-                    if 'pub_sig' in payload:
-                        log.error('Received signed master pubkey, rejecting key because signature '
-                                 'verification (verify_master_pub_sig) is not enabled.')
-                        return ''
+                        log.error('Received a new master key from master {0} without the public '
+                                  'keys signature'.format(self.opts['master']))
+                        log.error('Either disable verifying the master public key or enable the signing '
+                                  'of the public key on the master')
 
-                # This is not the last master we connected to
-                log.error('The master key has changed, the salt master could '
-                          'have been subverted, verify salt master\'s public '
-                          'key')
-                return ''
-            try:
-                aes, token = self.decrypt_aes(payload)
-                if token != self.token:
-                    log.error(
-                        'The master failed to decrypt the random minion token'
-                    )
+                # a reply _with_ the pubkeys signature without having it 
+                # verified by the minion shall never be accepted
+                elif 'pub_sig' in payload:
+                    log.error('Received reply with the pubkeys signature, but rejecting pubkey '
+                              'because signature verification (verify_master_pubkey_sign) is not enabled.')
                     return ''
-            except Exception:
-                log.error(
-                    'The master failed to decrypt the random minion token'
-                )
-                return ''
-            return aes
+
+                else:
+                    # This is not the last master we connected to
+                    log.error('The master key has changed, the salt master could '
+                              'have been subverted, verify salt master\'s public '
+                              'key')
+                    return ''
+
+            # make sure, master and minion both sign and verify and that it fails,
+            # if either side does not sign (master) or does not verify (minion)
+            if 'pub_sig' in payload:
+                if not self.opts['verify_master_pubkey_sign']:
+                    log.error('The masters public has been verified, but the public signature sent by '
+                              'the master is not being verified on the minion. Either enable signature '
+                              'verification on the minion or disable signing the public on the master!')
+                    return ''
+                else:
+                    # verify the signature of the pubkey even if it has
+                    # not changed compared with the one we already have
+                    if self.opts['always_verify_signature']:
+                        if self.verify_pubkey_sig(payload['pub_key'],
+                                                  payload['pub_sig']):
+                            log.info('Received signed and verified master pubkey '
+                                     'from master {0}'.format(self.opts['master']))
+                    try:
+                        aes, token = self.decrypt_aes(payload)
+                        if token != self.token:
+                            log.error(
+                                'The master failed to decrypt the random minion token'
+                            )
+                            return ''
+                    except Exception:
+                        log.error(
+                            'The master failed to decrypt the random minion token'
+                        )
+                        return ''
+                    return aes
+            else:
+                if self.opts['verify_master_pubkey_sign']:
+                    log.error('Master public key signature verification is enabled, but the masters '
+                              'reply does not contain any signature. Either enable signing the public '
+                              'key on the master or disable signature verification on the minion.')
+                    return ''
+
         else:
             # verify the masters pubkey signature if the minion
             # has not received any masters pubkey before
-            if self.opts['verify_master_pub_sig']:
+            if self.opts['verify_master_pubkey_sign']:
                 if self.verify_pubkey_sig(payload['pub_key'],
                                           payload['pub_sig']):
                     log.info('Received signed and verified master pubkey '
