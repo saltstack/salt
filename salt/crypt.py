@@ -439,19 +439,21 @@ class Auth(object):
                                                   payload['pub_sig']):
                             log.info('Received signed and verified master pubkey '
                                      'from master {0}'.format(self.opts['master']))
-                    try:
-                        aes, token = self.decrypt_aes(payload)
-                        if token != self.token:
-                            log.error(
-                                'The master failed to decrypt the random minion token'
-                            )
+                            try:
+                                aes, token = self.decrypt_aes(payload)
+                                if token != self.token:
+                                    log.error(
+                                        'The master failed to decrypt the random minion token'
+                                    )
+                                    return ''
+                            except Exception:
+                                log.error(
+                                    'The master failed to decrypt the random minion token'
+                                )
+                                return ''
+                            return aes
+                        else:
                             return ''
-                    except Exception:
-                        log.error(
-                            'The master failed to decrypt the random minion token'
-                        )
-                        return ''
-                    return aes
             else:
                 if self.opts['verify_master_pubkey_sign']:
                     log.error('Master public key signature verification is enabled, but the masters '
