@@ -902,7 +902,10 @@ class NixExecutor(ioflo.base.deeding.Deed):
                     yid=data['jid'],
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            self.uxd_stack.value.addRemote(ex_yard)
+            try:
+                self.uxd_stack.value.addRemote(ex_yard)
+            except Exception:
+                pass  # if the yard is already there don't worry
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}
