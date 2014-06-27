@@ -4,7 +4,9 @@ The match module allows for match routines to be run and determine target specs
 '''
 
 # Import python libs
+import inspect
 import logging
+import sys
 
 # Import salt libs
 import salt.minion
@@ -234,3 +236,36 @@ def glob(tgt, minion_id=None):
     except Exception as exc:
         log.exception(exc)
         return False
+
+
+def filter_by(lookup, expr_form='compound', minion_id=None):
+    '''
+    Return the first match in a dictionary of target patterns
+
+    .. versionadded:: Helium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' match.filter_by '{foo*: Foo!, bar*: Bar!}' minion_id=bar03
+
+    Pillar Example:
+
+    .. code-block:: yaml
+
+        {% set roles = salt['match.filter_by']({
+            'web*': ['app', 'caching'],
+            'db*': ['db'],
+        }) %}
+    '''
+    expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
+        predicate=inspect.isfunction))
+
+    for key in lookup.keys():
+        if minion_id and expr_funcs[expr_form](key, minion_id):
+            return lookup[key]
+        elif expr_funcs[expr_form](key, minion_id):
+            return lookup[key]
+
+    return None
