@@ -73,7 +73,11 @@ def fire(data, tag):
         salt '*' event.fire '{"data":"my event data"}' 'tag'
     '''
     try:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        event = salt.utils.event.get_event(
+                'minion',
+                opts=__opts__,
+                transport=__opts__['transport'],
+                listen=False)
         return event.fire_event(data, tag)
     except Exception:
         return False

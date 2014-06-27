@@ -720,6 +720,8 @@ class Eventer(ioflo.base.deeding.Deed):
                'event_yards': '.salt.event.yards',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
+               'module_refresh': '.salt.var.module_refresh',
+               'pillar_refresh': '.salt.var.pillar_refresh',
                'uxd_stack': '.salt.uxd.stack.stack'}
 
     def _register_event_yard(self, msg):
