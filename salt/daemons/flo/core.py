@@ -424,7 +424,6 @@ class LoadPillar(ioflo.base.deeding.Deed):
             self.udp_stack.value.serviceAll()
 
 
-
 class Schedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the schedule
