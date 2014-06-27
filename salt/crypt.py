@@ -178,7 +178,7 @@ class MasterKeys(dict):
                               '{0}'.format(self.sig_path))
                     sys.exit(1)
 
-            # create a new signing key-pair to sign the masters 
+            # create a new signing key-pair to sign the masters
             # auth-replies when a minion tries to connect
             else:
                 self.pub_sign_path = os.path.join(self.opts['pki_dir'],
@@ -401,7 +401,7 @@ class Auth(object):
                         log.error('Either disable verifying the master public key or enable the signing '
                                   'of the public key on the master')
 
-                # a reply _with_ the pubkeys signature without having it 
+                # a reply _with_ the pubkeys signature without having it
                 # verified by the minion shall never be accepted
                 elif 'pub_sig' in payload:
                     log.error('Received reply with the pubkeys signature, but rejecting pubkey '
