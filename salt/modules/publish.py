@@ -20,7 +20,7 @@ __virtualname__ = 'publish'
 
 
 def __virtual__():
-    return True if __opts__.get('transport', '') == 'zeromq' else False
+    return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
 
 
 def _publish(
