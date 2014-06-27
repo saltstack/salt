@@ -10,6 +10,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+import pipes
 
 # Import third party libs
 import yaml
@@ -827,7 +828,7 @@ class LocalClient(Client):
             return {}
         cmd = '{0} {1}'.format(self.opts['external_nodes'], self.opts['id'])
         ndata = yaml.safe_load(subprocess.Popen(
-                               cmd,
+                               pipes.quote(cmd),
                                shell=True,
                                stdout=subprocess.PIPE
                                ).communicate()[0])
@@ -845,7 +846,6 @@ class LocalClient(Client):
             else:
                 return ret
         return ret
-
 
 class RemoteClient(Client):
     '''
@@ -1155,7 +1155,6 @@ class RemoteClient(Client):
         '''
         if self.auth:
             return self.channel
-
         return salt.transport.Channel.factory(self.opts)
 
     def ext_nodes(self):
