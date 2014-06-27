@@ -40,6 +40,13 @@ Available Functions
       ubuntu:
         docker.pulled
 
+- pushed
+
+  .. code-block:: yaml
+
+      corp/mysuperdocker_img:
+        docker.pushed
+
 - installed
 
   .. code-block:: yaml
