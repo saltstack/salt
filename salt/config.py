@@ -503,7 +503,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
-    'maintinance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
+    'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
