@@ -1022,8 +1022,9 @@ def _create_eni(interface, eip=None):
                     break
 
     if not found:
-        raise SaltCloudConfigError('No such subnet <%s>' %
-                                   interface['SubnetId'])
+        raise SaltCloudConfigError(
+            'No such subnet <{0}>'.format(interface['SubnetId'])
+        )
 
     params = {'Action': 'CreateNetworkInterface',
               'SubnetId': interface['SubnetId']}
@@ -1040,7 +1041,7 @@ def _create_eni(interface, eip=None):
     result = query(params, return_root=True)
     eni_desc = result[1]
     if not eni_desc or not eni_desc.get('networkInterfaceId'):
-        raise SaltCloudException('Failed to create interface: %s' % result)
+        raise SaltCloudException('Failed to create interface: {0}'.format(result))
 
     eni_id = eni_desc.get('networkInterfaceId')
     log.debug(
@@ -1127,9 +1128,12 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
 
         return result[2].get('associationId')
 
-    raise SaltCloudException('Could not associate elastic ip address ' +
-                             '<%s> with network interface <%s>' %
-                             (eip_id, eni_id))
+    raise SaltCloudException(
+        'Could not associate elastic ip address '
+        '<{0}> with network interface <{1}>'.format(
+            eip_id, eni_id
+        )
+    )
 
 
 def _update_enis(interfaces, instance):
