@@ -70,7 +70,7 @@ class SSHHighState(salt.state.BaseHighState):
         return
 
 
-def lowstate_file_refs(chunks):
+def lowstate_file_refs(chunks, extras=''):
     '''
     Create a list of file ref objects to reconcile
     '''
@@ -90,6 +90,12 @@ def lowstate_file_refs(chunks):
             if saltenv not in refs:
                 refs[saltenv] = []
             refs[saltenv].append(crefs)
+    if extras:
+        extra_refs = extras.split(',')
+        if extra_refs:
+            for env in refs:
+                [refs[env].append([x]) for x in extra_refs]
+
     return refs
 
 

@@ -61,7 +61,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
         return errors
     # Compile and verify the raw chunks
     chunks = st_.state.compile_high_data(high_data)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
@@ -100,7 +100,7 @@ def low(data):
     err = st_.verify_data(data)
     if err:
         return err
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
@@ -135,7 +135,7 @@ def high(data):
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     chunks = st_.state.compile_high_data(high)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
@@ -172,7 +172,7 @@ def highstate(test=None, **kwargs):
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
@@ -219,7 +219,7 @@ def top(topfn, test=None, **kwargs):
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
