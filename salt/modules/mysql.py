@@ -1572,9 +1572,13 @@ def grant_exists(grant,
         salt '*' mysql.grant_exists \
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
-    target = __grant_generate(
-        grant, database, user, host, grant_option, escape
-    )
+    try:
+        target = __grant_generate(
+            grant, database, user, host, grant_option, escape
+        )
+    except Exception:
+        log.error('Error during grant generation.')
+        return False
 
     grants = user_grants(user, host, **connection_args)
 
@@ -1636,7 +1640,11 @@ def grant_add(grant,
 
     # Avoid spaces problems
     grant = grant.strip()
-    qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
+    try:
+        qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
+    except Exception:
+        log.error('Error during grant generation')
+        return False
     try:
         _execute(cur, qry['qry'], qry['args'])
     except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
