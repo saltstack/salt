@@ -44,6 +44,10 @@ Glossary
         :conf_master:`ext_job_cache`, :ref:`the list of returners
         <all-salt.returners>`.
 
+    External Pillar
+        A module that accepts arbitrary arguments and returns a dictionary. 
+        The dictionary is automatically added to a pillar for a minion.
+
     Event
         A notice emitted onto an event bus. Events are often driven by requests
         for actions to occur on a minion or master and the results of those
@@ -98,6 +102,10 @@ Glossary
     Masterless
         A minion which does not require a Salt master to operate. All
         configuration is local. *See also*: :conf_minion:`file_client`.
+
+    Master Tops
+        A system for the master that allows hooks into external systems to
+        generate top file data.
 
     Mine
         A facility to collect arbitrary data from minions and store that data
@@ -245,3 +253,9 @@ Glossary
     Worker
         A master process which can send notices and receive replies from
         minions. *See also*: :conf_master:`worker_threads`.
+
+    __virtual__
+        A function in a module that is called on module load to determine
+        whether or not the module should be available to a minion. This
+        function commonly contains logic to determine if all requirements
+        for a module are available, such as external libraries.
