@@ -303,13 +303,14 @@ class Terminal(object):
         if not self.closed:
             if self.child_fd is not None:
                 os.close(self.child_fd)
+                self.child_fd = None
             if self.child_fde is not None:
                 os.close(self.child_fde)
+                self.child_fde = None
             time.sleep(0.1)
             if terminate:
                 if not self.terminate(kill):
                     raise TerminalException('Failed to terminate child process.')
-            self.child_fd = self.child_fde = None
             self.closed = True
 
     # <---- Common Public API ------------------------------------------------
@@ -393,7 +394,7 @@ class Terminal(object):
                 args = []
 
             if self.shell and self.args:
-                self.args = ['/bin/sh', '-c'] + args
+                self.args = ['/bin/sh', '-c', ' '.join(args)]
             elif self.shell:
                 self.args = ['/bin/sh']
             else:
