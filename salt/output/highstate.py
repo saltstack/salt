@@ -106,9 +106,16 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
+
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
+
+            # Skip this state if it was successfull & diff output was requested
+            if __opts__.get('state_output_diff', False) and \
+               ret['result'] and not schanged:
+                continue
+
             if schanged:
                 tcolor = colors['CYAN']
             if ret['result'] is False:
