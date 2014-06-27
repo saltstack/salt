@@ -76,6 +76,7 @@ def _publish(
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
     time.sleep(float(timeout))
+    sreq = salt.transport.Channel.factory(__opts__)
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
             'jid': peer_data['jid']}
