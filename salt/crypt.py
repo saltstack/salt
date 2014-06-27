@@ -402,11 +402,12 @@ class Auth(object):
                             log.error('Received signed master pubkey from master {0} '
                                       'but signature verification failed!'.format(self.opts['master']))
                             return ''
-                    except KeyError, IndexError:
+                    except Exception:
                         log.error('Received a new master key from master {0} without the public '
                                   'keys signature'.format(self.opts['master']))
-                        log.error('Either disable verifying the master public key or enable the signing '
-                                  'of the public key on the master')
+                        log.error('Either disable verifying the master public on the minion or '
+                                  'enable the signing of the public key on the master')
+                        return ''
 
                 # a reply _with_ the pubkeys signature without having it
                 # verified by the minion shall never be accepted
@@ -462,14 +463,21 @@ class Auth(object):
             # verify the masters pubkey signature if the minion
             # has not received any masters pubkey before
             if self.opts['verify_master_pubkey_sign']:
-                if self.verify_pubkey_sig(payload['pub_key'],
-                                          payload['pub_sig']):
-                    log.info('Received signed and verified master pubkey '
-                             'from master {0}'.format(self.opts['master']))
-                    m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-                    salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-                    aes, token = self.decrypt_aes(payload, False)
-                    return aes
+                if 'pub_sig' in payload:
+                    if self.verify_pubkey_sig(payload['pub_key'],
+                                              payload['pub_sig']):
+                        log.info('Received signed and verified master pubkey '
+                                 'from master {0}'.format(self.opts['master']))
+                        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+                        salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                        aes, token = self.decrypt_aes(payload, False)
+                        return aes
+                else:
+                    log.error('Failed to accept the masters public key because no '
+                              'verifiable signature was found in the reply')
+                    log.error('Either disable verifying the master public on the minion or '
+                              'enable the signing of the public key on the master')
+                    return ''
             # the minion has not received any masters pubkey yet, write
             # the newly received pubkey to minion_master.pub
             else:
