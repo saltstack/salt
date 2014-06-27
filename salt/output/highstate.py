@@ -68,9 +68,6 @@ def output(data):
 
 
 def _format_host(host, data):
-    #import pdb
-    #pdb.set_trace()
-
     colors = salt.utils.get_colors(__opts__.get('color'))
     tabular = __opts__.get('state_tabular', False)
     rcounts = {}
