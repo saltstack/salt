@@ -29,9 +29,11 @@ Augeas_ can be used to manage configuration files.
 
 '''
 
+# Import python libs
 import re
 import os.path
 import difflib
+
 
 def __virtual__():
     return 'augeas' if 'augeas.execute' in __salt__ else False
