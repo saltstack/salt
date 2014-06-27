@@ -353,9 +353,16 @@ class Auth(object):
         if self.opts['master_sign_key_name']:
             path = os.path.join(self.opts['pki_dir'],
                                 self.opts['master_sign_key_name'] + '.pub')
-            res = verify_signature(path,
-                                   message,
-                                   binascii.a2b_base64(sig))
+
+            if os.path.isfile(path):
+                res = verify_signature(path,
+                                       message,
+                                       binascii.a2b_base64(sig))
+            else:
+                log.error('Verification public key {0} does not exist. You '
+                          'need to copy it from the master to the minions '
+                          'pki directory'.format(os.path.basename(path)))
+                return False
             if res:
                 log.debug('Successfully verified signature of master '
                           'public key with verification public key '
