@@ -83,7 +83,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
-def low(data):
+def low(data, **kwargs):
     '''
     Execute a single low data call
     This function is mostly intended for testing the state system
@@ -121,7 +121,7 @@ def low(data):
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
-def high(data):
+def high(data, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
