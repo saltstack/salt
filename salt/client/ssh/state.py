@@ -94,7 +94,8 @@ def lowstate_file_refs(chunks, extras=''):
         extra_refs = extras.split(',')
         if extra_refs:
             for env in refs:
-                [refs[env].append([x]) for x in extra_refs]
+                for x in extra_refs:
+                    refs[env].append([x])
 
     return refs
 

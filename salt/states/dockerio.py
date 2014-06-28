@@ -256,7 +256,7 @@ def pulled(name, force=False, *args, **kwargs):
 
 
 def pushed(name):
-    ''' 
+    '''
     Push an image from a docker registry. (`docker push`)
 
     .. note::
