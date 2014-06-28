@@ -233,7 +233,7 @@ def pulled(name, force=False, *args, **kwargs):
         module.
 
     name
-        Tag of the image
+        Name of the image
 
     force
         Pull even if the image is already pulled
@@ -272,7 +272,7 @@ def pushed(name):
         module.
 
     name
-        Tag of the image
+        Name of the image
     '''
     push = __salt__['docker.push']
     returned = push(name)
@@ -296,7 +296,7 @@ def built(name,
     Build a docker image from a path or URL to a dockerfile. (`docker build`)
 
     name
-        Tag of the image
+        Name of the image
 
     path
         URL (e.g. `url/branch/docker_dir/dockerfile`)
