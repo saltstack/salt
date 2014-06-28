@@ -274,19 +274,11 @@ def pushed(name):
     name
         Tag of the image
     '''
-    inspect_image = __salt__['docker.inspect_image']
-    image_infos = inspect_image(name)
-    #if image_infos['status']:
-    #    return _valid(
-    #        name=name,
-    #        comment='Image already pushed: {0}'.format(name))
-    previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     push = __salt__['docker.push']
     returned = push(name)
     log.debug("Returned: "+str(returned))
-    if previous_id != returned['id'] and returned['status']:
-        changes = {name: {'old': previous_id,
-                          'new': returned['id']}}
+    if returned['status']:
+        changes = {name: {'Rev': returned['id']}} 
     else:
         changes = {}
     return _ret_status(returned, name, changes=changes)
