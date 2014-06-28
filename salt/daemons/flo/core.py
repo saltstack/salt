@@ -294,7 +294,11 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
     '''
     Ioinits = odict(
         inode=".raet.udp.stack.",
-        stack='stack', )
+        stack='stack',
+        alloweds = {'ipath': '.salt.var.presence.alloweds',
+                    'ival': odict()},
+        changeds = {'ipath': '.salt.var.presence.changed',
+                    'ival': odict(plus=set(), minus=set())},)
 
     def action(self, **kwa):
         '''
@@ -303,10 +307,16 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
             stack.manage(cascade=True)
-            # stack.alloweds now has dict keyed by name of available remotes for messages
-            # stack.changeds is dict with sets of {plus: plus, minus: minus} names of
-            # remotes that that are newly allowed plus and newly disallowed minus
-            # need to copy reference to stack.alloweds to data store
+            self.alloweds.value = odict(self.stack.value.alloweds) #make copy
+            self.changeds.data.plus = set(self.stack.value.changeds['plus'])
+            self.changeds.data.minus = set(self.stack.value.changeds['minus'])
+
+            # share .salt.var.presence.alloweds value is dict keyed by name of allowed remotes
+            # share .salt.var.presence.changeds has two fields,
+            #      plus is set of newly allowed remotes
+            #      minus is set of newly unallowed remotes
+
+
             # need to queue presence event message if either plus or minus is not empty
 
 
@@ -902,7 +912,10 @@ class NixExecutor(ioflo.base.deeding.Deed):
                     yid=data['jid'],
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            self.uxd_stack.value.addRemote(ex_yard)
+            try:
+                self.uxd_stack.value.addRemote(ex_yard)
+            except Exception:
+                pass  # if the yard is already there don't worry
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}

@@ -105,7 +105,7 @@ def state_doc(*args):
             target_mod = ''
         for fun in st_.states:
             if fun == module or fun.startswith(target_mod):
-                state = module.replace('.', '')
+                state = module.split('.')[0]
                 if state not in docs:
                     if hasattr(st_.states[fun], '__globals__'):
                         docs[state] = st_.states[fun].__globals__['__doc__']
