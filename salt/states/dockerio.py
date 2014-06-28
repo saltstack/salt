@@ -278,7 +278,7 @@ def pushed(name):
     returned = push(name)
     log.debug("Returned: "+str(returned))
     if returned['status']:
-        changes = {name: {'Rev': returned['id']}} 
+        changes = {name: {'Rev': returned['id']}}
     else:
         changes = {}
     return _ret_status(returned, name, changes=changes)
