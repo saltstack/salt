@@ -229,7 +229,7 @@ def pulled(name, force=False, *args, **kwargs):
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that we added in SaltStack a way to authenticate yourself with the
         Docker Hub Registry by supplying your credentials (username, email & password)
-        using pillars. For more information, see salt.modules.dockerio execution 
+        using pillars. For more information, see salt.modules.dockerio execution
         module.
 
     name
@@ -256,7 +256,7 @@ def pulled(name, force=False, *args, **kwargs):
 
 
 def pushed(name):
-    '''   
+    ''' 
     Push an image from a docker registry. (`docker push`)
 
     .. note::
@@ -268,7 +268,7 @@ def pushed(name):
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that we added in SaltStack a way to authenticate yourself with the
         Docker Hub Registry by supplying your credentials (username, email & password)
-        using pillars. For more information, see salt.modules.dockerio execution 
+        using pillars. For more information, see salt.modules.dockerio execution
         module.
 
     name
