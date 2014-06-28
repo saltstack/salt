@@ -1521,7 +1521,7 @@ def _parse_image_multilogs_string(ret, repo):
     Parse image log strings into grokable data
     '''
     image_logs, infos = [], None
-    if ret and ret.startswith('{') and ret.endswith('}'):
+    if ret and ret.strip().startswith('{') and ret.strip().endswith('}'):
         pushd = 0
         buf = ''
         for char in ret:
@@ -1733,26 +1733,31 @@ def push(repo):
     client = _get_client()
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
-    ret = client.push(repo)
-    image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
-    if image_logs:
-        laststatus = image_logs[0].get('status', None)
-        if laststatus and (
-            ('already pushed' in laststatus)
-            or ('Pushing tags for rev' in laststatus)
-        ):
-            status['status'] = True
-            status['id'] = _get_image_infos(repo)['Id']
-            status['comment'] = 'Image {0}({1}) was pushed'.format(
-                repo, status['id'])
+    try:
+        ret = client.push(repo)
+        if ret:
+            image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
             if image_logs:
                 status['out'] = image_logs
+                laststatus = image_logs[2].get('status', None)
+                if laststatus and (
+                    ('already pushed' in laststatus)
+                    or ('Pushing tags for rev' in laststatus)
+                    or ('Pushing tag for rev' in laststatus)
+                ):
+                    status['status'] = True
+                    status['id'] = _get_image_infos(repo)['Id']
+                    status['comment'] = 'Image {0}({1}) was pushed'.format(
+                        repo, status['id'])
+                else:
+                    _push_assemble_error_status(status, ret, image_logs)
             else:
                 status['out'] = ret
+                _push_assemble_error_status(status, ret, image_logs)
         else:
-            _push_assemble_error_status(status, ret, image_logs)
-    else:
-        _push_assemble_error_status(status, ret, image_logs)
+            _invalid(status)
+    except Exception:
+        _invalid(status, id_=repo, out=traceback.format_exc())
     return status
 
 
