@@ -2454,4 +2454,3 @@ def chugid_and_umask(runas, umask):
         chugid(runas)
     if umask is not None:
         os.umask(umask)
-

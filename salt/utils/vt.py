@@ -47,7 +47,7 @@ else:
 # Import salt libs
 from salt._compat import string_types
 from salt.log.setup import LOG_LEVELS
-import  salt.utils
+import salt.utils
 
 log = logging.getLogger(__name__)
 
