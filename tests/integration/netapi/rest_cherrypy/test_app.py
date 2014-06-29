@@ -3,13 +3,6 @@ import urllib
 
 from tests.utils import BaseRestCherryPyTest
 
-# Import 3rd-party libs
-try:
-    import cherrypy
-    HAS_CHERRYPY = True
-except ImportError:
-    HAS_CHERRYPY = False
-
 
 class TestAuth(BaseRestCherryPyTest):
     def test_get_root_noauth(self):
