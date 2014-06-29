@@ -26,8 +26,8 @@ requires very little. In the example:
 .. code-block:: yaml
 
     mykeyring:
-      - driver: keyring
-      - service: system
+      driver: keyring
+      service: system
 
 The ``driver`` refers to the keyring module, ``service`` refers to the service
 that will be used inside of keyring (which may be likened unto a database
