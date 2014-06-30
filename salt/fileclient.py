@@ -853,8 +853,8 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        channel = salt.transport.Channel.factory(self.opts)
-        if channel.ttype == 'zeromq':
+        self.channel = salt.transport.Channel.factory(self.opts)
+        if self.channel.ttype == 'zeromq':
             self.auth = salt.crypt.SAuth(opts)
         else:
             self.auth = ''
@@ -1149,20 +1149,29 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
+
+    def _get_channel(self):
+       '''
+       Return the right channel
+       '''
+       if self.auth:
+           return self.channel
+
+       return salt.transport.Channel.factory(self.opts)
+
+
     def ext_nodes(self):
         '''
         Return the metadata derived from the external nodes system on the
         master.
         '''
-        channel = salt.transport.Channel.factory(
-                self.opts,
-                auth=self.auth)
         load = {'cmd': '_ext_nodes',
                 'id': self.opts['id'],
                 'opts': self.opts}
         if self.auth:
             load['tok'] = self.auth.gen_token('salt')
         try:
+            channel = self._get_channel()
             return channel.send(load)
         except SaltReqTimeoutError:
             return ''
