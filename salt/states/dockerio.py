@@ -40,6 +40,13 @@ Available Functions
       ubuntu:
         docker.pulled
 
+- pushed
+
+  .. code-block:: yaml
+
+      corp/mysuperdocker_img:
+        docker.pushed
+
 - installed
 
   .. code-block:: yaml
@@ -220,12 +227,13 @@ def pulled(name, force=False, *args, **kwargs):
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
-        NOTE that We added saltack a way to identify yourself via pillar,
-        see in the salt.modules.dockerio execution module how to ident yourself
-        via the pillar.
+        NOTE that we added in SaltStack a way to authenticate yourself with the
+        Docker Hub Registry by supplying your credentials (username, email & password)
+        using pillars. For more information, see salt.modules.dockerio execution
+        module.
 
     name
-        Tag of the image
+        Name of the image
 
     force
         Pull even if the image is already pulled
@@ -247,6 +255,35 @@ def pulled(name, force=False, *args, **kwargs):
     return _ret_status(returned, name, changes=changes)
 
 
+def pushed(name):
+    '''
+    Push an image from a docker registry. (`docker push`)
+
+    .. note::
+
+        See first the documentation for `docker login`, `docker pull`,
+        `docker push`,
+        and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
+        (`docker import
+        <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
+        NOTE that we added in SaltStack a way to authenticate yourself with the
+        Docker Hub Registry by supplying your credentials (username, email & password)
+        using pillars. For more information, see salt.modules.dockerio execution
+        module.
+
+    name
+        Name of the image
+    '''
+    push = __salt__['docker.push']
+    returned = push(name)
+    log.debug("Returned: "+str(returned))
+    if returned['status']:
+        changes = {name: {'Rev': returned['id']}}
+    else:
+        changes = {}
+    return _ret_status(returned, name, changes=changes)
+
+
 def built(name,
           path=None,
           quiet=False,
@@ -259,7 +296,7 @@ def built(name,
     Build a docker image from a path or URL to a dockerfile. (`docker build`)
 
     name
-        Tag of the image
+        Name of the image
 
     path
         URL (e.g. `url/branch/docker_dir/dockerfile`)
