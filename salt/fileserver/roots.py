@@ -126,8 +126,8 @@ def update():
                     old_mtime_map[file_path] = mtime
                 except ValueError:
                     # Document the invalid entry in the log
-                    log.error('Skipped invalid cache mtime entry in {0}: {1}'
-                              .format(mtime_map_path, line))
+                    log.warning('Skipped invalid cache mtime entry in {0}: {1}'
+                                .format(mtime_map_path, line))
 
     # generate the new map
     new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
