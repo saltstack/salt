@@ -804,31 +804,35 @@ class Eventer(ioflo.base.deeding.Deed):
                     )
 
 
-class Publisher(ioflo.base.deeding.Deed):
+class SaltPublisher(ioflo.base.deeding.Deed):
     '''
     Publish to the minions
     FloScript:
 
-    do publisher
+    do salt publisher
 
     '''
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.local.publish',
-               'udp_stack': '.raet.udp.stack.stack'}
+               'stack': '.raet.udp.stack.stack',
+               'availables': {'ipath': '.salt.var.presence.availables',
+                              'ival': set()}, }
 
     def _publish(self, pub_msg):
         '''
         Publish the message out to the targeted minions
         '''
         pub_data = pub_msg['return']
-        for minion in self.udp_stack.value.uids:
-            eid = self.udp_stack.value.uids.get(minion)
+        # only publish to available minions by intersecting sets
+        minions = self.availables.value & set(self.stack.value.uids.keys())
+        for minion in minions:
+            eid = self.stack.value.uids.get(minion)
             if eid:
                 route = {
                         'dst': (minion, None, 'fun'),
-                        'src': (self.udp_stack.value.local.name, None, None)}
+                        'src': (self.stack.value.local.name, None, None)}
                 msg = {'route': route, 'pub': pub_data['pub']}
-                self.udp_stack.value.message(msg, eid)
+                self.stack.value.message(msg, eid)
 
     def action(self):
         '''

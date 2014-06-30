@@ -39,7 +39,7 @@ framer events be active first start
 
 framer publish be active first start
     frame start
-        do publisher
+        do salt publisher
 
 framer manager be active first start at 10.0
     frame start
