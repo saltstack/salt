@@ -22,6 +22,7 @@ import salt.transport
 import salt.utils.args
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
+from salt.utils import print_cli
 
 # Custom exceptions
 from salt.exceptions import (
@@ -169,7 +170,7 @@ class Caller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get('fun', '')):
-                print('{0}:\n{1}\n'.format(name, docs[name]))
+                print_cli('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
