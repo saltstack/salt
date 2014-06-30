@@ -483,7 +483,7 @@ def installed(
         Also, while this function is not yet implemented for all pkg frontends,
         :mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` will
         show all versions available in the various repositories for a given
-        package.
+        package, irrespective of whether or not it is installed.
 
         .. code-block:: bash
 
