@@ -21,7 +21,7 @@ import salt.runner
 import salt.auth
 import salt.key
 
-from salt.utils import parsers
+from salt.utils import parsers, print_cli
 from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
@@ -133,7 +133,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if self.config['async']:
                 jid = local.cmd_async(**kwargs)
-                print('Executed command with job ID: {0}'.format(jid))
+                print_cli('Executed command with job ID: {0}'.format(jid))
                 return
             retcodes = []
             try:
@@ -199,17 +199,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 not_return_minions.append(each_minion)
             else:
                 return_counter += 1
-        print('\n')
-        print('-------------------------------------------')
-        print('Summary')
-        print('-------------------------------------------')
+        print_cli('\n')
+        print_cli('-------------------------------------------')
+        print_cli('Summary')
+        print_cli('-------------------------------------------')
         if self.options.verbose:
-            print('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
-        print('# of Minions Returned: {0}'.format(return_counter))
+            print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of Minions Returned: {0}'.format(return_counter))
         if self.options.verbose:
-            print('# of Minions Did Not Return: {0}'.format(not_return_counter))
-            print('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
-        print('-------------------------------------------')
+            print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
+            print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
+        print_cli('-------------------------------------------')
 
     def _output_ret(self, ret, out):
         '''
@@ -255,8 +255,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
             salt.output.display_output(fun + ':', 'text', self.config)
-            print(docs[fun])
-            print('')
+            print_cli(docs[fun])
+            print_cli('')
 
 
 class SaltCP(parsers.SaltCPOptionParser):
