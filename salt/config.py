@@ -58,12 +58,6 @@ VALID_OPTS = {
     'master_finger': str,
     'master_shuffle': bool,
     'master_alive_interval': int,
-    'master_sign_key_name': str,
-    'master_sign_pubkey': bool,
-    'verify_master_pubkey_sign': bool,
-    'always_verify_signature': bool,
-    'master_pubkey_signature': str,
-    'master_use_pubkey_signature': bool,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -258,9 +252,6 @@ DEFAULT_MINION_OPTS = {
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
-    'verify_master_pubkey_sign': False,
-    'always_verify_signature': False,
-    'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -521,10 +512,6 @@ DEFAULT_MASTER_OPTS = {
     'queue_dirs': [],
     'cli_summary': False,
     'max_minions': 0,
-    'master_sign_key_name': 'master_sign',
-    'master_sign_pubkey': False,
-    'master_pubkey_signature': 'master_pubkey_signature',
-    'master_use_pubkey_signature': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
