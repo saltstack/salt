@@ -131,7 +131,7 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # are database names, table names and column names. Theses names are not values
 # and do not follow the same escape rules (see quote_identifier function for
 # details on `_ and % escape policies on identifiers). Using value escaping on
-# identifier could fool the SQL engine (badly escaping quotes and not doubling 
+# identifier could fool the SQL engine (badly escaping quotes and not doubling
 # ` characters. So for identifiers a call to quote_identifier should be done and
 # theses identifiers should then be added in strings with format, but without
 # __repr__ filter.
