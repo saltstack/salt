@@ -152,6 +152,14 @@ def install_ruby(ruby, runas=None):
         The version of Ruby to install, should match one of the
         versions listed by rbenv.list
 
+    You can configure additionnal environment variables in pillar /
+    grains / master:
+
+    .. code-block:: yaml
+
+        rbenv:
+          build_env: 'CONFIGURE_OPTS="--no-tcmalloc" CFLAGS="-fno-tree-dce"'
+
     CLI Example:
 
     .. code-block:: bash
@@ -166,8 +174,9 @@ def install_ruby(ruby, runas=None):
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
         env_list.append('MAKE=gmake')
 
-    if __salt__['config.option']('rbenv.build_env'):
-        env_list.append(__salt__['config.option']('rbenv.build_env'))
+    build_env = __salt__['config.get']('rbenv:build_env')
+    if build_env:
+        env_list.append(build_env)
 
     if env_list:
         env = ' '.join(env_list)
