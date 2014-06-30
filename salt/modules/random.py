@@ -13,6 +13,17 @@ import os
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 
+# Define the module's virtual name
+__virtualname__ = 'random'
+
+
+def __virtual__():
+    '''
+    Confirm this module is on a Debian based system
+    '''
+    return __virtualname__
+
+
 def encode(value, encoder='sha256'):
     '''
     .. versionadded:: Helium
