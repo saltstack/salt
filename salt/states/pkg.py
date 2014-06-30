@@ -468,7 +468,41 @@ def installed(
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
-        :mod:`zypper <salt.modules.zypper>`.
+        :mod:`zypper <salt.modules.zypper>`. The version number includes the
+        release designation where applicable, to allow Salt to target a
+        specific release of a given version. When in doubt, using the
+        ``pkg.latest_version`` function for an uninstalled package will tell
+        you the version available.
+
+        .. code-block:: bash
+
+            # salt myminion pkg.latest_version httpd
+            myminion:
+                2.2.15-30.el6.centos
+
+        Also, while this function is not yet implemented for all pkg frontends,
+        :mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` will
+        show all versions available in the various repositories for a given
+        package, irrespective of whether or not it is installed.
+
+        .. code-block:: bash
+
+            # salt myminion pkg.list_repo_pkgs httpd
+            myminion:
+                ----------
+                base:
+                    |_
+                      ----------
+                      httpd:
+                          2.2.15-29.el6.centos
+                updates:
+                    |_
+                      ----------
+                      httpd:
+                          2.2.15-30.el6.centos
+
+        The version strings returned by either of these functions can be used
+        as version specifiers in pkg states.
 
     refresh
         Update the repo database of available packages prior to installing the
