@@ -104,7 +104,7 @@ class GitPillar(object):
         self.repo = None
 
         hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
-        hash_str = '{} {}'.format(self.branch, self.rp_location)
+        hash_str = '{0} {1}'.format(self.branch, self.rp_location)
         repo_hash = hash_type(hash_str).hexdigest()
         rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
@@ -142,7 +142,6 @@ class GitPillar(object):
             else:
                 if self.repo.remotes.origin.url != self.rp_location:
                     self.repo.remotes.origin.config_writer.set('url', self.rp_location)
-
 
     def update(self):
         '''

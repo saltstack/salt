@@ -19,8 +19,8 @@ def update(branch, repo):
         salt-run git_pillar.update branch='branch' repo='location'
     '''
     for opts_dict in __opts__.get('ext_pillar', []):
-	parts = opts_dict.get('git', '').split()
-	if len(parts) >= 2 and parts[:2] == [branch, repo]:
+        parts = opts_dict.get('git', '').split()
+        if len(parts) >= 2 and parts[:2] == [branch, repo]:
             salt.pillar.git_pillar.GitPillar(branch, repo, __opts__).update()
             break
     else:
