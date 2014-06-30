@@ -311,13 +311,20 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        sreq = salt.payload.SREQ(
-                'tcp://{0}:{1}'.format(
-                    salt.utils.ip_bracket(self.opts['interface']),
-                    self.opts['ret_port'])
-            )
-        tdata = sreq.send('clear', load)
-        return tdata
+        if self.opts['transport'] == 'zeromq':
+            sreq = salt.payload.SREQ(
+                    'tcp://{0}:{1}'.format(
+                        salt.utils.ip_bracket(self.opts['interface']),
+                        self.opts['ret_port'])
+                )
+            tdata = sreq.send('clear', load)
+            return tdata
+        elif self.opts['transport'] == 'raet':
+            sreq = salt.transport.Channel(
+                    self.opts)
+            sreq.route['dst'] = (None, None, 'local_cmd')
+            tdata = sreq.send(load)
+            return tdata
 
     def cli(self, eauth):
         '''
