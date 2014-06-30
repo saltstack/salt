@@ -10,6 +10,7 @@ import copy
 import collections
 import datetime
 import distutils.version  # pylint: disable=E0611
+import errno
 import fnmatch
 import hashlib
 import imp
@@ -1646,6 +1647,18 @@ def parse_docstring(docstring):
         deps = dep_list[0].replace(txt, '').strip().split(', ')
         ret['deps'] = deps
         return ret
+
+
+def print_cli(msg):
+    '''
+    Wrapper around print() that suppresses tracebacks on broken pipes (i.e.
+    when salt output is piped to less and less is stopped prematurely).
+    '''
+    try:
+        print(msg)
+    except IOError as exc:
+        if exc.errno != errno.EPIPE:
+            raise
 
 
 def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
