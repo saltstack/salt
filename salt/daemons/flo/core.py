@@ -297,19 +297,42 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
         stack='stack',
         alloweds={'ipath': '.salt.var.presence.alloweds',
                   'ival': odict()},
-        changeds={'ipath': '.salt.var.presence.changed',
+        aliveds={'ipath': '.salt.var.presence.aliveds',
+                 'ival': odict()},
+        availables={'ipath': '.salt.var.presence.availables',
+                    'ival': set()},
+        changeds={'ipath': '.salt.var.presence.changeds',
                   'ival': odict(plus=set(), minus=set())},)
 
     def action(self, **kwa):
         '''
         Manage the presence of any remotes
+
+        availables is set of names of alive remotes which are also allowed
+        changeds is is share with two fields:
+            plus is set of names of newly available remotes
+            minus is set of names of newly unavailable remotes
+        alloweds is dict of allowed remotes keyed by name
+        aliveds is dict of alived remotes keyed by name
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
             stack.manage(cascade=True)
-            self.alloweds.value = odict(self.stack.value.alloweds)  # make copy
-            self.changeds.data.plus = set(self.stack.value.changeds['plus'])
-            self.changeds.data.minus = set(self.stack.value.changeds['minus'])
+            # make copies
+            self.availables.value = set(self.stack.value.availables)
+            self.changeds.update(plus=set(self.stack.value.changeds['plus']))
+            self.changeds.update(minus=set(self.stack.value.changeds['minus']))
+            self.alloweds.value = odict(self.stack.value.alloweds)
+            self.aliveds.value = odict(self.stack.value.aliveds)
+
+            console.concise(" Manage {0}.\nAvailables: {1}\nChangeds:\nPlus: {2}\n"
+                            "Minus: {3}\nAlloweds: {4}\nAliveds{5}\n".format(
+                    stack.name,
+                    self.availables.value,
+                    self.changeds.data.plus,
+                    self.changeds.data.minus,
+                    self.alloweds.value,
+                    self.aliveds.value))
 
             # share .salt.var.presence.alloweds value is dict keyed by name of allowed remotes
             # share .salt.var.presence.changeds has two fields,
