@@ -27,6 +27,11 @@ import subprocess
 import yaml
 
 
+# Import python libs
+import logging
+
+log = logging.getLogger(__name__)
+
 def __virtual__():
     '''
     Only run if properly configured
@@ -40,7 +45,9 @@ def top(**kwargs):
     '''
     Run the command configured
     '''
-    if 'id' not in kwargs['opts']:
+    log.debug('tops.ext_nodes.top: ---------------------------- ')
+    if not 'id' in kwargs['opts']:
+        log.debug('id not in opts?!? ---------------------------- ')
         return {}
     cmd = '{0} {1}'.format(
             __opts__['master_tops']['ext_nodes'],
@@ -52,6 +59,7 @@ def top(**kwargs):
                 shell=True,
                 stdout=subprocess.PIPE
                 ).communicate()[0])
+    log.debug('ndata: {}'.format(ndata))
     ret = {}
     if 'environment' in ndata:
         env = ndata['environment']
