@@ -50,6 +50,7 @@ import salt.utils.gzip_util
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
+import binascii
 
 # Import halite libs
 try:
@@ -1966,6 +1967,23 @@ class ClearFuncs(object):
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port'],
               }
+
+        # sign the masters pubkey (if enabled) before it is
+        # send to the minion that was just authenticated
+        if self.opts['master_sign_pubkey']:
+            # append the pre-computed signature to the auth-reply
+            if self.master_key.pubkey_signature():
+                log.debug('Adding pubkey signature to auth-reply')
+                log.debug(self.master_key.pubkey_signature())
+                ret.update({'pub_sig': self.master_key.pubkey_signature()})
+            else:
+                # the master has its own signing-keypair, compute the master.pub's
+                # signature and append that to the auth-reply
+                log.debug("Signing master public key before sending")
+                pub_sign = salt.crypt.sign_message(self.master_key.get_sign_paths()[1],
+                                                   ret['pub_key'])
+                ret.update({'pub_sig': binascii.b2a_base64(pub_sign)})
+
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:
