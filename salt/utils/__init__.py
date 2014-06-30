@@ -3,6 +3,7 @@
 Some of the utils used by salt
 '''
 from __future__ import absolute_import
+from __future__ import print_function
 
 # Import python libs
 import contextlib

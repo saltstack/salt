@@ -43,7 +43,7 @@ class ForkMaint(ioflo.base.deeding.Deed):
         console_logdir = self.opts.value.get('ioflo_console_logdir', '')
         if console_logdir:
             consolepath = os.path.join(console_logdir, 'maintenance.log')
-        else: # empty means log to std out
+        else:  # empty means log to std out
             consolepath = ''
 
         ioflo.app.run.start(
