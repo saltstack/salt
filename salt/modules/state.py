@@ -534,8 +534,9 @@ def show_lowstate(queue=False, **kwargs):
 
         salt '*' state.show_lowstate
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
+        assert False
         return conflict
     st_ = salt.state.HighState(__opts__)
     st_.push_active()
@@ -564,7 +565,7 @@ def sls_id(
 
         salt '*' state.sls_id apache http
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
@@ -620,7 +621,7 @@ def show_low_sls(mods,
         )
         # Backwards compatibility
         saltenv = env
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
@@ -673,7 +674,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         )
         # Backwards compatibility
         saltenv = env
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
@@ -718,7 +719,7 @@ def show_top(queue=False, **kwargs):
 
         salt '*' state.show_top
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.HighState(__opts__)
@@ -749,7 +750,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         salt '*' state.single pkg.installed name=vim
 
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     comps = fun.split('.')
