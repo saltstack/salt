@@ -241,6 +241,8 @@ VALID_OPTS = {
     'ping_interval': int,
     'cli_summary': bool,
     'max_minions': int,
+    'username': str,
+    'password': str,
 }
 
 # default configurations
@@ -360,6 +362,8 @@ DEFAULT_MINION_OPTS = {
     'raet_port': 4510,
     'restart_on_error': False,
     'ping_interval': 0,
+    'username': None,
+    'password': None,
 }
 
 DEFAULT_MASTER_OPTS = {
