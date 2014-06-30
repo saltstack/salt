@@ -38,6 +38,18 @@ class HighStateTestCase(TestCase):
         matches = self.highstate.top_matches(top)
         self.assertEqual(matches, {'env': ['state1']})
 
+    def test_matches_whitelist(self):
+        matches = {'env': ['state1', 'state2', 'state3']}
+        matches = self.highstate.matches_whitelist(matches, ['state2'])
+        self.assertEqual(matches, {'env': ['state2']})
+
+    def test_matches_whitelist_with_string(self):
+        matches = {'env': ['state1', 'state2', 'state3']}
+        matches = self.highstate.matches_whitelist(matches,
+                                                   'state2,state3')
+        self.assertEqual(matches, {'env': ['state2', 'state3']})
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(HighStateTestCase, needs_daemon=False)

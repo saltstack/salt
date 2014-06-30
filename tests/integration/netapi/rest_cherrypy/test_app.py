@@ -5,7 +5,7 @@ from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
 try:
-    import cherrypy
+    import cherrypy  # pylint: disable=W0611
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
@@ -23,8 +23,8 @@ class TestAuth(BaseRestCherryPyTest):
         '''
         POST requests to the root URL redirect to login
         '''
-        self.assertRaisesRegexp(cherrypy.InternalRedirect, '/login',
-                self.request, '/', method='POST', data={})
+        request, response = self.request('/', method='POST', data={})
+        self.assertEqual(response.status, '401 Unauthorized')
 
     def test_login_noauth(self):
         '''
@@ -37,8 +37,8 @@ class TestAuth(BaseRestCherryPyTest):
         '''
         Requests to the webhook URL require auth by default
         '''
-        self.assertRaisesRegexp(cherrypy.InternalRedirect, '/login',
-                self.request, '/hook', method='POST', data={})
+        request, response = self.request('/hook', method='POST', data={})
+        self.assertEqual(response.status, '401 Unauthorized')
 
 
 class TestLogin(BaseRestCherryPyTest):

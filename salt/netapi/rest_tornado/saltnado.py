@@ -7,271 +7,7 @@ A REST API for Salt
 
 :depends:   - tornado Python module
 
-All Events
-----------
 
-Exposes ``all`` "real-time" events from Salt's event bus on a websocket connection.
-It should be noted that "Real-time" here means these events are made available
-to the server as soon as any salt related action (changes to minions, new jobs etc) happens.
-Clients are however assumed to be able to tolerate any network transport related latencies.
-Functionality provided by this endpoint is similar to the ``/events`` end point.
-
-The event bus on the Salt master exposes a large variety of things, notably
-when executions are started on the master and also when minions ultimately
-return their results. This URL provides a real-time window into a running
-Salt infrastructure. Uses websocket as the transport mechanism.
-
-Exposes GET method to return websocket connections.
-All requests should include an auth token.
-A way to obtain obtain authentication tokens is shown below.
-
-.. code-block:: bash
-
-    % curl -si localhost:8000/login \\
-        -H "Accept: application/json" \\
-        -d username='salt' \\
-        -d password='salt' \\
-        -d eauth='pam'
-
-Which results in the response
-
-.. code-block:: json
-
-    {
-        "return": [{
-            "perms": [".*", "@runner", "@wheel"],
-            "start": 1400556492.277421,
-            "token": "d0ce6c1a37e99dcc0374392f272fe19c0090cca7",
-            "expire": 1400599692.277422,
-            "user": "salt",
-            "eauth": "pam"
-        }]
-    }
-
-In this example the ``token`` returned is ``d0ce6c1a37e99dcc0374392f272fe19c0090cca7`` and can be included
-in subsequent websocket requests (as part of the URL).
-
-The event stream can be easily consumed via JavaScript:
-
-.. code-block:: javascript
-
-    // Note, you must be authenticated!
-
-    // Get the Websocket connection to Salt
-    var source = new Websocket('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
-
-    // Get Salt's "real time" event stream.
-    source.onopen = function() { source.send('websocket client ready'); };
-
-    // Other handlers
-    source.onerror = function(e) { console.debug('error!', e); };
-
-    // e.data represents Salt's "real time" event data as serialized JSON.
-    source.onmessage = function(e) { console.debug(e.data); };
-
-    // Terminates websocket connection and Salt's "real time" event stream on the server.
-    source.close();
-
-Or via Python, using the Python module
-`websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
-Or the tornado
-`client <http://tornado.readthedocs.org/en/latest/websocket.html#client-side-support>`_.
-
-.. code-block:: python
-
-    # Note, you must be authenticated!
-
-    from websocket import create_connection
-
-    # Get the Websocket connection to Salt
-    ws = create_connection('wss://localhost:8000/all_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
-
-    # Get Salt's "real time" event stream.
-    ws.send('websocket client ready')
-
-
-    # Simple listener to print results of Salt's "real time" event stream.
-    # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
-    while listening_to_events:
-        print ws.recv()       #  Salt's "real time" event data as serialized JSON.
-
-    # Terminates websocket connection and Salt's "real time" event stream on the server.
-    ws.close()
-
-    # Please refer to https://github.com/liris/websocket-client/issues/81 when using a self signed cert
-
-Above examples show how to establish a websocket connection to Salt and activating
-real time updates from Salt's event stream by signaling ``websocket client ready``.
-
-
-Formatted Events
------------------
-
-Exposes ``formatted`` "real-time" events from Salt's event bus on a websocket connection.
-It should be noted that "Real-time" here means these events are made available
-to the server as soon as any salt related action (changes to minions, new jobs etc) happens.
-Clients are however assumed to be able to tolerate any network transport related latencies.
-Functionality provided by this endpoint is similar to the ``/events`` end point.
-
-The event bus on the Salt master exposes a large variety of things, notably
-when executions are started on the master and also when minions ultimately
-return their results. This URL provides a real-time window into a running
-Salt infrastructure. Uses websocket as the transport mechanism.
-
-Formatted events parses the raw "real time" event stream and maintains
-a current view of the following:
-
-- minions
-- jobs
-
-A change to the minions (such as addition, removal of keys or connection drops)
-or jobs is processed and clients are updated.
-Since we use salt's presence events to track minions,
-please enable ``presence_events``
-and set a small value for the ``loop_interval``
-in the salt master config file.
-
-Exposes GET method to return websocket connections.
-All requests should include an auth token.
-A way to obtain obtain authentication tokens is shown below.
-
-.. code-block:: bash
-
-    % curl -si localhost:8000/login \\
-        -H "Accept: application/json" \\
-        -d username='salt' \\
-        -d password='salt' \\
-        -d eauth='pam'
-
-Which results in the response
-
-.. code-block:: json
-
-    {
-        "return": [{
-            "perms": [".*", "@runner", "@wheel"],
-            "start": 1400556492.277421,
-            "token": "d0ce6c1a37e99dcc0374392f272fe19c0090cca7",
-            "expire": 1400599692.277422,
-            "user": "salt",
-            "eauth": "pam"
-        }]
-    }
-
-In this example the ``token`` returned is ``d0ce6c1a37e99dcc0374392f272fe19c0090cca7`` and can be included
-in subsequent websocket requests (as part of the URL).
-
-The event stream can be easily consumed via JavaScript:
-
-.. code-block:: javascript
-
-    // Note, you must be authenticated!
-
-    // Get the Websocket connection to Salt
-    var source = new Websocket('wss://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7');
-
-    // Get Salt's "real time" event stream.
-    source.onopen = function() { source.send('websocket client ready'); };
-
-    // Other handlers
-    source.onerror = function(e) { console.debug('error!', e); };
-
-    // e.data represents Salt's "real time" event data as serialized JSON.
-    source.onmessage = function(e) { console.debug(e.data); };
-
-    // Terminates websocket connection and Salt's "real time" event stream on the server.
-    source.close();
-
-Or via Python, using the Python module
-`websocket-client <https://pypi.python.org/pypi/websocket-client/>`_ for example.
-Or the tornado
-`client <http://tornado.readthedocs.org/en/latest/websocket.html#client-side-support>`_.
-
-.. code-block:: python
-
-    # Note, you must be authenticated!
-
-    from websocket import create_connection
-
-    # Get the Websocket connection to Salt
-    ws = create_connection('wss://localhost:8000/formatted_events/d0ce6c1a37e99dcc0374392f272fe19c0090cca7')
-
-    # Get Salt's "real time" event stream.
-    ws.send('websocket client ready')
-
-
-    # Simple listener to print results of Salt's "real time" event stream.
-    # Look at https://pypi.python.org/pypi/websocket-client/ for more examples.
-    while listening_to_events:
-        print ws.recv()       #  Salt's "real time" event data as serialized JSON.
-
-    # Terminates websocket connection and Salt's "real time" event stream on the server.
-    ws.close()
-
-    # Please refer to https://github.com/liris/websocket-client/issues/81 when using a self signed cert
-
-Above examples show how to establish a websocket connection to Salt and activating
-real time updates from Salt's event stream by signaling ``websocket client ready``.
-
-Example responses
------------------
-
-``Minion information`` is a dictionary keyed by each connected minion's ``id`` (``mid``),
-grains information for each minion is also included.
-
-Minion information is sent in response to the following minion events:
-
-- connection drops
-    - requires running ``manage.present`` periodically every ``loop_interval`` seconds
-- minion addition
-- minon removal
-
-.. code-block:: python
-
-    # Not all grains are shown
-    data: {
-        "minions": {
-            "minion1": {
-                "id": "minion1",
-                "grains": {
-                    "kernel": "Darwin",
-                    "domain": "local",
-                    "zmqversion": "4.0.3",
-                    "kernelrelease": "13.2.0"
-                }
-            }
-        }
-    }
-
-``Job information`` is also tracked and delivered.
-
-Job information is also a dictionary
-in which each job's information is keyed by salt's ``jid``.
-
-.. code-block:: python
-
-    data: {
-        "jobs": {
-            "20140609153646699137": {
-                "tgt_type": "glob",
-                "jid": "20140609153646699137",
-                "tgt": "*",
-                "start_time": "2014-06-09T15:36:46.700315",
-                "state": "complete",
-                "fun": "test.ping",
-                "minions": {
-                    "minion1": {
-                        "return": true,
-                        "retcode": 0,
-                        "success": true
-                    }
-                }
-            }
-        }
-    }
-
-Setup
-=====
 
 In order to run rest_tornado with the salt-master
 add the following to your salt master config file.
@@ -313,22 +49,20 @@ import logging
 from copy import copy
 
 import time
-
+import os
 import sys
 
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.gen
-import tornado.websocket
+
 from tornado.concurrent import Future
-from . import event_processor
 
 from collections import defaultdict
 
 import math
 import functools
-import json
 import yaml
 import zmq
 import fnmatch
@@ -341,7 +75,10 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
+from salt import syspaths
 
+
+json = salt.utils.import_json()
 logger = logging.getLogger()
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
@@ -356,13 +93,25 @@ logger = logging.getLogger()
 #  - "wheel" (need async api...)
 
 
-# TODO: refreshing clients using cachedict
-saltclients = {'local': salt.client.get_local_client().run_job,
-               # not the actual client we'll use.. but its what we'll use to get args
-               'local_batch': salt.client.get_local_client().cmd_batch,
-               'local_async': salt.client.get_local_client().run_job,
-               'runner': salt.runner.RunnerClient(salt.config.master_config('/etc/salt/master')).async,
-               }
+class SaltClientsMixIn(object):
+    '''
+    MixIn class to container all of the salt clients that the API needs
+    '''
+    @property
+    def saltclients(self):
+        if not hasattr(self, '__saltclients'):
+            # TODO: refreshing clients using cachedict
+            self.__saltclients = {
+                'local': salt.client.get_local_client().run_job,
+                # not the actual client we'll use.. but its what we'll use to get args
+                'local_batch': salt.client.get_local_client().cmd_batch,
+                'local_async': salt.client.get_local_client().run_job,
+                'runner': salt.runner.RunnerClient(
+                    salt.config.master_config(
+                        os.path.join(syspaths.CONFIG_DIR, 'master')
+                    )).async,
+                }
+        return self.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -387,13 +136,19 @@ class Any(Future):
 
 
 class EventListener(object):
+    '''
+    Class responsible for listening to the salt master event bus and updating
+    futures. This is the core of what makes this async, this allows us to do
+    non-blocking work in the main processes and "wait" for an event to happen
+    '''
+
     def __init__(self, mod_opts, opts):
         self.mod_opts = mod_opts
         self.opts = opts
         self.event = salt.utils.event.get_event(
-                'master',
-                opts['sock_dir'],
-                opts['transport'])
+            'master',
+            opts['sock_dir'],
+            opts['transport'])
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -419,9 +174,11 @@ class EventListener(object):
             if len(self.tag_map[tag]) == 0:
                 del self.tag_map[tag]
 
-    def get_event(self, request,
-                        tag='',
-                        callback=None):
+    def get_event(self,
+                  request,
+                  tag='',
+                  callback=None,
+                  ):
         '''
         Get an event (async of course) return a future that will get it later
         '''
@@ -489,7 +246,7 @@ def get_batch_size(batch, num_minions):
                'of %10, 10% or 3').format(batch))
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler):
+class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
     ct_out_map = (
         ('application/json', json.dumps),
         ('application/x-yaml', functools.partial(
@@ -500,7 +257,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):
         '''
         Verify that the client is in fact one we have
         '''
-        if client not in saltclients:
+        if client not in self.saltclients:
             self.set_status(400)
             self.write('We don\'t serve your kind here')
             self.finish()
@@ -669,8 +426,8 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             perms = self.application.opts['external_auth'][token['eauth']][token['name']]
         except (AttributeError, IndexError):
             logging.debug("Configuration for external_auth malformed for "
-                         "eauth '{0}', and user '{1}'."
-                         .format(token.get('eauth'), token.get('name')), exc_info=True)
+                          "eauth '{0}', and user '{1}'."
+                          .format(token.get('eauth'), token.get('name')), exc_info=True)
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
 
@@ -687,7 +444,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):
         self.finish()
 
 
-class SaltAPIHandler(BaseSaltAPIHandler):
+class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     '''
     Main API handler for base "/"
     '''
@@ -695,7 +452,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         '''
         return data about what clients you have
         '''
-        ret = {"clients": saltclients.keys(),
+        ret = {"clients": self.saltclients.keys(),
                "return": "Welcome"}
         self.write(self.serialize(ret))
         self.finish()
@@ -751,7 +508,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         self.ret = []
 
         for chunk in self.lowstate:
-            f_call = salt.utils.format_call(saltclients['local_batch'], chunk)
+            f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
 
             timeout = float(chunk.get('timeout', self.application.opts['timeout']))
             # set the timeout
@@ -759,10 +516,10 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
             # ping all the minions (to see who we have to talk to)
             # TODO: actually ping them all? this just gets the pub data
-            minions = saltclients['local'](chunk['tgt'],
-                                           'test.ping',
-                                           [],
-                                           expr_form=f_call['kwargs']['expr_form'])['minions']
+            minions = self.saltclients['local'](chunk['tgt'],
+                                                'test.ping',
+                                                [],
+                                                expr_form=f_call['kwargs']['expr_form'])['minions']
 
             chunk_ret = {}
             maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
@@ -775,8 +532,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                     f_call['args'][0] = minion_id
                     # TODO: list??
                     f_call['kwargs']['expr_form'] = 'glob'
-                    pub_data = saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-                    print pub_data
+                    pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
                     tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
                     future = self.application.event_listener.get_event(self, tag=tag)
                     inflight_futures.append(future)
@@ -787,7 +543,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):
                     event = finished_future.result()
                 except TimeoutException:
                     break
-                print event
                 chunk_ret[event['data']['id']] = event['data']['return']
                 inflight_futures.remove(finished_future)
 
@@ -818,9 +573,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):
 
             chunk_ret = {}
 
-            f_call = salt.utils.format_call(saltclients[self.client], chunk)
+            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
             # fire a job off
-            pub_data = saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
             # get the tag that we are looking for
             tag = tagify([pub_data['jid'], 'ret'], 'job')
@@ -850,9 +605,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):
         '''
         ret = []
         for chunk in self.lowstate:
-            f_call = salt.utils.format_call(saltclients[self.client], chunk)
+            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
             # fire a job off
-            pub_data = saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
             ret.append(pub_data)
 
         self.write(self.serialize({'return': ret}))
@@ -871,7 +626,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):
             timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
 
             f_call = {'args': [chunk['fun'], chunk]}
-            pub_data = saltclients[self.client](chunk['fun'], chunk)
+            pub_data = self.saltclients[self.client](chunk['fun'], chunk)
             tag = pub_data['tag'] + '/ret'
             try:
                 event = yield self.application.event_listener.get_event(self, tag=tag)
@@ -983,108 +738,6 @@ class EventsSaltAPIHandler(SaltAPIHandler):
         self.finish()
 
 
-class AllEventsHandler(tornado.websocket.WebSocketHandler):
-    '''
-    Server side websocket handler.
-    '''
-    def open(self, token):
-        '''
-        Return a websocket connection to Salt
-        representing Salt's "real time" event stream.
-        '''
-        logger.debug('In the websocket open method')
-
-        self.token = token
-        # close the connection, if not authenticated
-        if not self.application.auth.get_tok(token):
-            logger.debug('Refusing websocket connection, bad token!')
-            self.close()
-            return
-
-        self.connected = False
-
-    @tornado.gen.coroutine
-    def on_message(self, message):
-        """Listens for a "websocket client ready" message.
-        Once that message is received an asynchronous job
-        is stated that yeilds messages to the client.
-        These messages make up salt's
-        "real time" event stream.
-        """
-        logger.debug('Got websocket message {0}'.format(message))
-        if message == 'websocket client ready':
-            if self.connected:
-                # TBD: Add ability to run commands in this branch
-                logger.debug('Websocket already connected, returning')
-                return
-
-            self.connected = True
-
-            while True:
-                try:
-                    event = yield self.application.event_listener.get_event(self)
-                    self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
-                except Exception as err:
-                    logger.info('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
-                    break
-
-            self.close()
-        else:
-            # TBD: Add logic to run salt commands here
-            pass
-
-    def on_close(self, *args, **kwargs):
-        '''Cleanup.
-
-        '''
-        logger.debug('In the websocket close method')
-        self.close()
-
-
-class FormattedEventsHandler(AllEventsHandler):
-
-    @tornado.gen.coroutine
-    def on_message(self, message):
-        """Listens for a "websocket client ready" message.
-        Once that message is received an asynchronous job
-        is stated that yeilds messages to the client.
-        These messages make up salt's
-        "real time" event stream.
-        """
-        logger.debug('Got websocket message {0}'.format(message))
-        if message == 'websocket client ready':
-            if self.connected:
-                # TBD: Add ability to run commands in this branch
-                logger.debug('Websocket already connected, returning')
-                return
-
-            self.connected = True
-
-            evt_processor = event_processor.SaltInfo(self)
-            client = salt.netapi.NetapiClient(self.application.opts)
-            client.run({
-                'fun': 'grains.items',
-                'tgt': '*',
-                'token': self.token,
-                'mode': 'client',
-                'async': 'local_async',
-                'client': 'local'
-                })
-            while True:
-                try:
-                    event = yield self.application.event_listener.get_event(self)
-                    evt_processor.process(event, self.token, self.application.opts)
-                    # self.write_message(u'data: {0}\n\n'.format(json.dumps(event)))
-                except Exception as err:
-                    logger.debug('Error! Ending server side websocket connection. Reason = {0}'.format(str(err)))
-                    break
-
-            self.close()
-        else:
-            # TBD: Add logic to run salt commands here
-            pass
-
-
 class WebhookSaltAPIHandler(SaltAPIHandler):
     '''
     Handler for /run requests
@@ -1101,9 +754,9 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
 
         # TODO: consolidate??
         self.event = salt.utils.event.get_event(
-                'master',
-                self.application.opts['sock_dir'],
-                self.application.opts['transport'])
+            'master',
+            self.application.opts['sock_dir'],
+            self.application.opts['transport'])
 
         ret = self.event.fire_event({
             'post': self.raw_data,

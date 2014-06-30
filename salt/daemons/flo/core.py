@@ -7,6 +7,7 @@ The core behaviors used by minion and master
 # Import python libs
 import os
 import sys
+import time
 import types
 import logging
 import multiprocessing
@@ -114,7 +115,9 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 basedirpath=dirpath,
                 safe=safe,
                 txMsgs=txMsgs,
-                rxMsgs=rxMsgs)
+                rxMsgs=rxMsgs,
+                period=3.0,
+                offset=0.5)
         self.stack.value.Bk = raeting.bodyKinds.msgpack
         self.stack.value.JoinentTimeout = 0.0
 
@@ -180,6 +183,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
+                                                alived=False,
+                                                rejected=False,
                                                 idle=False, )))
 
     def action(self, **kwa):
@@ -192,6 +197,39 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
             if stack.remotes:
                 joined = stack.remotes.values()[0].joined
         self.status.update(joined=joined)
+
+
+class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
+    '''
+    Updates status with rejected of .acceptance of zeroth remote estate (master)
+    FloScript:
+
+    do salt raet road stack rejected
+    go next if rejected in .raet.udp.stack.status
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        status=odict(ipath='status', ival=odict(joined=False,
+                                                allowed=False,
+                                                alived=False,
+                                                rejected=False,
+                                                idle=False, )))
+
+    def action(self, **kwa):
+        '''
+        Update .status share
+        '''
+        stack = self.stack.value
+        rejected = False
+        if stack and isinstance(stack, RoadStack):
+            if stack.remotes:
+                rejected = (stack.remotes.values()[0].acceptance
+                                == raeting.acceptances.rejected)
+            else:  # no remotes so assume rejected
+                rejected = True
+        self.status.update(rejected=rejected)
 
 
 class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
@@ -213,7 +251,7 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.allow()
+            stack.allow(timeout=0.0)
         return None
 
 
@@ -231,6 +269,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
+                                                alived=False,
+                                                rejected=False,
                                                 idle=False, )))
 
     def action(self, **kwa):
@@ -243,6 +283,40 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
             if stack.remotes:
                 allowed = stack.remotes.values()[0].allowed
         self.status.update(allowed=allowed)
+
+
+class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
+    '''
+    Runs the manage method of RoadStack
+    FloScript:
+        do salt raet road stack manager
+
+    '''
+    Ioinits = odict(
+        inode=".raet.udp.stack.",
+        stack='stack',
+        alloweds={'ipath': '.salt.var.presence.alloweds',
+                  'ival': odict()},
+        changeds={'ipath': '.salt.var.presence.changed',
+                  'ival': odict(plus=set(), minus=set())},)
+
+    def action(self, **kwa):
+        '''
+        Manage the presence of any remotes
+        '''
+        stack = self.stack.value
+        if stack and isinstance(stack, RoadStack):
+            stack.manage(cascade=True)
+            self.alloweds.value = odict(self.stack.value.alloweds)  # make copy
+            self.changeds.data.plus = set(self.stack.value.changeds['plus'])
+            self.changeds.data.minus = set(self.stack.value.changeds['minus'])
+
+            # share .salt.var.presence.alloweds value is dict keyed by name of allowed remotes
+            # share .salt.var.presence.changeds has two fields,
+            #      plus is set of newly allowed remotes
+            #      minus is set of newly unallowed remotes
+
+            # need to queue presence event message if either plus or minus is not empty
 
 
 class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
@@ -278,13 +352,23 @@ class LoadModules(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
+               'grain_time': '.salt.var.grain_time',
+               'module_refresh': '.salt.var.module_refresh',
                'returners': '.salt.loader.returners'}
 
     def postinitio(self):
+        self._load_modules()
+
+    def action(self):
+        self._load_modules()
+
+    def _load_modules(self):
         '''
         Return the functions and the returners loaded up from the loader
         module
         '''
+        if self.grain_time.value is None:
+            self.grain_time.value = 0.0
         # if this is a *nix system AND modules_max_memory is set, lets enforce
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
@@ -305,14 +389,52 @@ class LoadModules(ioflo.base.deeding.Deed):
             if not HAS_RESOURCE:
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
-        self.opts.value['grains'] = salt.loader.grains(self.opts.value)
-        self.grains.value = self.opts.value['grains']
+        if time.time() - self.grain_time.value > 300.0 or self.module_refresh.value:
+            self.opts.value['grains'] = salt.loader.grains(self.opts.value)
+            self.grain_time.value = time.time()
+            self.grains.value = self.opts.value['grains']
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
 
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
+        self.module_refresh.value = False
+
+
+class LoadPillar(ioflo.base.deeding.Deed):
+    '''
+    Load up the initial pillar for the minion
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'pillar': '.salt.pillar',
+               'grains': '.salt.grains',
+               'modules': '.salt.loader.modules',
+               'pillar_refresh': '.salt.var.pillar_refresh',
+               'udp_stack': '.raet.udp.stack.stack'}
+
+    def action(self):
+        '''
+        Initial pillar
+        '''
+        route = {'src': (self.opts.value['id'], 0, None),
+                 'dst': ('master', None, 'remote_cmd')}
+        load = {'id': self.opts.value['id'],
+                'grains': self.grains.value,
+                'saltenv': self.opts.value['environment'],
+                'ver': '2',
+                'cmd': '_pillar'}
+        self.udp_stack.value.transmit({'route': route, 'load': load})
+        self.udp_stack.value.serviceAll()
+        while True:
+            time.sleep(0.01)
+            if self.udp_stack.value.rxMsgs:
+                for msg in self.udp_stack.value.rxMsgs:
+                    self.pillar.value = msg.get('return', {})
+                    self.opts.value['pillar'] = self.pillar.value
+                    return
+            self.udp_stack.value.serviceAll()
+        self.pillar_refresh.value = False
 
 
 class Schedule(ioflo.base.deeding.Deed):
@@ -425,7 +547,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
             self.stack.value.server.close()
 
 
-class SaltRoadService(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
     '''
     Process the udp traffic
     FloScript:
@@ -444,7 +566,7 @@ class SaltRoadService(ioflo.base.deeding.Deed):
         self.udp_stack.value.serviceAll()
 
 
-class Rx(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
     FloScript:
@@ -465,7 +587,7 @@ class Rx(ioflo.base.deeding.Deed):
         self.uxd_stack.value.serviceAllRx()
 
 
-class Tx(ioflo.base.deeding.Deed):
+class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     '''
     Process the inbound udp traffic
     FloScript:
@@ -611,6 +733,8 @@ class Eventer(ioflo.base.deeding.Deed):
                'event_yards': '.salt.event.yards',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
+               'module_refresh': '.salt.var.module_refresh',
+               'pillar_refresh': '.salt.var.pillar_refresh',
                'uxd_stack': '.salt.uxd.stack.stack'}
 
     def _register_event_yard(self, msg):
@@ -624,6 +748,10 @@ class Eventer(ioflo.base.deeding.Deed):
         Fire an event to all subscribed yards
         '''
         rm_ = []
+        if event.get('tag') == 'pillar_refresh':
+            self.pillar_refresh.value = True
+        if event.get('tag') == 'module_refresh':
+            self.module_refresh.value = True
         for y_name in self.event_yards.value:
             if y_name not in self.uxd_stack.value.uids:
                 rm_.append(y_name)
@@ -783,7 +911,10 @@ class NixExecutor(ioflo.base.deeding.Deed):
                     yid=data['jid'],
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            self.uxd_stack.value.addRemote(ex_yard)
+            try:
+                self.uxd_stack.value.addRemote(ex_yard)
+            except Exception:
+                pass  # if the yard is already there don't worry
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}

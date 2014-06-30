@@ -283,8 +283,8 @@ def create(vm_):
 
     if key_filename is None:
         raise SaltCloudConfigError(
-            'The Digital Ocean driver requires a ssh_key_file because it does not supply a root password '
-            'upon building the server'
+            'The Digital Ocean driver requires an ssh_key_file and an ssh_key_name '
+            'because it does not supply a root password upon building the server.'
         )
 
     private_networking = config.get_cloud_config_value(
@@ -487,7 +487,15 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     '''
     Make a web call to Digital Ocean
     '''
-    path = 'https://api.digitalocean.com/{0}/'.format(method)
+    base_path = str(config.get_cloud_config_value(
+        'api_root',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='https://api.digitalocean.com/v1'
+    ))
+
+    path = '{0}/{1}/'.format(base_path, method)
 
     if droplet_id:
         path += '{0}/'.format(droplet_id)

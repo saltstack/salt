@@ -158,7 +158,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-How do I create a environment from a pillar map?
+How do I create an environment from a pillar map?
 -------------------------------------------------------------------------------
 
 The map that comes from a pillar cannot be directly consumed by the env option.
@@ -352,6 +352,8 @@ def wait(name,
          env=(),
          stateful=False,
          umask=None,
+         output_loglevel='debug',
+         use_vt=False,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it
@@ -412,6 +414,16 @@ def wait(name,
         Only run if the file specified by ``creates`` does not exist.
 
         .. versionadded:: Helium
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -436,6 +448,8 @@ def wait_script(name,
                 env=None,
                 stateful=False,
                 umask=None,
+                use_vt=False,
+                output_loglevel='debug',
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -503,6 +517,17 @@ def wait_script(name,
     stateful
         The command being executed is expected to return data about executing
         a state
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
+     output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -522,9 +547,10 @@ def run(name,
         env=None,
         stateful=False,
         umask=None,
-        output_loglevel='info',
+        output_loglevel='debug',
         quiet=False,
         timeout=None,
+        use_vt=False,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -584,7 +610,7 @@ def run(name,
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged at loglevel INFO
+        Note that the command being run will still be logged (loglevel: DEBUG)
         regardless, unless ``quiet`` is used for this value.
 
     quiet
@@ -601,6 +627,11 @@ def run(name,
         Only run if the file specified by ``creates`` does not exist.
 
         .. versionadded:: Helium
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
 
     .. note::
 
@@ -651,6 +682,7 @@ def run(name,
 
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
+                  'use_vt': use_vt,
                   'shell': shell or __grains__['shell'],
                   'env': env,
                   'umask': umask,
@@ -700,6 +732,8 @@ def script(name,
            stateful=False,
            umask=None,
            timeout=None,
+           use_vt=False,
+           output_loglevel='debug',
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -780,6 +814,17 @@ def script(name,
         Only run if the file specified by ``creates`` does not exist.
 
         .. versionadded:: Helium
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -815,6 +860,8 @@ def script(name,
                        'template': template,
                        'umask': umask,
                        'timeout': timeout,
+                       'output_loglevel': output_loglevel,
+                       'use_vt': use_vt,
                        'saltenv': __env__})
 
     run_check_cmd_kwargs = {
@@ -876,6 +923,8 @@ def call(name,
          onlyif=None,
          unless=None,
          creates=None,
+         output_loglevel='debug',
+         use_vt=False,
          **kwargs):
     '''
     Invoke a pre-defined Python function with arguments specified in the state
@@ -918,6 +967,8 @@ def call(name,
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env'),
+                  'use_vt': use_vt,
+                  'output_loglevel': output_loglevel,
                   'umask': kwargs.get('umask')}
     if HAS_GRP:
         pgid = os.getegid()
@@ -952,6 +1003,8 @@ def wait_call(name,
               unless=None,
               creates=None,
               stateful=False,
+              use_vt=False,
+              output_loglevel='debug',
               **kwargs):
     # Ignoring our arguments is intentional.
     return {'name': name,

@@ -198,13 +198,17 @@ The easiest way to accept the minion key is to accept all pending keys:
     public key. This fingerprint can then be compared against the fingerprint
     generated on the minion.
 
-    On the master::
+    On the master:
+
+    .. code-block: bash
 
         # salt-key -f foo.domain.com
         Unaccepted Keys:
         foo.domain.com:  39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
 
-    On the minion::
+    On the minion:
+
+    .. code-block: bash
 
         # salt-call key.finger --local
         local:

@@ -39,11 +39,11 @@ class ForkMaint(ioflo.base.deeding.Deed):
         behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value))]
         ioflo.app.run.start(
-                name='maintiance',
+                name='maintenance',
                 period=float(self.opts.value['loop_interval']),
                 stamp=0.0,
                 real=self.opts.value['ioflo_realtime'],
-                filepath=self.opts.value['maintinance_floscript'],
+                filepath=self.opts.value['maintenance_floscript'],
                 behaviors=behaviors,
                 username="",
                 password="",

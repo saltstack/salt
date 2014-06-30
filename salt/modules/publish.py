@@ -16,6 +16,12 @@ from salt.exceptions import SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'publish'
+
+
+def __virtual__():
+    return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
+
 
 def _publish(
         tgt,

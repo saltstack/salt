@@ -39,7 +39,9 @@ is identical in behavior and function as :conf_master:`file_roots`:
 
 This example configuration declares that the base environment will be located
 in the ``/srv/pillar`` directory. It must not be in a subdirectory of the
-state tree. The top file used matches the name of the top file used for States,
+state tree.
+
+The top file used matches the name of the top file used for States,
 and has the same structure:
 
 ``/srv/pillar/top.sls``
@@ -50,9 +52,16 @@ and has the same structure:
       '*':
         - packages
 
-This further example shows how to use other standard top matching types (grain
-matching is used in this example) to deliver specific salt pillar data to
-minions with different ``os`` grains:
+In the above top file, it is declared that in the 'base' environment, the glob
+matching all minions will have the pillar data found in the 'packages' pillar
+available to it. Assuming the 'pillar_roots' value of '/srv/salt' taken from
+above, the 'packages' pillar would be located at '/srv/salt/packages.sls'.
+
+Another example shows how to use other standard top matching types
+to deliver specific salt pillar data to minions with different properties.
+
+Here is an example using the 'grains' matcher to target pillars to minions
+by their 'os' grain:
 
 .. code-block:: yaml
 
@@ -73,7 +82,15 @@ minions with different ``os`` grains:
     git: git-core
     {% endif %}
 
-Now this data can be used from within modules, renderers, State SLS files, and
+    company: Foo Industries
+
+The above pillar sets two key/value pairs. If a minion is running RedHat, then
+the 'apache' key is set to 'httpd' and the 'git' key is set to the value of
+'git'. If the minion is running Debian, those values are changed to 'apache2'
+and 'git-core' respctively. All minions that have this pillar targeting to them
+via a top file will have the key of 'company' with a value of 'Foo Industries'.
+
+Consequently this data can be used from within modules, renderers, State SLS files, and
 more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
 .. code-block:: yaml
@@ -90,9 +107,27 @@ more via the shared pillar :ref:`dict <python2:typesmapping>`:
         - installed
         - name: {{ pillar['git'] }}
 
+Finally, the above states can utilize the values provided to them via Pillar.
+All pillar values targeted to a minion are available via the 'pillar'
+dictionary. As seen in the above example, Jinja substitution can then be
+utilized to access the keys and values in the Pillar dictionary. 
 
+Note that you cannot just list key/value-information in ``top.sls``. Instead,
+target a minion to a pillar file and then list the keys and values in the
+pillar. Here is an example top file that illustrates this point:
 
-Note that you cannot just list key/value-information in ``top.sls``.
+.. code-block:: yaml
+
+    base:
+      '*':
+         - common_pillar
+
+And the actual pillar file at '/srv/salt/common_pillar.sls':
+
+.. code-block:: yaml
+
+    foo: bar
+    boo: baz 
 
 Pillar namespace flattened
 ==========================

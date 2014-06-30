@@ -471,6 +471,10 @@ def check_chain(table='filter', chain=None, family='ipv4'):
 def check_table(table=None, family='ipv4'):
     '''
     Check for the existence of a table
+
+    CLI Example::
+
+        salt '*' nftables.check_table nat
     '''
     if not table:
         return 'Error: table needs to be specified'

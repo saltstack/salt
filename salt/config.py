@@ -34,7 +34,7 @@ import salt.utils.xdg
 from salt._compat import string_types
 
 import sys
-#can't use salt.utils.is_windows, because config.py is included from salt.utils
+# can't use salt.utils.is_windows, because config.py is included from salt.utils
 if not sys.platform.lower().startswith('win'):
     import salt.cloud.exceptions
 
@@ -333,7 +333,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
-    'recon_max': 59000,
+    'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
     'random_reauth_delay': 60,
@@ -503,7 +503,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_user': 'root',
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
-    'maintinance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
+    'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
@@ -649,6 +649,27 @@ def _read_conf_file(path):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
+
+
+def _absolute_path(path, relative_to=None):
+    '''
+    Return an absolute path. In case ``relative_to`` is passed and ``path`` is
+    not an absolute path, we try to prepend ``relative_to`` to ``path``and if
+    that path exists, return that one
+    '''
+
+    if path and os.path.isabs(path):
+        return path
+    if path and relative_to is not None:
+        _abspath = os.path.join(relative_to, path)
+        if os.path.isfile(_abspath):
+            log.debug(
+                'Relative path {0!r} converted to existing absolute path {1!r}'.format(
+                    path, _abspath
+                )
+            )
+            return _abspath
+    return path
 
 
 def load_config(path, env_var, default_path=None):
@@ -1017,6 +1038,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # configuration file, and
         master_config_path = os.path.join(config_dir, 'master')
 
+    # Convert relative to absolute paths if necessary
+    master_config_path = _absolute_path(master_config_path, config_dir)
+
     if 'providers_config' in overrides and providers_config_path is None:
         # The configuration setting is being specified in the main cloud
         # configuration file
@@ -1025,6 +1049,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                                                 and not providers_config_path:
         providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
+    # Convert relative to absolute paths if necessary
+    providers_config_path = _absolute_path(providers_config_path, config_dir)
+
     if 'profiles_config' in overrides and profiles_config_path is None:
         # The configuration setting is being specified in the main cloud
         # configuration file
@@ -1032,6 +1059,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif 'profiles_config' not in overrides and not profiles_config \
             and not profiles_config_path:
         profiles_config_path = os.path.join(config_dir, 'cloud.profiles')
+
+    # Convert relative to absolute paths if necessary
+    profiles_config_path = _absolute_path(profiles_config_path, config_dir)
 
     # Prepare the deploy scripts search path
     deploy_scripts_search_path = overrides.get(
@@ -1958,6 +1988,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
+    if opts.get('transport') == 'raet':
+        opts.pop('aes')
     return opts
 
 

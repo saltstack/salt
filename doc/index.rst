@@ -230,7 +230,8 @@ Salt is many splendid things.
 
 :ref:`External API interfaces <netapi-introduction>`
     Expose a Salt API such as REST, XMPP, WebSockets, and more using netapi
-    modules. See the :ref:`full list of netapi modules <all-netapi-modules>`.
+    modules. Run these modules using the ``salt-api`` daemon.
+    See the :ref:`full list of netapi modules <all-netapi-modules>`.
 
 :doc:`Automatic Updates and Frozen Binary Deployments <topics/tutorials/esky>`
     Use a frozen install to make deployments easier (Even on Windows!). Or

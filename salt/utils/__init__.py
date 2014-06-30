@@ -88,6 +88,12 @@ except ImportError:
     # pwd is not available on windows
     HAS_PWD = False
 
+try:
+    import setproctitle
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
 # Import salt libs
 import salt._compat
 import salt.log
@@ -1263,12 +1269,33 @@ def traverse_dict_and_list(data, key, default, delim=':'):
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
-    try:
-        for each in key.split(delim):
-            data = data[int(each)] if isinstance(data, list) else data[each]
-    except (KeyError, IndexError, TypeError, ValueError):
-        # Encountered a non-indexable value in the middle of traversing
-        return default
+    for each in key.split(delim):
+        if isinstance(data, list):
+            try:
+                idx = int(each)
+            except ValueError:
+                embed_match = False
+                # Index was not numeric, lets look at any embedded dicts
+                for embedded in (x for x in data if isinstance(x, dict)):
+                    try:
+                        data = embedded[each]
+                        embed_match = True
+                        break
+                    except KeyError:
+                        pass
+                if not embed_match:
+                    # No embedded dicts matched, return the default
+                    return default
+            else:
+                try:
+                    data = data[idx]
+                except IndexError:
+                    return default
+        else:
+            try:
+                data = data[each]
+            except (KeyError, TypeError):
+                return default
     return data
 
 
@@ -2333,3 +2360,24 @@ def total_seconds(td):
     method which does not exist in versions of Python < 2.7.
     '''
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
+def import_json():
+    '''
+    Import a json module, starting with the quick ones and going down the list)
+    '''
+    for fast_json in ('ujson', 'yajl', 'json'):
+        try:
+            mod = __import__(fast_json)
+            log.info('loaded {0} json lib'.format(fast_json))
+            return mod
+        except ImportError:
+            continue
+
+
+def appendproctitle(name):
+    '''
+    Append "name" to the current process title
+    '''
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)

@@ -6,11 +6,12 @@ Operations on regular files, special files, directories, and symlinks
 Salt States can aggressively manipulate files on a system. There are a number
 of ways in which files can be managed.
 
-Regular files can be enforced with the ``managed`` function. This function
-downloads files from the salt master and places them on the target system.
-The downloaded files can be rendered as a jinja, mako, or wempy template,
-adding a dynamic component to file management. An example of ``file.managed``
-which makes use of the jinja templating system would look like this:
+Regular files can be enforced with the :mod:`file.managed
+<salt.states.file.managed>` state. This state downloads files from the salt
+master and places them on the target system. Managed files can be rendered as a
+jinja, mako, or wempy template, adding a dynamic component to file management.
+An example of :mod:`file.managed <salt.states.file.managed>` which makes use of
+the jinja templating system would look like this:
 
 .. code-block:: yaml
 
@@ -28,6 +29,17 @@ which makes use of the jinja templating system would look like this:
         - context:
             custom_var: "override"
     {% endif %}
+
+It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
+templating option. The template would be a python script which would need to
+contain a function called ``run()``, which returns a string. The returned
+string will be the contents of the managed file. For example:
+
+.. code-block:: python
+
+    def run():
+        lines = ('foo', 'bar', 'baz')
+        return '\\n\\n'.join(lines)
 
 .. note::
 
@@ -1398,6 +1410,8 @@ def directory(name,
               require=None,
               exclude_pat=None,
               follow_symlinks=False,
+              force=False,
+              backupname=None,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1463,6 +1477,24 @@ def directory(name,
         permissions of the directory/file to which the symlink points.
 
         .. versionadded:: 2014.1.4
+
+    force
+        If the name of the directory exists and is not a direcotry and
+        force is set to False, the state will fail. If force is set to
+        True, the file in the way of the directory will be deleted to
+        make room for the directory, unless backupname is set,
+        then it will be renamed.
+
+        .. versionadded:: Helium
+
+    backupname
+        If the name of the directory exists and is not a directory, it will be
+        renamed to the backupname. If the backupname already
+        exists and force is False, the state will fail. Otherwise, the
+        backupname will be removed first.
+
+        .. versionadded:: Helium
+
     '''
     # Remove trailing slash, if present
     if name[-1] == '/':
@@ -1499,8 +1531,33 @@ def directory(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
     if os.path.isfile(name):
-        return _error(
-            ret, 'Specified location {0} exists and is a file'.format(name))
+        if backupname is not None:
+            # Make a backup first
+            if os.path.lexists(backupname):
+                if not force:
+                    return _error(ret, ((
+                        'File exists where the backup target {0} should go'
+                    ).format(backupname)))
+                elif os.path.isfile(backupname):
+                    os.remove(backupname)
+                elif os.path.isdir(backupname):
+                    shutil.rmtree(backupname)
+                else:
+                    return _error(ret, ((
+                        'Something exists where the backup target {0}'
+                        'should go'
+                    ).format(backupname)))
+            os.rename(name, backupname)
+        elif force:
+            # Remove whatever is in the way
+            if os.path.isfile(name):
+                os.remove(name)
+                ret['changes']['forced'] = 'File was forcibly replaced'
+            else:
+                shutil.rmtree(name)
+        else:
+            return _error(
+                ret, 'Specified location {0} exists and is a file'.format(name))
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_directory(
             name,
@@ -3239,7 +3296,7 @@ def copy(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            __salt__['file.makedirs'](dname)
+            __salt__['file.makedirs'](name)
         else:
             return _error(
                 ret,
@@ -3325,7 +3382,7 @@ def rename(name, source, force=False, makedirs=False):
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
         if makedirs:
-            __salt__['file.makedirs'](dname)
+            __salt__['file.makedirs'](name)
         else:
             return _error(
                 ret,

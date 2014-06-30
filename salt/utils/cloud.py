@@ -8,6 +8,7 @@ import os
 import sys
 import codecs
 import shutil
+import hashlib
 import socket
 import tempfile
 import time
@@ -1366,7 +1367,7 @@ def _exec_ssh_cmd(cmd,
         trace = traceback.format_exc()
         log.error(error_msg.format(cmd, err, trace))
     finally:
-        proc.close(force=True)
+        proc.close(terminate=True, kill=True)
     # Signal an error
     return 1
 
@@ -1948,28 +1949,61 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
             os.remove(path)
 
 
-def update_bootstrap(config):
+def update_bootstrap(config, url=None):
+
     '''
     Update the salt-bootstrap script
+
+        url can be either:
+
+            - The URL to fetch the bootstrap script from
+            - The absolute path to the bootstrap
+            - The content of the bootstrap script
+
+
     '''
-    log.debug('Updating the bootstrap-salt.sh script to latest stable')
-    try:
-        import requests
-    except ImportError:
-        return {'error': (
-            'Updating the bootstrap-salt.sh script requires the '
-            'Python requests library to be installed'
-        )}
-    url = 'https://bootstrap.saltstack.com'
-    req = requests.get(url)
-    if req.status_code != 200:
-        return {'error': (
-            'Failed to download the latest stable version of the '
-            'bootstrap-salt.sh script from {0}. HTTP error: '
-            '{1}'.format(
-                url, req.status_code
-            )
-        )}
+    default_url = config.get('bootstrap_script__url',
+                             'https://bootstrap.saltstack.com')
+    if not url:
+        url = default_url
+    if not url:
+        raise ValueError('Cant get any source to update')
+    if (url.startswith('http')) or ('://' in url):
+        log.debug('Updating the bootstrap-salt.sh script to latest stable')
+        try:
+            import requests
+        except ImportError:
+            return {'error': (
+                'Updating the bootstrap-salt.sh script requires the '
+                'Python requests library to be installed'
+            )}
+        req = requests.get(url)
+        if req.status_code != 200:
+            return {'error': (
+                'Failed to download the latest stable version of the '
+                'bootstrap-salt.sh script from {0}. HTTP error: '
+                '{1}'.format(
+                    url, req.status_code
+                )
+            )}
+        script_content = req.text
+        if url == default_url:
+            script_name = 'bootstrap-salt.sh'
+        else:
+            script_name = os.path.basename(url)
+    elif os.path.exists(url):
+        with open(url) as fic:
+            script_content = fic.read()
+        script_name = os.path.basename(url)
+    # in last case, assuming we got a script content
+    else:
+        script_content = url
+        script_name = '{0}.sh'.format(
+            hashlib.sha1(script_content).hexdigest()
+        )
+
+    if not script_content:
+        raise ValueError('No content in bootstrap script !')
 
     # Get the path to the built-in deploy scripts directory
     builtin_deploy_dir = os.path.join(
@@ -2044,11 +2078,11 @@ def update_bootstrap(config):
             )
             continue
 
-        deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
+        deploy_path = os.path.join(entry, script_name)
         try:
             finished_full.append(deploy_path)
             with salt.utils.fopen(deploy_path, 'w') as fp_:
-                fp_.write(req.text)
+                fp_.write(script_content)
         except (OSError, IOError) as err:
             log.debug(
                 'Failed to write the updated script: {0}'.format(err)

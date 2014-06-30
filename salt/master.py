@@ -19,13 +19,11 @@ try:
 except ImportError:  # This is in case windows minion is importing
     pass
 import resource
-import subprocess
 import multiprocessing
 import sys
 
 # Import third party libs
 import zmq
-import yaml
 from M2Crypto import RSA
 
 # Import salt libs
@@ -362,6 +360,7 @@ class Halite(multiprocessing.Process):
         '''
         Fire up halite!
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         halite.start(self.hopts)
 
 
@@ -378,6 +377,7 @@ class Publisher(multiprocessing.Process):
         '''
         Bind to the interface specified in the configuration file
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -435,25 +435,6 @@ class Publisher(multiprocessing.Process):
                 context.term()
 
 
-class WorkerTrack(object):
-    def __init__(self, opts):
-        '''
-        Watches the worker procs
-        '''
-        self.opts = opts
-        self.counter = multiprocessing.Value('i', 0)
-        self.lock = multiprocessing.Lock()
-
-    def finished(self):
-        '''
-        To be called when a process finishes initializing
-        '''
-        with self.lock:
-            self.counter.value += 1
-        if int(self.opts['worker_threads']) == self.counter.value:
-            log.info('Master is ready to receive requests!')
-
-
 class ReqServer(object):
     '''
     Starts up the master request server, minions send results to this
@@ -476,7 +457,6 @@ class ReqServer(object):
         # Prepare the AES key
         self.key = key
         self.crypticle = crypticle
-        self.tracker = WorkerTrack(opts)
 
     def __bind(self):
         '''
@@ -496,14 +476,11 @@ class ReqServer(object):
             self.work_procs.append(MWorker(self.opts,
                     self.master_key,
                     self.key,
-                    self.crypticle,
-                    tracker=self.tracker)
-            )
+                    self.crypticle))
 
         for ind, proc in enumerate(self.work_procs):
             log.info('Starting Salt worker process {0}'.format(ind))
             proc.start()
-            log.info('Successfully started Salt worker process on PID: {0}'.format(proc.pid))
 
         self.workers.bind(self.w_uri)
 
@@ -592,8 +569,7 @@ class MWorker(multiprocessing.Process):
             opts,
             mkey,
             key,
-            crypticle,
-            tracker=None):
+            crypticle):
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
@@ -601,7 +577,6 @@ class MWorker(multiprocessing.Process):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
-        self.tracker = tracker
 
     def __bind(self):
         '''
@@ -615,7 +590,6 @@ class MWorker(multiprocessing.Process):
         log.info('Worker binding to socket {0}'.format(w_uri))
         try:
             socket.connect(w_uri)
-            self.tracker.finished()
             while True:
                 try:
                     package = socket.recv()
@@ -722,6 +696,7 @@ class MWorker(multiprocessing.Process):
         '''
         Start a Master Worker
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         self.clear_funcs = ClearFuncs(
                 self.opts,
                 self.key,
@@ -875,39 +850,13 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
-        ret = {}
-        # The old ext_nodes method is set to be deprecated in 0.10.4
-        # and should be removed within 3-5 releases in favor of the
-        # "master_tops" system
-        if self.opts['external_nodes']:
-            if not salt.utils.which(self.opts['external_nodes']):
-                log.error(('Specified external nodes controller {0} is not'
-                           ' available, please verify that it is installed'
-                           '').format(self.opts['external_nodes']))
-                return {}
-            cmd = '{0} {1}'.format(self.opts['external_nodes'], load['id'])
-            ndata = yaml.safe_load(
-                    subprocess.Popen(
-                        cmd,
-                        shell=True,
-                        stdout=subprocess.PIPE
-                        ).communicate()[0])
-            if 'environment' in ndata:
-                saltenv = ndata['environment']
-            else:
-                saltenv = 'base'
 
-            if 'classes' in ndata:
-                if isinstance(ndata['classes'], dict):
-                    ret[saltenv] = list(ndata['classes'])
-                elif isinstance(ndata['classes'], list):
-                    ret[saltenv] = ndata['classes']
-                else:
-                    return ret
         # Evaluate all configured master_tops interfaces
 
+        ret = {}
         opts = {}
         grains = {}
+
         if 'opts' in load:
             opts = load['opts']
             if 'grains' in load['opts']:
@@ -1152,7 +1101,7 @@ class AESFuncs(object):
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
 
         if 'loc' in load and load['loc'] < 0:
-            log.error('Should not happen: load[loc] < 0')
+            log.error('Invalid file pointer: load[loc] < 0')
             return False
 
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
@@ -1505,7 +1454,7 @@ class AESFuncs(object):
                 load['timeout'] = int(clear_load['timeout'])
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
-                        clear_load['tmo'])
+                        clear_load['timeout'])
                 log.warn(msg)
                 return {}
         if 'tgt_type' in clear_load:

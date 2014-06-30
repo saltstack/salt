@@ -8,7 +8,8 @@ import os
 import subprocess
 
 # Import salt libs
-from salt import utils, exceptions
+from salt import utils
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
 def __virtual__():
@@ -58,7 +59,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                 stderrs.append(result['stderr'])
 
         # we've tried all IDs and still haven't passed, so error out
-        raise exceptions.CommandExecutionError("\n\n".join(stderrs))
+        raise CommandExecutionError("\n\n".join(stderrs))
 
     else:
         result = __salt__['cmd.run_all'](cmd,
@@ -71,7 +72,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         if retcode == 0:
             return result['stdout']
         else:
-            raise exceptions.CommandExecutionError(result['stderr'])
+            raise CommandExecutionError(result['stderr'])
 
 
 def _git_getdir(cwd, user=None):
@@ -688,7 +689,7 @@ def remote_get(cwd, remote='origin', user=None):
             return res
         else:
             return None
-    except exceptions.CommandExecutionError:
+    except CommandExecutionError:
         return None
 
 
@@ -799,19 +800,22 @@ def stash(cwd, opts=None, user=None):
     return _git_run('git stash {0}'.format(opts), cwd=cwd, runas=user)
 
 
-def config_set(cwd, setting_name, setting_value, user=None, is_global=False):
+def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_global=False):
     '''
     Set a key in the git configuration file (.git/config) of the repository or
     globally.
-
-    cwd
-        The path to the Git repository
 
     setting_name
         The name of the configuration key to set
 
     setting_value
         The (new) value to set
+
+    cwd : None
+        Options path to the Git repository
+
+        .. versionchanged:: Helium
+            Made ``cwd`` optional
 
     user : None
         Run git as a user other than what the minion runs as
@@ -823,26 +827,36 @@ def config_set(cwd, setting_name, setting_value, user=None, is_global=False):
 
     .. code-block:: bash
 
-        salt '*' git.config_set /path/to/repo user.email me@example.com
+        salt '*' git.config_set user.email me@example.com /path/to/repo
     '''
+    if setting_name is None or setting_value is None:
+        raise TypeError
+    if cwd is None and not is_global:
+        raise SaltInvocationError('Either `is_global` must be set to True or '
+                                  'you must provide `cwd`')
+
     scope = '--local'
     if is_global:
         scope = '--global'
 
     _check_git()
 
-    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value), cwd=cwd, runas=user)
+    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value),
+                    cwd=cwd, runas=user)
 
 
-def config_get(cwd, setting_name, user=None):
+def config_get(cwd=None, setting_name=None, user=None):
     '''
-    Get a key from the git configuration file (.git/config) of the repository.
-
-    cwd
-        The path to the Git repository
+    Get a key or keys from the git configuration file (.git/config).
 
     setting_name
         The name of the configuration key to get
+
+    cwd : None
+        Optional path to a Git repository
+
+        .. versionchanged:: Helium
+            Made ``cwd`` optional
 
     user : None
         Run git as a user other than what the minion runs as
@@ -851,8 +865,11 @@ def config_get(cwd, setting_name, user=None):
 
     .. code-block:: bash
 
-        salt '*' git.config_get /path/to/repo user.email
+        salt '*' git.config_get user.email
+        salt '*' git.config_get user.name cwd=/path/to/repo user=arthur
     '''
+    if setting_name is None:
+        raise TypeError
     _check_git()
 
     return _git_run('git config {0}'.format(setting_name), cwd=cwd, runas=user)

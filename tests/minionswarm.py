@@ -66,6 +66,10 @@ def parse():
             dest='root_dir',
             default=None,
             help='Override the minion root_dir config')
+    parser.add_option('--transport',
+            dest='transport',
+            default='zeromq',
+            help='Declare which transport to use, default is zeromq')
     parser.add_option(
             '-c', '--config-dir', default='/etc/salt',
             help=('Pass in an alternative configuration directory. Default: '
@@ -89,6 +93,7 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.raet_port = 4550
 
         # If given a root_dir, keep the tmp files there as well
         if opts['root_dir']:
@@ -99,7 +104,8 @@ class Swarm(object):
         self.swarm_root = tempfile.mkdtemp(prefix='mswarm-root', suffix='.d',
             dir=tmpdir)
 
-        self.pki = self._pki_dir()
+        if self.opts['transport'] == 'zeromq':
+            self.pki = self._pki_dir()
         self.__zfill = len(str(self.opts['minions']))
 
         self.confs = set()
@@ -133,21 +139,28 @@ class Swarm(object):
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
 
-        minion_pkidir = os.path.join(dpath, 'pki')
-        os.makedirs(minion_pkidir)
-        minion_pem = os.path.join(self.pki, 'minion.pem')
-        minion_pub = os.path.join(self.pki, 'minion.pub')
-        shutil.copy(minion_pem, minion_pkidir)
-        shutil.copy(minion_pub, minion_pkidir)
-
         data = {
             'id': minion_id,
             'user': self.opts['user'],
-            'pki_dir': minion_pkidir,
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
             'log_file': os.path.join(dpath, 'minion.log')
         }
+
+        if self.opts['transport'] == 'zeromq':
+            minion_pkidir = os.path.join(dpath, 'pki')
+            os.makedirs(minion_pkidir)
+            minion_pem = os.path.join(self.pki, 'minion.pem')
+            minion_pub = os.path.join(self.pki, 'minion.pub')
+            shutil.copy(minion_pem, minion_pkidir)
+            shutil.copy(minion_pub, minion_pkidir)
+            data['pki_dir'] = minion_pkidir
+        elif self.opts['transport'] == 'raet':
+            data['transport'] = 'raet'
+            data['sock_dir'] = os.path.join(dpath, 'sock')
+            data['raet_port'] = self.raet_port
+            data['pki_dir'] = os.path.join(dpath, 'pki')
+            self.raet_port += 1
 
         if self.opts['root_dir']:
             data['root_dir'] = self.opts['root_dir']

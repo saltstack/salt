@@ -21,12 +21,12 @@ Installation prerequisites
 --------------------------
 
 - You will need the 'docker-py' python package in your python installation
-  running salt. The version of docker-py should support `version 1.6 of docker
+  running salt. The version of docker-py should support `version 1.12 of docker
   remote API.
-  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
-- For now, you need docker-py from sources:
+  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
+- For now, you need docker-py 0.3.2
 
-    https://github.com/dotcloud/docker-py
+    pip install docker-py==0.3.2
 
 Prerequisite pillar configuration for authentication
 ----------------------------------------------------
@@ -277,21 +277,9 @@ def _get_client(version=None, timeout=None):
 
 def _merge_auth_bits():
     '''
-    Merge the local docker authentication file
-    with the pillar configuration
+    Get the pillar configuration
     '''
-    cfg = os.path.expanduser('~/.dockercfg')
-    try:
-        fic = open(cfg)
-        try:
-            config = json.loads(fic.read())
-        finally:
-            fic.close()
-    except Exception:
-        config = {}
-    config.update(
-        __pillar__.get('docker-registries', {})
-    )
+    config = __pillar__.get('docker-registries', {})
     for k, data in __pillar__.items():
         if k.endswith('-docker-registries'):
             config.update(data)
@@ -357,8 +345,8 @@ def _get_container_infos(container):
             'an existing container'.format(
                 container)
         )
-    if 'id' not in status['out'] and 'ID' in status['out']:
-        status['out']['id'] = status['out']['ID']
+    if 'id' not in status['out'] and 'Id' in status['out']:
+        status['out']['id'] = status['out']['Id']
     return status['out']
 
 
@@ -876,7 +864,8 @@ def start(container,
           links=None,
           privileged=False,
           dns=None,
-          volumes_from=None):
+          volumes_from=None,
+          network_mode=None):
     '''
     Restart the specified container
 
@@ -914,31 +903,16 @@ def start(container,
                         'port_bindings must be formatted as a dictionary of '
                         'dictionaries'
                     )
-            try:
-                client.start(dcontainer,
-                             binds=binds,
-                             port_bindings=bindings,
-                             lxc_conf=lxc_conf,
-                             publish_all_ports=publish_all_ports,
-                             links=links,
-                             privileged=privileged,
-                             dns=dns,
-                             volumes_from=volumes_from)
-            except TypeError:
-                # maybe older version of docker-py <= 0.3.1 dns and
-                # volumes_from are not accepted
-                # FIXME:
-                # Ideally we should write an explicit check based on
-                # version of docker-py package, but
-                # https://github.com/dotcloud/docker-py/issues/216
-                # prevents us to do it at the time I'm writing this.
-                client.start(dcontainer,
-                             binds=binds,
-                             port_bindings=bindings,
-                             lxc_conf=lxc_conf,
-                             publish_all_ports=publish_all_ports,
-                             links=links,
-                             privileged=privileged)
+            client.start(dcontainer,
+                         binds=binds,
+                         port_bindings=bindings,
+                         lxc_conf=lxc_conf,
+                         publish_all_ports=publish_all_ports,
+                         links=links,
+                         privileged=privileged,
+                         dns=dns,
+                         volumes_from=volumes_from,
+                         network_mode=network_mode)
 
             if is_running(dcontainer):
                 _valid(status,
@@ -1547,7 +1521,7 @@ def _parse_image_multilogs_string(ret, repo):
     Parse image log strings into grokable data
     '''
     image_logs, infos = [], None
-    if ret and ret.startswith('{') and ret.endswith('}'):
+    if ret and ret.strip().startswith('{') and ret.strip().endswith('}'):
         pushd = 0
         buf = ''
         for char in ret:
@@ -1567,7 +1541,7 @@ def _parse_image_multilogs_string(ret, repo):
         # search last layer grabbed
         for l in image_logs:
             if isinstance(l, dict):
-                if l.get('status') == 'Download complete' and l.get('Id'):
+                if l.get('status') == 'Download complete' and l.get('id'):
                     infos = _get_image_infos(repo)
                     break
     return image_logs, infos
@@ -1759,26 +1733,31 @@ def push(repo):
     client = _get_client()
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
-    ret = client.push(repo)
-    image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
-    if image_logs:
-        laststatus = image_logs[0].get('status', None)
-        if laststatus and (
-            ('already pushed' in laststatus)
-            or ('Pushing tags for rev' in laststatus)
-        ):
-            status['status'] = True
-            status['id'] = _get_image_infos(repo)['Id']
-            status['comment'] = 'Image {0}({1}) was pushed'.format(
-                repo, status['id'])
+    try:
+        ret = client.push(repo)
+        if ret:
+            image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
             if image_logs:
                 status['out'] = image_logs
+                laststatus = image_logs[2].get('status', None)
+                if laststatus and (
+                    ('already pushed' in laststatus)
+                    or ('Pushing tags for rev' in laststatus)
+                    or ('Pushing tag for rev' in laststatus)
+                ):
+                    status['status'] = True
+                    status['id'] = _get_image_infos(repo)['Id']
+                    status['comment'] = 'Image {0}({1}) was pushed'.format(
+                        repo, status['id'])
+                else:
+                    _push_assemble_error_status(status, ret, image_logs)
             else:
                 status['out'] = ret
+                _push_assemble_error_status(status, ret, image_logs)
         else:
-            _push_assemble_error_status(status, ret, image_logs)
-    else:
-        _push_assemble_error_status(status, ret, image_logs)
+            _invalid(status)
+    except Exception:
+        _invalid(status, id_=repo, out=traceback.format_exc())
     return status
 
 

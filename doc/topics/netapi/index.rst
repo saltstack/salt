@@ -4,7 +4,7 @@
 ``netapi`` modules
 ==================
 
-.. toctree:: Contents
+.. toctree::
 
     writing
 

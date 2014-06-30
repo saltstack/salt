@@ -301,12 +301,20 @@ class SaltKey(parsers.SaltKeyOptionParser):
         if self.config['verify_env']:
             verify_env_dirs = []
             if not self.config['gen_keys']:
-                verify_env_dirs.extend([
-                    self.config['pki_dir'],
-                    os.path.join(self.config['pki_dir'], 'minions'),
-                    os.path.join(self.config['pki_dir'], 'minions_pre'),
-                    os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                ])
+                if self.config['transport'] == 'raet':
+                    verify_env_dirs.extend([
+                        self.config['pki_dir'],
+                        os.path.join(self.config['pki_dir'], 'accepted'),
+                        os.path.join(self.config['pki_dir'], 'pending'),
+                        os.path.join(self.config['pki_dir'], 'rejected'),
+                    ])
+                elif self.config['transport'] == 'zeromq':
+                    verify_env_dirs.extend([
+                        self.config['pki_dir'],
+                        os.path.join(self.config['pki_dir'], 'minions'),
+                        os.path.join(self.config['pki_dir'], 'minions_pre'),
+                        os.path.join(self.config['pki_dir'], 'minions_rejected'),
+                    ])
 
             verify_env(
                 verify_env_dirs,

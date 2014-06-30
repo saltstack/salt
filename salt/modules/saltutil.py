@@ -500,6 +500,8 @@ def clear_cache():
     '''
     Forcibly removes all caches on a minion.
 
+    .. versionadded:: Helium
+
     WARNING: The safest way to clear a minion cache is by first stopping
     the minion and then deleting the cache files before restarting it.
 

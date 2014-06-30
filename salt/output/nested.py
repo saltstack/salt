@@ -44,6 +44,7 @@ class NestDisplay(object):
         '''
         Recursively iterate down through data structures to determine output
         '''
+        strip_colors = __opts__.get('strip_colors', True)
         if ret is None or ret is True or ret is False:
             out += '{0}{1}{2}{3}{4}\n'.format(
                     ' ' * indent,
@@ -62,11 +63,13 @@ class NestDisplay(object):
         elif isinstance(ret, string_types):
             lines = re.split(r'\r?\n', ret)
             for line in lines:
+                if strip_colors:
+                    line = salt.output.strip_esc_sequence(line)
                 out += '{0}{1}{2}{3}{4}\n'.format(
                         ' ' * indent,
                         self.colors['GREEN'],
                         prefix,
-                        salt.output.strip_esc_sequence(line),
+                        line,
                         self.colors['ENDC'])
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:

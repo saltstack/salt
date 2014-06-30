@@ -61,11 +61,12 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
         return errors
     # Compile and verify the raw chunks
     chunks = st_.state.compile_high_data(high_data)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
-            file_refs)
+            file_refs,
+            __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
@@ -82,7 +83,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
-def low(data):
+def low(data, **kwargs):
     '''
     Execute a single low data call
     This function is mostly intended for testing the state system
@@ -99,11 +100,12 @@ def low(data):
     err = st_.verify_data(data)
     if err:
         return err
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
-            file_refs)
+            file_refs,
+            __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
             trans_tar_sum,
@@ -119,7 +121,7 @@ def low(data):
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
-def high(data):
+def high(data, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
@@ -133,11 +135,12 @@ def high(data):
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     chunks = st_.state.compile_high_data(high)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
-            file_refs)
+            file_refs,
+            __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
             trans_tar_sum,
@@ -169,11 +172,12 @@ def highstate(test=None, **kwargs):
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
-            file_refs)
+            file_refs,
+            __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
@@ -215,11 +219,12 @@ def top(topfn, test=None, **kwargs):
     st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __opts__,
             chunks,
-            file_refs)
+            file_refs,
+            __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,

@@ -1,6 +1,7 @@
 # encoding: utf-8
 import json
 import logging
+import threading
 
 import salt.netapi
 
@@ -201,7 +202,6 @@ class SaltInfo(object):
         '''
         Process events and publish data
         '''
-        import threading
         logger.debug('In process {0}'.format(threading.current_thread()))
         logger.debug(salt_data['tag'])
         logger.debug(salt_data)

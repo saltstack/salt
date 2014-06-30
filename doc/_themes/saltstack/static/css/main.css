@@ -476,3 +476,70 @@ SaltStack custom styles
     overflow-x:auto;
     position:relative;
 }
+
+/* Code blocks */
+
+pre {
+    position: relative;
+    border-top-width: 4px;
+    padding-top: 18px; /* :before height */
+}
+
+.highlight-bash,
+.highlight-jinja,
+.highlight-python,
+.highlight-yaml {
+    position: relative;
+}
+.highlight-bash:before,
+.highlight-jinja:before,
+.highlight-python:before,
+.highlight-yaml:before {
+    z-index: 10;
+    font-size: 9px;
+    padding: 0.1em 0.8em;
+    text-align: center;
+    color: #999;
+    display: block;
+    position: absolute;
+    border-radius: 0 3px 0 3px;
+    border-top: none;
+    border-right: none;
+    background-color: #f1f1f1;
+    top: 0;
+    right: 0;
+    height: 18px;
+}
+.highlight-bash pre {
+    /* bit more subdued ... */
+    border-color: #999;
+}
+.highlight-jinja pre {
+    border-color: #e00a1b;
+}
+.highlight-python pre {
+    border-color: #3377b0;
+}
+.highlight-yaml pre {
+    border-color: #ccc;
+}
+.highlight-bash:before {
+    content: 'BASH';
+    background-color: #444;
+    color: white;
+}
+.highlight-jinja:before {
+    content: 'JINJA';
+    background-color: #e00a1b;
+    color: white;
+}
+.highlight-python:before {
+    content: 'PYTHON';
+    background-color: #3377b0;
+    color: #ffe243;
+}
+.highlight-yaml:before {
+    content: 'YAML';
+    background-color: #ccc;
+    color: black;
+}
