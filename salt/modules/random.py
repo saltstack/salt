@@ -38,7 +38,7 @@ def encode(value, encoder='sha256'):
         ``base64``.
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt '*' random.encode 'I am a string' md5
