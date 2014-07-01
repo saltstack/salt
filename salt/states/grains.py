@@ -63,7 +63,7 @@ def present(name, value):
 
 def list_present(name, value):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Ensure the value is present in the list type grain
 

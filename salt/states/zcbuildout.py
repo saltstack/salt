@@ -157,12 +157,12 @@ def installed(name,
     runas
         user used to run buildout as
 
-        .. deprecated:: 2014.1.4 (Hydrogen)
+        .. deprecated:: 2014.1.4
 
     user
         user used to run buildout as
 
-        .. versionadded:: 2014.1.4 (Hydrogen)
+        .. versionadded:: 2014.1.4
 
     env
         environment variables to set when running
@@ -212,7 +212,7 @@ def installed(name,
     salt.utils.warn_until(
         'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4 (Hydrogen).',
+        'added in 2014.1.4.',
         _dont_call_warnings=True
     )
     if runas:

@@ -2,7 +2,7 @@
 '''
 Archive states.
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 '''
 
 import logging
@@ -21,7 +21,7 @@ def extracted(name,
               if_missing=None,
               keep=False):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     State that make sure an archive is extracted in a directory.
     The downloaded archive is erased if successfully extracted.

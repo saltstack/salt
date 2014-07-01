@@ -93,7 +93,7 @@ def create(path,
         Set ownership for the virtualenv
 
     .. note::
-        The ``runas`` argument is deprecated as of Hydrogen. ``user`` should be
+        The ``runas`` argument is deprecated as of 2014.1.0. ``user`` should be
         used instead.
 
     CLI Example:

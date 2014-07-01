@@ -3,7 +3,7 @@
 Management of dockers
 =====================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 .. note::
 
