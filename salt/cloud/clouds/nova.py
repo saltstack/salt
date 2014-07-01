@@ -386,8 +386,6 @@ def destroy(name, conn=None, call=None):
             {'name': name},
             transport=__opts__['transport']
         )
-        print __opts__.get('ssh_interface')
-        print str(node)
         if __opts__.get('delete_sshkeys', False) is True:
             salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
         if __opts__.get('update_cachedir', False) is True:
