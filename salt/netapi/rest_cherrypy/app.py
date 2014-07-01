@@ -188,7 +188,6 @@ The following example (in JSON format) causes Salt to execute two commands::
 # Import Python libs
 import collections
 import itertools
-import fnmatch
 import functools
 import logging
 import json
@@ -1019,9 +1018,11 @@ class Login(LowDataAdapter):
         # Grab eauth config for the current backend for the current user
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
-            perms = next((eauth[username] for username in eauth.keys()
-                if fnmatch.fnmatch(token['name'], username)))
-        except (AttributeError, IndexError, KeyError, StopIteration):
+            perms = eauth.get(token['name'], eauth.get('*'))
+
+            if perms is None:
+                raise ValueError("Eauth permission list not found.")
+        except (AttributeError, IndexError, KeyError, ValueError):
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)
