@@ -556,8 +556,7 @@ def refresh_db(**kwargs):
     }
     branch_arg = _get_branch_option(**kwargs)
 
-    cmd = 'yum -q clean expire-cache && yum -q check-update {0}'
-          .format(branch_arg)
+    cmd = 'yum -q clean expire-cache && yum -q check-update {0}'.format(branch_arg)
     ret = __salt__['cmd.retcode'](cmd, ignore_retcode=True)
     return retcodes.get(ret, False)
 

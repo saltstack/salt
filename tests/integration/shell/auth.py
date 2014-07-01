@@ -6,20 +6,15 @@
 
 # Import python libs
 import os
-import yaml
-import pipes
-import shutil
 
 # Import Salt Testing libs
 from salttesting.helpers import (
     ensure_in_syspath,
-    destructiveTest,
-    with_system_user)
+    destructiveTest)
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 
 from salttesting import skipIf
 
