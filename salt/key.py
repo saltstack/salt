@@ -717,6 +717,36 @@ class RaetKey(Key):
         rejected = os.path.join(self.opts['pki_dir'], 'rejected')
         return accepted, pre, rejected
 
+    def check_minion_cache(self):
+        '''
+        Check the minion cache to make sure that old minion data is cleared
+        '''
+        m_cache = os.path.join(self.opts['cachedir'], 'minions')
+        road_cache = os.path.join(
+            self.opts['cachedir'],
+            'raet',
+            'master',
+            'remote')
+        if not os.path.isdir(m_cache):
+            return
+        keys = self.list_keys()
+        minions = []
+        for key, val in keys.items():
+            minions.extend(val)
+        for minion in os.listdir(m_cache):
+            if minion not in minions:
+                shutil.rmtree(os.path.join(m_cache, minion))
+        for road in os.listdir(road_cache):
+            path = os.path.join(road_cache, road)
+            with open(path, 'rb') as fp_:
+                if road.endswith('.msgpack'):
+                    data = msgpack.loads(fp_.read())
+                elif road.endswith('.json'):
+                    data = json.loads(fp_.read())
+                else:
+                    data = msgpack.loads(fp_.read())
+
+
     def gen_keys(self):
         '''
         Use libnacl to generate and safely save a private key
@@ -907,6 +937,7 @@ class RaetKey(Key):
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
         '''
+        roads = set()
         if match is not None:
             matches = self.name_match(match)
         elif match_dict is not None and isinstance(match_dict, dict):
@@ -917,6 +948,7 @@ class RaetKey(Key):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    roads.add(key)
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
