@@ -4,7 +4,7 @@ Installing and Configuring Halite
 
 In this tutorial, we'll walk through installing and setting up Halite.  The
 current version of Halite is considered pre-alpha and is supported only in Salt
-``v2014.1.0 (Hydrogen)`` or greater. Additional information is available on GitHub:
+``v2014.1.0`` or greater. Additional information is available on GitHub:
 https://github.com/saltstack/halite
 
 Before beginning this tutorial, ensure that the salt-master is installed. To
@@ -13,7 +13,7 @@ http://docs.saltstack.com/topics/installation/index.html
 
 .. note::
 
-    Halite only works with Salt versions greater than 2014.1.0 (Hydrogen).
+    Halite only works with Salt versions greater than 2014.1.0.
 
 Installing Halite Via Package
 =============================

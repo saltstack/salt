@@ -386,7 +386,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def list_repo_pkgs(*args, **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Returns all available packages. Optionally, package names can be passed and
     the results will be filtered to packages matching those names. This can be
@@ -563,7 +563,7 @@ def refresh_db(**kwargs):
 
 def clean_metadata(**kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Cleans local yum metadata. Functionally identical to :mod:`refresh_db()
     <salt.modules.yumpkg.refresh_db>`.
@@ -582,7 +582,7 @@ def group_install(name,
                   include=(),
                   **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Install the passed package group(s). This is basically a wrapper around
     pkg.install, which performs package group resolution for the user. This
@@ -1259,7 +1259,7 @@ def get_locked_packages(pattern=None, full=True):
 
 def verify(*names, **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Runs an rpm -Va on a system, and returns the results in a dict
 
@@ -1280,7 +1280,7 @@ def verify(*names, **kwargs):
 
 def group_list():
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Lists all groups known by yum on this system
 
@@ -1325,7 +1325,7 @@ def group_list():
 
 def group_info(name):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Lists packages belonging to a certain group
 
@@ -1377,7 +1377,7 @@ def group_info(name):
 
 def group_diff(name):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Lists packages belonging to a certain group, and which are installed
 
@@ -1677,7 +1677,7 @@ def _parse_repo_file(filename):
 
 def file_list(*packages):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     List the files that belong to a package. Not specifying any packages will
     return a list of *every* file on the system's rpm database (not generally
@@ -1696,7 +1696,7 @@ def file_list(*packages):
 
 def file_dict(*packages):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of *every* file on the system's

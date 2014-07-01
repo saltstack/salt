@@ -9,7 +9,7 @@ all interfaces are ignored unless specified.
 
 .. note::
 
-    Prior to version 2014.1.0 (Hydrogen), only RedHat-based systems (RHEL,
+    Prior to version 2014.1.0, only RedHat-based systems (RHEL,
     CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
     new in 2014.1.0 and should be considered experimental.
 

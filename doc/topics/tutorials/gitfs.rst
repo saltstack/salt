@@ -133,7 +133,7 @@ If the ``gitfs_remotes`` option specifies three remotes:
 
 .. warning::
 
-    Salt versions prior to 2014.1.0 (Hydrogen) are not tolerant of changing the
+    Salt versions prior to 2014.1.0 are not tolerant of changing the
     order of remotes or modifying the URI of existing remotes. In those
     versions, when modifying remotes it is a good idea to remove the gitfs
     cache directory (``/var/cache/salt/master/gitfs``) before restarting the
