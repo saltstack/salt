@@ -2015,7 +2015,7 @@ def create(vm_=None, call=None):
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
                 'instance_id': ret['instanceId'],
-                'del_all_vols_on_destroy': vm_['set_del_all_vols_on_destroy']
+                'del_all_vols_on_destroy': vm_.get('set_del_all_vols_on_destroy', False)
             },
             call='action'
         )
