@@ -2,7 +2,7 @@
 '''
 Management of NTP servers on Windows
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 '''
 
 # Import python libs
