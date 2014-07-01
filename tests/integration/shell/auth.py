@@ -32,7 +32,13 @@ class AuthTest(integration.ShellCase):
 
     @destructiveTest
     @skipIf(is_root, 'You must be logged in as root to run this test')
-    # @with_system_user('saltdev') - doesn't work with ShellCase
+    def setUp(self):
+        # This is a little wasteful but shouldn't be a problem
+        self.run_call('user.add saltdev createhome=False')
+
+    def tearDown(self):
+        self.run_call('user.delete saltdev')
+
     def test_pam_auth_valid_user(self):
         '''
         test pam auth mechanism is working with a valid user
@@ -59,7 +65,6 @@ class AuthTest(integration.ShellCase):
             'minion:' in resp
         )
 
-    @skipIf(is_root, 'You must be logged in as root to run this test')
     def test_pam_auth_invalid_user(self):
         '''
         test pam auth mechanism errors for an invalid user
