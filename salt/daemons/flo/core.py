@@ -522,7 +522,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Set up required objects and queues
         '''
-        name = self.opts.value.get('id', self.local.data.name)
+        name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         localname = self.opts.value.get('id', self.local.data.localname)
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
@@ -568,6 +568,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         if self.stack.value and isinstance(self.stack.value, LaneStack):
             self.stack.value.server.close()
+            self.stack.value.clearAllDir()
 
 
 class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
@@ -908,6 +909,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
         msg = {'route': route, 'load': ret}
         ret_stack.transmit(msg, ret_stack.uids.get('yard0'))
         ret_stack.serviceAll()
+        ret_stack.server.close()
+        ret_stack.clearAllDir()
 
     def action(self):
         '''

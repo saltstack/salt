@@ -210,8 +210,7 @@ class SaltEvent(object):
     def destroy(self):
         if hasattr(self, 'stack'):
             self.stack.server.close()
-            self.stack.clearLocal()
-            self.stack.clearRemoteKeeps()
+            self.stack.clearAllDir()
 
     def __del__(self):
         self.destroy()

@@ -11,10 +11,13 @@ framer minionudpstack be active first setup
     frame setup
         enter
             do load modules
+        go manorsetup
+
     frame manorsetup
         enter
             do salt manor lane setup
         go start
+
     frame start
         do salt raet road stack per inode ".raet.udp.stack"
         exit

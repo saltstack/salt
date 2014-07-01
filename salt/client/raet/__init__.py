@@ -80,5 +80,4 @@ class LocalClient(salt.client.LocalClient):
                     return ret['ret']
                 return ret
         stack.server.close()
-        stack.clearLocal()
-        stack.clearRemoteKeeps()
+        self.stack.clearAllDir()
