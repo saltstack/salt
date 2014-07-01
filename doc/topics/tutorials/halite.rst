@@ -13,7 +13,7 @@ http://docs.saltstack.com/topics/installation/index.html
 
 .. note::
 
-    Halite only works with Salt versions greater than 2014.1.0:.
+    Halite only works with Salt versions greater than 2014.1.0.
 
 Installing Halite Via Package
 =============================
