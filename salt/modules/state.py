@@ -149,7 +149,7 @@ def low(data, queue=False, **kwargs):
 
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.State(__opts__)
@@ -176,7 +176,7 @@ def high(data, queue=False, **kwargs):
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.State(__opts__)
@@ -195,7 +195,7 @@ def template(tem, queue=False, **kwargs):
 
         salt '*' state.template '<Path to template on the minion>'
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.State(__opts__)
@@ -214,7 +214,7 @@ def template_str(tem, queue=False, **kwargs):
 
         salt '*' state.template_str '<Template String>'
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.State(__opts__)
@@ -241,7 +241,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
@@ -455,7 +455,7 @@ def top(topfn, test=None, queue=False, **kwargs):
         salt '*' state.top reverse_top.sls exclude=sls_to_exclude
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     if not _check_pillar(kwargs):
@@ -506,7 +506,7 @@ def show_highstate(queue=False, **kwargs):
 
         salt '*' state.show_highstate
     '''
-    conflict = _check_queue(kwargs)
+    conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     pillar = kwargs.get('pillar')
