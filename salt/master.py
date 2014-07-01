@@ -1004,6 +1004,7 @@ class AESFuncs(object):
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']
 
+        pillar_dirs = {}
         pillar = salt.pillar.Pillar(
             self.opts,
             load['grains'],
@@ -1011,7 +1012,7 @@ class AESFuncs(object):
             load.get('saltenv', load.get('env')),
             load.get('ext'),
             self.mminion.functions)
-        data = pillar.compile_pillar()
+        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
