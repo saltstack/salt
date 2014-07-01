@@ -144,9 +144,7 @@ class WorkerSetup(ioflo.base.deeding.Deed):
 
     def __del__(self):
         self.stack.server.close()
-        self.stack.clearLocal()
-        self.stack.clearRemoteKeeps()
-
+        self.stack.clearAllDir()
 
 class WorkerRouter(ioflo.base.deeding.Deed):
     '''

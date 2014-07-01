@@ -113,9 +113,7 @@ class RAETChannel(Channel):
         Clean up the stack when finished
         '''
         self.stack.server.close()
-        self.stack.clearLocal()
-        self.stack.clearRemoteKeeps()
-
+        self.stack.clearAllDir()
 
 class ZeroMQChannel(Channel):
     '''
