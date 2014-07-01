@@ -146,6 +146,7 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         self.stack.server.close()
         self.stack.clearAllDir()
 
+
 class WorkerRouter(ioflo.base.deeding.Deed):
     '''
     FloScript:
