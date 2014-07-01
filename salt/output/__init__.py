@@ -15,6 +15,7 @@ import traceback
 # Import salt libs
 import salt.loader
 import salt.utils
+from salt.utils import print_cli
 
 
 log = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def display_output(data, out=None, opts=None):
                 ofh.write('\n')
             return
         if display_data:
-            print(display_data)
+            print_cli(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:

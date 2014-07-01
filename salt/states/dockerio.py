@@ -38,7 +38,15 @@ Available Functions
   .. code-block:: yaml
 
       ubuntu:
-        docker.pulled
+        docker.pulled:
+          - tag: latest
+
+- pushed
+
+  .. code-block:: yaml
+
+      corp/mysuperdocker_img:
+        docker.pushed
 
 - installed
 
@@ -209,7 +217,7 @@ def mod_watch(name, sfun=None, *args, **kw):
                         ' implemented for {0}'.format(sfun))}
 
 
-def pulled(name, force=False, *args, **kwargs):
+def pulled(name, tag=None, force=False, *args, **kwargs):
     '''
     Pull an image from a docker registry. (`docker pull`)
 
@@ -220,11 +228,15 @@ def pulled(name, force=False, *args, **kwargs):
         and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
-        NOTE that We added saltack a way to identify yourself via pillar,
-        see in the salt.modules.dockerio execution module how to ident yourself
-        via the pillar.
+        NOTE that we added in SaltStack a way to authenticate yourself with the
+        Docker Hub Registry by supplying your credentials (username, email & password)
+        using pillars. For more information, see salt.modules.dockerio execution
+        module.
 
     name
+        Name of the image
+
+    tag
         Tag of the image
 
     force
@@ -238,10 +250,39 @@ def pulled(name, force=False, *args, **kwargs):
             comment='Image already pulled: {0}'.format(name))
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
-    returned = pull(name)
+    returned = pull(name, tag=tag)
     if previous_id != returned['id']:
         changes = {name: {'old': previous_id,
                           'new': returned['id']}}
+    else:
+        changes = {}
+    return _ret_status(returned, name, changes=changes)
+
+
+def pushed(name):
+    '''
+    Push an image from a docker registry. (`docker push`)
+
+    .. note::
+
+        See first the documentation for `docker login`, `docker pull`,
+        `docker push`,
+        and `docker.import_image <https://github.com/dotcloud/docker-py#api>`_
+        (`docker import
+        <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
+        NOTE that we added in SaltStack a way to authenticate yourself with the
+        Docker Hub Registry by supplying your credentials (username, email & password)
+        using pillars. For more information, see salt.modules.dockerio execution
+        module.
+
+    name
+        Name of the image
+    '''
+    push = __salt__['docker.push']
+    returned = push(name)
+    log.debug("Returned: "+str(returned))
+    if returned['status']:
+        changes = {name: {'Rev': returned['id']}}
     else:
         changes = {}
     return _ret_status(returned, name, changes=changes)
@@ -259,7 +300,7 @@ def built(name,
     Build a docker image from a path or URL to a dockerfile. (`docker build`)
 
     name
-        Tag of the image
+        Name of the image
 
     path
         URL (e.g. `url/branch/docker_dir/dockerfile`)
@@ -322,7 +363,7 @@ def installed(name,
     environment
         Environment variables for the container, either
             - a mapping of key, values
-            - a list of mappings of key values
+            - a list of mappings of key, values
     ports
         List of ports definitions, either:
             - a port to map

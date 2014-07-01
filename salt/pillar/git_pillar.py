@@ -50,6 +50,7 @@ section in it, like this:
 # Import python libs
 from copy import deepcopy
 import logging
+import hashlib
 import os
 
 # Import third party libs
@@ -102,48 +103,45 @@ class GitPillar(object):
         self.working_dir = ''
         self.repo = None
 
-        for idx, opts_dict in enumerate(self.opts['ext_pillar']):
-            lopts = opts_dict.get('git', '').split()
-            if len(lopts) >= 2 and lopts[:2] == [self.branch, self.rp_location]:
-                rp_ = os.path.join(self.opts['cachedir'],
-                                   'pillar_gitfs', str(idx))
+        hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
+        hash_str = '{0} {1}'.format(self.branch, self.rp_location)
+        repo_hash = hash_type(hash_str).hexdigest()
+        rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
-                if not os.path.isdir(rp_):
-                    os.makedirs(rp_)
+        if not os.path.isdir(rp_):
+            os.makedirs(rp_)
 
+        try:
+            self.repo = git.Repo.init(rp_)
+        except (git.exc.NoSuchPathError,
+                git.exc.InvalidGitRepositoryError) as exc:
+            log.error('GitPython exception caught while '
+                      'initializing the repo: {0}. Maybe '
+                      'git is not available.'.format(exc))
+
+        # Git directory we are working on
+        # Should be the same as self.repo.working_dir
+        self.working_dir = rp_
+
+        if isinstance(self.repo, git.Repo):
+            if not self.repo.remotes:
                 try:
-                    self.repo = git.Repo.init(rp_)
-                except (git.exc.NoSuchPathError,
-                        git.exc.InvalidGitRepositoryError) as exc:
-                    log.error('GitPython exception caught while '
-                              'initializing the repo: {0}. Maybe '
-                              'git is not available.'.format(exc))
-
-                # Git directory we are working on
-                # Should be the same as self.repo.working_dir
-                self.working_dir = rp_
-
-                if isinstance(self.repo, git.Repo):
-                    if not self.repo.remotes:
-                        try:
-                            self.repo.create_remote('origin', self.rp_location)
-                            # ignore git ssl verification if requested
-                            if self.opts.get('pillar_gitfs_ssl_verify', True):
-                                self.repo.git.config('http.sslVerify', 'true')
-                            else:
-                                self.repo.git.config('http.sslVerify', 'false')
-                        except os.error:
-                            # This exception occurs when two processes are
-                            # trying to write to the git config at once, go
-                            # ahead and pass over it since this is the only
-                            # write.
-                            # This should place a lock down.
-                            pass
+                    self.repo.create_remote('origin', self.rp_location)
+                    # ignore git ssl verification if requested
+                    if self.opts.get('pillar_gitfs_ssl_verify', True):
+                        self.repo.git.config('http.sslVerify', 'true')
                     else:
-                        if self.repo.remotes.origin.url != self.rp_location:
-                            self.repo.remotes.origin.config_writer.set('url', self.rp_location)
-
-                break
+                        self.repo.git.config('http.sslVerify', 'false')
+                except os.error:
+                    # This exception occurs when two processes are
+                    # trying to write to the git config at once, go
+                    # ahead and pass over it since this is the only
+                    # write.
+                    # This should place a lock down.
+                    pass
+            else:
+                if self.repo.remotes.origin.url != self.rp_location:
+                    self.repo.remotes.origin.config_writer.set('url', self.rp_location)
 
     def update(self):
         '''

@@ -70,7 +70,7 @@ class IofloMaster(object):
         console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
             consolepath = os.path.join(console_logdir, 'master.log')
-        else: # empty means log to std out
+        else:  # empty means log to std out
             consolepath = ''
 
         ioflo.app.run.start(
@@ -116,7 +116,7 @@ class IofloMinion(object):
         console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
             consolepath = os.path.join(console_logdir, 'minion.log')
-        else: # empty means log to std out
+        else:  # empty means log to std out
             consolepath = ''
 
         ioflo.app.run.start(

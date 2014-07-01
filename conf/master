@@ -231,9 +231,8 @@
 # no signature, it will still be accepted, and a warning message will be logged.
 # Conversely, if sign_pub_messages is False, but a minion receives a signed
 # message it will be accepted, the signature will not be checked, and a warning message
-# will be logged.  This behavior will go away in Salt 0.17.6 (or Hydrogen RC1, whichever
-# comes first) and these two situations will cause minion to throw an exception and
-# drop the message.
+# will be logged. This behavior went away in Salt 2014.1.0 and these two situations
+# will cause minion to throw an exception and drop the message.
 #
 # sign_pub_messages: False
 

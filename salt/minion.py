@@ -809,6 +809,10 @@ class Minion(MinionBase):
         elif data and tag:
             load['data'] = data
             load['tag'] = tag
+        elif not data and tag:
+            load['data'] = {}
+            load['tag'] = tag
+
         else:
             return
         channel = salt.transport.Channel.factory(self.opts)

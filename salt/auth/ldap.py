@@ -76,13 +76,14 @@ class _LDAPConnection(object):
         self.server = server
         self.port = port
         self.tls = tls
+        schema = 'ldaps' if tls else 'ldap'
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
             raise CommandExecutionError('Failed to connect to LDAP, module '
                                         'not loaded')
         if self.uri == '':
-            self.uri = 'ldap://{0}:{1}'.format(self.server, self.port)
+            self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
         try:
             if no_verify:
@@ -94,9 +95,6 @@ class _LDAPConnection(object):
             )
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
-
-            if self.tls:
-                self.ldap.start_tls_s()
 
             if not anonymous:
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)

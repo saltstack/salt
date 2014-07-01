@@ -76,9 +76,9 @@ class LoadAuth(object):
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception as exc:
-            err = 'Authentication module threw an exception: {0}'.format(exc)
-            log.critical(err)
+        except Exception:
+            err = 'Authentication module threw an exception: '
+            log.critical(err, exc_info=True)
             return False
 
     def time_auth(self, load):
@@ -311,13 +311,21 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        sreq = salt.payload.SREQ(
-                'tcp://{0}:{1}'.format(
-                    salt.utils.ip_bracket(self.opts['interface']),
-                    self.opts['ret_port'])
-            )
-        tdata = sreq.send('clear', load)
-        return tdata
+        if self.opts['transport'] == 'zeromq':
+            sreq = salt.payload.SREQ(
+                    'tcp://{0}:{1}'.format(
+                        salt.utils.ip_bracket(self.opts['interface']),
+                        self.opts['ret_port'])
+                )
+            tdata = sreq.send('clear', load)
+            return tdata
+        elif self.opts['transport'] == 'raet':
+            sreq = salt.transport.Channel.factory(
+                    self.opts)
+            sreq.route['dst'] = (None, None, 'local_cmd')
+            sreq.route['src'] = (None, sreq.stack.local.name, None)
+            tdata = sreq.send(load)
+            return tdata
 
     def cli(self, eauth):
         '''

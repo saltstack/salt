@@ -12,6 +12,7 @@ import copy
 # Import salt libs
 import salt.client
 import salt.output
+from salt.utils import print_cli
 
 
 class Batch(object):
@@ -45,7 +46,7 @@ class Batch(object):
         for ret in self.local.cmd_iter(*args, **self.eauth):
             for minion in ret:
                 if not self.quiet:
-                    print('{0} Detected for this batch run'.format(minion))
+                    print_cli('{0} Detected for this batch run'.format(minion))
                 fret.append(minion)
         return sorted(fret)
 
@@ -65,8 +66,8 @@ class Batch(object):
                 return int(self.opts['batch'])
         except ValueError:
             if not self.quiet:
-                print(('Invalid batch data sent: {0}\nData must be in the form'
-                       'of %10, 10% or 3').format(self.opts['batch']))
+                print_cli('Invalid batch data sent: {0}\nData must be in the '
+                          'form of %10, 10% or 3'.format(self.opts['batch']))
 
     def run(self):
         '''
@@ -109,7 +110,7 @@ class Batch(object):
 
             if next_:
                 if not self.quiet:
-                    print('\nExecuting run on {0}\n'.format(next_))
+                    print_cli('\nExecuting run on {0}\n'.format(next_))
                 # create a new iterator for this batch of minions
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,

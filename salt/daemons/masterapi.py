@@ -442,7 +442,7 @@ class RemoteFuncs(object):
         Allow the minion to delete all of its own mine contents
         '''
         if not skip_verify and 'id' not in load:
-                return False
+            return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -641,11 +641,20 @@ class RemoteFuncs(object):
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        if not skip_verify:
-            if any(key not in load for key in ('jid', 'id')):
+        if not skip_verify and any(key not in load for key in ('jid', 'id')):
                 return {}
         else:
-            return self.masterapi.pub_ret(load, skip_verify=True)
+            auth_cache = os.path.join(
+                    self.opts['cachedir'],
+                    'publish_auth')
+            if not os.path.isdir(auth_cache):
+                os.makedirs(auth_cache)
+            jid_fn = os.path.join(auth_cache, load['jid'])
+            with salt.utils.fopen(jid_fn, 'r') as fp_:
+                if not load['id'] == fp_.read():
+                 return {}
+
+            return self.local.get_cache_returns(load['jid'])
 
     def minion_pub(self, load):
         '''
@@ -696,7 +705,7 @@ class RemoteFuncs(object):
                 'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, ret['jid'])
+        jid_fn = os.path.join(auth_cache, str(ret['jid']))
         with salt.utils.fopen(jid_fn, 'w+') as fp_:
             fp_.write(load['id'])
         return ret

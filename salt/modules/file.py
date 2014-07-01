@@ -1118,7 +1118,7 @@ def blockreplace(path,
         show_changes=True,
         ):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Replace content of a text block in a file, delimited by line markers
 
@@ -1625,7 +1625,7 @@ def touch(name, atime=None, mtime=None):
 
 def seek_read(path, size, offset):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Seek to a position on a file and write to it
 
@@ -1646,7 +1646,7 @@ def seek_read(path, size, offset):
 
 def seek_write(path, data, offset):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Seek to a position on a file and write to it
 
@@ -1668,7 +1668,7 @@ def seek_write(path, data, offset):
 
 def truncate(path, length):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Seek to a position on a file and delete everything after that point
 
@@ -1687,7 +1687,7 @@ def truncate(path, length):
 
 def link(src, path):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Create a hard link to a file
 
@@ -1823,7 +1823,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
 
 def lstat(path):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Returns the lstat attributes for the given file or dir. Does not support
     symbolic links.
@@ -1847,7 +1847,7 @@ def lstat(path):
 
 def access(path, mode):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
@@ -1882,7 +1882,7 @@ def access(path, mode):
 
 def readlink(path):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
 
@@ -1903,7 +1903,7 @@ def readlink(path):
 
 def readdir(path):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Return a list containing the contents of a directory
 
@@ -1926,7 +1926,7 @@ def readdir(path):
 
 def statvfs(path):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Perform a statvfs call against the filesystem that the file resides on
 
@@ -2006,7 +2006,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
 
 def rmdir(path):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Remove the specified directory. Fails if a directory is not empty.
 

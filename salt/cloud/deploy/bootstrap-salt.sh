@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.06.28"
+__ScriptVersion="2014.06.30"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -687,6 +687,8 @@ __gather_linux_system_info() {
         elif [ "${DISTRO_NAME}" = "OracleServer" ]; then
             # This the Oracle Linux Server 6.5
             DISTRO_NAME="Oracle Linux"
+        elif [ "${DISTRO_NAME}" = "AmazonAMI" ]; then
+            DISTRO_NAME="Amazon Linux AMI"
         fi
         rv=$(lsb_release -sr)
         [ "${rv}" != "" ] && DISTRO_VERSION=$(__parse_version_string "$rv")
@@ -702,9 +704,9 @@ __gather_linux_system_info() {
         return
     fi
 
-    # shellcheck disable=SC2086
+    # shellcheck disable=SC2035,SC2086
     for rsource in $(__sort_release_files "$(
-            cd /etc && /bin/ls ./*[_-]release ./*[_-]version 2>/dev/null | env -i sort | \
+            cd /etc && /bin/ls *[_-]release *[_-]version 2>/dev/null | env -i sort | \
             sed -e '/^redhat-release$/d' -e '/^lsb-release$/d'; \
             echo redhat-release lsb-release
             )"); do
@@ -2376,7 +2378,7 @@ __install_epel_repository() {
     elif [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
         rpm -Uvh --force "http://mirrors.kernel.org/fedora-epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
-        rpm -Uvh --force "http://mirrors.kernel.org/fedora-epel/beta/7/${EPEL_ARCH}/epel-release-7-0.1.noarch.rpm" || return 1
+        rpm -Uvh --force "http://mirrors.kernel.org/fedora-epel/beta/7/${EPEL_ARCH}/epel-release-7-0.2.noarch.rpm" || return 1
     else
         echoerror "Failed add EPEL repository support."
         return 1
@@ -2634,8 +2636,8 @@ __test_rhel_optionals_packages() {
                 yum -y install yum-plugin-tsflags --enablerepo=${_EPEL_REPO} || \
                 return 1
         else
-            yum -y install yum-tsflags --enablerepo=${_EPEL_REPO} \
-                yum -y install yum-tsflags --enablerepo=${_EPEL_REPO} || \
+            yum -y install yum-tsflags --enablerepo=${_EPEL_REPO} || \
+                yum -y install yum-plugin-tsflags --enablerepo=${_EPEL_REPO} || \
                 return 1
         fi
 

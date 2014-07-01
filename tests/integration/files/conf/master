@@ -28,7 +28,7 @@ config_opt:
 yaml_utf8: True
 
 external_auth:
-  auto:
+  pam:
     saltdev:
       - '@wheel'
       - '@runner'

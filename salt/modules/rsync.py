@@ -2,7 +2,7 @@
 '''
 Wrapper for rsync
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
 Options passed into opts will overwrite options passed into pillar.

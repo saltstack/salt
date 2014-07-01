@@ -616,7 +616,7 @@ def run(name,
     quiet
         The command will be executed quietly, meaning no log entries of the
         actual command or its return data. This is deprecated as of the
-        **2014.1.0 (Hydrogen)** release, and is being replaced with
+        **2014.1.0** release, and is being replaced with
         ``output_loglevel: quiet``.
 
     timeout

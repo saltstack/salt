@@ -56,7 +56,7 @@ class WorkerFork(ioflo.base.deeding.Deed):
         console_logdir = self.opts.value.get('ioflo_console_logdir', '')
         if console_logdir:
             consolepath = os.path.join(console_logdir, "worker_{0}.log".format(yid))
-        else: # empty means log to std out
+        else:  # empty means log to std out
             consolepath = ''
 
         ioflo.app.run.start(

@@ -506,7 +506,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
 def check_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Check for the existence of a chain in the table
 
@@ -536,7 +536,7 @@ def check_chain(table='filter', chain=None, family='ipv4'):
 
 def new_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Create new custom chain to the specified table.
 
@@ -563,7 +563,7 @@ def new_chain(table='filter', chain=None, family='ipv4'):
 
 def delete_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Delete custom chain to the specified table.
 

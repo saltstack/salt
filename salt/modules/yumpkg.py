@@ -130,16 +130,16 @@ def _get_repo_options(**kwargs):
     repo_arg = ''
     if fromrepo:
         log.info('Restricting to repo {0!r}'.format(fromrepo))
-        repo_arg = ('--disablerepo={0!r} --enablerepo={1!r} '
+        repo_arg = ('--disablerepo={0!r} --enablerepo={1!r}'
                     .format('*', fromrepo))
     else:
         repo_arg = ''
         if disablerepo:
             log.info('Disabling repo {0!r}'.format(disablerepo))
-            repo_arg += '--disablerepo={0!r} '.format(disablerepo)
+            repo_arg += '--disablerepo={0!r}'.format(disablerepo)
         if enablerepo:
             log.info('Enabling repo {0!r}'.format(enablerepo))
-            repo_arg += '--enablerepo={0!r} '.format(enablerepo)
+            repo_arg += '--enablerepo={0!r}'.format(enablerepo)
     return repo_arg
 
 
@@ -156,6 +156,21 @@ def _get_excludes_option(**kwargs):
         disable_excludes_arg = ('--disableexcludes={0!r}'.format(disable_excludes))
 
     return disable_excludes_arg
+
+
+def _get_branch_option(**kwargs):
+    '''
+    Returns a string of '--branch' option to be used in the yum command,
+    based on the kwargs. This feature requires 'branch' plugin for YUM.
+    '''
+    # Get branch option from the kwargs
+    branch = kwargs.get('branch', '')
+
+    branch_arg = ''
+    if branch:
+        log.info('Adding branch {0!r}'.format(branch))
+        branch_arg = ('--branch={0!r}'.format(branch))
+    return branch_arg
 
 
 def _check_32(arch):
@@ -274,7 +289,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if refresh:
-        refresh_db()
+        refresh_db(**kwargs)
 
     # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
@@ -371,7 +386,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def list_repo_pkgs(*args, **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Returns all available packages. Optionally, package names can be passed and
     the results will be filtered to packages matching those names. This can be
@@ -443,7 +458,7 @@ def list_upgrades(refresh=True, **kwargs):
         salt '*' pkg.list_upgrades
     '''
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(**kwargs)
 
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
@@ -518,7 +533,7 @@ def check_db(*names, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     '''
     Check the yum repos for updated packages
 
@@ -539,15 +554,16 @@ def refresh_db():
         0: None,
         1: False,
     }
+    branch_arg = _get_branch_option(**kwargs)
 
-    cmd = 'yum -q clean expire-cache && yum -q check-update'
+    cmd = 'yum -q clean expire-cache && yum -q check-update {0}'.format(branch_arg)
     ret = __salt__['cmd.retcode'](cmd, ignore_retcode=True)
     return retcodes.get(ret, False)
 
 
-def clean_metadata():
+def clean_metadata(**kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Cleans local yum metadata. Functionally identical to :mod:`refresh_db()
     <salt.modules.yumpkg.refresh_db>`.
@@ -558,7 +574,7 @@ def clean_metadata():
 
         salt '*' pkg.clean_metadata
     '''
-    return refresh_db()
+    return refresh_db(**kwargs)
 
 
 def group_install(name,
@@ -566,7 +582,7 @@ def group_install(name,
                   include=(),
                   **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Install the passed package group(s). This is basically a wrapper around
     pkg.install, which performs package group resolution for the user. This
@@ -726,10 +742,6 @@ def install(name=None,
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
 
-    branch
-        Specifies the branch on YUM server.
-        (e.g., ``yum --branch='test'``)
-
         .. versionadded:: Helium
 
 
@@ -766,7 +778,7 @@ def install(name=None,
                        'new': '<new-version>'}}
     '''
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(**kwargs)
     reinstall = salt.utils.is_true(reinstall)
 
     try:
@@ -789,11 +801,8 @@ def install(name=None,
                         'package targets')
 
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
-    # Support branch parameter for yum
-    branch = kwargs.get('branch', '')
-    if branch:
-        repo_arg += '--branch={0!r}'.format(branch)
     exclude_arg = _get_excludes_option(**kwargs)
+    branch_arg = _get_branch_option(**kwargs)
 
     old = list_pkgs()
     targets = []
@@ -847,27 +856,30 @@ def install(name=None,
                 downgrade.append(pkgstr)
 
     if targets:
-        cmd = 'yum -y {repo} {exclude} {gpgcheck} install {pkg}'.format(
+        cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
             repo=repo_arg,
             exclude=exclude_arg,
+            branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if downgrade:
-        cmd = 'yum -y {repo} {exclude} {gpgcheck} downgrade {pkg}'.format(
+        cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} downgrade {pkg}'.format(
             repo=repo_arg,
             exclude=exclude_arg,
+            branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if to_reinstall:
-        cmd = 'yum -y {repo} {exclude} {gpgcheck} reinstall {pkg}'.format(
+        cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} reinstall {pkg}'.format(
             repo=repo_arg,
             exclude=exclude_arg,
+            branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(to_reinstall.values()),
         )
@@ -927,15 +939,17 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         .. versionadded:: Helium
     '''
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(**kwargs)
 
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
+    branch_arg = _get_branch_option(**kwargs)
 
     old = list_pkgs()
-    cmd = 'yum -q -y {repo} {exclude} {gpgcheck} upgrade'.format(
+    cmd = 'yum -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
         repo=repo_arg,
         exclude=exclude_arg,
+        branch=branch_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '')
 
     __salt__['cmd.run'](cmd, output_loglevel='trace')
@@ -1245,7 +1259,7 @@ def get_locked_packages(pattern=None, full=True):
 
 def verify(*names, **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Runs an rpm -Va on a system, and returns the results in a dict
 
@@ -1266,7 +1280,7 @@ def verify(*names, **kwargs):
 
 def group_list():
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Lists all groups known by yum on this system
 
@@ -1311,7 +1325,7 @@ def group_list():
 
 def group_info(name):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Lists packages belonging to a certain group
 
@@ -1363,7 +1377,7 @@ def group_info(name):
 
 def group_diff(name):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Lists packages belonging to a certain group, and which are installed
 
@@ -1663,7 +1677,7 @@ def _parse_repo_file(filename):
 
 def file_list(*packages):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     List the files that belong to a package. Not specifying any packages will
     return a list of *every* file on the system's rpm database (not generally
@@ -1682,7 +1696,7 @@ def file_list(*packages):
 
 def file_dict(*packages):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of *every* file on the system's

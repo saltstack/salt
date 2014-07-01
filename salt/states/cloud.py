@@ -3,7 +3,7 @@
 Using states instead of maps to deploy clouds
 =============================================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 Use this minion to spin up a cloud instance:
 
