@@ -93,6 +93,10 @@ class Depends(object):
                         dependency
                     )
                 )
+                try:
+                    module.__name__
+                except AttributeError:
+                    continue
                 # if not, unload dependent_set
                 mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
                                            func.__name__)
