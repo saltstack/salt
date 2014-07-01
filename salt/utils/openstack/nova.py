@@ -293,7 +293,8 @@ class SaltNova(object):
 
         return volume
 
-    def volume_create(self, name, size=100, snapshot=None, voltype=None):
+    def volume_create(self, name, size=100, snapshot=None, voltype=None,
+                      availability_zone=None):
         '''
         Create a block device
         '''
@@ -302,7 +303,8 @@ class SaltNova(object):
             size=size,
             display_name=name,
             volume_type=voltype,
-            snapshot_id=snapshot
+            snapshot_id=snapshot,
+            availability_zone=availability_zone
         )
 
         return self._volume_get(response.id)
