@@ -80,7 +80,12 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             trans_tar,
             '/tmp/.salt/salt_state.tgz')
     stdout, stderr, _ = single.cmd_block()
-    return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception, e:
+        log.error("JSON Render failed for: {0}".format(stdout))
+        log.error(str(e))
+    return stdout
 
 
 def low(data, **kwargs):
