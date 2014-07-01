@@ -320,9 +320,10 @@ class Resolver(object):
             tdata = sreq.send('clear', load)
             return tdata
         elif self.opts['transport'] == 'raet':
-            sreq = salt.transport.Channel(
+            sreq = salt.transport.Channel.factory(
                     self.opts)
             sreq.route['dst'] = (None, None, 'local_cmd')
+            sreq.route['src'] = (None, sreq.stack.local.name, None)
             tdata = sreq.send(load)
             return tdata
 

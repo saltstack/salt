@@ -60,12 +60,13 @@ class RAETChannel(Channel):
         '''
         Prepare the stack objects
         '''
+        id = self.opts.get('id', 'master')
         yid = salt.utils.gen_jid()
-        stackname = self.opts['id'] + yid
+        stackname = id + yid
         dirpath = os.path.join(self.opts['cachedir'], 'raet')
         self.stack = LaneStack(
                 name=stackname,
-                lanename=self.opts['id'],
+                lanename=id,
                 yid=yid,
                 basedirpath=dirpath,
                 sockdirpath=self.opts['sock_dir'])
@@ -73,10 +74,10 @@ class RAETChannel(Channel):
         self.router_yard = yarding.RemoteYard(
                 stack=self.stack,
                 yid=0,
-                lanename=self.opts['id'],
+                lanename=id,
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemote(self.router_yard)
-        src = (self.opts['id'], self.stack.local.name, None)
+        src = (id, self.stack.local.name, None)
         dst = ('master', None, 'remote_cmd')
         self.route = {'src': src, 'dst': dst}
 
