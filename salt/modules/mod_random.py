@@ -90,23 +90,22 @@ def get_str(length=20):
 
     .. code-block:: bash
 
-        salt '*' random.get 128
+        salt '*' random.get_str 128
     '''
-
     return salt.utils.pycrypto.secure_password(length)
 
 
-def salted_hash(crypt_salt=None, crypt_value=None, algorithm='sha512'):
+def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
     '''
-    Generates a salted hash.
+    Generates a salted hash suitable for /etc/shadow.
 
     crypt_salt : None
         Salt to be used in the generation of the hash. If one is not
         provided, a random salt will be generated.
 
-    crypt_value : None
+    password : None
         Value to be salted and hashed. If one is not provided, a random
-        value will be generated.
+        password will be generated.
 
     algorithm : sha512
         Hash algorithm to use.
@@ -115,6 +114,6 @@ def salted_hash(crypt_salt=None, crypt_value=None, algorithm='sha512'):
 
     .. code-block:: bash
 
-        salt '*' 'My5alT' 'I am a value to be hashed' md5
+        salt '*' random.shadow_hash 'My5alT' 'MyP@asswd' md5
     '''
     return salt.utils.pycrypto.gen_hash(crypt_salt, crypt_value, algorithm)
