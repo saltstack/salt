@@ -51,7 +51,7 @@ def hash(value, algorithm='sha512'):
     return out
 
 
-def str_encode(value, encoder = 'base64'):
+def str_encode(value, encoder='base64'):
     '''
     .. versionadded:: Helium
 
@@ -116,4 +116,4 @@ def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
 
         salt '*' random.shadow_hash 'My5alT' 'MyP@asswd' md5
     '''
-    return salt.utils.pycrypto.gen_hash(crypt_salt, crypt_value, algorithm)
+    return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
