@@ -124,7 +124,7 @@ def _prior_running_states(jid):
     return ret
 
 
-def _check_queue(queue=False, **kwargs):
+def _check_queue(queue, kwargs):
     '''
     Utility function to queue the state run if requested
     and to check for conflicts in currently running states
@@ -132,8 +132,10 @@ def _check_queue(queue=False, **kwargs):
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
-        __context__['retcode'] = 1
-        return running()
+        conflict = running()
+        if conflict:
+            __context__['retcode'] = 1
+            return conflict
 
 
 def low(data, queue=False, **kwargs):
