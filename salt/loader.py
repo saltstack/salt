@@ -887,7 +887,6 @@ class Loader(object):
                         ), names[name], tempfile.gettempdir()
                     )
                 else:
-                    if name == 'tops':
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
@@ -902,7 +901,6 @@ class Loader(object):
                         getattr(mod, sname) for sname in dir(mod) if
                         isinstance(getattr(mod, sname), mod.__class__)
                     ]
-                    if name == 'tops':
 
                     # reload only custom "sub"modules i.e is a submodule in
                     # parent module that are still available on disk (i.e. not
