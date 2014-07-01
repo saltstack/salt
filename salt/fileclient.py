@@ -1149,7 +1149,6 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
-
     def _get_channel(self):
         '''
         Return the right channel
@@ -1158,7 +1157,6 @@ class RemoteClient(Client):
             return self.channel
 
         return salt.transport.Channel.factory(self.opts)
-
 
     def ext_nodes(self):
         '''
