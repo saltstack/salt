@@ -11,6 +11,8 @@ import stat
 import shutil
 import fnmatch
 import hashlib
+import msgpack
+import json
 
 # Import salt libs
 import salt.crypt
@@ -745,7 +747,8 @@ class RaetKey(Key):
                     data = json.loads(fp_.read())
                 else:
                     data = msgpack.loads(fp_.read())
-
+            if data['name'] not in minions:
+                os.remove(path)
 
     def gen_keys(self):
         '''
@@ -937,7 +940,6 @@ class RaetKey(Key):
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
         '''
-        roads = set()
         if match is not None:
             matches = self.name_match(match)
         elif match_dict is not None and isinstance(match_dict, dict):
@@ -948,7 +950,6 @@ class RaetKey(Key):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                    roads.add(key)
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
