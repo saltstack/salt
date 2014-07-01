@@ -19,7 +19,7 @@ import integration
 from salttesting import skipIf
 
 import random
-
+import pwd
 
 class AuthTest(integration.ShellCase):
     '''
@@ -34,12 +34,11 @@ class AuthTest(integration.ShellCase):
     @skipIf(is_root, 'You must be logged in as root to run this test')
     def setUp(self):
         # This is a little wasteful but shouldn't be a problem
-        self.run_call('user.add saltdev createhome=False')
+        try:
+            pwd.getpwnam('saltdev')
+        except KeyError:
+            self.run_call('user.add saltdev createhome=False')
 
-    @destructiveTest
-    @skipIf(is_root, 'You must be logged in as root to run this test')
-    def tearDown(self):
-        self.run_call('user.delete saltdev')
 
     def test_pam_auth_valid_user(self):
         '''
@@ -78,6 +77,12 @@ class AuthTest(integration.ShellCase):
         self.assertTrue(
             'Failed to authenticate' in ''.join(resp)
         )
+
+    @destructiveTest
+    @skipIf(is_root, 'You must be logged in as root to run this test')
+    def test_zzzz_tearDown(self):
+        if pwd.getpwnam('saltdev'):
+            self.run_call('user.delete saltdev')
 
 if __name__ == '__main__':
     from integration import run_tests
