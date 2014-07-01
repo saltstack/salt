@@ -75,7 +75,7 @@ def str_encode(value, encoder='base64'):
         raise SaltInvocationError('Value must be an encode-able string')
 
     return out
-        
+
 
 def get_str(length=20):
     '''
