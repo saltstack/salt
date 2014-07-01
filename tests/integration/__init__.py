@@ -40,7 +40,6 @@ SALT_LIBS = os.path.dirname(CODE_DIR)
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.case import ShellTestCase
-from salttesting.helpers import skip_if_binaries_missing
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
