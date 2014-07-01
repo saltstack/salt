@@ -1121,7 +1121,7 @@ class AESFuncs(object):
             'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, load['jid'])
+        jid_fn = os.path.join(auth_cache, str(load['jid']))
         with salt.utils.fopen(jid_fn, 'r') as fp_:
             if not load['id'] == fp_.read():
                 return {}

@@ -65,7 +65,6 @@ class PublishModuleTest(integration.ModuleCase,
             'publish.full_data',
             ['minion', 'test.kwarg', 'arg="cheese=spam"']
         )
-
         ret = ret['minion']['ret']
 
         check_true = (
@@ -93,7 +92,7 @@ class PublishModuleTest(integration.ModuleCase,
             ['minion', 'test.kwarg', 'cheese=spam']
         )
         self.assertIn(
-            'The following keyword arguments are not valid: cheese=spam', ret
+            'The following keyword arguments are not valid', ret
         )
 
     def test_reject_minion(self):
