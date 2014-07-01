@@ -323,6 +323,7 @@ class Resolver(object):
             sreq = salt.transport.Channel.factory(
                     self.opts)
             sreq.route['dst'] = (None, None, 'local_cmd')
+            sreq.route['src'] = (None, sreq.stack.local.name, None)
             tdata = sreq.send(load)
             return tdata
 
