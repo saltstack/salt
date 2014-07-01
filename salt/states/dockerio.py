@@ -38,7 +38,8 @@ Available Functions
   .. code-block:: yaml
 
       ubuntu:
-        docker.pulled
+        docker.pulled:
+          - tag: latest
 
 - pushed
 
@@ -235,6 +236,9 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
     name
         Name of the image
 
+    tag
+        Tag of the image
+
     force
         Pull even if the image is already pulled
     '''
@@ -359,7 +363,7 @@ def installed(name,
     environment
         Environment variables for the container, either
             - a mapping of key, values
-            - a list of mappings of key values
+            - a list of mappings of key, values
     ports
         List of ports definitions, either:
             - a port to map
