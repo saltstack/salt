@@ -79,7 +79,7 @@ def _publish(
     sreq = salt.transport.Channel.factory(__opts__)
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
-            'jid': peer_data['jid']}
+            'jid': str(peer_data['jid'])}
     ret = sreq.send(load)
     if form == 'clean':
         cret = {}
