@@ -202,32 +202,10 @@ class Master(SMaster):
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
         pillargitfs = []
-        git_pillars = []
         for opts_dict in [x for x in self.opts.get('ext_pillar', [])]:
             if 'git' in opts_dict:
-                git_pillars.append(opts_dict)
-
-        for idx, opts_dict in enumerate(git_pillars):
-
-            if 'git' in opts_dict:
-                parts = opts_dict['git'].strip().split()
-                br, loc = parts[0], parts[1]
-                if len(parts) > 2:
-                    key, _dir = parts[2].split('=')
-
-                    if key != 'root':
-                        log.error("malformed params, got: %s. Ignoring.", key)
-                        continue
-
-                    working_dir = os.path.join(self.opts['cachedir'],
-                                               'pillar_gitfs', str(idx))
-                    pillar_dir = os.path.normpath(os.path.join(
-                        working_dir, _dir))
-
-                    self.opts['pillar_roots'][br] = pillar_dir
-
-                p = git_pillar.GitPillar(br, loc, self.opts)
-                pillargitfs.append(p)
+                br, loc = opts_dict['git'].strip().split()
+                pillargitfs.append(git_pillar.GitPillar(br, loc, self.opts))
 
         # Clear remote fileserver backend env cache so it gets recreated during
         # the first loop_interval
@@ -264,23 +242,13 @@ class Master(SMaster):
                             if not os.path.isfile(jid_file):
                                 # No jid file means corrupted cache entry,
                                 # scrub it
-                                try:
-                                    shutil.rmtree(f_path)
-                                except (os.error, IOError) as exc:
-                                    log.critical('Error while attempting to '
-                                                 'remove an entry from the '
-                                                 'job cache!  {0}'.format(exc))
+                                shutil.rmtree(f_path)
                             else:
                                 with salt.utils.fopen(jid_file, 'r') as fn_:
                                     jid = fn_.read()
                                 if len(jid) < 18:
                                     # Invalid jid, scrub the dir
-                                    try:
-                                        shutil.rmtree(f_path)
-                                    except (os.error, IOError) as exc:
-                                        log.critical('Error while attempting to '
-                                                     'remove an entry from the '
-                                                     'job cache!  {0}'.format(exc))
+                                    shutil.rmtree(f_path)
                                 else:
                                     # Parse the jid into a proper datetime
                                     # object. We only parse down to the minute,
@@ -294,21 +262,11 @@ class Master(SMaster):
                                                                     int(jid[10:12]))
                                     except ValueError as e:
                                         # Invalid jid, scrub the dir
-                                        try:
-                                            shutil.rmtree(f_path)
-                                        except (os.error, IOError) as exc:
-                                            log.critical('Error while attempting to '
-                                                         'remove an entry from the '
-                                                         'job cache!  {0}'.format(exc))
+                                        shutil.rmtree(f_path)
                                     difference = cur - jidtime
-                                    hours_difference = salt.utils.total_seconds(difference) / 3600.0
+                                    hours_difference = difference.seconds / 3600.0
                                     if hours_difference > self.opts['keep_jobs']:
-                                        try:
-                                            shutil.rmtree(f_path)
-                                        except (os.error, IOError) as exc:
-                                            log.critical('Error while attempting to '
-                                                         'remove an entry from the '
-                                                         'job cache!  {0}'.format(exc))
+                                        shutil.rmtree(f_path)
 
             if self.opts.get('publish_session'):
                 if now - rotate >= self.opts['publish_session']:
@@ -979,9 +937,9 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
-        ret = {}
-        # Evaluate all configured master_tops interfaces
 
+        # Evaluate all configured master_tops interfaces
+        ret = {}
         opts = {}
         grains = {}
         if 'opts' in load:

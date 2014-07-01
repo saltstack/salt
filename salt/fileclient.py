@@ -813,6 +813,39 @@ class LocalClient(Client):
         '''
         return self.opts
 
+    def ext_nodes(self):
+        '''
+        Return the metadata derived from the external nodes system on the local
+        system
+        '''
+        if not self.opts['external_nodes']:
+            return {}
+        if not salt.utils.which(self.opts['external_nodes']):
+            log.error(('Specified external nodes controller {0} is not'
+                       ' available, please verify that it is installed'
+                       '').format(self.opts['external_nodes']))
+            return {}
+        cmd = '{0} {1}'.format(self.opts['external_nodes'], self.opts['id'])
+        ndata = yaml.safe_load(subprocess.Popen(
+                               cmd,
+                               shell=True,
+                               stdout=subprocess.PIPE
+                               ).communicate()[0])
+        ret = {}
+        if 'environment' in ndata:
+            saltenv = ndata['environment']
+        else:
+            saltenv = 'base'
+
+        if 'classes' in ndata:
+            if isinstance(ndata['classes'], dict):
+                ret[saltenv] = list(ndata['classes'])
+            elif isinstance(ndata['classes'], list):
+                ret[saltenv] = ndata['classes']
+            else:
+                return ret
+        return ret
+
 
 class RemoteClient(Client):
     '''
@@ -820,8 +853,8 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        channel = salt.transport.Channel.factory(self.opts)
-        if channel.ttype == 'zeromq':
+        self.channel = salt.transport.Channel.factory(self.opts)
+        if self.channel.ttype == 'zeromq':
             self.auth = salt.crypt.SAuth(opts)
         else:
             self.auth = ''
@@ -1112,6 +1145,31 @@ class RemoteClient(Client):
             channel = salt.transport.Channel.factory(
                     self.opts,
                     auth=self.auth)
+            return channel.send(load)
+        except SaltReqTimeoutError:
+            return ''
+
+    def _get_channel(self):
+        '''
+        Return the right channel
+        '''
+        if self.auth:
+            return self.channel
+
+        return salt.transport.Channel.factory(self.opts)
+
+    def ext_nodes(self):
+        '''
+        Return the metadata derived from the external nodes system on the
+        master.
+        '''
+        load = {'cmd': '_ext_nodes',
+                'id': self.opts['id'],
+                'opts': self.opts}
+        if self.auth:
+            load['tok'] = self.auth.gen_token('salt')
+        try:
+            channel = self._get_channel()
             return channel.send(load)
         except SaltReqTimeoutError:
             return ''
