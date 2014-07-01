@@ -1017,8 +1017,12 @@ class Login(LowDataAdapter):
 
         # Grab eauth config for the current backend for the current user
         try:
-            perms = self.opts['external_auth'][token['eauth']][token['name']]
-        except (AttributeError, IndexError):
+            eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
+            perms = eauth.get(token['name'], eauth.get('*'))
+
+            if perms is None:
+                raise ValueError("Eauth permission list not found.")
+        except (AttributeError, IndexError, KeyError, ValueError):
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)
