@@ -36,6 +36,8 @@ class AuthTest(integration.ShellCase):
         # This is a little wasteful but shouldn't be a problem
         self.run_call('user.add saltdev createhome=False')
 
+    @destructiveTest
+    @skipIf(is_root, 'You must be logged in as root to run this test')
     def tearDown(self):
         self.run_call('user.delete saltdev')
 
