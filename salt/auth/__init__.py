@@ -76,9 +76,9 @@ class LoadAuth(object):
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception as exc:
-            err = 'Authentication module threw an exception: {0}'.format(exc)
-            log.critical(err)
+        except Exception:
+            err = 'Authentication module threw an exception: '
+            log.critical(err, exc_info=True)
             return False
 
     def time_auth(self, load):
