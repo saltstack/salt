@@ -217,6 +217,20 @@ def envs(branch, repo_location):
     return gitpil.envs()
 
 
+def _extract_key_val(kv, delim='='):
+    '''Extract key and value from key=val string.
+
+    Example:
+    >>> _extract_key_val('foo=bar')
+    ('foo', 'bar')
+    '''
+    delim = '='
+    pieces = kv.split(delim)
+    key = pieces[0]
+    val = delim.join(pieces[1:])
+    return key, val
+
+
 def _get_pillars_root_dir(parts, delim='='):
     '''
     Return the directory name from git repo to update pillars
@@ -237,30 +251,49 @@ def _get_pillars_root_dir(parts, delim='='):
     return _dir
 
 
-def ext_pillar(minion_id, pillar, repo_string):
+def ext_pillar(minion_id,
+               repo_string,
+               pillar_dirs):
     '''
     Execute a command and read the output as YAML
     '''
-    # split the branch and repo name
-    parts = repo_string.strip().split()
+    if pillar_dirs is None:
+        return
+    # split the branch, repo name and optional extra (key=val) parameters.
+    options = repo_string.strip().split()
+    branch = options[0]
+    repo_location = options[1]
+    root = ''
 
-    try:
-        branch = parts[0]
-        repo_location = parts[1]
-    except IndexError:
-        log.error("Unable to extract git branch and repo_location: %s",
-                  "".join(parts))
+    for extraopt in options[2:]:
+        # Support multiple key=val attributes as custom parameters.
+        DELIM = '='
+        if DELIM not in extraopt:
+            log.error('Incorrectly formatted extra parameter. '
+                      'Missing {0!r}: {1}'.format(DELIM, extraopt))
+        key, val = _extract_key_val(extraopt, DELIM)
+        if key == 'root':
+            root = val
+        else:
+            log.warning('Unrecognized extra parameter: {0}'.format(key))
 
-    root = _get_pillars_root_dir(parts[2:])
     gitpil = GitPillar(branch, repo_location, __opts__)
-
-    pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
 
     # environment is "different" from the branch
     branch = (branch == 'master' and 'base' or branch)
 
-    # Don't recurse forever-- the Pillar object will re-call
-    # the ext_pillar function
+    # normpath is needed to remove appended '/' if root is empty string.
+    pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
+
+    pillar_dirs.setdefault(pillar_dir, {})
+
+    if pillar_dirs[pillar_dir].get(branch, False):
+        return {}  # we've already seen this combo
+
+    pillar_dirs[pillar_dir].setdefault(branch, True)
+
+    # Don't recurse forever-- the Pillar object will re-call the ext_pillar
+    # function
     if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
         return {}
 
