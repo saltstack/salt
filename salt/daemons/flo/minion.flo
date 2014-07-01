@@ -11,6 +11,7 @@ framer minionudpstack be active first setup
     frame setup
         enter
             do load modules
+        go manorsetup
     frame manorsetup
         enter
             do salt manor lane setup
