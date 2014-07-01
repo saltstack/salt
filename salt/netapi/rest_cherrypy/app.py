@@ -369,6 +369,7 @@ def urlencoded_processor(entity):
     # First call out to CherryPy's default processor
     cherrypy._cpreqbody.process_urlencoded(entity)
     cherrypy.serving.request.unserialized_data = entity.params
+    cherrypy.serving.request.raw_body = ''
 
 
 @process_request_body
@@ -384,6 +385,8 @@ def json_processor(entity):
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
+    cherrypy.serving.request.raw_body = body
+
 
 @process_request_body
 def yaml_processor(entity):
@@ -397,6 +400,8 @@ def yaml_processor(entity):
         cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
     except ValueError:
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
+
+    cherrypy.serving.request.raw_body = body
 
 
 @process_request_body
@@ -414,6 +419,8 @@ def text_processor(entity):
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError:
         cherrypy.serving.request.unserialized_data = body
+
+    cherrypy.serving.request.raw_body = body
 
 
 def hypermedia_in():
@@ -1586,9 +1593,11 @@ class Webhook(object):
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.unserialized_data
+        raw_body = cherrypy.serving.request.raw_body
         headers = dict(cherrypy.request.headers)
 
         ret = self.event.fire_event({
+            'body': raw_body,
             'post': data,
             'headers': headers,
         }, tag)
