@@ -1464,7 +1464,7 @@ def request_instance(vm_=None, call=None):
                 ] = str(set_del_root_vol_on_destroy).lower()
 
     set_del_all_vols_on_destroy = config.get_cloud_config_value(
-        'del_all_vols_on_destroy', vm_, __opts__, search_global=False
+        'del_all_vols_on_destroy', vm_, __opts__, search_global=False, default=False
     )
 
     if set_del_all_vols_on_destroy is not None:
