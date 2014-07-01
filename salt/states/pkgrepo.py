@@ -276,7 +276,7 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        if __grains__['os_family'] == 'Debain':
+        if __grains__['os_family'] == 'Debian':
             __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
         else:
             __salt__['pkg.mod_repo'](**kwargs)
