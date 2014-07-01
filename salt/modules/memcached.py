@@ -3,7 +3,7 @@
 Module for Management of Memcached Keys
 =======================================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 '''
 
 # Import python libs
