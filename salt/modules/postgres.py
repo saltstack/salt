@@ -482,7 +482,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         log.error('Could not retrieve Postgres version. Is Postgresql server running?')
         return False
 
-    query = (
+    # will return empty string if return_password = False
+    _x = lambda s: s if return_password else ''
+
+    query = ([
         'SELECT '
         'pg_roles.rolname as "name",'
         'pg_roles.rolsuper as "superuser", '
@@ -495,12 +498,12 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables", '
-        'COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '
+        , _x('COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
         'FROM pg_roles '
-        'LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid '
-        'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
+        , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
+        , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
         .format(replication_column)
-    )
+    ].join(''))
 
     rows = psql_query(query,
                       runas=runas,
@@ -589,7 +592,7 @@ def user_exists(name,
                  maintenance_db=maintenance_db,
                  password=password,
                  runas=runas,
-                 return_password=True))
+                 return_password=False))
 
 
 def _add_role_flag(string,
