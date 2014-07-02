@@ -6,6 +6,8 @@
 
 # Import python libs
 import os
+import pwd
+import random
 
 # Import Salt Testing libs
 from salttesting.helpers import (
@@ -18,8 +20,6 @@ import integration
 
 from salttesting import skipIf
 
-import random
-import pwd
 
 
 class AuthTest(integration.ShellCase):
