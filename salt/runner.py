@@ -233,6 +233,53 @@ class RunnerClient(object):
                 raise_error(**ret['error'])
         return ret
 
+    def cmd_async(self, low):
+        '''
+        Execute a runner function asynchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized to execute runner functions: (``@runner``).
+
+        .. code-block:: python
+
+            runner.eauth_async({
+                'fun': 'jobs.list_jobs',
+                'username': 'saltdev',
+                'password': 'saltdev',
+                'eauth': 'pam',
+            })
+        '''
+        return self.master_call(**low)
+
+    def cmd_sync(self, low):
+        '''
+        Execute a runner function synchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized to execute runner functions: (``@runner``).
+
+        .. code-block:: python
+
+            runner.eauth_sync({
+                'fun': 'jobs.list_jobs',
+                'username': 'saltdev',
+                'password': 'saltdev',
+                'eauth': 'pam',
+            })
+        '''
+        sevent = salt.utils.event.get_event('master', self.opts['sock_dir'],
+                self.opts['transport'])
+        job = self.master_call(**low)
+        ret_tag = tagify('ret', base=job['tag'])
+
+        while True:
+            ret = sevent.get_event(full=True)
+            if ret is None:
+                continue
+
+            if ret['tag'] == ret_tag:
+                return ret['data']['return']
+
 
 class Runner(RunnerClient):
     '''
