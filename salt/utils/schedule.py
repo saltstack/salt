@@ -151,6 +151,12 @@ except ImportError:
     _WHEN_SUPPORTED = False
     _RANGE_SUPPORTED = False
 
+try:
+    import croniter
+    _CRON_SUPPORTED = True
+except ImportError:
+    _CRON_SUPPORTED = False
+
 # Import Salt libs
 import salt.utils
 import salt.utils.process
@@ -448,7 +454,6 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self.option('schedule')
-        #log.debug('calling eval {0}'.format(schedule))
         if not isinstance(schedule, dict):
             return
         if 'enabled' in schedule and not schedule['enabled']:
@@ -479,18 +484,25 @@ class Schedule(object):
             # Add up how many seconds between now and then
             when = 0
             seconds = 0
+            cron = 0
 
             time_conflict = False
             for item in ['seconds', 'minutes', 'hours', 'days']:
                 if item in data and 'when' in data:
                     time_conflict = True
+                if item in data and 'cron' in data:
+                    time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
+                log.error('Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.  Ignoring.')
                 continue
 
-            # clean this up
-            if 'seconds' in data or 'minutes' in data or 'hours' in data or 'days' in data:
+            if 'when' in data and 'cron' in data:
+                log.error('Unable to use "when" and "cron" options together.  Ignoring.')
+                continue
+
+            time_elements = ['seconds', 'minutes', 'hours', 'days']
+            if True in [True for item in time_elements if item in data]:
                 # Add up how many seconds between now and then
                 seconds += int(data.get('seconds', 0))
                 seconds += int(data.get('minutes', 0)) * 60
@@ -570,8 +582,21 @@ class Schedule(object):
                         data['_when'] = when
                         data['_when_run'] = True
 
+            elif 'cron' in data:
+                if not _CRON_SUPPORTED:
+                    log.error('Missing python-croniter. Ignoring job {0}'.format(job))
+                    continue
+
+                now = int(datetime.datetime.now().strftime('%s'))
+                try:
+                    cron = int(croniter.croniter(data['cron'], now).get_next())
+                except (ValueError, KeyError):
+                    log.error('Invalid cron string.  Ignoring')
+                    continue
+                seconds = cron - now
             else:
                 continue
+
             # Check if the seconds variable is lower than current lowest
             # loop interval needed. If it is lower then overwrite variable
             # external loops using can then check this variable for how often
@@ -580,20 +605,25 @@ class Schedule(object):
                 self.loop_interval = seconds
             now = int(time.time())
             run = False
+
             if job in self.intervals:
                 if 'when' in data:
                     if now - when >= seconds:
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
+                if 'cron' in data:
+                    if seconds == 1:
+                        run = True
                 else:
                     if now - self.intervals[job] >= seconds:
                         run = True
-
             else:
                 if 'splay' in data:
                     if 'when' in data:
                         log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                    elif 'cron' in data:
+                        log.error('Unable to use "splay" with "cron" option at this time.  Ignoring.')
                     else:
                         data['_seconds'] = data['seconds']
 
@@ -602,6 +632,9 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
+                if 'cron' in data:
+                    if seconds == 1:
+                        run = True
                 else:
                     run = True
 
