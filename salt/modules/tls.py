@@ -169,6 +169,7 @@ def maybe_fix_ssl_version(ca_name):
                     emailAddress=subj.emailAddress,
                     fixmode=True)
 
+
 def _ca_exists(ca_name):
     '''
     Verify whether a Certificate Authority (CA) already exists

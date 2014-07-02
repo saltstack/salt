@@ -21,6 +21,7 @@ from salttesting import skipIf
 import random
 import pwd
 
+
 class AuthTest(integration.ShellCase):
     '''
     Test auth mechanisms
@@ -38,7 +39,6 @@ class AuthTest(integration.ShellCase):
             pwd.getpwnam('saltdev')
         except KeyError:
             self.run_call('user.add saltdev createhome=False')
-
 
     def test_pam_auth_valid_user(self):
         '''

@@ -66,7 +66,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
     Ioinits = {
                 'opts': '.salt.opts',
                 'basedirpath': {'ipath': '.salt.raet.basedirpath',
-                                'ival': '',},
+                                'ival': ''}
             }
 
     def postinitio(self):
@@ -74,7 +74,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         Initialize value of data store share for .salt.raet.basedirpath
         Will override if empty value
         '''
-        if not self.basedirpath.value: # override if empty
+        if not self.basedirpath.value:  # override if empty
             self.basedirpath.value = os.path.abspath(
                     os.path.join(self.opts.value['cachedir'], 'raet'))
 
@@ -105,7 +105,6 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     shutil.rmtree(dirpath)
 
 
-
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -129,7 +128,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
-                               'prikey': None,}},
+                               'prikey': None}},
             'basedirpath': {'ipath': '.salt.raet.basedirpath',
                             'ival': ''},
             }
@@ -159,7 +158,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
-        basedirpath = self.basedirpath.value # must be assigned elsewhere
+        basedirpath = self.basedirpath.value  # must be assigned elsewhere
 
         local = LocalEstate(
                 eid=eid,
@@ -186,7 +185,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                 period=3.0,
                 offset=0.5)
 
-class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+
+class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
     '''
     Closes stack server socket connection
     FloScript:
@@ -581,7 +581,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                                    'yid': 0,
                                    'lanename': 'master'}},
                'basedirpath': {'ipath': '.salt.raet.basedirpath',
-                               'ival': '',},
+                               'ival': ''}
             }
 
     def postinitio(self):
@@ -589,7 +589,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         Set up required objects and queues
         '''
         pass
-
 
     def action(self):
         '''
@@ -599,7 +598,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         localname = self.opts.value.get('id', self.local.data.localname)
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
-        basedirpath = self.basedirpath.value # must be assigned elsewhere
+        basedirpath = self.basedirpath.value  # must be assigned elsewhere
 
         #os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
         self.stack.value = LaneStack(
