@@ -4,13 +4,11 @@
 
 Provides access to randomness generators.
 '''
-
 # Import python libs
-import base64
 import hashlib
-import os
 
 # Import salt libs
+import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 
 # Define the module's virtual name
@@ -24,62 +22,98 @@ def __virtual__():
     return __virtualname__
 
 
-def encode(value, encoder='sha256'):
+def hash(value, algorithm='sha512'):
     '''
     .. versionadded:: Helium
 
     Encodes a value with the specified encoder.
 
     value
-        The value to be encoded.
+        The value to be hashed.
 
-    encoder : sha256
-        The encoder to use. May be any valid algorithm supported by hashlib or
-        ``base64``.
+    algorithm : sha512
+        The algorithm to use. May be any valid algorithm supported by
+        hashlib.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' random.encode 'I am a string' md5
+        salt '*' random.hash 'I am a string' md5
     '''
-    if encoder == 'base64':
-        out = base64.b64encode(value)
-    elif encoder in hashlib.algorithms:
-        hasher = hashlib.new(encoder)
+    if algorithm in hashlib.algorithms:
+        hasher = hashlib.new(algorithm)
         hasher.update(value)
         out = hasher.hexdigest()
     else:
-        raise SaltInvocationError('You must specify a valid encoder.')
+        raise SaltInvocationError('You must specify a valid algorithm.')
 
     return out
 
 
-def urandom(length=256, encoder=None):
+def str_encode(value, encoder='base64'):
     '''
     .. versionadded:: Helium
 
-    Returns a random string of the specified length, optionally encoded. The
-    truncation takes place prior to encoding so final output may be larger or
-    smaller according to the encoder output.
+    value
+        The value to be encoded.
 
-    length : 256
-        Any valid number of bytes.
-
-    encoder : None
-        An optional encoder. May be any valid algorithm supported by haslib
-        or ``base64``.
+    encoder : base64
+        The encoder to use on the subsequent string.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' random.get 128 sha512
+        salt '*' random.str_encode 'I am a new string' base64
     '''
+    try:
+        out = value.encode(encoder)
+    except LookupError:
+        raise SaltInvocationError('You must specify a valid encoder')
+    except AttributeError:
+        raise SaltInvocationError('Value must be an encode-able string')
 
-    rand = os.urandom(length)
+    return out
 
-    if encoder is not None:
-        rand = encode(rand, encoder)
 
-    return rand
+def get_str(length=20):
+    '''
+    .. versionadded:: Helium
+
+    Returns a random string of the specified length.
+
+    length : 20
+        Any valid number of bytes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' random.get_str 128
+    '''
+    return salt.utils.pycrypto.secure_password(length)
+
+
+def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
+    '''
+    Generates a salted hash suitable for /etc/shadow.
+
+    crypt_salt : None
+        Salt to be used in the generation of the hash. If one is not
+        provided, a random salt will be generated.
+
+    password : None
+        Value to be salted and hashed. If one is not provided, a random
+        password will be generated.
+
+    algorithm : sha512
+        Hash algorithm to use.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' random.shadow_hash 'My5alT' 'MyP@asswd' md5
+    '''
+    return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
