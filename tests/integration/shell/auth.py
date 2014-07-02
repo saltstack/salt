@@ -84,6 +84,7 @@ class AuthTest(integration.ShellCase):
         if pwd.getpwnam('saltdev'):
             self.run_call('user.delete saltdev')
 
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(AuthTest)
