@@ -495,6 +495,42 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     return True
 
 
+def register_instances(name, instances, region=None, key=None, keyid=None,
+                       profile=None):
+    '''
+    Register instances with an ELB.  Instances is either a string
+    instance id or a list of string instance id's.
+
+    CLI example to set attributes on an ELB::
+
+        salt myminion boto_elb.register_instances myelb instance_id
+        salt myminion boto_elb.register_instances myelb "[instance_id,instance_id]"
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    elb = conn.get_all_load_balancers(name)[0]
+    return elb.register_instances(instances)
+
+
+def deregister_instances(name, instances, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Deregister instances with an ELB.  Instances is either a string
+    instance id or a list of string instance id's.
+
+    CLI example to set attributes on an ELB::
+
+        salt myminion boto_elb.deregister_instances myelb instance_id
+        salt myminion boto_elb.deregister_instances myelb "[instance_id,instance_id]"
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    elb = conn.get_all_load_balancers(name)[0]
+    return elb.deregister_instances(instances)
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to ELB.
