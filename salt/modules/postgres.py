@@ -74,7 +74,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
     kwargs = {
         'reset_system_locale': False,
         'clean_env': True,
-    }
+        }
     if runas is None:
         if not host:
             host = __salt__['config.option']('postgres.host')
@@ -100,7 +100,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
                 port if port else '*',
                 user if user else '*',
                 password,
-            ))
+                ))
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
@@ -156,7 +156,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
         maintenance_db=maintenance_db,
         password=password,
         runas=runas,
-    )
+        )
 
     if psql_version:
         return distutils.version.LooseVersion(psql_version)
@@ -372,7 +372,7 @@ def db_create(name,
         'LC_COLLATE': lc_collate and '{0!r}'.format(lc_collate),
         'LC_CTYPE': lc_ctype and '{0!r}'.format(lc_ctype),
         'TABLESPACE': tablespace,
-    }
+        }
     with_chunks = []
     for key, value in with_args.iteritems():
         if value is not None:
@@ -656,15 +656,15 @@ def _role_cmd_args(name,
     skip_passwd = False
     escaped_password = ''
     if not (
-        rolepassword is not None
-        # first is passwd set
-        # second is for handling NOPASSWD
-        and (
-            isinstance(rolepassword, string_types) and bool(rolepassword)
-        )
-        or (
-            isinstance(rolepassword, bool)
-        )
+                        rolepassword is not None
+                # first is passwd set
+                # second is for handling NOPASSWD
+                and (
+                            isinstance(rolepassword, string_types) and bool(rolepassword)
+                )
+            or (
+                    isinstance(rolepassword, bool)
+            )
     ):
         skip_passwd = True
     if isinstance(rolepassword, string_types) and bool(rolepassword):
@@ -1145,17 +1145,17 @@ def create_metadata(name,
     if installed_ext:
         ret = [_EXTENSION_INSTALLED]
         if (
-            ext_version is not None
-            and _pg_is_older_ext_ver(
-                installed_ext.get('extversion', ext_version),
-                ext_version
-            )
+                        ext_version is not None
+                and _pg_is_older_ext_ver(
+                        installed_ext.get('extversion', ext_version),
+                        ext_version
+                )
         ):
             ret.append(_EXTENSION_TO_UPGRADE)
         if (
-            schema is not None
-            and installed_ext.get('extrelocatable', 'f') == 't'
-            and installed_ext.get('schema_name', schema) != schema
+                            schema is not None
+                    and installed_ext.get('extrelocatable', 'f') == 't'
+                and installed_ext.get('schema_name', schema) != schema
         ):
             ret.append(_EXTENSION_TO_MOVE)
     return ret
