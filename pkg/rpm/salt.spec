@@ -31,6 +31,7 @@ Source5: %{name}-master.service
 Source6: %{name}-syndic.service
 Source7: %{name}-minion.service
 Source8: README.fedora
+Source9: logrotate.salt
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -161,6 +162,7 @@ install -p -m 0644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
 %endif
 
 install -p %{SOURCE8} .
+install -p %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/salt
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
