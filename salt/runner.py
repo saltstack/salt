@@ -203,7 +203,7 @@ class RunnerClient(object):
                 target=self._proc_runner,
                 args=(fun, low, user, tag, jid))
         proc.start()
-        return {'tag': tag}
+        return {'tag': tag, 'jid': jid}
 
     def master_call(self, **kwargs):
         '''
