@@ -10,10 +10,9 @@ caused by what situation. It will not go into the details of any setup
 procedure required.
 
 For how to install the saltmaster and get everything up and running, please
-go here:
-http://docs.saltstack.com/topics/installation/index.html
+go here: `Installing saltstack <http://docs.saltstack.com/topics/installation/index.html>`_
 
-.. note::
+    Note
     This tutorial is not intended for users with less than a thousand minions.
     Even though it can not hurt, to tune a few settings mentioned in this
     tutorial if the environment consists of less than a thousand minions.
@@ -236,7 +235,7 @@ key-sizes. For example with a 2048 bit key:
 
 With thousands of decrpytions, the amount of time that can be saved on the
 masters end should not be neglected. See here for reference:
-`Pull Request 9235 <https://github.com/saltstack/salt/pull/9235>>`_ how much
+`Pull Request 9235 <https://github.com/saltstack/salt/pull/9235>`_ how much
 influence the key-size can have.
 
 Downsizing the salt-masters key is not that important, because the minions
