@@ -244,11 +244,13 @@ Downsizing the salt-masters key is not that important, because the minions
 do not encrypt as many messages as the master does.
 
 The master has slow disks
+-------------------------
 By default, the master saves every minions return for every job in its
 job-cache. The cache can then be used later, to lookup results for previous
 jobs. The default directory for this is:
 
 .. code-block:: yaml
+
     cachedir: /var/cache/salt
 
 and then in the ``/proc`` directory.
@@ -263,7 +265,7 @@ directory can grow immensly, depending on the number of published jobs and if
 was raised to have a longer job-history than 24 hours. Saving the files is
 not that expensive, but cleaning up can be over time.
 
-.. code-block: math
+.. code-block:: math
     
     250 jobs/day * 2000 minions returns = 500.000 files a day
 
@@ -274,14 +276,17 @@ If no job history is needed, the job cache can be disabled:
    job_cache: False
 
 
-If a permanent job cache is required, there are currently not too many
+For legal reasons, it might be required, that there is a permanent job-cache
+for a certain amount of time. If thats the case, there are currently only two
 alternatives.
 
-- Use returners and disable the job-cache
-- Use salt-eventsd and disable the job-cache
+- use returners and disable the job-cache
+- use salt-eventsd and disable the job-cache
 
 The first one has the disadvantage of losing the encryption used by salt
 unless the returner implements it.
 
 The second one is not part of the official salt environment and therefore
 not broadly known on the mailing list or by the core salt-developers.
+
+`salt-eventsd on github <https://github.com/felskrone/salt/salt-eventsd>`_
