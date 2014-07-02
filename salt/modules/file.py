@@ -2444,19 +2444,24 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
 
     # Mode changes if needed
     if mode is not None:
-        mode = __salt__['config.manage_mode'](mode)
-        if mode != perms['lmode']:
-            if __opts__['test'] is True:
-                ret['changes']['mode'] = mode
-            else:
-                set_mode(name, mode)
-                if mode != __salt__['config.manage_mode'](get_mode(name)):
-                    ret['result'] = False
-                    ret['comment'].append(
-                        'Failed to change mode to {0}'.format(mode)
-                    )
-                else:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            mode = __salt__['config.manage_mode'](mode)
+            if mode != perms['lmode']:
+                if __opts__['test'] is True:
                     ret['changes']['mode'] = mode
+                else:
+                    set_mode(name, mode)
+                    if mode != __salt__['config.manage_mode'](get_mode(name)):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change mode to {0}'.format(mode)
+                        )
+                    else:
+                        ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if user != perms['luser']:
