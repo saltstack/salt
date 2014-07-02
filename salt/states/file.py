@@ -1830,13 +1830,6 @@ def recurse(name,
         'comment': {}  # { path: [comment, ...] }
     }
 
-    try:
-        source = source.rstrip('/')
-    except AttributeError:
-        ret['result'] = False
-        ret['comment'] = '\'source\' parameter must be a string'
-        return ret
-
     if 'mode' in kwargs:
         ret['result'] = False
         ret['comment'] = (
@@ -1887,12 +1880,33 @@ def recurse(name,
                               .format(precheck))
             return ret
 
+    if isinstance(source, list):
+        sources = source
+    else:
+        sources = [source]
+
+    try:
+        for idx, val in enumerate(sources):
+            sources[idx] = val.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter(s) must be a string'
+        return ret
+
     # If source is a list, find which in the list actually exists
     try:
-        source, source_hash = __salt__['file.source_list'](source, '', __env__)
+        source, source_hash = __salt__['file.source_list'](sources, '', __env__)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = 'Recurse failed: {0}'.format(exc)
+        return ret
+
+    try:
+        for idx, val in enumerate(sources):
+            sources[idx] = val.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter must be a string'
         return ret
 
     # Check source path relative to fileserver root, make sure it is a
