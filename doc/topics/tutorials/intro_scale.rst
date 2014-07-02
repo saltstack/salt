@@ -67,7 +67,7 @@ at once, this can already cause a TCP-SYN-flood on the master. This can be
 easily avoided by not starting too many minions at once. This is rarely a
 problem though.
 
-It is much more like to happen, that if many minions have already made their
+It is much more likely to happen, that if many minions have already made their
 first connection to the master and wait for their key to be accepted, they
 check in every 10 seconds (conf_minion:`acceptance_wait_time`). With the
 default of 10 seconds and a thousand minions, thats about 100 minions
@@ -95,14 +95,14 @@ This is most likely to happen in the testing phase, when all minion keys have
 already been accepted, the framework is being tested and parameters change
 frequently in the masters configuration file.
 
-Upon a service restart, the salt-master generates a new key-pair to encrypt
-its publications with, but the minions dont yet know about the masters new
-public key. When the first job after the masters restart is published, the
+Upon a service restart, the salt-master generates a new AES-key to encrypt
+its publications with, but the minions don't yet know about the masters new
+AES-key. When the first job after the masters restart is published, the
 minions realize, that they have received a publication they can not decrypt
 and try to re-auth themselves on the master.
 
-Because all minions always receive all publications, every single one who
-can not decrypt the publication, will try to re-auth immediately, causing
+Because all minions always receive all publications, every single minion who
+can not decrypt a/the publication, will try to re-auth immediately, causing
 thousands of minions trying to re-auth at once. This can be avoided by
 setting the
 
@@ -119,21 +119,21 @@ settings on the minion side should also be tweaked.
 
 As described before, the master and the minions are permanently connected
 with each other through the publisher on port 4505.  Restarting the salt-master
-service shuts down the socket on the masters end only to bring it back up
-within seconds.
+service shuts down the publishing-socket on the masters only to bring it
+back up within seconds.
 
 This change is detected by the ZeroMQ-socket on the minions end. Not being
-connected does not really matter to the socket or the minion. The socket
-just waits and tries to reconnect and the minion just does not receive
-publications while not being connected.
+connected does not really matter to the minion pull-socket or the minion.
+The pull-socket just waits and tries to reconnect, while the minion just does
+not receive publications while not being connected.
 
-In this situation, its the ZeroMQ-sockets reconnect value (default 100ms)
-that might be too low. With each and every minions socket trying to
+In this situation, its the pull-sockets reconnect value (default 100ms)
+that might be too low. With each and every minions pull-socket trying to
 reconnect within 100ms as soon as the master publisher port comes back up,
 its a piece of cake to cause a syn-flood on the masters publishing port.
 
 To tune the minions sockets reconnect attempts, there are a few values in
-the sample configuration file.
+the sample configuration file (default values)
 
 .. code-block:: yaml
 
@@ -143,22 +143,21 @@ the sample configuration file.
 
 
 - recon_default: the default value the socket should use, i.e. 100ms
-- recon_max: the max value that the socket should use as a delay before
-trying to reconnect
+- recon_max: the max value that the socket should use as a delay before trying to reconnect
 - recon_randomize: enables randomization between recon_default and recon_max
 
 To tune this values to an existing environment, a few decision have to be made.
 
 
-How long can one wait, before the minions should be back online and reachable
+1. How long can one wait, before the minions should be back online and reachable
 with salt?
-How many reconnects can my master handle without detecting a syn flood?
+2. How many reconnects can the master handle without detecting a syn flood?
 
 These questions can not be answered generally. Their answers highly depend
 on the hardware and the administrators requirements.
 
 Here is an example scenario with the goal, to have all minions reconnect
-within a 60 second timeframe on a disconnect.
+within a 60 second time-frame on a salt-master service restart.
 
 .. code-block:: yaml
 
