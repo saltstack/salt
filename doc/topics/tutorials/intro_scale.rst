@@ -149,8 +149,7 @@ the sample configuration file (default values)
 To tune this values to an existing environment, a few decision have to be made.
 
 
-1. How long can one wait, before the minions should be back online and reachable
-with salt?
+1. How long can one wait, before the minions should be back online and reachable with salt?
 
 2. How many reconnects can the master handle without detecting a syn flood?
 
