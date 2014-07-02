@@ -4,15 +4,15 @@ Multiple Master Failover Tutorial
 
 When using salts default setup, a minion can only work with one single master.
 While this works very nicely with a few hundred minions, it does not provide
-redundancy of any kind on the masters end. 
+redundancy of any kind on the masters end.
 
 For smaller networks with several hundred minions, there is the possibility of
 running a Multi-Master setup, in which a minion connects to a list of masters
 and keeps all connections open. Any master a minion is connected to, can
-can publish commands. 
+can publish commands.
 
 In larger networks with several thousand or more minions, its not always possible
-or desirable, to have all minions connected to two or more masters all the time. 
+or desirable, to have all minions connected to two or more masters all the time.
 What would be more appealing is to have a bunch of masters, and spread the minions
 over all of them evenly. Or if the hardware differs between the masters, have more
 minions on stronger hardware and less on weaker.
@@ -35,9 +35,9 @@ Motivation
 
 The default behaviour of a salt-minion is to connect to a master and accept the masters
 public key after being accepted by the master. The minions saves this masters public
-in its pki-directory. In future communication, the master sends its public key on 
-various occasions and the minions checks it every time with the one, it has saved 
-locally. If this public key ever changes (for example when the master is changed 
+in its pki-directory. In future communication, the master sends its public key on
+various occasions and the minions checks it every time with the one, it has saved
+locally. If this public key ever changes (for example when the master is changed
 without copying the master keys), the minion complains and exits. That means, a minion
 only accepts one single master at a time. Wouldnt it be much nicer, if the minion
 could just jump to the next master if its current master died because of a network or
@@ -90,7 +90,7 @@ The signature of the master public key in master.pub is computed with
 
     master_sign.pem + master.pub + M2Crypto.EVP.sign_update()
 
-This results in binary signature which is then converted to base64 and attached to the 
+This results in binary signature which is then converted to base64 and attached to the
 auth-reply send to the minion.
 
 As said before, the matching public key has to be available for verification. In
@@ -143,14 +143,14 @@ A custom name can be set for the signing key-pair by setting
 
     master_key_sign_name: <name>
 
-The master will then generate that key-pair upon restart and use it for creating the 
+The master will then generate that key-pair upon restart and use it for creating the
 public keys signature attached to the auth-reply.
 
 The computation is done for every auth-request of a minion. If many minions auth very often,
 it is advised to use master_pubkey_signature and master_use_pubkey_signature settings
 described below.
 
-If multiple masters are in use and should sign the auth-replies, the signing key-pair 
+If multiple masters are in use and should sign the auth-replies, the signing key-pair
 master_sign.* has to be copied to each master. Otherwise a minion will fail to verify
 the masters public when connecting to a different master than it did initially. Thats
 because the public keys signature was created with a different signing key-pair.
@@ -175,7 +175,7 @@ When that is done, enable the signature checking in the minions configuration
 .. code-block:: yaml
 
     verify_master_pub_sig: True
-    
+
 and restart the minion. For the first try, the minion should be run in manual debug mode.
 
 
@@ -219,7 +219,7 @@ from the master. That is, for every single auth-attempt which are quite frequent
 just the start of the minion will force the signature to be checked 6 times for various things
 like auth, mine, highstate, etc.
 
-If thats desired, enable the setting 
+If thats desired, enable the setting
 
 
 .. code-block:: yaml
@@ -230,7 +230,7 @@ If thats desired, enable the setting
 Multiple Masters For A Minion
 -----------------------------
 
-Configuring multiple masters on a minion is done by specifying two settings. A list of 
+Configuring multiple masters on a minion is done by specifying two settings. A list of
 masters and what type of master is defined:
 
 .. code-block:: yaml
@@ -246,7 +246,7 @@ masters and what type of master is defined:
 
 
 This tells the minion that all the master above are available for it to connect to.
-When started with this configuration, it will try the master in the order they are 
+When started with this configuration, it will try the master in the order they are
 defined. To randomize that order, set
 
 .. code-block:: yaml
@@ -311,16 +311,18 @@ loss of the connection and log it to its logfile.
 
 .. code-block:: bash
 
-    ADD LOG MSG HERE!
+    [INFO    ] Connection to master 172.16.0.10 lost
+    [INFO    ] Trying to tune in to next master from master-list
 
 
 The minion will then remove the current master from the list and try connecting
 to the next master
 
-
 .. code-block:: bash
 
-    ADD LOG MSG HERE
+    [INFO    ] Removing possibly failed master 172.16.0.10 from list of masters
+    [WARNING ] Master ip address changed from 172.16.0.10 to 172.16.0.11
+    [DEBUG   ] Attempting to authenticate with the Salt Master at 172.16.0.11
 
 
 If everything is configured correctly, the new masters public key will be
@@ -329,7 +331,19 @@ verified successfully
 
 .. code-block:: bash
 
-    ADD LOG MSG HERE
+    [DEBUG   ] Loaded minion key: /etc/salt/pki/minion/minion.pem
+    [DEBUG   ] salt.crypt.verify_signature: Loading public key
+    [DEBUG   ] salt.crypt.verify_signature: Verifying signature
+    [DEBUG   ] Successfully verified signature of master public key with verification public key master_sign.pub
+
+the authentication with the new master is successful
+
+.. code-block:: bash
+
+    [INFO    ] Received signed and verified master pubkey from master 172.16.0.11
+    [DEBUG   ] Decrypting the current master AES key
+    [DEBUG   ] Loaded minion key: /etc/salt/pki/minion/minion.pem
+    [INFO    ] Authentication with master successful!
 
 
 and the minion can be pinged again from its new master.
@@ -351,7 +365,7 @@ That signature can be created with
 
     THIS IS NOT YET IMPLEMENTED. BUT I THINK ITS THE RIGHT PLACE TO PUT IT.
 .. code-block:: bash
-    
+
     $ salt-key --master-pair=master --signing-pair=master_sign --out=master_pubkey_signature
 
 It is a simple text-file with the binary-signature converted to base64. The minion
