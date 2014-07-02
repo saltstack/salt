@@ -114,7 +114,7 @@ in the minions configuration file to a higher value and stagger the amount
 of re-auth attempts. Increasing this value will of course increase the time
 it takes, until all minions are reachable again via salt commands.
 
-But this is only the salt part that requires tuning. The ZeroMQ socket
+But this is not only the salt part that requires tuning. The ZeroMQ socket
 settings on the minion side should also be tweaked.
 
 As described before, the master and the minions are permanently connected
@@ -127,20 +127,19 @@ connected does not really matter to the socket or the minion. The socket
 just waits and tries to reconnect and the minion just does not receive
 publications while not being connected.
 
-In this situation, its the ZeroMQ sockets reconnect attempt default value
-of 100ms that can cause problems. With each and every minions socket trying
-to reconnect within 100ms as soon as the master publisher port comes back up,
-its a piece of cake to cause a syn-flood on the masters port with thousands
-of minions.
+In this situation, its the ZeroMQ-sockets reconnect value (default 100ms)
+that might be too low. With each and every minions socket trying to
+reconnect within 100ms as soon as the master publisher port comes back up,
+its a piece of cake to cause a syn-flood on the masters publishing port.
 
 To tune the minions sockets reconnect attempts, there are a few values in
 the sample configuration file.
 
 .. code-block:: yaml
 
-    recon_default
-    recon_max
-    recon_randomize
+    recon_default: 100ms
+    recon_max: 5000
+    recon_randomize: True
 
 
 - recon_default: the default value the socket should use, i.e. 100ms
@@ -151,16 +150,15 @@ trying to reconnect
 To tune this values to an existing environment, a few decision have to be made.
 
 
-How long can i wait before i need the minions back online and reachable
+How long can one wait, before the minions should be back online and reachable
 with salt?
 How many reconnects can my master handle without detecting a syn flood?
 
 These questions can not be answered generally. Their answers highly depend
-on the hardware and the administrators requirements. Here is an example
-scenario:
+on the hardware and the administrators requirements.
 
-The goal: have all minions reconnect within a 60 second timeframe on
-a disconnect
+Here is an example scenario with the goal, to have all minions reconnect
+within a 60 second timeframe on a disconnect.
 
 .. code-block:: yaml
 
@@ -170,8 +168,8 @@ a disconnect
 
 Each minion will have a randomized reconnect value between 'recon_default'
 and 'recon_default + recon_max', which in this example means between 1000ms
-60000ms (or between 1 and 60 seconds). The generated random-value will be
-doubled after each attempt to reconnect (ZeroMQ default behaviour). 
+and 60000ms (or between 1 and 60 seconds). The generated random-value will
+be doubled after each attempt to reconnect (ZeroMQ default behaviour).
 
 Lets say the generated random value is 11 seconds (or 11000ms).
 
@@ -192,19 +190,21 @@ With a thousand minions this will mean
 
     1000/60 = ~16 
     
-reconnection attempts a second.
+round about 16 connection attempts a second. These values should be altered to
+values that match your environment. Keep in mind though, that it may grow over
+time and that more minions might raise the problem again.
 
 
 Too many minions returning at once
 ==================================
 This can also happen during the testing phase, if all minions are addressed at
-once. Doing a
+once with
 
 .. code-block:: bash
 
     $ salt * test.ping
 
-will cause thousands of minions trying to return their data to the salt-master
+it may cause thousands of minions trying to return their data to the salt-master
 open port 4506. Also causing a syn-flood if the master cant handle that many
 returns at once.
 
@@ -217,6 +217,7 @@ This can be easily avoided with salts batch mode:
 This will only address 50 minions at once while looping through all addressed
 minions.
 
+
 Too little ressources
 =====================
 The masters resources always have to match the environment. There is no way
@@ -224,6 +225,7 @@ to give good advise without knowing the environment the master is supposed to
 run in.  But here are some general tuning tips for different situations:
 
 The master has little CPU-Power
+-------------------------------
 Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096
 bit key-pairs on first start. While the key-size for the master is currently
 not configurable, the minions keysize can be configured with different
