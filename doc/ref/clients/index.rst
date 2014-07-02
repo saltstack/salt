@@ -88,7 +88,7 @@ RunnerClient
 ------------
 
 .. autoclass:: salt.runner.RunnerClient
-    :members:
+    :members: cmd, async, cmd_sync, cmd_async
 
 WheelClient
 -----------

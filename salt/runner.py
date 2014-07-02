@@ -208,18 +208,6 @@ class RunnerClient(object):
     def master_call(self, **kwargs):
         '''
         Execute a runner function through the master network interface (eauth).
-
-        This function requires that :conf_master:`external_auth` is configured
-        and the user is authorized to execute runner functions: (``@runner``).
-
-        .. code-block:: python
-
-            runner.master_call(
-                fun='jobs.list_jobs',
-                username='saltdev',
-                password='saltdev',
-                eauth='pam'
-            )
         '''
         load = kwargs
         load['cmd'] = 'runner'
