@@ -40,7 +40,8 @@ SCHEDULE_CONF = [
         'minutes',
         'hours',
         'days',
-        'enabled'
+        'enabled',
+        'cron'
         ]
 
 
@@ -203,9 +204,17 @@ def build_schedule_item(name, **kwargs):
         if item in kwargs and 'when' in kwargs:
             time_conflict = True
 
+        if item in kwargs and 'cron' in kwargs:
+            time_conflict = True
+
     if time_conflict:
         ret['result'] = False
-        ret['comment'] = 'Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        ret['comment'] = 'Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.'
+        return ret
+
+    if 'when' in kwargs and 'cron' in kwargs:
+        ret['result'] = False
+        ret['comment'] = 'Unable to use "when" and "cron" options together.  Ignoring.'
         return ret
 
     for item in ['seconds', 'minutes', 'hours', 'days']:
@@ -240,7 +249,7 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'returner']:
+    for item in ['range', 'when', 'cron', 'returner']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 
@@ -278,10 +287,17 @@ def add(name, **kwargs):
     for item in ['seconds', 'minutes', 'hours', 'days']:
         if item in kwargs and 'when' in kwargs:
             time_conflict = True
+        if item in kwargs and 'cron' in kwargs:
+            time_conflict = True
 
     if time_conflict:
         ret['result'] = False
-        ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.'
+        return ret
+
+    if 'when' in kwargs and 'cron' in kwargs:
+        ret['result'] = False
+        ret['comment'] = 'Unable to use "when" and "cron" options together.  Ignoring.'
         return ret
 
     _new = build_schedule_item(name, **kwargs)
@@ -321,9 +337,17 @@ def modify(name, **kwargs):
         if item in kwargs and 'when' in kwargs:
             time_conflict = True
 
+        if item in kwargs and 'cron' in kwargs:
+            time_conflict = True
+
     if time_conflict:
         ret['result'] = False
         ret['comment'] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        return ret
+
+    if 'when' in kwargs and 'cron' in kwargs:
+        ret['result'] = False
+        ret['comment'] = 'Unable to use "when" and "cron" options together.  Ignoring.'
         return ret
 
     current_schedule = __opts__['schedule'].copy()

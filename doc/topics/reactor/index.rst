@@ -401,4 +401,4 @@ executed.
 
 Other types can be synced by replacing ``cmd.saltutil.sync_grains`` with
 ``cmd.saltutil.sync_modules``, ``cmd.saltutil.sync_all``, or whatever else
-suits your particular use case.
+suits the intended use case.

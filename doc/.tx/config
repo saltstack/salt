@@ -4544,3 +4544,51 @@ source_file = _build/locale/topics/targeting/ipcidr.pot
 source_lang = en
 source_name = topics/targeting/ipcidr.rst
 
+[salt.ref--modules--all--salt_modules_boto_elasticache]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_elasticache.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_elasticache.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_elasticache.rst
+
+[salt.ref--roster--all--index]
+file_filter = locale/<lang>/LC_MESSAGES/ref/roster/all/index.po
+source_file = _build/locale/ref/roster/all/index.pot
+source_lang = en
+source_name = ref/roster/all/index.rst
+
+[salt.ref--roster--all--salt_roster_flat]
+file_filter = locale/<lang>/LC_MESSAGES/ref/roster/all/salt.roster.flat.po
+source_file = _build/locale/ref/roster/all/salt.roster.flat.pot
+source_lang = en
+source_name = ref/roster/all/salt.roster.flat.rst
+
+[salt.ref--roster--all--salt_roster_scan]
+file_filter = locale/<lang>/LC_MESSAGES/ref/roster/all/salt.roster.scan.po
+source_file = _build/locale/ref/roster/all/salt.roster.scan.pot
+source_lang = en
+source_name = ref/roster/all/salt.roster.scan.rst
+
+[salt.ref--states--all--salt_states_apache_module]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.apache_module.po
+source_file = _build/locale/ref/states/all/salt.states.apache_module.pot
+source_lang = en
+source_name = ref/states/all/salt.states.apache_module.rst
+
+[salt.ref--states--all--salt_states_boto_elasticache]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_elasticache.po
+source_file = _build/locale/ref/states/all/salt.states.boto_elasticache.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_elasticache.rst
+
+[salt.topics--releases--2014_1_6]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.6.po
+source_file = _build/locale/topics/releases/2014.1.6.pot
+source_lang = en
+source_name = topics/releases/2014.1.6.rst
+
+[salt.topics--releases--version_numbers]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/version_numbers.po
+source_file = _build/locale/topics/releases/version_numbers.pot
+source_lang = en
+source_name = topics/releases/version_numbers.rst
+

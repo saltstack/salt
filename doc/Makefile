@@ -142,7 +142,7 @@ latexpdfja: translations
 xetexpdf: translations
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through xelatex..."
-	cd $(BUILDDIR)/latex; xelatex *.tex && xelatex *.tex; cd -
+	cd $(BUILDDIR)/latex; xelatex *.tex && xelatex *.tex && xelatex *.tex; cd -
 	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
 
 text: translations

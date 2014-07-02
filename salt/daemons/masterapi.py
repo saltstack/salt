@@ -642,7 +642,7 @@ class RemoteFuncs(object):
         if the requesting minion also initialted the execution.
         '''
         if not skip_verify and any(key not in load for key in ('jid', 'id')):
-                return {}
+            return {}
         else:
             auth_cache = os.path.join(
                     self.opts['cachedir'],
@@ -652,7 +652,7 @@ class RemoteFuncs(object):
             jid_fn = os.path.join(auth_cache, load['jid'])
             with salt.utils.fopen(jid_fn, 'r') as fp_:
                 if not load['id'] == fp_.read():
-                 return {}
+                    return {}
 
             return self.local.get_cache_returns(load['jid'])
 

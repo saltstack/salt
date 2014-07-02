@@ -115,6 +115,7 @@ class RAETChannel(Channel):
         self.stack.server.close()
         self.stack.clearAllDir()
 
+
 class ZeroMQChannel(Channel):
     '''
     Encapsulate sending routines to ZeroMQ.

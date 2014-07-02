@@ -574,8 +574,9 @@ class Cloud(object):
                 # If driver has function list_nodes_min, just replace it
                 # with query param to check existing vms on this driver
                 # for minimum information, Othwise still use query param.
-                if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                    this_query = 'list_nodes_min'
+                if 'selected_query_option' not in opts:
+                    if '{0}.list_nodes_min'.format(driver) in self.clouds:
+                        this_query = 'list_nodes_min'
                 fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
