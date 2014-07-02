@@ -14,6 +14,7 @@ import multiprocessing
 import traceback
 import itertools
 from collections import deque
+import shutil
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -53,12 +54,61 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class SaltRaetRoadStack(ioflo.base.deeding.Deed):
+class SaltRaetCleanup(ioflo.base.deeding.Deed):
+    '''
+    Cleanup stray lane keep directories not reaped
+
+    FloScript:
+
+    do salt raet cleanup at enter
+
+    '''
+    Ioinits = {
+                'opts': '.salt.opts',
+                'basedirpath': {'ipath': '.salt.raet.basedirpath',
+                                'ival': '',},
+            }
+
+    def postinitio(self):
+        '''
+        Initialize value of data store share for .salt.raet.basedirpath
+        Will override if empty value
+        '''
+        if not self.basedirpath.value: # override if empty
+            self.basedirpath.value = os.path.abspath(
+                    os.path.join(self.opts.value['cachedir'], 'raet'))
+
+    def action(self):
+        '''
+        Should only run once to cleanup stale lane directories.
+        '''
+        basedirpath = self.basedirpath.value
+        if basedirpath:
+            console.concise("Cleaning up {0}\n".format(basedirpath))
+            dirpaths = []
+            prefixes = ['client', 'event', self.opts.value['id']]
+            for name in os.listdir(basedirpath):
+                path = os.path.join(basedirpath, name)
+                if not os.path.isdir(path):
+                    continue
+                for prefix in prefixes:
+                    if name.startswith(prefix) and len(name) == (len(prefix) +  20):
+                        dirpaths.append(path)
+                        break
+
+            for dirpath in dirpaths:
+                if os.path.exists(dirpath):
+                    console.concise("Removing directory {0}\n".format(dirpath))
+                    shutil.rmtree(dirpath)
+
+
+
+class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
     FloScript:
 
-    do salt raet road stack
+    do salt raet road stack setup at enter
 
     '''
     Ioinits = {
@@ -76,24 +126,38 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                                'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
-                               'prikey': None}}
+                               'prikey': None,}},
+            'basedirpath': {'ipath': '.salt.raet.basedirpath',
+                            'ival': ''},
             }
 
     def postinitio(self):
         '''
-        Setup stack instance
+        Assign class defaults
         '''
-        sigkey = self.local.data.sigkey
-        prikey = self.local.data.prikey
+        RoadStack.Bk = raeting.bodyKinds.msgpack
+        RoadStack.JoinentTimeout = 0.0
+
+    def action(self):
+        '''
+        enter action
+        should only run once to setup road stack.
+        moved from postinitio so can do clean up before stack is initialized
+
+        do salt raet road stack setup at enter
+        '''
         name = self.opts.value.get('id', self.local.data.name)
         localname = self.opts.value.get('id', self.local.data.localname)
-        dirpath = os.path.abspath(
-                os.path.join(self.opts.value['cachedir'], 'raet'))
+        sigkey = self.local.data.sigkey
+        prikey = self.local.data.prikey
         auto = self.local.data.auto
         main = self.local.data.main
+        eid = self.local.data.eid
+
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
-        eid = self.local.data.eid
+        basedirpath = self.basedirpath.value # must be assigned elsewhere
+
         local = LocalEstate(
                 eid=eid,
                 name=localname,
@@ -112,22 +176,19 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 localname=localname,
                 auto=auto,
                 main=main,
-                basedirpath=dirpath,
+                basedirpath=basedirpath,
                 safe=safe,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs,
                 period=3.0,
                 offset=0.5)
-        self.stack.value.Bk = raeting.bodyKinds.msgpack
-        self.stack.value.JoinentTimeout = 0.0
-
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
     '''
     Closes stack server socket connection
     FloScript:
 
-    salt raet road stack closer at exit
+    do salt raet road stack closer at exit
 
     '''
     Ioinits = odict(
@@ -497,7 +558,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     Sets of the LaneStack for the main yard
     FloScript:
 
-    do setup at enter
+    do salt manor lane setup at enter
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -515,19 +576,29 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                           'ival': {'name': 'master',
                                    'localname': 'master',
                                    'yid': 0,
-                                   'lanename': 'master'}}
+                                   'lanename': 'master'}},
+               'basedirpath': {'ipath': '.salt.raet.basedirpath',
+                               'ival': '',},
             }
 
     def postinitio(self):
         '''
         Set up required objects and queues
         '''
+        pass
+
+
+    def action(self):
+        '''
+        Run once at enter
+        '''
         name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         localname = self.opts.value.get('id', self.local.data.localname)
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
-        basedirpath = os.path.abspath(
-                os.path.join(self.opts.value['cachedir'], 'raet'))
+        basedirpath = self.basedirpath.value # must be assigned elsewhere
+
+        #os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
         self.stack.value = LaneStack(
                                     name=name,
                                     #localname=localname,
