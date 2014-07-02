@@ -14,6 +14,7 @@ import salt.payload
 import salt.utils
 import salt.exceptions
 from salt.utils.error import raise_error
+from salt.utils.event import tagify
 
 
 class WheelClient(object):
@@ -71,29 +72,6 @@ class WheelClient(object):
     def master_call(self, **kwargs):
         '''
         Execute a wheel function through the master network interface (eauth).
-
-        This function requires that :conf_master:`external_auth` is configured
-        and the user is authorized to execute wheel functions: (``@wheel``).
-
-        .. code-block:: python
-
-            >>> wheel.master_call(**{
-                'fun': 'key.finger',
-                'match': 'jerry',
-                'eauth': 'auto',
-                'username': 'saltdev',
-                'password': 'saltdev',
-            })
-            {'data': {
-                '_stamp': '2013-12-19_22:47:44.427338',
-                'fun': 'wheel.key.finger',
-                'jid': '20131219224744416681',
-                'return': {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}},
-                'success': True,
-                'tag': 'salt/wheel/20131219224744416681',
-                'user': 'saltdev'
-            },
-            'tag': 'salt/wheel/20131219224744416681'}
         '''
         load = kwargs
         load['cmd'] = 'wheel'
@@ -105,5 +83,36 @@ class WheelClient(object):
             if 'error' in ret:
                 raise_error(**ret['error'])
         return ret
+
+    def cmd_sync(self, low):
+        '''
+        Execute a wheel function synchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized to execute runner functions: (``@wheel``).
+
+        .. code-block:: python
+
+            >>> wheel.cmd_sync({
+                'fun': 'key.finger',
+                'match': 'jerry',
+                'eauth': 'auto',
+                'username': 'saltdev',
+                'password': 'saltdev',
+            })
+            {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+        '''
+        sevent = salt.utils.event.get_event('master', self.opts['sock_dir'],
+                self.opts['transport'])
+        job = self.master_call(**low)
+        ret_tag = tagify('ret', base=job['tag'])
+
+        while True:
+            ret = sevent.get_event(full=True)
+            if ret is None:
+                continue
+
+            if ret['tag'] == ret_tag:
+                return ret['data']['return']
 
 Wheel = WheelClient  # for backward-compat
