@@ -17,7 +17,7 @@ What would be more appealing is to have a bunch of masters, and spread the minio
 over all of them evenly. Or if the hardware differs between the masters, have more
 minions on stronger hardware and less on weaker.
 
-This tutorial describes all the settings to make this possible. It will describe:
+This tutorial explains alle the settings to make this possible. It will describe:
 
 - setting up a mutli-master environment without having to copy AES-master-keys back and forth after restarting the salt-master daemon on one of the masters
 - how to enable minions to work with multiple masters without compromising security
@@ -25,9 +25,10 @@ This tutorial describes all the settings to make this possible. It will describe
 - it will show how to limit the number of minions on a master
 - how to have a minion detect that its lost its master and should connect to the next
 
-Please not that it is advised to have good knowledge of the salt-authentication and
-communication-process to understand this tutorial. All of the settings described here,
-go on top of the default authentication/communication.
+    Please note, that it is advised to have good knowledge of the salt-authentication and
+    communication-process to understand this tutorial. All of the settings described here,
+    go on top of the default authentication/communication process.
+
 
 
 Motivation
@@ -53,11 +54,14 @@ a master. To make this theoretical attack impossible, it would be great if the a
 of even the very first public key a minion receives could be verified.
 
 
+
 The Goal
 --------
 
 Setup the master to sign the public key it sends to the minions and enable the
 minions to verify this signature for authenticity.
+
+
 
 How the signing and verification works
 --------------------------------------
@@ -115,6 +119,7 @@ them. But unlike required during the Multimaster-Setup and the AES-key, the sign
 pair only has to be copied once, not after every master-restart.
 
 
+
 Prepping the master to sign its public key
 ------------------------------------------
 
@@ -147,13 +152,14 @@ The master will then generate that key-pair upon restart and use it for creating
 public keys signature attached to the auth-reply.
 
 The computation is done for every auth-request of a minion. If many minions auth very often,
-it is advised to use master_pubkey_signature and master_use_pubkey_signature settings
+it is advised to use conf_master:`master_pubkey_signature` and conf_master:`master_use_pubkey_signature` settings
 described below.
 
 If multiple masters are in use and should sign the auth-replies, the signing key-pair
 master_sign.* has to be copied to each master. Otherwise a minion will fail to verify
 the masters public when connecting to a different master than it did initially. Thats
 because the public keys signature was created with a different signing key-pair.
+
 
 
 Prepping the minion to verify received public keys
@@ -227,6 +233,7 @@ If thats desired, enable the setting
     always_verify_signature: True
 
 
+
 Multiple Masters For A Minion
 -----------------------------
 
@@ -272,6 +279,7 @@ shuffled if thats enabled).
 The master_alive_interval setting can also be used in single-master mode. The minion will then log
 to its logfile that the connection was lost and when it is re-established. Quite useful because
 ZeroMQ does not provide that information to the minion by default.
+
 
 
 Testing the setup
@@ -347,6 +355,7 @@ the authentication with the new master is successful
 
 
 and the minion can be pinged again from its new master.
+
 
 
 Performance Tuning
