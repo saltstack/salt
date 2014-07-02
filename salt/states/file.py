@@ -1429,7 +1429,9 @@ def directory(name,
 
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
-        a list of strings representing what you would like to recurse.
+        a list of strings representing what you would like to recurse.  If
+        'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
+        they are defined.
         Example:
 
         .. code-block:: yaml
@@ -1450,7 +1452,7 @@ def directory(name,
         Windows
 
     file_mode
-        The permissions mode to set any files created if 'mode' is ran in
+        The permissions mode to set any files created if 'mode' is run in
         'recurse'. This defaults to dir_mode. Not supported on Windows
 
     makedirs
