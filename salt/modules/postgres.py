@@ -485,7 +485,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
     # will return empty string if return_password = False
     _x = lambda s: s if return_password else ''
 
-    query = ([
+    query = (''.join([
         'SELECT '
         'pg_roles.rolname as "name",'
         'pg_roles.rolsuper as "superuser", '
@@ -497,13 +497,12 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         '{0} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-        'pg_roles.rolconfig  as "defaults variables", '
-        , _x('COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
+        'pg_roles.rolconfig  as "defaults variables" '
+        , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
         'FROM pg_roles '
         , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
         , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
-        .format(replication_column)
-    ].join(''))
+    ]).format(replication_column))
 
     rows = psql_query(query,
                       runas=runas,
@@ -824,18 +823,17 @@ def _role_update(name,
     '''
     Updates a postgres role.
     '''
-
     role = role_get(name,
-         user=user,
-         host=host,
-         port=port,
-         maintenance_db=maintenance_db,
-         password=password,
-         runas=runas,
-         return_password=False)
+                    user=user,
+                    host=host,
+                    port=port,
+                    maintenance_db=maintenance_db,
+                    password=password,
+                    runas=runas,
+                    return_password=False)
 
     # check if user exists
-    if bool(role):
+    if not bool(role):
         log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
