@@ -40,7 +40,6 @@ class NetapiClient(object):
         '''
         for fun in self.netapi:
             if fun.endswith('.start'):
-
                 self.add_process(fun)
 
         # make sure to kill the subprocesses if the parent is killed
@@ -59,7 +58,6 @@ class NetapiClient(object):
             self.pid_map[pid]['Process'].join(1)
             self.add_process(self.pid_map[pid]['fun'])
             del self.pid_map[pid]
-
 
     def kill_children(self, *args):
         '''
