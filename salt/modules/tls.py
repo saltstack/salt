@@ -43,11 +43,34 @@ def __virtual__():
     return False
 
 
-def _cert_base_path():
+def cert_base_path(cacert_path=None):
     '''
-    Return the base path for certs
+    Return the base path for certs from CLI or from options
+    cacert_path
+        absolute path to ca certificates root directory
     '''
-    return __salt__['config.option']('ca.cert_base_path')
+    if not cacert_path:
+        cacert_path = __salt__['config.option']('ca.contextual_cert_base_path')
+    if not cacert_path:
+        cacert_path = __salt__['config.option']('ca.cert_base_path')
+    return cacert_path
+
+
+def _cert_base_path(cacert_path=None):
+    '''
+    Retrocompatible wrapper
+    '''
+    return cert_base_path(cacert_path)
+
+
+def set_ca_path(cacert_path):
+    '''
+    If wanted, store the aforementionned cacert_path in context
+    to be used as the basepath for further operations
+    '''
+    if cacert_path:
+        __opts__['ca.contextual_cert_base_path'] = cacert_path
+    return cert_base_path()
 
 
 def _new_serial(ca_name, CN):
@@ -83,7 +106,7 @@ def _new_serial(ca_name, CN):
     return hashnum
 
 
-def _write_cert_to_database(ca_name, cert):
+def _write_cert_to_database(ca_name, cert, cacert_path=None):
     '''
     write out the index.txt database file in the appropriate directory to
     track certificates
@@ -92,8 +115,12 @@ def _write_cert_to_database(ca_name, cert):
         name of the CA
     cert
         certificate to be recorded
+    cacert_path
+        absolute path to ca certificates root directory
     '''
-    index_file = "{0}/{1}/index.txt".format(_cert_base_path(), ca_name)
+    set_ca_path(cacert_path)
+    index_file = "{0}/{1}/index.txt".format(cert_base_path(),
+                                            ca_name)
 
     expire_date = cert.get_notAfter()
     serial_number = cert.get_serial_number()
@@ -119,7 +146,7 @@ def _write_cert_to_database(ca_name, cert):
         ofile.write(index_data)
 
 
-def maybe_fix_ssl_version(ca_name):
+def maybe_fix_ssl_version(ca_name, cacert_path=None):
     '''
     Check that the X509 version is correct
     (was incorrectly setted in previous salt versions).
@@ -127,13 +154,15 @@ def maybe_fix_ssl_version(ca_name):
 
     ca_name
         ca authority name
+    cacert_path
+        absolute path to ca certificates root directory
     '''
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-        _cert_base_path(),
+        cert_base_path(),
             ca_name,
             ca_name)
     ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
-        _cert_base_path(), ca_name, ca_name)
+        cert_base_path(), ca_name, ca_name)
     with open(certp) as fic:
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                fic.read())
@@ -170,15 +199,16 @@ def maybe_fix_ssl_version(ca_name):
                     fixmode=True)
 
 
-def _ca_exists(ca_name):
+def ca_exists(ca_name, cacert_path=None):
     '''
     Verify whether a Certificate Authority (CA) already exists
 
     ca_name
         name of the CA
     '''
+    set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            _cert_base_path(),
+            cert_base_path(),
             ca_name,
             ca_name)
     if os.path.exists(certp):
@@ -187,18 +217,48 @@ def _ca_exists(ca_name):
     return False
 
 
-def create_ca(
-        ca_name,
-        bits=2048,
-        days=365,
-        CN='localhost',
-        C='US',
-        ST='Utah',
-        L='Salt Lake City',
-        O='SaltStack',
-        OU=None,
-        emailAddress='xyz@pdq.net',
-        fixmode=False):
+def _ca_exists(ca_name, cacert_path=None):
+    '''Retrocompatible wrapper'''
+    return ca_exists(ca_name, cacert_path)
+
+
+def get_ca(ca_name, as_text=False, cacert_path=None):
+    '''
+    Get the certificate path or content
+
+    ca_name
+        name of the CA
+    as_text
+        if true, return the certificate content instead of the path
+    cacert_path
+        absolute path to ca certificates root directory
+    '''
+    set_ca_path(cacert_path)
+    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+            cert_base_path(),
+            ca_name,
+            ca_name)
+    if not os.path.exists(certp):
+        raise ValueError('Certificate does not exists for {0}'.format(ca_name))
+    else:
+        if as_text:
+            with open(certp) as fic:
+                certp = fic.read()
+    return certp
+
+
+def create_ca(ca_name,
+              bits=2048,
+              days=365,
+              CN='localhost',
+              C='US',
+              ST='Utah',
+              L='Salt Lake City',
+              O='SaltStack',
+              OU=None,
+              emailAddress='xyz@pdq.net',
+              fixmode=False,
+              cacert_path=None):
     '''
     Create a Certificate Authority (CA)
 
@@ -222,6 +282,8 @@ def create_ca(
         organizational unit, default is None
     emailAddress
         email address for the CA owner, default is 'xyz@pdq.net'
+    cacert_path
+        absolute path to ca certificates root directory
 
     Writes out a CA certificate based upon defined config values. If the file
     already exists, the function just returns assuming the CA certificate
@@ -243,11 +305,12 @@ def create_ca(
 
         salt '*' tls.create_ca test_ca
     '''
+    set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-        _cert_base_path(), ca_name, ca_name)
+        cert_base_path(), ca_name, ca_name)
     ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
-        _cert_base_path(), ca_name, ca_name)
-    if (not fixmode) and _ca_exists(ca_name):
+        cert_base_path(), ca_name, ca_name)
+    if (not fixmode) and ca_exists(ca_name):
         return (
             'Certificate for CA named "{0}" '
             'already exists').format(ca_name)
@@ -255,8 +318,11 @@ def create_ca(
     if fixmode and not os.path.exists(certp):
         raise ValueError('{0} does not exists, can\'t fix'.format(certp))
 
-    if not os.path.exists('{0}/{1}'.format(_cert_base_path(), ca_name)):
-        os.makedirs('{0}/{1}'.format(_cert_base_path(), ca_name))
+    if not os.path.exists('{0}/{1}'.format(
+        cert_base_path(), ca_name)
+    ):
+        os.makedirs('{0}/{1}'.format(cert_base_path(),
+                                     ca_name))
 
     # try to reuse existing ssl key
     key = None
@@ -331,24 +397,24 @@ def create_ca(
     _write_cert_to_database(ca_name, ca)
 
     ret = ('Created Private Key: "{1}/{2}/{3}_ca_cert.key." ').format(
-        ca_name, _cert_base_path(), ca_name, ca_name)
+        ca_name, cert_base_path(), ca_name, ca_name)
     ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
-        ca_name, _cert_base_path(), ca_name, ca_name)
+        ca_name, cert_base_path(), ca_name, ca_name)
 
     return ret
 
 
-def create_csr(
-        ca_name,
-        bits=2048,
-        CN='localhost',
-        C='US',
-        ST='Utah',
-        L='Salt Lake City',
-        O='SaltStack',
-        OU=None,
-        emailAddress='xyz@pdq.net',
-        subjectAltName=None):
+def create_csr(ca_name,
+               bits=2048,
+               CN='localhost',
+               C='US',
+               ST='Utah',
+               L='Salt Lake City',
+               O='SaltStack',
+               OU=None,
+               emailAddress='xyz@pdq.net',
+               subjectAltName=None,
+               cacert_path=None):
     '''
     Create a Certificate Signing Request (CSR) for a
     particular Certificate Authority (CA)
@@ -375,6 +441,8 @@ def create_csr(
     subjectAltName
         valid subjectAltNames in full form, eg to add DNS entry you would call
         this function with this value:  **['DNS:myapp.foo.comm']**
+    cacert_path
+        absolute path to ca certificates root directory
 
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
@@ -397,15 +465,21 @@ def create_csr(
 
         salt '*' tls.create_csr test
     '''
+    set_ca_path(cacert_path)
 
-    if not _ca_exists(ca_name):
+    if not ca_exists(ca_name):
         return ('Certificate for CA named "{0}" does not exist, please create '
                 'it first.').format(ca_name)
 
-    if not os.path.exists('{0}/{1}/certs/'.format(_cert_base_path(), ca_name)):
-        os.makedirs("{0}/{1}/certs/".format(_cert_base_path(), ca_name))
+    if not os.path.exists('{0}/{1}/certs/'.format(
+        cert_base_path(),
+        ca_name)
+    ):
+        os.makedirs("{0}/{1}/certs/".format(cert_base_path(),
+                                            ca_name))
 
-    csr_f = '{0}/{1}/certs/{2}.csr'.format(_cert_base_path(), ca_name, CN)
+    csr_f = '{0}/{1}/certs/{2}.csr'.format(cert_base_path(),
+                                           ca_name, CN)
     if os.path.exists(csr_f):
         return 'Certificate Request "{0}" already exists'.format(csr_f)
 
@@ -432,7 +506,8 @@ def create_csr(
 
     # Write private key and request
     priv_key = salt.utils.fopen(
-            '{0}/{1}/certs/{2}.key'.format(_cert_base_path(), ca_name, CN),
+            '{0}/{1}/certs/{2}.key'.format(cert_base_path(),
+                                           ca_name, CN),
             'w+'
             )
     priv_key.write(
@@ -450,13 +525,13 @@ def create_csr(
     csr.close()
 
     ret = 'Created Private Key: "{0}/{1}/certs/{2}.key." '.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )
     ret += 'Created CSR for "{0}": "{1}/{2}/certs/{3}.csr."'.format(
                     ca_name,
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )
@@ -464,18 +539,17 @@ def create_csr(
     return ret
 
 
-def create_self_signed_cert(
-        tls_dir='tls',
-        bits=2048,
-        days=365,
-        CN='localhost',
-        C='US',
-        ST='Utah',
-        L='Salt Lake City',
-        O='SaltStack',
-        OU=None,
-        emailAddress='xyz@pdq.net'):
-
+def create_self_signed_cert(tls_dir='tls',
+                            bits=2048,
+                            days=365,
+                            CN='localhost',
+                            C='US',
+                            ST='Utah',
+                            L='Salt Lake City',
+                            O='SaltStack',
+                            OU=None,
+                            emailAddress='xyz@pdq.net',
+                            cacert_path=None):
     '''
     Create a Self-Signed Certificate (CERT)
 
@@ -498,6 +572,8 @@ def create_self_signed_cert(
         organizational unit, default is None
     emailAddress
         email address for the request, default is 'xyz@pdq.net'
+    cacert_path
+        absolute path to ca certificates root directory
 
     Writes out a Self-Signed Certificate (CERT). If the file already
     exists, the function just returns.
@@ -526,12 +602,15 @@ def create_self_signed_cert(
 
         salt 'minion' tls.create_self_signed_cert CN='test.mysite.org'
     '''
+    set_ca_path(cacert_path)
 
-    if not os.path.exists('{0}/{1}/certs/'.format(_cert_base_path(), tls_dir)):
-        os.makedirs("{0}/{1}/certs/".format(_cert_base_path(), tls_dir))
+    if not os.path.exists('{0}/{1}/certs/'.format(cert_base_path(tls_dir))):
+        os.makedirs("{0}/{1}/certs/".format(cert_base_path(),
+                                            tls_dir))
 
     if os.path.exists(
-            '{0}/{1}/certs/{2}.crt'.format(_cert_base_path(), tls_dir, CN)
+            '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
+                                           tls_dir, CN)
             ):
         return 'Certificate "{0}" already exists'.format(CN)
 
@@ -561,7 +640,8 @@ def create_self_signed_cert(
 
     # Write private key and cert
     priv_key = salt.utils.fopen(
-            '{0}/{1}/certs/{2}.key'.format(_cert_base_path(), tls_dir, CN),
+            '{0}/{1}/certs/{2}.key'.format(cert_base_path(),
+                                           tls_dir, CN),
             'w+'
             )
     priv_key.write(
@@ -570,7 +650,7 @@ def create_self_signed_cert(
     priv_key.close()
 
     crt = salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
-        _cert_base_path(),
+        cert_base_path(),
         tls_dir,
         CN
         ), 'w+')
@@ -585,12 +665,12 @@ def create_self_signed_cert(
     _write_cert_to_database(tls_dir, cert)
 
     ret = 'Created Private Key: "{0}/{1}/certs/{2}.key." '.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     tls_dir,
                     CN
                     )
     ret += 'Created Certificate: "{0}/{1}/certs/{2}.crt."'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     tls_dir,
                     CN
                     )
@@ -598,7 +678,7 @@ def create_self_signed_cert(
     return ret
 
 
-def create_ca_signed_cert(ca_name, CN, days=365):
+def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None):
     '''
     Create a Certificate (CERT) signed by a
     named Certificate Authority (CA)
@@ -615,6 +695,8 @@ def create_ca_signed_cert(ca_name, CN, days=365):
 
     The CN *must* match an existing CSR generated by create_csr. If it
     does not, this method does nothing.
+    cacert_path
+        absolute path to ca certificates root directory
 
     If the following values were set::
 
@@ -633,9 +715,11 @@ def create_ca_signed_cert(ca_name, CN, days=365):
 
         salt '*' tls.create_ca_signed_cert test localhost
     '''
+    set_ca_path(cacert_path)
     if os.path.exists(
-            '{0}/{1}/{2}.crt'.format(_cert_base_path(), ca_name, CN)
-            ):
+            '{0}/{1}/{2}.crt'.format(cert_base_path(),
+                                     ca_name, CN)
+    ):
         return 'Certificate "{0}" already exists'.format(ca_name)
 
     try:
@@ -643,14 +727,14 @@ def create_ca_signed_cert(ca_name, CN, days=365):
         ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name, ca_name
                     )).read()
                 )
         ca_key = OpenSSL.crypto.load_privatekey(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/{2}_ca_cert.key'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     ca_name
                     )).read()
@@ -662,7 +746,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
         req = OpenSSL.crypto.load_certificate_request(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/certs/{2}.csr'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )).read()
@@ -696,7 +780,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     cert.sign(ca_key, 'sha1')
 
     crt = salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
-        _cert_base_path(),
+        cert_base_path(),
         ca_name,
         CN
         ), 'w+')
@@ -713,13 +797,13 @@ def create_ca_signed_cert(ca_name, CN, days=365):
     return ('Created Certificate for "{0}": '
             '"{1}/{2}/certs/{3}.crt"').format(
                     ca_name,
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )
 
 
-def create_pkcs12(ca_name, CN, passphrase=''):
+def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
     '''
     Create a PKCS#12 browser certificate for a particular Certificate (CN)
 
@@ -729,6 +813,8 @@ def create_pkcs12(ca_name, CN, passphrase=''):
         common name matching the certificate signing request
     passphrase
         used to unlock the PKCS#12 certificate when loaded into the browser
+    cacert_path
+        absolute path to ca certificates root directory
 
     If the following values were set::
 
@@ -747,9 +833,10 @@ def create_pkcs12(ca_name, CN, passphrase=''):
 
         salt '*' tls.create_pkcs12 test localhost
     '''
+    set_ca_path(cacert_path)
     if os.path.exists(
             '{0}/{1}/certs/{2}.p12'.format(
-                _cert_base_path(),
+                cert_base_path(),
                 ca_name,
                 CN)
             ):
@@ -759,7 +846,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
         ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     ca_name
                     )).read()
@@ -771,7 +858,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
         cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )).read()
@@ -779,7 +866,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
         key = OpenSSL.crypto.load_privatekey(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/certs/{2}.key'.format(
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )).read()
@@ -794,7 +881,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     pkcs12.set_privatekey(key)
 
     with salt.utils.fopen('{0}/{1}/certs/{2}.p12'.format(
-        _cert_base_path(),
+        cert_base_path(),
         ca_name,
         CN
         ), 'w') as ofile:
@@ -803,7 +890,7 @@ def create_pkcs12(ca_name, CN, passphrase=''):
     return ('Created PKCS#12 Certificate for "{0}": '
             '"{1}/{2}/certs/{3}.p12"').format(
                     CN,
-                    _cert_base_path(),
+                    cert_base_path(),
                     ca_name,
                     CN
                     )
