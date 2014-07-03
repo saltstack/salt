@@ -6,6 +6,7 @@ The main entry point for salt-api
 import logging
 import multiprocessing
 import signal
+import os
 
 # Import salt-api libs
 import salt.loader
@@ -19,27 +20,50 @@ class NetapiClient(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.processes = []
+        # pid -> {fun: foo, Process: object}
+        self.pid_map = {}
+        self.netapi = salt.loader.netapi(self.opts)
+
+    def add_process(self, fun):
+        '''
+        Start a netapi child process of "fun"
+        '''
+        p = multiprocessing.Process(target=self.netapi[fun])
+        p.start()
+        logger.info("Started '{0}' api module with pid {1}".format(fun, p.pid))
+        self.pid_map[p.pid] = {'fun': fun,
+                               'Process': p}
 
     def run(self):
         '''
         Load and start all available api modules
         '''
-        netapi = salt.loader.netapi(self.opts)
-        for fun in netapi:
+        for fun in self.netapi:
             if fun.endswith('.start'):
-                logger.info("Starting '{0}' api module".format(fun))
-                p = multiprocessing.Process(target=netapi[fun])
-                p.start()
-                self.processes.append(p)
+                self.add_process(fun)
 
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
+
+        while True:
+            pid, exit_status = os.wait()
+            if pid not in self.pid_map:
+                logger.info(('Process of pid {0} died, not a known netapi'
+                             ' process, will not restart').format(pid))
+                continue
+            logger.info(('Process {0} ({1}) died with exit status {2},'
+                         ' restarting...').format(self.pid_map[pid]['fun'],
+                                                  pid,
+                                                  exit_status))
+            self.pid_map[pid]['Process'].join(1)
+            self.add_process(self.pid_map[pid]['fun'])
+            del self.pid_map[pid]
 
     def kill_children(self, *args):
         '''
         Kill all of the children
         '''
-        for p in self.processes:
-            p.terminate()
-            p.join()
+        for pid, p_map in self.pid_map.items():
+            p_map['Process'].terminate()
+            p_map['Process'].join()
+            del self.pid_map[pid]
