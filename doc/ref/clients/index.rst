@@ -94,7 +94,7 @@ WheelClient
 -----------
 
 .. autoclass:: salt.wheel.WheelClient
-    :members: call_func, cmd_sync, cmd_async
+    :members: cmd, async, cmd_sync, cmd_async
 
 CloudClient
 -----------
