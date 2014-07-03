@@ -36,12 +36,12 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     runas
         Users run the job.
 
-        .. deprecated:: 2014.1.4 (Hydrogen)
+        .. deprecated:: 2014.1.4
 
     user
         The user to run the at job
 
-        .. versionadded:: 2014.1.4 (Hydrogen)
+        .. versionadded:: 2014.1.4
 
     .. code-block:: yaml
 
@@ -64,7 +64,7 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     salt.utils.warn_until(
         'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4 (Hydrogen). Support will be removed in {version}.',
+        'added in 2014.1.4. Support will be removed in {version}.',
         _dont_call_warnings=True
     )
     if runas:

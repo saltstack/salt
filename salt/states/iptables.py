@@ -194,7 +194,7 @@ def __virtual__():
 
 def chain_present(name, table='filter', family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Verify the chain is exist.
 
@@ -246,7 +246,7 @@ def chain_present(name, table='filter', family='ipv4'):
 
 def chain_absent(name, table='filter', family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Verify the chain is absent.
 
@@ -367,7 +367,7 @@ def append(name, family='ipv4', **kwargs):
 
 def insert(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Insert a rule into a chain
 
@@ -434,7 +434,7 @@ def insert(name, family='ipv4', **kwargs):
 
 def delete(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Delete a rule to a chain
 
@@ -514,7 +514,7 @@ def delete(name, family='ipv4', **kwargs):
 
 def set_policy(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Sets the default policy for iptables firewall tables
 
@@ -576,7 +576,7 @@ def set_policy(name, family='ipv4', **kwargs):
 
 def flush(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Flush current iptables state
 

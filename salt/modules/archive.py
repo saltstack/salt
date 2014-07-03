@@ -2,7 +2,7 @@
 '''
 A module to wrap archive calls
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 '''
 
 # Import salt libs

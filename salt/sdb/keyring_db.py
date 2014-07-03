@@ -42,7 +42,7 @@ examples and documentation, see keyring:
 
 https://pypi.python.org/pypi/keyring
 
-.. versionadded:: 2014.1.4 (Hydrogen)
+.. versionadded:: 2014.1.4
 '''
 
 # import python libs

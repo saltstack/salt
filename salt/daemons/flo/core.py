@@ -14,11 +14,12 @@ import multiprocessing
 import traceback
 import itertools
 from collections import deque
+import shutil
 
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
-from raet import raeting
+from raet import raeting, nacling
 from raet.road.stacking import RoadStack
 from raet.road.estating import LocalEstate
 from raet.lane.stacking import LaneStack
@@ -53,12 +54,63 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class SaltRaetRoadStack(ioflo.base.deeding.Deed):
+class SaltRaetCleanup(ioflo.base.deeding.Deed):
+    '''
+    Cleanup stray lane keep directories not reaped
+
+    FloScript:
+
+    do salt raet cleanup at enter
+
+    '''
+    Ioinits = {
+                'opts': '.salt.opts',
+                'basedirpath': {'ipath': '.salt.raet.basedirpath',
+                                'ival': ''}
+            }
+
+    def postinitio(self):
+        '''
+        Initialize value of data store share for .salt.raet.basedirpath
+        Will override if empty value
+        '''
+        if not self.basedirpath.value:  # override if empty
+            self.basedirpath.value = os.path.abspath(
+                    os.path.join(self.opts.value['cachedir'], 'raet'))
+
+    def action(self):
+        '''
+        Should only run once to cleanup stale lane directories.
+        '''
+        basedirpath = self.basedirpath.value
+        if basedirpath:
+            console.concise("Cleaning up {0}\n".format(basedirpath))
+            dirpaths = []
+            prefixes = ['client', 'event', 'raet', 'jobret']
+            #mid = self.opts.value.get('id', '')
+            #if mid:
+                #prefixes.append(mid)
+            for name in os.listdir(basedirpath):
+                path = os.path.join(basedirpath, name)
+                if not os.path.isdir(path):
+                    continue
+                for prefix in prefixes:
+                    if name.startswith(prefix) and len(name) >= (len(prefix) +  18):
+                        dirpaths.append(path)
+                        break
+
+            for dirpath in dirpaths:
+                if os.path.exists(dirpath):
+                    console.concise("Removing directory {0}\n".format(dirpath))
+                    shutil.rmtree(dirpath)
+
+
+class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
     FloScript:
 
-    do salt raet road stack
+    do salt raet road stack setup at enter
 
     '''
     Ioinits = {
@@ -76,24 +128,38 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                                'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
-                               'prikey': None}}
+                               'prikey': None}},
+            'basedirpath': {'ipath': '.salt.raet.basedirpath',
+                            'ival': ''},
             }
 
     def postinitio(self):
         '''
-        Setup stack instance
+        Assign class defaults
         '''
-        sigkey = self.local.data.sigkey
-        prikey = self.local.data.prikey
+        RoadStack.Bk = raeting.bodyKinds.msgpack
+        RoadStack.JoinentTimeout = 0.0
+
+    def action(self):
+        '''
+        enter action
+        should only run once to setup road stack.
+        moved from postinitio so can do clean up before stack is initialized
+
+        do salt raet road stack setup at enter
+        '''
         name = self.opts.value.get('id', self.local.data.name)
         localname = self.opts.value.get('id', self.local.data.localname)
-        dirpath = os.path.abspath(
-                os.path.join(self.opts.value['cachedir'], 'raet'))
+        sigkey = self.local.data.sigkey
+        prikey = self.local.data.prikey
         auto = self.local.data.auto
         main = self.local.data.main
+        eid = self.local.data.eid
+
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
-        eid = self.local.data.eid
+        basedirpath = self.basedirpath.value  # must be assigned elsewhere
+
         local = LocalEstate(
                 eid=eid,
                 name=localname,
@@ -112,22 +178,20 @@ class SaltRaetRoadStack(ioflo.base.deeding.Deed):
                 localname=localname,
                 auto=auto,
                 main=main,
-                basedirpath=dirpath,
+                basedirpath=basedirpath,
                 safe=safe,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs,
                 period=3.0,
                 offset=0.5)
-        self.stack.value.Bk = raeting.bodyKinds.msgpack
-        self.stack.value.JoinentTimeout = 0.0
 
 
-class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
+class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
     '''
     Closes stack server socket connection
     FloScript:
 
-    salt raet road stack closer at exit
+    do salt raet road stack closer at exit
 
     '''
     Ioinits = odict(
@@ -494,10 +558,10 @@ class Schedule(ioflo.base.deeding.Deed):
 class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     '''
     Only intended to be called once at the top of the manor house
-    Sets of the LaneStack for the main yard
+    Sets up the LaneStack for the main yard
     FloScript:
 
-    do setup at enter
+    do salt manor lane setup at enter
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -515,19 +579,26 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                           'ival': {'name': 'master',
                                    'localname': 'master',
                                    'yid': 0,
-                                   'lanename': 'master'}}
+                                   'lanename': 'master'}},
+               'basedirpath': {'ipath': '.salt.raet.basedirpath',
+                               'ival': ''}
             }
 
     def postinitio(self):
         '''
         Set up required objects and queues
         '''
-        name = self.opts.value.get('id', self.local.data.name)
+        pass
+
+    def action(self):
+        '''
+        Run once at enter
+        '''
+        name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         localname = self.opts.value.get('id', self.local.data.localname)
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
-        basedirpath = os.path.abspath(
-                os.path.join(self.opts.value['cachedir'], 'raet'))
+        basedirpath = self.basedirpath.value  # must be assigned elsewhere
         self.stack.value = LaneStack(
                                     name=name,
                                     #localname=localname,
@@ -568,6 +639,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         if self.stack.value and isinstance(self.stack.value, LaneStack):
             self.stack.value.server.close()
+            self.stack.value.clearAllDir()
 
 
 class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
@@ -876,12 +948,14 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
-        stackname = self.opts['id'] + ret['jid']
+        mid = self.opts['id']
+        yid = nacling.uuid(size=18)
+        stackname = 'jobret' + yid
         dirpath = os.path.join(self.opts['cachedir'], 'raet')
         ret_stack = LaneStack(
                 name=stackname,
-                lanename=self.opts['id'],
-                yid=ret['jid'],
+                lanename=mid,
+                yid=yid, # jid
                 sockdirpath=self.opts['sock_dir'],
                 basedirpath=dirpath)
 
@@ -889,15 +963,15 @@ class NixExecutor(ioflo.base.deeding.Deed):
         main_yard = RemoteYard(
                 stack=ret_stack,
                 yid=0,
-                lanename=self.opts['id'],
+                lanename=mid,
                 dirpath=self.opts['sock_dir']
                 )
 
         ret_stack.addRemote(main_yard)
-        route = {'src': (self.opts['id'], ret_stack.local.name, 'jid_ret'),
+        route = {'src': (mid, ret_stack.local.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
-        ret['id'] = self.opts['id']
+        ret['id'] = mid
         try:
             oput = self.modules.value[ret['fun']].__outputter__
         except (KeyError, AttributeError, TypeError):
@@ -908,6 +982,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
         msg = {'route': route, 'load': ret}
         ret_stack.transmit(msg, ret_stack.uids.get('yard0'))
         ret_stack.serviceAll()
+        ret_stack.server.close()
+        ret_stack.clearAllDir()
 
     def action(self):
         '''
@@ -933,15 +1009,13 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
+            yid = nacling.uuid(size=18)
             ex_yard = RemoteYard(
                     stack=self.uxd_stack.value,
-                    yid=data['jid'],
+                    yid=yid,
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            try:
-                self.uxd_stack.value.addRemote(ex_yard)
-            except Exception:
-                pass  # if the yard is already there don't worry
+            self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}

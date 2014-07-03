@@ -352,7 +352,7 @@ def _read_config(conf_file=None):
 
 def options(name, conf_file=None):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Read the config file and return the config options for a given process
 

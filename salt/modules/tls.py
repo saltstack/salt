@@ -16,6 +16,7 @@ or use Self-Signed certificates.
 # Import python libs
 import os
 import time
+import datetime
 import logging
 import hashlib
 
@@ -118,6 +119,57 @@ def _write_cert_to_database(ca_name, cert):
         ofile.write(index_data)
 
 
+def maybe_fix_ssl_version(ca_name):
+    '''
+    Check that the X509 version is correct
+    (was incorrectly setted in previous salt versions).
+    This will fix the version if needed.
+
+    ca_name
+        ca authority name
+    '''
+    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+        _cert_base_path(),
+            ca_name,
+            ca_name)
+    ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
+        _cert_base_path(), ca_name, ca_name)
+    with open(certp) as fic:
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                               fic.read())
+        if cert.get_version() == 3:
+            log.info(
+                'Regenerating wrong x509 version '
+                'for certificate {0}'.format(certp))
+            with open(ca_keyp) as fic2:
+                try:
+                    # try to determine the key bits
+                    key = OpenSSL.crypto.load_privatekey(
+                        OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+                    bits = key.bits()
+                except Exception:
+                    bits = 2048
+                try:
+                    days = (datetime.datetime.strptime(cert.get_notAfter(),
+                                                       '%Y%m%d%H%M%SZ') -
+                            datetime.datetime.now()).days
+                except (ValueError, TypeError):
+                    days = 365
+                subj = cert.get_subject()
+                create_ca(
+                    ca_name,
+                    bits=bits,
+                    days=days,
+                    CN=subj.CN,
+                    C=subj.C,
+                    ST=subj.ST,
+                    L=subj.L,
+                    O=subj.O,
+                    OU=subj.OU,
+                    emailAddress=subj.emailAddress,
+                    fixmode=True)
+
+
 def _ca_exists(ca_name):
     '''
     Verify whether a Certificate Authority (CA) already exists
@@ -125,12 +177,12 @@ def _ca_exists(ca_name):
     ca_name
         name of the CA
     '''
-
-    if os.path.exists('{0}/{1}/{2}_ca_cert.crt'.format(
+    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
             _cert_base_path(),
             ca_name,
-            ca_name
-            )):
+            ca_name)
+    if os.path.exists(certp):
+        maybe_fix_ssl_version(ca_name)
         return True
     return False
 
@@ -145,7 +197,8 @@ def create_ca(
         L='Salt Lake City',
         O='SaltStack',
         OU=None,
-        emailAddress='xyz@pdq.net'):
+        emailAddress='xyz@pdq.net',
+        fixmode=False):
     '''
     Create a Certificate Authority (CA)
 
@@ -190,17 +243,34 @@ def create_ca(
 
         salt '*' tls.create_ca test_ca
     '''
-    if _ca_exists(ca_name):
-        return 'Certificate for CA named "{0}" already exists'.format(ca_name)
+    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+        _cert_base_path(), ca_name, ca_name)
+    ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
+        _cert_base_path(), ca_name, ca_name)
+    if (not fixmode) and _ca_exists(ca_name):
+        return (
+            'Certificate for CA named "{0}" '
+            'already exists').format(ca_name)
+
+    if fixmode and not os.path.exists(certp):
+        raise ValueError('{0} does not exists, can\'t fix'.format(certp))
 
     if not os.path.exists('{0}/{1}'.format(_cert_base_path(), ca_name)):
         os.makedirs('{0}/{1}'.format(_cert_base_path(), ca_name))
 
-    key = OpenSSL.crypto.PKey()
-    key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
+    # try to reuse existing ssl key
+    key = None
+    if os.path.exists(ca_keyp):
+        with open(ca_keyp) as fic2:
+            # try to determine the key bits
+            key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+    if not key:
+        key = OpenSSL.crypto.PKey()
+        key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
 
     ca = OpenSSL.crypto.X509()
-    ca.set_version(3)
+    ca.set_version(2)
     ca.set_serial_number(_new_serial(ca_name, CN))
     ca.get_subject().C = C
     ca.get_subject().ST = ST
@@ -222,59 +292,48 @@ def create_ca(
         OpenSSL.crypto.X509Extension('keyUsage', True,
                                      'keyCertSign, cRLSign'),
         OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False, 'hash',
-                                     subject=ca)
-      ])
+                                     subject=ca)])
 
     ca.add_extensions([
         OpenSSL.crypto.X509Extension(
             'authorityKeyIdentifier',
             False,
             'issuer:always,keyid:always',
-            issuer=ca
-        )
-    ])
+            issuer=ca)])
     ca.sign(key, 'sha1')
 
-    ca_key = salt.utils.fopen(
-            '{0}/{1}/{2}_ca_cert.key'.format(
-                _cert_base_path(),
-                ca_name,
-                ca_name
-                ),
-            'w'
-            )
-    ca_key.write(
-            OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
-            )
-    ca_key.close()
+    # alway backup existing keys in case
+    keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+                                                key)
+    write_key = True
+    if os.path.exists(ca_keyp):
+        bck = "{0}.{1}".format(ca_keyp, datetime.datetime.now().strftime(
+            "%Y%m%d%H%M%S"))
+        with open(ca_keyp) as fic:
+            old_key = fic.read().strip()
+            if old_key.strip() == keycontent.strip():
+                write_key = False
+            else:
+                log.info('Saving old CA ssl key in {0}'.format(bck))
+                with open(bck, 'w') as bckf:
+                    bckf.write(old_key)
+                    os.chmod(bck, 0600)
+    if write_key:
+        ca_key = salt.utils.fopen(ca_keyp, 'w')
+        ca_key.write(keycontent)
+        ca_key.close()
 
-    ca_crt = salt.utils.fopen(
-            '{0}/{1}/{2}_ca_cert.crt'.format(
-                _cert_base_path(),
-                ca_name,
-                ca_name
-                ),
-            'w'
-            )
+    ca_crt = salt.utils.fopen(certp, 'w')
     ca_crt.write(
-            OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca)
-            )
+        OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca))
     ca_crt.close()
 
     _write_cert_to_database(ca_name, ca)
 
     ret = ('Created Private Key: "{1}/{2}/{3}_ca_cert.key." ').format(
-                    ca_name,
-                    _cert_base_path(),
-                    ca_name,
-                    ca_name
-                    )
+        ca_name, _cert_base_path(), ca_name, ca_name)
     ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
-                    ca_name,
-                    _cert_base_path(),
-                    ca_name,
-                    ca_name
-                    )
+        ca_name, _cert_base_path(), ca_name, ca_name)
 
     return ret
 
@@ -580,6 +639,7 @@ def create_ca_signed_cert(ca_name, CN, days=365):
         return 'Certificate "{0}" already exists'.format(ca_name)
 
     try:
+        maybe_fix_ssl_version(ca_name)
         ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(

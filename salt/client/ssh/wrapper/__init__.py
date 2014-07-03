@@ -14,7 +14,7 @@ import salt.utils
 import salt.client.ssh
 
 
-class FunctionWrapper(object):
+class FunctionWrapper(dict):
     '''
     Create an object that acts like the salt function dict and makes function
     calls remotely via the SSH shell system
