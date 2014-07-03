@@ -1049,7 +1049,7 @@ def os_data():
             if not value.isdigit():
                 continue
             osrelease_info[idx] = int(value)
-        grains['osrelease_info'] = osrelease_info
+        grains['osrelease_info'] = tuple(osrelease_info)
 
     return grains
 
