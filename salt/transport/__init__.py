@@ -148,7 +148,8 @@ class ZeroMQChannel(Channel):
         key = self.sreq_key
 
         if key not in ZeroMQChannel.sreq_cache:
-            if self.opts['master_type'] == 'failover':
+            master_type = self.opts.get('master_type', None)
+            if master_type == 'failover':
                 # remove all cached sreqs to the old master to prevent
                 # zeromq from reconnecting to old masters automagically
                 for check_key in self.sreq_cache.keys():
