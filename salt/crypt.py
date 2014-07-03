@@ -464,6 +464,9 @@ class Auth(object):
                               'reply does not contain any signature. Either enable signing the public '
                               'key on the master or disable signature verification on the minion.')
                     return ''
+                else:
+                    aes, token = self.decrypt_aes(payload, False)
+                    return aes
 
         else:
             # verify the masters pubkey signature if the minion
