@@ -815,7 +815,7 @@ class LocalClient(Client):
              salt-call --local state.show_top
         ends up here, but master_tops has not been extended to support
         show_top in a completely local environment yet.  It's worth noting
-        that originally this fn started with
+        that originally this fn started with 
             if 'external_nodes' not in opts: return {}
         So since external_nodes is gone now, we are just returning the
         empty dict.
