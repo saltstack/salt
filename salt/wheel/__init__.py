@@ -45,7 +45,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.opts = opts
         self.functions = salt.loader.wheels(opts)
 
-    def call_func(self, fun, **kwargs):
+    def cmd(self, fun, **kwargs):
         '''
         Execute a wheel function
 
@@ -60,6 +60,8 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             'minions_rejected': []}
         '''
         return self.low(fun, kwargs)
+
+    call_func = cmd  # alias for backward-compat
 
     def master_call(self, **kwargs):
         '''
