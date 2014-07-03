@@ -13,7 +13,7 @@ import salt.payload
 import salt.auth
 import salt.utils
 try:
-    from raet import raeting
+    from raet import raeting, nacling
     from raet.road.stacking import RoadStack
     from raet.lane.stacking import LaneStack
     from raet.lane import yarding
@@ -60,13 +60,13 @@ class RAETChannel(Channel):
         '''
         Prepare the stack objects
         '''
-        id = self.opts.get('id', 'master')
-        yid = salt.utils.gen_jid()
-        stackname = id + yid
+        mid = self.opts.get('id', 'master')
+        yid = nacling.uuid(size=18)
+        stackname = 'raet' + yid
         dirpath = os.path.join(self.opts['cachedir'], 'raet')
         self.stack = LaneStack(
                 name=stackname,
-                lanename=id,
+                lanename=mid,
                 yid=yid,
                 basedirpath=dirpath,
                 sockdirpath=self.opts['sock_dir'])
@@ -74,10 +74,10 @@ class RAETChannel(Channel):
         self.router_yard = yarding.RemoteYard(
                 stack=self.stack,
                 yid=0,
-                lanename=id,
+                lanename=mid,
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemote(self.router_yard)
-        src = (id, self.stack.local.name, None)
+        src = (mid, self.stack.local.name, None)
         dst = ('master', None, 'remote_cmd')
         self.route = {'src': src, 'dst': dst}
 

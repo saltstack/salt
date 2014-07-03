@@ -19,7 +19,7 @@ import shutil
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
-from raet import raeting
+from raet import raeting, nacling
 from raet.road.stacking import RoadStack
 from raet.road.estating import LocalEstate
 from raet.lane.stacking import LaneStack
@@ -86,16 +86,16 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         if basedirpath:
             console.concise("Cleaning up {0}\n".format(basedirpath))
             dirpaths = []
-            prefixes = ['client', 'event',]
-            mid = self.opts.value.get('id', '')
-            if mid:
-                prefixes.append(mid)
+            prefixes = ['client', 'event', 'raet', 'jobret']
+            #mid = self.opts.value.get('id', '')
+            #if mid:
+                #prefixes.append(mid)
             for name in os.listdir(basedirpath):
                 path = os.path.join(basedirpath, name)
                 if not os.path.isdir(path):
                     continue
                 for prefix in prefixes:
-                    if name.startswith(prefix) and len(name) == (len(prefix) +  20):
+                    if name.startswith(prefix) and len(name) >= (len(prefix) +  18):
                         dirpaths.append(path)
                         break
 
@@ -558,7 +558,7 @@ class Schedule(ioflo.base.deeding.Deed):
 class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     '''
     Only intended to be called once at the top of the manor house
-    Sets of the LaneStack for the main yard
+    Sets up the LaneStack for the main yard
     FloScript:
 
     do salt manor lane setup at enter
@@ -599,8 +599,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
         basedirpath = self.basedirpath.value  # must be assigned elsewhere
-
-        #os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
         self.stack.value = LaneStack(
                                     name=name,
                                     #localname=localname,
@@ -950,12 +948,14 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
-        stackname = self.opts['id'] + ret['jid']
+        mid = self.opts['id']
+        yid = nacling.uuid(size=18)
+        stackname = 'jobret' + yid
         dirpath = os.path.join(self.opts['cachedir'], 'raet')
         ret_stack = LaneStack(
                 name=stackname,
-                lanename=self.opts['id'],
-                yid=ret['jid'],
+                lanename=mid,
+                yid=yid, # jid
                 sockdirpath=self.opts['sock_dir'],
                 basedirpath=dirpath)
 
@@ -963,15 +963,15 @@ class NixExecutor(ioflo.base.deeding.Deed):
         main_yard = RemoteYard(
                 stack=ret_stack,
                 yid=0,
-                lanename=self.opts['id'],
+                lanename=mid,
                 dirpath=self.opts['sock_dir']
                 )
 
         ret_stack.addRemote(main_yard)
-        route = {'src': (self.opts['id'], ret_stack.local.name, 'jid_ret'),
+        route = {'src': (mid, ret_stack.local.name, 'jid_ret'),
                  'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
-        ret['id'] = self.opts['id']
+        ret['id'] = mid
         try:
             oput = self.modules.value[ret['fun']].__outputter__
         except (KeyError, AttributeError, TypeError):
@@ -1009,15 +1009,13 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
+            yid = nacling.uuid(size=18)
             ex_yard = RemoteYard(
                     stack=self.uxd_stack.value,
-                    yid=data['jid'],
+                    yid=yid,
                     lanename=self.opts['id'],
                     dirpath=self.opts['sock_dir'])
-            try:
-                self.uxd_stack.value.addRemote(ex_yard)
-            except Exception:
-                pass  # if the yard is already there don't worry
+            self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}
