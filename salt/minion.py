@@ -724,7 +724,7 @@ class Minion(MinionBase):
 
                 # on first run, update self.opts with the whole master list
                 # to enable a minion to re-use old masters if they get fixed
-                if not 'master_list' in self.opts:
+                if 'master_list' not in self.opts:
                     self.opts['master_list'] = local_masters
 
                 try:
@@ -1597,8 +1597,9 @@ class Minion(MinionBase):
                                     self.opts['master'] = self.eval_master(opts=self.opts,
                                                                            failed=True)
                                     if self.connected:
-                                        log.info('Re-initialising subsystems for new master')
                                         # re-init the subsystems to work with the new master
+                                        log.info('Re-initialising subsystems for new '
+                                                 'master {0}'.format(self.opts['master']))
                                         del self.socket
                                         del self.context
                                         del self.poller
