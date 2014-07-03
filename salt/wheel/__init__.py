@@ -13,11 +13,12 @@ import salt.loader
 import salt.payload
 import salt.utils
 import salt.exceptions
+from salt.client import mixins
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 
 
-class WheelClient(object):
+class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     '''
     An interface to Salt's wheel modules
 
@@ -29,6 +30,9 @@ class WheelClient(object):
     running as. Unless :conf_master:`external_auth` is configured and the user
     is authorized to execute wheel functions: (``@wheel``).
     '''
+    client = 'wheel'
+    tag_prefix = 'wheel'
+
     def __init__(self, opts=None):
         if not opts:
             opts = salt.config.client_config(
@@ -39,16 +43,7 @@ class WheelClient(object):
                     )
 
         self.opts = opts
-        self.w_funcs = salt.loader.wheels(opts)
-
-    def get_docs(self):
-        '''
-        Return a dictionary of functions and the inline documentation for each
-        '''
-        ret = [(fun, self.w_funcs[fun].__doc__)
-                for fun in sorted(self.w_funcs)]
-
-        return dict(ret)
+        self.functions = salt.loader.wheels(opts)
 
     def call_func(self, fun, **kwargs):
         '''
@@ -64,10 +59,7 @@ class WheelClient(object):
             'minions_pre': [],
             'minions_rejected': []}
         '''
-        if fun not in self.w_funcs:
-            return 'Unknown wheel function'
-        f_call = salt.utils.format_call(self.w_funcs[fun], kwargs)
-        return self.w_funcs[fun](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        return self.low(fun, kwargs)
 
     def master_call(self, **kwargs):
         '''
