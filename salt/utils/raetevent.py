@@ -17,7 +17,7 @@ import salt.loader
 import salt.state
 import salt.utils.event
 from salt import syspaths
-from raet import raeting
+from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
@@ -41,8 +41,7 @@ class SaltEvent(object):
         self.__prep_stack()
 
     def __prep_stack(self):
-        time.sleep(0.01)  # Make sure the event jids don't collide
-        self.yid = salt.utils.gen_jid()
+        self.yid = nacling.uuid(size=18)
         name = 'event' + self.yid
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
         basedirpath = os.path.abspath(
