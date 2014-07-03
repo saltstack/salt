@@ -107,4 +107,25 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             if ret['tag'] == ret_tag:
                 return ret['data']['return']
 
+    def cmd_async(self, low):
+        '''
+        Execute a wheel function asynchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized to execute runner functions: (``@wheel``).
+
+        .. code-block:: python
+
+            >>> wheel.cmd_async({
+                'fun': 'key.finger',
+                'match': 'jerry',
+                'eauth': 'auto',
+                'username': 'saltdev',
+                'password': 'saltdev',
+            })
+            {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
+        '''
+        fun = low.pop('fun')
+        return self.async(fun, low)
+
 Wheel = WheelClient  # for backward-compat
