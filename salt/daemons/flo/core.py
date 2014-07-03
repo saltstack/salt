@@ -86,7 +86,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         if basedirpath:
             console.concise("Cleaning up {0}\n".format(basedirpath))
             dirpaths = []
-            prefixes = ['client', 'event',]
+            prefixes = ['client', 'event']
             mid = self.opts.value.get('id', '')
             if mid:
                 prefixes.append(mid)
