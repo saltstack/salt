@@ -179,6 +179,9 @@ autosummary_generate = True
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
+.. |salt-users| replace:: `salt-users <https://groups.google.com/forum/#!forum/salt-users>`_
+.. |salt-announce| replace:: `salt-announce <https://groups.google.com/forum/#!forum/salt-announce>`_
+.. |salt-packagers| replace:: `salt-packagers <https://groups.google.com/forum/#!forum/salt-packagers>`_
 """
 
 # A shortcut for linking to tickets on the GitHub issue tracker
