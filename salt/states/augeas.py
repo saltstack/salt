@@ -174,9 +174,9 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
     if context:
         filename = re.sub('^/files|/$', '', context)
         if os.path.isfile(filename):
-            file = open(filename, 'r')
-            old_file = file.readlines()
-            file.close()
+            file_ = open(filename, 'r')
+            old_file = file_.readlines()
+            file_.close()
 
     result = __salt__['augeas.execute'](context=context, lens=lens, commands=changes)
     ret['result'] = result['retval']
@@ -186,9 +186,9 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         return ret
 
     if old_file:
-        file = open(filename, 'r')
-        diff = ''.join(difflib.unified_diff(old_file, file.readlines(), n=0))
-        file.close()
+        file_ = open(filename, 'r')
+        diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
+        file_.close()
 
         if diff:
             ret['comment'] = 'Changes have been saved'
