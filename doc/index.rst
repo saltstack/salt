@@ -276,5 +276,8 @@ More information about the project
 :doc:`Translate Documentation </topics/development/translating>`
     How to help out translating Salt to your language.
 
+:ref:`Security disclosures <disclosure>`
+    The SaltStack security disclosure policy
+
 .. _`salt-contrib`: https://github.com/saltstack/salt-contrib
 .. _`salt-states`: https://github.com/saltstack/salt-states
