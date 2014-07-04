@@ -220,12 +220,12 @@ def setvalue(name, prefix=None, changes=None, **kwargs):
         if not isinstance(changes, list):
             ret['comment'] = '\'changes\' must be formatted as a list'
             return ret
-        for change in changes:
-            if not isinstance(change, dict) or len(change) > 1:
+        for change_ in changes:
+            if not isinstance(change_, dict) or len(change_) > 1:
                 ret['comment'] = 'Invalidly-formatted change'
                 return ret
-            key = next(iter(change))
-            args.extend([key, change[key]])
+            key = next(iter(change_))
+            args.extend([key, change_[key]])
 
     if prefix is not None:
         args.insert(0, 'prefix={0}'.format(prefix))
@@ -244,6 +244,6 @@ def setvalue(name, prefix=None, changes=None, **kwargs):
         return ret
 
     ret['comment'] = 'Success'
-    for change in changes:
-        ret['changes'].update(change)
+    for change_ in changes:
+        ret['changes'].update(change_)
     return ret
