@@ -379,6 +379,75 @@ class Auth(object):
                       'make sure, master_sign_key_name is defined.')
             return False
 
+    def verify_signing_master(self, payload):
+        try:
+            if self.verify_pubkey_sig(payload['pub_key'],
+                                      payload['pub_sig']):
+                log.info('Received signed and verified master pubkey '
+                         'from master {0}'.format(self.opts['master']))
+                m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                return True
+            else:
+                log.error('Received signed public-key from master {0} '
+                          'but signature verification failed!'.format(self.opts['master']))
+                return False
+        except Exception as sign_exc:
+            log.error('There was an error while verifying the masters public-key signature')
+            raise Exception, sign_exc
+
+
+    def check_auth_deps(self, payload):
+        '''
+        checks if both master and minion either sign (master) and
+        verify (minion). If one side does not, it should fail
+        '''
+        # master and minion sign and verify
+        if 'pub_sig' in payload and self.opts['verify_master_pubkey_sign']:
+            return True
+        # master and minion do NOT sign and do NOT verify
+        elif 'pub_sig' not in payload and not self.opts['verify_master_pubkey_sign']:
+            return True
+
+        # master signs, but minion does NOT verify
+        elif 'pub_sig' in payload and not self.opts['verify_master_pubkey_sign']:
+            log.error('The masters sent its public-key signature, but signature '
+                      'verification is not enabled on the minion. Either enable '
+                      'signature verification on the minion or disable signing '
+                      'the public key on the master!')
+            return False
+        # master does NOT sign but minion wants to verify
+        elif 'pub_sig' not in payload and self.opts['verify_master_pubkey_sign']:
+            log.error('The master did not send its public-key signature, but '
+                      'signature verification is enabled on the minion. Either '
+                      'disable signature verification on the minion or enable '
+                      'signing the public on the master!')
+            return False
+
+    def extract_aes(self, payload, master_pub=True):
+        '''
+        return the aes key received from the master
+        when the minion has been successfully authed
+        '''
+        if master_pub:
+            try:
+                aes, token = self.decrypt_aes(payload, master_pub)
+                if token != self.token:
+                    log.error(
+                        'The master failed to decrypt the random minion token'
+                    )
+                    return ''
+            except Exception:
+                log.error(
+                    'The master failed to decrypt the random minion token'
+                )
+                return ''
+            return aes
+        else:
+            aes, token = self.decrypt_aes(payload, master_pub)
+            return aes
+
+
     def verify_master(self, payload):
         '''
         Verify that the master is the same one that was previously accepted.
@@ -388,36 +457,14 @@ class Auth(object):
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
 
             if payload['pub_key'] != local_master_pub:
-                # if we receive a new pubkey from the master, try to verify
-                # its signature if the payload contains one
-                if self.opts['verify_master_pubkey_sign']:
-                    try:
-                        if self.verify_pubkey_sig(payload['pub_key'],
-                                                  payload['pub_sig']):
-                            log.info('Received signed and verified master pubkey '
-                                     'from master {0}'.format(self.opts['master']))
-                            m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-                            salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-                            aes, token = self.decrypt_aes(payload, False)
-                            return aes
-                        else:
-                            log.error('Received signed master pubkey from master {0} '
-                                      'but signature verification failed!'.format(self.opts['master']))
-                            return ''
-                    except Exception:
-                        log.error('Received a new master key from master {0} without the public '
-                                  'keys signature'.format(self.opts['master']))
-                        log.error('Either disable verifying the master public on the minion or '
-                                  'enable the signing of the public key on the master')
-                        return ''
-
-                # a reply _with_ the pubkeys signature without having it
-                # verified by the minion shall never be accepted
-                elif 'pub_sig' in payload:
-                    log.error('Received reply with the pubkeys signature, but rejecting pubkey '
-                              'because signature verification (verify_master_pubkey_sign) is not enabled.')
+                if not self.check_auth_deps(payload):
                     return ''
 
+                if self.opts['verify_master_pubkey_sign']:
+                    if self.verify_signing_master(payload):
+                        return self.extract_aes(payload, master_pub=False)
+                    else:
+                        return ''
                 else:
                     # This is not the last master we connected to
                     log.error('The master key has changed, the salt master could '
@@ -425,76 +472,38 @@ class Auth(object):
                               'key')
                     return ''
 
-            # make sure, master and minion both sign and verify and that it fails,
-            # if either side does not sign (master) or does not verify (minion)
-            if 'pub_sig' in payload:
-                if not self.opts['verify_master_pubkey_sign']:
-                    log.error('The masters public has been verified, but the public signature sent by '
-                              'the master is not being verified on the minion. Either enable signature '
-                              'verification on the minion or disable signing the public on the master!')
-                    return ''
-                else:
-                    # verify the signature of the pubkey even if it has
-                    # not changed compared with the one we already have
-                    if self.opts['always_verify_signature']:
-                        if self.verify_pubkey_sig(payload['pub_key'],
-                                                  payload['pub_sig']):
-                            log.info('Received signed and verified master pubkey '
-                                     'from master {0}'.format(self.opts['master']))
-                            try:
-                                aes, token = self.decrypt_aes(payload)
-                                if token != self.token:
-                                    log.error(
-                                        'The master failed to decrypt the random minion token'
-                                    )
-                                    return ''
-                            except Exception:
-                                log.error(
-                                    'The master failed to decrypt the random minion token'
-                                )
-                                return ''
-                            return aes
-                        else:
-                            log.error('The masters public could not be verified. Is the '
-                                      'verification pubkey {0} up to date?'
-                                      ''.format(self.opts['master_sign_key_name'] + '.pub'))
-
-                            return ''
             else:
-                if self.opts['verify_master_pubkey_sign']:
-                    log.error('Master public key signature verification is enabled, but the masters '
-                              'reply does not contain any signature. Either enable signing the public '
-                              'key on the master or disable signature verification on the minion.')
+                if not self.check_auth_deps(payload):
                     return ''
-                else:
-                    aes, token = self.decrypt_aes(payload, False)
-                    return aes
+                # verify the signature of the pubkey even if it has
+                # not changed compared with the one we already have
+                if self.opts['always_verify_signature']:
+                    if self.verify_signing_master(payload):
+                        return self.extract_aes(payload)
+                    else:
+                        log.error('The masters public could not be verified. Is the '
+                                  'verification pubkey {0} up to date?'
+                                  ''.format(self.opts['master_sign_key_name'] + '.pub'))
+                        return ''
 
+                else:
+                    return self.extract_aes(payload)
         else:
+            if not self.check_auth_deps(payload):
+                return ''
+
             # verify the masters pubkey signature if the minion
             # has not received any masters pubkey before
             if self.opts['verify_master_pubkey_sign']:
-                if 'pub_sig' in payload:
-                    if self.verify_pubkey_sig(payload['pub_key'],
-                                              payload['pub_sig']):
-                        log.info('Received signed and verified master pubkey '
-                                 'from master {0}'.format(self.opts['master']))
-                        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-                        salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-                        aes, token = self.decrypt_aes(payload, False)
-                        return aes
+                if self.verify_signing_master(payload):
+                    return self.extract_aes(payload, master_pub=False)
                 else:
-                    log.error('Failed to accept the masters public key because no '
-                              'verifiable signature was found in the reply')
-                    log.error('Either disable verifying the master public on the minion or '
-                              'enable the signing of the public key on the master')
                     return ''
             # the minion has not received any masters pubkey yet, write
             # the newly received pubkey to minion_master.pub
             else:
                 salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-                aes, token = self.decrypt_aes(payload, False)
-                return aes
+                return self.extract_aes(payload, master_pub=False)
 
     def sign_in(self, timeout=60, safe=True, tries=1):
         '''
