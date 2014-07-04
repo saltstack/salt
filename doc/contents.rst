@@ -31,5 +31,6 @@ Salt Table of Contents
     topics/development/index
     topics/releases/index
     topics/projects/index
+    security/index
     faq
     glossary
