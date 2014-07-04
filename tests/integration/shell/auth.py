@@ -21,7 +21,6 @@ import integration
 from salttesting import skipIf
 
 
-
 class AuthTest(integration.ShellCase):
     '''
     Test auth mechanisms
