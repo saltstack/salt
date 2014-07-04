@@ -174,8 +174,10 @@ class MasterKeys(dict):
                                        self.opts['master_pubkey_signature']))
                 else:
                     log.error('Signing the master.pub key with a signature is enabled '
-                              'but no signature file found at the default location '
+                              'but no signature file found at the defined location '
                               '{0}'.format(self.sig_path))
+                    log.error('The signature-file may be either named differently '
+                               'or has to be created with \'salt-key --gen-signature\'')
                     sys.exit(1)
 
             # create a new signing key-pair to sign the masters
