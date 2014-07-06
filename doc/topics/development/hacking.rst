@@ -175,7 +175,9 @@ do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
 If you would like to log to the console instead of to the log file, remove the
 ``-d``.
 
-Once the minion starts, you may see an error like the following::
+Once the minion starts, you may see an error like the following:
+
+.. code-block:: bash
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
