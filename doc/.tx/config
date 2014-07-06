@@ -4592,3 +4592,9 @@ source_file = _build/locale/topics/releases/version_numbers.pot
 source_lang = en
 source_name = topics/releases/version_numbers.rst
 
+[salt.security--index]
+file_filter = locale/<lang>/LC_MESSAGES/security/index.po
+source_file = _build/locale/security/index.pot
+source_lang = en
+source_name = security/index.rst
+
