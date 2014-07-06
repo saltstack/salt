@@ -221,6 +221,12 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 
+class SaltDotLookup(dict):
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.__dict__ = self
+
+
 def _split_module_dicts(__salt__):
     '''
     Create a dictionary from module.function as module[function]
