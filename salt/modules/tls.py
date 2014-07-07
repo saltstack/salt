@@ -620,7 +620,7 @@ def create_self_signed_cert(tls_dir='tls',
 
     # create certificate
     cert = OpenSSL.crypto.X509()
-    cert.set_version(3)
+    cert.set_version(2)
 
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
