@@ -955,7 +955,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=mid,
-                yid=yid, # jid
+                yid=yid,  # jid
                 sockdirpath=self.opts['sock_dir'],
                 basedirpath=dirpath)
 

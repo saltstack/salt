@@ -1043,6 +1043,14 @@ def os_data():
             os=grains['osfullname'],
             ver=grains['osrelease'])
 
+    if grains.get('osrelease', ''):
+        osrelease_info = grains['osrelease'].split('.')
+        for idx, value in enumerate(osrelease_info):
+            if not value.isdigit():
+                continue
+            osrelease_info[idx] = int(value)
+        grains['osrelease_info'] = tuple(osrelease_info)
+
     return grains
 
 

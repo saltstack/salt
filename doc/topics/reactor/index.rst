@@ -159,7 +159,9 @@ what the master does in response to that event, and it will also include the
 rendered SLS file (or any errors generated while rendering the SLS file).
 
 1.  Stop the master.
-2.  Start the master manually::
+2.  Start the master manually:
+
+    .. code-block:: bash
 
         salt-master -l debug
 
