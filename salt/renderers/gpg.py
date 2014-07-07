@@ -71,10 +71,11 @@ Now you can include your ciphers in your pillar data like so:
 '''
 
 import re
+import salt.utils
 try:
     import gnupg
     HAS_GPG = True
-except ImportError:
+except ImportError or salt.utils.which('gpg') is None:
     HAS_GPG = False
 import logging
 
