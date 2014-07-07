@@ -409,7 +409,7 @@ def installed(
             Distros which use APT (Debian, Ubuntu, etc.) do not have a concept
             of repositories, in the same way as YUM-based distros do. When a
             source is added, it is assigned to a given release. Consider the
-            following source configuration::
+            following source configuration:
 
             .. code-block:: text
 
