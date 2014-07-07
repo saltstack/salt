@@ -75,7 +75,9 @@ import salt.utils
 try:
     import gnupg
     HAS_GPG = True
-except ImportError or salt.utils.which('gpg') is None:
+    if salt.utils.which('gpg') is None:
+        HAS_GPG = False
+except ImportError:
     HAS_GPG = False
 import logging
 
