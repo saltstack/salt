@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Management of dockers
+Management of Dockers
 =====================
 
 .. versionadded:: 2014.1.0
@@ -9,7 +9,7 @@ Management of dockers
 
     The DockerIO integration is still in beta; the API is subject to change
 
-General notes
+General Notes
 -------------
 
 - As we use states, we don't want to be continuously popping dockers, so we
@@ -17,83 +17,92 @@ General notes
 - As a corollary, we will resolve a container id either directly by the id
   or try to find a container id matching something stocked in grain.
 
-Installation prerequisites
+Installation Prerequisites
 --------------------------
 
-- You will need the 'docker-py' python package in your python installation
-  running salt. The version of docker-py should support `version 1.12 of docker
-  remote API.
-  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
-- For now, you need docker-py 0.3.2
+- You will need the ``docker-py`` python package in your python installation
+  path that is running salt. Its version should support `Docker Remote API
+  v1.12 <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
 
-    pip install docker-py==0.3.2
+  Currently, ``docker-py 0.3.2`` is known to support `Docker Remote API v1.12
+  <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_
 
-Prerequisite pillar configuration for authentication
+  .. code-block:: bash
+
+      pip install docker-py==0.3.2
+
+Prerequisite Pillar Configuration for Authentication
 ----------------------------------------------------
 
-- To push or pull you will need to be authenticated as the docker-py bindings
+- To push or pull you will need to be authenticated as the ``docker-py`` bindings
   require it
 - For this to happen, you will need to configure a mapping in the pillar
-  representing your per URL authentication bits::
+  representing your per URL authentication bits:
 
-    docker-registries:
-        registry_url:
-            email: foo@foo.com
-            password: s3cr3t
-            username: foo
+  .. code-block:: yaml
 
-- You need at least an entry to the default docker index::
+      docker-registries:
+          registry_url:
+              email: foo@foo.com
+              password: s3cr3t
+              username: foo
 
-    docker-registries:
-        https://index.docker.io/v1:
-            email: foo@foo.com
-            password: s3cr3t
-            username: foo
+- You need at least an entry to the default docker index:
 
-you can define multiple registries blocks for them to be aggregated, their id
-just must finish with -docker-registries::
+  .. code-block:: yaml
 
-   ac-docker-registries:
-        https://index.bar.io/v1:
-            email: foo@foo.com
-            password: s3cr3t
-            username: foo
+      docker-registries:
+          https://index.docker.io/v1:
+              email: foo@foo.com
+              password: s3cr3t
+              username: foo
 
-   ab-docker-registries:
-        https://index.foo.io/v1:
-            email: foo@foo.com
-            password: s3cr3t
-            username: foo
+- You can define multiple registry blocks for them to be aggregated. The only thing to keep
+  in mind is that their ID must finish with ``-docker-registries``:
 
-Would be the equivalent to::
+  .. code-block:: yaml
 
-   docker-registries:
-        https://index.bar.io/v1:
-            email: foo@foo.com
-            password: s3cr3t
-            username: foo
-        https://index.foo.io/v1:
-            email: foo@foo.com
-            password: s3cr3t
-            username: foo
+      ac-docker-registries:
+          https://index.bar.io/v1:
+              email: foo@foo.com
+              password: s3cr3t
+              username: foo
 
-Registry dialog methods
+      ab-docker-registries:
+          https://index.foo.io/v1:
+              email: foo@foo.com
+              password: s3cr3t
+              username: foo
+
+  This could be also written as:
+
+  .. code-block:: yaml
+
+      docker-registries:
+          https://index.bar.io/v1:
+              email: foo@foo.com
+              password: s3cr3t
+              username: foo
+          https://index.foo.io/v1:
+              email: foo@foo.com
+              password: s3cr3t
+              username: foo
+
+Registry Dialog Methods
 -----------------------
 
 - login
 - push
 - pull
 
-Docker management
+Docker Management
 -----------------
 
 - version
 - info
 
-Image management
+Image Management
 ----------------
-
-You have those methods:
 
 - search
 - inspect_image
@@ -103,10 +112,8 @@ You have those methods:
 - build
 - tag
 
-Container management
+Container Management
 --------------------
-
-You have those methods:
 
 - start
 - stop
@@ -126,15 +133,15 @@ You have those methods:
 - export
 - get_container_root
 
-Runtime execution within a specific already existing and running container
+Runtime Execution within a specific, already existing/running container
 --------------------------------------------------------------------------
 
-- Idea is to use lxc-attach to execute inside the container context.
-- We do not use a "docker run command" but want to execute something inside a
-  running container.
+Idea is to use `lxc-attach <http://linux.die.net/man/1/lxc-attach>`_ to execute
+inside the container context.
+We do not want to use ``docker run`` but want to execute something inside a
+running container.
 
-
-You have those methods:
+These are the available methods:
 
 - retcode
 - run
