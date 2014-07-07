@@ -394,7 +394,7 @@ def install(name=None,
             if not _latest_version == _version:
                 refreshdb = True
 
-        if 'pkgs':
+        if pkgs:
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
