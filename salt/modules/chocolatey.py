@@ -45,7 +45,7 @@ def _find_chocolatey():
     choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
                      'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
 
-    choc_path = __salt__['cmd.which']('chocolatey.bat')
+    choc_path = __salt__['cmd.which']('chocolatey.exe')
     if not choc_path:
         for choc_dir in choc_defaults:
             if __salt__['cmd.has_exec'](choc_dir):
