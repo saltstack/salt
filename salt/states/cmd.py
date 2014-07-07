@@ -83,30 +83,34 @@ a simple protocol described below:
    state.`
 
    Here's an example of how one might write a shell script for use with a
-   stateful command::
+   stateful command:
 
-    #!/bin/bash
-    #
-    echo "Working hard..."
+   .. code-block:: bash
 
-    # writing the state line
-    echo  # an empty line here so the next line will be the last.
-    echo "changed=yes comment='something has changed' whatever=123"
+       #!/bin/bash
+       #
+       echo "Working hard..."
 
-   And an example SLS file using this module::
+       # writing the state line
+       echo  # an empty line here so the next line will be the last.
+       echo "changed=yes comment='something has changed' whatever=123"
 
-    Run myscript:
-      cmd.run:
-        - name: /path/to/myscript
-        - cwd: /
-        - stateful: True
+   And an example SLS file using this module:
 
-    Run only if myscript changed something:
-      cmd.wait:
-        - name: echo hello
-        - cwd: /
-        - watch:
-            - cmd: Run myscript
+   .. code-block:: yaml
+
+       Run myscript:
+         cmd.run:
+           - name: /path/to/myscript
+           - cwd: /
+           - stateful: True
+
+       Run only if myscript changed something:
+         cmd.wait:
+           - name: echo hello
+           - cwd: /
+           - watch:
+               - cmd: Run myscript
 
    Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
