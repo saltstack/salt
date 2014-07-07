@@ -770,6 +770,7 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None):
         log.error('Support for extensions is not available, upgrade PyOpenSSL')
 
     cert = OpenSSL.crypto.X509()
+    cert.set_version(2)
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
