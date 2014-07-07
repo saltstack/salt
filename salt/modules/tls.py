@@ -157,6 +157,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
     cacert_path
         absolute path to ca certificates root directory
     '''
+    set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
         cert_base_path(),
             ca_name,
