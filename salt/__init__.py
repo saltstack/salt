@@ -87,6 +87,7 @@ class Master(parsers.MasterOptionParser):
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
                 verify_env(
                     v_dirs,
                     self.config['user'],
@@ -195,6 +196,7 @@ class Minion(parsers.MinionOptionParser):
                         v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
                         v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
                         v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                        v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
                     verify_env(
                         v_dirs,
                         self.config['user'],
