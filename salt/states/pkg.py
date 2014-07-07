@@ -411,6 +411,8 @@ def installed(
             source is added, it is assigned to a given release. Consider the
             following source configuration::
 
+            .. code-block:: text
+
                 deb http://ppa.launchpad.net/saltstack/salt/ubuntu precise main
 
             The packages provided by this source would be made available via
