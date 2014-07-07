@@ -159,6 +159,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    show_installed = salt.utils.is_true(kwargs.pop('show_installed', False))
 
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
@@ -215,6 +216,8 @@ def latest_version(*names, **kwargs):
 
         installed = pkgs.get(name, [])
         if not installed:
+            ret[name] = candidate
+        elif installed and show_installed:
             ret[name] = candidate
         elif candidate:
             # If there are no installed versions that are greater than or equal
@@ -380,8 +383,30 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    refreshdb = False
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refreshdb = True
+        if 'version' in kwargs and kwargs['version']:
+            refreshdb = False
+            _latest_version = latest_version(name, refresh=False, show_installed=True)
+            _version = kwargs.get('version')
+            # If the versions don't match, refresh is True, otherwise no need to refresh
+            if not _latest_version == _version:
+                refreshdb = True
+
+        if pkgs:
+            refreshdb = False
+            for pkg in pkgs:
+                if isinstance(pkg, dict):
+                    _name = pkg.keys()[0]
+                    _latest_version = latest_version(_name, refresh=False, show_installed=True)
+                    _version = pkg[_name]
+                    # If the versions don't match, refresh is True, otherwise no need to refresh
+                    if not _latest_version == _version:
+                        refreshdb = True
+                else:
+                    # No version specified, so refresh should be True
+                    refreshdb = True
 
     if debconf:
         __salt__['debconf.set_file'](debconf)
@@ -441,6 +466,9 @@ def install(name=None,
             cmd.extend(['-t', fromrepo])
         cmd.append('install')
         cmd.extend(targets)
+
+    if refreshdb:
+        refresh_db()
 
     __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
