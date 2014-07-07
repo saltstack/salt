@@ -173,7 +173,7 @@ HAS_NSENTER = bool(salt.utils.which('nsenter'))
 
 log = logging.getLogger(__name__)
 
-INVALID_RESPONSE = 'We did not get any expectable answer from docker'
+INVALID_RESPONSE = 'We did not get any expected answer from docker'
 VALID_RESPONSE = ''
 NOTSET = object()
 base_status = {
@@ -1800,7 +1800,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                     ' {cmd}'.format(pid=container_pid, cmd=cmd))
     else:
         raise NotImplementedError(
-            'Unknown docker ExecutionDriver {0!r}. Or didn\'t found command'
+            'Unknown docker ExecutionDriver {0!r}. Or didn\'t find command'
             ' to attach to the container'.format(driver))
 
     # now execute the command
