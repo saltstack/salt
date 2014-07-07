@@ -651,7 +651,7 @@ def installed(
         appear in the output of the ``pkg.version`` or ``pkg.list_pkgs`` salt
         CLI commands.
 
-    Usage::
+    .. code-block:: yaml
 
         mypkgs:
           pkg.installed:
@@ -1032,7 +1032,7 @@ def latest(
     pkgs
         A list of packages to maintain at the latest available version.
 
-    Usage::
+    .. code-block:: yaml
 
         mypkgs:
           pkg.latest:
