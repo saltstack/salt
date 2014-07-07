@@ -346,7 +346,7 @@ def get_pgid(path, follow_symlinks=True):
         # generic memory error (win2k3+)
         return 'S-1-1-0'
     except pywinerror as exc:
-        # invalid function error (win2k8+)
+        # Incorrect function error (win2k8+)
         if exc.winerror == 1:
             return 'S-1-1-0'
         raise
@@ -542,7 +542,7 @@ def get_uid(path, follow_symlinks=True):
         # generic memory error (win2k3+)
         return 'S-1-1-0'
     except pywinerror as exc:
-        # invalid function error (win2k8+)
+        # Incorrect function error (win2k8+)
         if exc.winerror == 1:
             return 'S-1-1-0'
         raise
