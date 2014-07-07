@@ -11,6 +11,7 @@ import logging
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh.state
+from salt.client.ssh import DEFAULT_THIN_PKG_DIR
 import salt.utils
 import salt.utils.thin
 import salt.roster
@@ -68,17 +69,18 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             file_refs,
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
+    cmd = 'state.pkg {3}/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            __opts__['hash_type'],
+            DEFAULT_THIN_PKG_DIR)
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/.salt/salt_state.tgz')
+            '{0}/salt_state.tgz'.format(DEFAULT_THIN_PKG_DIR))
     stdout, stderr, _ = single.cmd_block()
     try:
         return json.loads(stdout, object_hook=salt.utils.decode_dict)
@@ -112,16 +114,17 @@ def low(data, **kwargs):
             file_refs,
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
+    cmd = 'state.pkg {2}/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
             trans_tar_sum,
-            __opts__['hash_type'])
+            __opts__['hash_type'],
+            DEFAULT_THIN_PKG_DIR)
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/.salt/salt_state.tgz')
+            '{0}/salt_state.tgz'.format(DEFAULT_THIN_PKG_DIR))
     stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
@@ -147,16 +150,17 @@ def high(data, **kwargs):
             file_refs,
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
+    cmd = 'state.pkg {2}/salt_state.tgz pkg_sum={0} hash_type={1}'.format(
             trans_tar_sum,
-            __opts__['hash_type'])
+            __opts__['hash_type'],
+            DEFAULT_THIN_PKG_DIR)
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/.salt/salt_state.tgz')
+            '{0}/salt_state.tgz'.format(DEFAULT_THIN_PKG_DIR))
     stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
@@ -184,17 +188,18 @@ def highstate(test=None, **kwargs):
             file_refs,
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
+    cmd = 'state.pkg {3}/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            __opts__['hash_type'],
+            DEFAULT_THIN_PKG_DIR)
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/.salt/salt_state.tgz')
+            '{0}/salt_state.tgz'.format(DEFAULT_THIN_PKG_DIR))
     stdout, stderr, _ = single.cmd_block()
     try:
         stdout = json.loads(stdout, object_hook=salt.utils.decode_dict)
@@ -231,17 +236,18 @@ def top(topfn, test=None, **kwargs):
             file_refs,
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
-    cmd = 'state.pkg /tmp/.salt/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
+    cmd = 'state.pkg {3}/salt_state.tgz test={0} pkg_sum={1} hash_type={2}'.format(
             test,
             trans_tar_sum,
-            __opts__['hash_type'])
+            __opts__['hash_type'],
+            DEFAULT_THIN_PKG_DIR)
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '/tmp/.salt/salt_state.tgz')
+            '{0}/salt_state.tgz'.format(DEFAULT_THIN_PKG_DIR))
     stdout, stderr, _ = single.cmd_block()
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
