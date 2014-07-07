@@ -19,7 +19,7 @@ configuration is necessary. More information available `here
 If IAM roles are not used you need to specify them either in a pillar file or
 in the minion's config file:
 
-.. code-block:: yaml 
+.. code-block:: yaml
 
     asg.keyid: GKTADJGHEIQSXMKKRBJ08H
     asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -28,7 +28,7 @@ It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, e
 passed in as a dict, or as a string to pull from pillars or minion config:
 
 .. code-block:: yaml
- 
+
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
