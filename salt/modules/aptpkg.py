@@ -386,7 +386,7 @@ def install(name=None,
     refreshdb = False
     if salt.utils.is_true(refresh):
         refreshdb = True
-        if 'version' in kwargs:
+        if 'version' in kwargs and kwargs['version']:
             refreshdb = False
             _latest_version = latest_version(name, refresh=False, show_installed=True)
             _version = kwargs.get('version')
