@@ -21,7 +21,7 @@ Installation Prerequisites
 --------------------------
 
 - You will need the ``docker-py`` python package in your python installation
-  path that is running salt. It's version should support `Docker Remote API 
+  path that is running salt. It's version should support `Docker Remote API
   v1.12 <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
 
   Currently, ``docker-py 0.3.2`` is known to support `Docker Remote API v1.12
