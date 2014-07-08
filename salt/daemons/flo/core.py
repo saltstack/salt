@@ -424,7 +424,7 @@ class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
         '''
         rxMsgs = self.rxmsgs.value
         while rxMsgs:
-            msg = rxMsgs.popleft()
+            msg, name = rxMsgs.popleft()
             console.terse("\nReceived....\n{0}\n".format(msg))
 
 
@@ -516,7 +516,7 @@ class LoadPillar(ioflo.base.deeding.Deed):
         while True:
             time.sleep(0.01)
             if self.udp_stack.value.rxMsgs:
-                for msg in self.udp_stack.value.rxMsgs:
+                for msg, rnmid in self.udp_stack.value.rxMsgs:
                     self.pillar.value = msg.get('return', {})
                     self.opts.value['pillar'] = self.pillar.value
                     return
@@ -727,9 +727,11 @@ class Router(ioflo.base.deeding.Deed):
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
 
-    def _process_udp_rxmsg(self, msg):
+    def _process_udp_rxmsg(self, msg, rnmid):
         '''
         Send to the right queue
+        msg is the message body dict
+        rnmid is the unique name identifyer of the remote estate that sent the message
         '''
         try:
             d_estate = msg['route']['dst'][0]
@@ -811,7 +813,8 @@ class Router(ioflo.base.deeding.Deed):
         Process the messages!
         '''
         while self.udp_stack.value.rxMsgs:
-            self._process_udp_rxmsg(self.udp_stack.value.rxMsgs.popleft())
+            msg, name = self.udp_stack.value.rxMsgs.popleft()
+            self._process_udp_rxmsg(msg=msg, rnmid=name)
         while self.uxd_stack.value.rxMsgs:
             self._process_uxd_rxmsg(self.uxd_stack.value.rxMsgs.popleft())
 
