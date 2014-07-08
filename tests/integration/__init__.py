@@ -57,6 +57,7 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
+import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -591,19 +592,19 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
+        salt.utils.process.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
-        salt.master.clean_proc(self.minion_process, wait_for_kill=50)
+        salt.utils.process.clean_proc(self.minion_process, wait_for_kill=50)
         self.minion_process.join()
-        salt.master.clean_proc(self.master_process, wait_for_kill=50)
+        salt.utils.process.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
         try:
-            salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
+            salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
             self.syndic_process.join()
         except AttributeError:
             pass
         try:
-            salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
+            salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
             self.smaster_process.join()
         except AttributeError:
             pass
