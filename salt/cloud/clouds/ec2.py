@@ -2533,7 +2533,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
             'The show_instance action requires a name.'
         )
 
-    if instance_id and call == 'function':
+    if call == 'function':
         name = kwargs.get('name', None)
         instance_id = kwargs.get('instance_id', None)
 
