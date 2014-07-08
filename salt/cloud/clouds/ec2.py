@@ -315,6 +315,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
             requesturl = 'https://{0}/'.format(endpoint)
 
         log.debug('EC2 Request: {0}'.format(requesturl))
+        log.trace('EC2 Request Parameters: {0}'.format(params_with_headers))
         try:
             result = requests.get(requesturl, params=params_with_headers)
             log.debug(
@@ -1276,9 +1277,15 @@ def request_instance(vm_=None, call=None):
 
     # regular EC2 instance
     else:
+        min_instance = config.get_cloud_config_value(
+            'min_instance', vm_, __opts__, search_global=False, default=1
+        )
+        max_instance = config.get_cloud_config_value(
+            'max_instance', vm_, __opts__, search_global=False, default=1
+        )
         params = {'Action': 'RunInstances',
-                  'MinCount': '1',
-                  'MaxCount': '1'}
+                  'MinCount': min_instance,
+                  'MaxCount': max_instance}
 
         # Normal instances should have no prefix.
         spot_prefix = ''
@@ -1907,7 +1914,16 @@ def create(vm_=None, call=None):
         data, vm_ = request_instance(vm_, location)
 
         # Pull the instance ID, valid for both spot and normal instances
-        vm_['instance_id'] = data[0]['instanceId']
+
+        # Multiple instances may have been spun up, get all their IDs
+        vm_['instance_id_list'] = []
+        for instance in data:
+            vm_['instance_id_list'].append(instance['instanceId'])
+
+    vm_['instance_id'] = vm_['instance_id_list'].pop()
+    if len(vm_['instance_id_list']) > 0:
+        # Multiple instances were spun up, get one now, and queue the rest
+        queue_instances(vm_['instance_id_list'])
 
     # Wait for vital information, such as IP addresses, to be available
     # for the new instance
@@ -2036,6 +2052,23 @@ def create(vm_=None, call=None):
     )
 
     return ret
+
+
+def queue_instances(instances):
+    '''
+    Queue a set of instances to be provisioned later. Expects a list.
+
+    Currently this only queries node data, and then places it in the cloud
+    cache (if configured). If the salt-cloud-reactor is being used, these
+    instances will be automatically provisioned using that.
+
+    For more information about the salt-cloud-reactor, see:
+
+    https://github.com/saltstack-formulas/salt-cloud-reactor
+    '''
+    for instance_id in instances:
+        node = _get_node(instance_id=instance_id)
+        salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None):
@@ -2476,23 +2509,49 @@ def show_image(kwargs, call=None):
     return result
 
 
-def show_instance(name, call=None):
+def show_instance(name=None, instance_id=None, call=None, kwargs=None):
     '''
-    Show the details from EC2 concerning an AMI
+    Show the details from EC2 concerning an AMI.
+
+    Can be called as an action (which requires a name):
+
+        salt-cloud -a show_instance myinstance
+
+    ...or as a function (which requires either a name or instance_id):
+
+        salt-cloud -f show_instance my-ec2 name=myinstance
+        salt-cloud -f show_instance my-ec2 instance_id=i-d34db33f
     '''
-    if call != 'action':
+    if not name and call == 'action':
         raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
+            'The show_instance action requires a name.'
         )
 
-    node = _get_node(name)
+    if instance_id and call == 'function':
+        name = kwargs.get('name', None)
+        instance_id = kwargs.get('instance_id', None)
+
+    if not name and not instance_id:
+        raise SaltCloudSystemExit(
+            'The show_instance function requires '
+            'either a name or an instance_id'
+        )
+
+    node = _get_node(name=name, instance_id=instance_id)
     salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
     return node
 
 
-def _get_node(name, location=None):
+def _get_node(name=None, instance_id=None, location=None):
     if location is None:
         location = get_location()
+
+    params = {'Action': 'DescribeInstances'}
+    if instance_id:
+        params['InstanceId.1'] = instance_id
+        instances = query(params, location=location)
+        return _extract_instance_info(instances)
+    log.trace(params)
 
     attempts = 10
     while attempts >= 0:
@@ -2557,21 +2616,11 @@ def _extract_name_tag(item):
     return item['instanceId']
 
 
-def _list_nodes_full(location=None):
+def _extract_instance_info(instances):
     '''
-    Return a list of the VMs that in this location
+    Given an instance query, return a dict of all instance data
     '''
-
     ret = {}
-    params = {'Action': 'DescribeInstances'}
-    instances = query(params, location=location)
-    if 'error' in instances:
-        raise SaltCloudSystemExit(
-            'An error occurred while listing nodes: {0}'.format(
-                instances['error']['Errors']['Error']['Message']
-            )
-        )
-
     for instance in instances:
         # items could be type dict or list (for stopped EC2 instances)
         if isinstance(instance['instancesSet']['item'], list):
@@ -2602,6 +2651,25 @@ def _list_nodes_full(location=None):
                     public_ips=item.get('ipAddress', [])
                 )
             )
+
+    return ret
+
+
+def _list_nodes_full(location=None):
+    '''
+    Return a list of the VMs that in this location
+    '''
+
+    params = {'Action': 'DescribeInstances'}
+    instances = query(params, location=location)
+    if 'error' in instances:
+        raise SaltCloudSystemExit(
+            'An error occurred while listing nodes: {0}'.format(
+                instances['error']['Errors']['Error']['Message']
+            )
+        )
+
+    ret = _extract_instance_info(instances)
 
     provider = __active_provider_name__ or 'ec2'
     if ':' in provider:
