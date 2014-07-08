@@ -1277,6 +1277,12 @@ def request_instance(vm_=None, call=None):
 
     # regular EC2 instance
     else:
+        # WARNING! EXPERIMENTAL!
+        # This allows more than one instance to be spun up in a single call.
+        # The first instance will be called by the name provided, but all other
+        # instances will be nameless (or more specifically, they will use the
+        # InstanceId as the name). This interface is expected to change, so
+        # use at your own risk.
         min_instance = config.get_cloud_config_value(
             'min_instance', vm_, __opts__, search_global=False, default=1
         )
