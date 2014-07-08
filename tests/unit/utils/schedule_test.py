@@ -90,8 +90,8 @@ class ScheduleTestCase(TestCase):
 
     def test_reload_update_schedule_key(self):
         '''
-        Tests reloading and updating the schedule from saved schedule file that
-        contains a schedule key
+        Tests reloading the schedule from saved schedule where both the
+        saved schedule and self.schedule.opts contain a schedule key
         '''
         saved = {'schedule': {'foo': 'bar'}}
         ret = {'schedule': {'foo': 'bar', 'hello': 'world'}}
@@ -101,8 +101,8 @@ class ScheduleTestCase(TestCase):
 
     def test_reload_update_schedule_no_key(self):
         '''
-        Tests reloading and updating the schedule from saved schedule file that
-        contains a schedule key
+        Tests reloading the schedule from saved schedule that does not
+        contain a schedule key but self.schedule.opts does not
         '''
         saved = {'foo': 'bar'}
         ret = {'schedule': {'foo': 'bar', 'hello': 'world'}}
@@ -112,7 +112,8 @@ class ScheduleTestCase(TestCase):
 
     def test_reload_no_schedule_in_opts(self):
         '''
-        Tests reloading the schedule
+        Tests reloading the schedule from saved schedule that does not
+        contain a schedule key and neither does self.schedule.opts
         '''
         saved = {'foo': 'bar'}
         ret = {'schedule': {'foo': 'bar'}}
@@ -121,7 +122,8 @@ class ScheduleTestCase(TestCase):
 
     def test_reload_schedule_in_saved_but_not_opts(self):
         '''
-        Tests reloading the schedule
+        Tests reloading the schedule from saved schedule that contains
+        a schedule key, but self.schedule.opts does not
         '''
         saved = {'schedule': {'foo': 'bar'}}
         ret = {'schedule': {'schedule': {'foo': 'bar'}}}
