@@ -31,7 +31,7 @@ def __virtual__():
 def user_exists(name, password=None, htpasswd_file=None, options='',
                 force=False, **kwargs):
     '''
-    Make sure the user is inside the /etc/nginx/htpasswd
+    Make sure the user is inside the ``/etc/nginx/htpasswd``
 
     ``name``
         username
