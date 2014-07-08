@@ -381,7 +381,10 @@ def get_flags_from_package_conf(conf, atom):
         package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
         if '/' not in atom:
             atom = _p_to_cp(atom)
-        match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+        try:
+            match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+        except AttributeError:
+            return []
         flags = []
         try:
             file_handler = salt.utils.fopen(package_file)
