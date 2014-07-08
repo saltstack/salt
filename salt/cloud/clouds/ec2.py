@@ -2555,14 +2555,17 @@ def _get_node(name=None, instance_id=None, location=None):
     params = {'Action': 'DescribeInstances'}
     if instance_id:
         params['InstanceId.1'] = instance_id
-        instances = query(params, location=location)
-        return _extract_instance_info(instances)
+    else:
+        params['Filter.1.Name'] = 'tag:Name'
+        params['Filter.1.Value.1'] = name
+
     log.trace(params)
 
     attempts = 10
     while attempts >= 0:
         try:
-            return list_nodes_full(location)[name]
+            instances = query(params, location=location)
+            return _extract_instance_info(instances)
         except KeyError:
             attempts -= 1
             log.debug(
