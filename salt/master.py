@@ -11,13 +11,8 @@ import time
 import errno
 import signal
 import shutil
-import stat
 import logging
 import hashlib
-try:
-    import pwd
-except ImportError:  # This is in case windows minion is importing
-    pass
 import resource
 import multiprocessing
 import sys

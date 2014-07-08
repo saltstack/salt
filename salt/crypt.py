@@ -238,6 +238,7 @@ class MasterKeys(dict):
         '''
         return self.pub_signature
 
+
 class Auth(object):
     '''
     The Auth class provides the sequence for setting up communication with
@@ -394,8 +395,7 @@ class Auth(object):
                 return False
         except Exception as sign_exc:
             log.error('There was an error while verifying the masters public-key signature')
-            raise Exception, sign_exc
-
+            raise Exception(sign_exc)
 
     def check_auth_deps(self, payload):
         '''
@@ -446,7 +446,6 @@ class Auth(object):
         else:
             aes, token = self.decrypt_aes(payload, master_pub)
             return aes
-
 
     def verify_master(self, payload):
         '''
