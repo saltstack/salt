@@ -230,6 +230,11 @@ class SaltStackVersion(object):
         return cls(*cls.LNAMES[name.lower()])
 
     @property
+    def sse(self):
+        # Higher than 0.17, lower than first date based
+        return 0 < self.major < 2014
+
+    @property
     def info(self):
         return (
             self.major,
