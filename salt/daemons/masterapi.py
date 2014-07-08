@@ -54,6 +54,10 @@ def init_git_pillar(opts):
     pillargitfs = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
+            try:
+                import git
+            except ImportError:
+                return pillargitfs
             parts = opts_dict['git'].strip().split()
             try:
                 br = parts[0]
