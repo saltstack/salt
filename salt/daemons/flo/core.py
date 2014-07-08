@@ -950,14 +950,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=mid,
-<<<<<<< HEAD
                 yid=yid, # jid
                 sockdirpath=self.opts['sock_dir'])
-=======
-                yid=yid,  # jid
-                sockdirpath=self.opts['sock_dir'],
-                basedirpath=dirpath)
->>>>>>> sam_raet_50
 
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
