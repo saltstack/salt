@@ -66,7 +66,43 @@ class ScheduleTestCase(TestCase):
         data = {'key1': 'value1', 'key2': 'value2'}
         self.assertRaises(ValueError, Schedule.add_job, self.schedule, data)
 
-    # enabled_schedule tests
+    # enable_job tests
+
+    def test_enable_job(self):
+        '''
+        Tests enabling a job
+        '''
+        self.schedule.opts = {'schedule': {'name': {'enabled': 'foo'}}}
+        Schedule.enable_job(self.schedule, 'name')
+        self.assertTrue(self.schedule.opts['schedule']['name']['enabled'])
+
+    def test_enable_job_pillar(self):
+        '''
+        Tests enabling a job in pillar
+        '''
+        self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}}}
+        Schedule.enable_job(self.schedule, 'name', where='pillar')
+        self.assertTrue(self.schedule.opts['pillar']['schedule']['name']['enabled'])
+
+    # disable_job tests
+
+    def test_disable_job(self):
+        '''
+        Tests disabling a job
+        '''
+        self.schedule.opts = {'schedule': {'name': {'enabled': 'foo'}}}
+        Schedule.disable_job(self.schedule, 'name')
+        self.assertFalse(self.schedule.opts['schedule']['name']['enabled'])
+
+    def test_disable_job_pillar(self):
+        '''
+        Tests disabling a job in pillar
+        '''
+        self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}}}
+        Schedule.disable_job(self.schedule, 'name', where='pillar')
+        self.assertFalse(self.schedule.opts['pillar']['schedule']['name']['enabled'])
+
+    # enable_schedule tests
 
     def test_enable_schedule(self):
         '''
