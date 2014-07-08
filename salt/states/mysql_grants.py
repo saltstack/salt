@@ -91,10 +91,10 @@ def present(name,
         The network/host that the grant should apply to
 
     grant_option
-        Adds the WITH GRANT OPTION to the defined grant. default: False
+        Adds the WITH GRANT OPTION to the defined grant. Default is ``False``
 
     escape
-        Defines if the database value gets escaped or not. default: True
+        Defines if the database value gets escaped or not. Default is ``True``
 
     revoke_first
         By default, MySQL will not do anything if you issue a command to grant
@@ -111,7 +111,7 @@ def present(name,
         unknown and potentially dangerous state.
         Use with caution!
 
-        default: False
+        Default is ``False``
 
     ssl_option
         Adds the specified ssl options for the connecting user as requirements for
@@ -119,6 +119,8 @@ def present(name,
         list of ssl options to use.
 
         Possible key/value pairings for the dicts in the value:
+
+        .. code-block:: text
 
             - SSL: True
             - X509: True
@@ -130,7 +132,7 @@ def present(name,
         be an appropriate value as specified by the MySQL documentation for these
         options.
 
-        default: False (no ssl options will be used)
+        Default is ``False`` (no ssl options will be used)
     '''
     comment = 'Grant {0} on {1} to {2}@{3} is already present'
     ret = {'name': name,

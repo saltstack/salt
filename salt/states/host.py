@@ -3,7 +3,7 @@
 Management of addresses and names in hosts file
 ===============================================
 
-The /etc/hosts file can be managed to contain definitions for specific hosts:
+The ``/etc/hosts`` file can be managed to contain definitions for specific hosts:
 
 .. code-block:: yaml
 
@@ -11,7 +11,7 @@ The /etc/hosts file can be managed to contain definitions for specific hosts:
       host.present:
         - ip: 192.168.0.42
 
-Or using the "names:" directive, you can put several names for the same IP.
+Or using the ``names`` directive, you can put several names for the same IP.
 (Do not try one name with space-separated values).
 
 .. code-block:: yaml
@@ -23,8 +23,12 @@ Or using the "names:" directive, you can put several names for the same IP.
           - server1
           - florida
 
-NOTE: changing the name(s) in the present() function does not cause an
-update to remove the old entry.
+.. note::
+
+    Changing the ``names`` in ``host.present`` does not cause an
+    update to remove the old entry.
+
+.. code-block:: yaml
 
     server1:
       host.present:
