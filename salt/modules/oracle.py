@@ -46,11 +46,13 @@ def __virtual__():
     '''
     return True
 
+
 def _cx_oracle_req():
     '''
     Fallback function stub
     '''
     return 'Need "cx_Oracle" and Oracle Client installed for this functin exist'
+
 
 def _unicode_output(cursor, name, default_type, size, precision, scale):
     '''
@@ -61,6 +63,7 @@ def _unicode_output(cursor, name, default_type, size, precision, scale):
     if default_type in (cx_Oracle.STRING, cx_Oracle.LONG_STRING,
                         cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB):
         return cursor.var(unicode, size, cursor.arraysize)
+
 
 def _connect(uri):
     '''
@@ -94,6 +97,7 @@ def _connect(uri):
     conn.outputtypehandler = _unicode_output
     return conn
 
+
 @depends('cx_Oracle', fallback_function=_cx_oracle_req)
 def run_query(db, query):
     '''
@@ -104,11 +108,11 @@ def run_query(db, query):
     .. code-block:: bash
 
         salt '*' oracle.run_query my_db "select * from my_table"
-
     '''
     log.debug('run query on {0}: {1}'.format(db, query))
     conn = _connect(show_dbs(db)[db]['uri'])
     return conn.cursor().execute(query).fetchall()
+
 
 def show_dbs(*dbs):
     '''
@@ -122,10 +126,11 @@ def show_dbs(*dbs):
     pillar_dbs = __salt__['pillar.get']('oracle:dbs')
     if dbs:
         log.debug('get dbs from pillar: {0}'.format(dbs))
-        return {db:pillar_dbs[db] for db in dbs if pillar_dbs.has_key(db)}
+        return {db:pillar_dbs[db] for db in dbs if db in pillar_dbs}
     else:
         log.debug('get all ({0}) dbs from pillar'.format(len(pillar_dbs)))
         return pillar_dbs
+
 
 @depends('cx_Oracle', fallback_function=_cx_oracle_req)
 def version(*dbs):
@@ -140,14 +145,16 @@ def version(*dbs):
         salt '*' oracle.version my_db
     '''
     pillar_dbs = __salt__['pillar.get']('oracle:dbs')
-    get_version = lambda x: [r[0] for r in \
-        run_query(x, "select banner from v$version order by banner")]
+    get_version = lambda x: [
+        r[0] for r in run_query(x, "select banner from v$version order by banner")
+        ]
     if dbs:
         log.debug('get db versions for: {0}'.format(dbs))
-        return {db:get_version(db) for db in dbs if pillar_dbs.has_key(db)}
+        return {db:get_version(db) for db in dbs if db in pillar_dbs}
     else:
         log.debug('get all({0}) dbs versions'.format(len(dbs)))
         return {db:get_version(db) for db in pillar_dbs}
+
 
 @depends('cx_Oracle', fallback_function=_cx_oracle_req)
 def client_version():
@@ -161,6 +168,7 @@ def client_version():
         salt '*' oracle.client_version
     '''
     return '.'.join((str(x) for x in cx_Oracle.clientversion()))
+
 
 def show_pillar(item=None):
     '''
@@ -178,6 +186,7 @@ def show_pillar(item=None):
     else:
         return __salt__['pillar.get']('oracle')
 
+
 def show_env():
     '''
     Show Environment used by Oracle Client
@@ -192,4 +201,4 @@ def show_env():
         at first _connect() ``NLS_LANG`` will forced to '.AL32UTF8'
     '''
     envs = ['PATH', 'ORACLE_HOME', 'TNS_ADMIN', 'NLS_LANG']
-    return {env:os.environ[env] for env in envs if os.environ.has_key(env)}
+    return {env:os.environ[env] for env in envs if env in os.environ}
