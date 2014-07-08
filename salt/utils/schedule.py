@@ -270,7 +270,7 @@ class Schedule(object):
                 self.delete_job(name, where=where)
             self.opts['schedule'][name] = schedule
 
-    def run_job(self, name, where):
+    def run_job(self, name, where=None):
         '''
         Run a schedule job now
         '''
@@ -498,7 +498,8 @@ class Schedule(object):
                     time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.  Ignoring.')
+                log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
+                          '"when" or "cron" options.  Ignoring.')
                 continue
 
             if 'when' in data and 'cron' in data:

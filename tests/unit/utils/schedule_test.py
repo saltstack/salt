@@ -66,6 +66,16 @@ class ScheduleTestCase(TestCase):
         data = {'key1': 'value1', 'key2': 'value2'}
         self.assertRaises(ValueError, Schedule.add_job, self.schedule, data)
 
+    def test_add_job(self):
+        '''
+        Tests adding a job to the schedule
+        '''
+        data = {'foo': 'bar'}
+        ret = {'schedule': {'foo': 'bar', 'hello': 'world'}}
+        self.schedule.opts = {'schedule': {'hello': 'world'}}
+        Schedule.add_job(self.schedule, data)
+        self.assertEqual(self.schedule.opts, ret)
+
     # enable_job tests
 
     def test_enable_job(self):
