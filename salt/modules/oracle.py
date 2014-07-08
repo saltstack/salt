@@ -126,7 +126,11 @@ def show_dbs(*dbs):
     pillar_dbs = __salt__['pillar.get']('oracle:dbs')
     if dbs:
         log.debug('get dbs from pillar: {0}'.format(dbs))
-        return {db:pillar_dbs[db] for db in dbs if db in pillar_dbs}
+        result = {}
+        for db in dbs:
+            if db in pillar_dbs:
+                result[db] = pillar_dbs[db]
+        return result
     else:
         log.debug('get all ({0}) dbs from pillar'.format(len(pillar_dbs)))
         return pillar_dbs
@@ -148,12 +152,17 @@ def version(*dbs):
     get_version = lambda x: [
         r[0] for r in run_query(x, "select banner from v$version order by banner")
         ]
+    result = {}
     if dbs:
         log.debug('get db versions for: {0}'.format(dbs))
-        return {db:get_version(db) for db in dbs if db in pillar_dbs}
+        for db in dbs:
+            if db in pillar_dbs:
+                result[db] = get_version(db)
     else:
         log.debug('get all({0}) dbs versions'.format(len(dbs)))
-        return {db:get_version(db) for db in pillar_dbs}
+        for db in dbs:
+            result[db] = get_version(db)
+    return result
 
 
 @depends('cx_Oracle', fallback_function=_cx_oracle_req)
@@ -201,4 +210,8 @@ def show_env():
         at first _connect() ``NLS_LANG`` will forced to '.AL32UTF8'
     '''
     envs = ['PATH', 'ORACLE_HOME', 'TNS_ADMIN', 'NLS_LANG']
-    return {env:os.environ[env] for env in envs if env in os.environ}
+    result = {}
+    for env in envs:
+        if env in os.environ:
+            result[env] = os.environ[env]
+    return result
