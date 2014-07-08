@@ -343,7 +343,13 @@ def get_pgid(path, follow_symlinks=True):
     # can't load a file descriptor for the file, we default
     # to "Everyone" - http://support.microsoft.com/kb/243330
     except MemoryError:
+        # generic memory error (win2k3+)
         return 'S-1-1-0'
+    except pywinerror as exc:
+        # Incorrect function error (win2k8+)
+        if exc.winerror == 1:
+            return 'S-1-1-0'
+        raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
     return win32security.ConvertSidToStringSid(group_sid)
 
@@ -533,7 +539,13 @@ def get_uid(path, follow_symlinks=True):
             path, win32security.OWNER_SECURITY_INFORMATION
         )
     except MemoryError:
+        # generic memory error (win2k3+)
         return 'S-1-1-0'
+    except pywinerror as exc:
+        # Incorrect function error (win2k8+)
+        if exc.winerror == 1:
+            return 'S-1-1-0'
+        raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()
     return win32security.ConvertSidToStringSid(owner_sid)
 

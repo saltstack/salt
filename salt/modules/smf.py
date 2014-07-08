@@ -89,13 +89,21 @@ def available(name):
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
+    The SmartOS if statement uses svcs to return the service name from the
+    package name.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' service.available net-snmp
     '''
-    return name in get_all()
+    if 'SmartOS' in __grains__['os']:
+        cmd = '/usr/bin/svcs -H -o SVC {0}'.format(name)
+        name = __salt__['cmd.run'](cmd)
+        return name in get_all()
+    else:
+        return name in get_all()
 
 
 def missing(name):
@@ -110,7 +118,12 @@ def missing(name):
 
         salt '*' service.missing net-snmp
     '''
-    return name not in get_all()
+    if 'SmartOS' in __grains__['os']:
+        cmd = '/usr/bin/svcs -H -o SVC {0}'.format(name)
+        name = __salt__['cmd.run'](cmd)
+        return name not in get_all()
+    else:
+        return name not in get_all()
 
 
 def get_all():

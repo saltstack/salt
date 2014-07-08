@@ -276,6 +276,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
     attempts = 5
     while attempts > 0:
+        params_with_headers = params.copy()
         timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
         if not location:
@@ -294,13 +295,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
                 DEFAULT_EC2_API_VERSION
             )
 
-            params['AWSAccessKeyId'] = provider['id']
-            params['SignatureVersion'] = '2'
-            params['SignatureMethod'] = 'HmacSHA256'
-            params['Timestamp'] = '{0}'.format(timestamp)
-            params['Version'] = ec2_api_version
-            keys = sorted(params.keys())
-            values = map(params.get, keys)
+            params_with_headers['AWSAccessKeyId'] = provider['id']
+            params_with_headers['SignatureVersion'] = '2'
+            params_with_headers['SignatureMethod'] = 'HmacSHA256'
+            params_with_headers['Timestamp'] = '{0}'.format(timestamp)
+            params_with_headers['Version'] = ec2_api_version
+            keys = sorted(params_with_headers.keys())
+            values = map(params_with_headers.get, keys)
             querystring = urllib.urlencode(list(zip(keys, values)))
 
             uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
@@ -309,13 +310,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             hashed = hmac.new(provider['key'], uri, hashlib.sha256)
             sig = binascii.b2a_base64(hashed.digest())
-            params['Signature'] = sig.strip()
+            params_with_headers['Signature'] = sig.strip()
 
             requesturl = 'https://{0}/'.format(endpoint)
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         try:
-            result = requests.get(requesturl, params=params)
+            result = requests.get(requesturl, params=params_with_headers)
             log.debug(
                 'EC2 Response Status Code: {0}'.format(
                     # result.getcode()

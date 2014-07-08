@@ -439,7 +439,7 @@ def service_delete(service_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.service_delete c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_delete name=nova
     '''
-    kstone = auth(profile)
+    kstone = auth(profile, **connection_args)
     if name:
         service_id = service_get(name=name, profile=profile,
                                  **connection_args)[name]['id']

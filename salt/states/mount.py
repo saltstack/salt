@@ -51,34 +51,34 @@ def mounted(name,
         The path to the location where the device is to be mounted
 
     device
-        The device name, typically the device node, such as /dev/sdb1
-        or UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
+        The device name, typically the device node, such as ``/dev/sdb1``
+        or ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314``
 
     fstype
-        The filesystem type, this will be xfs, ext2/3/4 in the case of classic
-        filesystems, and fuse in the case of fuse mounts
+        The filesystem type, this will be ``xfs``, ``ext2/3/4`` in the case of classic
+        filesystems, and ``fuse`` in the case of fuse mounts
 
     mkmnt
-        If the mount point is not present then the state will fail, set mkmnt
-        to True to create the mount point if it is otherwise not present
+        If the mount point is not present then the state will fail, set ``mkmnt: True``
+        to create the mount point if it is otherwise not present
 
     opts
         A list object of options or a comma delimited list
 
     dump
-        The dump value to be passed into the fstab, default to 0
+        The dump value to be passed into the fstab, Default is ``0``
 
     pass_num
-        The pass value to be passed into the fstab, default to 0
+        The pass value to be passed into the fstab, Default is ``0``
 
     config
-        Set an alternative location for the fstab, default to /etc/fstab
+        Set an alternative location for the fstab, Default is ``/etc/fstab``
 
     persist
-        Set if the mount should be saved in the fstab, default to True
+        Set if the mount should be saved in the fstab, Default is ``True``
 
     mount
-        Set if the mount should be mounted immediately, default to True
+        Set if the mount should be mounted immediately, Default is ``True``
     '''
     ret = {'name': name,
            'changes': {},
@@ -333,10 +333,10 @@ def unmounted(name,
         The path to the location where the device is to be unmounted from
 
     config
-        Set an alternative location for the fstab, default to /etc/fstab
+        Set an alternative location for the fstab, Default is ``/etc/fstab``
 
     persist
-        Set if the mount should be purged from the fstab, default to False
+        Set if the mount should be purged from the fstab, Default is ``False``
     '''
     ret = {'name': name,
            'changes': {},

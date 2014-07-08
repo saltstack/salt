@@ -14,6 +14,7 @@ import shutil
 import hashlib
 import logging
 import traceback
+import binascii
 
 # Import third party libs
 try:
@@ -146,26 +147,61 @@ class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
     authentication by the master.
+
+    It also generates a signing key-pair if enabled with master_sign_key_name.
     '''
     def __init__(self, opts):
         super(MasterKeys, self).__init__()
         self.opts = opts
         self.pub_path = os.path.join(self.opts['pki_dir'], 'master.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
+
         self.key = self.__get_keys()
         self.token = self.__gen_token()
+        self.pub_signature = None
 
-    def __get_keys(self):
+        # set names for the signing key-pairs
+        if opts['master_sign_pubkey']:
+
+            # if only the signature is available, use that
+            if opts['master_use_pubkey_signature']:
+                self.sig_path = os.path.join(self.opts['pki_dir'],
+                                             opts['master_pubkey_signature'])
+                if os.path.isfile(self.sig_path):
+                    self.pub_signature = salt.utils.fopen(self.sig_path).read()
+                    log.info('Read {0}\'s signature from {1}'
+                             ''.format(os.path.basename(self.pub_path),
+                                       self.opts['master_pubkey_signature']))
+                else:
+                    log.error('Signing the master.pub key with a signature is enabled '
+                              'but no signature file found at the defined location '
+                              '{0}'.format(self.sig_path))
+                    log.error('The signature-file may be either named differently '
+                               'or has to be created with \'salt-key --gen-signature\'')
+                    sys.exit(1)
+
+            # create a new signing key-pair to sign the masters
+            # auth-replies when a minion tries to connect
+            else:
+                self.pub_sign_path = os.path.join(self.opts['pki_dir'],
+                                                  opts['master_sign_key_name'] + '.pub')
+                self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
+                                                  opts['master_sign_key_name'] + '.pem')
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+
+    def __get_keys(self, name='master'):
         '''
-        Returns a key objects for the master
+        Returns a key object for a key in the pki-dir
         '''
-        if os.path.exists(self.rsa_path):
-            key = RSA.load_key(self.rsa_path)
-            log.debug('Loaded master key: {0}'.format(self.rsa_path))
+        path = os.path.join(self.opts['pki_dir'],
+                            name + '.pem')
+        if os.path.exists(path):
+            key = RSA.load_key(path)
+            log.debug('Loaded {0} key: {1}'.format(name, path))
         else:
-            log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
+            log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
             gen_keys(self.opts['pki_dir'],
-                     'master',
+                     name,
                      self.opts['keysize'],
                      self.opts.get('user'))
             key = RSA.load_key(self.rsa_path)
@@ -177,14 +213,30 @@ class MasterKeys(dict):
         '''
         return self.key.private_encrypt('salty bacon', 5)
 
-    def get_pub_str(self):
+    def get_pub_str(self, name='master'):
         '''
-        Return the string representation of the public key
+        Return the string representation of a public key
+        in the pki-directory
         '''
-        if not os.path.isfile(self.pub_path):
+        path = os.path.join(self.opts['pki_dir'],
+                            name + '.pub')
+        if not os.path.isfile(path):
             key = self.__get_keys()
-            key.save_pub_key(self.pub_path)
-        return salt.utils.fopen(self.pub_path, 'r').read()
+            key.save_pub_key(path)
+        return salt.utils.fopen(path, 'r').read()
+
+    def get_mkey_paths(self):
+        return self.pub_path, self.rsa_path
+
+    def get_sign_paths(self):
+        return self.pub_sign_path, self.rsa_sign_path
+
+    def pubkey_signature(self):
+        '''
+        returns the base64 encoded signature from the signature file
+        or None if the master has its own signing keys
+        '''
+        return self.pub_signature
 
 
 class Auth(object):
@@ -296,22 +348,90 @@ class Auth(object):
                 return key_str, ''
         return '', ''
 
-    def verify_master(self, payload):
+    def verify_pubkey_sig(self, message, sig):
         '''
-        Verify that the master is the same one that was previously accepted.
+        wraps the verify_signature method so we have
+        additional checks and return a bool
         '''
-        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
-            local_master_pub = salt.utils.fopen(m_pub_fn).read()
-            if payload['pub_key'] != local_master_pub:
+        if self.opts['master_sign_key_name']:
+            path = os.path.join(self.opts['pki_dir'],
+                                self.opts['master_sign_key_name'] + '.pub')
 
-                # This is not the last master we connected to
-                log.error('The master key has changed, the salt master could '
-                          'have been subverted, verify salt master\'s public '
-                          'key')
-                return ''
+            if os.path.isfile(path):
+                res = verify_signature(path,
+                                       message,
+                                       binascii.a2b_base64(sig))
+            else:
+                log.error('Verification public key {0} does not exist. You '
+                          'need to copy it from the master to the minions '
+                          'pki directory'.format(os.path.basename(path)))
+                return False
+            if res:
+                log.debug('Successfully verified signature of master '
+                          'public key with verification public key '
+                          '{0}'.format(self.opts['master_sign_key_name'] + '.pub'))
+                return True
+            else:
+                log.debug('Failed to verify signature of public key')
+                return False
+        else:
+            log.error('Failed to verify the signature of the message because '
+                      'the verification key-pairs name is not defined. Please '
+                      'make sure, master_sign_key_name is defined.')
+            return False
+
+    def verify_signing_master(self, payload):
+        try:
+            if self.verify_pubkey_sig(payload['pub_key'],
+                                      payload['pub_sig']):
+                log.info('Received signed and verified master pubkey '
+                         'from master {0}'.format(self.opts['master']))
+                m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                return True
+            else:
+                log.error('Received signed public-key from master {0} '
+                          'but signature verification failed!'.format(self.opts['master']))
+                return False
+        except Exception as sign_exc:
+            log.error('There was an error while verifying the masters public-key signature')
+            raise Exception(sign_exc)
+
+    def check_auth_deps(self, payload):
+        '''
+        checks if both master and minion either sign (master) and
+        verify (minion). If one side does not, it should fail
+        '''
+        # master and minion sign and verify
+        if 'pub_sig' in payload and self.opts['verify_master_pubkey_sign']:
+            return True
+        # master and minion do NOT sign and do NOT verify
+        elif 'pub_sig' not in payload and not self.opts['verify_master_pubkey_sign']:
+            return True
+
+        # master signs, but minion does NOT verify
+        elif 'pub_sig' in payload and not self.opts['verify_master_pubkey_sign']:
+            log.error('The masters sent its public-key signature, but signature '
+                      'verification is not enabled on the minion. Either enable '
+                      'signature verification on the minion or disable signing '
+                      'the public key on the master!')
+            return False
+        # master does NOT sign but minion wants to verify
+        elif 'pub_sig' not in payload and self.opts['verify_master_pubkey_sign']:
+            log.error('The master did not send its public-key signature, but '
+                      'signature verification is enabled on the minion. Either '
+                      'disable signature verification on the minion or enable '
+                      'signing the public on the master!')
+            return False
+
+    def extract_aes(self, payload, master_pub=True):
+        '''
+        return the aes key received from the master
+        when the minion has been successfully authed
+        '''
+        if master_pub:
             try:
-                aes, token = self.decrypt_aes(payload)
+                aes, token = self.decrypt_aes(payload, master_pub)
                 if token != self.token:
                     log.error(
                         'The master failed to decrypt the random minion token'
@@ -324,9 +444,65 @@ class Auth(object):
                 return ''
             return aes
         else:
-            salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
-            aes, token = self.decrypt_aes(payload, False)
+            aes, token = self.decrypt_aes(payload, master_pub)
             return aes
+
+    def verify_master(self, payload):
+        '''
+        Verify that the master is the same one that was previously accepted.
+        '''
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+        if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
+            local_master_pub = salt.utils.fopen(m_pub_fn).read()
+
+            if payload['pub_key'] != local_master_pub:
+                if not self.check_auth_deps(payload):
+                    return ''
+
+                if self.opts['verify_master_pubkey_sign']:
+                    if self.verify_signing_master(payload):
+                        return self.extract_aes(payload, master_pub=False)
+                    else:
+                        return ''
+                else:
+                    # This is not the last master we connected to
+                    log.error('The master key has changed, the salt master could '
+                              'have been subverted, verify salt master\'s public '
+                              'key')
+                    return ''
+
+            else:
+                if not self.check_auth_deps(payload):
+                    return ''
+                # verify the signature of the pubkey even if it has
+                # not changed compared with the one we already have
+                if self.opts['always_verify_signature']:
+                    if self.verify_signing_master(payload):
+                        return self.extract_aes(payload)
+                    else:
+                        log.error('The masters public could not be verified. Is the '
+                                  'verification pubkey {0} up to date?'
+                                  ''.format(self.opts['master_sign_key_name'] + '.pub'))
+                        return ''
+
+                else:
+                    return self.extract_aes(payload)
+        else:
+            if not self.check_auth_deps(payload):
+                return ''
+
+            # verify the masters pubkey signature if the minion
+            # has not received any masters pubkey before
+            if self.opts['verify_master_pubkey_sign']:
+                if self.verify_signing_master(payload):
+                    return self.extract_aes(payload, master_pub=False)
+                else:
+                    return ''
+            # the minion has not received any masters pubkey yet, write
+            # the newly received pubkey to minion_master.pub
+            else:
+                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                return self.extract_aes(payload, master_pub=False)
 
     def sign_in(self, timeout=60, safe=True, tries=1):
         '''

@@ -123,7 +123,8 @@ def installed(name,
               no_chown=False,
               cwd=None,
               activate=False,
-              pre_releases=False):
+              pre_releases=False,
+              cert=None):
     '''
     Make sure the package is installed
 
@@ -422,6 +423,7 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
+        cert=cert,
         saltenv=__env__
     )
 

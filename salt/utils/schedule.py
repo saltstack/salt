@@ -327,8 +327,10 @@ class Schedule(object):
         # Remove all jobs from self.intervals
         self.intervals = {}
 
-        if 'schedule' in self.opts:
+        if 'schedule' in self.opts and 'schedule' in schedule:
             self.opts['schedule'].update(schedule['schedule'])
+        elif 'schedule' in self.opts:
+            self.opts['schedule'].update(schedule)
         else:
             self.opts['schedule'] = schedule
 
