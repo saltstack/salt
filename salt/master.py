@@ -1278,122 +1278,7 @@ class ClearFuncs(object):
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
-
-    def __check_permissions(self, filename):
-        '''
-        Check if the specified filename has correct permissions
-        '''
-        if salt.utils.is_windows():
-            return True
-
-        # After we've ascertained we're not on windows
-        try:
-            user = self.opts['user']
-            pwnam = pwd.getpwnam(user)
-            uid = pwnam[2]
-            gid = pwnam[3]
-            groups = salt.utils.get_gid_list(user, include_default=False)
-        except KeyError:
-            log.error(
-                'Failed to determine groups for user {0}. The user is not '
-                'available.\n'.format(
-                    user
-                )
-            )
-            return False
-
-        fmode = os.stat(filename)
-
-        if os.getuid() == 0:
-            if fmode.st_uid == uid or fmode.st_gid != gid:
-                return True
-            elif self.opts.get('permissive_pki_access', False) \
-                    and fmode.st_gid in groups:
-                return True
-        else:
-            if stat.S_IWOTH & fmode.st_mode:
-                # don't allow others to write to the file
-                return False
-
-            # check group flags
-            if self.opts.get('permissive_pki_access', False) and stat.S_IWGRP & fmode.st_mode:
-                return True
-            elif stat.S_IWGRP & fmode.st_mode:
-                return False
-
-            # check if writable by group or other
-            if not (stat.S_IWGRP & fmode.st_mode or
-                    stat.S_IWOTH & fmode.st_mode):
-                return True
-
-        return False
-
-    def __check_signing_file(self, keyid, signing_file):
-        '''
-        Check a keyid for membership in a signing file
-        '''
-        if not signing_file or not os.path.exists(signing_file):
-            return False
-
-        if not self.__check_permissions(signing_file):
-            message = 'Wrong permissions for {0}, ignoring content'
-            log.warn(message.format(signing_file))
-            return False
-
-        with salt.utils.fopen(signing_file, 'r') as fp_:
-            for line in fp_:
-                line = line.strip()
-                if line.startswith('#'):
-                    continue
-                else:
-                    if salt.utils.expr_match(keyid, line):
-                        return True
-        return False
-
-    def __check_autosign_dir(self, keyid):
-        '''
-        Check a keyid for membership in a autosign directory.
-        '''
-        autosign_dir = os.path.join(self.opts['pki_dir'], 'minions_autosign')
-
-        # cleanup expired files
-        expire_minutes = self.opts.get('autosign_expire_minutes', 10)
-        if expire_minutes > 0:
-            min_time = time.time() - (60 * int(expire_minutes))
-            for root, dirs, filenames in os.walk(autosign_dir):
-                for f in filenames:
-                    stub_file = os.path.join(autosign_dir, f)
-                    mtime = os.path.getmtime(stub_file)
-                    if mtime < min_time:
-                        log.warn('Autosign keyid expired {0}'.format(stub_file))
-                        os.remove(stub_file)
-
-        stub_file = os.path.join(autosign_dir, keyid)
-        if not os.path.exists(stub_file):
-            return False
-        os.remove(stub_file)
-        return True
-
-    def __check_autoreject(self, keyid):
-        '''
-        Checks if the specified keyid should automatically be rejected.
-        '''
-        return self.__check_signing_file(
-            keyid,
-            self.opts.get('autoreject_file', None)
-        )
-
-    def __check_autosign(self, keyid):
-        '''
-        Checks if the specified keyid should automatically be signed.
-        '''
-        if self.opts['auto_accept']:
-            return True
-        if self.__check_signing_file(keyid, self.opts.get('autosign_file', None)):
-            return True
-        if self.__check_autosign_dir(keyid):
-            return True
-        return False
+        self.auto_key = salt.daemons.masterapi.AutoKey(opts)
 
     def _auth(self, load):
         '''
@@ -1442,8 +1327,8 @@ class ClearFuncs(object):
                             'load': {'ret': 'full'}}
 
         # Check if key is configured to be auto-rejected/signed
-        auto_reject = self.__check_autoreject(load['id'])
-        auto_sign = self.__check_autosign(load['id'])
+        auto_reject = self.auto_key.check_autoreject(load['id'])
+        auto_sign = self.auto_key.check_autosign(load['id'])
 
         pubfn = os.path.join(self.opts['pki_dir'],
                              'minions',
