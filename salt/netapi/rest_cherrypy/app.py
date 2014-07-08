@@ -1262,7 +1262,11 @@ class Events(object):
             '''
             An iterator to yield Salt events
             '''
-            event = salt.utils.event.get_event('master', opts=self.opts)
+            event = salt.utils.event.get_event(
+                    'master',
+                    sock_dir=self.opts['sock_dir'],
+                    transport=self.opts['transport'],
+                    opts=self.opts)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1427,7 +1431,11 @@ class WebsocketEndpoint(object):
             # blocks until send is called on the parent end of this pipe.
             pipe.recv()
 
-            event = salt.utils.event.get_event('master', opts=self.opts)
+            event = salt.utils.event.get_event(
+                    'master',
+                    sock_dir=self.opts['sock_dir'],
+                    transport=self.opts['transport'],
+                    opts=self.opts)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
