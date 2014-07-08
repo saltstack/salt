@@ -1509,7 +1509,12 @@ class Webhook(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
-        self.event = salt.utils.event.get_event('master', opts=self.opts)
+        self.event = salt.utils.event.get_event(
+                'master',
+                sock_dir=self.opts['sock_dir'],
+                transport=self.opts['transport'],
+                opts=self.opts,
+                listen=False)
 
         if cherrypy.config['apiopts'].get('webhook_disable_auth'):
             self._cp_config['tools.salt_token.on'] = False
