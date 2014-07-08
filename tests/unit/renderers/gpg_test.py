@@ -14,6 +14,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.loader
 import salt.config
+import salt.utils
 from salt.state import HighState
 from integration import TMP
 
@@ -53,6 +54,9 @@ SKIP = False
 try:
     find_module('gnupg')
 except ImportError:
+    SKIP = True
+
+if salt.utils.which('gpg') is None:
     SKIP = True
 
 
