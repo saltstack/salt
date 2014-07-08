@@ -25,6 +25,26 @@ class PillarModuleTest(integration.ModuleCase):
         else:
             self.assertEqual(pillar['class'], 'other')
 
+    def test_two_ext_pillar_sources_override(self):
+        '''
+        https://github.com/saltstack/salt/issues/12647
+        '''
+
+        self.assertEqual(
+            self.run_function('pillar.data')['info'],
+            'bar'
+        )
+
+    def test_two_ext_pillar_sources(self):
+        '''
+        https://github.com/saltstack/salt/issues/12647
+        '''
+
+        self.assertEqual(
+            self.run_function('pillar.data')['abc'],
+            'def'
+        )
+
     def test_issue_5449_report_actual_file_roots_in_pillar(self):
         '''
         pillar['master']['file_roots'] is overwritten by the master
