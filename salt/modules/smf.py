@@ -87,9 +87,9 @@ def get_stopped():
 def available(name):
     '''
     Returns ``True`` if the specified service is available, otherwise returns
-    ``False``. 
-    
-    The SmartOS if statement uses svcs to return the service name from the 
+    ``False``.
+
+    The SmartOS if statement uses svcs to return the service name from the
     package name.
 
     CLI Example:
@@ -104,7 +104,7 @@ def available(name):
         return name in get_all()
     else:
         return name in get_all()
-        
+
 
 def missing(name):
     '''
@@ -124,7 +124,7 @@ def missing(name):
         return name not in get_all()
     else:
         return name not in get_all()
-        
+
 
 def get_all():
     '''
