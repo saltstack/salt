@@ -366,7 +366,7 @@ DEFAULT_MINION_OPTS = {
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 0,
-    'ioflo_period': 0.01,
+    'ioflo_period': 0.1,
     'ioflo_realtime': True,
     'raet_port': 4510,
     'restart_on_error': False,
