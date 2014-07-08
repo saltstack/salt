@@ -30,7 +30,7 @@ def present(name, persist=False):
         The name of the kernel module to verify is loaded
 
     persist
-        Also add module to /etc/modules
+        Also add module to ``/etc/modules``
     '''
     ret = {'name': name,
            'result': True,
@@ -75,10 +75,10 @@ def absent(name, persist=False, comment=True):
         The name of the kernel module to verify is not loaded
 
     persist
-        Delete module from /etc/modules
+        Delete module from ``/etc/modules``
 
     comment
-        Don't remove module from /etc/modules, only comment it
+        Don't remove module from ``/etc/modules``, only comment it
     '''
     ret = {'name': name,
            'result': True,
