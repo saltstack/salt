@@ -248,6 +248,14 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
         return _valid(
             name=name,
             comment='Image already pulled: {0}'.format(name))
+
+    if __opts__['test'] and force:
+        comment = 'Image {0} will be pulled'.format(name)
+        return {'name': name,
+                'changes': {},
+                'result': None,
+                'comment': comment}
+
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
     returned = pull(name, tag=tag)
@@ -278,6 +286,14 @@ def pushed(name):
     name
         Name of the image
     '''
+
+    if __opts__['test']:
+        comment = 'Image {0} will be pushed'.format(name)
+        return {'name': name,
+                'changes': {},
+                'result': None,
+                'comment': comment}
+
     push = __salt__['docker.push']
     returned = push(name)
     log.debug("Returned: "+str(returned))
@@ -314,6 +330,14 @@ def built(name,
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
                 name, image_infos['out']['Id']))
+
+    if __opts__['test'] and force:
+        comment = 'Image {0} will be built'.format(name)
+        return {'name': name,
+                'changes': {},
+                'result': None,
+                'comment': comment}
+
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     build = __salt__['docker.build']
     kw = dict(tag=name,

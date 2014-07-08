@@ -120,6 +120,7 @@ def install(pkgs=None,
             cwd=None,
             activate=False,
             pre_releases=False,
+            cert=None,
             __env__=None,
             saltenv='base'):
     '''
@@ -221,7 +222,8 @@ def install(pkgs=None,
         before running install.
     pre_releases
         Include pre-releases in the available versions
-
+    cert
+        Provide a path to an alternate CA bundle
 
     CLI Example:
 
@@ -447,6 +449,9 @@ def install(pkgs=None,
         # From pip v1.4 the --pre flag is available
         if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
             cmd.append('--pre')
+
+    if cert:
+        cmd.append('--cert={0}'.format(cert))
 
     if global_options:
         if isinstance(global_options, string_types):

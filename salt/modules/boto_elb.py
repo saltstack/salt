@@ -509,8 +509,8 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    elb = conn.get_all_load_balancers(name)[0]
-    return elb.register_instances(instances)
+    load_balancer = conn.get_all_load_balancers(name)[0]
+    return load_balancer.register_instances(instances)
 
 
 def deregister_instances(name, instances, region=None, key=None, keyid=None,
@@ -527,8 +527,8 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    elb = conn.get_all_load_balancers(name)[0]
-    return elb.deregister_instances(instances)
+    load_balancer = conn.get_all_load_balancers(name)[0]
+    return load_balancer.deregister_instances(instances)
 
 
 def _get_conn(region, key, keyid, profile):

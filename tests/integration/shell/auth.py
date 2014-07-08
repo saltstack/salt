@@ -6,6 +6,8 @@
 
 # Import python libs
 import os
+import pwd
+import random
 
 # Import Salt Testing libs
 from salttesting.helpers import (
@@ -17,9 +19,6 @@ ensure_in_syspath('../../')
 import integration
 
 from salttesting import skipIf
-
-import random
-import pwd
 
 
 class AuthTest(integration.ShellCase):
@@ -83,6 +82,7 @@ class AuthTest(integration.ShellCase):
     def test_zzzz_tearDown(self):
         if pwd.getpwnam('saltdev'):
             self.run_call('user.delete saltdev')
+
 
 if __name__ == '__main__':
     from integration import run_tests
