@@ -101,7 +101,7 @@ def _publish(
                     return cret
                 else:
                     return ret
-            if ((loop_interval * loop_counter) > timeout):
+            if (loop_interval * loop_counter) > timeout:
                 return {}
             loop_counter = loop_counter + 1
             time.sleep(loop_interval)
@@ -119,7 +119,6 @@ def _publish(
             return cret
         else:
             return ret
-
 
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
