@@ -47,16 +47,19 @@ def __virtual__():
     return True
 
 def _cx_oracle_req():
-    return '"cx_Oracle" and Oracle Client needs to be installed for this functin exist'
+    '''
+    Fallback function stub
+    '''
+    return 'Need "cx_Oracle" and Oracle Client installed for this functin exist'
 
-def _unicode_output(cursor, name, defaultType, size, precision, scale):
+def _unicode_output(cursor, name, default_type, size, precision, scale):
     '''
     Return strings values as python unicode string
 
     http://www.oracle.com/technetwork/articles/dsl/tuininga-cx-oracle-084866.html
     '''
-    if defaultType in (cx_Oracle.STRING, cx_Oracle.LONG_STRING,
-            cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB):
+    if default_type in (cx_Oracle.STRING, cx_Oracle.LONG_STRING,
+                        cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB):
         return cursor.var(unicode, size, cursor.arraysize)
 
 def _connect(uri):
@@ -68,12 +71,12 @@ def _connect(uri):
     # cx_Oracle.Connection() not support 'as sysdba' syntax
     uri_l = uri.rsplit(' as ', 1)
     if len(uri_l) == 2:
-        credits, mode = uri_l
+        credentials, mode = uri_l
         mode = MODE[mode]
     else:
-        credits = uri_l[0]
+        credentials = uri_l[0]
         mode = 0
-    userpass, hostportsid = credits.split('@')
+    userpass, hostportsid = credentials.split('@')
     user, password = userpass.split('/')
     hostport, sid = hostportsid.split('/')
     hostport_l = hostport.split(':')
@@ -86,8 +89,8 @@ def _connect(uri):
     # force UTF-8 client encoding
     os.environ['NLS_LANG'] = '.AL32UTF8'
     conn = cx_Oracle.connect(user, password,
-        cx_Oracle.makedsn(host, port, sid),
-        mode)
+                             cx_Oracle.makedsn(host, port, sid),
+                             mode)
     conn.outputtypehandler = _unicode_output
     return conn
 
@@ -118,7 +121,7 @@ def show_dbs(*dbs):
     '''
     pillar_dbs = __salt__['pillar.get']('oracle:dbs')
     if dbs:
-        log.debug('get dbs from pillar: %s' % dbs)
+        log.debug('get dbs from pillar: {0}'.format(dbs))
         return {db:pillar_dbs[db] for db in dbs if pillar_dbs.has_key(db)}
     else:
         log.debug('get all ({0}) dbs from pillar'.format(len(pillar_dbs)))
