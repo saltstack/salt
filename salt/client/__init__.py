@@ -558,6 +558,7 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         '''
+        import  wingdbstub
         arg = salt.utils.args.condition_input(arg, kwarg)
         pub_data = self.run_job(
             tgt,

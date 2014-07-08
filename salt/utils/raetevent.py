@@ -44,20 +44,18 @@ class SaltEvent(object):
         self.yid = nacling.uuid(size=18)
         name = 'event' + self.yid
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
-        basedirpath = os.path.abspath(
-                os.path.join(cachedir, 'raet'))
         self.connected = False
         self.stack = LaneStack(
                 name=name,
                 yid=self.yid,
                 lanename=self.node,
-                basedirpath=basedirpath,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
                 lanename=self.node,
                 yid=0,
+                name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
         self.connect_pub()
@@ -209,7 +207,6 @@ class SaltEvent(object):
     def destroy(self):
         if hasattr(self, 'stack'):
             self.stack.server.close()
-            self.stack.clearAllDir()
 
     def __del__(self):
         self.destroy()

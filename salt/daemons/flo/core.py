@@ -125,7 +125,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                       'ival': {'name': 'master',
                                'main': False,
                                'auto': True,
-                               'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}},
@@ -149,7 +148,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         do salt raet road stack setup at enter
         '''
         name = self.opts.value.get('id', self.local.data.name)
-        localname = self.opts.value.get('id', self.local.data.localname)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
         auto = self.local.data.auto
@@ -162,7 +160,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         local = LocalEstate(
                 eid=eid,
-                name=localname,
+                name=name,
                 main=main,
                 ha=ha,
                 sigkey=sigkey,
@@ -175,7 +173,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                 local=local,
                 store=self.store,
                 name=name,
-                localname=localname,
                 auto=auto,
                 main=main,
                 basedirpath=basedirpath,
@@ -577,7 +574,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                'stack': 'stack',
                'local': {'ipath': 'local',
                           'ival': {'name': 'master',
-                                   'localname': 'master',
                                    'yid': 0,
                                    'lanename': 'master'}},
                'basedirpath': {'ipath': '.salt.raet.basedirpath',
@@ -594,18 +590,16 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Run once at enter
         '''
-        name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
-        localname = self.opts.value.get('id', self.local.data.localname)
+        #name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
+        name = 'manor'
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
         basedirpath = self.basedirpath.value  # must be assigned elsewhere
         self.stack.value = LaneStack(
                                     name=name,
-                                    #localname=localname,
                                     lanename=lanename,
                                     yid=0,
-                                    sockdirpath=self.opts.value['sock_dir'],
-                                    basedirpath=basedirpath)
+                                    sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
@@ -639,7 +633,6 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         if self.stack.value and isinstance(self.stack.value, LaneStack):
             self.stack.value.server.close()
-            self.stack.value.clearAllDir()
 
 
 class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
@@ -951,18 +944,17 @@ class NixExecutor(ioflo.base.deeding.Deed):
         mid = self.opts['id']
         yid = nacling.uuid(size=18)
         stackname = 'jobret' + yid
-        dirpath = os.path.join(self.opts['cachedir'], 'raet')
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=mid,
                 yid=yid, # jid
-                sockdirpath=self.opts['sock_dir'],
-                basedirpath=dirpath)
+                sockdirpath=self.opts['sock_dir'])
 
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
                 stack=ret_stack,
                 yid=0,
+                name='manor',
                 lanename=mid,
                 dirpath=self.opts['sock_dir']
                 )
@@ -980,10 +972,9 @@ class NixExecutor(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        ret_stack.transmit(msg, ret_stack.uids.get('yard0'))
+        ret_stack.transmit(msg, ret_stack.uids.get('manor'))
         ret_stack.serviceAll()
         ret_stack.server.close()
-        ret_stack.clearAllDir()
 
     def action(self):
         '''
