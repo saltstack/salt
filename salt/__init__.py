@@ -240,6 +240,8 @@ class Minion(parsers.MinionOptionParser):
                 self.minion = salt.minion.Minion(self.config)
         else:
             import salt.daemons.flo
+            self.daemonize_if_required()
+            self.set_pidfile()
             self.minion = salt.daemons.flo.IofloMinion(self.config)
 
     def start(self):
