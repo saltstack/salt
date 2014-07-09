@@ -418,4 +418,4 @@ That will limit the master to accept only 100 minions.
 
 If a minion is rejected by a master because it is full, it is told that the
 master is full. It will log that to its logfile and (if configured), will try
-the next master from its list of masters.
+the next master from its list of masters. 
