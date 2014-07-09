@@ -195,19 +195,20 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
-    def delete_job(self, name):
+    def delete_job(self, name, where=None):
         '''
         Deletes a job from the scheduler.
         '''
 
-        # ensure job exists, then delete it
-        if name in self.opts['schedule']:
-            del self.opts['schedule'][name]
-
-        # If job is in pillar, delete it there too
-        if 'schedule' in self.opts['pillar']:
-            if name in self.opts['pillar']['schedule']:
-                del self.opts['pillar']['schedule'][name]
+        if where is None or where != 'pillar':
+            # ensure job exists, then delete it
+            if name in self.opts['schedule']:
+                del self.opts['schedule'][name]
+        else:
+            # If job is in pillar, delete it there too
+            if 'schedule' in self.opts['pillar']:
+                if name in self.opts['pillar']['schedule']:
+                    del self.opts['pillar']['schedule'][name]
 
         # remove from self.intervals
         if name in self.intervals:
@@ -262,14 +263,14 @@ class Schedule(object):
         '''
         if where == 'pillar':
             if name in self.opts['pillar']['schedule']:
-                self.delete_job(name)
+                self.delete_job(name, where=where)
             self.opts['pillar']['schedule'][name] = schedule
         else:
             if name in self.opts['schedule']:
-                self.delete_job(name)
+                self.delete_job(name, where=where)
             self.opts['schedule'][name] = schedule
 
-    def run_job(self, name, where):
+    def run_job(self, name, where=None):
         '''
         Run a schedule job now
         '''
@@ -327,10 +328,11 @@ class Schedule(object):
         # Remove all jobs from self.intervals
         self.intervals = {}
 
-        if 'schedule' in self.opts and 'schedule' in schedule:
-            self.opts['schedule'].update(schedule['schedule'])
-        elif 'schedule' in self.opts:
-            self.opts['schedule'].update(schedule)
+        if 'schedule' in self.opts:
+            if 'schedule' in schedule:
+                self.opts['schedule'].update(schedule['schedule'])
+            else:
+                self.opts['schedule'].update(schedule)
         else:
             self.opts['schedule'] = schedule
 
@@ -496,7 +498,8 @@ class Schedule(object):
                     time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.  Ignoring.')
+                log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
+                          '"when" or "cron" options.  Ignoring.')
                 continue
 
             if 'when' in data and 'cron' in data:

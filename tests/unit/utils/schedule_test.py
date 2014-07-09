@@ -66,6 +66,16 @@ class ScheduleTestCase(TestCase):
         data = {'key1': 'value1', 'key2': 'value2'}
         self.assertRaises(ValueError, Schedule.add_job, self.schedule, data)
 
+    def test_add_job(self):
+        '''
+        Tests adding a job to the schedule
+        '''
+        data = {'foo': 'bar'}
+        ret = {'schedule': {'foo': 'bar', 'hello': 'world'}}
+        self.schedule.opts = {'schedule': {'hello': 'world'}}
+        Schedule.add_job(self.schedule, data)
+        self.assertEqual(self.schedule.opts, ret)
+
     # enable_job tests
 
     def test_enable_job(self):
@@ -101,6 +111,28 @@ class ScheduleTestCase(TestCase):
         self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}}}
         Schedule.disable_job(self.schedule, 'name', where='pillar')
         self.assertFalse(self.schedule.opts['pillar']['schedule']['name']['enabled'])
+
+    # modify_job tests
+
+    def test_modify_job(self):
+        '''
+        Tests modifying a job in the scheduler
+        '''
+        schedule = {'schedule': {'foo': 'bar'}}
+        ret = {'schedule': {'foo': 'bar', 'name': {'schedule': {'foo': 'bar'}}}}
+        self.schedule.opts = {'schedule': {'foo': 'bar'}}
+        Schedule.modify_job(self.schedule, 'name', schedule)
+        self.assertEqual(self.schedule.opts, ret)
+
+    def test_modify_job_pillar(self):
+        '''
+        Tests modifying a job in the scheduler in pillar
+        '''
+        schedule = {'foo': 'bar'}
+        ret = {'pillar': {'schedule': {'name': {'foo': 'bar'}}}}
+        self.schedule.opts = {'pillar': {'schedule': {'name': {'foo': 'bar'}}}}
+        Schedule.modify_job(self.schedule, 'name', schedule, where='pillar')
+        self.assertEqual(self.schedule.opts, ret)
 
     # enable_schedule tests
 
