@@ -106,7 +106,7 @@ class RAETChannel(Channel):
             time.sleep(0.01)
             self.stack.serviceAll()
             if self.stack.rxMsgs:
-                for msg in self.stack.rxMsgs:
+                for msg, sender in self.stack.rxMsgs:
                     return msg.get('return', {})
             if time.time() - start > timeout:
                 if tried >= tries:

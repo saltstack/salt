@@ -167,7 +167,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
         '''
         self.uxd_stack.value.serviceAll()
         while self.uxd_stack.value.rxMsgs:
-            msg = self.uxd_stack.value.rxMsgs.popleft()
+            msg, sender = self.uxd_stack.value.rxMsgs.popleft()
             if 'load' in msg:
                 cmd = msg['load'].get('cmd')
                 if not cmd:
