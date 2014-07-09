@@ -29,6 +29,7 @@ class WorkerFork(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {'opts': '.salt.opts',
+               'worker_verify': '.salt.var.worker_verify',
                'access_keys': '.salt.access_keys'}
 
     def _make_workers(self):
@@ -48,7 +49,8 @@ class WorkerFork(ioflo.base.deeding.Deed):
         '''
         self.opts.value['__worker'] = True
         behaviors = ['salt.daemons.flo']
-        preloads = [('.salt.opts', dict(value=self.opts.value))]
+        preloads = [('.salt.opts', dict(value=self.opts.value)),
+                    ('.salt.var.worker_verify', self.worker_verify.value)]
         preloads.append(('.salt.yid', dict(value=yid)))
         preloads.append(
                 ('.salt.access_keys', dict(value=self.access_keys.value)))
@@ -153,6 +155,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
             'uxd_stack': '.salt.uxd.stack.stack',
             'opts': '.salt.opts',
             'yid': '.salt.yid',
+            'worker_verify': '.salt.var.worker_verify',
             'remote': '.salt.loader.remote',
             'local': '.salt.loader.local',
             }
@@ -178,6 +181,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
                     ret['return'] = getattr(self.local.value, cmd)(msg['load'])
                 if cmd == 'publish' and 'pub' in ret['return']:
                     r_share = 'pub_ret'
+                    ret['__worker_verify'] = self.worker_verify.value
                 else:
                     r_share = 'ret'
                 ret['route'] = {

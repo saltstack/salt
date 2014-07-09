@@ -14,7 +14,6 @@ import multiprocessing
 import traceback
 import itertools
 from collections import deque
-import shutil
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -564,6 +563,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                'remote_cmd': '.salt.local.remote_cmd',
                'publish': '.salt.local.publish',
                'fun': '.salt.local.fun',
+               'worker_verify': '.salt.var.worker_verify',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
@@ -605,6 +605,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         self.event.value = deque()
         self.event_req.value = deque()
         self.publish.value = deque()
+        self.worker_verify.value = salt.utils.rand_string()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for ind in range(self.opts.value['worker_threads']):
@@ -714,6 +715,7 @@ class Router(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
+               'worker_verify': '.salt.var.worker_verify',
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
 
@@ -777,7 +779,8 @@ class Router(ioflo.base.deeding.Deed):
             self.udp_stack.value.message(msg, eid)
             return
         if d_share == 'pub_ret':
-            self.publish.value.append(msg)
+            if msg.get('__worker_verify') == self.worker_verify.value:
+                self.publish.value.append(msg)
         if d_yard is None:
             pass
         elif d_yard != self.uxd_stack.value.local.name:
