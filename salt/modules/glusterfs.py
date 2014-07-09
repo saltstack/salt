@@ -159,7 +159,7 @@ def list_volumes():
 
     results = __salt__['cmd.run']('gluster volume list').splitlines()
     if results[0] == 'No volumes present in cluster':
-        return None
+        return []
     else:
         return results
 
