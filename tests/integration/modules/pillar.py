@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import (
+    ensure_in_syspath,
+    requires_network
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -25,6 +28,7 @@ class PillarModuleTest(integration.ModuleCase):
         else:
             self.assertEqual(pillar['class'], 'other')
 
+    @requires_network()
     def test_two_ext_pillar_sources_override(self):
         '''
         https://github.com/saltstack/salt/issues/12647
@@ -35,6 +39,7 @@ class PillarModuleTest(integration.ModuleCase):
             'bar'
         )
 
+    @requires_network()
     def test_two_ext_pillar_sources(self):
         '''
         https://github.com/saltstack/salt/issues/12647
