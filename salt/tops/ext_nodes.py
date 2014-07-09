@@ -42,19 +42,15 @@ base:
 
 '''
 
-
-
 # Import python libs
+import logging
 import subprocess
 
 # Import third party libs
 import yaml
 
-
-# Import python libs
-import logging
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
