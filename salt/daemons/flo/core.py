@@ -75,34 +75,31 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         Will override if empty value
         '''
         if not self.basedirpath.value:  # override if empty
-            self.basedirpath.value = os.path.abspath(
-                    os.path.join(self.opts.value['cachedir'], 'raet'))
+            self.basedirpath.value = os.path.abspath(self.opts.value['sock_dir'])
 
     def action(self):
         '''
-        Should only run once to cleanup stale lane directories.
+        Should only run once to cleanup stale lane uxd files.
         '''
         basedirpath = self.basedirpath.value
         if basedirpath:
-            console.concise("Cleaning up {0}\n".format(basedirpath))
-            dirpaths = []
-            prefixes = ['client', 'event', 'raet', 'jobret']
-            #mid = self.opts.value.get('id', '')
-            #if mid:
-                #prefixes.append(mid)
+            console.concise("Cleaning up uxd files in {0}\n".format(basedirpath))
             for name in os.listdir(basedirpath):
                 path = os.path.join(basedirpath, name)
-                if not os.path.isdir(path):
+                if os.path.isdir(path):
                     continue
-                for prefix in prefixes:
-                    if name.startswith(prefix) and len(name) >= (len(prefix) +  18):
-                        dirpaths.append(path)
-                        break
+                root, ext = os.path.splitext(name)
+                if ext != '.uxd':
+                    continue
+                if not all(root.partition('.')):
+                    continue
+                try:
+                    os.unlink(path)
+                    console.concise("Removed {0}\n".format(path))
+                except OSError:
+                    console.concise("Failed removing {0}\n".format(path))
+                    raise
 
-            for dirpath in dirpaths:
-                if os.path.exists(dirpath):
-                    console.concise("Removing directory {0}\n".format(dirpath))
-                    shutil.rmtree(dirpath)
 
 
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
