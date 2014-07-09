@@ -73,7 +73,8 @@ class LocalClient(salt.client.LocalClient):
         while True:
             time.sleep(0.01)
             stack.serviceAll()
-            for msg, sender in stack.rxMsgs:
+            while stack.rxMsgs:
+                msg, sender = stack.rxMsgs.popleft()
                 ret = msg.get('return', {})
                 if 'ret' in ret:
                     stack.server.close()

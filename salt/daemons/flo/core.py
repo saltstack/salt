@@ -506,12 +506,12 @@ class LoadPillar(ioflo.base.deeding.Deed):
         self.udp_stack.value.transmit({'route': route, 'load': load})
         self.udp_stack.value.serviceAll()
         while True:
-            time.sleep(0.01)
-            if self.udp_stack.value.rxMsgs:
-                for msg, sender in self.udp_stack.value.rxMsgs:
-                    self.pillar.value = msg.get('return', {})
-                    self.opts.value['pillar'] = self.pillar.value
-                    return
+            time.sleep(0.1)
+            while self.udp_stack.value.rxMsgs:
+                msg, sender = self.udp_stack.value.rxMsgs.popleft()
+                self.pillar.value = msg.get('return', {})
+                self.opts.value['pillar'] = self.pillar.value
+                return
             self.udp_stack.value.serviceAll()
         self.pillar_refresh.value = False
 

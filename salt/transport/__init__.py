@@ -18,7 +18,6 @@ log = logging.getLogger(__name__)
 
 try:
     from raet import raeting, nacling
-    from raet.road.stacking import RoadStack
     from raet.lane.stacking import LaneStack
     from raet.lane import yarding
 
@@ -105,9 +104,9 @@ class RAETChannel(Channel):
         while True:
             time.sleep(0.01)
             self.stack.serviceAll()
-            if self.stack.rxMsgs:
-                for msg, sender in self.stack.rxMsgs:
-                    return msg.get('return', {})
+            while self.stack.rxMsgs:
+                msg, sender = self.stack.rxMsgs.popleft()
+                return msg.get('return', {})
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
