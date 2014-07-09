@@ -414,7 +414,24 @@ class Publisher(multiprocessing.Process):
                 # SIGUSR1 gracefully so we don't choke and die horribly
                 try:
                     package = pull_sock.recv()
-                    pub_sock.send(package)
+                    unpacked_package = salt.payload.unpackage(package)
+                    payload = unpacked_package['payload']
+                    if self.opts['zmq_filtering']:
+                        # if you have a specific topic list, use that
+                        if 'topic_lst' in unpacked_package:
+                            for topic in unpacked_package['topic_lst']:
+                                # zmq filters are substring match, hash the topic
+                                # to avoid collisions
+                                htopic = hashlib.sha1(topic).hexdigest()
+                                pub_sock.send(htopic, flags=zmq.SNDMORE)
+                                pub_sock.send(payload)
+                                # otherwise its a broadcast
+                        else:
+                            # TODO: constants file for "broadcast"
+                            pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                            pub_sock.send(payload)
+                    else:
+                        pub_sock.send(payload)
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
@@ -2213,7 +2230,13 @@ class ClearFuncs(object):
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
         pub_sock.connect(pull_uri)
-        pub_sock.send(self.serial.dumps(payload))
+        int_payload = {'payload': self.serial.dumps(payload)}
+
+        # add some targeting stuff for lists only (for now)
+        if load['tgt_type'] == 'list':
+            int_payload['topic_lst'] = load['tgt']
+
+        pub_sock.send(self.serial.dumps(int_payload))
         return {
             'enc': 'clear',
             'load': {
