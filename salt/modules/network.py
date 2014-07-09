@@ -635,10 +635,12 @@ def connect(host, port=None, proto=None, timeout=5):
     if not host:
         ret['result'] = False
         ret['comment'] = 'Required argument, host, is missing.'
+        return ret
 
     if not port:
         ret['result'] = False
         ret['comment'] = 'Required argument, port, is missing.'
+        return ret
 
     if salt.utils.validate.net.ipv4_addr(host) or salt.utils.validate.net.ipv6_addr(host):
         address = host
@@ -650,6 +652,7 @@ def connect(host, port=None, proto=None, timeout=5):
             __proto = socket.SOL_UDP
         else:
             __proto = socket.SOL_TCP
+            proto = 'tcp'
 
         (family,
          socktype,
