@@ -613,7 +613,7 @@ def mod_hostname(hostname):
     return True
 
 
-def connect(host, port=None, proto=None, timeout=5):
+def connect(host, port=None, **kwargs):
     '''
     Test connectivity to a host using a particular
     port from the minion.
@@ -625,6 +625,8 @@ def connect(host, port=None, proto=None, timeout=5):
         salt '*' network.connect archlinux.org 80
 
         salt '*' network.connect archlinux.org 80 timeout=3
+
+        salt '*' network.connect archlinux.org 80 timeout=3 family=ipv4
 
         salt '*' network.connect google-public-dns-a.google.com port=53 proto=udp timeout=3
     '''
@@ -642,6 +644,10 @@ def connect(host, port=None, proto=None, timeout=5):
         ret['comment'] = 'Required argument, port, is missing.'
         return ret
 
+    proto = kwargs.get('proto', 'tcp')
+    timeout = kwargs.get('timeout', 5)
+    family = kwargs.get('family', None)
+
     if salt.utils.validate.net.ipv4_addr(host) or salt.utils.validate.net.ipv6_addr(host):
         address = host
     else:
@@ -654,11 +660,21 @@ def connect(host, port=None, proto=None, timeout=5):
             __proto = socket.SOL_TCP
             proto = 'tcp'
 
+        if family:
+            if family == 'ipv4':
+                __family = socket.AF_INET
+            elif family == 'ipv6':
+                __family = socket.AF_INET6
+            else:
+                __family = 0
+        else:
+            __family = 0
+
         (family,
          socktype,
          _proto,
          garbage,
-         _address) = socket.getaddrinfo(address, port, 0, 0, __proto)[0]
+         _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
 
         s = socket.socket(family, socktype, _proto)
         s.settimeout(timeout)
@@ -680,11 +696,11 @@ def connect(host, port=None, proto=None, timeout=5):
         try:
             errno, errtxt = e
         except ValueError:
-            ret['comment'] = 'Unable to connect to {0} on {1} port {2}'.format(host, proto, port)
+            ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         else:
             ret['comment'] = '%s' % (errtxt)
         return ret
 
     ret['result'] = True
-    ret['comment'] = 'Successfully connected to {0} on {1} port {2}'.format(host, proto, port)
+    ret['comment'] = 'Successfully connected to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
     return ret
