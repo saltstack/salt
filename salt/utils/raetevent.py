@@ -44,20 +44,18 @@ class SaltEvent(object):
         self.yid = nacling.uuid(size=18)
         name = 'event' + self.yid
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
-        basedirpath = os.path.abspath(
-                os.path.join(cachedir, 'raet'))
         self.connected = False
         self.stack = LaneStack(
                 name=name,
                 yid=self.yid,
                 lanename=self.node,
-                basedirpath=basedirpath,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
                 lanename=self.node,
                 yid=0,
+                name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
         self.connect_pub()
@@ -117,7 +115,7 @@ class SaltEvent(object):
         while True:
             self.stack.serviceAll()
             if self.stack.rxMsgs:
-                msg = self.stack.rxMsgs.popleft()
+                msg, sender = self.stack.rxMsgs.popleft()
                 event = msg.get('event', {})
                 if 'tag' not in event and 'data' not in event:
                     # Invalid event, how did this get here?
@@ -140,7 +138,7 @@ class SaltEvent(object):
         self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
-            event = self.stack.rxMsgs.popleft()
+            event, sender = self.stack.rxMsgs.popleft()
             if 'tag' not in event and 'data' not in event:
                 # Invalid event, how did this get here?
                 return None
@@ -209,7 +207,6 @@ class SaltEvent(object):
     def destroy(self):
         if hasattr(self, 'stack'):
             self.stack.server.close()
-            self.stack.clearAllDir()
 
     def __del__(self):
         self.destroy()

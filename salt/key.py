@@ -18,6 +18,7 @@ import json
 import salt.crypt
 import salt.utils
 import salt.utils.event
+import salt.daemons.masterapi
 from salt.utils.event import tagify
 
 
@@ -708,6 +709,7 @@ class RaetKey(Key):
     '''
     def __init__(self, opts):
         Key.__init__(self, opts)
+        self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
         self.serial = salt.payload.Serial(self.opts)
 
     def _check_minions_directories(self):
@@ -816,16 +818,33 @@ class RaetKey(Key):
             else:
                 return 'rejected'
         elif os.path.isfile(pre_path):
+            auto_reject = self.auto_key.check_autoreject(minion_id)
+            auto_sign = self.auto_key.check_autosign(minion_id)
             with salt.utils.fopen(pre_path, 'rb') as fp_:
                 keydata = self.serial.loads(fp_.read())
             if keydata['pub'] == pub and keydata['verify'] == verify:
+                if auto_reject:
+                    self.reject(minion_id)
+                    return 'rejected'
+                elif auto_sign:
+                    self.accept(minion_id)
+                    return 'accepted'
                 return 'pending'
             else:
                 return 'rejected'
-        # This is a new key, place it in pending
+        # This is a new key, evaluate auto accept/reject files and place
+        # accordingly
+        auto_reject = self.auto_key.check_autoreject(minion_id)
+        auto_sign = self.auto_key.check_autosign(minion_id)
         if self.opts['auto_accept']:
             w_path = acc_path
             ret = 'accepted'
+        elif auto_sign:
+            w_path = acc_path
+            ret = 'accepted'
+        elif auto_reject:
+            w_path = rej_path
+            ret = 'rejected'
         else:
             w_path = pre_path
             ret = 'pending'

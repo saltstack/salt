@@ -56,7 +56,6 @@ class GitFSTest(integration.ModuleCase):
         '''
         self.integration_base_files = os.path.join(integration.FILES, 'file', 'base')
         self.tmp_repo_dir = os.path.join(integration.TMP, 'gitfs_root')
-        self.tmp_repo_git = os.path.join(self.tmp_repo_dir, '.git')
 
         # Create the dir if it doesn't already exist
 
@@ -66,32 +65,30 @@ class GitFSTest(integration.ModuleCase):
             # We probably caught an error because files already exist. Ignore
             pass
 
-        if not os.path.exists(self.tmp_repo_git):
-            os.makedirs(self.tmp_repo_git)
         try:
-            git_bin = git.Git(self.tmp_repo_git)
-            git_bin.init(self.tmp_repo_dir)
-            os.chdir(self.tmp_repo_dir)
-            git_bin.add('.', with_keep_cwd=True)  # Is there a way to pass in a .git repo?
-            git_bin.commit('-a', '-m', 'Test', with_keep_cwd=True)
-        except git.GitCommandError:  # Will throw a command error if you try to init a repo that already exists
-            pass
+            repo = git.Repo(self.tmp_repo_dir)
+        except git.exc.InvalidGitRepositoryError:
+            repo = git.Repo.init(self.tmp_repo_dir)
+
+        repo.index.add([x for x in os.listdir(self.tmp_repo_dir)
+                        if x != '.git'])
+        repo.index.commit('Test')
 
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir']}):
             gitfs.update()
 
     def test_file_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.file_list(LOAD)
             self.assertIn('testfile', ret)
 
     def test_find_file(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.find_file('testfile')
             expected_ret = {'path': os.path.join(self.master_opts['cachedir'],
@@ -105,7 +102,7 @@ class GitFSTest(integration.ModuleCase):
 
     def test_dir_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.dir_list(LOAD)
             self.assertIn('grail', ret)
@@ -113,42 +110,61 @@ class GitFSTest(integration.ModuleCase):
     @skipIf(True, 'This test is failing and for good reason! See #9193')
     def test_file_list_emptydirs(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.file_list_emptydirs(LOAD)
             self.assertIn('empty_dir', ret)
 
     def test_envs(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.envs()
             self.assertIn('base', ret)
 
-    def test_file_hash_sha1(self):
+    def test_sha1_file_hash(self):
+        '''
+        NOTE: this test must be named in such a way that it comes later,
+        lexicographically, than test_find_file, otherwise the file in the local
+        minion cache referred to by fnd['path'] will not exist.
+        '''
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir'],
                                          'hash_type': 'sha1'}):
             tmp_load = LOAD.copy()
             tmp_load['loc'] = 0
             tmp_load['path'] = 'testfile'
             fnd = {'rel': 'testfile',
-                   'path': 'testfile'}
+                   'path': os.path.join(gitfs.__opts__['cachedir'],
+                                        'gitfs/refs',
+                                        tmp_load['saltenv'],
+                                        tmp_load['path'])}
+
             ret = gitfs.file_hash(tmp_load, fnd)
-            self.assertDictEqual({'hash_type': 'sha1', 'hsum': '6b18d04b61238ba13b5e4626b13ac5fb7432b5e2'}, ret)
+            self.assertDictEqual(
+                {'hash_type': 'sha1',
+                 'hsum': '6b18d04b61238ba13b5e4626b13ac5fb7432b5e2'},
+                ret)
 
     def test_serve_file(self):
+        '''
+        NOTE: this test must be named in such a way that it comes later,
+        lexigraphically, than test_find_file, otherwise the file in the local
+        minion cache referred to by fnd['path'] will not exist.
+        '''
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_git],
+                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
                                          'sock_dir': self.master_opts['sock_dir'],
                                          'file_buffer_size': 262144}):
-            fnd = {'rel': 'testfile',
-                   'path': 'testfile'}
-
             tmp_load = LOAD.copy()
             tmp_load['loc'] = 0
             tmp_load['path'] = 'testfile'
+            fnd = {'rel': 'testfile',
+                   'path': os.path.join(gitfs.__opts__['cachedir'],
+                                        'gitfs/refs',
+                                        tmp_load['saltenv'],
+                                        tmp_load['path'])}
 
             ret = gitfs.serve_file(tmp_load, fnd)
             self.assertDictEqual({

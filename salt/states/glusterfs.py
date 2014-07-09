@@ -111,7 +111,7 @@ def created(name, bricks, stripe=False, replica=False, device_vg=False,
            'comment': '',
            'result': False}
     volumes = __salt__['glusterfs.list_volumes']()
-    if volumes and name in volumes:
+    if name in volumes:
         if start:
             if isinstance(__salt__['glusterfs.status'](name), dict):
                 ret['result'] = True

@@ -15,8 +15,9 @@ class Roster(object):
     Used to manage a roster of minions allowing the master to become outwardly
     minion aware
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, backends=None):
         self.opts = opts
+        self.backends = backends
         self.rosters = salt.loader.roster(opts)
 
     def _gen_back(self):
@@ -24,10 +25,12 @@ class Roster(object):
         Return a list of loaded roster backends
         '''
         back = set()
-        if self.opts.get('roster'):
-            fun = '{0}.targets'.format(self.opts['roster'])
-            if fun in self.rosters:
-                return [self.opts['roster']]
+        if self.backends:
+            for backend in self.backends:
+                fun = '{0}.targets'.format(backend)
+                if fun in self.rosters:
+                    back.add(backend)
+            return back
         for roster in self.rosters:
             back.add(roster.split('.')[0])
         return sorted(back)

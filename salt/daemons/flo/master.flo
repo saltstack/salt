@@ -2,9 +2,9 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1 main true name "master" localname "master"
+init .raet.udp.stack.local to eid 1 main true name "master"
 
-init .salt.uxd.stack.local to yid 0 name "master" localname "master" lanename "master"
+init .salt.uxd.stack.local to yid 0 name "master" lanename "master"
 
 framer masterudpstack be active first setup
     frame setup

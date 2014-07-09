@@ -157,6 +157,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
     cacert_path
         absolute path to ca certificates root directory
     '''
+    set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
         cert_base_path(),
             ca_name,
@@ -619,7 +620,7 @@ def create_self_signed_cert(tls_dir='tls',
 
     # create certificate
     cert = OpenSSL.crypto.X509()
-    cert.set_version(3)
+    cert.set_version(2)
 
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
@@ -769,6 +770,7 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None):
         log.error('Support for extensions is not available, upgrade PyOpenSSL')
 
     cert = OpenSSL.crypto.X509()
+    cert.set_version(2)
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)

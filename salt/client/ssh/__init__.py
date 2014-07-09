@@ -175,7 +175,7 @@ class SSH(object):
         self.opts = opts
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
-        self.roster = salt.roster.Roster(opts)
+        self.roster = salt.roster.Roster(opts, opts.get('roster'))
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 self.tgt_type)

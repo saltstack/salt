@@ -30,7 +30,8 @@ def _publish(
         expr_form='glob',
         returner='',
         timeout=5,
-        form='clean'):
+        form='clean',
+        wait=False):
     '''
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
@@ -80,19 +81,44 @@ def _publish(
     if not peer_data:
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
-    time.sleep(float(timeout))
-    load = {'cmd': 'pub_ret',
-            'id': __opts__['id'],
-            'tok': tok,
-            'jid': peer_data['jid']}
-    ret = sreq.send(load)
-    if form == 'clean':
-        cret = {}
-        for host in ret:
-            cret[host] = ret[host]['ret']
-        return cret
+    if wait:
+        loop_interval = 0.3
+        matched_minions = peer_data['minions']
+        returned_minions = []
+        loop_counter = 0
+        while len(returned_minions) < len(matched_minions):
+            load = {'cmd': 'pub_ret',
+                    'id': __opts__['id'],
+                    'tok': tok,
+                    'jid': peer_data['jid']}
+            ret = sreq.send(load)
+            returned_minions = ret.keys()
+            if returned_minions >= matched_minions:
+                if form == 'clean':
+                    cret = {}
+                    for host in ret:
+                        cret[host] = ret[host]['ret']
+                    return cret
+                else:
+                    return ret
+            if (loop_interval * loop_counter) > timeout:
+                return {}
+            loop_counter = loop_counter + 1
+            time.sleep(loop_interval)
     else:
-        return ret
+        time.sleep(float(timeout))
+        load = {'cmd': 'pub_ret',
+                'id': __opts__['id'],
+                'tok': tok,
+                'jid': peer_data['jid']}
+        ret = sreq.send(load)
+        if form == 'clean':
+            cret = {}
+            for host in ret:
+                cret[host] = ret[host]['ret']
+            return cret
+        else:
+            return ret
 
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
@@ -151,7 +177,8 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     expr_form=expr_form,
                     returner=returner,
                     timeout=timeout,
-                    form='clean')
+                    form='clean',
+                    wait=True)
 
 
 def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):

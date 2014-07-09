@@ -14,7 +14,6 @@ import multiprocessing
 import traceback
 import itertools
 from collections import deque
-import shutil
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -75,34 +74,30 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         Will override if empty value
         '''
         if not self.basedirpath.value:  # override if empty
-            self.basedirpath.value = os.path.abspath(
-                    os.path.join(self.opts.value['cachedir'], 'raet'))
+            self.basedirpath.value = os.path.abspath(self.opts.value['sock_dir'])
 
     def action(self):
         '''
-        Should only run once to cleanup stale lane directories.
+        Should only run once to cleanup stale lane uxd files.
         '''
         basedirpath = self.basedirpath.value
         if basedirpath:
-            console.concise("Cleaning up {0}\n".format(basedirpath))
-            dirpaths = []
-            prefixes = ['client', 'event', 'raet', 'jobret']
-            #mid = self.opts.value.get('id', '')
-            #if mid:
-                #prefixes.append(mid)
+            console.concise("Cleaning up uxd files in {0}\n".format(basedirpath))
             for name in os.listdir(basedirpath):
                 path = os.path.join(basedirpath, name)
-                if not os.path.isdir(path):
+                if os.path.isdir(path):
                     continue
-                for prefix in prefixes:
-                    if name.startswith(prefix) and len(name) >= (len(prefix) +  18):
-                        dirpaths.append(path)
-                        break
-
-            for dirpath in dirpaths:
-                if os.path.exists(dirpath):
-                    console.concise("Removing directory {0}\n".format(dirpath))
-                    shutil.rmtree(dirpath)
+                root, ext = os.path.splitext(name)
+                if ext != '.uxd':
+                    continue
+                if not all(root.partition('.')):
+                    continue
+                try:
+                    os.unlink(path)
+                    console.concise("Removed {0}\n".format(path))
+                except OSError:
+                    console.concise("Failed removing {0}\n".format(path))
+                    raise
 
 
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
@@ -125,7 +120,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                       'ival': {'name': 'master',
                                'main': False,
                                'auto': True,
-                               'localname': 'master',
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}},
@@ -149,7 +143,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         do salt raet road stack setup at enter
         '''
         name = self.opts.value.get('id', self.local.data.name)
-        localname = self.opts.value.get('id', self.local.data.localname)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
         auto = self.local.data.auto
@@ -162,7 +155,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         local = LocalEstate(
                 eid=eid,
-                name=localname,
+                name=name,
                 main=main,
                 ha=ha,
                 sigkey=sigkey,
@@ -175,7 +168,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                 local=local,
                 store=self.store,
                 name=name,
-                localname=localname,
                 auto=auto,
                 main=main,
                 basedirpath=basedirpath,
@@ -424,7 +416,7 @@ class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
         '''
         rxMsgs = self.rxmsgs.value
         while rxMsgs:
-            msg = rxMsgs.popleft()
+            msg, name = rxMsgs.popleft()
             console.terse("\nReceived....\n{0}\n".format(msg))
 
 
@@ -514,12 +506,12 @@ class LoadPillar(ioflo.base.deeding.Deed):
         self.udp_stack.value.transmit({'route': route, 'load': load})
         self.udp_stack.value.serviceAll()
         while True:
-            time.sleep(0.01)
-            if self.udp_stack.value.rxMsgs:
-                for msg in self.udp_stack.value.rxMsgs:
-                    self.pillar.value = msg.get('return', {})
-                    self.opts.value['pillar'] = self.pillar.value
-                    return
+            time.sleep(0.1)
+            while self.udp_stack.value.rxMsgs:
+                msg, sender = self.udp_stack.value.rxMsgs.popleft()
+                self.pillar.value = msg.get('return', {})
+                self.opts.value['pillar'] = self.pillar.value
+                return
             self.udp_stack.value.serviceAll()
         self.pillar_refresh.value = False
 
@@ -570,6 +562,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                'remote_cmd': '.salt.local.remote_cmd',
                'publish': '.salt.local.publish',
                'fun': '.salt.local.fun',
+               'worker_verify': '.salt.var.worker_verify',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
@@ -577,7 +570,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                'stack': 'stack',
                'local': {'ipath': 'local',
                           'ival': {'name': 'master',
-                                   'localname': 'master',
                                    'yid': 0,
                                    'lanename': 'master'}},
                'basedirpath': {'ipath': '.salt.raet.basedirpath',
@@ -594,18 +586,16 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Run once at enter
         '''
-        name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
-        localname = self.opts.value.get('id', self.local.data.localname)
+        #name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
+        name = 'manor'
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
         basedirpath = self.basedirpath.value  # must be assigned elsewhere
         self.stack.value = LaneStack(
                                     name=name,
-                                    #localname=localname,
                                     lanename=lanename,
                                     yid=0,
-                                    sockdirpath=self.opts.value['sock_dir'],
-                                    basedirpath=basedirpath)
+                                    sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
         self.local_cmd.value = deque()
@@ -614,10 +604,11 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         self.event.value = deque()
         self.event_req.value = deque()
         self.publish.value = deque()
+        self.worker_verify.value = salt.utils.rand_string()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for ind in range(self.opts.value['worker_threads']):
-                worker_seed.append('yard{0}'.format(ind + 1))
+                worker_seed.append('worker{0}'.format(ind + 1))
             self.workers.value = itertools.cycle(worker_seed)
 
 
@@ -639,7 +630,6 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
         '''
         if self.stack.value and isinstance(self.stack.value, LaneStack):
             self.stack.value.server.close()
-            self.stack.value.clearAllDir()
 
 
 class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
@@ -724,12 +714,15 @@ class Router(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
+               'worker_verify': '.salt.var.worker_verify',
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
 
-    def _process_udp_rxmsg(self, msg):
+    def _process_udp_rxmsg(self, msg, sender):
         '''
         Send to the right queue
+        msg is the message body dict
+        sender is the unique name of the remote estate that sent the message
         '''
         try:
             d_estate = msg['route']['dst'][0]
@@ -760,15 +753,20 @@ class Router(ioflo.base.deeding.Deed):
             return
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
-            self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.uids.get(next(self.workers.value)))
+            if 'load' in msg:
+                msg['load']['id'] = sender
+                self.uxd_stack.value.transmit(msg,
+                        self.uxd_stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
-    def _process_uxd_rxmsg(self, msg):
+    def _process_uxd_rxmsg(self, msg, sender):
         '''
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
+
+        msg is message body dict
+        sender is unique name  of remote that sent the message
         '''
         try:
             d_estate = msg['route']['dst'][0]
@@ -785,7 +783,8 @@ class Router(ioflo.base.deeding.Deed):
             self.udp_stack.value.message(msg, eid)
             return
         if d_share == 'pub_ret':
-            self.publish.value.append(msg)
+            if msg.get('__worker_verify') == self.worker_verify.value:
+                self.publish.value.append(msg)
         if d_yard is None:
             pass
         elif d_yard != self.uxd_stack.value.local.name:
@@ -811,9 +810,11 @@ class Router(ioflo.base.deeding.Deed):
         Process the messages!
         '''
         while self.udp_stack.value.rxMsgs:
-            self._process_udp_rxmsg(self.udp_stack.value.rxMsgs.popleft())
+            msg, sender = self.udp_stack.value.rxMsgs.popleft()
+            self._process_udp_rxmsg(msg=msg, sender=sender)
         while self.uxd_stack.value.rxMsgs:
-            self._process_uxd_rxmsg(self.uxd_stack.value.rxMsgs.popleft())
+            msg, sender = self.uxd_stack.value.rxMsgs.popleft()
+            self._process_uxd_rxmsg(msg=msg, sender=sender)
 
 
 class Eventer(ioflo.base.deeding.Deed):
@@ -951,18 +952,17 @@ class NixExecutor(ioflo.base.deeding.Deed):
         mid = self.opts['id']
         yid = nacling.uuid(size=18)
         stackname = 'jobret' + yid
-        dirpath = os.path.join(self.opts['cachedir'], 'raet')
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=mid,
-                yid=yid,  # jid
-                sockdirpath=self.opts['sock_dir'],
-                basedirpath=dirpath)
+                yid=yid,
+                sockdirpath=self.opts['sock_dir'])
 
         ret_stack.Pk = raeting.packKinds.pack
         main_yard = RemoteYard(
                 stack=ret_stack,
                 yid=0,
+                name='manor',
                 lanename=mid,
                 dirpath=self.opts['sock_dir']
                 )
@@ -980,10 +980,9 @@ class NixExecutor(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        ret_stack.transmit(msg, ret_stack.uids.get('yard0'))
+        ret_stack.transmit(msg, ret_stack.uids.get('manor'))
         ret_stack.serviceAll()
         ret_stack.server.close()
-        ret_stack.clearAllDir()
 
     def action(self):
         '''

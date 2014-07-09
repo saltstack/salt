@@ -40,7 +40,6 @@ SALT_LIBS = os.path.dirname(CODE_DIR)
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.case import ShellTestCase
-from salttesting.helpers import skip_if_binaries_missing
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
@@ -57,6 +56,7 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
+import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 
@@ -544,23 +544,28 @@ class TestDaemon(object):
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
+                    os.path.join(master_opts['cachedir'], 'raet'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(syndic_master_opts['cachedir'], 'jobs'),
+                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
                     os.path.join(master_opts['pki_dir'], 'accepted'),
                     os.path.join(master_opts['pki_dir'], 'rejected'),
                     os.path.join(master_opts['pki_dir'], 'pending'),
                     os.path.join(syndic_master_opts['pki_dir'], 'accepted'),
                     os.path.join(syndic_master_opts['pki_dir'], 'rejected'),
                     os.path.join(syndic_master_opts['pki_dir'], 'pending'),
+                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
 
                     os.path.join(minion_opts['pki_dir'], 'accepted'),
                     os.path.join(minion_opts['pki_dir'], 'rejected'),
                     os.path.join(minion_opts['pki_dir'], 'pending'),
+                    os.path.join(minion_opts['cachedir'], 'raet'),
                     os.path.join(sub_minion_opts['pki_dir'], 'accepted'),
                     os.path.join(sub_minion_opts['pki_dir'], 'rejected'),
                     os.path.join(sub_minion_opts['pki_dir'], 'pending'),
+                    os.path.join(sub_minion_opts['cachedir'], 'raet'),
                     os.path.dirname(master_opts['log_file']),
                     minion_opts['extension_modules'],
                     sub_minion_opts['extension_modules'],
@@ -586,19 +591,19 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        salt.master.clean_proc(self.sub_minion_process, wait_for_kill=50)
+        salt.utils.process.clean_proc(self.sub_minion_process, wait_for_kill=50)
         self.sub_minion_process.join()
-        salt.master.clean_proc(self.minion_process, wait_for_kill=50)
+        salt.utils.process.clean_proc(self.minion_process, wait_for_kill=50)
         self.minion_process.join()
-        salt.master.clean_proc(self.master_process, wait_for_kill=50)
+        salt.utils.process.clean_proc(self.master_process, wait_for_kill=50)
         self.master_process.join()
         try:
-            salt.master.clean_proc(self.syndic_process, wait_for_kill=50)
+            salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
             self.syndic_process.join()
         except AttributeError:
             pass
         try:
-            salt.master.clean_proc(self.smaster_process, wait_for_kill=50)
+            salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
             self.smaster_process.join()
         except AttributeError:
             pass

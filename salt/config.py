@@ -58,6 +58,12 @@ VALID_OPTS = {
     'master_finger': str,
     'master_shuffle': bool,
     'master_alive_interval': int,
+    'master_sign_key_name': str,
+    'master_sign_pubkey': bool,
+    'verify_master_pubkey_sign': bool,
+    'always_verify_signature': bool,
+    'master_pubkey_signature': str,
+    'master_use_pubkey_signature': bool,
     'syndic_finger': str,
     'user': str,
     'root_dir': str,
@@ -243,6 +249,7 @@ VALID_OPTS = {
     'max_minions': int,
     'username': str,
     'password': str,
+    'zmq_filtering': bool,
 }
 
 # default configurations
@@ -254,6 +261,9 @@ DEFAULT_MINION_OPTS = {
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
+    'verify_master_pubkey_sign': False,
+    'always_verify_signature': False,
+    'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -357,13 +367,14 @@ DEFAULT_MINION_OPTS = {
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
     'ioflo_verbose': 0,
-    'ioflo_period': 0.01,
+    'ioflo_period': 0.1,
     'ioflo_realtime': True,
     'raet_port': 4510,
     'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
+    'zmq_filtering': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -516,6 +527,11 @@ DEFAULT_MASTER_OPTS = {
     'queue_dirs': [],
     'cli_summary': False,
     'max_minions': 0,
+    'master_sign_key_name': 'master_sign',
+    'master_sign_pubkey': False,
+    'master_pubkey_signature': 'master_pubkey_signature',
+    'master_use_pubkey_signature': False,
+    'zmq_filtering': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
