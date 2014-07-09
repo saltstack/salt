@@ -18,9 +18,8 @@ class Batch(object):
     '''
     Manage the execution of batch runs
     '''
-    def __init__(self, opts, eauth=None, quiet=False):
+    def __init__(self, opts, quiet=False):
         self.opts = opts
-        self.eauth = eauth
         self.quiet = quiet
         self.local = salt.client.get_local_client(opts['conf_file'])
         self.minions = self.__gather_minions()
@@ -42,7 +41,7 @@ class Batch(object):
             args.append(self.opts.get('expr_form', 'glob'))
 
         fret = []
-        for ret in self.local.cmd_iter(*args, **self.eauth):
+        for ret in self.local.cmd_iter(*args):
             for minion in ret:
                 if not self.quiet:
                     print('{0} Detected for this batch run'.format(minion))
@@ -114,8 +113,7 @@ class Batch(object):
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,
                                 raw=self.opts.get('raw', False),
-                                ret=self.opts.get('return', ''),
-                                **self.eauth)
+                                ret=self.opts.get('return', ''))
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
                 minion_tracker[new_iter] = {}
