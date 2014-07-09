@@ -108,9 +108,10 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         '''
         Set up the uxd stack and behaviors
         '''
-        name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
-                                  'worker',
-                                  self.yid.value)
+        #name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
+                                  #'worker',
+                                  #self.yid.value)
+        name = "worker{0}".format(self.yid.value)
         lanename = self.opts.value.get('id', self.main.data.lanename)
         self.stack.value = LaneStack(
                                      name=name,

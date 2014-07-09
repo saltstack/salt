@@ -611,7 +611,7 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for ind in range(self.opts.value['worker_threads']):
-                worker_seed.append('yard{0}'.format(ind + 1))
+                worker_seed.append('worker{0}'.format(ind + 1))
             self.workers.value = itertools.cycle(worker_seed)
 
 
