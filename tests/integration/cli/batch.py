@@ -34,7 +34,7 @@ class BatchTest(integration.ShellCase):
                'minion:',
                '    batch testing']
         self.assertEqual(self.run_salt('\'*\' test.echo \'batch testing\' -b 50%'), ret)
-        
+
 
 if __name__ == '__main__':
     from integration import run_tests
