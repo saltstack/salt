@@ -198,6 +198,15 @@ class ScheduleTestCase(TestCase):
         Schedule.reload(self.schedule, saved)
         self.assertEqual(self.schedule.opts, ret)
 
+    # eval tests
+
+    def test_eval_schedule_is_not_dict(self):
+        '''
+        Tests if the schedule is a dictionary
+        '''
+        self.schedule.opts = {'schedule': ''}
+        self.assertRaises(ValueError, Schedule.eval, self.schedule)
+
 
 if __name__ == '__main__':
     from integration import run_tests
