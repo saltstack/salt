@@ -866,7 +866,6 @@ class AESFuncs(object):
             load.pop('tok')
         return load
 
-
     def _ext_nodes(self, load):
         '''
         Return the results from an external node classifier if one is
@@ -876,7 +875,6 @@ class AESFuncs(object):
         if load is False:
             return {}
         return self.masterapi._ext_nodes(load, skip_verify=True)
-
 
     def _master_opts(self, load):
         '''
