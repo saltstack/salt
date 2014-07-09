@@ -57,3 +57,9 @@ Vagrantfile
 
 # Allow a user to set their own _version.py for testing
 _version.py
+
+# MacPorts index files
+pkg/macports/ports/PortIndex
+pkg/macports/ports/PortIndex.quick
+pkg/macports/ports/sysutils/salt/PortIndex
+pkg/macports/ports/sysutils/salt/PortIndex.quick
