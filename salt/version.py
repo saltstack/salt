@@ -281,15 +281,22 @@ class SaltStackVersion(object):
             version_string += 'rc{0}'.format(self.rc)
         if self.noc and self.sha:
             version_string += '-{0}-{1}'.format(self.noc, self.sha)
-        #if (self.major, self.minor) in self.RMATCH:
-        #    version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
         return version_string
 
     @property
     def formatted_version(self):
         if self.name and self.major > 10000:
-            return '{0} (Unreleased)'.format(self.name)
-        return self.string
+            version_string = self.name
+            if self.sse:
+                version_string += ' SSE'
+            version_string += ' (Unreleased)'
+            return version_string
+        version_string = self.string
+        if self.sse:
+            version_string += ' SSE'
+        if (self.major, self.minor) in self.RMATCH:
+            version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
+        return version_string
 
     def __str__(self):
         return self.string
