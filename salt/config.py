@@ -374,7 +374,7 @@ DEFAULT_MINION_OPTS = {
     'ping_interval': 0,
     'username': None,
     'password': None,
-    'zmq_filtering': True,
+    'zmq_filtering': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -531,7 +531,7 @@ DEFAULT_MASTER_OPTS = {
     'master_sign_pubkey': False,
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
-    'zmq_filtering': True,
+    'zmq_filtering': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
