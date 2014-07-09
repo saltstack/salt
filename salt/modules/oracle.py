@@ -123,15 +123,14 @@ def show_dbs(*dbs):
         salt '*' oracle.show_dbs
         salt '*' oracle.show_dbs my_db
     '''
-    pillar_dbs = __salt__['pillar.get']('oracle:dbs')
     if dbs:
         log.debug('get dbs from pillar: {0}'.format(dbs))
         result = {}
         for db in dbs:
-            if db in pillar_dbs:
-                result[db] = pillar_dbs[db]
+            result[db] = __salt__['pillar.get']('oracle:dbs:' + db)
         return result
     else:
+        pillar_dbs = __salt__['pillar.get']('oracle:dbs')
         log.debug('get all ({0}) dbs from pillar'.format(len(pillar_dbs)))
         return pillar_dbs
 
