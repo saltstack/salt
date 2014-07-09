@@ -42,26 +42,22 @@ base:
 
 '''
 
-
-
 # Import python libs
+import logging
 import subprocess
 
 # Import third party libs
 import yaml
 
-
-# Import python libs
-import logging
-
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
     Only run if properly configured
     '''
     if __opts__['master_tops'].get('ext_nodes'):
-        return 'ext_nodes'
+        return True
     return False
 
 
