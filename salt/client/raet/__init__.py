@@ -52,18 +52,17 @@ class LocalClient(salt.client.LocalClient):
                 timeout=timeout,
                 **kwargs)
         yid = nacling.uuid(size=18)
-        basedirpath = os.path.join(self.opts['cachedir'], 'raet')
         stack = LaneStack(
                 name=('client' + yid),
                 yid=yid,
                 lanename='master',
-                basedirpath=basedirpath,
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
                 stack=stack,
                 lanename='master',
                 yid=0,
+                name='manor',
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)
         route = {'dst': (None, router_yard.name, 'local_cmd'),
@@ -77,7 +76,8 @@ class LocalClient(salt.client.LocalClient):
             for msg in stack.rxMsgs:
                 ret = msg.get('return', {})
                 if 'ret' in ret:
+                    stack.server.close()
                     return ret['ret']
+                stack.server.close()
                 return ret
-        stack.server.close()
-        self.stack.clearAllDir()
+

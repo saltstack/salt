@@ -2,7 +2,7 @@
 
 house minion
 
-init .raet.udp.stack.local to eid 0 name "minion" host "" port 7531 main false localname "minion"
+init .raet.udp.stack.local to eid 0 name "minion" host "" port 7531 main false
 #init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 
 #init .salt.etc.master to  "127.0.0.1"

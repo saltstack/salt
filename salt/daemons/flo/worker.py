@@ -100,7 +100,6 @@ class WorkerSetup(ioflo.base.deeding.Deed):
             'stack': 'stack',
             'main': {'ipath': 'main',
                        'ival': {'name': 'master',
-                                'localname': 'master',
                                 'yid': 0,
                                 'lanename': 'master'}}
             }
@@ -109,16 +108,13 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         '''
         Set up the uxd stack and behaviors
         '''
-        name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
-                                  'worker',
-                                  self.yid.value)
+        #name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
+                                  #'worker',
+                                  #self.yid.value)
+        name = "worker{0}".format(self.yid.value)
         lanename = self.opts.value.get('id', self.main.data.lanename)
-        basedirpath = os.path.abspath(
-                os.path.join(self.opts.value['cachedir'], 'raet'))
-
         self.stack.value = LaneStack(
                                      name=name,
-                                     basedirpath=basedirpath,
                                      lanename=lanename,
                                      yid=self.yid.value,
                                      sockdirpath=self.opts.value['sock_dir'])
@@ -126,6 +122,7 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         manor_yard = RemoteYard(
                                  stack=self.stack.value,
                                  yid=0,
+                                 name='manor',
                                  lanename=lanename,
                                  dirpath=self.opts.value['sock_dir'])
         self.stack.value.addRemote(manor_yard)
@@ -143,7 +140,6 @@ class WorkerSetup(ioflo.base.deeding.Deed):
 
     def __del__(self):
         self.stack.server.close()
-        self.stack.clearAllDir()
 
 
 class WorkerRouter(ioflo.base.deeding.Deed):
@@ -188,5 +184,5 @@ class WorkerRouter(ioflo.base.deeding.Deed):
                         'src': (self.opts.value.get('id', 'master'), self.uxd_stack.value.local.name, None),
                         'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)
                         }
-                self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids.get('yard0'))
+                self.uxd_stack.value.transmit(ret, self.uxd_stack.value.uids.get('manor'))
                 self.uxd_stack.value.serviceAll()
