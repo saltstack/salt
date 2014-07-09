@@ -754,8 +754,10 @@ class Router(ioflo.base.deeding.Deed):
             return
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
-            self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.uids.get(next(self.workers.value)))
+            if 'load' in msg:
+                msg['load']['id'] = rnmid
+                self.uxd_stack.value.transmit(msg,
+                        self.uxd_stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
