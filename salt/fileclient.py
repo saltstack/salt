@@ -214,8 +214,8 @@ class Client(object):
                 path, saltenv
             )
         )
-        #go through the list of all files finding ones that are in
-        #the target directory and caching them
+        # go through the list of all files finding ones that are in
+        # the target directory and caching them
         for fn_ in self.file_list(saltenv):
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
@@ -226,12 +226,12 @@ class Client(object):
             # Break up the path into a list containing the bottom-level
             # directory (the one being recursively copied) and the directories
             # preceding it
-            #separated = string.rsplit(path, '/', 1)
-            #if len(separated) != 2:
-            #    # No slashes in path. (So all files in saltenv will be copied)
-            #    prefix = ''
-            #else:
-            #    prefix = separated[0]
+            # separated = string.rsplit(path, '/', 1)
+            # if len(separated) != 2:
+            #     # No slashes in path. (So all files in saltenv will be copied)
+            #     prefix = ''
+            # else:
+            #     prefix = separated[0]
             dest = salt.utils.path_join(
                 self.opts['cachedir'],
                 'files',
@@ -934,8 +934,8 @@ class RemoteClient(Client):
             # Backwards compatibility
             saltenv = env
 
-        #--  Hash compare local copy with master and skip download
-        #    if no diference found.
+        # Hash compare local copy with master and skip download
+        # if no diference found.
         dest2check = dest
         if not dest2check:
             rel_path = self._check_proto(path)
@@ -1190,7 +1190,6 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
-
     def _get_channel(self):
        '''
        Return the right channel
@@ -1199,7 +1198,6 @@ class RemoteClient(Client):
            return self.channel
 
        return salt.transport.Channel.factory(self.opts)
-
 
     def ext_nodes(self):
         '''
