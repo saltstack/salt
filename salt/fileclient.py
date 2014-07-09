@@ -1190,15 +1190,6 @@ class RemoteClient(Client):
         except SaltReqTimeoutError:
             return ''
 
-    def _get_channel(self):
-       '''
-       Return the right channel
-       '''
-       if self.auth:
-           return self.channel
-
-       return salt.transport.Channel.factory(self.opts)
-
     def ext_nodes(self):
         '''
         Return the metadata derived from the external nodes system on the
