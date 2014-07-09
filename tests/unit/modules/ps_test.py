@@ -6,7 +6,7 @@
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, call
+from salttesting.mock import MagicMock, patch, call, Mock
 
 ensure_in_syspath('../../')
 
@@ -16,6 +16,8 @@ HAS_PSUTIL = ps.__virtual__()
 
 if HAS_PSUTIL:
     import psutil
+
+    PSUTIL2 = psutil.version_info >= (2, 0)
 
     STUB_CPU_TIMES = psutil._compat.namedtuple('cputimes', 'user nice system idle')(1, 2, 3, 4)
     STUB_VIRT_MEM = psutil._compat.namedtuple('vmem', 'total available percent used free')(1000, 500, 50, 500, 500)
@@ -55,11 +57,23 @@ except ImportError:
     HAS_UTMP = False
 
 
+def _get_proc_name(proc):
+    return proc.name() if PSUTIL2 else proc.name
+
+
+def _get_proc_pid(proc):
+    return proc.pid() if PSUTIL2 else proc.pid
+
+
 @skipIf(not HAS_PSUTIL, "psutils are required for this test case")
 class PsTestCase(TestCase):
     def setUp(self):
-        MOCK_PROC.name = 'test_mock_proc'
-        MOCK_PROC.pid = 9999999999
+        if PSUTIL2:
+            MOCK_PROC.name = Mock(return_value="test_mock_proc")
+            MOCK_PROC.pid = Mock(return_value=9999999999)
+        else:
+            MOCK_PROC.name = 'test_mock_proc'
+            MOCK_PROC.pid = 9999999999
 
     @patch('psutil.get_pid_list', new=MagicMock(return_value=STUB_PID_LIST))
     def test_get_pid_list(self):
@@ -75,12 +89,12 @@ class PsTestCase(TestCase):
     def test_pkill(self, send_signal_mock):
         mocked_proc.send_signal = MagicMock()
         test_signal = 1234
-        ps.pkill(mocked_proc.name, signal=test_signal)
+        ps.pkill(_get_proc_name(mocked_proc), signal=test_signal)
         self.assertEqual(mocked_proc.send_signal.call_args, call(test_signal))
 
     @patch('psutil.process_iter', new=MagicMock(return_value=[MOCK_PROC]))
     def test_pgrep(self):
-        self.assertIn(MOCK_PROC.pid, ps.pgrep(MOCK_PROC.name))
+        self.assertIn(_get_proc_pid(MOCK_PROC), ps.pgrep(_get_proc_name(MOCK_PROC)))
 
     @patch('psutil.cpu_percent', new=MagicMock(return_value=1))
     def test_cpu_percent(self):
@@ -92,11 +106,13 @@ class PsTestCase(TestCase):
 
     @patch('psutil.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
     def test_virtual_memory(self):
-        self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500}, ps.virtual_memory())
+        self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500},
+                             ps.virtual_memory())
 
     @patch('psutil.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
     def test_swap_memory(self):
-        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0}, ps.swap_memory())
+        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},
+                             ps.swap_memory())
 
     @patch('psutil.phymem_usage', new=MagicMock(return_value=STUB_PHY_MEM_USAGE))
     def test_physical_memory_usage(self):
@@ -108,7 +124,7 @@ class PsTestCase(TestCase):
 
     # ps.cached_physical_memory is deprecated! See #9301
     # def test_cached_physical_memory(self):
-    #    pass
+    # pass
 
     #ps.physical_memory_buffers is deprecated! See #9301
     # def test_physical_memory_buffers(self):
@@ -169,4 +185,5 @@ class PsTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
+
     run_tests(PsTestCase, needs_daemon=False)
