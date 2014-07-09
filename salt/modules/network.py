@@ -4,12 +4,16 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
-import re
+import datetime
+import hashlib
 import logging
+import re
+import socket
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+import salt.utils.validate.net
 
 
 log = logging.getLogger(__name__)
@@ -607,3 +611,77 @@ def mod_hostname(hostname):
             fh.write(hostname + '\n')
 
     return True
+
+
+def connect(host, port=None, proto=None, timeout=5):
+    '''
+    Test connectivity to a host using a particular
+    port from the minion.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.connect archlinux.org 80
+
+        salt '*' network.connect archlinux.org 80 timeout=3
+
+        salt '*' network.connect google-public-dns-a.google.com port=53 proto=udp timeout=3
+    '''
+
+    ret = {'result': None,
+           'comment': ''}
+
+    if not host:
+        ret['result'] = False
+        ret['comment'] = 'Required argument, host, is missing.'
+
+    if not port:
+        ret['result'] = False
+        ret['comment'] = 'Required argument, port, is missing.'
+
+    if salt.utils.validate.net.ipv4_addr(host) or salt.utils.validate.net.ipv6_addr(host):
+        address = host
+    else:
+        address = '{0}'.format(salt.utils.network.sanitize_host(host))
+
+    try:
+        if proto == 'udp':
+            __proto = socket.SOL_UDP
+        else:
+            __proto = socket.SOL_TCP
+
+        (family,
+         socktype,
+         _proto,
+         garbage,
+         _address) = socket.getaddrinfo(address, port, 0, 0, __proto)[0]
+
+        s = socket.socket(family, socktype, _proto)
+        s.settimeout(timeout)
+
+        if proto == 'udp':
+            # Generate a random string of a
+            # decent size to test UDP connection
+            h = hashlib.md5()
+            h.update(datetime.datetime.now().strftime('%s'))
+            msg = h.hexdigest()
+            s.sendto(msg, _address)
+            recv, svr = s.recvfrom(255)
+            s.close()
+        else:
+            s.connect(_address)
+            s.shutdown(2)
+    except Exception, e:
+        ret['result'] = False
+        try:
+            errno, errtxt = e
+        except ValueError:
+            ret['comment'] = 'Unable to connect to {0} on {1} port {2}'.format(host, proto, port)
+        else:
+            ret['comment'] = '%s' % (errtxt)
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Successfully connected to {0} on {1} port {2}'.format(host, proto, port)
+    return ret
