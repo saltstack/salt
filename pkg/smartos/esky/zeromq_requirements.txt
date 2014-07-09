@@ -1,0 +1,2 @@
+-r ../../../zeromq-requirements.txt
+-r requirements.txt
