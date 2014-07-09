@@ -224,9 +224,9 @@ class Schedule(object):
         # we dont do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
         if not type(data) is dict:
-            raise ValueError('Scheduled jobs have to be of type dict')
+            raise ValueError('Scheduled jobs have to be of type dict.')
         if not len(data.keys()) == 1:
-            raise ValueError('You can only schedule one new job at a time')
+            raise ValueError('You can only schedule one new job at a time.')
 
         new_job = data.keys()[0]
 
@@ -430,7 +430,7 @@ class Schedule(object):
                         self.returners[ret_str](ret)
                     else:
                         log.info(
-                            'Job {0} using invalid returner: {1} Ignoring.'.format(
+                            'Job {0} using invalid returner: {1}. Ignoring.'.format(
                                 func, returner
                             )
                         )
@@ -499,11 +499,11 @@ class Schedule(object):
 
             if time_conflict:
                 log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
-                          '"when" or "cron" options.  Ignoring.')
+                          '"when" or "cron" options. Ignoring.')
                 continue
 
             if 'when' in data and 'cron' in data:
-                log.error('Unable to use "when" and "cron" options together.  Ignoring.')
+                log.error('Unable to use "when" and "cron" options together. Ignoring.')
                 continue
 
             time_elements = ['seconds', 'minutes', 'hours', 'days']
@@ -515,7 +515,7 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
@@ -525,7 +525,7 @@ class Schedule(object):
                         try:
                             tmp = int(dateutil_parser.parse(i).strftime('%s'))
                         except ValueError:
-                            log.error('Invalid date string {0}.  Ignoring job {1}.'.format(i, job))
+                            log.error('Invalid date string {0}. Ignoring job {1}.'.format(i, job))
                             continue
                         if tmp >= now:
                             _when.append(tmp)
@@ -565,7 +565,7 @@ class Schedule(object):
                     try:
                         when = int(dateutil_parser.parse(data['when']).strftime('%s'))
                     except ValueError:
-                        log.error('Invalid date string.  Ignoring')
+                        log.error('Invalid date string. Ignoring')
                         continue
 
                     now = int(time.time())
@@ -596,7 +596,7 @@ class Schedule(object):
                 try:
                     cron = int(croniter.croniter(data['cron'], now).get_next())
                 except (ValueError, KeyError):
-                    log.error('Invalid cron string.  Ignoring')
+                    log.error('Invalid cron string. Ignoring')
                     continue
                 seconds = cron - now
             else:
@@ -626,9 +626,9 @@ class Schedule(object):
             else:
                 if 'splay' in data:
                     if 'when' in data:
-                        log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
                     elif 'cron' in data:
-                        log.error('Unable to use "splay" with "cron" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
                     else:
                         data['_seconds'] = data['seconds']
 
@@ -646,19 +646,19 @@ class Schedule(object):
             if run:
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                        log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue
                     else:
                         if isinstance(data['range'], dict):
                             try:
                                 start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
                             except ValueError:
-                                log.error('Invalid date string for start.  Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
                                 end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
                             except ValueError:
-                                log.error('Invalid date string for end.  Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
                             if end > start:
                                 if 'invert' in data['range'] and data['range']['invert']:
@@ -685,7 +685,7 @@ class Schedule(object):
             else:
                 if 'splay' in data:
                     if 'when' in data:
-                        log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
                     else:
                         if isinstance(data['splay'], dict):
                             if data['splay']['end'] > data['splay']['start']:
