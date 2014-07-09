@@ -8,7 +8,7 @@ information about the version numbering scheme.
 .. releasestree::
     :maxdepth: 1
 
-    2014.1.6
+    2014.1.7
 
 Archive
 =======
