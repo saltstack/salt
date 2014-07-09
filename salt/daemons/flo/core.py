@@ -100,7 +100,6 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     raise
 
 
-
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -956,7 +955,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=mid,
-                yid=yid, # jid
+                yid=yid,
                 sockdirpath=self.opts['sock_dir'])
 
         ret_stack.Pk = raeting.packKinds.pack

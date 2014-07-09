@@ -80,4 +80,3 @@ class LocalClient(salt.client.LocalClient):
                     return ret['ret']
                 stack.server.close()
                 return ret
-
