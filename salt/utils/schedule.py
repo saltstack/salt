@@ -459,7 +459,7 @@ class Schedule(object):
         '''
         schedule = self.option('schedule')
         if not isinstance(schedule, dict):
-            return
+            raise ValueError('Schedule must of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
         for job, data in schedule.items():
