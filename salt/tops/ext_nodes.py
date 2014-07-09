@@ -57,7 +57,7 @@ def __virtual__():
     Only run if properly configured
     '''
     if __opts__['master_tops'].get('ext_nodes'):
-        return 'ext_nodes'
+        return True
     return False
 
 
