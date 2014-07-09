@@ -50,7 +50,7 @@ class WorkerFork(ioflo.base.deeding.Deed):
         self.opts.value['__worker'] = True
         behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value)),
-                    ('.salt.var.worker_verify', self.worker_verify.value)]
+                    ('.salt.var.worker_verify', dict(value=self.worker_verify.value))]
         preloads.append(('.salt.yid', dict(value=yid)))
         preloads.append(
                 ('.salt.access_keys', dict(value=self.access_keys.value)))
