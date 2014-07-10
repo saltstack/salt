@@ -92,7 +92,7 @@ class RAETChannel(Channel):
         tried = 1
         start = time.time()
         mid = self.opts.get('id', 'master')
-        track = salt.utils.nacling.uuid(18)
+        track = nacling.uuid(18)
         src = (mid, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
