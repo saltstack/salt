@@ -82,9 +82,9 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     stdout, stderr, _ = single.cmd_block()
     try:
         return json.loads(stdout, object_hook=salt.utils.decode_dict)
-    except Exception, e:
+    except Exception as exc:
         log.error("JSON Render failed for: {0}".format(stdout))
-        log.error(str(e))
+        log.error(str(exc))
     return stdout
 
 
@@ -198,9 +198,9 @@ def highstate(test=None, **kwargs):
     stdout, stderr, _ = single.cmd_block()
     try:
         stdout = json.loads(stdout, object_hook=salt.utils.decode_dict)
-    except Exception, e:
+    except Exception as exc:
         log.error("JSON Render failed for: {0}".format(stdout))
-        log.error(str(e))
+        log.error(str(exc))
     return stdout
 
 

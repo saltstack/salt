@@ -691,14 +691,14 @@ def connect(host, port=None, **kwargs):
         else:
             s.connect(_address)
             s.shutdown(2)
-    except Exception, e:
+    except Exception, exc:
         ret['result'] = False
         try:
-            errno, errtxt = e
+            errno, errtxt = exc
         except ValueError:
             ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         else:
-            ret['comment'] = '%s' % (errtxt)
+            ret['comment'] = errtxt
         return ret
 
     ret['result'] = True

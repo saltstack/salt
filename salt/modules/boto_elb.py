@@ -77,8 +77,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     try:
         conn.get_all_load_balancers(load_balancer_names=[name])
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         return False
 
 
@@ -94,12 +94,12 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return []
     try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
+        lb_ = conn.get_all_load_balancers(load_balancer_names=[name])
+        lb_ = lb_[0]
         ret = {}
-        ret['availability_zones'] = lb.availability_zones
+        ret['availability_zones'] = lb_.availability_zones
         listeners = []
-        for _listener in lb.listeners:
+        for _listener in lb_.listeners:
             # Making this a list makes our life easier and is also the only way
             # to include the certificate.
             complex_listener = list(_listener.get_complex_tuple())
@@ -110,13 +110,13 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
                 complex_listener.append(_listener.ssl_certificate_id)
             listeners.append(complex_listener)
         ret['listeners'] = listeners
-        ret['subnets'] = lb.subnets
-        ret['security_groups'] = lb.security_groups
-        ret['scheme'] = lb.scheme
-        ret['dns_name'] = lb.dns_name
+        ret['subnets'] = lb_.subnets
+        ret['security_groups'] = lb_.security_groups
+        ret['scheme'] = lb_.scheme
+        ret['dns_name'] = lb_.dns_name
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         return []
 
 
@@ -154,20 +154,19 @@ def create(name, availability_zones, listeners=None, subnets=None,
         else:
             _complex_listeners.append(listener)
     try:
-        lb = conn.create_load_balancer(name, availability_zones, _listeners,
+        lb_ = conn.create_load_balancer(name, availability_zones, _listeners,
                                        subnets, security_groups, scheme,
                                        _complex_listeners)
-        if lb:
+        if lb_:
             log.info('Created ELB {0}'.format(name))
             return True
         else:
             msg = 'Failed to create ELB {0}'.format(name)
             log.error(msg)
             return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create ELB {0}'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to create ELB {0}'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -189,10 +188,9 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         msg = 'Deleted ELB {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete ELB {0}'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to delete ELB {0}'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -229,10 +227,9 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
         msg = 'Created ELB listeners on {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create ELB listeners on {0}'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to create ELB listeners on {0}'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -255,10 +252,9 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
         msg = 'Deleted ELB listeners on {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete ELB listeners on {0}'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to delete ELB listeners on {0}'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -281,10 +277,9 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
         msg = 'Enabled availability_zones on ELB {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to enable availability_zones on ELB {0}'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to enable availability_zones on ELB {0}'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -307,10 +302,9 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
         msg = 'Disabled availability_zones on ELB {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to disable availability_zones on ELB {0}'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to disable availability_zones on ELB {0}'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -333,10 +327,9 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
         msg = 'Attached ELB {0} on subnets.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to attach ELB {0} on subnets.'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to attach ELB {0} on subnets.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -359,10 +352,9 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         msg = 'Detatched ELB {0} from subnets.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to detach ELB {0} from subnets.'.format(name)
-        log.error(msg)
+    except boto.exception.BotoServerError:
+        log.error('Failed to detach ELB {0} from subnets.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -382,17 +374,17 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         ret = odict.OrderedDict()
         ret['access_log'] = odict.OrderedDict()
         ret['cross_zone_load_balancing'] = odict.OrderedDict()
-        al = lbattrs.access_log
+        al_ = lbattrs.access_log
         czlb = lbattrs.cross_zone_load_balancing
-        ret['access_log']['enabled'] = al.enabled
-        ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
-        ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
-        ret['access_log']['emit_interval'] = al.emit_interval
+        ret['access_log']['enabled'] = al_.enabled
+        ret['access_log']['s3_bucket_name'] = al_.s3_bucket_name
+        ret['access_log']['s3_bucket_prefix'] = al_.s3_bucket_prefix
+        ret['access_log']['emit_interval'] = al_.emit_interval
         ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+    except boto.exception.BotoServerError:
+        log.error('ELB {0} does not exist.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return {}
 
 
@@ -408,21 +400,21 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    al = attributes.get('access_log', {})
+    al_ = attributes.get('access_log', {})
     czlb = attributes.get('cross_zone_load_balancing', {})
-    if not al and not czlb:
+    if not al_ and not czlb:
         log.error('No supported attributes for ELB.')
         return False
-    if al:
+    if al_:
         _al = elb.attributes.AccessLogAttribute()
-        _al.enabled = al.get('enabled', False)
+        _al.enabled = al_.get('enabled', False)
         if not _al.enabled:
             msg = 'Access log attribute configured, but enabled config missing'
             log.error(msg)
             return False
-        _al.s3_bucket_name = al.get('s3_bucket_name', None)
-        _al.s3_bucket_prefix = al.get('s3_bucket_prefix', None)
-        _al.emit_interval = al.get('emit_interval', None)
+        _al.s3_bucket_name = al_.get('s3_bucket_name', None)
+        _al.s3_bucket_prefix = al_.get('s3_bucket_prefix', None)
+        _al.emit_interval = al_.get('emit_interval', None)
         added_attr = conn.modify_lb_attribute(name, 'accessLog', _al)
         if added_attr:
             log.info('Added access_log attribute to {0} elb.'.format(name))
@@ -456,19 +448,19 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return {}
     try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
+        lb_ = conn.get_all_load_balancers(load_balancer_names=[name])
+        lb_ = lb_[0]
         ret = odict.OrderedDict()
-        hc = lb.health_check
-        ret['interval'] = hc.interval
-        ret['target'] = hc.target
-        ret['healthy_threshold'] = hc.healthy_threshold
-        ret['timeout'] = hc.timeout
-        ret['unhealthy_threshold'] = hc.unhealthy_threshold
+        hc_ = lb_.health_check
+        ret['interval'] = hc_.interval
+        ret['target'] = hc_.target
+        ret['healthy_threshold'] = hc_.healthy_threshold
+        ret['timeout'] = hc_.timeout
+        ret['unhealthy_threshold'] = hc_.unhealthy_threshold
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+    except boto.exception.BotoServerError:
+        log.error('ELB {0} does not exist.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return {}
 
 
@@ -484,13 +476,13 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    hc = elb.HealthCheck(**health_check)
+    hc_ = elb.HealthCheck(**health_check)
     try:
-        conn.configure_health_check(name, hc)
+        conn.configure_health_check(name, hc_)
         log.info('Configured health check on ELB {0}'.format(name))
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.info('Failed to configure health check on ELB {0}'.format(name))
+    except boto.exception.BotoServerError:
+        log.info('Failed to configure health check on ELB {0}'.format(name),
+                 exc_info=log.isEnabledFor(logging.DEBUG))
         return False
     return True
 

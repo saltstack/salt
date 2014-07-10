@@ -523,9 +523,9 @@ class Auth(object):
                 tries=tries,
                 timeout=timeout
             )
-        except SaltReqTimeoutError as e:
+        except SaltReqTimeoutError as exc:
             if safe:
-                log.warning('SaltReqTimeoutError: {0}'.format(e))
+                log.warning('SaltReqTimeoutError: {0}'.format(exc))
                 return 'retry'
             raise SaltClientError('Failed sign in')
 

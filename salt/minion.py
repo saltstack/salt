@@ -1934,9 +1934,9 @@ class Syndic(Minion):
                 raise SaltSyndicMasterError('Syndication master recieved message of invalid len ({0}/2)'.format(messages_len))
 
             payload = self.serial.loads(messages[idx])
-        except zmq.ZMQError as e:
+        except zmq.ZMQError as exc:
             # Swallow errors for bad wakeups or signals needing processing
-            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
+            if exc.errno != errno.EAGAIN and exc.errno != errno.EINTR:
                 raise
         log.trace('Handling payload')
         self._handle_payload(payload)
@@ -1951,11 +1951,11 @@ class Syndic(Minion):
         while tout > time.time():
             try:
                 event = self.local.event.get_event_noblock()
-            except zmq.ZMQError as e:
+            except zmq.ZMQError as exc:
                 # EAGAIN indicates no more events at the moment
                 # EINTR some kind of signal maybe someone trying
                 # to get us to quit so escape our timeout
-                if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
+                if exc.errno == errno.EAGAIN or exc.errno == errno.EINTR:
                     break
                 raise
             log.trace('Got event {0}'.format(event['tag']))

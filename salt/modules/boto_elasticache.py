@@ -77,8 +77,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     try:
         conn.describe_cache_clusters(name)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         return False
 
 
@@ -95,10 +95,9 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         return None
     try:
         cc = conn.describe_cache_clusters(name)
-    except boto.exception.BotoServerError as e:
-        msg = 'Failed to get config for cache cluster {0}.'.format(name)
-        log.error(msg)
-        log.debug(e)
+    except boto.exception.BotoServerError:
+        log.error('Failed to get config for cache cluster {0}.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return {}
     cc = cc['DescribeCacheClustersResponse']['DescribeCacheClustersResult']
     cc = cc['CacheClusters'][0]
@@ -180,10 +179,9 @@ def create(name, num_cache_nodes, engine, cache_node_type,
                 return True
             time.sleep(2)
         log.info('Created cache cluster {0}.'.format(name))
-    except boto.exception.BotoServerError as e:
-        msg = 'Failed to create cache cluster {0}.'.format(name)
-        log.error(msg)
-        log.debug(e)
+    except boto.exception.BotoServerError:
+        log.error('Failed to create cache cluster {0}.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -212,10 +210,9 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
             time.sleep(2)
         log.info('Deleted cache cluster {0}.'.format(name))
         return True
-    except boto.exception.BotoServerError as e:
-        msg = 'Failed to delete cache cluster {0}.'.format(name)
-        log.error(msg)
-        log.debug(e)
+    except boto.exception.BotoServerError:
+        log.error('Failed to delete cache cluster {0}.'.format(name),
+                  exc_info=log.isEnabledFor(logging.DEBUG))
         return False
 
 
@@ -291,11 +288,13 @@ def authorize_cache_security_group_ingress(name, ec2_security_group_name,
             msg = msg.format(name, ec2_security_group_name)
             log.error(msg)
             return False
-    except boto.exception.EC2ResponseError as e:
-        log.debug(e)
-        msg = 'Failed to add {0} to cache security group {1}.'
-        msg = msg.format(name, ec2_security_group_name)
-        log.error(msg)
+    except boto.exception.EC2ResponseError:
+        log.error(
+            'Failed to add {0} to cache security group {1}.'format(
+                name, ec2_security_group_name
+            ),
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
         return False
 
 
@@ -327,11 +326,13 @@ def revoke_cache_security_group_ingress(name, ec2_security_group_name,
             msg = msg.format(name, ec2_security_group_name)
             log.error(msg)
             return False
-    except boto.exception.EC2ResponseError as e:
-        log.debug(e)
-        msg = 'Failed to remove {0} from cache security group {1}.'
-        msg = msg.format(name, ec2_security_group_name)
-        log.error(msg)
+    except boto.exception.EC2ResponseError:
+        log.error(
+            'Failed to remove {0} from cache security group {1}.'format(
+                name, ec2_security_group_name
+            ),
+            exc_info=log.isEnabledFor(logging.DEBUG)
+        )
         return False
 
 
