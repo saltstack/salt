@@ -234,12 +234,18 @@ default is 2048.
 .INDENT 0.0
 .TP
 .B \-\-gen-signature
-Generate the signature file named master_pubkey_signature  for the 
-salt-masters public key. The signatur itself can be send to the 
+Generate the signature file named master_pubkey_signature  for the
+salt-masters public key. The signatur itself can be send to the
 minions in auth-replies and enables the minions to verify
 the salt-masters public-key cryptographically. This requires a new
 signing-key-pair which can be auto-created with the --auto-create
 parameter.
+.UNINDENT
+
+.INDENT 0.0
+.TP
+.B \-\-signature-path
+Target path for the signature file (must already exist)
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -257,8 +263,8 @@ The path to the public-key file to generate a signature for
 The path to the private-key file to generate a signature with
 .UNINDENT
 
-Example which will auto-create a default master_sign.* key-pair and 
-a signature file named master_pubkey_signature for an already 
+Example which will auto-create a default master_sign.* key-pair and
+a signature file named master_pubkey_signature for an already
 existing master.pub key
 .INDENT 0.0
 .INDENT 3.5
@@ -271,7 +277,7 @@ salt-key --gen-signature --auto-create
 .UNINDENT
 .UNINDENT
 
-Example which will auto-create a new key-pair called signature.* and the 
+Example which will auto-create a new key-pair called signature.* and the
 signature itself for an already existing master.pub
 .INDENT 0.0
 .INDENT 3.5
