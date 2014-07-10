@@ -2,33 +2,20 @@
 Multiple Master Failover Tutorial
 =================================
 
-When using salts default setup, a minion can only work with one single master.
-While this works very nicely with a few hundred minions, it does not provide
-redundancy of any kind on the masters end.
+This tutorial will explain, how to run a salt-environment where a minion can
+connect to multiple masters as a failover-strategy.
 
-For smaller networks with several hundred minions, there is the possibility of
-running a Multi-Master setup, in which a minion connects to a list of masters
-and keeps all connections open. Any master a minion is connected to, can
-can publish commands.
+The individual steps are
 
-In larger networks with several thousand or more minions, its not always possible
-or desirable, to have all minions connected to two or more masters all the time.
-What would be more appealing is to have a bunch of masters, and spread the minions
-over all of them evenly. Or if the hardware differs between the masters, have more
-minions on stronger hardware and less on weaker.
-
-This tutorial explains alle the settings to make this possible. It will describe:
-
-- setting up a mutli-master environment without having to copy AES-master-keys back and forth after restarting the salt-master daemon on one of the masters
-- how to enable minions to work with multiple masters without compromising security
-- in detail how to enable signing and verifying of trusted masters public keys
-- it will show how to limit the number of minions on a master
-- how to have a minion detect that its lost its master and should connect to the next
+- setting up a multi-master environment without having to copy AES-master-keys back and forth
+- enable minions to work with multiple masters without compromising security
+- enable signing and verifying of trusted masters public keys
+- have a minion detect that its lost its master and should connect to the next
+- Optional: to limit the number of minions on a master
 
     Please note, that it is advised to have good knowledge of the salt-authentication and
     communication-process to understand this tutorial. All of the settings described here,
     go on top of the default authentication/communication process.
-
 
 
 Motivation
@@ -418,4 +405,4 @@ That will limit the master to accept only 100 minions.
 
 If a minion is rejected by a master because it is full, it is told that the
 master is full. It will log that to its logfile and (if configured), will try
-the next master from its list of masters. 
+the next master from its list of masters.
