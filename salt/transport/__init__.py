@@ -75,9 +75,6 @@ class RAETChannel(Channel):
             raise ValueError(emsg)
         log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
         self.stack = jobber_stack
-        mid = self.opts.get('id', 'master')
-        src = (mid, self.stack.local.name, None)
-        self.route = {'src': src, 'dst': self.dst}
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -96,17 +93,23 @@ class RAETChannel(Channel):
         self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
         start = time.time()
-        while True:
+        mid = self.opts.get('id', 'master')
+        track = salt.utils.nacling.uuid(18)
+        src = (mid, self.stack.local.name, track)
+        self.route = {'src': src, 'dst': self.dst}
+        while track not in jobber_rxMsgs:
             time.sleep(0.01)
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                return msg.get('return', {})
+                jobber_rxMsgs[msg['route']['src'][2]] = msg
+                continue
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
                 self.stack.transmit(msg, self.stack.uids['manor'])
                 tried += 1
+        return jobber_rxMsgs.pop(track).get('return', {})
 
 
 class ZeroMQChannel(Channel):
