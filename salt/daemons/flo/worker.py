@@ -175,10 +175,14 @@ class WorkerRouter(ioflo.base.deeding.Deed):
                 elif cmd.startswith('__'):
                     continue
                 ret = {}
-                if hasattr(self.remote.value, cmd):
-                    ret['return'] = getattr(self.remote.value, cmd)(msg['load'])
-                elif hasattr(self.local.value, cmd):
-                    ret['return'] = getattr(self.local.value, cmd)(msg['load'])
+                if msg['route']['dst'][2] == 'remote_cmd':
+                    if hasattr(self.remote.value, cmd):
+                        ret['return'] = getattr(self.remote.value, cmd)(msg['load'])
+                elif msg['route']['dst'][2] == 'local_cmd':
+                    if hasattr(self.local.value, cmd):
+                        ret['return'] = getattr(self.local.value, cmd)(msg['load'])
+                else:
+                    ret = {'error': 'Invalid request'}
                 if cmd == 'publish' and 'pub' in ret['return']:
                     r_share = 'pub_ret'
                     ret['__worker_verify'] = self.worker_verify.value
