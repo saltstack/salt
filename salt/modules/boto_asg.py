@@ -107,7 +107,8 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                  'desired_capacity', 'health_check_period',
                  'health_check_type', 'launch_config_name', 'load_balancers',
                  'max_size', 'min_size', 'placement_group',
-                 'vpc_zone_identifier', 'tags', 'termination_policies']
+                 'vpc_zone_identifier', 'tags', 'termination_policies',
+                 'suspended_processes']
         for attr in attrs:
             # Tags are objects, so we need to turn them into dicts.
             if attr == 'tags':
@@ -119,8 +120,22 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     _tag['propagate_at_launch'] = tag.propagate_at_launch
                     _tags.append(_tag)
                 ret['tags'] = _tags
+            elif attr == 'suspended_processes':  # convert SuspendedProcess objects to names
+                suspended_processes = getattr(asg,attr)
+                ret[attr] = sorted([ x.process_name for x in suspended_processes ])
             else:
                 ret[attr] = getattr(asg, attr)
+        # scaling policies
+        policies = conn.get_all_policies(as_group=name)
+        ret["scaling_policies"] = []
+        for policy in policies:
+            ret["scaling_policies"].append(dict([
+                ("name",policy.name),
+                ("adjustment_type",policy.adjustment_type),
+                ("scaling_adjustment", policy.scaling_adjustment ),
+                ("min_adjustment_step", policy.min_adjustment_step ),
+                ("cooldown", policy.cooldown ),
+                ]))
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -131,7 +146,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            desired_capacity=None, load_balancers=None, default_cooldown=None,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
-           termination_policies=None, region=None, key=None, keyid=None,
+           termination_policies=None, suspended_processes=None, scaling_policies=None, region=None, key=None, keyid=None,
            profile=None):
     '''
     Create an autoscale group.
@@ -170,6 +185,8 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         _tags.append(_tag)
     if isinstance(termination_policies, string_types):
         termination_policies = json.loads(termination_policies)
+    if isinstance(suspended_processes, string_types):
+        suspended_processes = json.loads(suspended_processes)
     try:
         _asg = autoscale.AutoScalingGroup(
             name=name, launch_config=launch_config_name,
@@ -181,8 +198,11 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
             health_check_period=health_check_period,
             placement_group=placement_group, tags=_tags,
             vpc_zone_identifier=vpc_zone_identifier,
-            termination_policies=termination_policies)
+            termination_policies=termination_policies,
+            suspended_processes=suspended_processes)
         conn.create_auto_scaling_group(_asg)
+        # create scaling policies
+        _create_scaling_policies(conn,name,scaling_policies)
         log.info('Created ASG {0}'.format(name))
         return True
     except boto.exception.BotoServerError as e:
@@ -196,7 +216,9 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            desired_capacity=None, load_balancers=None, default_cooldown=None,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
-           termination_policies=None, region=None, key=None, keyid=None,
+           termination_policies=None, suspended_processes=None,
+           scaling_policies=None,
+           region=None, key=None, keyid=None,
            profile=None):
     '''
     Update an autoscale group.
@@ -205,6 +227,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
 
         salt myminion boto_asg.update myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     '''
+
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -235,6 +258,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         _tags.append(_tag)
     if isinstance(termination_policies, string_types):
         termination_policies = json.loads(termination_policies)
+    if isinstance(suspended_processes, string_types):
+        suspended_processes = json.loads(suspended_processes)
     try:
         _asg = autoscale.AutoScalingGroup(
             connection=conn,
@@ -252,7 +277,17 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
         conn.create_or_update_tags(_tags)
+        # update doesn't handle suspended_processes either
+        _asg.resume_processes() # resume all
+        # suspend any that are specified. Note that the boto default of empty list suspends all; don't do that.
+        if suspended_processes != None and len(suspended_processes) > 0:
+            _asg.suspend_processes(suspended_processes) 
         log.info('Updated ASG {0}'.format(name))
+        #### scaling policies
+        # delete all policies, then recreate them
+        for policy in conn.get_all_policies(as_group=name):
+            conn.delete_policy(policy.name,autoscale_group=name)
+        _create_scaling_policies(conn,name,scaling_policies)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -260,6 +295,18 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         log.error(msg)
         return False
 
+def _create_scaling_policies(conn,as_name,scaling_policies):
+    'helper function to create scaling policies'
+    if scaling_policies:
+        for policy in scaling_policies:
+            policy = autoscale.policy.ScalingPolicy(
+                name=policy["name"],
+                as_name=as_name,
+                adjustment_type=policy["adjustment_type"],
+                scaling_adjustment=policy["scaling_adjustment"],
+                min_adjustment_step=policy.get("min_adjustment_step",None),
+                cooldown=policy["cooldown"])
+            conn.create_scaling_policy(policy)
 
 def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
     '''
@@ -410,6 +457,18 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
         log.error(msg)
         return False
 
+def get_scaling_policy_arn(as_group,scaling_policy_name, region=None, key=None, keyid=None, profile=None):
+    '''return the arn for a scaling policy in a specific autoscale group
+    or None if not found.
+    Mainly used as a helper method for boto_cloudwatch_alarm, for linking alarms to scaling policies.
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    policies = conn.get_all_policies(as_group=as_group)
+    for policy in policies:
+        if policy.name == scaling_policy_name:
+            return policy.policy_arn
+    log.error('Could not convert: %s' % arn)
+    return None
 
 def _get_conn(region, key, keyid, profile):
     '''
