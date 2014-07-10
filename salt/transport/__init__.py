@@ -89,14 +89,14 @@ class RAETChannel(Channel):
         One shot wonder
         '''
         self.__prep_stack()
-        msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
         start = time.time()
         mid = self.opts.get('id', 'master')
         track = salt.utils.nacling.uuid(18)
         src = (mid, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
+        msg = {'route': self.route, 'load': load}
+        self.stack.transmit(msg, self.stack.uids['manor'])
         while track not in jobber_rxMsgs:
             time.sleep(0.01)
             self.stack.serviceAll()
