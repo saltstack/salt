@@ -80,8 +80,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     try:
         conn.conn.get_all_groups(names=[name])
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         return False
 
 
@@ -122,8 +122,8 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
             else:
                 ret[attr] = getattr(asg, attr)
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         return {}
 
 
@@ -185,8 +185,8 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         log.info('Created ASG {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         msg = 'Failed to create ASG {0}'.format(name)
         log.error(msg)
         return False
@@ -254,8 +254,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_or_update_tags(_tags)
         log.info('Updated ASG {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         msg = 'Failed to update ASG {0}'.format(name)
         log.error(msg)
         return False
@@ -277,8 +277,8 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
         msg = 'Deleted autoscale group {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         msg = 'Failed to delete autoscale group {0}'.format(name)
         log.error(msg)
         return False
@@ -322,8 +322,8 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    lc = conn.get_all_launch_configurations(names=[name])
-    if lc:
+    lc_ = conn.get_all_launch_configurations(names=[name])
+    if lc_:
         return True
     else:
         return False
@@ -366,7 +366,7 @@ def create_launch_configuration(name, image_id=None, key_name=None,
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
-    lc = autoscale.LaunchConfiguration(
+    lc_ = autoscale.LaunchConfiguration(
         name=name, image_id=image_id, key_name=key_name,
         security_groups=security_groups, user_data=user_data,
         instance_type=instance_type, kernel_id=kernel_id,
@@ -378,11 +378,11 @@ def create_launch_configuration(name, image_id=None, key_name=None,
         volume_type=volume_type, delete_on_termination=delete_on_termination,
         iops=iops, use_block_device_types=use_block_device_types)
     try:
-        conn.create_launch_configuration(lc)
+        conn.create_launch_configuration(lc_)
         log.info('Created LC {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         msg = 'Failed to create LC {0}'.format(name)
         log.error(msg)
         return False
@@ -404,8 +404,8 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
         conn.delete_launch_configuration(name)
         log.info('Deleted LC {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         msg = 'Failed to delete LC {0}'.format(name)
         log.error(msg)
         return False
