@@ -433,7 +433,7 @@ def installed(name,
         if requirements or editable:
             comments = []
             if requirements:
-                for eachline in pip_install_call.get('stdout').split('\n'):
+                for eachline in pip_install_call.get('stdout', '').split('\n'):
                     if not eachline.startswith('Requirement already satisfied') and eachline != 'Cleaning up...':
                         ret['changes']['requirements'] = True
                 if ret['changes'].get('requirements'):
