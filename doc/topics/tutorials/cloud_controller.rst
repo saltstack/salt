@@ -2,15 +2,16 @@
 Salt as a Cloud Controller
 ==========================
 
-In Salt 0.14.0 advanced cloud control systems were introduced, allowing for
+In Salt 0.14.0, an advanced cloud control system were introduced, allow
 private cloud vms to be managed directly with Salt. This system is generally
 referred to as :strong:`Salt Virt`.
 
 The Salt Virt system already exists and is installed within Salt itself, this
-means that beyond setting up Salt no additional salt code needs to be deployed.
+means that beside setting up Salt, no additional salt code needs to be
+deployed.
 
-The main goal of Salt Virt is to facilitate a very fast and simple cloud. A
-cloud that can scale and a fully featured cloud. Salt Virt comes with the
+The main goal of Salt Virt is to facilitate a very fast and simple cloud. The
+cloud that can scale and fully featured. Salt Virt comes with the
 ability to set up and manage complex virtual machine networking, powerful
 image and disk management, as well as virtual machine migration with and without
 shared storage.
@@ -33,7 +34,7 @@ Installing Hypervisor Software
 Salt Virt is made to be hypervisor agnostic but currently the only fully
 implemented hypervisor is KVM via libvirt.
 
-The required software for a hypervisor is libvirt and kvm. For advanced 
+The required software for a hypervisor is libvirt and kvm. For advanced
 features install libguestfs or qemu-nbd.
 
 .. note::
@@ -172,7 +173,7 @@ Existing Virtual Machine Images
 -------------------------------
 
 Many existing Linux distributions distribute virtual machine images which
-can be used with Salt Virt. Please be advised that NONE OF THESE IMAGES ARE 
+can be used with Salt Virt. Please be advised that NONE OF THESE IMAGES ARE
 SUPPORTED BY SALTSTACK.
 
 CentOS
@@ -264,7 +265,7 @@ opened on hypervisors:
 .. note::
 
     More in-depth information regarding distribution specific firewall settings can read in:
-    
+
     :doc:`Opening the Firewall up for Salt </topics/tutorials/firewall>`
 
 Salt also needs an additional flag to be turned on as well. The ``virt.tunnel``
