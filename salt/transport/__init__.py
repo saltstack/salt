@@ -22,8 +22,8 @@ except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
 
-jobber_stack = None # global that holds raet jobber LaneStack
-jobber_rxMsgs = {} # dict of deques one for each RaetChannel
+jobber_stack = None  # global that holds raet jobber LaneStack
+jobber_rxMsgs = {}  # dict of deques one for each RaetChannel
 
 
 class Channel(object):

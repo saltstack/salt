@@ -17,7 +17,6 @@ import difflib
 import errno
 import fileinput
 import fnmatch
-import hashlib
 import itertools
 import logging
 import operator

@@ -993,8 +993,8 @@ class RemoteClient(Client):
                     init_retries -= 1
                     time.sleep(0.02)
                     continue
-            if not 'data' in data:
-                log.error("Data is {0}".format(data))
+            if 'data' not in data:
+                log.error('Data is {0}'.format(data))
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master

@@ -948,7 +948,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=mid,
-                                   dirpath=self.opts['sock_dir'] ))
+                                   dirpath=self.opts['sock_dir']))
         console.concise("Created Jobber Stack {0}\n".format(stack.name))
         return stack
 
