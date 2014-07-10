@@ -505,10 +505,8 @@ def request_instance(vm_=None, call=None):
                         'There are no more floating IP addresses '
                         'available, please create some more'
                     )
-            except Exception as e:
-                if str(e).startswith('404'):
-                    pass
-                else:
+            except Exception as exc:
+                if not str(exc).startswith('404'):
                     raise
     vm_['floating'] = floating
 
