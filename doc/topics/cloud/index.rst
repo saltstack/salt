@@ -17,6 +17,7 @@ Using Salt Cloud
 .. toctree::
     :maxdepth: 3
 
+    Basic <basic>
     Profiles <profiles>
     Maps <map>
     Actions <action>
@@ -35,6 +36,8 @@ Windows Configuration
     :maxdepth: 3
 
         Windows Configuration <windows>
+
+.. _cloud-provider-specifics:
 
 Cloud Provider Specifics
 ========================
