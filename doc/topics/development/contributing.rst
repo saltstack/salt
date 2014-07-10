@@ -64,6 +64,10 @@ reviewed. If a reviewer asks for changes, just make the changes locally in the
 same local feature branch, push them to GitHub, then add a comment to the
 discussion section of the pull request.
 
+For details on how to contribute documentation improvements please review
+:ref:`Writing Salt Documentation <salt-docs>`.
+
+
 .. note:: Jenkins
 
     Whenever you make a pull request against the main Salt repository your
