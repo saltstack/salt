@@ -31,11 +31,39 @@ hammer out the update. This is a BETA release of Salt RAET.
 For information about how to use Salt with RAET please see the tutorial:
 <put tutorial here>
 
+New Imperitive State Keyword "Listen"
+-------------------------------------
+
+The new listen keyword allows for completely imperitive states by calling the
+mod_watch routine after all states have run instead of re-ordering the states.
+
+New Requisites: onchanges and onfail
+------------------------------------
+
+New requisites!
+
+Global onlyif and unless
+------------------------
+
+The onlyif and unless options can now be used for any state declaration.
+
 Scheduler Additions
 -------------------
 
 The Salt sceduler system has recived MAJOR enhancements, allowing for cron like
 sceduling and much mroe granular timing routines.
+
+Red Hat 7 Family Support
+------------------------
+
+All the needed additions have been made to run Salt on RHEL 7 and derived
+OSes like CentOS and Scientific.
+
+Amazon Execution Modules
+------------------------
+
+An entire family of execution modules further enhancing Salt's Amazon Cloud
+support.
 
 LXC Runner Enhancements
 -----------------------
@@ -49,3 +77,51 @@ Next Gen Docker Management
 The Docker support in Salt has been increased at least ten fold. The Docker
 api is now completely exposed and Salt ships with Docker data tracking
 systems which make automating Docker deployments very easy.
+
+Peer System Performance Improvements
+------------------------------------
+
+The peer system communication routines have been refined to make the peer
+system substantially faster.
+
+SDB
+---
+
+Encryption at rest for configs
+
+GPG Renderer
+------------
+
+Encrypted pillar at rest
+
+OpenStack Expansion
+-------------------
+
+Lots of new openstack stuff
+
+Queues System
+-------------
+
+Ran change external queue systems into salt events
+
+Multi Master Failover Additions
+-------------------------------
+
+Connecting to multiple masters is more dynamic then ever
+
+Chef Execution Module
+---------------------
+
+Managing Chef with Salt just got even easier!
+
+Fileserver Backend Enhacements
+------------------------------
+
+All of the fileserver backends have been overhauled to be faster, lighter and more reliable
+
+New Modules
+===========
+
+Syslog-ng
+Oracle
+random
