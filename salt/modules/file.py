@@ -1984,7 +1984,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
-        ret['sum'] = get_sum(path, hash_type)
+        ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
