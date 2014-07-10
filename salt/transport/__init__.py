@@ -70,7 +70,9 @@ class RAETChannel(Channel):
         Prepare the stack objects
         '''
         if not jobber_stack:
-            log.error("Jobber Stack not setup\n")
+            emsg = "Jobber Stack not setup\n"
+            log.error(emsg)
+            raise ValueError(emsg)
         log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
         self.stack = jobber_stack
         mid = self.opts.get('id', 'master')
