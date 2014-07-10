@@ -185,7 +185,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         log.info('Created ASG {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as exc:
+    except boto.exception.BotoServerError:
         log.error('Failed to create ASG {0}'.format(name),
                   exc_info=log.isEnabledFor(logging.DEBUG))
         return False
@@ -253,7 +253,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_or_update_tags(_tags)
         log.info('Updated ASG {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as exc:
+    except boto.exception.BotoServerError:
         log.error('Failed to update ASG {0}'.format(name),
                   exc_info=log.isEnabledFor(logging.DEBUG))
         return False
@@ -275,7 +275,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
         msg = 'Deleted autoscale group {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as exc:
+    except boto.exception.BotoServerError:
         log.error('Failed to delete autoscale group {0}'.format(name),
                   exc_info=log.isEnabledFor(logging.DEBUG))
         return False
@@ -378,7 +378,7 @@ def create_launch_configuration(name, image_id=None, key_name=None,
         conn.create_launch_configuration(lc_)
         log.info('Created LC {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as exc:
+    except boto.exception.BotoServerError:
         log.error('Failed to create LC {0}'.format(name),
                   exc_info=log.isEnabledFor(logging.DEBUG))
         return False
@@ -400,7 +400,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
         conn.delete_launch_configuration(name)
         log.info('Deleted LC {0}'.format(name))
         return True
-    except boto.exception.BotoServerError as exc:
+    except boto.exception.BotoServerError:
         log.error('Failed to delete LC {0}'.format(name),
                   exc_info=log.isEnabledFor(logging.DEBUG))
         return False
