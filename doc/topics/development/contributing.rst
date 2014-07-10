@@ -7,7 +7,6 @@ has come from, and most importantly, to give credit where credit is due!
 
 There are a number of ways to contribute to salt development.
 
-
 Sending a GitHub pull request
 -----------------------------
 
@@ -66,7 +65,6 @@ discussion section of the pull request.
 
 For details on how to contribute documentation improvements please review
 :ref:`Writing Salt Documentation <salt-docs>`.
-
 
 .. note:: Jenkins
 
