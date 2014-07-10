@@ -42,10 +42,21 @@ Management of the Salt scheduler
     This will schedule the command: state.sls httpd test=True at 5pm on Monday,
     Wednesday and Friday, and 3pm on Tuesday and Thursday.
 
-'''
+    job1:
+      schedule.present:
+        - function: state.sls
+        - args:
+          - httpd
+        - kwargs:
+          test: True
+        - cron: '*/5 * * * *'
 
-import logging
-log = logging.getLogger(__name__)
+    Scheduled jobs can also be specified using the format used by cron.  This will
+    schedule the command: state.sls httpd test=True to run every 5 minutes.  Requires
+    that python-croniter is installed.
+
+
+'''
 
 
 def present(name,
@@ -76,6 +87,10 @@ def present(name,
         This will schedule the job at the specified time(s).
         The when parameter must be a single value or a dictionary
         with the date string(s) using the dateutil format.
+
+    cron
+        This will schedule the job at the specified time(s)
+        using the crontab format.
 
     function
         The function that should be executed by the scheduled job.

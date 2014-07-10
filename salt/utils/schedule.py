@@ -151,6 +151,12 @@ except ImportError:
     _WHEN_SUPPORTED = False
     _RANGE_SUPPORTED = False
 
+try:
+    import croniter
+    _CRON_SUPPORTED = True
+except ImportError:
+    _CRON_SUPPORTED = False
+
 # Import Salt libs
 import salt.utils
 import salt.utils.process
@@ -189,19 +195,20 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
-    def delete_job(self, name):
+    def delete_job(self, name, where=None):
         '''
         Deletes a job from the scheduler.
         '''
 
-        # ensure job exists, then delete it
-        if name in self.opts['schedule']:
-            del self.opts['schedule'][name]
-
-        # If job is in pillar, delete it there too
-        if 'schedule' in self.opts['pillar']:
-            if name in self.opts['pillar']['schedule']:
-                del self.opts['pillar']['schedule'][name]
+        if where is None or where != 'pillar':
+            # ensure job exists, then delete it
+            if name in self.opts['schedule']:
+                del self.opts['schedule'][name]
+        else:
+            # If job is in pillar, delete it there too
+            if 'schedule' in self.opts['pillar']:
+                if name in self.opts['pillar']['schedule']:
+                    del self.opts['pillar']['schedule'][name]
 
         # remove from self.intervals
         if name in self.intervals:
@@ -217,9 +224,9 @@ class Schedule(object):
         # we dont do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
         if not type(data) is dict:
-            raise ValueError('Scheduled jobs have to be of type dict')
+            raise ValueError('Scheduled jobs have to be of type dict.')
         if not len(data.keys()) == 1:
-            raise ValueError('You can only schedule one new job at a time')
+            raise ValueError('You can only schedule one new job at a time.')
 
         new_job = data.keys()[0]
 
@@ -256,14 +263,14 @@ class Schedule(object):
         '''
         if where == 'pillar':
             if name in self.opts['pillar']['schedule']:
-                self.delete_job(name)
+                self.delete_job(name, where=where)
             self.opts['pillar']['schedule'][name] = schedule
         else:
             if name in self.opts['schedule']:
-                self.delete_job(name)
+                self.delete_job(name, where=where)
             self.opts['schedule'][name] = schedule
 
-    def run_job(self, name, where):
+    def run_job(self, name, where=None):
         '''
         Run a schedule job now
         '''
@@ -322,7 +329,10 @@ class Schedule(object):
         self.intervals = {}
 
         if 'schedule' in self.opts:
-            self.opts['schedule'].update(schedule['schedule'])
+            if 'schedule' in schedule:
+                self.opts['schedule'].update(schedule['schedule'])
+            else:
+                self.opts['schedule'].update(schedule)
         else:
             self.opts['schedule'] = schedule
 
@@ -420,7 +430,7 @@ class Schedule(object):
                         self.returners[ret_str](ret)
                     else:
                         log.info(
-                            'Job {0} using invalid returner: {1} Ignoring.'.format(
+                            'Job {0} using invalid returner: {1}. Ignoring.'.format(
                                 func, returner
                             )
                         )
@@ -448,9 +458,8 @@ class Schedule(object):
         Evaluate and execute the schedule
         '''
         schedule = self.option('schedule')
-        #log.debug('calling eval {0}'.format(schedule))
         if not isinstance(schedule, dict):
-            return
+            raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
         for job, data in schedule.items():
@@ -479,18 +488,26 @@ class Schedule(object):
             # Add up how many seconds between now and then
             when = 0
             seconds = 0
+            cron = 0
 
             time_conflict = False
             for item in ['seconds', 'minutes', 'hours', 'days']:
                 if item in data and 'when' in data:
                     time_conflict = True
+                if item in data and 'cron' in data:
+                    time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with "when" option.  Ignoring.')
+                log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
+                          '"when" or "cron" options. Ignoring.')
                 continue
 
-            # clean this up
-            if 'seconds' in data or 'minutes' in data or 'hours' in data or 'days' in data:
+            if 'when' in data and 'cron' in data:
+                log.error('Unable to use "when" and "cron" options together. Ignoring.')
+                continue
+
+            time_elements = ['seconds', 'minutes', 'hours', 'days']
+            if True in [True for item in time_elements if item in data]:
                 # Add up how many seconds between now and then
                 seconds += int(data.get('seconds', 0))
                 seconds += int(data.get('minutes', 0)) * 60
@@ -498,7 +515,7 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
@@ -508,7 +525,7 @@ class Schedule(object):
                         try:
                             tmp = int(dateutil_parser.parse(i).strftime('%s'))
                         except ValueError:
-                            log.error('Invalid date string {0}.  Ignoring job {1}.'.format(i, job))
+                            log.error('Invalid date string {0}. Ignoring job {1}.'.format(i, job))
                             continue
                         if tmp >= now:
                             _when.append(tmp)
@@ -548,7 +565,7 @@ class Schedule(object):
                     try:
                         when = int(dateutil_parser.parse(data['when']).strftime('%s'))
                     except ValueError:
-                        log.error('Invalid date string.  Ignoring')
+                        log.error('Invalid date string. Ignoring')
                         continue
 
                     now = int(time.time())
@@ -570,8 +587,21 @@ class Schedule(object):
                         data['_when'] = when
                         data['_when_run'] = True
 
+            elif 'cron' in data:
+                if not _CRON_SUPPORTED:
+                    log.error('Missing python-croniter. Ignoring job {0}'.format(job))
+                    continue
+
+                now = int(datetime.datetime.now().strftime('%s'))
+                try:
+                    cron = int(croniter.croniter(data['cron'], now).get_next())
+                except (ValueError, KeyError):
+                    log.error('Invalid cron string. Ignoring')
+                    continue
+                seconds = cron - now
             else:
                 continue
+
             # Check if the seconds variable is lower than current lowest
             # loop interval needed. If it is lower then overwrite variable
             # external loops using can then check this variable for how often
@@ -580,20 +610,25 @@ class Schedule(object):
                 self.loop_interval = seconds
             now = int(time.time())
             run = False
+
             if job in self.intervals:
                 if 'when' in data:
                     if now - when >= seconds:
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
+                if 'cron' in data:
+                    if seconds == 1:
+                        run = True
                 else:
                     if now - self.intervals[job] >= seconds:
                         run = True
-
             else:
                 if 'splay' in data:
                     if 'when' in data:
-                        log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
+                    elif 'cron' in data:
+                        log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
                     else:
                         data['_seconds'] = data['seconds']
 
@@ -602,25 +637,28 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
+                if 'cron' in data:
+                    if seconds == 1:
+                        run = True
                 else:
                     run = True
 
             if run:
                 if 'range' in data:
                     if not _RANGE_SUPPORTED:
-                        log.error('Missing python-dateutil.  Ignoring job {0}'.format(job))
+                        log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
                         continue
                     else:
                         if isinstance(data['range'], dict):
                             try:
                                 start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
                             except ValueError:
-                                log.error('Invalid date string for start.  Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
                                 end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
                             except ValueError:
-                                log.error('Invalid date string for end.  Ignoring job {0}.'.format(job))
+                                log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
                             if end > start:
                                 if 'invert' in data['range'] and data['range']['invert']:
@@ -647,7 +685,7 @@ class Schedule(object):
             else:
                 if 'splay' in data:
                     if 'when' in data:
-                        log.error('Unable to use "splay" with "when" option at this time.  Ignoring.')
+                        log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
                     else:
                         if isinstance(data['splay'], dict):
                             if data['splay']['end'] > data['splay']['start']:

@@ -82,7 +82,7 @@ def _get_all_units():
                       r')\s+loaded\s+(?P<active>[^\s]+)')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full --no-legend --no-pager list-units | col -b'
+        'systemctl --all --full --no-legend --no-pager list-units | col -b'
     )
 
     ret = {}

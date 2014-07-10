@@ -28,7 +28,7 @@ __salt__ = {
 }
 log = logging.getLogger(__name__)
 
-SALT_BASE_PATH = os.path.dirname(salt.__file__)
+SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
 LOADED_BASE_NAME = 'salt.loaded'
 
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
@@ -201,7 +201,8 @@ def tops(opts):
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
-    return load.filter_func('top', whitelist=whitelist)
+    topmodules = load.filter_func('top', whitelist=whitelist)
+    return topmodules
 
 
 def wheels(opts, whitelist=None):
@@ -900,6 +901,7 @@ class Loader(object):
                         getattr(mod, sname) for sname in dir(mod) if
                         isinstance(getattr(mod, sname), mod.__class__)
                     ]
+
                     # reload only custom "sub"modules i.e is a submodule in
                     # parent module that are still available on disk (i.e. not
                     # removed during sync_modules)

@@ -258,7 +258,11 @@ def salt_ip_verify_tool():
                         'status': cherrypy.response.status,
                         'return': "Bad IP",
                     }
+
+    # Add simple CORS support
     cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
+    cherrypy.response.headers['Access-Control-Allow-Credentials'] = 'true'
+    cherrypy.response.headers['Access-Control-Expose-Headers'] = 'X-Auth-Token'
 
 
 def salt_auth_tool():
@@ -660,6 +664,30 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate(
                 token=cherrypy.session.get('token')))
         }
+
+    def OPTIONS(self):
+        '''
+        Handle a CORS preflight request
+        '''
+        req_head = cherrypy.request.headers
+        resp_head = cherrypy.response.headers
+
+        method = req_head.get('Access-Control-Request-Method', None)
+        headers = req_head.get('Access-Control-Request-Headers', None)
+
+        allowed_methods = ['GET', 'POST', 'OPTIONS']
+        allowed_headers = ['X-Auth-Token']
+
+        if method and method in allowed_methods:
+            resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
+
+            if req_head.get('Access-Control-Allow-Headers') in allowed_headers:
+                resp_head['Access-Control-Allow-Headers'] = 'X-Auth-Token'
+
+                resp_head['Connection'] = 'keep-alive'
+                resp_head['Access-Control-Max-Age '] = '1400'
+
+        return {}
 
 
 class Minions(LowDataAdapter):
@@ -1262,7 +1290,11 @@ class Events(object):
             '''
             An iterator to yield Salt events
             '''
-            event = salt.utils.event.get_event('master', opts=self.opts)
+            event = salt.utils.event.get_event(
+                    'master',
+                    sock_dir=self.opts['sock_dir'],
+                    transport=self.opts['transport'],
+                    opts=self.opts)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1427,7 +1459,11 @@ class WebsocketEndpoint(object):
             # blocks until send is called on the parent end of this pipe.
             pipe.recv()
 
-            event = salt.utils.event.get_event('master', opts=self.opts)
+            event = salt.utils.event.get_event(
+                    'master',
+                    sock_dir=self.opts['sock_dir'],
+                    transport=self.opts['transport'],
+                    opts=self.opts)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
@@ -1509,7 +1545,12 @@ class Webhook(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
-        self.event = salt.utils.event.get_event('master', opts=self.opts)
+        self.event = salt.utils.event.get_event(
+                'master',
+                sock_dir=self.opts['sock_dir'],
+                transport=self.opts['transport'],
+                opts=self.opts,
+                listen=False)
 
         if cherrypy.config['apiopts'].get('webhook_disable_auth'):
             self._cp_config['tools.salt_token.on'] = False

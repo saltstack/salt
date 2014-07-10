@@ -74,7 +74,8 @@ def fire(data, tag):
     '''
     try:
         event = salt.utils.event.get_event(
-                'minion',
+                __opts__['id'],
+                sock_dir=__opts__['sock_dir'],
                 opts=__opts__,
                 transport=__opts__['transport'],
                 listen=False)

@@ -64,11 +64,21 @@ class StdTest(integration.ModuleCase):
                 'test.pong',
                 )
         self.assertIn('minion', ret)
-        self.assertEqual(
-            {'out': 'nested', 'ret': '\'test.pong\' is not available.', 'success': False},
-            ret['minion']
-        )
 
+        if self.master_opts['transport'] == 'zeromq':
+            self.assertEqual(
+                {
+                    'out': 'nested',
+                    'ret': '\'test.pong\' is not available.',
+                    'success': False
+                },
+                ret['minion']
+            )
+        elif self.master_opts['transport'] == 'raet':
+            self.assertEqual(
+                {'success': False, 'ret': '\'test.pong\' is not available.'},
+                ret['minion']
+            )
 
 if __name__ == '__main__':
     from integration import run_tests

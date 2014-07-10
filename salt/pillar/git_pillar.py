@@ -221,10 +221,14 @@ def _extract_key_val(kv, delim='='):
     return key, val
 
 
-def ext_pillar(minion_id, pillar, repo_string):
+def ext_pillar(minion_id,
+               repo_string,
+               pillar_dirs):
     '''
     Execute a command and read the output as YAML
     '''
+    if pillar_dirs is None:
+        return
     # split the branch, repo name and optional extra (key=val) parameters.
     options = repo_string.strip().split()
     branch = options[0]
@@ -250,6 +254,13 @@ def ext_pillar(minion_id, pillar, repo_string):
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
+
+    pillar_dirs.setdefault(pillar_dir, {})
+
+    if pillar_dirs[pillar_dir].get(branch, False):
+        return {}  # we've already seen this combo
+
+    pillar_dirs[pillar_dir].setdefault(branch, True)
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function

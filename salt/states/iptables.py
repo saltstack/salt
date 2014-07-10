@@ -308,7 +308,7 @@ def append(name, family='ipv4', **kwargs):
         Network family, ipv4 or ipv6.
 
     All other arguments are passed in with the same name as the long option
-    that would normally be used for iptables, with one exception: `--state` is
+    that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
     '''
@@ -379,7 +379,7 @@ def insert(name, family='ipv4', **kwargs):
         Networking family, either ipv4 or ipv6
 
     All other arguments are passed in with the same name as the long option
-    that would normally be used for iptables, with one exception: `--state` is
+    that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
     '''
@@ -446,7 +446,7 @@ def delete(name, family='ipv4', **kwargs):
         Networking family, either ipv4 or ipv6
 
     All other arguments are passed in with the same name as the long option
-    that would normally be used for iptables, with one exception: `--state` is
+    that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
     '''

@@ -6,10 +6,10 @@ Management of incron, the inotify cron
 The incron state module allows for user incrontabs to be cleanly managed.
 
 Incron declarations require a number of parameters. The parameters needed
-to be declared: path, mask, and cmd. The user whose incrontab is to be edited
+to be declared: ``path``, ``mask``, and ``cmd``. The ``user`` whose incrontab is to be edited
 also needs to be defined.
 
-When making changes to an existing incron job, the path declaration is the unique
+When making changes to an existing incron job, the ``path`` declaration is the unique
 factor, so if an existing cron that looks like this:
 
 .. code-block:: yaml

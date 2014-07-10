@@ -2,16 +2,17 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1 name "master" host "" port 7530 main true localname "master"
+init .raet.udp.stack.local to eid 1 name "master" host "" port 7530 main true
 #init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 
 
 
 framer masterudpstack be active first start
    frame start
-      do salt raet road stack per inode ".raet.udp.stack"
-      exit
-         do raet road stack closer per inode ".raet.udp.stack."
+      do salt raet cleanup at enter
+      do salt raet road stack setup per inode ".raet.udp.stack" at enter
+      bid start service
+      do raet road stack closer per inode ".raet.udp.stack." at exit
 
 framer printer be active first start
    frame start
@@ -21,7 +22,7 @@ framer printer be active first start
    frame abort
       bid stop all
 
-framer service be active first start
+framer service be inactive first start
     frame start
         do salt raet road stack service
 

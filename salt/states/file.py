@@ -1015,7 +1015,9 @@ def managed(name,
 
         The function accepts the first encountered long unbroken alphanumeric
         string of correct length as a valid hash, in order from most secure to
-        least secure::
+        least secure:
+
+        .. code-block:: text
 
             Type    Length
             ======  ======
@@ -1033,7 +1035,9 @@ def managed(name,
 
         Debian file type ``*.dsc`` is supported.
 
-        Examples::
+        Examples:
+
+        .. code-block:: text
 
             /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
             sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
@@ -1429,7 +1433,9 @@ def directory(name,
 
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
-        a list of strings representing what you would like to recurse.
+        a list of strings representing what you would like to recurse.  If
+        'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
+        they are defined.
         Example:
 
         .. code-block:: yaml
@@ -1450,7 +1456,7 @@ def directory(name,
         Windows
 
     file_mode
-        The permissions mode to set any files created if 'mode' is ran in
+        The permissions mode to set any files created if 'mode' is run in
         'recurse'. This defaults to dir_mode. Not supported on Windows
 
     makedirs
@@ -1830,13 +1836,6 @@ def recurse(name,
         'comment': {}  # { path: [comment, ...] }
     }
 
-    try:
-        source = source.rstrip('/')
-    except AttributeError:
-        ret['result'] = False
-        ret['comment'] = '\'source\' parameter must be a string'
-        return ret
-
     if 'mode' in kwargs:
         ret['result'] = False
         ret['comment'] = (
@@ -1887,12 +1886,33 @@ def recurse(name,
                               .format(precheck))
             return ret
 
+    if isinstance(source, list):
+        sources = source
+    else:
+        sources = [source]
+
+    try:
+        for idx, val in enumerate(sources):
+            sources[idx] = val.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter(s) must be a string'
+        return ret
+
     # If source is a list, find which in the list actually exists
     try:
-        source, source_hash = __salt__['file.source_list'](source, '', __env__)
+        source, source_hash = __salt__['file.source_list'](sources, '', __env__)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = 'Recurse failed: {0}'.format(exc)
+        return ret
+
+    try:
+        for idx, val in enumerate(sources):
+            sources[idx] = val.rstrip('/')
+    except AttributeError:
+        ret['result'] = False
+        ret['comment'] = '\'source\' parameter must be a string'
         return ret
 
     # Check source path relative to fileserver root, make sure it is a
@@ -2245,7 +2265,9 @@ def blockreplace(
 
     :rtype: bool or str
 
-     Example of usage with an accumulator and with a variable::
+    Example of usage with an accumulator and with a variable:
+
+    .. code-block:: yaml
 
         {% set myvar = 42 %}
         hosts-config-block-{{ myvar }}:
@@ -2276,7 +2298,9 @@ def blockreplace(
             - require_in:
               - file: hosts-config-block-{{ myvar }}
 
-    will generate and maintain a block of content in ``/etc/hosts``::
+    will generate and maintain a block of content in ``/etc/hosts``:
+
+    .. code-block:: text
 
         # START managed zone 42 -DO-NOT-EDIT-
         First line of content
@@ -2375,7 +2399,9 @@ def sed(name,
 
         .. versionadded:: 0.17.0
 
-    Usage::
+    Usage:
+
+    .. code-block:: yaml
 
         # Disable the epel repo by default
         /etc/yum.repos.d/epel.repo:
@@ -2488,7 +2514,9 @@ def comment(name, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
-    Usage::
+    Usage:
+
+    .. code-block:: yaml
 
         /etc/fstab:
           file.comment:
@@ -2566,7 +2594,9 @@ def uncomment(name, regex, char='#', backup='.bak'):
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
 
-    Usage::
+    Usage:
+
+    .. code-block:: yaml
 
         /etc/adduser.conf:
           file.uncomment:
@@ -2681,7 +2711,9 @@ def append(name,
 
         The function accepts the first encountered long unbroken alphanumeric
         string of correct length as a valid hash, in order from most secure to
-        least secure::
+        least secure:
+
+        .. code-block:: text
 
             Type    Length
             ======  ======
@@ -2699,7 +2731,9 @@ def append(name,
 
         Debian file type ``*.dsc`` is supported.
 
-        Examples::
+        Examples:
+
+        .. code-block:: text
 
             /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
             sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
@@ -2737,7 +2771,9 @@ def append(name,
     context
         Overrides default context variables passed to the template.
 
-    Multi-line example::
+    Multi-line example:
+
+    .. code-block:: yaml
 
         /etc/motd:
           file.append:
@@ -2746,7 +2782,9 @@ def append(name,
                 than sugar with the Courtiers of Italy.
                 - Benjamin Franklin
 
-    Multiple lines of text::
+    Multiple lines of text:
+
+    .. code-block:: yaml
 
         /etc/motd:
           file.append:
@@ -2754,7 +2792,9 @@ def append(name,
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
 
-    Gather text from multiple template files::
+    Gather text from multiple template files:
+
+    .. code-block:: yaml
 
         /etc/motd:
           file:
@@ -2909,7 +2949,9 @@ def prepend(name,
     The text will not be prepended again if it already exists in the file. You
     may specify a single line of text or a list of lines to append.
 
-    Multi-line example::
+    Multi-line example:
+
+    .. code-block:: yaml
 
         /etc/motd:
           file.prepend:
@@ -2918,7 +2960,9 @@ def prepend(name,
                 than sugar with the Courtiers of Italy.
                 - Benjamin Franklin
 
-    Multiple lines of text::
+    Multiple lines of text:
+
+    .. code-block:: yaml
 
         /etc/motd:
           file.prepend:
@@ -2926,7 +2970,9 @@ def prepend(name,
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
 
-    Gather text from multiple template files::
+    Gather text from multiple template files:
+
+    .. code-block:: yaml
 
         /etc/motd:
           file:
@@ -3093,7 +3139,9 @@ def patch(name,
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
 
-    Usage::
+    Usage:
+
+    .. code-block:: yaml
 
         # Equivalent to ``patch --forward /opt/file.txt file.patch``
         /opt/file.txt:
@@ -3187,7 +3235,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         whether we should create the parent directory/directories in order to
         touch the file
 
-    Usage::
+    Usage:
+
+    .. code-block:: yaml
 
         /var/log/httpd/logrotate.empty:
           file.touch
@@ -3426,7 +3476,9 @@ def accumulated(name, filename, text, **kwargs):
 
     Example:
 
-    Given the following::
+    Given the following:
+
+    .. code-block:: yaml
 
         animals_doing_things:
           file.accumulated:
@@ -3441,11 +3493,15 @@ def accumulated(name, filename, text, **kwargs):
             - source: salt://animal_file.txt
             - template: jinja
 
-    One might write a template for animal_file.txt like the following::
+    One might write a template for ``animal_file.txt`` like the following:
+
+    .. code-block:: jinja
 
         The quick brown fox{% for animal in accumulator['animals_doing_things'] %}{{ animal }}{% endfor %}
 
-    Collectively, the above states and template file will produce::
+    Collectively, the above states and template file will produce:
+
+    .. code-block:: text
 
         The quick brown fox jumps over the lazy dog.
 
@@ -3592,7 +3648,9 @@ def serialize(name,
 
         .. versionadded:: Helium
 
-    For example, this state::
+    For example, this state:
+
+    .. code-block:: yaml
 
         /etc/dummy/package.json:
           file.serialize:
@@ -3606,7 +3664,9 @@ def serialize(name,
                 engine: node 0.4.1
             - formatter: json
 
-    will manage the file ``/etc/dummy/package.json``::
+    will manage the file ``/etc/dummy/package.json``:
+
+    .. code-block:: json
 
         {
           "author": "A confused individual <iam@confused.com>",
@@ -3615,8 +3675,8 @@ def serialize(name,
             "optimist": ">= 0.1.0"
           },
           "description": "A package using naive versioning",
-          "engine": "node 0.4.1"
-          "name": "naive",
+          "engine": "node 0.4.1",
+          "name": "naive"
         }
     '''
 
@@ -3749,7 +3809,9 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     mode
         permissions on the device/pipe
 
-    Usage::
+    Usage:
+
+    .. code-block:: yaml
 
         /dev/chr:
           file.mknod:

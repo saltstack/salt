@@ -9,7 +9,7 @@ import time
 import logging
 
 # Import Salt libs
-from raet import raeting
+from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 import salt.config
@@ -51,19 +51,18 @@ class LocalClient(salt.client.LocalClient):
                 jid=jid,
                 timeout=timeout,
                 **kwargs)
-        yid = salt.utils.gen_jid()
-        basedirpath = os.path.join(self.opts['cachedir'], 'raet')
+        yid = nacling.uuid(size=18)
         stack = LaneStack(
                 name=('client' + yid),
                 yid=yid,
                 lanename='master',
-                basedirpath=basedirpath,
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
                 stack=stack,
                 lanename='master',
                 yid=0,
+                name='manor',
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)
         route = {'dst': (None, router_yard.name, 'local_cmd'),
@@ -74,10 +73,11 @@ class LocalClient(salt.client.LocalClient):
         while True:
             time.sleep(0.01)
             stack.serviceAll()
-            for msg in stack.rxMsgs:
+            while stack.rxMsgs:
+                msg, sender = stack.rxMsgs.popleft()
                 ret = msg.get('return', {})
                 if 'ret' in ret:
+                    stack.server.close()
                     return ret['ret']
+                stack.server.close()
                 return ret
-        stack.server.close()
-        self.stack.clearAllDir()
