@@ -143,6 +143,29 @@ def verify_signature(pubkey_path, message, signature):
     return result
 
 
+def gen_signature(priv_path, pub_path, sign_path):
+    '''
+    creates a signature for the given public-key with
+    the given private key and writes it to sign_path
+    '''
+
+    with salt.utils.fopen(pub_path) as fp_:
+        mpub_64 = fp_.read()
+
+    mpub_sig = sign_message(priv_path, mpub_64)
+    mpub_sig_64 = binascii.b2a_base64(mpub_sig)
+
+    if os.path.isfile(sign_path):
+        print('Signature file {0} already exists, please remove '
+              'it first and try again'.format(sign_path))
+    else:
+        with salt.utils.fopen(sign_path, 'w') as sig_f:
+            sig_f.write(mpub_sig_64)
+        print('Wrote signature to {0}'.format(sign_path))
+    return True
+
+
+
 class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
