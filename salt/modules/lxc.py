@@ -1120,9 +1120,13 @@ def create(name, config=None, profile=None, options=None, **kwargs):
                 cmd += ' --fstype {0}'.format(fstype)
             if size:
                 cmd += ' --fssize {0}'.format(size)
+    options = options or {}
     if profile:
-        cmd += ' --'
+        profile.update(options)
         options = profile
+
+    if options:
+        cmd += ' --'
         for k, v in options.items():
             cmd += ' --{0} {1}'.format(k, v)
 
