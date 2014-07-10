@@ -299,7 +299,7 @@ def get_cloud_init_mime(cloud_init):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'scripts' in cloud_init:
-        for script_name, script in cloud_init['scripts'].iteritems():
+        for script in cloud_init['scripts'].itervalues():
             _script = email.mime.text.MIMEText(script, 'x-shellscript')
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
