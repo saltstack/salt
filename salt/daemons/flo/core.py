@@ -64,27 +64,17 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
     '''
     Ioinits = {
                 'opts': '.salt.opts',
-                'basedirpath': {'ipath': '.salt.raet.basedirpath',
-                                'ival': ''}
             }
-
-    def postinitio(self):
-        '''
-        Initialize value of data store share for .salt.raet.basedirpath
-        Will override if empty value
-        '''
-        if not self.basedirpath.value:  # override if empty
-            self.basedirpath.value = os.path.abspath(self.opts.value['sock_dir'])
 
     def action(self):
         '''
         Should only run once to cleanup stale lane uxd files.
         '''
-        basedirpath = self.basedirpath.value
-        if basedirpath:
-            console.concise("Cleaning up uxd files in {0}\n".format(basedirpath))
-            for name in os.listdir(basedirpath):
-                path = os.path.join(basedirpath, name)
+        if self.opts.value.get('sock_dir'):
+            sockdirpath = os.path.abspath(self.opts.value['sock_dir'])
+            console.concise("Cleaning up uxd files in {0}\n".format(sockdirpath))
+            for name in os.listdir(sockdirpath):
+                path = os.path.join(sockdirpath, name)
                 if os.path.isdir(path):
                     continue
                 root, ext = os.path.splitext(name)
@@ -123,8 +113,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}},
-            'basedirpath': {'ipath': '.salt.raet.basedirpath',
-                            'ival': ''},
             }
 
     def postinitio(self):
@@ -151,7 +139,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
-        basedirpath = self.basedirpath.value  # must be assigned elsewhere
+        basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
         local = LocalEstate(
                 eid=eid,
@@ -572,8 +560,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                           'ival': {'name': 'master',
                                    'yid': 0,
                                    'lanename': 'master'}},
-               'basedirpath': {'ipath': '.salt.raet.basedirpath',
-                               'ival': ''}
             }
 
     def postinitio(self):
@@ -590,7 +576,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         name = 'manor'
         lanename = self.opts.value.get('id', self.local.data.lanename)
         yid = self.local.data.yid
-        basedirpath = self.basedirpath.value  # must be assigned elsewhere
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
@@ -944,6 +929,29 @@ class NixExecutor(ioflo.base.deeding.Deed):
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
 
+    def _setup_jobber_stack(self):
+        '''
+        Setup and return the LaneStack and Yard used by the jobber to communicate to-from
+        the minion
+
+        '''
+        mid = self.opts['id']
+        yid = nacling.uuid(size=18)
+        name = 'jobber' + yid
+        stack = LaneStack(
+                name=name,
+                lanename=mid,
+                sockdirpath=self.opts['sock_dir'])
+
+        stack.Pk = raeting.packKinds.pack
+        stack.addRemote(RemoteYard(stack=stack,
+                                   name='manor',
+                                   lanename=mid,
+                                   dirpath=self.opts['sock_dir'] ))
+        #route = {'src': (mid, stack.local.name, 'jid_ret'),
+                 #'dst': (msg['route']['src'][0], None, 'remote_cmd')}
+        return stack
+
     def _return_pub(self, msg, ret):
         '''
         Send the return data back via the uxd socket
@@ -1022,6 +1030,10 @@ class NixExecutor(ioflo.base.deeding.Deed):
         fn_ = os.path.join(self.proc_dir, data['jid'])
         self.opts['__ex_id'] = data['jid']
         salt.utils.daemonize_if(self.opts)
+
+        #import wingdbstub
+        stack = self._setup_jobber_stack()
+
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         with salt.utils.fopen(fn_, 'w+') as fp_:
@@ -1123,3 +1135,4 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         exc
                         )
                     )
+        stack.server.close()
