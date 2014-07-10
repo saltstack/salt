@@ -6,7 +6,7 @@ import time
 import os
 import threading
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # Import Salt Libs
 import salt.payload
@@ -24,6 +24,9 @@ try:
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
+
+jobber_stack = None # global that holds raet jobber LaneStack
+jobber_rxMsgs = {} # dict of deques one for each RaetChannel
 
 
 class Channel(object):
@@ -66,22 +69,13 @@ class RAETChannel(Channel):
         '''
         Prepare the stack objects
         '''
+        if not jobber_stack:
+            emsg = "Jobber Stack not setup\n"
+            log.error(emsg)
+            raise ValueError(emsg)
+        log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
+        self.stack = jobber_stack
         mid = self.opts.get('id', 'master')
-        yid = nacling.uuid(size=18)
-        stackname = 'raet' + yid
-        self.stack = LaneStack(
-                name=stackname,
-                lanename=mid,
-                yid=yid,
-                sockdirpath=self.opts['sock_dir'])
-        self.stack.Pk = raeting.packKinds.pack
-        self.router_yard = yarding.RemoteYard(
-                stack=self.stack,
-                yid=0,
-                name='manor',
-                lanename=mid,
-                dirpath=self.opts['sock_dir'])
-        self.stack.addRemote(self.router_yard)
         src = (mid, self.stack.local.name, None)
         self.route = {'src': src, 'dst': self.dst}
 
@@ -107,11 +101,9 @@ class RAETChannel(Channel):
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                self.stack.server.close()
                 return msg.get('return', {})
             if time.time() - start > timeout:
                 if tried >= tries:
-                    #self.stack.server.close()
                     raise ValueError
                 self.stack.transmit(msg, self.stack.uids['manor'])
                 tried += 1
