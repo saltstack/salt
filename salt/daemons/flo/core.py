@@ -18,6 +18,7 @@ from collections import deque
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.transport
 from raet import raeting, nacling
 from raet.road.stacking import RoadStack
 from raet.road.estating import LocalEstate
@@ -1032,7 +1033,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         salt.utils.daemonize_if(self.opts)
 
         #import wingdbstub
-        stack = self._setup_jobber_stack()
+        salt.transport.jobber_stack = stack = self._setup_jobber_stack()
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
@@ -1136,3 +1137,4 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         )
                     )
         stack.server.close()
+        salt.transport.jobber_stack = None

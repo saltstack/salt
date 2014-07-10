@@ -6,7 +6,7 @@ import time
 import os
 import threading
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # Import Salt Libs
 import salt.payload
@@ -24,6 +24,9 @@ try:
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
+
+jobber_stack = None # global that holds raet jobber LaneStack
+jobber_rxMsgs = {} # dict of deques one for each RaetChannel
 
 
 class Channel(object):
@@ -66,6 +69,10 @@ class RAETChannel(Channel):
         '''
         Prepare the stack objects
         '''
+        if not jobber_stack:
+            log.error("Jobber Stack not setup\n")
+        log.debug("Jobber Stack '{0}' at = {1}\n".format(jobber_stack.local.name,
+                                                         jobber_stack.local.ha))
         mid = self.opts.get('id', 'master')
         yid = nacling.uuid(size=18)
         stackname = 'raet' + yid
