@@ -60,7 +60,6 @@ class RAETChannel(Channel):
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.__prep_stack()
 
     def __prep_stack(self):
         '''
@@ -96,7 +95,9 @@ class RAETChannel(Channel):
     def send(self, load, tries=3, timeout=60):
         '''
         Send a message load and wait for a relative reply
+        One shot wonder
         '''
+        self.__prep_stack()
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
@@ -106,9 +107,11 @@ class RAETChannel(Channel):
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
+                self.stack.server.close()
                 return msg.get('return', {})
             if time.time() - start > timeout:
                 if tried >= tries:
+                    #self.stack.server.close()
                     raise ValueError
                 self.stack.transmit(msg, self.stack.uids['manor'])
                 tried += 1
