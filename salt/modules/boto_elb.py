@@ -374,12 +374,12 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         ret = odict.OrderedDict()
         ret['access_log'] = odict.OrderedDict()
         ret['cross_zone_load_balancing'] = odict.OrderedDict()
-        al = lbattrs.access_log
+        al_ = lbattrs.access_log
         czlb = lbattrs.cross_zone_load_balancing
-        ret['access_log']['enabled'] = al.enabled
-        ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
-        ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
-        ret['access_log']['emit_interval'] = al.emit_interval
+        ret['access_log']['enabled'] = al_.enabled
+        ret['access_log']['s3_bucket_name'] = al_.s3_bucket_name
+        ret['access_log']['s3_bucket_prefix'] = al_.s3_bucket_prefix
+        ret['access_log']['emit_interval'] = al_.emit_interval
         ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
         return ret
     except boto.exception.BotoServerError:
@@ -400,21 +400,21 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    al = attributes.get('access_log', {})
+    al_ = attributes.get('access_log', {})
     czlb = attributes.get('cross_zone_load_balancing', {})
-    if not al and not czlb:
+    if not al_ and not czlb:
         log.error('No supported attributes for ELB.')
         return False
-    if al:
+    if al_:
         _al = elb.attributes.AccessLogAttribute()
-        _al.enabled = al.get('enabled', False)
+        _al.enabled = al_.get('enabled', False)
         if not _al.enabled:
             msg = 'Access log attribute configured, but enabled config missing'
             log.error(msg)
             return False
-        _al.s3_bucket_name = al.get('s3_bucket_name', None)
-        _al.s3_bucket_prefix = al.get('s3_bucket_prefix', None)
-        _al.emit_interval = al.get('emit_interval', None)
+        _al.s3_bucket_name = al_.get('s3_bucket_name', None)
+        _al.s3_bucket_prefix = al_.get('s3_bucket_prefix', None)
+        _al.emit_interval = al_.get('emit_interval', None)
         added_attr = conn.modify_lb_attribute(name, 'accessLog', _al)
         if added_attr:
             log.info('Added access_log attribute to {0} elb.'.format(name))
@@ -451,12 +451,12 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         lb_ = conn.get_all_load_balancers(load_balancer_names=[name])
         lb_ = lb_[0]
         ret = odict.OrderedDict()
-        hc = lb_.health_check
-        ret['interval'] = hc.interval
-        ret['target'] = hc.target
-        ret['healthy_threshold'] = hc.healthy_threshold
-        ret['timeout'] = hc.timeout
-        ret['unhealthy_threshold'] = hc.unhealthy_threshold
+        hc_ = lb_.health_check
+        ret['interval'] = hc_.interval
+        ret['target'] = hc_.target
+        ret['healthy_threshold'] = hc_.healthy_threshold
+        ret['timeout'] = hc_.timeout
+        ret['unhealthy_threshold'] = hc_.unhealthy_threshold
         return ret
     except boto.exception.BotoServerError:
         log.error('ELB {0} does not exist.'.format(name),
@@ -476,9 +476,9 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    hc = elb.HealthCheck(**health_check)
+    hc_ = elb.HealthCheck(**health_check)
     try:
-        conn.configure_health_check(name, hc)
+        conn.configure_health_check(name, hc_)
         log.info('Configured health check on ELB {0}'.format(name))
     except boto.exception.BotoServerError:
         log.info('Failed to configure health check on ELB {0}'.format(name),
