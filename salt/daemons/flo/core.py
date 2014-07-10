@@ -947,7 +947,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=mid,
-                                   dirpath=self.opts['sock_dir'] ))
+                                   dirpath=self.opts['sock_dir']))
         #route = {'src': (mid, stack.local.name, 'jid_ret'),
                  #'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         return stack
