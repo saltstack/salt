@@ -127,6 +127,9 @@ def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
+    gid
+        gid to convert to a group name
+
     CLI Example:
 
     .. code-block:: bash
@@ -153,6 +156,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
+    group
+        group to convert to its gid
+
     CLI Example:
 
     .. code-block:: bash
@@ -173,6 +179,13 @@ def get_gid(path, follow_symlinks=True):
     '''
     Return the id of the group that owns a given file
 
+    path
+        file or directory of which to get the gid
+
+    follow_symlinks
+        indicated if symlinks should be followed
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -188,6 +201,12 @@ def get_gid(path, follow_symlinks=True):
 def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
+
+    path
+        file or directory of which to get the group
+
+    follow_symlinks
+        indicated if symlinks should be followed
 
     CLI Example:
 
@@ -205,6 +224,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
+    uid
+        uid to convert to a username
+
     CLI Example:
 
     .. code-block:: bash
@@ -220,6 +242,9 @@ def uid_to_user(uid):
 def user_to_uid(user):
     '''
     Convert user name to a uid
+
+    user
+        user name to convert to its uid
 
     CLI Example:
 
@@ -241,6 +266,12 @@ def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
+    path
+        file or directory of which to get the uid
+
+    follow_symlinks
+        indicated if symlinks should be followed
+
     CLI Example:
 
     .. code-block:: bash
@@ -256,6 +287,12 @@ def get_uid(path, follow_symlinks=True):
 def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
+
+    path
+        file or directory of which to get the user
+
+    follow_symlinks
+        indicated if symlinks should be followed
 
     CLI Example:
 
@@ -273,6 +310,12 @@ def get_mode(path, follow_symlinks=True):
     '''
     Return the mode of a file
 
+    path
+        file or directory of which to get the mode
+
+    follow_symlinks
+        indicated if symlinks should be followed
+
     CLI Example:
 
     .. code-block:: bash
@@ -288,6 +331,12 @@ def get_mode(path, follow_symlinks=True):
 def set_mode(path, mode):
     '''
     Set the mode of a file
+
+    path
+        file or directory of which to set the mode
+
+    mode
+        mode to set the path to
 
     CLI Example:
 
@@ -311,6 +360,15 @@ def lchown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group without following
     symlinks.
+
+    path
+        path to the file or directory
+
+    user
+        user owner
+
+    group
+        group owner
 
     CLI Example:
 
@@ -338,6 +396,15 @@ def lchown(path, user, group):
 def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
+
+    path
+        path to the file or directory
+
+    user
+        user owner
+
+    group
+        group owner
 
     CLI Example:
 
@@ -374,6 +441,12 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
+    path
+        path to the file or directory
+
+    group
+        group owner
+
     CLI Example:
 
     .. code-block:: bash
@@ -388,6 +461,12 @@ def get_sum(path, form='md5'):
     '''
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
+
+    path
+        path to the file or directory
+
+    form
+        desired sum format
 
     CLI Example:
 
@@ -407,6 +486,15 @@ def get_hash(path, form='md5', chunk_size=4096):
         - It does not return a string on error. The returned value of
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
+
+    path
+        path to the file or directory
+
+    form
+        desired sum format
+
+    chunk_size
+        amount to sum at once
 
     CLI Example:
 
@@ -1483,6 +1571,12 @@ def append(path, *args):
 
     Append text to the end of a file
 
+    path
+        path to file
+
+    *args
+        strings to append to file
+
     CLI Example:
 
     .. code-block:: bash
@@ -1522,6 +1616,12 @@ def prepend(path, *args):
 
     Prepend text to the beginning of a file
 
+    path
+        path to file
+
+    *args
+        strings to prepend to the file
+
     CLI Example:
 
     .. code-block:: bash
@@ -1550,6 +1650,12 @@ def write(path, *args):
     .. versionadded:: Helium
 
     Write text to a file, overwriting any existing contents.
+
+    path
+        path to file
+
+    *args
+        strings to write to the file
 
     CLI Example:
 
@@ -1616,6 +1722,15 @@ def seek_read(path, size, offset):
 
     Seek to a position on a file and write to it
 
+    path
+        path to file
+
+    seek
+        amount to read at once
+
+    offset
+        offset to start into the file
+
     CLI Example:
 
     .. code-block:: bash
@@ -1636,6 +1751,15 @@ def seek_write(path, data, offset):
     .. versionadded:: 2014.1.0
 
     Seek to a position on a file and write to it
+
+    path
+        path to fil
+
+    data
+        data to write to file
+
+    offset
+        position in file to start writing
 
     CLI Example:
 
@@ -1658,6 +1782,12 @@ def truncate(path, length):
     .. versionadded:: 2014.1.0
 
     Seek to a position on a file and delete everything after that point
+
+    path
+        path to file
+
+    length
+        offset into file to truncate
 
     CLI Example:
 
@@ -2249,6 +2379,34 @@ def get_managed(
     '''
     Return the managed file data for file.managed
 
+    name
+        location where the file lives on the server
+
+    template
+        template format
+
+    source
+        managed source file
+
+    source_hash
+        hash of the source file
+
+    user
+        user owner
+
+    group
+        group owner
+
+    mode
+        file mode
+
+    context
+        variables to add to the environment
+
+    default
+        default values of for context_dict
+        
+
     CLI Example:
 
     .. code-block:: bash
@@ -2720,6 +2878,49 @@ def manage_file(name,
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
+
+    name
+        location to place the file
+
+    sfn
+        location of cached file on the minion
+
+        This is the path to the file stored on the minion. This file is placed on the minion
+        using cp.cache_file.  If the hash sum of that file matches the source_sum, we do not
+        transfer the file to the minion again.
+
+        This file is then grabbed and if it has template set, it renders the file to be placed
+        into the correct place on the system using salt.utils.copyfile()
+
+    source
+        file reference on the master
+
+    source_hash
+        sum hash for source
+
+    user
+        user owner
+
+    group
+        group owner
+
+    backup
+        backup_mode
+
+    makedirs
+        make directories if they do not exist
+
+    template
+        format of templating
+
+    show_diff
+        Include diff in state return
+
+    contents:
+        contents to be placed in the file
+
+    dir_mode
+        mode for directories created with makedirs
 
     CLI Example:
 
