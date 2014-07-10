@@ -154,6 +154,8 @@ def gen_signature(priv_path, pub_path, sign_path):
 
     mpub_sig = sign_message(priv_path, mpub_64)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
+    print('Calculating signature for {0} with {1}'.format(os.path.basename(pub_path),
+                                                          os.path.basename(priv_path)))
 
     if os.path.isfile(sign_path):
         print('Signature file {0} already exists, please remove '
