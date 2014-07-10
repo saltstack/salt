@@ -77,7 +77,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             '-C',
             '--cli',
             '--cli-tests',
-            dest='module',
+            dest='cli',
             default=False,
             action='store_true',
             help='Run tests for cli'
