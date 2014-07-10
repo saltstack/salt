@@ -60,6 +60,7 @@ class RAETChannel(Channel):
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
+        self.__prep_stack()
 
     def __prep_stack(self):
         '''
@@ -97,7 +98,6 @@ class RAETChannel(Channel):
         Send a message load and wait for a relative reply
         One shot wonder
         '''
-        self.__prep_stack()
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
