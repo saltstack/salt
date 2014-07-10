@@ -957,27 +957,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
         Send the return data back via the uxd socket
         '''
         mid = self.opts['id']
-        #yid = nacling.uuid(size=18)
-        #stackname = 'jobret' + yid
-        #ret_stack = LaneStack(
-                #name=stackname,
-                #lanename=mid,
-                #yid=yid,
-                #sockdirpath=self.opts['sock_dir'])
-
-        #ret_stack.Pk = raeting.packKinds.pack
-        #main_yard = RemoteYard(
-                #stack=ret_stack,
-                #yid=0,
-                #name='manor',
-                #lanename=mid,
-                #dirpath=self.opts['sock_dir']
-                #)
-
-        #ret_stack.addRemote(main_yard)
-        #route = {'src': (mid, ret_stack.local.name, 'jid_ret'),
-                 #'dst': (msg['route']['src'][0], None, 'remote_cmd')}
-
         route = {'src': (mid, stack.local.name, 'jid_ret'),
                          'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
@@ -990,9 +969,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        #ret_stack.transmit(msg, ret_stack.uids.get('manor'))
-        #ret_stack.serviceAll()
-        #ret_stack.server.close()
         stack.transmit(msg, stack.uids.get('manor'))
         stack.serviceAll()
 
@@ -1036,7 +1012,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
         self.opts['__ex_id'] = data['jid']
         salt.utils.daemonize_if(self.opts)
 
-        #import wingdbstub
         salt.transport.jobber_stack = stack = self._setup_jobber_stack()
 
         sdata = {'pid': os.getpid()}
