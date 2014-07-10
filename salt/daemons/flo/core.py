@@ -930,7 +930,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'fun': '.salt.local.fun',
-               'uxd_stack': '.salt.uxd.stack.stack',
                'executors': '.salt.track.executors'}
 
     def postinitio(self):
@@ -1008,13 +1007,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
-            yid = nacling.uuid(size=18)
-            ex_yard = RemoteYard(
-                    stack=self.uxd_stack.value,
-                    yid=yid,
-                    lanename=self.opts['id'],
-                    dirpath=self.opts['sock_dir'])
-            self.uxd_stack.value.addRemote(ex_yard)
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}
