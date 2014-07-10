@@ -128,6 +128,9 @@ def gid_to_group(gid):
     '''
     Convert the group id to the group name on this system
 
+    gid
+        gid to convert to a group name
+
     CLI Example:
 
     .. code-block:: bash
@@ -154,6 +157,9 @@ def group_to_gid(group):
     '''
     Convert the group to the gid on this system
 
+    group
+        group to convert to its gid
+
     CLI Example:
 
     .. code-block:: bash
@@ -174,6 +180,13 @@ def get_gid(path, follow_symlinks=True):
     '''
     Return the id of the group that owns a given file
 
+    path
+        file or directory of which to get the gid
+
+    follow_symlinks
+        indicated if symlinks should be followed
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -189,6 +202,12 @@ def get_gid(path, follow_symlinks=True):
 def get_group(path, follow_symlinks=True):
     '''
     Return the group that owns a given file
+
+    path
+        file or directory of which to get the group
+
+    follow_symlinks
+        indicated if symlinks should be followed
 
     CLI Example:
 
@@ -206,6 +225,9 @@ def uid_to_user(uid):
     '''
     Convert a uid to a user name
 
+    uid
+        uid to convert to a username
+
     CLI Example:
 
     .. code-block:: bash
@@ -221,6 +243,9 @@ def uid_to_user(uid):
 def user_to_uid(user):
     '''
     Convert user name to a uid
+
+    user
+        user name to convert to its uid
 
     CLI Example:
 
@@ -242,6 +267,12 @@ def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
+    path
+        file or directory of which to get the uid
+
+    follow_symlinks
+        indicated if symlinks should be followed
+
     CLI Example:
 
     .. code-block:: bash
@@ -257,6 +288,12 @@ def get_uid(path, follow_symlinks=True):
 def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
+
+    path
+        file or directory of which to get the user
+
+    follow_symlinks
+        indicated if symlinks should be followed
 
     CLI Example:
 
@@ -274,6 +311,12 @@ def get_mode(path, follow_symlinks=True):
     '''
     Return the mode of a file
 
+    path
+        file or directory of which to get the mode
+
+    follow_symlinks
+        indicated if symlinks should be followed
+
     CLI Example:
 
     .. code-block:: bash
@@ -289,6 +332,12 @@ def get_mode(path, follow_symlinks=True):
 def set_mode(path, mode):
     '''
     Set the mode of a file
+
+    path
+        file or directory of which to set the mode
+
+    mode
+        mode to set the path to
 
     CLI Example:
 
@@ -312,6 +361,15 @@ def lchown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group without following
     symlinks.
+
+    path
+        path to the file or directory
+
+    user
+        user owner
+
+    group
+        group owner
 
     CLI Example:
 
@@ -339,6 +397,15 @@ def lchown(path, user, group):
 def chown(path, user, group):
     '''
     Chown a file, pass the file the desired user and group
+
+    path
+        path to the file or directory
+
+    user
+        user owner
+
+    group
+        group owner
 
     CLI Example:
 
@@ -375,6 +442,12 @@ def chgrp(path, group):
     '''
     Change the group of a file
 
+    path
+        path to the file or directory
+
+    group
+        group owner
+
     CLI Example:
 
     .. code-block:: bash
@@ -389,6 +462,12 @@ def get_sum(path, form='md5'):
     '''
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
+
+    path
+        path to the file or directory
+
+    form
+        desired sum format
 
     CLI Example:
 
@@ -408,6 +487,15 @@ def get_hash(path, form='md5', chunk_size=4096):
         - It does not return a string on error. The returned value of
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
+
+    path
+        path to the file or directory
+
+    form
+        desired sum format
+
+    chunk_size
+        amount to sum at once
 
     CLI Example:
 
@@ -1484,6 +1572,12 @@ def append(path, *args):
 
     Append text to the end of a file
 
+    path
+        path to file
+
+    *args
+        strings to append to file
+
     CLI Example:
 
     .. code-block:: bash
@@ -1523,6 +1617,12 @@ def prepend(path, *args):
 
     Prepend text to the beginning of a file
 
+    path
+        path to file
+
+    *args
+        strings to prepend to the file
+
     CLI Example:
 
     .. code-block:: bash
@@ -1551,6 +1651,12 @@ def write(path, *args):
     .. versionadded:: Helium
 
     Write text to a file, overwriting any existing contents.
+
+    path
+        path to file
+
+    *args
+        strings to write to the file
 
     CLI Example:
 
@@ -1617,6 +1723,15 @@ def seek_read(path, size, offset):
 
     Seek to a position on a file and write to it
 
+    path
+        path to file
+
+    seek
+        amount to read at once
+
+    offset
+        offset to start into the file
+
     CLI Example:
 
     .. code-block:: bash
@@ -1637,6 +1752,15 @@ def seek_write(path, data, offset):
     .. versionadded:: 2014.1.0
 
     Seek to a position on a file and write to it
+
+    path
+        path to fil
+
+    data
+        data to write to file
+
+    offset
+        position in file to start writing
 
     CLI Example:
 
@@ -1659,6 +1783,12 @@ def truncate(path, length):
     .. versionadded:: 2014.1.0
 
     Seek to a position on a file and delete everything after that point
+
+    path
+        path to file
+
+    length
+        offset into file to truncate
 
     CLI Example:
 
