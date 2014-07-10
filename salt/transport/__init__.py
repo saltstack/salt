@@ -60,7 +60,7 @@ class RAETChannel(Channel):
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.__prep_stack()
+        self.dst = ('master', None, 'remote_cmd')
 
     def __prep_stack(self):
         '''
@@ -83,8 +83,7 @@ class RAETChannel(Channel):
                 dirpath=self.opts['sock_dir'])
         self.stack.addRemote(self.router_yard)
         src = (mid, self.stack.local.name, None)
-        dst = ('master', None, 'remote_cmd')
-        self.route = {'src': src, 'dst': dst}
+        self.route = {'src': src, 'dst': self.dst}
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -99,6 +98,7 @@ class RAETChannel(Channel):
         One shot wonder
         '''
         msg = {'route': self.route, 'load': load}
+        self.__prep_stack()
         self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
         start = time.time()
@@ -115,12 +115,6 @@ class RAETChannel(Channel):
                     raise ValueError
                 self.stack.transmit(msg, self.stack.uids['manor'])
                 tried += 1
-
-    def __del__(self):
-        '''
-        Clean up the stack when finished
-        '''
-        #self.stack.server.close()
 
 
 class ZeroMQChannel(Channel):
