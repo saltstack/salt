@@ -11,6 +11,7 @@ import salt.payload
 import salt.auth
 import salt.utils
 import logging
+from collections import defaultdict
 
 log = logging.getLogger(__name__)
 
