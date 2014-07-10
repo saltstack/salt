@@ -69,7 +69,7 @@ variant master {
         if ![file exists /etc/salt] {
             file link /etc/salt /opt/local/etc/salt
         }
-        file copy ${worksrcpath}/pkg/macports/com.saltstack.salt.master.plist /Library/LaunchDaemons
+        # file copy ${worksrcpath}/pkg/macports/com.saltstack.salt.master.plist /Library/LaunchDaemons
     }
     notes-append "
 This variant is for the salt-master.  To start the salt-master via launchd, run
@@ -85,9 +85,9 @@ sudo launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
 
 variant syndic {
 
-    post-destroot {
-        file copy ${worksrcpath}/pkg/macports/com.saltstack.salt.syndic.plist /Library/LaunchDaemons
-    }
+    # post-destroot {
+    #     file copy ${worksrcpath}/pkg/macports/com.saltstack.salt.syndic.plist /Library/LaunchDaemons
+    #}
     notes-append "
 This variant is for the salt-syndic.  To start the salt-syndic via launchd, run
     
