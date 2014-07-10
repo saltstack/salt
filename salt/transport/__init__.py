@@ -120,7 +120,7 @@ class RAETChannel(Channel):
         '''
         Clean up the stack when finished
         '''
-        self.stack.server.close()
+        #self.stack.server.close()
 
 
 class ZeroMQChannel(Channel):
