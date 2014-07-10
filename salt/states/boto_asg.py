@@ -8,26 +8,23 @@ Manage Autoscale Groups
 Create and destroy autoscale groups. Be aware that this interacts with Amazon's
 services, and so may incur charges.
 
-This module uses ``boto``, which can be installed via package, or pip.
+This module uses boto, which can be installed via package, or pip.
 
 This module accepts explicit autoscale credentials but can also utilize
-IAM roles assigned to the instance through Instance Profiles. Dynamic
+IAM roles assigned to the instance trough Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
-configuration is necessary. More information available `here
-<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.
+configuration is necessary. More Information available at::
 
-If IAM roles are not used you need to specify them either in a pillar file or
-in the minion's config file:
+   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-.. code-block:: yaml
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file::
 
     asg.keyid: GKTADJGHEIQSXMKKRBJ08H
     asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, either
-passed in as a dict, or as a string to pull from pillars or minion config:
-
-.. code-block:: yaml
+It's also possible to specify key, keyid and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -48,6 +45,17 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - desired_capacity: 1
         - load_balancers:
           - myelb
+        - suspended_processes:
+            - AddToLoadBalancer
+            - AlarmNotification
+        - scaling_policies
+            ----------
+            - adjustment_type: ChangeInCapacity
+            - as_name: api-production-iad
+            - cooldown: 1800
+            - min_adjustment_step: None
+            - name: ScaleDown
+            - scaling_adjustment: -1
         - region: us-east-1
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -93,6 +101,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - force: True
 '''
 
+import hashlib
 
 def __virtual__():
     '''
@@ -107,6 +116,7 @@ def present(
         availability_zones,
         min_size,
         max_size,
+        launch_config=None,
         desired_capacity=None,
         load_balancers=None,
         default_cooldown=None,
@@ -116,6 +126,8 @@ def present(
         vpc_zone_identifier=None,
         tags=None,
         termination_policies=None,
+        suspended_processes=None,
+        scaling_policies=None,
         region=None,
         key=None,
         keyid=None,
@@ -127,7 +139,17 @@ def present(
         Name of the autoscale group.
 
     launch_config_name
-        Name of the launch config to use for the group.
+	Name of the launch config to use for the group.  Or, if
+	launch_config is specified, this will be the launch config
+	name's prefix.  (see below)
+
+    launch_config
+	A dictionary of launch config attributes.  If specified, a
+	launch config will be used or created, matching this set
+	of attributes, and the autoscale group will be set to use
+	that launch config.  The launch config name will be the
+	launch_config_name followed by a hyphen followed by a hash
+	of the launch_config dict contents.
 
     availability_zones
         List of availability zones for the group.
@@ -176,6 +198,14 @@ def present(
         “ClosestToNextInstanceHour”, “Default”. If no value is specified, the
         “Default” value is used.
 
+    suspended_processes
+        List of processes to be suspended. see 
+        http://docs.aws.amazon.com/AutoScaling/latest/DeveloperGuide/US_SuspendResume.html
+
+    scaling_policies
+        List of scaling policies.  Each policy is a dict of key-values described by
+        http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
+
     region
         The region to connect to.
 
@@ -190,6 +220,26 @@ def present(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    # if launch_config is defined, manage the launch config first.
+    # hash the launch_config dict to create a unique name suffix and then ensure it is present
+    if launch_config and not __opts__['test']:
+        launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
+        args = {
+               'name':  launch_config_name,
+                'region': region,
+                'key': key,
+                'keyid': keyid,
+                'profile': profile
+                }
+        for d in launch_config:
+            args.update(d)
+        lc_ret  = __salt__["state.single"]('boto_lc.present',**args)
+        lc_ret = lc_ret.values()[0]
+        if lc_ret["result"] == True:
+            if not "launch_config" in ret["changes"]:
+                    ret["changes"]["launch_config"] = {}
+            ret["changes"]["launch_config"] = lc_ret["changes"]
+
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
         ret['result'] = False
@@ -207,7 +257,7 @@ def present(
                                               health_check_period,
                                               placement_group,
                                               vpc_zone_identifier, tags,
-                                              termination_policies, region,
+                                              termination_policies, suspended_processes, scaling_policies, region,
                                               key, keyid, profile)
         if created:
             ret['result'] = True
@@ -222,6 +272,10 @@ def present(
         need_update = False
         # If any of these attributes can't be modified after creation
         # time, we should remove them from the dict.
+        if scaling_policies:
+            for policy in scaling_policies:
+                if "min_adjustment_step" not in policy:
+                    policy["min_adjustment_step"] = None
         config = {
             'launch_config_name': launch_config_name,
             'availability_zones': availability_zones,
@@ -233,21 +287,26 @@ def present(
             'health_check_period': health_check_period,
             'vpc_zone_identifier': vpc_zone_identifier,
             'tags': tags,
-            'termination_policies': termination_policies
+            'termination_policies': termination_policies,
+            'suspended_processes': suspended_processes,
+            "scaling_policies": scaling_policies,
         }
+        if suspended_processes == None:
+            config["suspended_processes"] = []
+        # ensure that we delete scaling_policies if none are specified
+        if scaling_policies == None:
+            config["scaling_policies"] = []
         for key, value in config.iteritems():
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
-            if not value:
+            if value is None:
                 continue
             if key in asg:
                 _value = asg[key]
-                if isinstance(value, list):
-                    _value.sort()
-                    value.sort()
-                if _value != value:
+                if not _recursive_compare(value,_value):
                     need_update = True
+                    break
         if need_update:
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
@@ -262,8 +321,15 @@ def present(
                                                   health_check_period,
                                                   placement_group,
                                                   vpc_zone_identifier, tags,
-                                                  termination_policies, region,
+                                                  termination_policies, suspended_processes, scaling_policies, region,
                                                   key, keyid, profile)
+            if asg["launch_config_name"] != launch_config_name:
+                # delete the old launch_config_name
+                deleted = __salt__['boto_asg.delete_launch_configuration']( asg["launch_config_name"], region, key, keyid, profile)
+                if deleted:
+                    if not "launch_config" in ret["changes"]:
+                        ret["changes"]["launch_config"] = {}
+                    ret["changes"]["launch_config"]["deleted"]=asg["launch_config_name"]
             if updated:
                 ret['result'] = True
                 ret['changes']['old'] = asg
@@ -278,6 +344,28 @@ def present(
             ret['comment'] = 'Autoscale group present.'
     return ret
 
+def _recursive_compare(v1,v2):
+    "return v1 == v2.  compares list, dict, OrderedDict, recursively"
+    if isinstance(v1,list):
+        if len(v1) != len(v2):
+            return False
+        v1.sort()
+        v2.sort()
+        for x,y in zip(v1,v2):
+            if not _recursive_compare(x,y):
+                return False
+        return True
+    elif isinstance(v1,dict):
+        v1 = dict(v1)
+        v2 = dict(v2)
+        if sorted(v1.keys()) != sorted(v2.keys()):
+            return False
+        for k in v1.keys():
+            if not _recursive_compare(v1[k],v2[k]):
+                return False
+        return True
+    else:
+        return v1 == v2
 
 def absent(
         name,
