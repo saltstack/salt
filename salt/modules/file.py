@@ -2380,6 +2380,34 @@ def get_managed(
     '''
     Return the managed file data for file.managed
 
+    name
+        location where the file lives on the server
+
+    template
+        template format
+
+    source
+        managed source file
+
+    source_hash
+        hash of the source file
+
+    user
+        user owner
+
+    group
+        group owner
+
+    mode
+        file mode
+
+    context
+        variables to add to the environment
+
+    default
+        default values of for context_dict
+        
+
     CLI Example:
 
     .. code-block:: bash
@@ -2851,6 +2879,49 @@ def manage_file(name,
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
+
+    name
+        location to place the file
+
+    sfn
+        location of cached file on the minion
+
+        This is the path to the file stored on the minion. This file is placed on the minion
+        using cp.cache_file.  If the hash sum of that file matches the source_sum, we do not
+        transfer the file to the minion again.
+
+        This file is then grabbed and if it has template set, it renders the file to be placed
+        into the correct place on the system using salt.utils.copyfile()
+
+    source
+        file reference on the master
+
+    source_hash
+        sum hash for source
+
+    user
+        user owner
+
+    group
+        group owner
+
+    backup
+        backup_mode
+
+    makedirs
+        make directories if they do not exist
+
+    template
+        format of templating
+
+    show_diff
+        Include diff in state return
+
+    contents:
+        contents to be placed in the file
+
+    dir_mode
+        mode for directories created with makedirs
 
     CLI Example:
 
