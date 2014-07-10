@@ -318,6 +318,9 @@ class KeyCLI(object):
 
         if not self.privkey:
             if self.opts['auto_create']:
+                print('Generating new signing key-pair {0}.* in {1}'
+                      ''.format(self.opts['master_sign_key_name'],
+                                self.opts['pki_dir']))
                 salt.crypt.gen_keys(self.opts['pki_dir'],
                                     self.opts['master_sign_key_name'],
                                     self.opts['keysize'],
@@ -344,7 +347,7 @@ class KeyCLI(object):
 
         sign_path = self.opts['signature_path'] + '/' + self.opts['master_pubkey_signature']
         salt.crypt.gen_signature(self.privkey,
-                                 self.privkey,
+                                 self.pubkey,
                                  sign_path)
 
 
