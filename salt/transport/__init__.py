@@ -6,8 +6,6 @@ import time
 import os
 import threading
 
-from collections import defaultdict, deque
-
 # Import Salt Libs
 import salt.payload
 import salt.auth
@@ -17,9 +15,7 @@ import logging
 log = logging.getLogger(__name__)
 
 try:
-    from raet import raeting, nacling
-    from raet.lane.stacking import LaneStack
-    from raet.lane import yarding
+    from raet import nacling
 
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
@@ -98,17 +94,19 @@ class RAETChannel(Channel):
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['manor'])
         while track not in jobber_rxMsgs:
-            time.sleep(0.01)
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                jobber_rxMsgs[msg['route']['src'][2]] = msg
+                jobber_rxMsgs[msg['route']['dst'][2]] = msg
                 continue
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
-                self.stack.transmit(msg, self.stack.uids['manor'])
-                tried += 1
+                if track not in jobber_rxMsgs:
+                    self.stack.transmit(msg, self.stack.uids['manor'])
+                    tried += 1
+            if track not in jobber_rxMsgs:
+                time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
 
 
