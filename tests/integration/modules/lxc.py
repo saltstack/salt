@@ -28,7 +28,8 @@ class LXCModuleTest(integration.ModuleCase):
              {'dist': os['os'].lower(),
               'arch': os['osarch'].lower(),
               'template': 'download',
-              'release': os['oscodename'].lower()}}
+              'release': os['oscodename'].lower()},
+             'sshd': {'template': 'sshd'}}
         self.run_function('grains.setval', ['lxc.profile', p])
 
     def tearDown(self):
@@ -46,11 +47,8 @@ class LXCModuleTest(integration.ModuleCase):
         Test basic create/destroy of an LXC.
         '''
 
-        opts = {'arch': 'amd64',
-                'dist': 'ubuntu',
-                'release': 'trusty'}
         r = self.run_function('lxc.create', [self.prefix],
-                              template='download', options=opts)
+                              template='sshd')
         self.assertEqual(r, {'created': True})
         self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
         r = self.run_function('lxc.destroy', [self.prefix])
@@ -63,7 +61,7 @@ class LXCModuleTest(integration.ModuleCase):
         '''
 
         r = self.run_function('lxc.init', [self.prefix],
-                              profile='download', seed=False)
+                              profile='sshd', seed=False)
         self.assertTrue(r.get('created', False))
         self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
 
@@ -80,10 +78,9 @@ class LXCModuleTest(integration.ModuleCase):
         self.run_function('grains.setval', ['lxc.nic', p])
 
         self.run_function('lxc.init', [self.prefix],
-                          profile='download', nic='macvlan',
+                          profile='sshd', nic='macvlan',
                           seed=False, start=False)
 
-        self.run_function('grains.delval', ['lxc.nic'])
         f = '/var/lib/lxc/{0}/config'.format(self.prefix)
         conf = self.run_function('lxc.read_conf', [f])
 
