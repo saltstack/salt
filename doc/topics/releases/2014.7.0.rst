@@ -1,0 +1,51 @@
+=============================================
+Salt 2014.7.0 Release Notes - Codename Helium
+=============================================
+
+This release is the largest Salt release ever, with more features and commits
+then any previous release of Salt. Everything from the new RAET transport to
+major updates in Salt Cloud and the merging of Salt API into the main project.
+
+Major Features
+==============
+
+RAET Transport Option
+---------------------
+
+This has been a HUGE ammount of work, but the beta release of salt with raet
+is ready to go. RAET is a reliable queuing transport system that has been
+developed in partnership with a number of large enterprises to give Salt
+an alternative to ZeroMQ and a way to get Salt to scale well beyond tens of
+thousands of servers. Unlike ZeroMQ, RAET is completely asynchronus in every
+aspect of its operation and has been developed using the flo programming
+paradigmn. This allows for many new capabilities to be added to Salt in the
+upcomming releases.
+
+Please keep in mind that this is a beta release of RAET and
+we hope for bugs to be worked out, performance to be better realized and more
+in the Lithium release.
+
+Simply stated, users running salt with RAET should expect some hicups as we
+hammer out the update. This is a BETA release of Salt RAET.
+
+For information about how to use Salt with RAET please see the tutorial:
+<put tutorial here>
+
+Scheduler Additions
+-------------------
+
+The Salt sceduler system has recived MAJOR enhancements, allowing for cron like
+sceduling and much mroe granular timing routines.
+
+LXC Runner Enhancements
+-----------------------
+
+The Salt LXC management system has recived a number of enhancements which make
+running an LXC cloud entirely from Salt an easy proposition.
+
+Next Gen Docker Management
+--------------------------
+
+The Docker support in Salt has been increased at least ten fold. The Docker
+api is now completely exposed and Salt ships with Docker data tracking
+systems which make automating Docker deployments very easy.
