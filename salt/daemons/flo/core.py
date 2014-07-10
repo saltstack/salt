@@ -949,35 +949,37 @@ class NixExecutor(ioflo.base.deeding.Deed):
                                    name='manor',
                                    lanename=mid,
                                    dirpath=self.opts['sock_dir'] ))
-        #route = {'src': (mid, stack.local.name, 'jid_ret'),
-                 #'dst': (msg['route']['src'][0], None, 'remote_cmd')}
+        console.concise("Created Jobber Stack {0}\n".format(stack.name))
         return stack
 
-    def _return_pub(self, msg, ret):
+    def _return_pub(self, msg, ret, stack):
         '''
         Send the return data back via the uxd socket
         '''
         mid = self.opts['id']
-        yid = nacling.uuid(size=18)
-        stackname = 'jobret' + yid
-        ret_stack = LaneStack(
-                name=stackname,
-                lanename=mid,
-                yid=yid,
-                sockdirpath=self.opts['sock_dir'])
+        #yid = nacling.uuid(size=18)
+        #stackname = 'jobret' + yid
+        #ret_stack = LaneStack(
+                #name=stackname,
+                #lanename=mid,
+                #yid=yid,
+                #sockdirpath=self.opts['sock_dir'])
 
-        ret_stack.Pk = raeting.packKinds.pack
-        main_yard = RemoteYard(
-                stack=ret_stack,
-                yid=0,
-                name='manor',
-                lanename=mid,
-                dirpath=self.opts['sock_dir']
-                )
+        #ret_stack.Pk = raeting.packKinds.pack
+        #main_yard = RemoteYard(
+                #stack=ret_stack,
+                #yid=0,
+                #name='manor',
+                #lanename=mid,
+                #dirpath=self.opts['sock_dir']
+                #)
 
-        ret_stack.addRemote(main_yard)
-        route = {'src': (mid, ret_stack.local.name, 'jid_ret'),
-                 'dst': (msg['route']['src'][0], None, 'remote_cmd')}
+        #ret_stack.addRemote(main_yard)
+        #route = {'src': (mid, ret_stack.local.name, 'jid_ret'),
+                 #'dst': (msg['route']['src'][0], None, 'remote_cmd')}
+
+        route = {'src': (mid, stack.local.name, 'jid_ret'),
+                         'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
         ret['id'] = mid
         try:
@@ -988,9 +990,11 @@ class NixExecutor(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        ret_stack.transmit(msg, ret_stack.uids.get('manor'))
-        ret_stack.serviceAll()
-        ret_stack.server.close()
+        #ret_stack.transmit(msg, ret_stack.uids.get('manor'))
+        #ret_stack.serviceAll()
+        #ret_stack.server.close()
+        stack.transmit(msg, stack.uids.get('manor'))
+        stack.serviceAll()
 
     def action(self):
         '''
@@ -1121,7 +1125,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        self._return_pub(exchange, ret)
+        self._return_pub(exchange, ret, stack)
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):
@@ -1136,5 +1140,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         exc
                         )
                     )
+        console.concise("Closing Jobber Stack {0}\n".format(stack.name))
         stack.server.close()
         salt.transport.jobber_stack = None

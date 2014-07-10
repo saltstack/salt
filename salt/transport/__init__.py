@@ -71,24 +71,9 @@ class RAETChannel(Channel):
         '''
         if not jobber_stack:
             log.error("Jobber Stack not setup\n")
-        log.debug("Jobber Stack '{0}' at = {1}\n".format(jobber_stack.local.name,
-                                                         jobber_stack.local.ha))
+        log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
+        self.stack = jobber_stack
         mid = self.opts.get('id', 'master')
-        yid = nacling.uuid(size=18)
-        stackname = 'raet' + yid
-        self.stack = LaneStack(
-                name=stackname,
-                lanename=mid,
-                yid=yid,
-                sockdirpath=self.opts['sock_dir'])
-        self.stack.Pk = raeting.packKinds.pack
-        self.router_yard = yarding.RemoteYard(
-                stack=self.stack,
-                yid=0,
-                name='manor',
-                lanename=mid,
-                dirpath=self.opts['sock_dir'])
-        self.stack.addRemote(self.router_yard)
         src = (mid, self.stack.local.name, None)
         self.route = {'src': src, 'dst': self.dst}
 
@@ -104,8 +89,8 @@ class RAETChannel(Channel):
         Send a message load and wait for a relative reply
         One shot wonder
         '''
-        msg = {'route': self.route, 'load': load}
         self.__prep_stack()
+        msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
         start = time.time()
@@ -114,11 +99,9 @@ class RAETChannel(Channel):
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                self.stack.server.close()
                 return msg.get('return', {})
             if time.time() - start > timeout:
                 if tried >= tries:
-                    #self.stack.server.close()
                     raise ValueError
                 self.stack.transmit(msg, self.stack.uids['manor'])
                 tried += 1
