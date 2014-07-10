@@ -49,7 +49,7 @@ Advanced Topics
     walkthrough_macosx
     writing_tests
 
-Salt Cloud
+Salt Virt
 ==========
 .. toctree::
     :maxdepth: 2

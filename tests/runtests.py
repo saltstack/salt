@@ -371,23 +371,27 @@ def main():
     '''
     Parse command line options for running specific tests
     '''
-    parser = SaltTestsuiteParser(
-        TEST_DIR,
-        xml_output_dir=XML_OUTPUT_DIR,
-        tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
-    )
-    parser.parse_args()
+    try:
+        parser = SaltTestsuiteParser(
+            TEST_DIR,
+            xml_output_dir=XML_OUTPUT_DIR,
+            tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+        )
+        parser.parse_args()
 
-    overall_status = []
-    status = parser.run_integration_tests()
-    overall_status.extend(status)
-    status = parser.run_unit_tests()
-    overall_status.extend(status)
-    false_count = overall_status.count(False)
+        overall_status = []
+        status = parser.run_integration_tests()
+        overall_status.extend(status)
+        status = parser.run_unit_tests()
+        overall_status.extend(status)
+        false_count = overall_status.count(False)
 
-    if false_count > 0:
-        parser.finalize(1)
-    parser.finalize(0)
+        if false_count > 0:
+            parser.finalize(1)
+        parser.finalize(0)
+    except KeyboardInterrupt:
+        print('\nCaught keyboard interrupt. Exiting.\n')
+        exit(0)
 
 
 if __name__ == '__main__':

@@ -68,6 +68,7 @@ support.
 LXC Runner Enhancements
 -----------------------
 
+BETA
 The Salt LXC management system has recived a number of enhancements which make
 running an LXC cloud entirely from Salt an easy proposition.
 

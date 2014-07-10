@@ -396,19 +396,7 @@ def get_sum(path, form='md5'):
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
-    if not os.path.isfile(path):
-        return 'File not found'
-    try:
-        with salt.utils.fopen(path, 'rb') as ifile:
-            return getattr(hashlib, form)(ifile.read()).hexdigest()
-    except (IOError, OSError) as err:
-        return 'File Error: {0}'.format(err)
-    except AttributeError:
-        return 'Hash {0} not supported'.format(form)
-    except NameError:
-        return 'Hashlib unavailable - please fix your python install'
-    except Exception as err:
-        return str(err)
+    return salt.utils.get_hash(path, form, 4096)
 
 
 def get_hash(path, form='md5', chunk_size=4096):
@@ -1984,7 +1972,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
-        ret['sum'] = get_sum(path, hash_type)
+        ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'

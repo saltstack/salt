@@ -6,6 +6,7 @@
 
         tgt.append('<h4>Table of Contents</h4>');
 
+        tgt.append('<ul>');
         jQuery('dt .headerlink').each(function(idx, elem) {
 
             var i = [
@@ -16,6 +17,7 @@
 
             tgt.append(i);
         });
+        tgt.append('</ul>');
 
         function last(list) {
             return list[list.length - 1];

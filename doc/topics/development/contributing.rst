@@ -7,7 +7,6 @@ has come from, and most importantly, to give credit where credit is due!
 
 There are a number of ways to contribute to salt development.
 
-
 Sending a GitHub pull request
 -----------------------------
 
@@ -63,6 +62,9 @@ The repo managers will be notified of your pull request and it will be
 reviewed. If a reviewer asks for changes, just make the changes locally in the
 same local feature branch, push them to GitHub, then add a comment to the
 discussion section of the pull request.
+
+For details on how to contribute documentation improvements please review
+:ref:`Writing Salt Documentation <salt-docs>`.
 
 .. note:: Jenkins
 
