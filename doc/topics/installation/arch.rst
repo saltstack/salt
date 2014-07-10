@@ -5,8 +5,9 @@ Arch Linux
 Installation
 ============
 
-Salt is currently available via the Arch User Repository (AUR). There are
-currently stable and -git packages available.
+Salt (stable) is currently available via the Arch Linux Official repositories.
+There are currently -git packages available in the Arch User repositories (AUR)
+as well.
 
 Stable Release
 --------------
