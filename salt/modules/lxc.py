@@ -2287,15 +2287,16 @@ def write_conf(conf_file, conf):
                 fp_.write(line)
             elif type(line) is dict:
                 key = line.keys()[0]
+                out_line = None
                 if type(line[key]) is str:
                     out_line = ' = '.join((key, line[key]))
                 elif type(line[key]) is dict:
                     out_line = ' = '.join((key, line[key]['value']))
                     if 'comment' in line[key]:
                         out_line = ' # '.join((out_line, line[key]['comment']))
-                fp_.write(out_line)
-                fp_.write('\n')
-
+                if out_line:
+                    fp_.write(out_line)
+                    fp_.write('\n')
     return {}
 
 
