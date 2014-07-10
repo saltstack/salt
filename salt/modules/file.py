@@ -3062,7 +3062,7 @@ def makedirs_(path,
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    dirname = os.path.normpath(os.path.dirname(path))
+    dirname = os.path.normpath(os.path.join(os.path.dirname(path), ''))
 
     if os.path.isdir(dirname):
         # There's nothing for us to do

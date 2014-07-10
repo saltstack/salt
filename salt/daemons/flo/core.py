@@ -100,7 +100,6 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     raise
 
 
-
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -507,12 +506,12 @@ class LoadPillar(ioflo.base.deeding.Deed):
         self.udp_stack.value.transmit({'route': route, 'load': load})
         self.udp_stack.value.serviceAll()
         while True:
-            time.sleep(0.01)
-            if self.udp_stack.value.rxMsgs:
-                for msg, rnmid in self.udp_stack.value.rxMsgs:
-                    self.pillar.value = msg.get('return', {})
-                    self.opts.value['pillar'] = self.pillar.value
-                    return
+            time.sleep(0.1)
+            while self.udp_stack.value.rxMsgs:
+                msg, sender = self.udp_stack.value.rxMsgs.popleft()
+                self.pillar.value = msg.get('return', {})
+                self.opts.value['pillar'] = self.pillar.value
+                return
             self.udp_stack.value.serviceAll()
         self.pillar_refresh.value = False
 
@@ -719,11 +718,11 @@ class Router(ioflo.base.deeding.Deed):
                'uxd_stack': '.salt.uxd.stack.stack',
                'udp_stack': '.raet.udp.stack.stack'}
 
-    def _process_udp_rxmsg(self, msg, rnmid):
+    def _process_udp_rxmsg(self, msg, sender):
         '''
         Send to the right queue
         msg is the message body dict
-        rnmid is the unique name identifyer of the remote estate that sent the message
+        sender is the unique name of the remote estate that sent the message
         '''
         try:
             d_estate = msg['route']['dst'][0]
@@ -755,16 +754,19 @@ class Router(ioflo.base.deeding.Deed):
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
             if 'load' in msg:
-                msg['load']['id'] = rnmid
+                msg['load']['id'] = sender
                 self.uxd_stack.value.transmit(msg,
                         self.uxd_stack.value.uids.get(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
-    def _process_uxd_rxmsg(self, msg):
+    def _process_uxd_rxmsg(self, msg, sender):
         '''
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
+
+        msg is message body dict
+        sender is unique name  of remote that sent the message
         '''
         try:
             d_estate = msg['route']['dst'][0]
@@ -808,10 +810,11 @@ class Router(ioflo.base.deeding.Deed):
         Process the messages!
         '''
         while self.udp_stack.value.rxMsgs:
-            msg, name = self.udp_stack.value.rxMsgs.popleft()
-            self._process_udp_rxmsg(msg=msg, rnmid=name)
+            msg, sender = self.udp_stack.value.rxMsgs.popleft()
+            self._process_udp_rxmsg(msg=msg, sender=sender)
         while self.uxd_stack.value.rxMsgs:
-            self._process_uxd_rxmsg(self.uxd_stack.value.rxMsgs.popleft())
+            msg, sender = self.uxd_stack.value.rxMsgs.popleft()
+            self._process_uxd_rxmsg(msg=msg, sender=sender)
 
 
 class Eventer(ioflo.base.deeding.Deed):
@@ -952,7 +955,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         ret_stack = LaneStack(
                 name=stackname,
                 lanename=mid,
-                yid=yid, # jid
+                yid=yid,
                 sockdirpath=self.opts['sock_dir'])
 
         ret_stack.Pk = raeting.packKinds.pack
