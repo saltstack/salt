@@ -43,7 +43,7 @@ class Depends(object):
                 return 'foo'
         '''
 
-        log.debug(
+        log.trace(
             'Depends decorator instantiated with dep list of {0}'.format(
                 dependencies
             )
@@ -77,7 +77,7 @@ class Depends(object):
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
                 if dependency in dir(module):
-                    log.debug(
+                    log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
                             dependency,
@@ -85,7 +85,7 @@ class Depends(object):
                         )
                     )
                     continue
-                log.debug(
+                log.trace(
                     'Unloading {0}.{1} because dependency ({2}) is not '
                     'imported'.format(
                         module,
@@ -108,7 +108,7 @@ class Depends(object):
                         del functions[mod_key]
                 except AttributeError:
                     # we already did???
-                    log.debug('{0} already removed, skipping'.format(mod_key))
+                    log.trace('{0} already removed, skipping'.format(mod_key))
                     continue
 
 
