@@ -312,7 +312,7 @@ def _lxc_profile(profile):
     key = 'lxc.profile.{0}'.format(profilename)
     rprofile = __context__.get(key, {})
     if not rprofile:
-        default_profile = __salt__['config.option'](
+        default_profile = __salt__['config.get'](
             'lxc.profile', {}).get(profilename, {})
         # save the resulting profile in the context
         rprofile = salt.utils.dictupdate.update(
@@ -350,7 +350,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
         conf_tuples = []
 
     if nic:
-        nicp = __salt__['config.option']('lxc.nic', {}).get(
+        nicp = __salt__['config.get']('lxc.nic', {}).get(
             nic, DEFAULT_NIC_PROFILE
         )
         nic_opts = kwargs.pop('nic_opts', None)
@@ -587,7 +587,7 @@ def get_base(**kwargs):
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(
                 img_tar,
-                __salt__['config.option']('hash_type'))
+                __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
             __salt__['lxc.create'](name, **kwargs)
@@ -785,7 +785,7 @@ def init(name,
         return kw
 
     tvg = select('vgname')
-    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
+    vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
     start_ = select('start', True)
     ret['started'] = start_
     autostart = select('autostart', autostart)
@@ -1079,7 +1079,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         return kw
 
     tvg = select('vgname')
-    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
+    vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
     template = select('template')
     backing = select('backing')
     if vgname and not backing:
