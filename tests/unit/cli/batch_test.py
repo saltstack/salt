@@ -5,6 +5,7 @@
 
 # Import Salt Libs
 from salt.cli.batch import Batch
+from salt.client import LocalClient
 
 # Import Salt Testing Libs
 from salttesting import TestCase
@@ -20,9 +21,11 @@ class BatchTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = {'batch': '', 'conf_file': '', 'tgt': ''}
-        with patch('salt.client.LocalClient.cmd_iter', MagicMock(return_value=[])):
-            self.batch = Batch(opts, quiet='quiet')
+        opts = {'batch': '', 'conf_file': {}, 'tgt': ''}
+        mock_client = MagicMock()
+        with patch('salt.client.get_local_client', MagicMock(return_value=mock_client)):
+            with patch('salt.client.LocalClient.cmd_iter', MagicMock(return_value=[])):
+                self.batch = Batch(opts, quiet='quiet')
 
     # get_bnum tests
 
