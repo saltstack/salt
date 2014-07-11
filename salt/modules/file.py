@@ -1030,7 +1030,7 @@ def replace(path,
 
     .. code-block:: bash
 
-        salt '*' file.replace /path/to/file pattern="bind-address\s*=" repl='bind-address:'
+        salt '*' file.replace /path/to/file pattern="bind-address\\s*=" repl='bind-address:'
 
     :param repl: The replacement text
     :param count: Maximum number of pattern occurrences to be replaced
