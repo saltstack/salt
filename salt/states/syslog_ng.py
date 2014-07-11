@@ -109,11 +109,11 @@ def _is_all_elements_simple_type(container):
     return all(map(_is_simple_type, container))
 
 
-def _is_all_element_has_type(container, type):
+def _is_all_element_has_type(container, type_):
     '''
     Returns True, if all elements in container are instances of the given type.
     '''
-    return all(map(lambda x: isinstance(x, type), container))
+    return all(map(lambda x: isinstance(x, type_), container))
 
 
 def _is_reference(parent, this, state_stack):
