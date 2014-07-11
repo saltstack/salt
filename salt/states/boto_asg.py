@@ -238,8 +238,8 @@ def present(
         lc_ret = __salt__["state.single"]('boto_lc.present', **args)
         lc_ret = lc_ret.values()[0]
         if lc_ret["result"] is True:
-            if not "launch_config" in ret["changes"]:
-                    ret["changes"]["launch_config"] = {}
+            if "launch_config" not in ret["changes"]:
+                ret["changes"]["launch_config"] = {}
             ret["changes"]["launch_config"] = lc_ret["changes"]
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
@@ -333,7 +333,7 @@ def present(
                 # delete the old launch_config_name
                 deleted = __salt__['boto_asg.delete_launch_configuration'](asg["launch_config_name"], region, key, keyid, profile)
                 if deleted:
-                    if not "launch_config" in ret["changes"]:
+                    if "launch_config" not in ret["changes"]:
                         ret["changes"]["launch_config"] = {}
                     ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
             if updated:

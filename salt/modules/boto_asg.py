@@ -478,7 +478,7 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     for policy in policies:
         if policy.name == scaling_policy_name:
             return policy.policy_arn
-    log.error('Could not convert: %s' % as_group)
+    log.error('Could not convert: {0}'.format(as_group))
     return None
 
 

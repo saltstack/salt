@@ -2411,7 +2411,7 @@ def get_managed(
 
     default
         default values of for context_dict
-        
+
 
     CLI Example:
 
