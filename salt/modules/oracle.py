@@ -1,4 +1,3 @@
-#! python
 # -*- coding: utf-8 -*-
 '''
 Oracle DataBase connection module
