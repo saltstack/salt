@@ -103,6 +103,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 import hashlib
 
+
 def __virtual__():
     '''
     Only load if boto is available.
@@ -139,17 +140,17 @@ def present(
         Name of the autoscale group.
 
     launch_config_name
-	Name of the launch config to use for the group.  Or, if
-	launch_config is specified, this will be the launch config
-	name's prefix.  (see below)
+    Name of the launch config to use for the group.  Or, if
+    launch_config is specified, this will be the launch config
+    name's prefix.  (see below)
 
     launch_config
-	A dictionary of launch config attributes.  If specified, a
-	launch config will be used or created, matching this set
-	of attributes, and the autoscale group will be set to use
-	that launch config.  The launch config name will be the
-	launch_config_name followed by a hyphen followed by a hash
-	of the launch_config dict contents.
+    A dictionary of launch config attributes.  If specified, a
+    launch config will be used or created, matching this set
+    of attributes, and the autoscale group will be set to use
+    that launch config.  The launch config name will be the
+    launch_config_name followed by a hyphen followed by a hash
+    of the launch_config dict contents.
 
     availability_zones
         List of availability zones for the group.
@@ -199,7 +200,7 @@ def present(
         “Default” value is used.
 
     suspended_processes
-        List of processes to be suspended. see 
+        List of processes to be suspended. see
         http://docs.aws.amazon.com/AutoScaling/latest/DeveloperGuide/US_SuspendResume.html
 
     scaling_policies
@@ -221,21 +222,22 @@ def present(
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     # if launch_config is defined, manage the launch config first.
-    # hash the launch_config dict to create a unique name suffix and then ensure it is present
+    # hash the launch_config dict to create a unique name suffix and then
+    # ensure it is present
     if launch_config and not __opts__['test']:
         launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
         args = {
-               'name':  launch_config_name,
-                'region': region,
-                'key': key,
-                'keyid': keyid,
-                'profile': profile
-                }
+            'name':  launch_config_name,
+            'region': region,
+            'key': key,
+            'keyid': keyid,
+            'profile': profile
+        }
         for d in launch_config:
             args.update(d)
-        lc_ret  = __salt__["state.single"]('boto_lc.present',**args)
+        lc_ret = __salt__["state.single"]('boto_lc.present', **args)
         lc_ret = lc_ret.values()[0]
-        if lc_ret["result"] == True:
+        if lc_ret["result"] is True:
             if not "launch_config" in ret["changes"]:
                     ret["changes"]["launch_config"] = {}
             ret["changes"]["launch_config"] = lc_ret["changes"]
@@ -257,7 +259,9 @@ def present(
                                               health_check_period,
                                               placement_group,
                                               vpc_zone_identifier, tags,
-                                              termination_policies, suspended_processes, scaling_policies, region,
+                                              termination_policies,
+                                              suspended_processes,
+                                              scaling_policies, region,
                                               key, keyid, profile)
         if created:
             ret['result'] = True
@@ -291,10 +295,10 @@ def present(
             'suspended_processes': suspended_processes,
             "scaling_policies": scaling_policies,
         }
-        if suspended_processes == None:
+        if suspended_processes is None:
             config["suspended_processes"] = []
         # ensure that we delete scaling_policies if none are specified
-        if scaling_policies == None:
+        if scaling_policies is None:
             config["scaling_policies"] = []
         for key, value in config.iteritems():
             # Only modify values being specified; introspection is difficult
@@ -304,7 +308,7 @@ def present(
                 continue
             if key in asg:
                 _value = asg[key]
-                if not _recursive_compare(value,_value):
+                if not _recursive_compare(value, _value):
                     need_update = True
                     break
         if need_update:
@@ -321,15 +325,17 @@ def present(
                                                   health_check_period,
                                                   placement_group,
                                                   vpc_zone_identifier, tags,
-                                                  termination_policies, suspended_processes, scaling_policies, region,
+                                                  termination_policies,
+                                                  suspended_processes,
+                                                  scaling_policies, region,
                                                   key, keyid, profile)
             if asg["launch_config_name"] != launch_config_name:
                 # delete the old launch_config_name
-                deleted = __salt__['boto_asg.delete_launch_configuration']( asg["launch_config_name"], region, key, keyid, profile)
+                deleted = __salt__['boto_asg.delete_launch_configuration'](asg["launch_config_name"], region, key, keyid, profile)
                 if deleted:
                     if not "launch_config" in ret["changes"]:
                         ret["changes"]["launch_config"] = {}
-                    ret["changes"]["launch_config"]["deleted"]=asg["launch_config_name"]
+                    ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
             if updated:
                 ret['result'] = True
                 ret['changes']['old'] = asg
@@ -344,28 +350,30 @@ def present(
             ret['comment'] = 'Autoscale group present.'
     return ret
 
-def _recursive_compare(v1,v2):
+
+def _recursive_compare(v1, v2):
     "return v1 == v2.  compares list, dict, OrderedDict, recursively"
-    if isinstance(v1,list):
+    if isinstance(v1, list):
         if len(v1) != len(v2):
             return False
         v1.sort()
         v2.sort()
-        for x,y in zip(v1,v2):
-            if not _recursive_compare(x,y):
+        for x, y in zip(v1, v2):
+            if not _recursive_compare(x, y):
                 return False
         return True
-    elif isinstance(v1,dict):
+    elif isinstance(v1, dict):
         v1 = dict(v1)
         v2 = dict(v2)
         if sorted(v1.keys()) != sorted(v2.keys()):
             return False
         for k in v1.keys():
-            if not _recursive_compare(v1[k],v2[k]):
+            if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True
     else:
         return v1 == v2
+
 
 def absent(
         name,
