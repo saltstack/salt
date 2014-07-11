@@ -7,7 +7,7 @@
 from salt.cli.batch import Batch
 
 # Import Salt Testing Libs
-from salttesting import TestCase, mock
+from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
 
