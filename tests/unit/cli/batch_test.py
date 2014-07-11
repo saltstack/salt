@@ -5,7 +5,6 @@
 
 # Import Salt Libs
 from salt.cli.batch import Batch
-from salt.client import LocalClient
 
 # Import Salt Testing Libs
 from salttesting import TestCase
