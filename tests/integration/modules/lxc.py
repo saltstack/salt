@@ -79,7 +79,7 @@ class LXCModuleTest(integration.ModuleCase):
 
         self.run_function('lxc.init', [self.prefix],
                           profile='sshd', nic='macvlan',
-                          seed=False, start=False)
+                          seed=False)
 
         f = '/var/lib/lxc/{0}/config'.format(self.prefix)
         conf = self.run_function('lxc.read_conf', [f])
