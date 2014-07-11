@@ -48,8 +48,7 @@ class LXCModuleTest(integration.ModuleCase):
         '''
 
         r = self.run_function('lxc.create', [self.prefix],
-                              template='sshd', start=False,
-                              autostart=False)
+                              template='sshd')
         self.assertEqual(r, {'created': True})
         self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
         r = self.run_function('lxc.destroy', [self.prefix])
@@ -62,8 +61,7 @@ class LXCModuleTest(integration.ModuleCase):
         '''
 
         r = self.run_function('lxc.init', [self.prefix],
-                              profile='sshd', start=False,
-                              autostart=False, seed=False)
+                              profile='sshd', seed=False)
         self.assertTrue(r.get('created', False))
         self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
 
@@ -81,7 +79,7 @@ class LXCModuleTest(integration.ModuleCase):
 
         self.run_function('lxc.init', [self.prefix],
                           profile='sshd', nic='macvlan',
-                          seed=False, start=False, autostart=False)
+                          seed=False)
 
         f = '/var/lib/lxc/{0}/config'.format(self.prefix)
         conf = self.run_function('lxc.read_conf', [f])

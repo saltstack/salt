@@ -400,30 +400,6 @@ def _get_network_conf(conf_tuples=None, **kwargs):
     return ret
 
 
-#def _get_memory(memory):
-#    '''
-#    Handle the saltcloud driver and lxc runner memory restriction
-#    differences.
-#    Runner limits to 1024MB by default
-#    SaltCloud does not restrict memory usage by default
-#    '''
-#    if memory is None:
-#        memory = 1024
-#    if memory:
-#        memory = memory * 1024 * 1024
-#    return memory
-#
-#
-#def _get_autostart(autostart):
-#    if autostart is None:
-#        autostart = True
-#    if autostart:
-#        autostart = '1'
-#    else:
-#        autostart = '0'
-#    return autostart
-
-
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
@@ -445,22 +421,6 @@ def _get_lxc_default_data(**kwargs):
     if cpu and not cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = _rand_cpu_str(cpu)
     return ret
-
-
-#def _config_list(conf_tuples=None, **kwargs):
-#    '''
-#    Return a list of dicts from the salt level configurations
-#    '''
-#    if not conf_tuples:
-#        conf_tuples = []
-#    kwargs = copy.deepcopy(kwargs)
-#    ret = []
-#    default_data = _get_lxc_default_data(**kwargs)
-#    for k, val in default_data.items():
-#        ret.append({k: val})
-#    net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
-#    ret.extend(net_datas)
-#    return ret
 
 
 def _get_veths(net_data):
@@ -655,7 +615,7 @@ def init(name,
                 [priv_key=/path_or_content] [pub_key=/path_or_content] \\
                 [bridge=lxcbr0] [gateway=10.0.3.1] \\
                 [dnsservers[dns1,dns2]] \\
-                [users=[foo]] password='secret'
+                [users=[foo]] [password='secret']
 
     name
         Name of the container.
@@ -782,7 +742,8 @@ def init(name,
     def select(k, default=None):
         kw = kwargs.pop(k, _marker)
         p = profile.pop(k, default)
-        # let kwargs be really be the preferred choice
+
+        # let kwargs be the preferred choice
         if kw is _marker:
             kw = p
         return kw
@@ -1091,11 +1052,11 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     fstype = select('fstype')
     size = select('size', '1G')
     image = select('image')
-    if backing in ['dir', 'overlayfs']:
+    if backing in ['dir', 'overlayfs', 'btrfs']:
         fstype = None
         size = None
     # some backends wont support some parameters
-    if backing in ['aufs', 'dir', 'overlayfs']:
+    if backing in ['aufs', 'dir', 'overlayfs', 'btrfs']:
         lvname = vgname = None
 
     if image:
@@ -1118,7 +1079,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
                 cmd += ' --lvname {0}'.format(vgname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
-        if backing not in ['dir', 'overlayfs']:
+        if backing not in ['dir', 'overlayfs', 'btrfs']:
             if fstype:
                 cmd += ' --fstype {0}'.format(fstype)
             if size:
@@ -1276,6 +1237,9 @@ def list_(extra=False):
         salt '*' lxc.list
         salt '*' lxc.list extra=True
     '''
+
+    # TODO: This can be sped up by using `lxc-ls --fancy` thus skipping
+    # the need to call lxc-info on each container to get running state.
     ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
     if extra:
