@@ -121,6 +121,10 @@ def install(pkgs=None,
             activate=False,
             pre_releases=False,
             cert=None,
+            allow_all_external=False,
+            allow_external=None,
+            allow_unverified=None,
+            process_dependency_links=False,
             __env__=None,
             saltenv='base'):
     '''
@@ -130,17 +134,17 @@ def install(pkgs=None,
     packages globally or to a virtualenv.
 
     pkgs
-        comma separated list of packages to install
+        Comma separated list of packages to install
     requirements
-        path to requirements
+        Path to requirements
     bin_env
-        path to pip bin or path to virtualenv. If doing a system install,
+        Path to pip bin or path to virtualenv. If doing a system install,
         and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
         specify the pip bin you want.
         If installing into a virtualenv, just use the path to the virtualenv
         (/home/code/path/to/virtualenv/)
     env
-        deprecated, use bin_env now
+        Deprecated, use bin_env now
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
     log
@@ -224,6 +228,14 @@ def install(pkgs=None,
         Include pre-releases in the available versions
     cert
         Provide a path to an alternate CA bundle
+    allow_all_external
+        Allow the installation of all externally hosted files
+    allow_external
+        Allow the installation of externally hosted files (comma separated list)
+    allow_unverified
+        Allow the installation of insecure and unverifiable files (comma separated list)
+    process_dependency_links
+        Enable the processing of dependency links
 
     CLI Example:
 
@@ -495,6 +507,26 @@ def install(pkgs=None,
                         'You must specify an egg for this editable'
                     )
             cmd.append('--editable={0}'.format(entry))
+
+    if allow_all_external:
+        cmd.append('--allow-all-external')
+
+    if allow_external:
+        if isinstance(allow_external, string_types):
+            allow_external = [p.strip() for p in allow_external.split(',')]
+
+        for pkg in allow_external:
+            cmd.append('--allow-external {0}'.format(pkg))
+
+    if allow_unverified:
+        if isinstance(allow_unverified, string_types):
+            allow_unverified = [p.strip() for p in allow_unverified.split(',')]
+
+        for pkg in allow_unverified:
+            cmd.append('--allow-unverified {0}'.format(pkg))
+
+    if process_dependency_links:
+        cmd.append('--process-dependency-links')
 
     try:
         cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)
