@@ -38,12 +38,14 @@ except ImportError:
     MODE = {'sysdba': 2, 'sysoper': 4}
     HAS_CX_ORACLE = False
 
+__virtualname__ = 'oracle'
+
 
 def __virtual__():
     '''
     Load module only if cx_Oracle installed
     '''
-    return True
+    return __virtualname__ if HAS_CX_ORACLE else False
 
 
 def _cx_oracle_req():
