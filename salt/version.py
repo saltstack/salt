@@ -290,12 +290,12 @@ class SaltStackVersion(object):
         if self.name and self.major > 10000:
             version_string = self.name
             if self.sse:
-                version_string += ' SSE'
+                version_string += ' Enterprise'
             version_string += ' (Unreleased)'
             return version_string
         version_string = self.string
         if self.sse:
-            version_string += ' SSE'
+            version_string += ' Enterprise'
         if (self.major, self.minor) in self.RMATCH:
             version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
         return version_string
