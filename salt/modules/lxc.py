@@ -798,40 +798,11 @@ def init(name,
                                        profile=profile, **kwargs))
         if not ret.get('created', False):
             return ret
-#        path = '/var/lib/lxc/{0}/config'.format(name)
-#        old_chunks = []
-#        if os.path.exists(path):
-#            old_chunks = __salt__['lxc.read_conf'](path)
-#        for comp in _config_list(conf_tuples=old_chunks,
-#                                 cpu=cpu,
-#                                 nic=nic, nic_opts=nic_opts, bridge=bridge,
-#                                 cpuset=cpuset, cpushare=cpushare,
-#                                 memory=memory):
-#            edit_conf(path, **comp)
-#        chunks = __salt__['lxc.read_conf'](path)
-#        if old_chunks != chunks:
-#            to_reboot = True
     if remove_seed_marker:
         lxcret = __salt__['lxc.run_cmd'](
             name, 'rm -f \"{0}\"'.format(SEED_MARKER),
             stdout=False, stderr=False)
 
-    # last time to be sure any of our property is correctly applied
-#    cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
-#                     bridge=bridge, gateway=gateway,
-#                     autostart=autostart,
-#                     cpuset=cpuset, cpushare=cpushare, memory=memory)
-#    old_chunks = []
-#    if os.path.exists(cfg.path):
-#        old_chunks = __salt__['lxc.read_conf'](cfg.path)
-#    cfg.write()
-#    chunks = __salt__['lxc.read_conf'](cfg.path)
-#    if old_chunks != chunks:
-#        comment += 'Container configuration updated\n'
-#        to_reboot = True
-#    else:
-#        if not to_reboot:
-#            comment += 'Container already correct\n'
     if to_reboot:
         __salt__['lxc.stop'](name)
     if clone_from:
