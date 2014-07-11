@@ -1360,7 +1360,7 @@ def uptodate(name, refresh=False):
         reference
 
     refresh
-        refresh the package database before checkif for new upgrades
+        refresh the package database before checking for new upgrades
     '''
     ret = {'name': name,
            'changes': {},
