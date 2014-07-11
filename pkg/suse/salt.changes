@@ -1,4 +1,30 @@
 -------------------------------------------------------------------
+Thu Jul 10 18:25:05 UTC 2014 - aboe76@gmail.com
+
+- Update to 2014.7
+  This release was a hotfix release for the regression listed above which was present in the 2014.1.6 
+- Fix batch mode regression (issue 14046)
+
+-------------------------------------------------------------------
+Wed Jul  9 06:42:05 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.6
+- Fix extra iptables --help output (Sorry!) (issue 13648, issue 13507, issue 13527, issue 13607)
+- Fix mount.active for Solaris
+- Fix support for allow-hotplug statement in debian_ip network module
+- Add sqlite3 to esky builds
+- Fix jobs.active output (issue 9526)
+- Fix the virtual grain for Xen (issue 13534)
+- Fix eauth for batch mode (issue 9605)
+- Fix force-related issues with tomcat support (issue 12889)
+- Fix KeyError when cloud mapping
+- Fix salt-minion restart loop in Windows (issue 12086)
+- Fix detection of service virtual module on Fedora minions
+- Fix traceback with missing ipv4 grain (issue 13838)
+- Fix issue in roots backend with invalid data in mtime_map (issue 13836)
+- Fix traceback in jobs.active (issue 11151)
+
+-------------------------------------------------------------------
 Wed Jun 11 18:53:38 UTC 2014 - aboe76@gmail.com
 
 - Updated to 2014.1.5
