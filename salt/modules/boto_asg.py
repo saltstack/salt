@@ -472,6 +472,10 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     Return the arn for a scaling policy in a specific autoscale group or None
     if not found. Mainly used as a helper method for boto_cloudwatch_alarm, for
     linking alarms to scaling policies.
+
+    CLI Example::
+
+        salt '*' boto_asg.get_scaling_policy_arn mygroup mypolicy
     '''
     conn = _get_conn(region, key, keyid, profile)
     policies = conn.get_all_policies(as_group=as_group)
