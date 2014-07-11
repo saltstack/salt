@@ -400,38 +400,41 @@ def _get_network_conf(conf_tuples=None, **kwargs):
     return ret
 
 
-def _get_memory(memory):
-    '''
-    Handle the saltcloud driver and lxc runner memory restriction
-    differences.
-    Runner limits to 1024MB by default
-    SaltCloud does not restrict memory usage by default
-    '''
-    if memory is None:
-        memory = 1024
-    if memory:
-        memory = memory * 1024 * 1024
-    return memory
-
-
-def _get_autostart(autostart):
-    if autostart is None:
-        autostart = True
-    if autostart:
-        autostart = '1'
-    else:
-        autostart = '0'
-    return autostart
+#def _get_memory(memory):
+#    '''
+#    Handle the saltcloud driver and lxc runner memory restriction
+#    differences.
+#    Runner limits to 1024MB by default
+#    SaltCloud does not restrict memory usage by default
+#    '''
+#    if memory is None:
+#        memory = 1024
+#    if memory:
+#        memory = memory * 1024 * 1024
+#    return memory
+#
+#
+#def _get_autostart(autostart):
+#    if autostart is None:
+#        autostart = True
+#    if autostart:
+#        autostart = '1'
+#    else:
+#        autostart = '0'
+#    return autostart
 
 
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
-    autostart = _get_autostart(kwargs.pop('autostart', None))
-    ret['lxc.start.auto'] = autostart
-    memory = _get_memory(kwargs.pop('memory', None))
-    if memory:
-        ret['lxc.cgroup.memory.limit_in_bytes'] = memory
+
+    autostart = kwargs.pop('autostart', True)
+    ret['lxc.start.auto'] = '1' if autostart else '0'
+
+    memory = kwargs.pop('memory', None) or 1024
+    memory = memory * 1024 * 1024
+    ret['lxc.cgroup.memory.limit_in_bytes'] = memory
+
     cpuset = kwargs.pop('cpuset', None)
     if cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = cpuset
@@ -444,20 +447,20 @@ def _get_lxc_default_data(**kwargs):
     return ret
 
 
-def _config_list(conf_tuples=None, **kwargs):
-    '''
-    Return a list of dicts from the salt level configurations
-    '''
-    if not conf_tuples:
-        conf_tuples = []
-    kwargs = copy.deepcopy(kwargs)
-    ret = []
-    default_data = _get_lxc_default_data(**kwargs)
-    for k, val in default_data.items():
-        ret.append({k: val})
-    net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
-    ret.extend(net_datas)
-    return ret
+#def _config_list(conf_tuples=None, **kwargs):
+#    '''
+#    Return a list of dicts from the salt level configurations
+#    '''
+#    if not conf_tuples:
+#        conf_tuples = []
+#    kwargs = copy.deepcopy(kwargs)
+#    ret = []
+#    default_data = _get_lxc_default_data(**kwargs)
+#    for k, val in default_data.items():
+#        ret.append({k: val})
+#    net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
+#    ret.extend(net_datas)
+#    return ret
 
 
 def _get_veths(net_data):
@@ -834,40 +837,40 @@ def init(name,
                                        profile=profile, **kwargs))
         if not ret.get('created', False):
             return ret
-        path = '/var/lib/lxc/{0}/config'.format(name)
-        old_chunks = []
-        if os.path.exists(path):
-            old_chunks = __salt__['lxc.read_conf'](path)
-        for comp in _config_list(conf_tuples=old_chunks,
-                                 cpu=cpu,
-                                 nic=nic, nic_opts=nic_opts, bridge=bridge,
-                                 cpuset=cpuset, cpushare=cpushare,
-                                 memory=memory):
-            edit_conf(path, **comp)
-        chunks = __salt__['lxc.read_conf'](path)
-        if old_chunks != chunks:
-            to_reboot = True
+#        path = '/var/lib/lxc/{0}/config'.format(name)
+#        old_chunks = []
+#        if os.path.exists(path):
+#            old_chunks = __salt__['lxc.read_conf'](path)
+#        for comp in _config_list(conf_tuples=old_chunks,
+#                                 cpu=cpu,
+#                                 nic=nic, nic_opts=nic_opts, bridge=bridge,
+#                                 cpuset=cpuset, cpushare=cpushare,
+#                                 memory=memory):
+#            edit_conf(path, **comp)
+#        chunks = __salt__['lxc.read_conf'](path)
+#        if old_chunks != chunks:
+#            to_reboot = True
     if remove_seed_marker:
         lxcret = __salt__['lxc.run_cmd'](
             name, 'rm -f \"{0}\"'.format(SEED_MARKER),
             stdout=False, stderr=False)
 
     # last time to be sure any of our property is correctly applied
-    cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
-                     bridge=bridge, gateway=gateway,
-                     autostart=autostart,
-                     cpuset=cpuset, cpushare=cpushare, memory=memory)
-    old_chunks = []
-    if os.path.exists(cfg.path):
-        old_chunks = __salt__['lxc.read_conf'](cfg.path)
-    cfg.write()
-    chunks = __salt__['lxc.read_conf'](cfg.path)
-    if old_chunks != chunks:
-        comment += 'Container configuration updated\n'
-        to_reboot = True
-    else:
-        if not to_reboot:
-            comment += 'Container already correct\n'
+#    cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
+#                     bridge=bridge, gateway=gateway,
+#                     autostart=autostart,
+#                     cpuset=cpuset, cpushare=cpushare, memory=memory)
+#    old_chunks = []
+#    if os.path.exists(cfg.path):
+#        old_chunks = __salt__['lxc.read_conf'](cfg.path)
+#    cfg.write()
+#    chunks = __salt__['lxc.read_conf'](cfg.path)
+#    if old_chunks != chunks:
+#        comment += 'Container configuration updated\n'
+#        to_reboot = True
+#    else:
+#        if not to_reboot:
+#            comment += 'Container already correct\n'
     if to_reboot:
         __salt__['lxc.stop'](name)
     if clone_from:
