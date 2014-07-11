@@ -1025,7 +1025,13 @@ def replace(path,
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
     :param path: Filesystem path to the file to be edited
-    :param pattern: The Python's regular expression search
+    :param pattern: Python's regular expression search
+        https://docs.python.org/2/library/re.html
+
+    .. code-block:: bash
+
+        salt '*' file.replace /path/to/file pattern="bind-address\s*=" repl='bind-address:'
+
     :param repl: The replacement text
     :param count: Maximum number of pattern occurrences to be replaced
     :param flags: A list of flags defined in the :ref:`re module documentation
