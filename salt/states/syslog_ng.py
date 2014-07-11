@@ -306,20 +306,20 @@ def _build_config(salt_id, parent, this, state_stack):
 
     Returns the built config.
     '''
-    buffer = cStringIO.StringIO()
+    buf = cStringIO.StringIO()
 
     deepness = len(state_stack) - 1
     # deepness based indentation
     indent = "{0}".format(deepness * "   ")
 
     if _is_statement(parent, this):
-        _build_statement(salt_id, parent, this, indent, buffer, state_stack)
+        _build_statement(salt_id, parent, this, indent, buf, state_stack)
     elif _is_reference(parent, this, state_stack):
-        print("{0}{1}({2});".format(indent, parent, this), file=buffer, end="")
+        print("{0}{1}({2});".format(indent, parent, this), file=buf, end="")
     elif _is_options(parent, this, state_stack):
-        _build_options(salt_id, parent, this, indent, buffer, state_stack)
+        _build_options(salt_id, parent, this, indent, buf, state_stack)
     elif _are_parameters(this, state_stack):
-        _build_parameters(salt_id, parent, this, buffer, state_stack)
+        _build_parameters(salt_id, parent, this, buf, state_stack)
     elif _is_simple_parameter(this, state_stack):
         return _build_simple_parameter(this, indent)
     elif _is_complex_parameter(this, state_stack):
@@ -335,12 +335,12 @@ def _build_config(salt_id, parent, this, state_stack):
     else:
         # It's an unhandled case
         print("{0}# BUG, please report to the syslog-ng mailing list: syslog-ng@lists.balabit.hu".format(indent),
-              file=buffer,
+              file=buf,
               end="")
         raise SyslogNgError("Unhandled case while generating configuration from YAML to syslog-ng format")
 
-    buffer.seek(0)
-    return buffer.read()
+    buf.seek(0)
+    return buf.read()
 
 
 def _format_state_result(name, result, changes=None, comment=""):
