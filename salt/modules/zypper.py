@@ -236,6 +236,9 @@ class RepoInfo(object):
             raise ValueError(
                 'Only one of \'mirrorlist\' and \'url\' can be specified')
 
+    def _zypp_url(self, url):
+        return zypp.Url(url) if url else zypp.Url()
+
     @options.setter
     def options(self, value):
         log.garbage('Setting options {} for RepoInfo'.format(value))
@@ -283,7 +286,7 @@ class RepoInfo(object):
 
     @gpgkey.setter
     def gpgkey(self, value):
-        self.zypp.setGpgKeyUrl(value)
+        self.zypp.setGpgKeyUrl(self._zypp_url(value))
 
     @property
     def keeppackages(self):
@@ -307,7 +310,7 @@ class RepoInfo(object):
 
     @mirrorlist.setter
     def mirrorlist(self, value):
-        self.zypp.setMirrorListUrl(zypp.Url(value))
+        self.zypp.setMirrorListUrl(self._zypp_url(value))
         # self._check_only_mirrorlist_or_url()
 
     @property
@@ -324,7 +327,7 @@ class RepoInfo(object):
 
     @packagesPath.setter
     def packagesPath(self, value):
-        self.zypp.setPackagesPath(zypp.Url(value))
+        self.zypp.setPackagesPath(self._zypp_url(value))
 
     @property
     def path(self):
@@ -332,7 +335,7 @@ class RepoInfo(object):
 
     @path.setter
     def path(self, value):
-        self.zypp.setPath(zypp.Url(value))
+        self.zypp.setPath(self._zypp_url(value))
 
     @property
     def priority(self):
@@ -372,7 +375,7 @@ class RepoInfo(object):
 
     @url.setter
     def url(self, value):
-        self.zypp.setBaseUrl(zypp.Url(value) if value else zypp.Url())
+        self.zypp.setBaseUrl(self._zypp_url(value))
         # self._check_only_mirrorlist_or_url()
 
 
