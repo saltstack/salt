@@ -7,6 +7,7 @@ Package support for openSUSE via the zypper package manager
 import copy
 import logging
 import re
+from contextlib import contextmanager
 
 # Import salt libs
 import salt.utils
@@ -375,15 +376,27 @@ class RepoInfo(object):
         # self._check_only_mirrorlist_or_url()
 
 
+@contextmanager
+def _try_zypp():
+    '''
+    Convert errors like:
+    'RuntimeError: [|] Repository has no alias defined.'
+    into
+    'ERROR: Repository has no alias defined.'.
+    '''
+    try:
+        yield
+    except RuntimeError as e:
+        raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
+
+
 @depends('zypp')
 def _get_zypp_repo(repo, **kwargs):
     '''
     Get zypp.RepoInfo object by repo name.
     '''
-    try:
+    with _try_zypp():
         return zypp.RepoManager().getRepositoryInfo(repo)
-    except RuntimeError:
-        raise CommandExecutionError('repo {0!r} was not found'.format(repo))
 
 
 @depends('zypp')
@@ -412,8 +425,9 @@ def list_repos():
 
        salt '*' pkg.list_repos
     '''
-    return {r.alias(): get_repo(r.alias())
-            for r in zypp.RepoManager().knownRepositories()}
+    with _try_zypp():
+        return {r.alias(): get_repo(r.alias())
+                for r in zypp.RepoManager().knownRepositories()}
 
 
 @depends('zypp')
@@ -429,10 +443,8 @@ def del_repo(repo, **kwargs):
         salt '*' pkg.del_repo alias
     '''
     r = _get_zypp_repo(repo)
-    try:
+    with _try_zypp():
         zypp.RepoManager().removeRepository(r)
-    except RuntimeError as e:
-        raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
     return 'File {1} containing repo {0!r} has been removed.\n'.format(
         repo, r.path().c_str())
 
@@ -470,15 +482,21 @@ def mod_repo(repo, **kwargs):
 
     repo_manager = zypp.RepoManager()
     try:
-        zypp_repo = repo_manager.getRepositoryInfo(repo)
+        r = RepoInfo(repo_manager.getRepositoryInfo(repo))
+        new_repo = False
     except RuntimeError:
-        raise NotImplementedError('Adding repositories is not yet supported')
-    r = RepoInfo(zypp_repo)
+        r = RepoInfo()
+        r.alias = repo
+        new_repo = True
     try:
         r.options = repo_opts
     except ValueError as e:
         raise SaltInvocationError(str(e))
-    repo_manager.modifyRepository(repo, r.zypp)
+    with _try_zypp():
+        if new_repo:
+            repo_manager.addRepository(r.zypp)
+        else:
+            repo_manager.modifyRepository(repo, r.zypp)
     return r.options
 
 
