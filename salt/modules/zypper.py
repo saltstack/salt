@@ -230,13 +230,27 @@ class RepoInfo(object):
                 if isinstance(v, property) and k != 'options'
                 and getattr(self, k) not in (None, '')}
 
+    def _check_only_mirrorlist_or_url(self):
+        if all(x in self.options for x in ('mirrorlist', 'url')):
+            raise ValueError(
+                'Only one of \'mirrorlist\' and \'url\' can be specified')
+
+    @options.setter
+    def options(self, value):
+        log.garbage('Setting options {} for RepoInfo'.format(value))
+        for k, v in value.iteritems():
+            setattr(self, k, v)
+
     @property
     def alias(self):
         return self.zypp.alias()
 
     @alias.setter
     def alias(self, value):
-        self.zypp.setAlias(value)
+        if value:
+            self.zypp.setAlias(value)
+        else:
+            raise ValueError('Alias cannot be empty')
 
     @property
     def autorefresh(self):
@@ -293,6 +307,7 @@ class RepoInfo(object):
     @mirrorlist.setter
     def mirrorlist(self, value):
         self.zypp.setMirrorListUrl(zypp.Url(value))
+        # self._check_only_mirrorlist_or_url()
 
     @property
     def name(self):
@@ -356,11 +371,12 @@ class RepoInfo(object):
 
     @url.setter
     def url(self, value):
-        self.zypp.addBaseUrl(value)
+        self.zypp.setBaseUrl(zypp.Url(value) if value else zypp.Url())
+        # self._check_only_mirrorlist_or_url()
 
 
 @depends('zypp')
-def _get_repo(repo, **kwargs):
+def _get_zypp_repo(repo, **kwargs):
     '''
     Get zypp.RepoInfo object by repo name.
     '''
@@ -381,7 +397,7 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    r = RepoInfo(_get_repo(repo))
+    r = RepoInfo(_get_zypp_repo(repo))
     return r.options
 
 
@@ -412,13 +428,58 @@ def del_repo(repo, **kwargs):
         salt '*' pkg.del_repo alias
         salt '*' pkg.del_repo alias
     '''
-    r = _get_repo(repo)
+    r = _get_zypp_repo(repo)
     try:
         zypp.RepoManager().removeRepository(r)
     except RuntimeError as e:
-        raise CommandExecutionError(re.sub(r'\[.*\] ', '', e.message))
+        raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
     return 'File {1} containing repo {0!r} has been removed.\n'.format(
         repo, r.path().c_str())
+
+
+@depends('zypp')
+def mod_repo(repo, **kwargs):
+    '''
+    Modify one or more values for a repo. If the repo does not exist, it will
+    be created, so long as the following values are specified:
+
+    repo
+        alias by which the zypper refers to the repo
+    name
+        a human-readable name for the repo
+    url
+        the URL for zypper to reference
+    mirrorlist
+        the URL for zypper to reference
+
+    Key/Value pairs may also be removed from a repo's configuration by setting
+    a key to a blank value. Bear in mind that a name cannot be deleted, and a
+    url can only be deleted if a mirrorlist is specified (or vice versa).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.mod_repo alias alias=new_alias
+        salt '*' pkg.mod_repo alias enabled=True
+        salt '*' pkg.mod_repo alias url= mirrorlist=http://host.com/
+    '''
+    # Filter out '__pub' arguments, as well as saltenv
+    repo_opts = {x: kwargs[x] for x in kwargs
+                 if not x.startswith('__') and x not in ('saltenv',)}
+
+    repo_manager = zypp.RepoManager()
+    try:
+        zypp_repo = repo_manager.getRepositoryInfo(repo)
+    except RuntimeError:
+        raise NotImplementedError('Adding repositories is not yet supported')
+    r = RepoInfo(zypp_repo)
+    try:
+        r.options = repo_opts
+    except ValueError as e:
+        raise SaltInvocationError(str(e))
+    repo_manager.modifyRepository(repo, r.zypp)
+    return r.options
 
 
 def refresh_db():
