@@ -209,9 +209,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-class RepoInfo(object):
+class _RepoInfo(object):
     '''
-    Incapsulate all properties that are dumped in zypp.RepoInfo.dumpOn:
+    Incapsulate all properties that are dumped in zypp._RepoInfo.dumpOn:
     http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
     '''
     repo_types = {
@@ -236,9 +236,11 @@ class RepoInfo(object):
             raise ValueError(
                 'Only one of \'mirrorlist\' and \'url\' can be specified')
 
+    def _zypp_url(self, url):
+        return zypp.Url(url) if url else zypp.Url()
+
     @options.setter
     def options(self, value):
-        log.garbage('Setting options {} for RepoInfo'.format(value))
         for k, v in value.iteritems():
             setattr(self, k, v)
 
@@ -283,7 +285,7 @@ class RepoInfo(object):
 
     @gpgkey.setter
     def gpgkey(self, value):
-        self.zypp.setGpgKeyUrl(value)
+        self.zypp.setGpgKeyUrl(self._zypp_url(value))
 
     @property
     def keeppackages(self):
@@ -307,7 +309,7 @@ class RepoInfo(object):
 
     @mirrorlist.setter
     def mirrorlist(self, value):
-        self.zypp.setMirrorListUrl(zypp.Url(value))
+        self.zypp.setMirrorListUrl(self._zypp_url(value))
         # self._check_only_mirrorlist_or_url()
 
     @property
@@ -324,7 +326,7 @@ class RepoInfo(object):
 
     @packagesPath.setter
     def packagesPath(self, value):
-        self.zypp.setPackagesPath(zypp.Url(value))
+        self.zypp.setPackagesPath(self._zypp_url(value))
 
     @property
     def path(self):
@@ -332,7 +334,7 @@ class RepoInfo(object):
 
     @path.setter
     def path(self, value):
-        self.zypp.setPath(zypp.Url(value))
+        self.zypp.setPath(self._zypp_url(value))
 
     @property
     def priority(self):
@@ -372,7 +374,7 @@ class RepoInfo(object):
 
     @url.setter
     def url(self, value):
-        self.zypp.setBaseUrl(zypp.Url(value) if value else zypp.Url())
+        self.zypp.setBaseUrl(self._zypp_url(value))
         # self._check_only_mirrorlist_or_url()
 
 
@@ -393,7 +395,7 @@ def _try_zypp():
 @depends('zypp')
 def _get_zypp_repo(repo, **kwargs):
     '''
-    Get zypp.RepoInfo object by repo name.
+    Get zypp._RepoInfo object by repo alias.
     '''
     with _try_zypp():
         return zypp.RepoManager().getRepositoryInfo(repo)
@@ -410,7 +412,7 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    r = RepoInfo(_get_zypp_repo(repo))
+    r = _RepoInfo(_get_zypp_repo(repo))
     return r.options
 
 
@@ -457,11 +459,7 @@ def mod_repo(repo, **kwargs):
 
     repo
         alias by which the zypper refers to the repo
-    name
-        a human-readable name for the repo
-    url
-        the URL for zypper to reference
-    mirrorlist
+    url or mirrorlist
         the URL for zypper to reference
 
     Key/Value pairs may also be removed from a repo's configuration by setting
@@ -482,10 +480,10 @@ def mod_repo(repo, **kwargs):
 
     repo_manager = zypp.RepoManager()
     try:
-        r = RepoInfo(repo_manager.getRepositoryInfo(repo))
+        r = _RepoInfo(repo_manager.getRepositoryInfo(repo))
         new_repo = False
     except RuntimeError:
-        r = RepoInfo()
+        r = _RepoInfo()
         r.alias = repo
         new_repo = True
     try:
