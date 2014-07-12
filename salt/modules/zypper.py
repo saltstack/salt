@@ -208,6 +208,157 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
+class RepoInfo(object):
+    '''
+    Incapsulate all properties that are dumped in zypp.RepoInfo.dumpOn:
+    http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
+    '''
+    repo_types = {
+        zypp.RepoType.NONE_e: 'NONE',
+        zypp.RepoType.RPMMD_e: 'rpm-md',
+        zypp.RepoType.YAST2_e: 'yast2',
+        zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
+    }
+
+    def __init__(self, zypp_repo_info=None):
+        self.zypp = zypp_repo_info if zypp_repo_info else zypp.RepoInfo()
+
+    @property
+    def options(self):
+        class_items = self.__class__.__dict__.iteritems()
+        return {k: getattr(self, k) for k, v in class_items
+                if isinstance(v, property) and k != 'options'
+                and getattr(self, k) not in (None, '')}
+
+    @property
+    def alias(self):
+        return self.zypp.alias()
+
+    @alias.setter
+    def alias(self, value):
+        self.zypp.setAlias(value)
+
+    @property
+    def autorefresh(self):
+        return self.zypp.autorefresh()
+
+    @autorefresh.setter
+    def autorefresh(self, value):
+        self.zypp.setAlias(value)
+
+    @property
+    def enabled(self):
+        return self.zypp.enabled()
+
+    @enabled.setter
+    def enabled(self, value):
+        self.zypp.setEnabled(value)
+
+    @property
+    def gpgcheck(self):
+        return self.zypp.gpgCheck()
+
+    @gpgcheck.setter
+    def gpgcheck(self, value):
+        self.zypp.setGpgCheck(value)
+
+    @property
+    def gpgkey(self):
+        return self.zypp.gpgKeyUrl().asCompleteString()
+
+    @gpgkey.setter
+    def gpgkey(self, value):
+        self.zypp.setGpgKeyUrl(value)
+
+    @property
+    def keeppackages(self):
+        return self.zypp.keepPackages()
+
+    @keeppackages.setter
+    def keeppackages(self, value):
+        self.zypp.setKeepPackages(value)
+
+    @property
+    def metadataPath(self):
+        return self.zypp.metadataPath().c_str()
+
+    @metadataPath.setter
+    def metadataPath(self, value):
+        self.zypp.setMetadataPath(value)
+
+    @property
+    def mirrorlist(self):
+        return self.zypp.mirrorListUrl().asCompleteString()
+
+    @mirrorlist.setter
+    def mirrorlist(self, value):
+        self.zypp.setMirrorListUrl(zypp.Url(value))
+
+    @property
+    def name(self):
+        return self.zypp.name()
+
+    @name.setter
+    def name(self, value):
+        self.zypp.setName(value)
+
+    @property
+    def packagesPath(self):
+        return self.zypp.packagesPath().c_str()
+
+    @packagesPath.setter
+    def packagesPath(self, value):
+        self.zypp.setPackagesPath(zypp.Url(value))
+
+    @property
+    def path(self):
+        return self.zypp.path().c_str()
+
+    @path.setter
+    def path(self, value):
+        self.zypp.setPath(zypp.Url(value))
+
+    @property
+    def priority(self):
+        return self.zypp.priority()
+
+    @priority.setter
+    def priority(self, value):
+        self.zypp.setPriority(value)
+
+    @property
+    def service(self):
+        return self.zypp.service()
+
+    @service.setter
+    def service(self, value):
+        self.zypp.setService(value)
+
+    @property
+    def targetdistro(self):
+        return self.zypp.targetDistribution()
+
+    @targetdistro.setter
+    def targetdistro(self, value):
+        self.zypp.setTargetDistribution(value)
+
+    @property
+    def type(self):
+        return self.repo_types[self.zypp.type().toEnum()]
+
+    @type.setter
+    def type(self, value):
+        self.zypp.setType(next(k for k, v in self.repo_types if v == value))
+
+    @property
+    def url(self):
+        return [url.asCompleteString() for url in self.zypp.baseUrls()]
+
+    @url.setter
+    def url(self, value):
+        self.zypp.addBaseUrl(value)
+
+
 @depends('zypp')
 def _get_repo(repo, **kwargs):
     '''
@@ -217,7 +368,6 @@ def _get_repo(repo, **kwargs):
         return zypp.RepoManager().getRepositoryInfo(repo)
     except RuntimeError:
         raise CommandExecutionError('repo {0!r} was not found'.format(repo))
-
 
 
 @depends('zypp')
@@ -231,33 +381,8 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    r = _get_repo(repo)
-    # put into dictionary all properties that are dumped in
-    # zypp.RepoInfo.dumpOn:
-    # http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
-    return {
-        'alias': r.alias(),
-        'autorefresh': r.autorefresh(),
-        'enabled': r.enabled(),
-        'gpgcheck': r.gpgCheck(),
-        'gpgkey': r.gpgKeyUrl().asCompleteString(),
-        'keeppackages': r.keepPackages(),
-        'metadataPath': r.metadataPath().c_str(),
-        'mirrorlist': r.mirrorListUrl().asCompleteString(),
-        'name': r.name() if r.name() else repo,
-        'packagesPath': r.packagesPath().c_str(),
-        'path': r.path().c_str(),
-        'priority': r.priority(),
-        'service': r.service(),
-        'targetdistro': r.targetDistribution(),
-        'type': {
-            zypp.RepoType.NONE_e: 'NONE',
-            zypp.RepoType.RPMMD_e: 'rpm-md',
-            zypp.RepoType.YAST2_e: 'yast2',
-            zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
-        }[r.type().toEnum()],
-        'url': [url.asCompleteString() for url in r.baseUrls()]
-    }
+    r = RepoInfo(_get_repo(repo))
+    return r.options
 
 
 @depends('zypp')
@@ -271,7 +396,7 @@ def list_repos():
 
        salt '*' pkg.list_repos
     '''
-    return {r.name(): get_repo(r.name())
+    return {r.alias(): get_repo(r.alias())
             for r in zypp.RepoManager().knownRepositories()}
 
 
@@ -291,7 +416,7 @@ def del_repo(repo, **kwargs):
     try:
         zypp.RepoManager().removeRepository(r)
     except RuntimeError as e:
-        raise CommandExecutionError(re.sub('\[.*\] ', '', e.message))
+        raise CommandExecutionError(re.sub(r'\[.*\] ', '', e.message))
     return 'File {1} containing repo {0!r} has been removed.\n'.format(
         repo, r.path().c_str())
 
