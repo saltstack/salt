@@ -275,6 +275,27 @@ def list_repos():
             for r in zypp.RepoManager().knownRepositories()}
 
 
+@depends('zypp')
+def del_repo(repo, **kwargs):
+    '''
+    Delete a repo.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.del_repo alias
+        salt '*' pkg.del_repo alias
+    '''
+    r = _get_repo(repo)
+    try:
+        zypp.RepoManager().removeRepository(r)
+    except RuntimeError as e:
+        raise CommandExecutionError(re.sub('\[.*\] ', '', e.message))
+    return 'File {1} containing repo {0!r} has been removed.\n'.format(
+        repo, r.path().c_str())
+
+
 def refresh_db():
     '''
     Just run a ``zypper refresh``, return a dict::
