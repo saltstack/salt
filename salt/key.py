@@ -281,10 +281,10 @@ class KeyCLI(object):
                 'key',
                 self.opts)
 
-    def gen_signature(self):
+    def prep_signature(self):
         '''
-        collects usable keys to be used with salt.crypt.gen_pub_signature
-        and errors out if something is missing
+        Searches for usable keys to create the
+        master public-key signature
         '''
         self.privkey = None
         self.pubkey = None
@@ -346,9 +346,10 @@ class KeyCLI(object):
             self.opts['signature_path'] = self.opts['pki_dir']
 
         sign_path = self.opts['signature_path'] + '/' + self.opts['master_pubkey_signature']
-        salt.crypt.gen_signature(self.privkey,
-                                 self.pubkey,
-                                 sign_path)
+
+        self.key.gen_signature(self.privkey,
+                               self.pubkey,
+                               sign_path)
 
 
     def run(self):
@@ -359,7 +360,7 @@ class KeyCLI(object):
             self.key.gen_keys()
             return
         elif self.opts['gen_signature']:
-            self.gen_signature()
+            self.prep_signature()
             return
         if self.opts['list']:
             self.list_status(self.opts['list'])
@@ -426,6 +427,15 @@ class Key(object):
                 self.opts['gen_keys'],
                 self.opts['keysize'])
         return
+
+    def gen_signature(self, privkey, pubkey, sig_path):
+        '''
+        Generate master public-key-signature
+        '''
+        return salt.crypt.gen_signature(privkey,
+                                        pubkey,
+                                        sig_path)
+
 
     def check_minion_cache(self):
         '''
