@@ -393,7 +393,7 @@ def _try_zypp():
 @depends('zypp')
 def _get_zypp_repo(repo, **kwargs):
     '''
-    Get zypp.RepoInfo object by repo name.
+    Get zypp.RepoInfo object by repo alias.
     '''
     with _try_zypp():
         return zypp.RepoManager().getRepositoryInfo(repo)
@@ -457,11 +457,7 @@ def mod_repo(repo, **kwargs):
 
     repo
         alias by which the zypper refers to the repo
-    name
-        a human-readable name for the repo
-    url
-        the URL for zypper to reference
-    mirrorlist
+    url or mirrorlist
         the URL for zypper to reference
 
     Key/Value pairs may also be removed from a repo's configuration by setting
