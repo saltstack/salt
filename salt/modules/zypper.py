@@ -10,9 +10,16 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError, MinionError
+from salt.utils.decorators import depends
+from salt.exceptions import (
+    CommandExecutionError, MinionError, SaltInvocationError)
 
 log = logging.getLogger(__name__)
+
+try:
+    import zypp
+except ImportError as e:
+    log.trace('Failed to import zypp: {0}'.format(e))
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -199,6 +206,73 @@ def list_pkgs(versions_as_list=False, **kwargs):
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
+
+
+@depends('zypp')
+def _get_repo(repo, **kwargs):
+    '''
+    Get zypp.RepoInfo object by repo name.
+    '''
+    try:
+        return zypp.RepoManager().getRepositoryInfo(repo)
+    except RuntimeError:
+        raise CommandExecutionError('repo {0!r} was not found'.format(repo))
+
+
+
+@depends('zypp')
+def get_repo(repo, **kwargs):
+    '''
+    Display a repo.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_repo alias
+    '''
+    r = _get_repo(repo)
+    # put into dictionary all properties that are dumped in
+    # zypp.RepoInfo.dumpOn:
+    # http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
+    return {
+        'alias': r.alias(),
+        'autorefresh': r.autorefresh(),
+        'enabled': r.enabled(),
+        'gpgcheck': r.gpgCheck(),
+        'gpgkey': r.gpgKeyUrl().asCompleteString(),
+        'keeppackages': r.keepPackages(),
+        'metadataPath': r.metadataPath().c_str(),
+        'mirrorlist': r.mirrorListUrl().asCompleteString(),
+        'name': r.name() if r.name() else repo,
+        'packagesPath': r.packagesPath().c_str(),
+        'path': r.path().c_str(),
+        'priority': r.priority(),
+        'service': r.service(),
+        'targetdistro': r.targetDistribution(),
+        'type': {
+            zypp.RepoType.NONE_e: 'NONE',
+            zypp.RepoType.RPMMD_e: 'rpm-md',
+            zypp.RepoType.YAST2_e: 'yast2',
+            zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
+        }[r.type().toEnum()],
+        'url': [url.asCompleteString() for url in r.baseUrls()]
+    }
+
+
+@depends('zypp')
+def list_repos():
+    '''
+    Lists all repos.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' pkg.list_repos
+    '''
+    return {r.name(): get_repo(r.name())
+            for r in zypp.RepoManager().knownRepositories()}
 
 
 def refresh_db():
