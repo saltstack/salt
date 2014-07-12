@@ -631,14 +631,6 @@ def running(name, container=None, port_bindings=None, binds=None,
     container
         name of the container to start
 
-    binds
-        like -v of docker run command
-
-        .. code-block:: yaml
-
-            - binds:
-                /var/log/service: /var/log/service
-
     publish_all_ports
 
     links
@@ -659,8 +651,19 @@ def running(name, container=None, port_bindings=None, binds=None,
                 "5000/tcp":
                     HostIp: ""
                     HostPort: "5000"
+
     binds
-        List of volumes to mount
+        List of volumes to mount (like ``-v`` of ``docker run`` command),
+        mapping host directory to container directory.
+
+        For read-write mounting, use the short form:
+
+        .. code-block:: yaml
+
+            - binds:
+                /var/log/service: /var/log/service
+
+        Or, to specify read-only mounting, use the extended form:
 
         .. code-block:: yaml
 

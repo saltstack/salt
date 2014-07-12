@@ -74,6 +74,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run tests for states'
         )
         self.test_selection_group.add_option(
+            '-C',
+            '--cli',
+            '--cli-tests',
+            dest='cli',
+            default=False,
+            action='store_true',
+            help='Run tests for cli'
+        )
+        self.test_selection_group.add_option(
             '-c',
             '--client',
             '--client-tests',
@@ -166,10 +175,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
         if self.options.coverage and any((
-                self.options.module, self.options.client, self.options.shell,
-                self.options.unit, self.options.state, self.options.runner,
-                self.options.loader, self.options.name, self.options.outputter,
-                self.options.fileserver, os.geteuid() != 0,
+                self.options.module, self.options.cli, self.options.client,
+                self.options.shell, self.options.unit, self.options.state,
+                self.options.runner, self.options.loader, self.options.name,
+                self.options.outputter, self.options.fileserver, os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
@@ -179,12 +188,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
 
         # Set test suite defaults if no specific suite options are provided
-        if not any((self.options.module, self.options.client,
+        if not any((self.options.module, self.options.client, self.options.cli,
                     self.options.shell, self.options.unit, self.options.state,
                     self.options.runner, self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
                     self.options.fileserver, self.options.api)):
             self.options.module = True
+            self.options.cli = True
             self.options.client = True
             self.options.shell = True
             self.options.unit = True
@@ -233,6 +243,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 (self.options.runner or
                  self.options.state or
                  self.options.module or
+                 self.options.cli or
                  self.options.client or
                  self.options.loader or
                  self.options.outputter or
@@ -283,7 +294,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        if not any([self.options.client, self.options.module,
+        if not any([self.options.cli, self.options.client, self.options.module,
                     self.options.runner, self.options.shell,
                     self.options.state, self.options.loader,
                     self.options.outputter, self.options.name,
@@ -306,6 +317,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('modules', 'Module'))
             if self.options.state:
                 status.append(self.run_integration_suite('states', 'State'))
+            if self.options.cli:
+                status.append(self.run_integration_suite('cli', 'CLI'))
             if self.options.client:
                 status.append(self.run_integration_suite('client', 'Client'))
             if self.options.shell:
@@ -358,23 +371,27 @@ def main():
     '''
     Parse command line options for running specific tests
     '''
-    parser = SaltTestsuiteParser(
-        TEST_DIR,
-        xml_output_dir=XML_OUTPUT_DIR,
-        tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
-    )
-    parser.parse_args()
+    try:
+        parser = SaltTestsuiteParser(
+            TEST_DIR,
+            xml_output_dir=XML_OUTPUT_DIR,
+            tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+        )
+        parser.parse_args()
 
-    overall_status = []
-    status = parser.run_integration_tests()
-    overall_status.extend(status)
-    status = parser.run_unit_tests()
-    overall_status.extend(status)
-    false_count = overall_status.count(False)
+        overall_status = []
+        status = parser.run_integration_tests()
+        overall_status.extend(status)
+        status = parser.run_unit_tests()
+        overall_status.extend(status)
+        false_count = overall_status.count(False)
 
-    if false_count > 0:
-        parser.finalize(1)
-    parser.finalize(0)
+        if false_count > 0:
+            parser.finalize(1)
+        parser.finalize(0)
+    except KeyboardInterrupt:
+        print('\nCaught keyboard interrupt. Exiting.\n')
+        exit(0)
 
 
 if __name__ == '__main__':

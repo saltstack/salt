@@ -1,0 +1,128 @@
+=============================================
+Salt 2014.7.0 Release Notes - Codename Helium
+=============================================
+
+This release is the largest Salt release ever, with more features and commits
+then any previous release of Salt. Everything from the new RAET transport to
+major updates in Salt Cloud and the merging of Salt API into the main project.
+
+Major Features
+==============
+
+RAET Transport Option
+---------------------
+
+This has been a HUGE amount of work, but the beta release of Salt with RAET is
+ready to go. RAET is a reliable queuing transport system that has been
+developed in partnership with a number of large enterprises to give Salt an
+alternative to ZeroMQ and a way to get Salt to scale well beyond tens of
+thousands of servers. Unlike ZeroMQ, RAET is completely asynchronous in every
+aspect of its operation and has been developed using the flow programming
+paradigm. This allows for many new capabilities to be added to Salt in the
+upcoming releases.
+
+Please keep in mind that this is a beta release of RAET and we hope for bugs to
+be worked out, performance to be better realized and more in the Lithium
+release.
+
+Simply stated, users running salt with RAET should expect some hiccups as we
+hammer out the update. This is a BETA release of Salt RAET.
+
+For information about how to use Salt with RAET please see the tutorial:
+<put tutorial here>
+
+New Imperitive State Keyword "Listen"
+-------------------------------------
+
+The new listen keyword allows for completely imperative states by calling the
+mod_watch routine after all states have run instead of re-ordering the states.
+
+New Requisites: onchanges and onfail
+------------------------------------
+
+New requisites!
+
+Global onlyif and unless
+------------------------
+
+The ``onlyif`` and ``unless`` options can now be used for any state declaration.
+
+Scheduler Additions
+-------------------
+
+The Salt scheduler system has received MAJOR enhancements, allowing for cron-like
+scheduling and much more granular timing routines.
+
+Red Hat 7 Family Support
+------------------------
+
+All the needed additions have been made to run Salt on RHEL 7 and derived OSes
+like CentOS and Scientific.
+
+Amazon Execution Modules
+------------------------
+
+An entire family of execution modules further enhancing Salt's Amazon Cloud
+support.
+
+LXC Runner Enhancements
+-----------------------
+
+BETA
+The Salt LXC management system has recived a number of enhancements which make
+running an LXC cloud entirely from Salt an easy proposition.
+
+Next Gen Docker Management
+--------------------------
+
+The Docker support in Salt has been increased at least ten fold. The Docker API
+is now completely exposed and Salt ships with Docker data tracking systems
+which make automating Docker deployments very easy.
+
+Peer System Performance Improvements
+------------------------------------
+
+The peer system communication routines have been refined to make the peer
+system substantially faster.
+
+SDB
+---
+
+Encryption at rest for configs
+
+GPG Renderer
+------------
+
+Encrypted pillar at rest
+
+OpenStack Expansion
+-------------------
+
+Lots of new OpenStack stuff
+
+Queues System
+-------------
+
+Ran change external queue systems into salt events
+
+Multi Master Failover Additions
+-------------------------------
+
+Connecting to multiple masters is more dynamic then ever
+
+Chef Execution Module
+---------------------
+
+Managing Chef with Salt just got even easier!
+
+Fileserver Backend Enhacements
+------------------------------
+
+All of the fileserver backends have been overhauled to be faster, lighter and more reliable
+
+New Modules
+===========
+
+Syslog-ng
+Oracle
+random

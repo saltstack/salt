@@ -32,6 +32,7 @@ States
     states_pt3
     states_pt4
     states_pt5
+    syslog_ng-state-usage
 
 Advanced Topics
 ================
@@ -48,7 +49,7 @@ Advanced Topics
     walkthrough_macosx
     writing_tests
 
-Salt Cloud
+Salt Virt
 ==========
 .. toctree::
     :maxdepth: 2

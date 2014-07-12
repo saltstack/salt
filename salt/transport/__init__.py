@@ -6,24 +6,24 @@ import time
 import os
 import threading
 
-from collections import defaultdict
-
 # Import Salt Libs
 import salt.payload
 import salt.auth
 import salt.utils
 import logging
+from collections import defaultdict
 
 log = logging.getLogger(__name__)
 
 try:
-    from raet import raeting, nacling
-    from raet.lane.stacking import LaneStack
-    from raet.lane import yarding
+    from raet import nacling
 
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
+
+jobber_stack = None  # global that holds raet jobber LaneStack
+jobber_rxMsgs = {}  # dict of deques one for each RaetChannel
 
 
 class Channel(object):
@@ -60,31 +60,18 @@ class RAETChannel(Channel):
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.__prep_stack()
+        self.dst = ('master', None, 'remote_cmd')
 
     def __prep_stack(self):
         '''
         Prepare the stack objects
         '''
-        mid = self.opts.get('id', 'master')
-        yid = nacling.uuid(size=18)
-        stackname = 'raet' + yid
-        self.stack = LaneStack(
-                name=stackname,
-                lanename=mid,
-                yid=yid,
-                sockdirpath=self.opts['sock_dir'])
-        self.stack.Pk = raeting.packKinds.pack
-        self.router_yard = yarding.RemoteYard(
-                stack=self.stack,
-                yid=0,
-                name='manor',
-                lanename=mid,
-                dirpath=self.opts['sock_dir'])
-        self.stack.addRemote(self.router_yard)
-        src = (mid, self.stack.local.name, None)
-        dst = ('master', None, 'remote_cmd')
-        self.route = {'src': src, 'dst': dst}
+        if not jobber_stack:
+            emsg = "Jobber Stack not setup\n"
+            log.error(emsg)
+            raise ValueError(emsg)
+        log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
+        self.stack = jobber_stack
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -96,28 +83,32 @@ class RAETChannel(Channel):
     def send(self, load, tries=3, timeout=60):
         '''
         Send a message load and wait for a relative reply
+        One shot wonder
         '''
-        msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, self.stack.uids['manor'])
+        self.__prep_stack()
         tried = 1
         start = time.time()
-        while True:
-            time.sleep(0.01)
+        mid = self.opts.get('id', 'master')
+        track = nacling.uuid(18)
+        src = (mid, self.stack.local.name, track)
+        self.route = {'src': src, 'dst': self.dst}
+        msg = {'route': self.route, 'load': load}
+        self.stack.transmit(msg, self.stack.uids['manor'])
+        while track not in jobber_rxMsgs:
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                return msg.get('return', {})
+                jobber_rxMsgs[msg['route']['dst'][2]] = msg
+                continue
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
-                self.stack.transmit(msg, self.stack.uids['manor'])
-                tried += 1
-
-    def __del__(self):
-        '''
-        Clean up the stack when finished
-        '''
-        self.stack.server.close()
+                if track not in jobber_rxMsgs:
+                    self.stack.transmit(msg, self.stack.uids['manor'])
+                    tried += 1
+            if track not in jobber_rxMsgs:
+                time.sleep(0.01)
+        return jobber_rxMsgs.pop(track).get('return', {})
 
 
 class ZeroMQChannel(Channel):

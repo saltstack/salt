@@ -312,7 +312,7 @@ def _lxc_profile(profile):
     key = 'lxc.profile.{0}'.format(profilename)
     rprofile = __context__.get(key, {})
     if not rprofile:
-        default_profile = __salt__['config.option'](
+        default_profile = __salt__['config.get'](
             'lxc.profile', {}).get(profilename, {})
         # save the resulting profile in the context
         rprofile = salt.utils.dictupdate.update(
@@ -350,7 +350,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
         conf_tuples = []
 
     if nic:
-        nicp = __salt__['config.option']('lxc.nic', {}).get(
+        nicp = __salt__['config.get']('lxc.nic', {}).get(
             nic, DEFAULT_NIC_PROFILE
         )
         nic_opts = kwargs.pop('nic_opts', None)
@@ -400,38 +400,17 @@ def _get_network_conf(conf_tuples=None, **kwargs):
     return ret
 
 
-def _get_memory(memory):
-    '''
-    Handle the saltcloud driver and lxc runner memory restriction
-    differences.
-    Runner limits to 1024MB by default
-    SaltCloud does not restrict memory usage by default
-    '''
-    if memory is None:
-        memory = 1024
-    if memory:
-        memory = memory * 1024 * 1024
-    return memory
-
-
-def _get_autostart(autostart):
-    if autostart is None:
-        autostart = True
-    if autostart:
-        autostart = '1'
-    else:
-        autostart = '0'
-    return autostart
-
-
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
-    autostart = _get_autostart(kwargs.pop('autostart', None))
-    ret['lxc.start.auto'] = autostart
-    memory = _get_memory(kwargs.pop('memory', None))
-    if memory:
-        ret['lxc.cgroup.memory.limit_in_bytes'] = memory
+
+    autostart = kwargs.pop('autostart', True)
+    ret['lxc.start.auto'] = '1' if autostart else '0'
+
+    memory = kwargs.pop('memory', None) or 1024
+    memory = memory * 1024 * 1024
+    ret['lxc.cgroup.memory.limit_in_bytes'] = memory
+
     cpuset = kwargs.pop('cpuset', None)
     if cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = cpuset
@@ -441,22 +420,6 @@ def _get_lxc_default_data(**kwargs):
         ret['lxc.cgroup.cpu.shares'] = cpushare
     if cpu and not cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = _rand_cpu_str(cpu)
-    return ret
-
-
-def _config_list(conf_tuples=None, **kwargs):
-    '''
-    Return a list of dicts from the salt level configurations
-    '''
-    if not conf_tuples:
-        conf_tuples = []
-    kwargs = copy.deepcopy(kwargs)
-    ret = []
-    default_data = _get_lxc_default_data(**kwargs)
-    for k, val in default_data.items():
-        ret.append({k: val})
-    net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
-    ret.extend(net_datas)
     return ret
 
 
@@ -587,7 +550,7 @@ def get_base(**kwargs):
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(
                 img_tar,
-                __salt__['config.option']('hash_type'))
+                __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
             __salt__['lxc.create'](name, **kwargs)
@@ -652,7 +615,7 @@ def init(name,
                 [priv_key=/path_or_content] [pub_key=/path_or_content] \\
                 [bridge=lxcbr0] [gateway=10.0.3.1] \\
                 [dnsservers[dns1,dns2]] \\
-                [users=[foo]] password='secret'
+                [users=[foo]] [password='secret']
 
     name
         Name of the container.
@@ -779,13 +742,14 @@ def init(name,
     def select(k, default=None):
         kw = kwargs.pop(k, _marker)
         p = profile.pop(k, default)
-        # let kwargs be really be the preferred choice
+
+        # let kwargs be the preferred choice
         if kw is _marker:
             kw = p
         return kw
 
     tvg = select('vgname')
-    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
+    vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
     start_ = select('start', True)
     ret['started'] = start_
     autostart = select('autostart', autostart)
@@ -834,40 +798,11 @@ def init(name,
                                        profile=profile, **kwargs))
         if not ret.get('created', False):
             return ret
-        path = '/var/lib/lxc/{0}/config'.format(name)
-        old_chunks = []
-        if os.path.exists(path):
-            old_chunks = __salt__['lxc.read_conf'](path)
-        for comp in _config_list(conf_tuples=old_chunks,
-                                 cpu=cpu,
-                                 nic=nic, nic_opts=nic_opts, bridge=bridge,
-                                 cpuset=cpuset, cpushare=cpushare,
-                                 memory=memory):
-            edit_conf(path, **comp)
-        chunks = __salt__['lxc.read_conf'](path)
-        if old_chunks != chunks:
-            to_reboot = True
     if remove_seed_marker:
         lxcret = __salt__['lxc.run_cmd'](
             name, 'rm -f \"{0}\"'.format(SEED_MARKER),
             stdout=False, stderr=False)
 
-    # last time to be sure any of our property is correctly applied
-    cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
-                     bridge=bridge, gateway=gateway,
-                     autostart=autostart,
-                     cpuset=cpuset, cpushare=cpushare, memory=memory)
-    old_chunks = []
-    if os.path.exists(cfg.path):
-        old_chunks = __salt__['lxc.read_conf'](cfg.path)
-    cfg.write()
-    chunks = __salt__['lxc.read_conf'](cfg.path)
-    if old_chunks != chunks:
-        comment += 'Container configuration updated\n'
-        to_reboot = True
-    else:
-        if not to_reboot:
-            comment += 'Container already correct\n'
     if to_reboot:
         __salt__['lxc.stop'](name)
     if clone_from:
@@ -1079,7 +1014,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         return kw
 
     tvg = select('vgname')
-    vgname = tvg if tvg else __salt__['config.option']('lxc.vgname')
+    vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
     template = select('template')
     backing = select('backing')
     if vgname and not backing:
@@ -1088,11 +1023,11 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     fstype = select('fstype')
     size = select('size', '1G')
     image = select('image')
-    if backing in ['dir', 'overlayfs']:
+    if backing in ['dir', 'overlayfs', 'btrfs']:
         fstype = None
         size = None
     # some backends wont support some parameters
-    if backing in ['aufs', 'dir', 'overlayfs']:
+    if backing in ['aufs', 'dir', 'overlayfs', 'btrfs']:
         lvname = vgname = None
 
     if image:
@@ -1115,14 +1050,18 @@ def create(name, config=None, profile=None, options=None, **kwargs):
                 cmd += ' --lvname {0}'.format(vgname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
-        if backing not in ['dir', 'overlayfs']:
+        if backing not in ['dir', 'overlayfs', 'btrfs']:
             if fstype:
                 cmd += ' --fstype {0}'.format(fstype)
             if size:
                 cmd += ' --fssize {0}'.format(size)
+    options = options or {}
     if profile:
-        cmd += ' --'
+        profile.update(options)
         options = profile
+
+    if options:
+        cmd += ' --'
         for k, v in options.items():
             cmd += ' --{0} {1}'.format(k, v)
 
@@ -1269,6 +1208,9 @@ def list_(extra=False):
         salt '*' lxc.list
         salt '*' lxc.list extra=True
     '''
+
+    # TODO: This can be sped up by using `lxc-ls --fancy` thus skipping
+    # the need to call lxc-info on each container to get running state.
     ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
 
     if extra:
@@ -2283,15 +2225,16 @@ def write_conf(conf_file, conf):
                 fp_.write(line)
             elif type(line) is dict:
                 key = line.keys()[0]
+                out_line = None
                 if type(line[key]) is str:
                     out_line = ' = '.join((key, line[key]))
                 elif type(line[key]) is dict:
                     out_line = ' = '.join((key, line[key]['value']))
                     if 'comment' in line[key]:
                         out_line = ' # '.join((out_line, line[key]['comment']))
-                fp_.write(out_line)
-                fp_.write('\n')
-
+                if out_line:
+                    fp_.write(out_line)
+                    fp_.write('\n')
     return {}
 
 

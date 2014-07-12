@@ -698,7 +698,7 @@ def connect(host, port=None, **kwargs):
         except ValueError:
             ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         else:
-            ret['comment'] = '%s' % (errtxt)
+            ret['comment'] = '{0}'.format(errtxt)
         return ret
 
     ret['result'] = True

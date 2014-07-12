@@ -25,15 +25,15 @@ The most common problems on the salt-master are:
 
 1. too many minions authing at once
 2. too many minions re-authing at once
-3. too many minions re-connectiong at once
+3. too many minions re-connecting at once
 4. too many minions returning at once
-5. too few ressources (CPU/HDD)
+5. too few resources (CPU/HDD)
 
 The first three are all "thundering herd" problems. To mitigate these issues
 we must configure the minions to back-off appropriately when the master is
 under heavy load.
 
-The fourth is caused by masters with little hardware ressources in combination
+The fourth is caused by masters with little hardware resources in combination
 with a possible bug in ZeroMQ. At least thats what it looks like till today
 (`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
 `Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_,
@@ -72,8 +72,8 @@ frequently in the masters configuration file.
 
 In a few cases (master restart, remove minion key, etc.) the salt-master generates
 a new AES-key to encrypt its publications with. The minions aren't notified of
-this but will realize this on the next pub job they recieve. When the minion
-recieves such a job it will then re-auth with the master. Since Salt does minion-side
+this but will realize this on the next pub job they receive. When the minion
+receives such a job it will then re-auth with the master. Since Salt does minion-side
 filtering this means that all the minions will re-auth on the next command published
 on the master-- causing another "thundering herd". This can be avoided by
 setting the
@@ -178,7 +178,7 @@ This will only address 50 minions at once while looping through all addressed
 minions.
 
 
-Too few ressources
+Too few resources
 =====================
 The masters resources always have to match the environment. There is no way
 to give good advise without knowing the environment the master is supposed to
@@ -195,7 +195,7 @@ key-sizes. For example with a 2048 bit key:
 
     keysize: 2048
 
-With thousands of decrpytions, the amount of time that can be saved on the
+With thousands of decryptions, the amount of time that can be saved on the
 masters end should not be neglected. See here for reference:
 `Pull Request 9235 <https://github.com/saltstack/salt/pull/9235>`_ how much
 influence the key-size can have.

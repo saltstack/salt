@@ -290,7 +290,8 @@ def get_file_str(path, saltenv='base', env=None):
 
 def cache_file(path, saltenv='base', env=None):
     '''
-    Used to cache a single file in the local salt-master file cache.
+    Used to cache a single file on the salt-minion
+    Returns the location of the new cached file on the minion
 
     CLI Example:
 

@@ -204,7 +204,7 @@ in the current Jinja context.
 
 .. code-block:: yaml
 
-    Context is: {{ show_full_context }}
+    Context is: {{ show_full_context() }}
 '''
 
 from __future__ import absolute_import

@@ -43,7 +43,7 @@ like package installation.
 To write a destructive test import and use the `destructiveTest` decorator for
 the test method:
 
-.. code-block:: yaml
+.. code-block:: python
 
     import integration
     from salttesting.helpers import destructiveTest

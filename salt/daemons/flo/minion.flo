@@ -68,12 +68,12 @@ framer bootstrap be inactive first join
     frame pillar
         enter
             do load pillar
-        go next
+        go loading
 
     frame loading
         enter
             do load modules
-        go next
+        go router
 
     frame router
         bid start manager #start alive presence from minion side

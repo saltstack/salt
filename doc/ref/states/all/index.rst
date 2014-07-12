@@ -120,6 +120,7 @@ Full list of builtin state modules
     supervisord
     svn
     sysctl
+    syslog_ng
     test
     timezone
     tomcat
