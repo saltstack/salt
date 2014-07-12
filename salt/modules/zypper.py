@@ -209,9 +209,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-class RepoInfo(object):
+class _RepoInfo(object):
     '''
-    Incapsulate all properties that are dumped in zypp.RepoInfo.dumpOn:
+    Incapsulate all properties that are dumped in zypp._RepoInfo.dumpOn:
     http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
     '''
     repo_types = {
@@ -241,7 +241,6 @@ class RepoInfo(object):
 
     @options.setter
     def options(self, value):
-        log.garbage('Setting options {} for RepoInfo'.format(value))
         for k, v in value.iteritems():
             setattr(self, k, v)
 
@@ -396,7 +395,7 @@ def _try_zypp():
 @depends('zypp')
 def _get_zypp_repo(repo, **kwargs):
     '''
-    Get zypp.RepoInfo object by repo alias.
+    Get zypp._RepoInfo object by repo alias.
     '''
     with _try_zypp():
         return zypp.RepoManager().getRepositoryInfo(repo)
@@ -413,7 +412,7 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    r = RepoInfo(_get_zypp_repo(repo))
+    r = _RepoInfo(_get_zypp_repo(repo))
     return r.options
 
 
@@ -481,10 +480,10 @@ def mod_repo(repo, **kwargs):
 
     repo_manager = zypp.RepoManager()
     try:
-        r = RepoInfo(repo_manager.getRepositoryInfo(repo))
+        r = _RepoInfo(repo_manager.getRepositoryInfo(repo))
         new_repo = False
     except RuntimeError:
-        r = RepoInfo()
+        r = _RepoInfo()
         r.alias = repo
         new_repo = True
     try:
