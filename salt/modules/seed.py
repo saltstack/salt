@@ -154,10 +154,10 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
     Generate keys and config and put them in a tmp directory.
 
     pub_key
-        absolute path or file content of an optionnal preseeded salt key
+        absolute path or file content of an optional preseeded salt key
 
     priv_key
-        absolute path or file content of an optionnal preseeded salt key
+        absolute path or file content of an optional preseeded salt key
 
     CLI Example:
 

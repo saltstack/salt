@@ -19,7 +19,7 @@ configuration at:
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer_hw
 
-The SoftLayer Python Library needs to be installed in ordere to use the
+The SoftLayer Python Library needs to be installed in order to use the
 SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 
 :depends: softlayer

@@ -189,7 +189,7 @@
 #                  and recon_max value kind of defeats the purpose of being able to
 #                  change these settings. If all minions have the same values and your
 #                  setup is quite large (several thousand minions), they will still
-#                  flood the master. The desired behaviour is to have timeframe within
+#                  flood the master. The desired behavior is to have timeframe within
 #                  all minions try to reconnect.
 
 # Example on how to use these settings:

@@ -12,7 +12,7 @@ Theory of mysql ext_pillar
 Ok, here's the theory for how this works...
 
 - If there's a keyword arg of mysql_query, that'll go first.
-- Then any non-keyworded args are processed in order.
+- Then any non-keyword args are processed in order.
 - Finally, remaining keywords are processed.
 
 We do this so that it's backward compatible with older configs.
@@ -124,7 +124,7 @@ These columns define list grouping
           }
     ]}
 
-The range for with_lists is 1 to number_of_fiels, inclusive.
+The range for with_lists is 1 to number_of_fields, inclusive.
 Numbers outside this range are ignored.
 
 Finally, if you use pass the queries in via a mapping, the key will be the
@@ -248,7 +248,7 @@ class merger(object):
 
     def extract_queries(self, args, kwargs):
         '''
-            This function normalises the config block in to a set of queries we
+            This function normalizes the config block in to a set of queries we
             can use.  The return is a list of consistently laid out dicts.
         '''
         # Please note the function signature is NOT an error.  Neither args, nor

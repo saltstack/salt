@@ -275,7 +275,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
 
     def _verify_auth(self):
         '''
-        Boolean wether the request is auth'd
+        Boolean whether the request is auth'd
         '''
 
         return self.token and bool(self.application.auth.get_tok(self.token))

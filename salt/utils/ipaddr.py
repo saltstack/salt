@@ -803,22 +803,22 @@ class _BaseNet(_IPAddrBase):
             If the IP versions of self and other are the same, returns:
 
             -1 if self < other:
-              eg: IPv4('1.1.1.0/24') < IPv4('1.1.2.0/24')
+              e.g.: IPv4('1.1.1.0/24') < IPv4('1.1.2.0/24')
               IPv6('1080::200C:417A') < IPv6('1080::200B:417B')
             0 if self == other
-              eg: IPv4('1.1.1.1/24') == IPv4('1.1.1.2/24')
+              e.g.: IPv4('1.1.1.1/24') == IPv4('1.1.1.2/24')
               IPv6('1080::200C:417A/96') == IPv6('1080::200C:417B/96')
             1 if self > other
-              eg: IPv4('1.1.1.0/24') > IPv4('1.1.0.0/24')
+              e.g.: IPv4('1.1.1.0/24') > IPv4('1.1.0.0/24')
               IPv6('1080::1:200C:417A/112') >
               IPv6('1080::0:200C:417A/112')
 
             If the IP versions of self and other are different, returns:
 
             -1 if self._version < other._version
-              eg: IPv4('10.0.0.1/24') < IPv6('::1/128')
+              e.g.: IPv4('10.0.0.1/24') < IPv6('::1/128')
             1 if self._version > other._version
-              eg: IPv6('::1/128') > IPv4('255.255.255.0/24')
+              e.g.: IPv6('::1/128') > IPv4('255.255.255.0/24')
 
         """
         if self._version < other._version:
@@ -1267,8 +1267,8 @@ class IPv4Network(_BaseV4, _BaseNet):
                 IPv4Network('192.168.1.1')
 
             strict: A boolean. If true, ensure that we have been passed
-              A true network address, eg, 192.168.1.0/24 and not an
-              IP address on a network, eg, 192.168.1.1/24.
+              A true network address, e.g., 192.168.1.0/24 and not an
+              IP address on a network, e.g., 192.168.1.1/24.
 
         Raises:
             AddressValueError: If ipaddr isn't a valid IPv4 address.
@@ -1835,8 +1835,8 @@ class IPv6Network(_BaseV6, _BaseNet):
                 IPv6Network('2001:4860::')
 
             strict: A boolean. If true, ensure that we have been passed
-              A true network address, eg, 192.168.1.0/24 and not an
-              IP address on a network, eg, 192.168.1.1/24.
+              A true network address, e.g., 192.168.1.0/24 and not an
+              IP address on a network, e.g., 192.168.1.1/24.
 
         Raises:
             AddressValueError: If address isn't a valid IPv6 address.

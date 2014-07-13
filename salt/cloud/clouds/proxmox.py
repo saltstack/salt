@@ -779,7 +779,7 @@ def get_vmconfig(vmid, node=None, node_type='openvz'):
 
 def wait_for_created(upid, timeout=300):
     '''
-    Wait until a the vm has been created succesfully
+    Wait until a the vm has been created successfully
     '''
     start_time = time.time()
     info = _lookup_proxmox_task(upid)

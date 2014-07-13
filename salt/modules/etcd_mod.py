@@ -14,8 +14,8 @@ configuration file:
       etcd.port: 4001
 
 It is technically possible to configure etcd without using a profile, but this
-is not consided to be a best practice, especially when multiple etcd servers or
-clusters are available.
+is not considered to be a best practice, especially when multiple etcd servers
+or clusters are available.
 
 .. code-block:: yaml
 

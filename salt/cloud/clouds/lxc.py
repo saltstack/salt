@@ -226,7 +226,7 @@ def _salt(fun, *args, **kw):
                 break
             # special case, some answers may be crafted
             # to handle the unresponsivness of a specific command
-            # which is also meaningfull, eg a minion not yet provisionned
+            # which is also meaningful, e.g. a minion not yet provisioned
             if fun in ['test.ping'] and not wait_for_res:
                 ret = {
                     'test.ping': False,
@@ -396,7 +396,7 @@ def create(vm_, call=None):
     This function is idempotent and will try to either provision
     or finish the provision of an lxc container.
 
-    NOTE: Most of the initialisation code has been moved and merged
+    NOTE: Most of the initialization code has been moved and merged
     with the lxc runner and lxc.init functions
     '''
     __grains__ = _salt('grains.items')

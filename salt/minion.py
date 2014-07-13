@@ -660,7 +660,7 @@ class Minion(MinionBase):
 
         With master_type=failover takes the list of masters and loops through them.
         The first one that allows the minion to connect is used to authenticate() and
-        then returned. If this function is called outside the minions initialisation
+        then returned. If this function is called outside the minions initialization
         phase (for example from the minions main event-loop when a master connection
         loss was detected), 'failed' should be set to True. The current
         (possibly failed) master will then be removed from the list of masters.
@@ -1662,7 +1662,7 @@ class Minion(MinionBase):
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
                 # SIGCHLD. Throws this error with errno == EINTR.
-                # Nothing to recieve on the zmq socket throws this error
+                # Nothing to receive on the zmq socket throws this error
                 # with EAGAIN.
                 # Both are safe to ignore
                 if exc.errno != errno.EAGAIN and exc.errno != errno.EINTR:
@@ -1911,7 +1911,7 @@ class Syndic(Minion):
                     self.event_forward_timeout < time.time()):
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
-            # I've put explicit handling around the recieve calls
+            # I've put explicit handling around the receive calls
             # in the process_*_socket methods. If we see any other
             # errors they may need some kind of handling so log them
             # for now.
@@ -1931,7 +1931,7 @@ class Syndic(Minion):
             elif messages_len == 2:
                 idx = 1
             else:
-                raise SaltSyndicMasterError('Syndication master recieved message of invalid len ({0}/2)'.format(messages_len))
+                raise SaltSyndicMasterError('Syndication master received message of invalid len ({0}/2)'.format(messages_len))
 
             payload = self.serial.loads(messages[idx])
         except zmq.ZMQError as e:

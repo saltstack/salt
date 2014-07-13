@@ -129,7 +129,7 @@ within a 60 second time-frame on a salt-master service restart.
 Each minion will have a randomized reconnect value between 'recon_default'
 and 'recon_default + recon_max', which in this example means between 1000ms
 and 60000ms (or between 1 and 60 seconds). The generated random-value will
-be doubled after each attempt to reconnect (ZeroMQ default behaviour).
+be doubled after each attempt to reconnect (ZeroMQ default behavior).
 
 Lets say the generated random value is 11 seconds (or 11000ms).
 

@@ -198,8 +198,8 @@ def refresh_db(jail=None, chroot=None, force=False):
         ``jail`` is specified)
 
     force
-        Force a full download of the repository catalogue without regard to the
-        respective ages of the local and remote copies of the catalogue.
+        Force a full download of the repository catalog without regard to the
+        respective ages of the local and remote copies of the catalog.
 
         CLI Example:
 
@@ -288,7 +288,7 @@ def list_pkgs(versions_as_list=False,
         List the packages in the specified jail
 
     chroot
-        List the pacakges in the specified chroot (ignored if ``jail`` is
+        List the packages in the specified chroot (ignored if ``jail`` is
         specified)
 
     with_origin : False
@@ -589,7 +589,7 @@ def install(name=None,
         Install the package into the specified jail
 
     chroot
-        Install the paackage into the specified chroot (ignored if ``jail`` is
+        Install the package into the specified chroot (ignored if ``jail`` is
         specified)
 
     orphan
@@ -622,7 +622,7 @@ def install(name=None,
             salt '*' pkg.install <package name> glob=True
 
     local
-        Do not update the repository catalogues with ``pkg-update(8)``.  A
+        Do not update the repository catalogs with ``pkg-update(8)``.  A
         value of ``True`` here is equivalent to using the ``-U`` flag with
         ``pkg install``.
 
@@ -793,7 +793,7 @@ def remove(name=None,
         Delete the package from the specified jail
 
     chroot
-        Delete the paackage grom the specified chroot (ignored if ``jail`` is
+        Delete the package from the specified chroot (ignored if ``jail`` is
         specified)
 
     all_installed
@@ -949,7 +949,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
             salt '*' pkg.upgrade force=True
 
     local
-        Do not update the repository catalogues with ``pkg-update(8)``. A value
+        Do not update the repository catalogs with ``pkg-update(8)``. A value
         of ``True`` here is equivalent to using the ``-U`` flag with ``pkg
         upgrade``.
 
@@ -961,7 +961,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
     dryrun
         Dry-run mode: show what packages have updates available, but do not
-        perform any upgrades. Repository catalogues will be updated as usual
+        perform any upgrades. Repository catalogs will be updated as usual
         unless the local option is also given.
 
         CLI Example:
@@ -1456,7 +1456,7 @@ def fetch(name,
             salt '*' pkg.fetch <extended regular expression> pcre=True
 
     local
-        Skip updating the repository catalogues with pkg-update(8). Use the
+        Skip updating the repository catalogs with pkg-update(8). Use the
         local cache only.
 
         CLI Example:

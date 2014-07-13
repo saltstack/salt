@@ -248,7 +248,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         Options to pass to brew. Only applies to initial install. Due to how brew
         works, modifying chosen options requires a full uninstall followed by a
         fresh install. Note that if "pkgs" is used, all options will be passed
-        to all packages. Unreconized options for a package will be silently
+        to all packages. Unrecognized options for a package will be silently
         ignored by brew.
 
         CLI Example:

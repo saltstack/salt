@@ -716,7 +716,7 @@ def load_config(path, env_var, default_path=None):
                 previous_frame.function, previous_frame.filename, env_var
             )
         )
-        # In this case, maintain old behaviour
+        # In this case, maintain old behavior
         default_path = DEFAULT_MASTER_OPTS['conf_file']
 
     # Default to the environment variable path, if it exists

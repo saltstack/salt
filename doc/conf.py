@@ -151,6 +151,7 @@ version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
 release = '2014.1.5'
 
+spelling_lang = 'en_US'
 language = 'en'
 locale_dirs = [
     '_locale',
@@ -166,6 +167,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
+    'sphinxcontrib.spelling',
     'httpdomain',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc

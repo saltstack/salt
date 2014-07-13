@@ -1573,7 +1573,7 @@ class Caller(object):
 
     Note, a running master or minion daemon is not required to use this class.
     Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
-    ``'local'``. The same can be achived at the Python level by including that
+    ``'local'``. The same can be achieved at the Python level by including that
     setting in a minion config file.
 
     Instantiate a new Caller() instance using a file system path to the minion

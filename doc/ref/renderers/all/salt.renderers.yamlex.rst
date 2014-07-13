@@ -2,7 +2,7 @@
 salt.renderers.yamlex
 =====================
 
-YAMLEX renderer is a remplacement of the YAML renderer.
+YAMLEX renderer is a replacement of the YAML renderer.
 It's 100% YAML with a pinch of Salt magic:
 
 * All mappings are automatically OrderedDict

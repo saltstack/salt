@@ -434,7 +434,7 @@ def file(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)

@@ -111,7 +111,7 @@ def ec2_credentials_create(user_id=None, name=None,
                            tenant_id=None, tenant=None,
                            profile=None, **connection_args):
     '''
-    Create EC2-compatibile credentials for user per tenant
+    Create EC2-compatible credentials for user per tenant
 
     CLI Examples:
 
@@ -146,7 +146,7 @@ def ec2_credentials_create(user_id=None, name=None,
 def ec2_credentials_delete(user_id=None, name=None, access_key=None,
                            profile=None, **connection_args):
     '''
-    Delete EC2-compatibile credentials
+    Delete EC2-compatible credentials
 
     CLI Examples:
 

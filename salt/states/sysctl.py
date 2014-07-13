@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Configuration of the Linux kernel using sysctrl
+Configuration of the Linux kernel using sysctl
 ===============================================
 
 Control the kernel sysctl system.

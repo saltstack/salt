@@ -50,7 +50,7 @@ def install(dir,
     Install composer dependencies for a directory.
 
     If composer has not been installed globally making it available in the
-    system PATH & making it executible, the ``composer`` and ``php`` parameters
+    system PATH & making it executable, the ``composer`` and ``php`` parameters
     will need to be set to the location of the executables.
 
     dir
@@ -62,7 +62,7 @@ def install(dir,
         (i.e. /path/to/composer.phar)
 
     php
-        Location of the php executible to use with composer.
+        Location of the php executable to use with composer.
         (i.e. /usr/bin/php)
 
     runas

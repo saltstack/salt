@@ -563,7 +563,7 @@ def list_hosts(kwargs=None, call=None):  # pylint: disable=W0613
 
 def list_datacenters(kwargs=None, call=None):  # pylint: disable=W0613
     '''
-    List the datacenters for this VMware environment
+    List the data centers for this VMware environment
     '''
     if call != 'function':
         log.error(

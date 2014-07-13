@@ -39,7 +39,7 @@ A :mod:`cmd.run <salt.states.cmd.run>` state will run the corresponding command
 *every time* (unless it is prevented from running by the ``unless`` or ``onlyif``
 arguments).
 
-More details can be found in the docmentation for the :mod:`cmd
+More details can be found in the documentation for the :mod:`cmd
 <salt.states.cmd>` states.
 
 When I run *test.ping*, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.

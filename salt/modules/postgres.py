@@ -394,7 +394,7 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
              password=None, tablespace=None, owner=None,
              runas=None):
     '''
-    Change tablesbase or/and owner of databse.
+    Change tablespace or/and owner of database.
 
     CLI Example:
 
