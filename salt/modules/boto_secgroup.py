@@ -61,37 +61,39 @@ def __virtual__():
     return True
 
 
-def _exists_name_classic(conn, name):
+def _get_group_id_classic(conn, name):
     '''
-    Given a security group name check to see if the security group exists
-    within EC2-Classic.
+    Given a name return a group id or None.
     '''
-    logging.debug('ec2-classic security group name lookup')
-    # would like to be able to filter on 'vpc_id': None but this is not
-    # currently possible
+    logging.debug('getting group_id for {0}'.format (name))
     group_filter = {'group-name': name}
     filtered_groups = conn.get_all_security_groups(filters=group_filter)
-    # if group.vpc_id is None a group exists and is not part of VPC
+    # security groups can have the same name if groups exist in both
+    # EC2-Classic and EC2-VPC
+    # iterate through groups to ensure we return the EC2-Classic
+    # security group
     for group in filtered_groups:
+        # a group in EC2-Classic will have vpc_id set to None
         if group.vpc_id is None:
-            return True
-    return False
+            logging.debug("ec2-vpc security group {0} with group_id {1} found."
+                          .format(name, filtered_groups[0].id))
+            return group.id
+    return None
 
 
-def _exists_name_vpc(conn, name, vpc_id):
+def _get_group_id_vpc(conn, name, vpc_id):
     '''
-    Given a security group name check to see if the security group exists
-    within EC2-VPC.
+    Given a name and vpc_id return a group id or None.
     '''
-    logging.debug('ec2-vpc security group lookup by name')
+    logging.debug('getting group_id for {0}'.format (name))
     group_filter = {'group-name': name, 'vpc_id': vpc_id}
     filtered_groups = conn.get_all_security_groups(filters=group_filter)
     if len(filtered_groups) == 1:
         logging.debug("ec2-vpc security group {0} with group_id {1} found."
                       .format(name, filtered_groups[0].id))
-        return True
+        return filtered_groups[0].id
     else:
-        return False
+        return None
 
 
 def _exists_group_id(conn, group_id):
@@ -126,9 +128,9 @@ def exists(name=None, group_id=None, vpc_id=None, region=None, key=None, keyid=N
         return False
     try:
         if name and vpc_id is None:
-            return _exists_name_classic(conn, name)
+            group_id = _get_group_id_classic(conn, name)
         if name and vpc_id:
-            return _exists_name_vpc(conn, name, vpc_id)
+            group_id = _get_group_id_vpc(conn, name, vpc_id)
         if group_id:
             return _exists_group_id(conn, group_id)
         else:
