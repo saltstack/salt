@@ -5,6 +5,8 @@
 Synopsis
 ========
 
+.. code-block:: bash
+
     salt-ssh '*' [ options ] sys.doc
 
     salt-ssh -E '.*' [ options ] sys.doc cmd

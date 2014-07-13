@@ -7,7 +7,9 @@ The Salt minion daemon, receives commands from a remote Salt master.
 Synopsis
 ========
 
-salt-minion [ options ]
+.. code-block:: bash
+
+    salt-minion [ options ]
 
 Description
 ===========

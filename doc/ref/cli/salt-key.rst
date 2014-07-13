@@ -5,7 +5,9 @@
 Synopsis
 ========
 
-salt-key [ options ]
+.. code-block:: bash
+
+    salt-key [ options ]
 
 Description
 ===========
