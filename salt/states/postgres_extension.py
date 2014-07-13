@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Management of PostgreSQL extensions (eg: postgis)
+Management of PostgreSQL extensions (e.g.: postgis)
 =================================================
 
 The postgres_extensions module is used to create and manage Postgres extensions.
