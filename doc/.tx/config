@@ -4598,3 +4598,51 @@ source_file = _build/locale/security/index.pot
 source_lang = en
 source_name = security/index.rst
 
+[salt.ref--modules--all--salt_modules_syslog_ng]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.syslog_ng.po
+source_file = _build/locale/ref/modules/all/salt.modules.syslog_ng.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.syslog_ng.rst
+
+[salt.ref--states--all--salt_states_syslog_ng]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.syslog_ng.po
+source_file = _build/locale/ref/states/all/salt.states.syslog_ng.pot
+source_lang = en
+source_name = ref/states/all/salt.states.syslog_ng.rst
+
+[salt.ref--states--global_state_arguments]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/global_state_arguments.po
+source_file = _build/locale/ref/states/global_state_arguments.pot
+source_lang = en
+source_name = ref/states/global_state_arguments.rst
+
+[salt.topics--cloud--basic]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/basic.po
+source_file = _build/locale/topics/cloud/basic.pot
+source_lang = en
+source_name = topics/cloud/basic.rst
+
+[salt.topics--releases--2014_1_7]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.7.po
+source_file = _build/locale/topics/releases/2014.1.7.pot
+source_lang = en
+source_name = topics/releases/2014.1.7.rst
+
+[salt.topics--releases--2014_7_0]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.7.0.po
+source_file = _build/locale/topics/releases/2014.7.0.pot
+source_lang = en
+source_name = topics/releases/2014.7.0.rst
+
+[salt.topics--tutorials--intro_scale]
+file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/intro_scale.po
+source_file = _build/locale/topics/tutorials/intro_scale.pot
+source_lang = en
+source_name = topics/tutorials/intro_scale.rst
+
+[salt.topics--tutorials--syslog_ng-state-usage]
+file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/syslog_ng-state-usage.po
+source_file = _build/locale/topics/tutorials/syslog_ng-state-usage.pot
+source_lang = en
+source_name = topics/tutorials/syslog_ng-state-usage.rst
+
