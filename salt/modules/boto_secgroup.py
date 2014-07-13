@@ -61,20 +61,78 @@ def __virtual__():
     return True
 
 
-def exists(name, region=None, key=None, keyid=None, profile=None):
+def _exists_name_classic(conn, name):
+    '''
+    Given a security group name check to see if the security group exists
+    within EC2-Classic.
+    '''
+    logging.debug('ec2-classic security group name lookup')
+    # would like to be able to filter on 'vpc_id': None but this is not
+    # currently possible
+    group_filter = {'group-name': name}
+    filtered_groups = conn.get_all_security_groups(filters=group_filter)
+    # if group.vpc_id is None a group exists and is not part of VPC
+    for group in filtered_groups:
+        if group.vpc_id is None:
+            return True
+    return False
+
+
+def _exists_name_vpc(conn, name, vpc_id):
+    '''
+    Given a security group name check to see if the security group exists
+    within EC2-VPC.
+    '''
+    logging.debug('ec2-vpc security group lookup by name')
+    group_filter = {'group-name': name, 'vpc_id': vpc_id}
+    filtered_groups = conn.get_all_security_groups(filters=group_filter)
+    if len(filtered_groups) == 1:
+        logging.debug("ec2-vpc security group {0} with group_id {1} found."
+                      .format(name, filtered_groups[0].id))
+        return True
+    else:
+        return False
+
+
+def _exists_group_id(conn, group_id):
+    '''
+    Given a security group id check to see if the security group exists
+    '''
+    logging.debug('ec2-vpc security group lookup by group_id')
+    group_filter = {'group-id': group_id}
+    filtered_groups = conn.get_all_security_groups(filters=group_filter)
+    if len(filtered_groups) == 1:
+        return True
+    else:
+        return False
+
+
+def exists(name=None, group_id=None, vpc_id=None, region=None, key=None, keyid=None,
+           profile=None):
     '''
     Check to see if an security group exists.
 
     CLI example::
 
-        salt myminion boto_secgroup.exists mysecgroup
+        salt myminion boto_secgroup.exists name=mysecgroup
+        or
+        salt myminion boto_secgroup.exists name=mysecgroup vpc_id=vpc-a55b83c0
+        or
+        salt myminion boto_secgroup.exists group_id=sg-3269ae58
+
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
     try:
-        conn.get_all_security_groups([name])
-        return True
+        if name and vpc_id is None:
+            return _exists_name_classic(conn, name)
+        if name and vpc_id:
+            return _exists_name_vpc(conn, name, vpc_id)
+        if group_id:
+            return _exists_group_id(conn, group_id)
+        else:
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
