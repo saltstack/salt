@@ -7,7 +7,7 @@ Copy a file to a set of systems
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-cp '*' [ options ] SOURCE DEST
 
