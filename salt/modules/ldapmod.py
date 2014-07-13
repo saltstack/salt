@@ -30,7 +30,7 @@ Salt interface to LDAP commands
     At the moment this module only recommends connection to LDAP services
     listening on ``localhost``. This is deliberate to avoid the potentially
     dangerous situation of multiple minions sending identical update commands
-    to the same LDAP server. It's easy enough to override this behaviour, but
+    to the same LDAP server. It's easy enough to override this behavior, but
     badness may ensue - you have been warned.
 '''
 

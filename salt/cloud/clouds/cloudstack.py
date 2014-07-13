@@ -150,7 +150,7 @@ def get_password(vm_):
 
 def get_key():
     '''
-    Returns the ssk private key for VM access
+    Returns the ssh private key for VM access
     '''
     return config.get_cloud_config_value(
         'private_key', get_configured_provider(), __opts__, search_global=False

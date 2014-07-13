@@ -33,7 +33,7 @@ Configuring the Mongo ext_pillar
 The Mongo ext_pillar takes advantage of the fact that the Salt Master
 configuration file is yaml. It uses a sub-dictionary of values to adjust
 specific features of the pillar. This is the explicit single-line dictionary
-notation for yaml. One may be able to get the easier-to-read multine dict to
+notation for yaml. One may be able to get the easier-to-read multi-line dict to
 work correctly with some experimentation.
 
 .. code-block:: yaml

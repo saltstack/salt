@@ -57,7 +57,7 @@ def ext_pillar(minion_id, pillar, function, **kwargs):
 def key_value(minion_id, pillar, pillar_key='redis_pillar'):
     '''
     Looks for key in redis matching minion_id, returns a structure based on the
-    datatype of the redis key. String for string type, dict for hash type and
+    data type of the redis key. String for string type, dict for hash type and
     lists for lists, sets and sorted sets.
 
     pillar_key

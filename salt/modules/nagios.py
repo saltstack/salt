@@ -128,7 +128,7 @@ def run_all(plugin, args=''):
 
 def retcode_pillar(pillar_name):
     '''
-    Run one or more nagios plugins from pillar data and get the result of cdm.retcode
+    Run one or more nagios plugins from pillar data and get the result of cmd.retcode
     The pillar have to be in this format::
 
         ------
@@ -189,7 +189,7 @@ def retcode_pillar(pillar_name):
 
 def run_pillar(pillar_name):
     '''
-    Run one or more nagios plugins from pillar data and get the result of cdm.run
+    Run one or more nagios plugins from pillar data and get the result of cmd.run
     The pillar have to be in this format::
 
         ------
@@ -221,7 +221,7 @@ def run_pillar(pillar_name):
 
 def run_all_pillar(pillar_name):
     '''
-    Run one or more nagios plugins from pillar data and get the result of cdm.run_all
+    Run one or more nagios plugins from pillar data and get the result of cmd.run_all
     The pillar have to be in this format::
 
         ------

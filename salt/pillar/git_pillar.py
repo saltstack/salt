@@ -147,7 +147,7 @@ class GitPillar(object):
         '''
         Ensure you are following the latest changes on the remote
 
-        Return boolean wether it worked
+        Return boolean whether it worked
         '''
         try:
             log.debug('Updating fileserver for git_pillar module')

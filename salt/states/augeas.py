@@ -52,7 +52,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
     context
         The context to use. Set this to a file path, prefixed by ``/files``, to
-        avoid redundancy, eg:
+        avoid redundancy, e.g.:
 
         .. code-block:: yaml
 
@@ -68,7 +68,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ``set``, ``mv``/``move``, ``ins``/``insert``, and ``rm``/``remove``.
 
     lens
-        The lens to use, needs to be suffixed with `.lns`, eg: `Nginx.lns`. See
+        The lens to use, needs to be suffixed with `.lns`, e.g.: `Nginx.lns`. See
         the `list of stock lenses <http://augeas.net/stock_lenses.html>`_
         shipped with Augeas.
 
@@ -153,7 +153,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
     .. warning::
 
         Don't forget the ``unless`` here, otherwise a new entry will be added
-        everytime this state is run.
+        every time this state is run.
 
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}

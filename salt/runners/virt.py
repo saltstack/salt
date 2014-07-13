@@ -128,7 +128,7 @@ def list(hyper=None, quiet=False):
 
 def next_hyper():
     '''
-    Return the hypervisor to use for the next autodeployed vm. This querires
+    Return the hypervisor to use for the next autodeployed vm. This queries
     the available hypervisors and executes some math the determine the most
     "available" next hypervisor.
     '''
@@ -172,14 +172,14 @@ def init(
 
     mem
         The amount of memory to allocate tot his virtual machine. The number
-        is interpereted in megabytes.
+        is interpreted in megabytes.
 
     image
         The network location of the virtual machine image, commonly a location
         on the salt fileserver, but http, https and ftp can also be used.
 
     hyper
-        The hypervisor to use for the new virtual macine, if this is ommited
+        The hypervisor to use for the new virtual machine, if this is omitted
         Salt will automatically detect what hypervisor to use.
 
     seed
@@ -191,7 +191,7 @@ def init(
         bridge on the master.
 
     install
-        Set to False to prevent Salt fom instaling a minion on the new vm
+        Set to False to prevent Salt from installing a minion on the new vm
         before it spins up.
     '''
     print('Searching for Hypervisors')

@@ -395,7 +395,7 @@ def status_webapp(app, url='http://localhost:8080/manager', timeout=180):
 
 def serverinfo(url='http://localhost:8080/manager', timeout=180):
     '''
-    return detailes about the server
+    return details about the server
 
     url : http://localhost:8080/manager
         the URL of the server manager webapp
@@ -547,7 +547,7 @@ def passwd(passwd,
            alg='md5',
            realm=None):
     '''
-    This function replaces the $CATALINS_HOME/bin/digest.sh script
+    This function replaces the $CATALINA_HOME/bin/digest.sh script
     convert a clear-text password to the $CATALINA_BASE/conf/tomcat-users.xml
     format
 

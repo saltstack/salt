@@ -206,7 +206,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
     def __get_pillar_files_from_s3_meta(s3_meta):
         return filter(lambda k: 'Key' in k, s3_meta)
 
-    # pull out the environment dirs (eg. the root dirs)
+    # pull out the environment dirs (e.g. the root dirs)
     def __get_pillar_environments_from_s3_meta(s3_meta):
         environments = map(lambda k: (os.path.dirname(k['Key'])
                            .split('/', 1))[0], files)
