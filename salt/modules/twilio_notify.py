@@ -58,7 +58,7 @@ def send_sms(profile, body, to, from_):
 
     CLI Example:
 
-        twilio.send_sms twilio-account '+18019999999' '+18011111111' 'Test sms'
+        twilio.send_sms twilio-account 'Test sms' '+18019999999' '+18011111111'
     '''
     ret = {
             'message.sid': None,
