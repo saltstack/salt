@@ -1844,7 +1844,7 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
-def get_id(root_dir=None, minion_id=False, cache=True):
+def get_id(opts, minion_id=False):
     '''
     Guess the id of the minion.
 
@@ -1855,8 +1855,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
     '''
-    if root_dir is None:
+    if opts['root_dir'] is None:
         root_dir = salt.syspaths.ROOT_DIR
+    else:
+        root_dir = opts['root_dir']
 
     config_dir = salt.syspaths.CONFIG_DIR
     if config_dir.startswith(salt.syspaths.ROOT_DIR):
@@ -1867,7 +1869,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
                             config_dir.lstrip(os.path.sep),
                             'minion_id')
 
-    if cache:
+    if opts.get('minion_id_caching', True):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
@@ -1898,8 +1900,6 @@ def apply_minion_config(overrides=None,
     '''
     Returns minion configurations dict.
     '''
-    import traceback
-    traceback.print_stack()
     if check_dns is not None:
         # All use of the `check_dns` arg was removed in `598d715`. The keyword
         # argument was then removed in `9d893e4` and `**kwargs` was then added
@@ -1928,9 +1928,8 @@ def apply_minion_config(overrides=None,
     using_ip_for_id = False
     if opts['id'] is None:
         opts['id'], using_ip_for_id = get_id(
-                opts['root_dir'],
-                minion_id=minion_id,
-                cache=opts.get('minion_id_caching', True))
+                opts,
+                minion_id=minion_id)
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
