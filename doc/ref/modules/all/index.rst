@@ -217,6 +217,7 @@ Full list of builtin execution modules
     timezone
     tls
     tomcat
+    twilio_notify
     upstart
     useradd
     uwsgi

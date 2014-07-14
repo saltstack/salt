@@ -16,7 +16,9 @@ from collections import defaultdict
 log = logging.getLogger(__name__)
 
 try:
-    from raet import nacling
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
 
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
@@ -61,17 +63,40 @@ class RAETChannel(Channel):
         self.opts = opts
         self.ttype = 'raet'
         self.dst = ('master', None, 'remote_cmd')
+        self.stack = None
+
+    def _setup_stack(self):
+        '''
+        Setup and return the LaneStack and Yard used by by channel when global
+        not already setup such as in salt-call to communicate to-from the minion
+
+        '''
+        mid = self.opts['id']
+        yid = nacling.uuid(size=18)
+        name = 'channel' + yid
+        stack = LaneStack(name=name,
+                          lanename=mid,
+                          sockdirpath=self.opts['sock_dir'])
+
+        stack.Pk = raeting.packKinds.pack
+        stack.addRemote(RemoteYard(stack=stack,
+                                   name='manor',
+                                   lanename=mid,
+                                   dirpath=self.opts['sock_dir']))
+        log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
+        return stack
 
     def __prep_stack(self):
         '''
         Prepare the stack objects
         '''
-        if not jobber_stack:
-            emsg = "Jobber Stack not setup\n"
-            log.error(emsg)
-            raise ValueError(emsg)
-        log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
-        self.stack = jobber_stack
+        global jobber_stack
+        if not self.stack:
+            if jobber_stack:
+                self.stack = jobber_stack
+            else:
+                self.stack = jobber_stack = self._setup_stack()
+        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.local.ha))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -100,14 +125,14 @@ class RAETChannel(Channel):
                 msg, sender = self.stack.rxMsgs.popleft()
                 jobber_rxMsgs[msg['route']['dst'][2]] = msg
                 continue
+            if track in jobber_rxMsgs:
+                break
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
-                if track not in jobber_rxMsgs:
-                    self.stack.transmit(msg, self.stack.uids['manor'])
-                    tried += 1
-            if track not in jobber_rxMsgs:
-                time.sleep(0.01)
+                self.stack.transmit(msg, self.stack.uids['manor'])
+                tried += 1
+            time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
 
 

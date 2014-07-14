@@ -181,7 +181,9 @@ on GitHub.
 Repository structure
 --------------------
 
-A basic Formula repository should have the following layout::
+A basic Formula repository should have the following layout:
+
+.. code-block:: text
 
     foo-formula
     |-- foo/
@@ -377,7 +379,9 @@ in child states build on top of the basic states.
 
 For example, the root Apache should only install the Apache httpd server and
 make sure the httpd service is running. It can then be used by more advanced
-states::
+states:
+
+.. code-block:: yaml
 
     # apache/init.sls
     httpd:

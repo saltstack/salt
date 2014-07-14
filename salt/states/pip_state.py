@@ -150,6 +150,10 @@ def installed(name,
     This will install the latest Django version greater than 1.6 but less
     than 1.7.
 
+    requirements
+        Path to a pip requirements file. If the path begins with salt://
+        the file will be transferred from the master file server.
+
     user
         The user under which to run pip
 

@@ -91,7 +91,8 @@ def _auth(profile=None):
         'api_key': api_key,
         'project_id': tenant,
         'auth_url': auth_url,
-        'region_name': region_name
+        'region_name': region_name,
+        'os_auth_plugin': os_auth_system
     }
 
     return suon.SaltNova(**kwargs)

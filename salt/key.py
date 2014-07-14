@@ -20,6 +20,7 @@ import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils.event import tagify
+import salt.crypt
 
 
 class KeyCLI(object):
@@ -279,12 +280,84 @@ class KeyCLI(object):
                 'key',
                 self.opts)
 
+    def prep_signature(self):
+        '''
+        Searches for usable keys to create the
+        master public-key signature
+        '''
+        self.privkey = None
+        self.pubkey = None
+
+        # check given pub-key
+        if self.opts['pub']:
+            if not os.path.isfile(self.opts['pub']):
+                print('Public-key {0} does not exist'.format(self.opts['pub']))
+                return
+            self.pubkey = self.opts['pub']
+
+        # default to master.pub
+        else:
+            mpub = self.opts['pki_dir'] + '/' + 'master.pub'
+            if os.path.isfile(mpub):
+                self.pubkey = mpub
+
+        # check given priv-key
+        if self.opts['priv']:
+            if not os.path.isfile(self.opts['priv']):
+                print('Private-key {0} does not exist'.format(self.opts['priv']))
+                return
+            self.privkey = self.opts['priv']
+
+        # default to master_sign.pem
+        else:
+            mpriv = self.opts['pki_dir'] + '/' + 'master_sign.pem'
+            if os.path.isfile(mpriv):
+                self.privkey = mpriv
+
+        if not self.privkey:
+            if self.opts['auto_create']:
+                print('Generating new signing key-pair {0}.* in {1}'
+                      ''.format(self.opts['master_sign_key_name'],
+                                self.opts['pki_dir']))
+                salt.crypt.gen_keys(self.opts['pki_dir'],
+                                    self.opts['master_sign_key_name'],
+                                    self.opts['keysize'],
+                                    self.opts.get('user'))
+
+                self.privkey = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
+            else:
+                print('No usable private-key found')
+                return
+
+        if not self.pubkey:
+            print('No usable public-key found')
+            return
+
+        print('Using public-key {0}'.format(self.pubkey))
+        print('Using private-key {0}'.format(self.privkey))
+
+        if self.opts['signature_path']:
+            if not os.path.isdir(self.opts['signature_path']):
+                print('target directory {0} does not exist'
+                      ''.format(self.opts['signature_path']))
+        else:
+            self.opts['signature_path'] = self.opts['pki_dir']
+
+        sign_path = self.opts['signature_path'] + '/' + self.opts['master_pubkey_signature']
+
+        self.key.gen_signature(self.privkey,
+                               self.pubkey,
+                               sign_path)
+
     def run(self):
         '''
         Run the logic for saltkey
         '''
         if self.opts['gen_keys']:
             self.key.gen_keys()
+            return
+        elif self.opts['gen_signature']:
+            self.prep_signature()
             return
         if self.opts['list']:
             self.list_status(self.opts['list'])
@@ -351,6 +424,14 @@ class Key(object):
                 self.opts['gen_keys'],
                 self.opts['keysize'])
         return
+
+    def gen_signature(self, privkey, pubkey, sig_path):
+        '''
+        Generate master public-key-signature
+        '''
+        return salt.crypt.gen_signature(privkey,
+                                        pubkey,
+                                        sig_path)
 
     def check_minion_cache(self):
         '''

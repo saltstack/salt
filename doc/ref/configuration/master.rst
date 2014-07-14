@@ -13,7 +13,9 @@ of the Salt system each have a respective configuration file. The
     :ref:`example master configuration file <configuration-examples-master>`
 
 The configuration file for the salt-master is located at
-:file:`/etc/salt/master`. The available options are as follows:
+:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
+configuration file is located at :file:`/usr/local/etc/salt`.  The available
+options are as follows:
 
 Primary Master Configuration
 ============================
@@ -78,28 +80,32 @@ The user to run the Salt processes
 ``max_open_files``
 ------------------
 
-Default: ``max_open_files``
+Default: ``100000``
 
 Each minion connecting to the master uses AT LEAST one file descriptor, the
 master subscription connection. If enough minions connect you might start
-seeing on the console(and then salt-master crashes)::
+seeing on the console(and then salt-master crashes):
 
-  Too many open files (tcp_listener.cpp:335)
-  Aborted (core dumped)
+.. code-block:: bash
 
-By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
-max open files.
-
-If you wish to set a different value than the default one, uncomment and
-configure this setting. Remember that this value CANNOT be higher than the
-hard limit. Raising the hard limit depends on your OS and/or distribution,
-a good way to find the limit is to search the internet for(for example)::
-
-  raise max open files hard limit debian
+    Too many open files (tcp_listener.cpp:335)
+    Aborted (core dumped)
 
 .. code-block:: yaml
 
     max_open_files: 100000
+
+By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
+max open files.
+
+To set a different value than the default one, uncomment and configure this
+setting. Remember that this value CANNOT be higher than the hard limit. Raising
+the hard limit depends on the OS and/or distribution, a good way to find the
+limit is to search the internet for something like this:
+
+.. code-block:: text
+
+    raise max open files hard limit debian
 
 .. conf_master:: worker_threads
 
