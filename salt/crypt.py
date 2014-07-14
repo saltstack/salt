@@ -167,7 +167,6 @@ def gen_signature(priv_path, pub_path, sign_path):
     return True
 
 
-
 class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for

@@ -1949,7 +1949,6 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   '; default=%default')
         )
 
-
         key_options_group.add_option(
             '--gen-signature',
             default=False,

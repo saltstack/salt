@@ -13,7 +13,6 @@ import fnmatch
 import hashlib
 import msgpack
 import json
-import binascii
 
 # Import salt libs
 import salt.crypt
@@ -315,7 +314,6 @@ class KeyCLI(object):
             if os.path.isfile(mpriv):
                 self.privkey = mpriv
 
-
         if not self.privkey:
             if self.opts['auto_create']:
                 print('Generating new signing key-pair {0}.* in {1}'
@@ -350,7 +348,6 @@ class KeyCLI(object):
         self.key.gen_signature(self.privkey,
                                self.pubkey,
                                sign_path)
-
 
     def run(self):
         '''
@@ -435,7 +432,6 @@ class Key(object):
         return salt.crypt.gen_signature(privkey,
                                         pubkey,
                                         sig_path)
-
 
     def check_minion_cache(self):
         '''
