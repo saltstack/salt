@@ -65,7 +65,7 @@ def _cert_base_path(cacert_path=None):
 
 def set_ca_path(cacert_path):
     '''
-    If wanted, store the aforementionned cacert_path in context
+    If wanted, store the aforementioned cacert_path in context
     to be used as the basepath for further operations
     '''
     if cacert_path:
@@ -149,7 +149,7 @@ def _write_cert_to_database(ca_name, cert, cacert_path=None):
 def maybe_fix_ssl_version(ca_name, cacert_path=None):
     '''
     Check that the X509 version is correct
-    (was incorrectly setted in previous salt versions).
+    (was incorrectly set in previous salt versions).
     This will fix the version if needed.
 
     ca_name
@@ -440,7 +440,7 @@ def create_csr(ca_name,
     emailAddress
         email address for the request, default is 'xyz@pdq.net'
     subjectAltName
-        valid subjectAltNames in full form, eg to add DNS entry you would call
+        valid subjectAltNames in full form, e.g. to add DNS entry you would call
         this function with this value:  **['DNS:myapp.foo.comm']**
     cacert_path
         absolute path to ca certificates root directory

@@ -193,18 +193,18 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example, installing a datastream pkg that already exists on the
+    CLI Example, installing a data stream pkg that already exists on the
     minion::
 
         salt '*' pkg.install sources='[{"<pkg name>": "/dir/on/minion/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
-    CLI Example, installing a datastream pkg that exists on the salt master::
+    CLI Example, installing a data stream pkg that exists on the salt master::
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "salt://pkgs/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
-    CLI Example, installing a datastream pkg that exists on a HTTP server::
+    CLI Example, installing a data stream pkg that exists on a HTTP server::
 
         salt '*' pkg.install sources='[{"<pkg name>": "http://packages.server.com/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg"}]'
@@ -216,7 +216,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     package in the global zone is to install it in all zones. This overrides
     that and installs the package only in the global.
 
-    CLI Example, installing a datastream package only in the global zone::
+    CLI Example, installing a data stream package only in the global zone::
 
         salt 'global_zone' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]' current_zone_only=True
 

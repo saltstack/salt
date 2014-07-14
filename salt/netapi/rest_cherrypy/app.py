@@ -922,7 +922,7 @@ class Jobs(LowDataAdapter):
 
 class Login(LowDataAdapter):
     '''
-    Log in to recieve a session token
+    Log in to receive a session token
 
     :ref:`Authentication information <rest_cherrypy-auth>`.
     '''

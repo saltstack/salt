@@ -283,7 +283,7 @@ def list_user_permissions(name, user=None):
 
 
 def set_user_tags(name, tags, runas=None):
-    '''Add user tags via rabbitctl set_user_tags
+    '''Add user tags via rabbitmqctl set_user_tags
 
     CLI Example:
 

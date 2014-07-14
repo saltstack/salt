@@ -155,7 +155,7 @@ def inodeusage(args=None):
 
 def percent(args=None):
     '''
-    Return partion information for volumes mounted on this minion
+    Return partition information for volumes mounted on this minion
 
     CLI Example:
 

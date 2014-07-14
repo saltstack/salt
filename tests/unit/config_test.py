@@ -108,9 +108,9 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 "key_logfile: key\n"
             )
             config = sconfig.master_config(fpath)
-            # os.path.join behaviour
+            # os.path.join behavior
             self.assertEqual(config['key_logfile'], os.path.join('/', 'key'))
-            # os.sep.join behaviour
+            # os.sep.join behavior
             self.assertNotEqual(config['key_logfile'], '//key')
         finally:
             if os.path.isfile(fpath):
@@ -460,7 +460,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
             self.assertEqual(
-                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
+                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
             )
 
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
@@ -471,7 +471,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
             self.assertEqual(
-                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
+                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
             )
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------

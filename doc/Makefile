@@ -178,6 +178,12 @@ changes: translations
 	@echo
 	@echo "The overview file is in $(BUILDDIR)/changes."
 
+spelling:
+	$(SPHINXBUILD) -b spelling $(ALLSPHINXOPTS) $(BUILDDIR)/spelling
+	@echo
+	@echo "Spell check complete; look for any errors in the above output " \
+	      "or in $(BUILDDIR)/spelling/output.txt."
+
 linkcheck:
 	$(SPHINXBUILD) -b linkcheck $(ALLSPHINXOPTS) $(BUILDDIR)/linkcheck
 	@echo

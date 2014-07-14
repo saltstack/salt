@@ -75,7 +75,7 @@ def installed(name,
         (i.e. /path/to/composer.phar)
 
     php
-        Location of the php executible to use with composer.
+        Location of the php executable to use with composer.
         (i.e. /usr/bin/php)
 
     runas

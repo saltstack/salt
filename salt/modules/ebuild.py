@@ -171,7 +171,7 @@ def ex_mod_init(low):
        Initial automatic enforcement added when pkg is used on a Gentoo system.
 
     .. versionchanged:: 2014.1.0
-       Configure option added to make this behaviour optional, defaulting to
+       Configure option added to make this behavior optional, defaulting to
        off.
 
     .. seealso::

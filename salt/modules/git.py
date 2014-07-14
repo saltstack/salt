@@ -485,7 +485,7 @@ def submodule(cwd, init=True, opts=None, user=None, identity=None):
 def status(cwd, user=None):
     '''
     Return the status of the repository. The returned format uses the status
-    codes of gits 'porcelain' output mode
+    codes of git's 'porcelain' output mode
 
     cwd
         The path to the Git repository

@@ -7,7 +7,7 @@ A Websockets add-on to saltnado
 
 :depends:   - tornado Python module
 
-In order to enable saltnado_webosockets you must add websockets: True to your
+In order to enable saltnado_websockets you must add websockets: True to your
 saltnado config block.
 
 .. code-block:: yaml

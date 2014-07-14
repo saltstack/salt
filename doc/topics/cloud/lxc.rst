@@ -54,7 +54,9 @@ Here is a simple provider configuration:
 Profile configuration
 ---------------------
 
-Here are the options to configure your containers::
+Here are the options to configure your containers:
+
+.. code-block:: text
 
     ``target``
         Host minion id to install the lxc Container into

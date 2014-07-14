@@ -4232,11 +4232,11 @@ source_file = _build/locale/topics/windows/windows-package-manager.pot
 source_lang = en
 source_name = topics/windows/windows-package-manager.rst
 
-[salt.topics--windows--windows-specific-behaviour]
-file_filter = locale/<lang>/LC_MESSAGES/topics/windows/windows-specific-behaviour.po
-source_file = _build/locale/topics/windows/windows-specific-behaviour.pot
+[salt.topics--windows--windows-specific-behavior]
+file_filter = locale/<lang>/LC_MESSAGES/topics/windows/windows-specific-behavior.po
+source_file = _build/locale/topics/windows/windows-specific-behavior.pot
 source_lang = en
-source_name = topics/windows/windows-specific-behaviour.rst
+source_name = topics/windows/windows-specific-behavior.rst
 
 [salt.topics--yaml--index]
 file_filter = locale/<lang>/LC_MESSAGES/topics/yaml/index.po

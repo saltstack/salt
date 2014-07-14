@@ -358,7 +358,7 @@ def vmstats():
 
 def nproc():
     '''
-    Return the number of processing units availabe on this system
+    Return the number of processing units available on this system
 
     CLI Example:
 

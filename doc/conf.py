@@ -149,8 +149,9 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.5'
+release = '2014.1.7'
 
+spelling_lang = 'en_US'
 language = 'en'
 locale_dirs = [
     '_locale',
@@ -172,6 +173,13 @@ extensions = [
     'shorturls',
 ]
 
+try:
+    import sphinxcontrib.spelling
+except ImportError:
+    pass
+else:
+    extensions += ['sphinxcontrib.spelling']
+
 modindex_common_prefix = ['salt.']
 
 autosummary_generate = True
@@ -179,9 +187,9 @@ autosummary_generate = True
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
-.. |salt-users| replace:: `salt-users <https://groups.google.com/forum/#!forum/salt-users>`_
-.. |salt-announce| replace:: `salt-announce <https://groups.google.com/forum/#!forum/salt-announce>`_
-.. |salt-packagers| replace:: `salt-packagers <https://groups.google.com/forum/#!forum/salt-packagers>`_
+.. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
+.. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
+.. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 """
 
 # A shortcut for linking to tickets on the GitHub issue tracker

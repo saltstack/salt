@@ -549,10 +549,10 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'event_yards': '.salt.event.yards',
-               'local_cmd': '.salt.local.local_cmd',
-               'remote_cmd': '.salt.local.remote_cmd',
-               'publish': '.salt.local.publish',
-               'fun': '.salt.local.fun',
+               'local_cmd': '.salt.var.local_cmd',
+               'remote_cmd': '.salt.var.remote_cmd',
+               'publish': '.salt.var.publish',
+               'fun': '.salt.var.fun',
                'worker_verify': '.salt.var.worker_verify',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
@@ -695,10 +695,10 @@ class Router(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {'opts': '.salt.opts',
-               'local_cmd': '.salt.local.local_cmd',
-               'remote_cmd': '.salt.local.remote_cmd',
-               'publish': '.salt.local.publish',
-               'fun': '.salt.local.fun',
+               'local_cmd': '.salt.var.local_cmd',
+               'remote_cmd': '.salt.var.remote_cmd',
+               'publish': '.salt.var.publish',
+               'fun': '.salt.var.fun',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
@@ -874,7 +874,7 @@ class SaltPublisher(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {'opts': '.salt.opts',
-               'publish': '.salt.local.publish',
+               'publish': '.salt.var.publish',
                'stack': '.raet.udp.stack.stack',
                'availables': {'ipath': '.salt.var.presence.availables',
                               'ival': set()}, }
@@ -917,7 +917,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
-               'fun': '.salt.local.fun',
+               'fun': '.salt.var.fun',
                'executors': '.salt.track.executors'}
 
     def postinitio(self):

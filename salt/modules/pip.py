@@ -73,6 +73,9 @@ def _get_cached_requirements(requirements, saltenv):
 
 
 def _get_env_activate(bin_env):
+    '''
+    Return the path to the activate binary
+    '''
     if not bin_env:
         raise CommandNotFoundError('Could not find a `activate` binary')
 
@@ -86,7 +89,7 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
-def install(pkgs=None,
+def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             env=None,
             bin_env=None,
@@ -189,7 +192,7 @@ def install(pkgs=None,
     ignore_installed
         Ignore the installed packages (reinstalling instead)
     exists_action
-        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe,
+        Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,
         (b)ackup
     no_deps
         Ignore package dependencies
@@ -248,7 +251,8 @@ def install(pkgs=None,
 
     Complicated CLI example::
 
-        salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
+        salt '*' pip.install markdown,django \
+                editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
     # Switching from using `pip_bin` and `env` to just `bin_env`
@@ -258,6 +262,11 @@ def install(pkgs=None,
     # but going fwd you should specify either a pip bin or an env with
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
+                'This functionality will be removed in Salt Boron.'
+        )
         bin_env = env
 
     if isinstance(__env__, string_types):
@@ -537,7 +546,7 @@ def install(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except Exception:
+            except OSError:
                 pass
 
 
@@ -705,7 +714,7 @@ def uninstall(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except Exception:
+            except OSError:
                 pass
 
 

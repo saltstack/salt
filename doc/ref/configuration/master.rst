@@ -13,7 +13,9 @@ of the Salt system each have a respective configuration file. The
     :ref:`example master configuration file <configuration-examples-master>`
 
 The configuration file for the salt-master is located at
-:file:`/etc/salt/master`. The available options are as follows:
+:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
+configuration file is located at :file:`/usr/local/etc/salt`.  The available
+options are as follows:
 
 Primary Master Configuration
 ============================
@@ -367,7 +369,7 @@ only the cache for the mine system.
 
 Default: 0
 
-The number of minions the master should allow to connect. Use this to accomodate
+The number of minions the master should allow to connect. Use this to accommodate
 the number of minions per master if you have different types of hardware serving
 your minions. The default of ``0`` means unlimited connections. Please note, that
 this can slow down the authentication process a bit in large setups.
@@ -1613,11 +1615,11 @@ There are additional details at :ref:`salt-pillars`
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows to configure merging strategy
-between differents sources. It accepts 3 values:
+between different sources. It accepts 3 values:
 
 * recurse:
 
-  it will merge recursivelly mapping of data. For example, theses 2 sources:
+  it will merge recursively mapping of data. For example, theses 2 sources:
 
   .. code-block:: yaml
 

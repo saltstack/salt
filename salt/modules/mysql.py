@@ -452,7 +452,7 @@ def quote_identifier(identifier, for_grants=False):
     r'''
     Return an identifier name (column, table, database, etc) escaped for MySQL
 
-    This means surrounded by "`" character and escaping this charater inside.
+    This means surrounded by "`" character and escaping this character inside.
     It also means doubling the '%' character for MySQLdb internal usage.
 
     :param identifier: the table, column or database identifier

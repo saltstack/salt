@@ -69,7 +69,7 @@ def diff(*args, **kwargs):
     These pools are determined from the aggregated and sorted results of
     a salt command.
     This command displays the "diffs" as a series of 2-way differences-- namely
-    the diffence between the FIRST displayed minion pool
+    the difference between the FIRST displayed minion pool
     (according to sort order) and EACH SUBSEQUENT minion pool result set.
     Differences are displayed according to the Python "difflib.unified_diff()"
     as in the case of the salt execution module "file.get_diff".

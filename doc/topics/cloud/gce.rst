@@ -61,10 +61,12 @@ Google Compute Engine Setup
    libcloud.  The original Google-generated private key was encrypted using
    *notasecret* as a passphrase.  Use the following command and record the
    location of the converted private key and record the location for use
-   in the ``service_account_private_key`` of your ``/etc/salt/cloud`` file::
+   in the ``service_account_private_key`` of your ``/etc/salt/cloud`` file:
 
-     openssl pkcs12 -in ORIG.pkey -passin pass:notasecret \
-     -nodes -nocerts | openssl rsa -out NEW.pem
+   .. code-block:: bash
+
+       openssl pkcs12 -in ORIG.pkey -passin pass:notasecret \
+       -nodes -nocerts | openssl rsa -out NEW.pem
 
 
 

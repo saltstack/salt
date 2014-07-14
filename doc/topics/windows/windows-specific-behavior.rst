@@ -6,7 +6,7 @@ Salt is capable of managing Windows systems, however due to various differences
 between the operating systems, there are some things you need to keep in mind.
 
 This document will contain any quirks that apply across Salt or generally across
-multiple module functions. Any Windows-specific behaviour for particular module
+multiple module functions. Any Windows-specific behavior for particular module
 functions will be documented in the module function documentation. Therefore
 this document should be read in conjunction with the module function
 documentation.
@@ -46,7 +46,7 @@ To avoid such issues, always pretend Windows is case-sensitive and use the right
 case for names, e.g. specify ``user=Administrator`` instead of
 ``user=administrator``.
 
-Follow :issue:`11801` for any changes to this behaviour.
+Follow :issue:`11801` for any changes to this behavior.
 
 
 Dealing with various username forms
@@ -59,7 +59,7 @@ the username without the domain or host information.
 Using these alternative forms will likely confuse Salt and cause odd errors to
 happen. Use only the raw username value in the correct case to avoid problems.
 
-Follow :issue:`11801` for any changes to this behaviour.
+Follow :issue:`11801` for any changes to this behavior.
 
 
 Specifying the None group
@@ -79,7 +79,7 @@ Symbolic link loops
 Under Windows, if any symbolic link loops are detected or if there are too many
 levels of symlinks (defaults to 64), an error is always raised.
 
-For some functions, this behaviour is different to the behaviour on Unix
+For some functions, this behavior is different to the behavior on Unix
 platforms. In general, avoid symlink loops on either platform.
 
 

@@ -77,7 +77,9 @@ As with any change to resource limits, it is best to stay logged into your
 current shell and open another shell to run ``ulimit -n`` again and verify that
 the changes were applied correctly. Additionally, if your master is running
 upstart, it may be necessary to specify the ``nofile`` limit in
-``/etc/default/salt-master`` if upstart isn't respecting your resource limits::
+``/etc/default/salt-master`` if upstart isn't respecting your resource limits:
+
+.. code-block:: text
 
     limit nofile 4096 4096
 

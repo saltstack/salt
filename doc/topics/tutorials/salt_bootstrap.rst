@@ -133,8 +133,9 @@ Installing via an Insecure One-Liner
 The following examples illustrate how to install Salt via a one-liner.
 
 .. note::
-    Warning! These methods do not involve a verification step and assume that the delivered file
-    is trustworthy.
+
+    Warning! These methods do not involve a verification step and assume that
+    the delivered file is trustworthy.
 
 
 Examples
@@ -231,7 +232,9 @@ passed):
 Command Line Options
 --------------------
 
-Here's a summary of the command line options::
+Here's a summary of the command line options:
+
+.. code-block:: bash
 
     $ sh bootstrap-salt.sh -h
     

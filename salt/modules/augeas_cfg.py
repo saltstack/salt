@@ -58,7 +58,7 @@ def __virtual__():
 def _recurmatch(path, aug):
     '''
     Recursive generator providing the infrastructure for
-    augtools print behaviour.
+    augtools print behavior.
 
     This function is based on test_augeas.py from
     Harald Hoyer <harald@redhat.com>  in the python-augeas

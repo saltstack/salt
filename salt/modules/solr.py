@@ -27,7 +27,7 @@ Override these in the minion config
 -----------------------------------
 
 solr.cores
-    A list of core names eg ['core1','core2'].
+    A list of core names e.g. ['core1','core2'].
     An empty list indicates non-multicore setup.
 solr.baseurl
     The root level URL to access solr via HTTP
@@ -197,7 +197,7 @@ def _format_url(handler, host=None, core_name=None, extra=None):
         The name of the solr core if using cores. Leave this blank if you
         are not using cores or if you want to check all cores.
     extra : list<str> ([])
-        A list of name value pairs in string format. eg ['name=value']
+        A list of name value pairs in string format. e.g. ['name=value']
 
     Return: str
         Fully formatted URL (http://<host>:<port>/solr/<handler>?wt=json&<extra>)
@@ -289,7 +289,7 @@ def _replication_request(command, host=None, core_name=None, params=None):
         not using cores or if you want to check all cores.
     params : list<str> ([])
         Any additional parameters you want to send. Should be a lsit of
-        strings in name=value format. eg ['name=value']
+        strings in name=value format. e.g. ['name=value']
 
     Return: dict<str, obj>::
 
@@ -1262,7 +1262,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
         be merged with __opts__
 
     extra : dict ([])
-        Extra name value pairs to pass to the handler. eg ["name=value"]
+        Extra name value pairs to pass to the handler. e.g. ["name=value"]
 
     Return : dict<str,obj>::
 

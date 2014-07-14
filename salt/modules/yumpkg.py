@@ -210,7 +210,7 @@ def _rpm_installed(name):
 def normalize_name(name):
     '''
     Strips the architecture from the specified package name, if necessary.
-    Circomstances where this would be done include:
+    Circumstances where this would be done include:
 
     * If the arch is 32 bit and the package name ends in a 32-bit arch.
     * If the arch matches the OS arch, or is ``noarch``.
