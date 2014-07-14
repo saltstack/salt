@@ -32,7 +32,7 @@ Increased Formatting Options
 Additional options have been added to salt-cloud -Q, to support the same kinds
 of formatting already available in Salt:
 
-::
+.. code-block:: bash
 
   --raw-out
   --text-out

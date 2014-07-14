@@ -65,7 +65,9 @@ Authentication information on login
     Changes such as this will be rare.
 
 New in this release is displaying information about the current session and the
-current user. For example::
+current user. For example:
+
+.. code-block:: bash
 
     % curl -sS localhost:8000/login \
         -H 'Accept: application/x-yaml'
@@ -74,18 +76,18 @@ current user. For example::
         -d eauth='pam'
 
     return:
-    - eauth: pam
-      expire: 1365508324.359403
-      perms:
-      - '@wheel'
-      - grains.*
-      - state.*
-      - status.*
-      - sys.*
-      - test.*
-      start: 1365465124.359402
-      token: caa7aa2b9dbc4a8adb6d2e19c3e52be68995ef4b
-      user: saltdev
+      - eauth: pam
+        expire: 1365508324.359403
+        perms:
+          - '@wheel'
+          - grains.*
+          - state.*
+          - status.*
+          - sys.*
+          - test.*
+        start: 1365465124.359402
+        token: caa7aa2b9dbc4a8adb6d2e19c3e52be68995ef4b
+        user: saltdev
 
 Bypass session handling
 -----------------------
@@ -106,7 +108,9 @@ then automatically added to the lowstate for subsequent requests that match the
 current session.
 
 It is sometimes useful to handle authentication or token management manually
-from another program or script. For example::
+from another program or script. For example:
+
+.. code-block:: bash
 
     curl -sS localhost:8000/run \
         -d client='local' \
@@ -139,7 +143,9 @@ The WSGI application entry point has been factored out into a stand-alone file
 in this release suitable for calling from an external server.
 :program:`salt-api` does not need to be running in this scenario.
 
-For example, an Apache virtual host configuration::
+For example, an Apache virtual host configuration:
+
+.. code-block:: text
 
     <VirtualHost *:80>
         ServerName example.com
