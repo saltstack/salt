@@ -258,6 +258,11 @@ def install(pkgs=None,
     # but going fwd you should specify either a pip bin or an env with
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
+                'This functionality will be removed in Salt Boron.'
+        )
         bin_env = env
 
     if isinstance(__env__, string_types):
