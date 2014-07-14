@@ -1,4 +1,4 @@
-.. _requisites:
+.. _global-state-arguments:
 
 ======================
 Global State Arguments
