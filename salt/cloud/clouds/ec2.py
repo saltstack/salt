@@ -72,7 +72,6 @@ import uuid
 import pprint
 import logging
 import yaml
-import re
 
 # Import libs for talking to the EC2 API
 import hmac
