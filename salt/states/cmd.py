@@ -283,6 +283,10 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     * unless succeeded (unless == 0)
     else return True
     '''
+    # never use VT for onlyif/unless executions because this will lead
+    # to quote problems
+    cmd_kwargs = copy.deepcopy(cmd_kwargs)
+    cmd_kwargs['use_vt'] = False
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
