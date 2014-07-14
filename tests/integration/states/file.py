@@ -5,11 +5,13 @@ Tests for the file state
 '''
 
 # Import python libs
-import os
 import glob
-import shutil
-import pwd
 import grp
+import os
+import pwd
+import shutil
+import stat
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -24,9 +26,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
-
-# Import Python libs
-import stat
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -1294,6 +1293,48 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
+
+    def test_template_local_file(self):
+        '''
+        Test a file.managed state with a local file as the source. Test both
+        with the file:// protocol designation prepended, and without it.
+        '''
+        source = tempfile.mkstemp()[-1]
+        dest = tempfile.mkstemp()[-1]
+        with open(source, 'w') as fp_:
+            fp_.write('{{ foo }}\n')
+
+        for prefix in ('file://', ''):
+            self.assertSaltTrueReturn(
+                self.run_state(
+                    'file.managed', name=dest, source=prefix + source,
+                    template='jinja', context={'foo': 'Hello world!'}
+                )
+            )
+
+        os.remove(source)
+        os.remove(dest)
+
+    def test_template_local_file_noclobber(self):
+        '''
+        Test the case where a source file is in the minion's local filesystem,
+        and the source path is the same as the destination path.
+        '''
+        source = tempfile.mkstemp()[-1]
+        with open(source, 'w') as fp_:
+            fp_.write('{{ foo }}\n')
+
+        ret = self.run_state(
+            'file.managed', name=source, source=source, template='jinja',
+            context={'foo': 'Hello world!'}
+        )
+        self.assertSaltFalseReturn(ret)
+        self.assertEqual(
+            ret[next(iter(ret))]['comment'],
+            ('Unable to manage file: Source file cannot be the same as '
+             'destination')
+        )
+        os.remove(source)
 
 if __name__ == '__main__':
     from integration import run_tests
