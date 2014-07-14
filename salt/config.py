@@ -1898,6 +1898,8 @@ def apply_minion_config(overrides=None,
     '''
     Returns minion configurations dict.
     '''
+    import traceback
+    traceback.print_stack()
     if check_dns is not None:
         # All use of the `check_dns` arg was removed in `598d715`. The keyword
         # argument was then removed in `9d893e4` and `**kwargs` was then added
