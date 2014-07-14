@@ -28,11 +28,11 @@ example):
    ``v``.  (e.g. ``v0.16.0RC``)
 #. The release should be packaged from this annotated tag and uploaded to PyPI
    as well as the GitHub releases page for this tag.
-#. The packagers should be notified on the ``salt-packagers`` mailing list so
+#. The packagers should be notified on the `salt-packagers`_ mailing list so
    they can create packages for all the major operating systems.  (note that
    release candidates should go in the testing repositories)
 #. After the packagers have been given a few days to compile the packages, the
-   release is announced on the ``salt-users`` mailing list.
+   release is announced on the `salt-users`_ mailing list.
 #. Log into RTD and add the new release there.  (Have to do it manually)
 
 
@@ -48,10 +48,10 @@ release can be cut:
    revision release.  It should be preceded by the letter ``v``.  (e.g.
    ``v0.16.2``)  Release candidates are unnecessary for bugfix releases.
 #. The release should be packaged from this annotated tag and uploaded to PyPI.
-#. The packagers should be notified on the ``salt-packagers`` mailing list so
+#. The packagers should be notified on the `salt-packagers`_ mailing list so
    they can create packages for all the major operating systems.
 #. After the packagers have been given a few days to compile the packages, the
-   release is announced on the ``salt-users`` mailing list.
+   release is announced on the `salt-users`_ mailing list.
 
 
 Cherry-Picking Process for Bugfixes
