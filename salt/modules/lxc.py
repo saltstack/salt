@@ -393,6 +393,11 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             nmac = ndata.get('lxc.network.hwaddr', '')
             if omac and not nmac:
                 new[iface]['lxc.network.hwaddr'] = omac
+            otype = odata.get('lxc.network.type', '')
+            ntype = ndata.get('lxc.network.type', '')
+            if otype:
+                new[iface]['lxc.network.type'] = otype
+
     ret = []
     for v in new.values():
         for row in v:
