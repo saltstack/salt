@@ -901,6 +901,7 @@ def syndic_config(master_config_path,
     opts.update(master_opts)
     opts.update(minion_opts)
     syndic_opts = {
+        'role': 'syndic',
         'root_dir': opts.get('root_dir', salt.syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
@@ -1916,6 +1917,7 @@ def apply_minion_config(overrides=None,
         defaults = DEFAULT_MINION_OPTS
 
     opts = defaults.copy()
+    opts['role'] = 'minion'
     if overrides:
         opts.update(overrides)
 
@@ -2021,6 +2023,7 @@ def apply_master_config(overrides=None, defaults=None):
         defaults = DEFAULT_MASTER_OPTS
 
     opts = defaults.copy()
+    opts['role'] = 'master'
     if overrides:
         opts.update(overrides)
 
