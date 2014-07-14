@@ -73,6 +73,9 @@ def _get_cached_requirements(requirements, saltenv):
 
 
 def _get_env_activate(bin_env):
+    '''
+    Return the path to the activate binary
+    '''
     if not bin_env:
         raise CommandNotFoundError('Could not find a `activate` binary')
 
@@ -248,7 +251,8 @@ def install(pkgs=None,
 
     Complicated CLI example::
 
-        salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
+        salt '*' pip.install markdown,django \
+                editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
     # Switching from using `pip_bin` and `env` to just `bin_env`
