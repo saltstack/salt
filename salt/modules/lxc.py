@@ -355,7 +355,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
         )
         nic_opts = kwargs.pop('nic_opts', None)
         for dev, args in nicp.items():
-            ret.append({'lxc.network.type': args.pop('type', 'veth')})
+            ret.append({'lxc.network.type': args.pop('type', '')})
             ret.append({'lxc.network.name': dev})
             ret.append({'lxc.network.flags': args.pop('flags', 'up')})
             opts = nic_opts.get(dev) if nic_opts else {}
@@ -391,6 +391,16 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             odata = old[iface]
             omac = odata.get('lxc.network.hwaddr', '')
             nmac = ndata.get('lxc.network.hwaddr', '')
+            otype = odata.get('lxc.network.type', '')
+            ntype = ndata.get('lxc.network.type', '')
+            # default for network type is setted here
+            # attention not to change the network type
+            # without a good and explicit reason to.
+            if otype and not ntype:
+                ntype = otype
+            if not ntype:
+                ntype = 'veth'
+            new[iface]['lxc.network.type'] = ntype
             if omac and not nmac:
                 new[iface]['lxc.network.hwaddr'] = omac
     ret = []
