@@ -119,7 +119,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         bridge^for the primary nic (lxcbr0)
     gateway
         network gateway for the container
-    unconditionnal_install
+    unconditional_install
         given to lxc.bootstrap (see relative doc)
     force_install
         given to lxc.bootstrap (see relative doc)
@@ -132,7 +132,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     password
         administrative password for the container
     users
-        administrative users for the contrainer
+        administrative users for the container
         default: [root] and [root, ubuntu] on ubuntu
     '''
     if vm_ is None:
@@ -181,7 +181,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     netmask = vm_.get('netmask', '24')
     bridge = vm_.get('bridge', 'lxcbr0')
     gateway = vm_.get('gateway', 'auto')
-    unconditionnal_install = vm_.get('unconditionnal_install', False)
+    unconditional_install = vm_.get('unconditional_install', False)
     force_install = vm_.get('force_install', True)
     config = vm_.get('config', {})
     if not config:
@@ -234,8 +234,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['size'] = size
     lxc_init_interface['lvname'] = lvname
     lxc_init_interface['force_install'] = force_install
-    lxc_init_interface['unconditionnal_install'] = (
-        unconditionnal_install
+    lxc_init_interface['unconditional_install'] = (
+        unconditional_install
     )
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
@@ -625,7 +625,7 @@ def init(name,
          pub_key=None,
          priv_key=None,
          force_install=False,
-         unconditionnal_install=False,
+         unconditional_install=False,
          bootstrap_args=None,
          bootstrap_shell=None,
          bootstrap_url=None,
@@ -633,10 +633,10 @@ def init(name,
     '''
     Initialize a new container.
 
-    This is a partial indempotent function as if it is already
-    provisionned, we will reset a bit the lxc configuration
+    This is a partial idempotent function as if it is already
+    provisioned, we will reset a bit the lxc configuration
     file but much of the hard work will be escaped as
-    markers will prevent re-execution of harmfull tasks.
+    markers will prevent re-execution of harmful tasks.
 
     CLI Example:
 
@@ -687,12 +687,12 @@ def init(name,
 
     users
         Sysadmins users to set the administrative password to
-        eg [root, ubuntu, sysadmin], default [root] and [root, ubuntu]
+        e.g. [root, ubuntu, sysadmin], default [root] and [root, ubuntu]
         on ubuntu
 
     password
         Set the initial password for default sysadmin users, at least root
-        but also can be used for sudoers, eg [root, ubuntu, sysadmin]
+        but also can be used for sudoers, e.g. [root, ubuntu, sysadmin]
 
     profile
         A LXC profile (defined in config or pillar).
@@ -725,11 +725,11 @@ def init(name,
         the name of the container.
 
     pub_key
-        Explicit public key to preseed the minion with (optionnal).
+        Explicit public key to preseed the minion with (optional).
         This can be either a filepath or a string representing the key
 
     priv_key
-        Explicit private key to preseed the minion with (optionnal).
+        Explicit private key to preseed the minion with (optional).
         This can be either a filepath or a string representing the key
 
     approve_key
@@ -754,7 +754,7 @@ def init(name,
         this is the way to run vendor bootstrap scripts even
         if a salt minion is already present in the container
 
-    unconditionnal_install
+    unconditional_install
         Run the script even if the container seems seeded
     '''
     kwargs = copy.deepcopy(kwargs)
@@ -968,7 +968,7 @@ def init(name,
                 pub_key=pub_key, priv_key=priv_key,
                 install=install,
                 force_install=force_install,
-                unconditionnal_install=unconditionnal_install,
+                unconditional_install=unconditional_install,
                 bootstrap_url=bootstrap_url,
                 bootstrap_shell=bootstrap_shell,
                 bootstrap_args=bootstrap_args)
@@ -1875,7 +1875,7 @@ def bootstrap(name, config=None, approve_key=True,
               pub_key=None, priv_key=None,
               bootstrap_url=None,
               force_install=False,
-              unconditionnal_install=False,
+              unconditional_install=False,
               bootstrap_args=None,
               bootstrap_shell=None):
     '''
@@ -1897,11 +1897,11 @@ def bootstrap(name, config=None, approve_key=True,
 
 
     pub_key
-        Explicit public key to pressed the minion with (optionnal).
+        Explicit public key to pressed the minion with (optional).
         This can be either a filepath or a string representing the key
 
     priv_key
-        Explicit private key to pressed the minion with (optionnal).
+        Explicit private key to pressed the minion with (optional).
         This can be either a filepath or a string representing the key
 
     bootstrap_url
@@ -1921,7 +1921,7 @@ def bootstrap(name, config=None, approve_key=True,
         this is the way to run vendor bootstrap scripts even
         if a salt minion is already present in the container
 
-    unconditionnal_install
+    unconditional_install
         Run the script even if the container seems seeded
 
     CLI Example:
@@ -1934,7 +1934,7 @@ def bootstrap(name, config=None, approve_key=True,
     infos = __salt__['lxc.info'](name)
     if not infos:
         return None
-    # default setted here as we cant set them
+    # default set here as we cannot set them
     # in def as it can come from a chain of procedures.
     if not bootstrap_args:
         bootstrap_args = '-c {0}'
@@ -1956,14 +1956,14 @@ def bootstrap(name, config=None, approve_key=True,
     seeded = not __salt__['lxc.run_cmd'](
         name, 'test -e \"{0}\"'.format(SEED_MARKER), stdout=False, stderr=False)
     tmp = tempfile.mkdtemp()
-    if seeded and not unconditionnal_install:
+    if seeded and not unconditional_install:
         res = True
     else:
         res = False
         cfg_files = __salt__['seed.mkconfig'](
             config, tmp=tmp, id_=name, approve_key=approve_key,
             priv_key=priv_key, pub_key=pub_key)
-        if needs_install or force_install or unconditionnal_install:
+        if needs_install or force_install or unconditional_install:
             if install:
                 rstr = __salt__['test.rand_str']()
                 configdir = '/tmp/.c_{0}'.format(rstr)

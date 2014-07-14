@@ -152,7 +152,7 @@ def install_ruby(ruby, runas=None):
         The version of Ruby to install, should match one of the
         versions listed by rbenv.list
 
-    Additionnal environment variables can be configured in pillar /
+    Additional environment variables can be configured in pillar /
     grains / master:
 
     .. code-block:: yaml

@@ -22,7 +22,7 @@ def __virtual__():
 
 def runner():
     '''
-    Return all inline documetation for runner modules
+    Return all inline documentation for runner modules
 
     CLI Example:
 

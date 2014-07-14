@@ -287,10 +287,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
             done.append(container)
 
     # marking ping status as True only and only if we have at
-    # least provisionned one container
+    # least provisioned one container
     ret['ping_status'] = bool(len(done))
 
-    # for all provisionned containers, last job is to verify
+    # for all provisioned containers, last job is to verify
     # - the key status
     # - we can reach them
     for container in done:
