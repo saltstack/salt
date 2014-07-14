@@ -64,6 +64,30 @@ class RAETChannel(Channel):
         self.opts = opts
         self.ttype = 'raet'
         self.dst = ('master', None, 'remote_cmd')
+        self.locally = False # was stack setup locally
+
+    def _setup_jobber_stack(self):
+        '''
+        Setup and return the LaneStack and Yard used by jobber or salt-call
+        to communicate to-from the minion
+
+        '''
+        mid = self.opts['id']
+        yid = nacling.uuid(size=18)
+        name = 'jobber' + yid
+        stack = LaneStack(
+                name=name,
+                lanename=mid,
+                sockdirpath=self.opts['sock_dir'])
+
+        stack.Pk = raeting.packKinds.pack
+        stack.addRemote(RemoteYard(stack=stack,
+                                   name='manor',
+                                   lanename=mid,
+                                   dirpath=self.opts['sock_dir'] ))
+        console.concise("Created Channel Jobber Stack {0}\n".format(stack.name))
+        self.locally = True
+        return stack
 
     def __prep_stack(self):
         '''
@@ -72,7 +96,8 @@ class RAETChannel(Channel):
         if not jobber_stack:
             emsg = "Jobber Stack not setup\n"
             log.error(emsg)
-            raise ValueError(emsg)
+            jobber_stack = self._setup_jobber_stack()
+            #raise ValueError(emsg)
         log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
         self.stack = jobber_stack
         mid = self.opts.get('id', 'master')
@@ -101,6 +126,8 @@ class RAETChannel(Channel):
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
+                if self.locally:
+                    self.stack.server.close()
                 return msg.get('return', {})
             if time.time() - start > timeout:
                 if tried >= tries:
