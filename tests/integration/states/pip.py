@@ -417,15 +417,6 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # environment as an url arg to salt://
             ret = self.run_state(
                 'pip.installed', name='', bin_env=venv_dir,
-                requirements='salt://prod-env-requirements.txt?env=prod'
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
-            )
-            ret = self.run_state(
-                'pip.installed', name='', bin_env=venv_dir,
                 requirements='salt://prod-env-requirements.txt?saltenv=prod'
             )
             self.assertSaltTrueReturn(ret)
