@@ -156,9 +156,17 @@ def gen_signature(priv_path, pub_path, sign_path):
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
     if os.path.isfile(sign_path):
         return False
+    log.trace('Calculating signature for {0} with {1}'
+              .format(os.path.basename(pub_path),
+                      os.path.basename(priv_path)))
+
+    if os.path.isfile(sign_path):
+        log.trace('Signature file {0} already exists, please '
+                  'remove it first and try again'.format(sign_path))
     else:
         with salt.utils.fopen(sign_path, 'w+') as sig_f:
             sig_f.write(mpub_sig_64)
+        log.trace('Wrote signature to {0}'.format(sign_path))
     return True
 
 
