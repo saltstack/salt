@@ -167,12 +167,18 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
-    'sphinxcontrib.spelling',
     'httpdomain',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc
     'shorturls',
 ]
+
+try:
+    import sphinxcontrib.spelling
+except ImportError:
+    pass
+else:
+    extensions += ['sphinxcontrib.spelling']
 
 modindex_common_prefix = ['salt.']
 
