@@ -460,7 +460,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hostname):
             self.assertEqual(
-                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
+                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
             )
 
     @patch('salt.utils.network.get_fqhostname', MagicMock(return_value='localhost'))
@@ -471,7 +471,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         with patch('salt.utils.fopen', _fopen_side_effect_etc_hosts):
             self.assertEqual(
-                sconfig.get_id(cache=False), (MOCK_HOSTNAME, False)
+                    sconfig.get_id({'root_dir': None, 'minion_id_caching': False}), (MOCK_HOSTNAME, False)
             )
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
