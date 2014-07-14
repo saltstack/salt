@@ -82,7 +82,7 @@ class RAETChannel(Channel):
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=mid,
-                                   dirpath=self.opts['sock_dir'] ))
+                                   dirpath=self.opts['sock_dir']))
         log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
         return stack
 
