@@ -168,7 +168,7 @@ class CronTestCase(TestCase):
             '# Lines below here are managed by Salt, do not edit\n'
             '* * * * * foo'
         )
-        # old behavior, do not remove with identifier setted and
+        # old behavior, do not remove with identifier set and
         # even if command match !
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'

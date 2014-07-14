@@ -585,7 +585,7 @@ def boot_time(time_format=None):
 
 def network_io_counters(interface=None):
     '''
-    Return network I/O statisitics.
+    Return network I/O statistics.
 
     CLI Example:
 
@@ -607,7 +607,7 @@ def network_io_counters(interface=None):
 
 def disk_io_counters(device=None):
     '''
-    Return disk I/O statisitics.
+    Return disk I/O statistics.
 
     CLI Example:
 

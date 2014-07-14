@@ -55,7 +55,7 @@ def bootstrap(platform,
 
     img_format
         Which format to create the image in. By default, just copies files into
-        a directory on the local fileysstem (``dir``). Future support will exist
+        a directory on the local filesystem (``dir``). Future support will exist
         for ``sparse``.
 
     fs_format

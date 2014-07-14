@@ -108,9 +108,9 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 "key_logfile: key\n"
             )
             config = sconfig.master_config(fpath)
-            # os.path.join behaviour
+            # os.path.join behavior
             self.assertEqual(config['key_logfile'], os.path.join('/', 'key'))
-            # os.sep.join behaviour
+            # os.sep.join behavior
             self.assertNotEqual(config['key_logfile'], '//key')
         finally:
             if os.path.isfile(fpath):

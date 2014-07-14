@@ -1225,7 +1225,7 @@ def managed(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -1860,7 +1860,7 @@ def recurse(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -2242,11 +2242,11 @@ def blockreplace(
     :param name: Filesystem path to the file to be edited
     :param marker_start: The line content identifying a line as the start of
         the content block. Note that the whole line containing this marker will
-        be considered, so whitespaces or extra content before or after the
+        be considered, so whitespace or extra content before or after the
         marker is included in final output
     :param marker_end: The line content identifying a line as the end of
         the content block. Note that the whole line containing this marker will
-        be considered, so whitespaces or extra content before or after the
+        be considered, so whitespace or extra content before or after the
         marker is included in final output.
         Note: you can use file.accumulated and target this state. All
         accumulated data dictionaries content will be added as new lines in the
@@ -3166,7 +3166,7 @@ def patch(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -3689,7 +3689,7 @@ def serialize(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)

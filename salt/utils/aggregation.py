@@ -28,7 +28,7 @@
         bar: !aggr-map {second: bar}
         baz: !aggr-scalar 42
 
-    but tagged values instruct salt that overlaping values they can be merged
+    but tagged values instruct salt that overlapping values they can be merged
     together:
 
     .. code-block:: yaml
@@ -38,8 +38,8 @@
         baz: !aggr-seq [42]
 
 
-    Default merge strategy is keeped untouched
-    ------------------------------------------
+    Default merge strategy is keep untouched
+    ----------------------------------------
 
     For example, this yaml document have still duplicate keys, but does not
     instruct aggregation:

@@ -189,7 +189,7 @@ def install(pkgs=None,
     ignore_installed
         Ignore the installed packages (reinstalling instead)
     exists_action
-        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe,
+        Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,
         (b)ackup
     no_deps
         Ignore package dependencies

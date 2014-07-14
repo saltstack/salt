@@ -70,7 +70,7 @@ def extracted(name,
         tar, zip or rar
 
     if_missing
-        Some archive, such as tar, extract themself in a subfolder.
+        Some archives, such as tar, extract themselves in a subfolder.
         This directive can be used to validate if the archive had been
         previously extracted.
 

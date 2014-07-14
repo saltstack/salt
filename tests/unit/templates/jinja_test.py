@@ -177,7 +177,7 @@ class TestGetTemplate(TestCase):
 
     def test_macro_additional_log_for_generalexc(self):
         '''
-        If we failed in a macro because of eg a typeerror, get
+        If we failed in a macro because of e.g. a TypeError, get
         more output from trace.
         '''
         expected = r'''Jinja error:.*division.*

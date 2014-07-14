@@ -84,7 +84,7 @@ def show_master(path=MASTER_CF):
     spacing or order.
 
     The data returned from this function should not be used for direct
-    modification of the main.cf file; other functions are avaiable for that.
+    modification of the main.cf file; other functions are available for that.
 
     CLI Examples:
 
@@ -264,7 +264,7 @@ def show_main(path=MAIN_CF):
     spacing or order. Bear in mind that order is functionally important in the
     main.cf file, since keys can be referred to as variables. This means that
     the data returned from this function should not be used for direct
-    modification of the main.cf file; other functions are avaiable for that.
+    modification of the main.cf file; other functions are available for that.
 
     CLI Examples:
 

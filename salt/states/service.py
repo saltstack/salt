@@ -22,7 +22,7 @@ The service can also be set to be started at runtime via the enable option:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
-service is by default restarted. If the desired behaviour is to reload the
+service is by default restarted. If the desired behavior is to reload the
 service, then set the reload value to True:
 
 .. code-block:: yaml

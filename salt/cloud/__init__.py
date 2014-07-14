@@ -51,7 +51,7 @@ except ImportError:
 def communicator(func):
     '''Warning, this is a picklable decorator !'''
     def _call(queue, args, kw):
-        '''called with [queue, args, kwargs] as first optionnal arg'''
+        '''called with [queue, args, kwargs] as first optional arg'''
         kw['queue'] = queue
         ret = None
         try:
@@ -110,7 +110,7 @@ def enter_mainloop(target,
 
     mapped_args
         a list of one or more arguments combinations to call the function with
-        eg (foo, [[1], [2]]) will call::
+        e.g. (foo, [[1], [2]]) will call::
 
                 foo([1])
                 foo([2])
@@ -902,7 +902,7 @@ class Cloud(object):
             for obj in output_multip:
                 ret_multip.update(obj)
 
-            # build up a datastructure similar to what the non-parallel
+            # build up a data structure similar to what the non-parallel
             # destroy uses
             for obj in parallel_data:
                 alias = obj['alias']

@@ -15,7 +15,6 @@ def finger():
     Return the minion's public key fingerprint
 
     CLI Example:
-    dfasdf
 
     .. code-block:: bash
 

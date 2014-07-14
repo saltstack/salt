@@ -1587,7 +1587,7 @@ __enable_universe_repository() {
 
 install_ubuntu_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
     fi
 
     apt-get update
@@ -1823,7 +1823,7 @@ install_ubuntu_check_services() {
 #
 install_debian_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -1863,7 +1863,7 @@ install_debian_deps() {
 
 install_debian_6_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -1958,7 +1958,7 @@ _eof
 
 install_debian_7_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -2042,7 +2042,7 @@ install_debian_8_deps__DISABLED() {
 
 install_debian_git_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive

@@ -38,7 +38,7 @@ def setenv(name,
     false_unsets
         If a key's value is False and false_unsets is True, then the
         key will be removed from the salt processes environment dict
-        entirely. If a key's value is Flase and false_unsets is not
+        entirely. If a key's value is False and false_unsets is not
         True, then the key's value will be set to an empty string.
         Default: False
 

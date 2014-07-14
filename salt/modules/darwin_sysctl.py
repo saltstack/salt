@@ -96,7 +96,7 @@ def assign(name, value):
     Assign a single sysctl parameter for this minion
 
     name
-        The name of ths sysctl value to edit.
+        The name of the sysctl value to edit.
 
     value
         The sysctl value to apply.

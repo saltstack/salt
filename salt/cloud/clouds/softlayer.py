@@ -19,7 +19,7 @@ configuration at:
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer
 
-The SoftLayer Python Library needs to be installed in ordere to use the
+The SoftLayer Python Library needs to be installed in order to use the
 SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 
 :depends: softlayer
@@ -107,7 +107,7 @@ def avail_locations(call=None):
     response = conn.getCreateObjectOptions()
     #return response
     for datacenter in response['datacenters']:
-        #return datacenter
+        #return data center
         ret[datacenter['template']['datacenter']['name']] = {
             'name': datacenter['template']['datacenter']['name'],
         }

@@ -81,7 +81,7 @@ Remote execution
 ----------------
 
 Running pre-defined or arbitrary commands on remote hosts, also known as
-remote exectution, is the core function of Salt. The following links explore
+remote execution, is the core function of Salt. The following links explore
 modules and returners, which are two key elements of remote execution.
 
 **Modules**
@@ -265,7 +265,7 @@ Reference
     Read through the heavily-commented minion configuration file.
 
 :doc:`Full table of contents </contents>`
-    Read the table of comntents of this document.
+    Read the table of contents of this document.
 
 FAQ
 ===

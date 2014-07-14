@@ -632,7 +632,7 @@ lxc
 ---
 
 The lxc driver is a new, experimental driver for installing Salt on
-newly provisionned (via saltcloud) lxc containers. It will in turn use saltify to install
+newly provisioned (via saltcloud) lxc containers. It will in turn use saltify to install
 salt an rattach the lxc container as a new lxc minion.
 As soon as we can, we manage baremetal operation over SSH.
 You can also destroy those containers via this driver.

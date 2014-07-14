@@ -151,6 +151,7 @@ version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
 release = '2014.1.5'
 
+spelling_lang = 'en_US'
 language = 'en'
 locale_dirs = [
     '_locale',
@@ -171,6 +172,13 @@ extensions = [
     'saltautodoc', # Must be AFTER autodoc
     'shorturls',
 ]
+
+try:
+    import sphinxcontrib.spelling
+except ImportError:
+    pass
+else:
+    extensions += ['sphinxcontrib.spelling']
 
 modindex_common_prefix = ['salt.']
 

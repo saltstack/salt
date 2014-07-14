@@ -97,7 +97,7 @@ def list_upgrades(rec=False, restart=False):
 def ignore(*updates):
     '''
     Ignore a specific program update. When an update is ignored the '-' and
-    version number at the end will be omited, so "SecUpd2014-001-1.0" becomes
+    version number at the end will be omitted, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
     is successfully ignored when it no longer shows up after list_upgrades.
 
@@ -182,8 +182,8 @@ def reset_ignored():
 def schedule(*status):
     '''
     Decide if automatic checking for upgrades should be on or off.
-    If no argumentsare given it will return the current status.
-    Appaend on or off to change the status.
+    If no arguments are given it will return the current status.
+    Append on or off to change the status.
 
     Return values:
     - ``True``: Automatic checking is now on,

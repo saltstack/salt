@@ -401,7 +401,7 @@ def which(exe=None):
                 # Allows both 'cmd' and 'cmd.exe' to be matched.
                 for ext in ext_list:
                     # Windows filesystem is case insensitive so we
-                    # safely rely on that behaviour
+                    # safely rely on that behavior
                     if os.access(full_path + ext, os.X_OK):
                         return full_path + ext
         log.trace(

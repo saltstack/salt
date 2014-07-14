@@ -28,7 +28,7 @@ def __virtual__():
 
 def _iptables_cmd(family='ipv4'):
     '''
-    Return correct command based on the family, eg. ipv4 or ipv6
+    Return correct command based on the family, e.g. ipv4 or ipv6
     '''
     if family == 'ipv6':
         return salt.utils.which('ip6tables')
