@@ -90,19 +90,19 @@ quickly and safely as is possible.
     actively supported. Back-ports of the fix are made to any old releases that
     are actively supported.
 
-4.  Packagers are notified via the |salt-packagers| mailing list that an issue
+4.  Packagers are notified via the `salt-packagers`_ mailing list that an issue
     was reported and resolved, and that an announcement is incoming.
 
 5.  A new release is created and pushed to all affected repositories. The
     release documentation provides a full description of the issue, plus any
     upgrade instructions or other relevant details.
 
-6.  An announcement is made to the |salt-users| and |salt-announce| mailing
+6.  An announcement is made to the `salt-users`_ and `salt-announce`_ mailing
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 
 Receiving security announcemnts
 ===============================
 
-The fastest place to receive security announcements is via the |salt-announce|
+The fastest place to receive security announcements is via the `salt-announce`_
 mailing list. This list is low-traffic.

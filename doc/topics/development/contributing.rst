@@ -135,7 +135,7 @@ Posting patches to the mailing list
 -----------------------------------
 
 Patches will also be accepted by email. Format patches using `git
-format-patch`_ and send them to the Salt users mailing list. The contributor
+format-patch`_ and send them to the `salt-users`_ mailing list. The contributor
 will then get credit for the patch, and the Salt community will have an archive
 of the patch and a place for discussion.
 

@@ -172,7 +172,7 @@ on GitHub.
     when it is ready. We will add you to the contributors team on the
     `saltstack-formulas`_ organization and help you transfer the repository
     over. Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an
-    email to the Salt mailing list.
+    email to the `salt-users`_ mailing list.
 
     There are a lot of repositories in that organization! Team members can
     manage which repositories they are subscribed to on GitHub's watching page:
