@@ -20,7 +20,7 @@ The individual steps are
 
 
 Motivation
-----------
+==========
 
 The default behaviour of a salt-minion is to connect to a master and accept
 the masters public key. With each publication, the master sends his public-key
@@ -43,13 +43,13 @@ public key a minion receives from a master. Currently a minions takes the
 first masters public key for granted.
 
 The Goal
---------
+========
 
 Setup the master to sign the public key it sends to the minions and enable the
 minions to verify this signature for authenticity.
 
 Prepping the master to sign its public key
-------------------------------------------
+==========================================
 
 For signing to work, both master and minion must have the signing and/or
 verification settings enabled. If the master signs the public key but the
@@ -92,7 +92,7 @@ with a different signing key-pair.
 
 
 Prepping the minion to verify received public keys
---------------------------------------------------
+==================================================
 The minion must have the public key (and only that one!) available to be
 able to verify a signature it receives. That public key (defaults to
 master_sign.pub) must be copied from the master to the minions pki-directory.
@@ -164,7 +164,7 @@ If that is desired, enable the setting
 
 
 Multiple Masters For A Minion
------------------------------
+=============================
 
 Configuring multiple masters on a minion is done by specifying two settings:
 
@@ -210,7 +210,7 @@ defined (again shuffled if that is enabled).
 
 
 Testing the setup
------------------
+=================
 
 At least two running masters are needed to test the failover setup.
 
@@ -286,7 +286,7 @@ and the minion can be pinged again from its new master.
 
 
 Performance Tuning
-------------------
+==================
 
 With the setup described above, the master computes a signature for every
 auth-request of a minion. With many minions and many auth-requests, that
@@ -347,7 +347,7 @@ signature was created from.
 Verifying that everything works is done the same way as above.
 
 How the signing and verification works
---------------------------------------
+======================================
 
 The default key-pair of the salt-master is
 
