@@ -16,6 +16,7 @@ import optparse
 import subprocess
 import tempfile
 import shutil
+import sys
 
 # Import salt libs
 import salt
@@ -35,6 +36,11 @@ def parse():
             default=5,
             type='int',
             help='The number of minions to make')
+    parser.add_option('-M',
+            action='store_true',
+            dest='master_too',
+            default=False,
+            help='Run a local master and tell the minions to connect to it')
     parser.add_option('--master',
             dest='master',
             default='salt',
@@ -221,10 +227,13 @@ class Swarm(object):
 
     def start(self):
         '''
-        Start the minions!!
+        Start the magic!!
         '''
-        print('Starting minions...')
         self.prep_configs()
+        if self.opts['master_too']:
+            master_swarm = MasterSwarm(self.opts)
+            master_swarm.start()
+        print('Starting minions...')
         self.start_minions()
         print('All {0} minions have started.'.format(self.opts['minions']))
         print('Waiting for CTRL-C to properly shutdown minions...')
@@ -242,10 +251,74 @@ class Swarm(object):
             'pkill -KILL -f "python.*salt-minion"',
             shell=True
         )
+        if self.opts['master_too']:
+            print('Killing any remaining masters')
+            subprocess.call(
+                    'pkill -KILL -f "python.*salt-master"',
+                    shell=True
+            )
         if not self.opts['no_clean']:
             print('Remove ALL related temp files/directories')
             shutil.rmtree(self.swarm_root)
         print('Done')
+
+
+class MasterSwarm(Swarm):
+    '''
+    Create one or more masters
+    '''
+    def start(self):
+        '''
+        Prep the master start and fire it off
+        '''
+        # sys.stdout for no newline
+        sys.stdout.write('Generating master config...')
+        self.mkconf()
+        print('done')
+
+        sys.stdout.write('Starting master...')
+        self.start_master()
+        print('done')
+
+    def start_master(self):
+        '''
+        Do the master start
+        '''
+        cmd = 'salt-master -c {0} --pid-file {1}'.format(
+                self.config,
+                '{0}.pid'.format(self.config)
+                )
+        if self.opts['foreground']:
+            cmd += ' -l debug &'
+        else:
+            cmd += ' -d &'
+        subprocess.call(cmd, shell=True)
+
+    def mkconf(self):
+        '''
+        Make a master config and write it'
+        '''
+        dpath = os.path.join(self.swarm_root, 'master')
+        data = {
+            'log_file': os.path.join(dpath, 'master.log'),
+            'open_mode': True  # TODO Pre-seed keys
+        }
+
+        os.makedirs(dpath)
+        path = os.path.join(dpath, 'master')
+
+        with open(path, 'w+') as fp_:
+            yaml.dump(data, fp_)
+        self.config = dpath
+
+    def shutdown(self):
+        print('Killing master')
+        subprocess.call(
+                'pkill -KILL -f "python.*salt-master"',
+                shell=True
+        )
+        print('Master killed')
+
 
 if __name__ == '__main__':
     swarm = Swarm(parse())
