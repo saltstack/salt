@@ -15,6 +15,10 @@ of the Salt system each have a respective configuration file. The
 The Salt Minion configuration is very simple, typically the only value that
 needs to be set is the master value so the minion can find its master.
 
+By default, the salt-minion configuration will be in :file:`/etc/salt/minion`.
+A notable exception is FreeBSD, where the configuration will be in
+:file:`/usr/local/etc/salt/minion`.
+
 
 
 Minion Primary Configuration

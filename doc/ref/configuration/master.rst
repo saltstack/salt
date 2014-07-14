@@ -13,7 +13,9 @@ of the Salt system each have a respective configuration file. The
     :ref:`example master configuration file <configuration-examples-master>`
 
 The configuration file for the salt-master is located at
-:file:`/etc/salt/master`. The available options are as follows:
+:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
+configuration file is located at :file:`/usr/local/etc/salt`.  The available
+options are as follows:
 
 Primary Master Configuration
 ============================
