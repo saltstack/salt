@@ -94,22 +94,23 @@ class Depends(object):
                     )
                 )
                 # if not, unload dependent_set
-                mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
-                                           func.__name__)
+                if module:
+                    mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
+                                               func.__name__)
 
-                # if we don't have this module loaded, skip it!
-                if mod_key not in functions:
-                    continue
+                    # if we don't have this module loaded, skip it!
+                    if mod_key not in functions:
+                        continue
 
-                try:
-                    if fallback_function is not None:
-                        functions[mod_key] = fallback_function
-                    else:
-                        del functions[mod_key]
-                except AttributeError:
-                    # we already did???
-                    log.trace('{0} already removed, skipping'.format(mod_key))
-                    continue
+                    try:
+                        if fallback_function is not None:
+                            functions[mod_key] = fallback_function
+                        else:
+                            del functions[mod_key]
+                    except AttributeError:
+                        # we already did???
+                        log.trace('{0} already removed, skipping'.format(mod_key))
+                        continue
 
 
 class depends(Depends):  # pylint: disable=C0103
