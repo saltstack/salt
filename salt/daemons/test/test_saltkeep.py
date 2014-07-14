@@ -42,32 +42,18 @@ class BasicTestCase(unittest.TestCase):
         self.store = storing.Store(stamp=0.0)
         self.timer = StoreTimer(store=self.store, duration=1.0)
 
-        self.mainDirpath = tempfile.mkdtemp(prefix="salt", suffix='main', dir='/tmp')
-        opts = self.createOpts(self.mainDirpath, openMode=True, autoAccept=True)
-        self.mainKeep = salting.SaltKeep(opts=opts)
-
-        self.otherDirpath = tempfile.mkdtemp(prefix="salt", suffix='other', dir='/tmp')
-        opts = self.createOpts(self.otherDirpath, openMode=True, autoAccept=True)
-        self.otherKeep = salting.SaltKeep(opts=opts)
-
-        self.baseDirpath = tempfile.mkdtemp(prefix="raet",  suffix="base", dir='/tmp')
+        self.tempDirpath = tempfile.mkdtemp(prefix="salt", suffix='keep', dir='/tmp')
 
     def tearDown(self):
-        if os.path.exists(self.mainDirpath):
-            shutil.rmtree(self.mainDirpath)
+        if os.path.exists(self.tempDirpath):
+            shutil.rmtree(self.tempDirpath)
 
-        if os.path.exists(self.otherDirpath):
-            shutil.rmtree(self.otherDirpath)
-
-        if os.path.exists(self.baseDirpath):
-            shutil.rmtree(self.baseDirpath)
-
-    def createOpts(self, dirpath, openMode=False, autoAccept=True):
+    def createOpts(self, name, dirpath, openMode=False, autoAccept=True):
         '''
         Create associated pki directories for stack and return opts
         '''
 
-        pkiDirpath = os.path.join(dirpath, 'pki')
+        pkiDirpath = os.path.join(dirpath, 'pki', name, 'raet')
         if not os.path.exists(pkiDirpath):
                 os.makedirs(pkiDirpath)
 
@@ -89,8 +75,8 @@ class BasicTestCase(unittest.TestCase):
             print mode
             os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IWUSR)
 
-        cacheDirpath = os.path.join(dirpath, 'cache')
-        sockDirpath = os.path.join(dirpath, 'sock')
+        cacheDirpath = os.path.join(dirpath, 'cache', name)
+        sockDirpath = os.path.join(dirpath, 'sock', name)
 
         opts = dict(
                      pki_dir=pkiDirpath,
@@ -102,7 +88,7 @@ class BasicTestCase(unittest.TestCase):
                      )
         return opts
 
-    def createRoadData(self, name, base):
+    def createRoadData(self, name, cachedirpath):
         '''
         Creates odict and populates with data to setup road stack
         {
@@ -116,7 +102,7 @@ class BasicTestCase(unittest.TestCase):
         '''
         data = odict()
         data['name'] = name
-        data['dirpath'] = os.path.join(base, 'road', 'keep', name)
+        data['basedirpath'] = os.path.join(cachedirpath, 'raet')
         signer = nacling.Signer()
         data['sighex'] = signer.keyhex
         data['verhex'] = signer.verhex
@@ -126,7 +112,7 @@ class BasicTestCase(unittest.TestCase):
 
         return data
 
-    def createRoadStack(self, data, eid=0, main=None, auto=None, ha=None, keep=None):
+    def createRoadStack(self, data, keep,  eid=0, main=None, ha=None):
         '''
         Creates stack and local estate from data with
         local estate.eid = eid
@@ -148,10 +134,8 @@ class BasicTestCase(unittest.TestCase):
         stack = stacking.RoadStack(name=data['name'],
                                    local=local,
                                    main=main,
-                                   dirpath=data['dirpath'],
                                    store=self.store,
-                                   keep=keep,
-                                   auto=auto,)
+                                   keep=keep)
 
         return stack
 
@@ -201,19 +185,27 @@ class BasicTestCase(unittest.TestCase):
         '''
         console.terse("{0}\n".format(self.testBasic.__doc__))
 
-        self.assertEqual(self.mainKeep.loadLocalData(), None)
-        self.assertEqual(self.mainKeep.loadAllRemoteData(), {})
+        opts = self.createOpts(name='main',
+                               dirpath=self.tempDirpath,
+                               openMode=True,
+                               autoAccept=True)
+        mainData = self.createRoadData(name='main', cachedirpath=opts['cachedir'] )
+        mainKeep = salting.SaltKeep(opts=opts,
+                                    basedirpath=mainData['basedirpath'],
+                                    stackname=mainData['name'])
 
-        dataMain = self.createRoadData(name='main', base=self.baseDirpath)
-        main = self.createRoadStack(data=dataMain,
+        self.assertEqual(mainKeep.loadLocalData(), None)
+        self.assertEqual(mainKeep.loadAllRemoteData(), {})
+
+        main = self.createRoadStack(data=mainData,
                                      eid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
-                                     keep=self.mainKeep)
+                                     keep=mainKeep)
 
-        console.terse("{0}\nkeep dirpath = {1}\".format(
+        console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
-        self.assertTrue(main.keep.dirpath.endswith('road/keep/main'))
+        self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.keep.auto)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
@@ -221,14 +213,13 @@ class BasicTestCase(unittest.TestCase):
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
                                                          'sid': 0,
-                                                         'stack': 'main',
                                                          'neid': 1,
-                                                         'prihex': dataMain['prihex'],
-                                                         'sighex': dataMain['sighex'],
+                                                         'sighex': mainData['sighex'],
+                                                         'prihex': mainData['prihex'],
                                                          'auto': True,
                                                          })
 
-        data1 = self.createRoadData(name='remote1', base=self.baseDirpath)
+        data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              eid=3,
                                              name=data1['name'],
@@ -238,7 +229,7 @@ class BasicTestCase(unittest.TestCase):
                                              period=main.period,
                                              offset=main.offset, ))
 
-        data2 = self.createRoadData(name='remote2', base=self.baseDirpath)
+        data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              eid=4,
                                              name=data2['name'],
@@ -272,40 +263,56 @@ class BasicTestCase(unittest.TestCase):
 
         # now recreate with saved data
         main.server.close()
-        main = stacking.RoadStack(name='main',
-                                  dirpath=dataMain['dirpath'],
-                                  store=self.store,)
+        mainKeep = salting.SaltKeep(opts=opts,
+                                     basedirpath=mainData['basedirpath'],
+                                     stackname=mainData['name'])
+        main = stacking.RoadStack(name=mainData['name'],
+                                  store=self.store,
+                                  keep=mainKeep)
 
-        self.assertEqual(main.local.priver.keyhex, dataMain['prihex'])
-        self.assertEqual(main.local.signer.keyhex, dataMain['sighex'])
+        self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
+        self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
 
         self.assertEqual(len(main.remotes.values()), 2)
 
-        self.assertEqual(self.otherKeep.loadLocalData(), None)
-        self.assertEqual(self.otherKeep.loadAllRemoteData(), {})
-
         # other stack
+        opts = self.createOpts(name='other',
+                               dirpath=self.tempDirpath,
+                               openMode=True,
+                               autoAccept=True)
+        otherData = self.createRoadData(name='other', cachedirpath=opts['cachedir'] )
+        otherKeep = salting.SaltKeep(opts=opts,
+                                      basedirpath=otherData['basedirpath'],
+                                      stackname=otherData['name'])
 
-        dataOther = self.createRoadData(name='other', base=self.baseDirpath)
-        other = self.createRoadStack(data=dataOther,
+        self.assertEqual(otherKeep.loadLocalData(), None)
+        self.assertEqual(otherKeep.loadAllRemoteData(), {})
+
+        other = self.createRoadStack(data=otherData,
                                      eid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
-                                     keep=self.otherKeep)
+                                     keep=otherKeep)
 
-        console.terse("{0} keep dirpath = {1} safe dirpath = {2}\n".format(
-                other.name, other.keep.dirpath, other.safe.dirpath))
-        self.assertTrue(other.keep.dirpath.endswith('road/keep/other'))
+        console.terse("{0} keep dirpath = {1}\n".format(
+                other.name, other.keep.dirpath))
+        self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
 
         self.assertDictEqual(other.keep.loadLocalData(),
-                             {
-                                 'prihex': dataOther['prihex'],
-                                 'sighex': dataOther['sighex'],
-                                 'auto': True,
-                             })
+                            {
+                                'uid': 0,
+                                'name': 'other',
+                                'ha': ['0.0.0.0', 7531],
+                                'main': None,
+                                'sid': 0,
+                                'neid': 1,
+                                'sighex': otherData['sighex'],
+                                'prihex': otherData['prihex'],
+                                'auto': True,
+                            })
 
-        data3 = self.createRoadData(name='remote3', base=self.baseDirpath)
+        data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               eid=3,
                                               name=data3['name'],
@@ -315,7 +322,7 @@ class BasicTestCase(unittest.TestCase):
                                               period=main.period,
                                               offset=main.offset,))
 
-        data4 = self.createRoadData(name='remote4', base=self.baseDirpath)
+        data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               eid=4,
                                               name=data4['name'],
@@ -326,7 +333,7 @@ class BasicTestCase(unittest.TestCase):
                                              offset=main.offset,))
 
         other.dumpRemotes()
-        self.assertDictEqual(other.safe.loadAllRemoteData(),
+        self.assertDictEqual(other.keep.loadAllRemoteData(),
             {
                 '3':
                 {
@@ -359,53 +366,76 @@ class BasicTestCase(unittest.TestCase):
         '''
         Basic keep setup for stack keep and safe persistence load and dump
         '''
-        console.terse("{0}\n".format(self.testBasic.__doc__))
+        console.terse("{0}\n".format(self.testBootstrapClean.__doc__))
 
-        self.assertEqual(self.mainKeep.loadLocalData(), None)
-        self.assertEqual(self.mainKeep.loadAllRemoteData(), {})
+        opts = self.createOpts(name='main',
+                               dirpath=self.tempDirpath,
+                               openMode=True,
+                               autoAccept=True)
+        mainData = self.createRoadData(name='main', cachedirpath=opts['cachedir'] )
+        mainKeep = salting.SaltKeep(opts=opts,
+                                    basedirpath=mainData['basedirpath'],
+                                    stackname=mainData['name'])
 
-        dataMain = self.createRoadData(name='main', base=self.baseDirpath)
-        main = self.createRoadStack(data=dataMain,
+        self.assertEqual(mainKeep.loadLocalData(), None)
+        self.assertEqual(mainKeep.loadAllRemoteData(), {})
+
+        main = self.createRoadStack(data=mainData,
                                      eid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
-                                     safe=self.mainKeep)
+                                     keep=mainKeep)
 
-        self.assertTrue(main.keep.dirpath.endswith('road/keep/main'))
-        self.assertTrue(main.safe.dirpath.endswith('pki'))
+        console.terse("{0}\nkeep dirpath = {1}\n".format(
+                main.name, main.keep.dirpath))
+        self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.safe.auto)
+        self.assertTrue(main.keep.auto)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': 'main',
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
                                                          'sid': 0,
-                                                         'stack': 'main',
-                                                         'neid': 1,})
-        self.assertDictEqual(main.safe.loadLocalData(), {'prihex': dataMain['prihex'],
-                                                     'sighex': dataMain['sighex'],
-                                                     'auto': True,})
+                                                         'neid': 1,
+                                                         'sighex': mainData['sighex'],
+                                                         'prihex': mainData['prihex'],
+                                                         'auto': True,
+                                                         })
 
-        self.assertEqual(self.otherKeep.loadLocalData(), None)
-        self.assertEqual(self.otherKeep.loadAllRemoteData(), {})
+        opts = self.createOpts(name='other',
+                               dirpath=self.tempDirpath,
+                               openMode=True,
+                               autoAccept=True)
+        otherData = self.createRoadData(name='other', cachedirpath=opts['cachedir'] )
+        otherKeep = salting.SaltKeep(opts=opts,
+                                      basedirpath=otherData['basedirpath'],
+                                      stackname=otherData['name'])
 
-        dataOther = self.createRoadData(name='other', base=self.baseDirpath)
-        other = self.createRoadStack(data=dataOther,
+        self.assertEqual(otherKeep.loadLocalData(), None)
+        self.assertEqual(otherKeep.loadAllRemoteData(), {})
+
+        other = self.createRoadStack(data=otherData,
                                      eid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
-                                     keep=self.otherKeep)
+                                     keep=otherKeep)
 
-        console.terse("{0} keep dirpath = {1} safe dirpath = {2}\n".format(
-                other.name, other.keep.dirpath, other.safe.dirpath))
-        self.assertTrue(other.keep.dirpath.endswith('road/keep/other'))
-        self.assertTrue(other.safe.dirpath.endswith('pki'))
+        console.terse("{0} keep dirpath = {1}\n".format(
+                other.name, other.keep.dirpath))
+        self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertTrue(other.safe.auto)
-
-        self.assertDictEqual(other.safe.loadLocalData(), {'prihex': dataOther['prihex'],
-                                                        'sighex': dataOther['sighex'],
-                                                        'auto': True,})
+        self.assertDictEqual(other.keep.loadLocalData(),
+                            {
+                                'uid': 0,
+                                'name': 'other',
+                                'ha': ['0.0.0.0', 7531],
+                                'main': None,
+                                'sid': 0,
+                                'neid': 1,
+                                'sighex': otherData['sighex'],
+                                'prihex': otherData['prihex'],
+                                'auto': True,
+                            })
 
         self.join(other, main)
         self.assertEqual(len(main.transactions), 0)
@@ -441,7 +471,8 @@ def runSome():
     Unittest runner
     '''
     tests =  []
-    names = ['testBasic',]
+    names = ['testBasic',
+             'testBootstrapClean', ]
 
     tests.extend(map(BasicTestCase, names))
 
@@ -461,8 +492,8 @@ if __name__ == '__main__' and __package__ is None:
 
     #console.reinit(verbosity=console.Wordage.concise)
 
-    runAll() #run all unittests
+    #runAll() #run all unittests
 
-    #runSome()#only run some
+    runSome()#only run some
 
-    #runOne('testBootstrap')
+    #runOne('testBootstrapClean')

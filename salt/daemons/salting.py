@@ -7,6 +7,7 @@ salting.py module of salt specific interfaces to raet
 # pylint: disable=W0611
 
 # Import Python libs
+import os
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -20,7 +21,7 @@ from raet.road.keeping import RoadKeep
 from salt.key import RaetKey
 
 
-class SaltKeep(keeping.RoadKeep):
+class SaltKeep(RoadKeep):
     '''
     RAET protocol estate on road data persistence for a given estate
     road specific data
@@ -34,17 +35,20 @@ class SaltKeep(keeping.RoadKeep):
                     estate.uid.ext
                     estate.uid.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid']
-    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined']
+    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto']
+    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid']
+    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex']
+    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined']
+
     Auto = False #auto accept
 
-    def __init__(self, opts, **kwa):
+    def __init__(self, opts, basedirpath='', auto=None, **kwa):
         '''
         Setup RoadKeep instance
         '''
-        auto = opts['auto_accept']
-        dirpath = opts['pki_dir']
-        super(SaltKeep, self).__init__(dirpath=dirpath, auto=auto, **kwa)
+        basedirpath = basedirpath or os.path.join(opts['cache_dir'], 'raet')
+        auto = auto if auto is not None else opts['auto_accept']
+        super(SaltKeep, self).__init__(basedirpath=basedirpath, auto=auto, **kwa)
         self.saltRaetKey = RaetKey(opts)
 
     def loadLocalData(self):
@@ -73,7 +77,7 @@ class SaltKeep(keeping.RoadKeep):
                         ('sid', local.sid),
                         ('neid', local.neid),
                     ])
-        if self.verifyLocalData(data):
+        if self.verifyLocalData(data, localFields = self.LocalDumpFields):
             self.dumpLocalData(data)
 
         self.saltRaetKey.write_local(local.priver.keyhex, local.signer.keyhex)
@@ -89,7 +93,7 @@ class SaltKeep(keeping.RoadKeep):
                         ('sid', remote.sid),
                         ('joined', remote.joined),
                     ])
-        if self.verifyRemoteData(data):
+        if self.verifyRemoteData(data, remoteFields =self.RemoteDumpFields):
             self.dumpRemoteData(data, remote.uid)
 
         self.saltRaetKey.status(remote.name,
