@@ -4646,3 +4646,9 @@ source_file = _build/locale/topics/tutorials/syslog_ng-state-usage.pot
 source_lang = en
 source_name = topics/tutorials/syslog_ng-state-usage.rst
 
+[salt.ref--modules--all--salt_modules_twilio_notify]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.twilio_notify.po
+source_file = _build/locale/ref/modules/all/salt.modules.twilio_notify.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.twilio_notify.rst
+
