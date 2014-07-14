@@ -7,6 +7,10 @@ except ImportError:
     HAS_CHERRYPY = False
 
 import mock
+import os
+
+import salt.config
+from ..integration import TMP_CONF_DIR
 
 if HAS_CHERRYPY:
     from . cptestcase import BaseCherryPyTestCase
@@ -31,6 +35,12 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     '''
     __opts__ = None
 
+    def __init__(self, *args, **kwargs):
+        super(BaseRestCherryPyTest, self).__init__(*args, **kwargs)
+
+        master_conf = os.path.join(TMP_CONF_DIR, 'master')
+        self.config = salt.config.client_config(master_conf)
+
     @mock.patch('salt.netapi.NetapiClient', autospec=True)
     @mock.patch('salt.auth.Resolver', autospec=True)
     @mock.patch('salt.auth.LoadAuth', autospec=True)
@@ -47,7 +57,8 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
         self.NetapiClient = NetapiClient
         self.get_event = get_event
 
-        __opts__ = self.__opts__ or {
+        __opts__ = self.config.copy()
+        __opts__.update(self.__opts__ or {
             'external_auth': {
                 'auto': {
                     'saltdev': [
@@ -61,7 +72,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
                 'port': 8000,
                 'debug': True,
             },
-        }
+        })
 
         root, apiopts, conf = app.get_app(__opts__)
 
