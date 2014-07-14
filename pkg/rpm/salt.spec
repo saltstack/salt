@@ -162,6 +162,7 @@ install -p -m 0644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
 %endif
 
 install -p %{SOURCE8} .
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/
 install -p %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/salt
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
@@ -182,6 +183,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/LICENSE
 %{python_sitelib}/%{name}/*
 %{python_sitelib}/%{name}-%{version}-py?.?.egg-info
+%{_sysconfdir}/logrotate.d/salt
 %doc %{_mandir}/man7/salt.7.*
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/README.fedora
 
@@ -324,6 +326,15 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-3
+- Add logrotate script
+
+* Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-2
+- Update to bugfix release 2014.1.7
+
+* Wed Jun 11 2014 Erik Johnson <erik@saltstack.com> - 2014.1.5-1
+- Update to bugfix release 2014.1.5
+
 * Tue May 6 2014 Erik Johnson <erik@saltstack.com> - 2014.1.4-1
 - Update to bugfix release 2014.1.4
 

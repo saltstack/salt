@@ -6,27 +6,24 @@ import time
 import os
 import threading
 
-from collections import defaultdict, deque
-
 # Import Salt Libs
 import salt.payload
 import salt.auth
 import salt.utils
 import logging
+from collections import defaultdict
 
 log = logging.getLogger(__name__)
 
 try:
-    from raet import raeting, nacling
-    from raet.lane.stacking import LaneStack
-    from raet.lane import yarding
+    from raet import nacling
 
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
 
-jobber_stack = None # global that holds raet jobber LaneStack
-jobber_rxMsgs = {} # dict of deques one for each RaetChannel
+jobber_stack = None  # global that holds raet jobber LaneStack
+jobber_rxMsgs = {}  # dict of deques one for each RaetChannel
 
 
 class Channel(object):
@@ -100,9 +97,6 @@ class RAETChannel(Channel):
             #raise ValueError(emsg)
         log.debug("Using Jobber Stack at = {0}\n".format(jobber_stack.local.ha))
         self.stack = jobber_stack
-        mid = self.opts.get('id', 'master')
-        src = (mid, self.stack.local.name, None)
-        self.route = {'src': src, 'dst': self.dst}
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -117,23 +111,31 @@ class RAETChannel(Channel):
         One shot wonder
         '''
         self.__prep_stack()
-        msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, self.stack.uids['manor'])
         tried = 1
         start = time.time()
-        while True:
-            time.sleep(0.01)
+        mid = self.opts.get('id', 'master')
+        track = nacling.uuid(18)
+        src = (mid, self.stack.local.name, track)
+        self.route = {'src': src, 'dst': self.dst}
+        msg = {'route': self.route, 'load': load}
+        self.stack.transmit(msg, self.stack.uids['manor'])
+        while track not in jobber_rxMsgs:
             self.stack.serviceAll()
             while self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                if self.locally:
-                    self.stack.server.close()
-                return msg.get('return', {})
+                jobber_rxMsgs[msg['route']['dst'][2]] = msg
+                continue
+            if track in jobber_rxMsgs:
+                break
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
                 self.stack.transmit(msg, self.stack.uids['manor'])
                 tried += 1
+            time.sleep(0.01)
+        if self.locally:
+            self.stack.server.close()
+        return jobber_rxMsgs.pop(track).get('return', {})
 
 
 class ZeroMQChannel(Channel):

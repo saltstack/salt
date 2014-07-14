@@ -948,7 +948,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=mid,
-                                   dirpath=self.opts['sock_dir'] ))
+                                   dirpath=self.opts['sock_dir']))
         console.concise("Created Jobber Stack {0}\n".format(stack.name))
         return stack
 
@@ -986,7 +986,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         )
                     )(data['tgt'])
             if not match:
-                return
+                continue
             if 'user' in data:
                 log.info(
                         'User {0[user]} Executing command {0[fun]} with jid '

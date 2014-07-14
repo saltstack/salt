@@ -71,7 +71,7 @@ vary:
 Salt defaults to the `ZeroMQ`_ transport, and the choice can be made at install 
 time, for example:
 
-.. code-block:: console
+.. code-block:: bash
 
     python setup.py install --salt-transport=raet
 
@@ -81,7 +81,7 @@ be.
 If installing using pip, the ``--salt-transport`` install option can be 
 provided like:
 
-.. code-block:: console
+.. code-block:: bash
 
   pip install --install-option="--salt-transport=raet" salt
 

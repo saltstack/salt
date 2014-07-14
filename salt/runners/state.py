@@ -83,6 +83,10 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     .. versionchanged:: 2014.1.1
 
         Runner renamed from ``state.sls`` to ``state.orchestrate``
+
+    .. versionchanged:: Helium
+
+        Runner uses the pillar variable
     '''
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError(

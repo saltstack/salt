@@ -876,7 +876,7 @@ class TestDaemon(object):
                     if isinstance(output['ret'], salt._compat.string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed so sync {2}: '
+                            ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
                             '{1}'.format(
                                 name, output['ret'],
                                 modules_kind,

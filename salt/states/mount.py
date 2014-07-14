@@ -255,6 +255,9 @@ def swap(name, persist=True, config='/etc/fstab'):
 
         /root/swapfile:
           mount.swap
+
+    .. note::
+        ``swap`` does not currently support LABEL
     '''
     ret = {'name': name,
            'changes': {},
@@ -324,8 +327,7 @@ def unmounted(name,
               config='/etc/fstab',
               persist=False):
     '''
-    .. note::
-        This state will be available in version 0.17.0.
+    .. versionadded:: 0.17.0
 
     Verify that a device is not mounted
 

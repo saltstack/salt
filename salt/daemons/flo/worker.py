@@ -187,7 +187,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
                     r_share = 'pub_ret'
                     ret['__worker_verify'] = self.worker_verify.value
                 else:
-                    r_share = 'ret'
+                    r_share = msg['route']['src'][2]
                 ret['route'] = {
                         'src': (self.opts.value.get('id', 'master'), self.uxd_stack.value.local.name, None),
                         'dst': (msg['route']['src'][0], msg['route']['src'][1], r_share)

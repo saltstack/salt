@@ -124,7 +124,11 @@ def installed(name,
               cwd=None,
               activate=False,
               pre_releases=False,
-              cert=None):
+              cert=None,
+              allow_all_external=False,
+              allow_external=None,
+              allow_unverified=None,
+              process_dependency_links=False):
     '''
     Make sure the package is installed
 
@@ -145,6 +149,10 @@ def installed(name,
 
     This will install the latest Django version greater than 1.6 but less
     than 1.7.
+
+    requirements
+        Path to a pip requirements file. If the path begins with salt://
+        the file will be transferred from the master file server.
 
     user
         The user under which to run pip
@@ -424,6 +432,10 @@ def installed(name,
         activate=activate,
         pre_releases=pre_releases,
         cert=cert,
+        allow_all_external=allow_all_external,
+        allow_external=allow_external,
+        allow_unverified=allow_unverified,
+        process_dependency_links=process_dependency_links,
         saltenv=__env__
     )
 
