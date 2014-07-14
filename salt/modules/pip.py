@@ -89,7 +89,7 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
-def install(pkgs=None,
+def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             env=None,
             bin_env=None,
@@ -546,7 +546,7 @@ def install(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except Exception:
+            except OSError:
                 pass
 
 
@@ -714,7 +714,7 @@ def uninstall(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except Exception:
+            except OSError:
                 pass
 
 
