@@ -72,6 +72,7 @@ import uuid
 import pprint
 import logging
 import yaml
+import re
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -301,6 +302,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                     return {'error': endpoint_err}, requesturl
                 return {'error': endpoint_err}
 
+        log.debug('Using EC2 endpoint: {0}'.format(endpoint))
         method = 'GET'
 
         ec2_api_version = provider.get(
