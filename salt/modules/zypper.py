@@ -227,9 +227,9 @@ class _RepoInfo(object):
     @property
     def options(self):
         class_items = self.__class__.__dict__.iteritems()
-        return {k: getattr(self, k) for k, v in class_items
-                if isinstance(v, property) and k != 'options'
-                and getattr(self, k) not in (None, '')}
+        return dict([(k, getattr(self, k)) for k, v in class_items
+                     if isinstance(v, property) and k != 'options'
+                     and getattr(self, k) not in (None, '')])
 
     def _check_only_mirrorlist_or_url(self):
         if all(x in self.options for x in ('mirrorlist', 'url')):
