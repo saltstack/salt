@@ -163,26 +163,6 @@ class VirtualenvTestCase(TestCase):
                 system_site_packages=True
             )
 
-    def test_no_site_packages_deprecation(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                virtualenv_mod.create(
-                    '/tmp/foo', no_site_packages=True
-                )
-                self.assertEqual(
-                    '\'no_site_packages\' has been deprecated. Please '
-                    'start using \'system_site_packages=False\' which '
-                    'means exactly the same as \'no_site_packages=True\'. '
-                    'This warning and respective workaround will be removed '
-                    'in Salt Helium (Unreleased)',
-                    str(w[-1].message)
-                )
-
     def test_unapplicable_options(self):
         # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
