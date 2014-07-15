@@ -477,8 +477,10 @@ def mod_repo(repo, **kwargs):
         salt '*' pkg.mod_repo alias url= mirrorlist=http://host.com/
     '''
     # Filter out '__pub' arguments, as well as saltenv
-    repo_opts = {x: kwargs[x] for x in kwargs
-                 if not x.startswith('__') and x not in ('saltenv',)}
+    repo_opts = {}
+    for x in kwargs:
+        if not x.startswith('__') and x not in ('saltenv',):
+            repo_opts[x] = kwargs[x]
 
     repo_manager = zypp.RepoManager()
     try:
