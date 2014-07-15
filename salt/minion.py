@@ -1700,7 +1700,6 @@ class Minion(MinionBase):
 
         # On first startup execute a state run if configured to do so
         self._state_run()
-        time.sleep(.5)
 
         while self._running is True:
             try:
