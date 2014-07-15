@@ -99,25 +99,26 @@ class GitPillar(object):
 
         for idx, opts_dict in enumerate(self.opts['ext_pillar']):
 
-            # self.opts['ext_pillar'] always contains full ext_pillar list
-            if 'git' not in opts_dict:
-                continue
-
+            # self.opts['ext_pillar'] always contains the full list of
+            # ext_pillar options specified in the master config file.
+            # We iterate over that list until we find the branch and location
+            # that match the options passed in via the 'opts' variable.
+            # The reason this is done in a loop is to set the 'idx' variable,
+            # which is used to form the path to the cached local copy of the
+            # git repository.
             parts = opts_dict.get('git', '').split()
 
-            # parts = 2: 'master' 'git_repo_uri'
-            # parts = 3: 'master' 'git_repo_uri' 'root=pillars_dir'
-            if len(parts) == 2:
-                self.branch = parts[0]
-                self.rp_location = parts[1]
-            elif len(parts) == 3:
-                self.branch = parts[0]
-                self.rp_location = parts[1]
-                self.root = parts[2]
-            else:
-                log.error("Unable to initilize GitPillar with ext_pillar: %s",
+            # expected option format:
+            # len(parts) = 2: 'master' 'git_repo_uri'
+            # len(parts) = 3: 'master' 'git_repo_uri' 'root=pillars_dir'
+            if len(parts) < 2 or len(parts) > 3:
+                log.error("Unable to initilize GitPillar with invalid \
+                          ext_pillar option format: %s",
                           opts_dict.get('git', None))
                 break
+
+            if (self.branch != parts[0] or self.rp_location != parts[1]):
+                continue
 
             rp_ = os.path.join(self.opts['cachedir'],
                                'pillar_gitfs', str(idx))
