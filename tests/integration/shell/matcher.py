@@ -216,15 +216,15 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
-        data = self.run_salt('-d')
+        data = self.run_salt('-d -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' -d')
+        data = self.run_salt('\'*\' -d -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' -d user')
+        data = self.run_salt('\'*\' -d user -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' sys.doc -d user')
+        data = self.run_salt('\'*\' sys.doc -d user -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' sys.doc user')
+        data = self.run_salt('\'*\' sys.doc user -t 20')
         self.assertIn('user.add:', data)
 
     def test_salt_documentation_too_many_arguments(self):
