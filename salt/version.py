@@ -57,7 +57,7 @@ class SaltStackVersion(object):
         # The idea is keep this readable
         # ------------------------------------------------------------------------------------------------------------
         'Hydrogen': (2014, 1, 0, 0),
-        'Helium': (sys.maxint - 107, 0, 0, 0),
+        'Helium': (2014, 7, 0, 0),
         'Lithium': (sys.maxint - 106, 0, 0, 0),
         'Beryllium': (sys.maxint - 105, 0, 0, 0),
         'Boron': (sys.maxint - 104, 0, 0, 0),
@@ -355,7 +355,7 @@ class SaltStackVersion(object):
 # forget to update to the real major version on SaltStackVersion.NAMES.
 # Minor version bumps should be done on SaltStackVersion.NAMES, see above.
 # --------------------------------------------------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion.from_name('Hydrogen')
+__saltstack_version__ = SaltStackVersion.from_name('Helium')
 # <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
