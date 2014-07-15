@@ -214,15 +214,14 @@ class _RepoInfo(object):
     Incapsulate all properties that are dumped in zypp._RepoInfo.dumpOn:
     http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
     '''
-    repo_types = {
-        zypp.RepoType.NONE_e: 'NONE',
-        zypp.RepoType.RPMMD_e: 'rpm-md',
-        zypp.RepoType.YAST2_e: 'yast2',
-        zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
-    }
-
     def __init__(self, zypp_repo_info=None):
         self.zypp = zypp_repo_info if zypp_repo_info else zypp.RepoInfo()
+        self.repo_types = {
+            zypp.RepoType.NONE_e: 'NONE',
+            zypp.RepoType.RPMMD_e: 'rpm-md',
+            zypp.RepoType.YAST2_e: 'yast2',
+            zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
+        }
 
     @property
     def options(self):
