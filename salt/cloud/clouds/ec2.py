@@ -79,6 +79,7 @@ import hashlib
 import binascii
 import datetime
 import urllib
+import urlparse
 import requests
 
 # Import salt libs
@@ -283,36 +284,47 @@ def query(params=None, setname=None, requesturl=None, location=None,
             location = get_location()
 
         if not requesturl:
-            method = 'GET'
-
             endpoint = provider.get(
                 'endpoint',
                 'ec2.{0}.{1}'.format(location, service_url)
             )
 
-            ec2_api_version = provider.get(
-                'ec2_api_version',
-                DEFAULT_EC2_API_VERSION
-            )
-
-            params_with_headers['AWSAccessKeyId'] = provider['id']
-            params_with_headers['SignatureVersion'] = '2'
-            params_with_headers['SignatureMethod'] = 'HmacSHA256'
-            params_with_headers['Timestamp'] = '{0}'.format(timestamp)
-            params_with_headers['Version'] = ec2_api_version
-            keys = sorted(params_with_headers.keys())
-            values = map(params_with_headers.get, keys)
-            querystring = urllib.urlencode(list(zip(keys, values)))
-
-            uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                            endpoint.encode('utf-8'),
-                                            querystring.encode('utf-8'))
-
-            hashed = hmac.new(provider['key'], uri, hashlib.sha256)
-            sig = binascii.b2a_base64(hashed.digest())
-            params_with_headers['Signature'] = sig.strip()
-
             requesturl = 'https://{0}/'.format(endpoint)
+        else:
+            endpoint = urlparse.urlparse(requesturl).netloc
+            if endpoint == '':
+                endpoint_err = 'Could not find a valid endpoint in the requesturl: {0}. Looking for something like https://some.ec2.endpoint/?args'.format(
+                    requesturl
+                )
+                log.error(endpoint_err)
+                if return_url is True:
+                    return {'error': endpoint_err}, requesturl
+                return {'error': endpoint_err}
+
+        log.debug('Using EC2 endpoint: {0}'.format(endpoint))
+        method = 'GET'
+
+        ec2_api_version = provider.get(
+            'ec2_api_version',
+            DEFAULT_EC2_API_VERSION
+        )
+
+        params_with_headers['AWSAccessKeyId'] = provider['id']
+        params_with_headers['SignatureVersion'] = '2'
+        params_with_headers['SignatureMethod'] = 'HmacSHA256'
+        params_with_headers['Timestamp'] = '{0}'.format(timestamp)
+        params_with_headers['Version'] = ec2_api_version
+        keys = sorted(params_with_headers.keys())
+        values = map(params_with_headers.get, keys)
+        querystring = urllib.urlencode(list(zip(keys, values)))
+
+        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
+                                        endpoint.encode('utf-8'),
+                                        querystring.encode('utf-8'))
+
+        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+        sig = binascii.b2a_base64(hashed.digest())
+        params_with_headers['Signature'] = sig.strip()
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         log.trace('EC2 Request Parameters: {0}'.format(params_with_headers))
