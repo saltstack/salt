@@ -18,8 +18,12 @@ import multiprocessing
 import sys
 
 # Import third party libs
-import zmq
-from M2Crypto import RSA
+try:
+    import zmq
+    from M2Crypto import RSA
+except ImportError:
+    # Don't fail on RAET when utils may import
+    pass
 
 # Import salt libs
 import salt.crypt
