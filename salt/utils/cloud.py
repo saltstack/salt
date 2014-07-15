@@ -2097,7 +2097,7 @@ def cache_node_list(nodes, provider, opts):
     If configured to do so, update the cloud cachedir with the current list of
     nodes. Also fires configured events pertaining to the node list.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
@@ -2122,7 +2122,7 @@ def cache_node(node, provider, opts):
     '''
     Cache node individually
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
@@ -2152,7 +2152,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
 
         diff_cache_events: True
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     cached_nodes = []
     for node in os.listdir(prov_dir):
@@ -2185,7 +2185,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
         diff_cache_events: True
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     if 'diff_cache_events' not in opts or not opts['diff_cache_events']:
         return
@@ -2241,7 +2241,7 @@ def _strip_cache_events(data, opts):
           - password
           - priv_key
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     event_data = copy.deepcopy(data)
     strip_fields = opts.get('cache_event_strip_fields', [])

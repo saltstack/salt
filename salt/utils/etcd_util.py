@@ -2,7 +2,7 @@
 '''
 Utilities for working with etcd
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:  - python-etcd
 
@@ -53,7 +53,7 @@ log = logging.getLogger(__name__)
 
 def get_conn(opts, profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a client object for accessing etcd
     '''
@@ -84,7 +84,7 @@ def get_conn(opts, profile=None):
 
 def tree(client, path):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Recurse through etcd and return all values
     '''
