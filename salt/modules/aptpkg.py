@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Support for APT (Advanced Packaging Tool)
+
+.. note::
+
+    The ``python-apt`` package is required to be installed.
+
 '''
 
 # Import python libs
