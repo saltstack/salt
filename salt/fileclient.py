@@ -17,7 +17,9 @@ import requests
 import yaml
 
 # Import salt libs
-from salt.exceptions import MinionError, SaltReqTimeoutError
+from salt.exceptions import (
+    CommandExecutionError, MinionError, SaltReqTimeoutError
+)
 import salt.client
 import salt.crypt
 import salt.loader
@@ -505,6 +507,15 @@ class Client(object):
             saltenv = env
 
         url_data = urlparse(url)
+
+        if url_data.scheme in ('file', ''):
+            # Local filesystem
+            if not os.path.isabs(url_data.path):
+                raise CommandExecutionError(
+                    'Path {0!r} is not absolute'.format(url_data.path)
+                )
+            return url_data.path
+
         if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, saltenv)
         if dest:
@@ -545,7 +556,7 @@ class Client(object):
                                     verify_ssl=self.opts.get('s3.verify_ssl',
                                                               True))
                 return dest
-            except Exception as ex:
+            except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         if url_data.scheme == 'swift':
@@ -558,7 +569,7 @@ class Client(object):
                                       url_data.path[1:],
                                       dest)
                 return dest
-            except Exception as ex:
+            except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         if url_data.username is not None \
@@ -580,13 +591,13 @@ class Client(object):
             with salt.utils.fopen(dest, 'wb') as destfp:
                 destfp.write(req.content)
             return dest
-        except HTTPError as ex:
+        except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
-                ex.code,
+                exc.code,
                 url,
-                *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except URLError as ex:
-            raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
+                *BaseHTTPServer.BaseHTTPRequestHandler.responses[exc.code]))
+        except URLError as exc:
+            raise MinionError('Error reading {0}: {1}'.format(url, exc.reason))
 
     def get_template(
             self,
