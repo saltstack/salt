@@ -2041,7 +2041,8 @@ def attachable(name):
 
 
 def run_cmd(name, cmd, no_start=False, preserve_state=True,
-            stdout=True, stderr=False, use_vt=False):
+            stdout=True, stderr=False, use_vt=False,
+            keep_env='http_proxy,https_proxy'):
     '''
     Run a command inside the container.
 
@@ -2075,6 +2076,10 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     use_vt
         use saltstack utils.vt to stream output to console
 
+    keep_env
+        A list of env vars to preserve. May be passed as commma-delimited list.
+        Defaults to http_proxy,https_proxy.
+
     .. note::
 
         If stderr and stdout are both ``False``, the return code is returned.
@@ -2085,12 +2090,18 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if not prior_state:
         return prior_state
     if attachable(name):
+        if isinstance(keep_env, basestring):
+            keep_env = keep_env.split(',')
+        if keep_env:
+            env = ' '.join('{0}=${0}'.format(x) for x in keep_env)
+        else:
+            env = ''
+
+        cmd = 'lxc-attach -n \'{0}\' -- env -i {1} {2}'.format(name, env, cmd)
         if not use_vt:
-            cmd = 'lxc-attach -n \'{0}\' -- env -i {1}'.format(name, cmd)
             res = __salt__['cmd.run_all'](cmd)
         else:
             stdout, stderr = '', ''
-            cmd = 'lxc-attach -n \'{0}\' -- env -i {1}'.format(name, cmd)
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,

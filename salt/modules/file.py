@@ -2426,6 +2426,10 @@ def get_managed(
         sfn = __salt__['cp.cache_file'](source, saltenv)
         if not os.path.exists(sfn):
             return sfn, {}, 'Source file {0} not found'.format(source)
+        if sfn == name:
+            raise SaltInvocationError(
+                'Source file cannot be the same as destination'
+            )
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             context_dict = defaults if defaults else {}
             if context:

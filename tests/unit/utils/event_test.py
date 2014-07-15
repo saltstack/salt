@@ -23,7 +23,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.master import clean_proc
+from salt.utils.process import clean_proc
 from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')

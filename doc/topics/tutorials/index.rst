@@ -43,6 +43,7 @@ Advanced Topics
     minionfs
     esky
     multimaster
+    multimaster_pki
     preseed_key
     salt_bootstrap
     gitfs

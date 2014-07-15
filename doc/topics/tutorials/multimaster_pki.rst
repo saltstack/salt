@@ -32,10 +32,10 @@ Would it not be much nicer, if the minion could have any number of masters
 (1:n) and jump to the next master if its current master died because of a
 network or hardware failure?
 
-
+.. note::
     There is also a MultiMaster-Tutorial with a different approach and topology
-    than this one that might also suite your needs:
-    `Multi-Master Tutorial: <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster.html>`
+    than this one, that might also suite your needs or might even be better suited
+    `Multi-Master Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster.html>`_
 
 
 It is also desirable, to add some sort of authenticity-check to the very first
