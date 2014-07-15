@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 This is the default local master event queue built on sqlite.  By default, an
 sqlite3 database file is created in the `sqlite_queue_dir` which is found at::
