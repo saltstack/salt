@@ -928,6 +928,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
             self.get_config_file_path('master')
         )
 
+
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
