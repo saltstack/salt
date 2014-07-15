@@ -532,7 +532,8 @@ class LowDataAdapter(object):
         # Release the session lock before executing any potentially
         # long-running Salt commands. This allows different threads to execute
         # Salt commands concurrently without blocking.
-        cherrypy.session.release_lock()
+        if cherrypy.request.config.get('tools.sessions.on', False):
+            cherrypy.session.release_lock()
 
         # if the lowstate loaded isn't a list, lets notify the client
         if type(lowstate) != list:
