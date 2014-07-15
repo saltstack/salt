@@ -256,11 +256,11 @@ class _RepoInfo(object):
             raise ValueError('Alias cannot be empty')
 
     @property
-    def autorefresh(self):
+    def auto_refresh(self):
         return self.zypp.autorefresh()
 
-    @autorefresh.setter
-    def autorefresh(self, value):
+    @auto_refresh.setter
+    def auto_refresh(self, value):
         self.zypp.setAlias(value)
 
     @property
@@ -272,43 +272,43 @@ class _RepoInfo(object):
         self.zypp.setEnabled(value)
 
     @property
-    def gpgcheck(self):
+    def gpg_check(self):
         return self.zypp.gpgCheck()
 
-    @gpgcheck.setter
-    def gpgcheck(self, value):
+    @gpg_check.setter
+    def gpg_check(self, value):
         self.zypp.setGpgCheck(value)
 
     @property
-    def gpgkey(self):
+    def gpg_key(self):
         return self.zypp.gpgKeyUrl().asCompleteString()
 
-    @gpgkey.setter
-    def gpgkey(self, value):
+    @gpg_key.setter
+    def gpg_key(self, value):
         self.zypp.setGpgKeyUrl(self._zypp_url(value))
 
     @property
-    def keeppackages(self):
+    def keep_packages(self):
         return self.zypp.keepPackages()
 
-    @keeppackages.setter
-    def keeppackages(self, value):
+    @keep_packages.setter
+    def keep_packages(self, value):
         self.zypp.setKeepPackages(value)
 
     @property
-    def metadataPath(self):
+    def metadata_path(self):
         return self.zypp.metadataPath().c_str()
 
-    @metadataPath.setter
-    def metadataPath(self, value):
+    @metadata_path.setter
+    def metadata_path(self, value):
         self.zypp.setMetadataPath(value)
 
     @property
-    def mirrorlist(self):
+    def mirror_list(self):
         return self.zypp.mirrorListUrl().asCompleteString()
 
-    @mirrorlist.setter
-    def mirrorlist(self, value):
+    @mirror_list.setter
+    def mirror_list(self, value):
         self.zypp.setMirrorListUrl(self._zypp_url(value))
         # self._check_only_mirrorlist_or_url()
 
@@ -321,11 +321,11 @@ class _RepoInfo(object):
         self.zypp.setName(value)
 
     @property
-    def packagesPath(self):
+    def packages_path(self):
         return self.zypp.packagesPath().c_str()
 
-    @packagesPath.setter
-    def packagesPath(self, value):
+    @packages_path.setter
+    def packages_path(self, value):
         self.zypp.setPackagesPath(self._zypp_url(value))
 
     @property
@@ -353,11 +353,11 @@ class _RepoInfo(object):
         self.zypp.setService(value)
 
     @property
-    def targetdistro(self):
+    def target_distro(self):
         return self.zypp.targetDistribution()
 
-    @targetdistro.setter
-    def targetdistro(self, value):
+    @target_distro.setter
+    def target_distro(self, value):
         self.zypp.setTargetDistribution(value)
 
     @property
@@ -388,8 +388,8 @@ def _try_zypp():
     '''
     try:
         yield
-    except RuntimeError as e:
-        raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
+    except RuntimeError as exc:
+        raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(exc)))
 
 
 @depends('zypp')
@@ -492,8 +492,8 @@ def mod_repo(repo, **kwargs):
         new_repo = True
     try:
         r.options = repo_opts
-    except ValueError as e:
-        raise SaltInvocationError(str(e))
+    except ValueError as exc:
+        raise SaltInvocationError(str(exc))
     with _try_zypp():
         if new_repo:
             repo_manager.addRepository(r.zypp)
