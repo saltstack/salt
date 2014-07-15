@@ -506,29 +506,20 @@ class MultiMinion(MinionBase):
         max_wait = self.opts['acceptance_wait_time_max']
 
         while True:
-            module_refresh = False
-            pillar_refresh = False
+            package = None
 
             socks = dict(self.poller.poll(1))
             if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
-                    while True:
-                        package = self.epull_sock.recv(zmq.NOBLOCK)
-                        if package.startswith('module_refresh'):
-                            module_refresh = True
-                        elif package.startswith('pillar_refresh'):
-                            pillar_refresh = True
-                        elif package.startswith('fire_master'):
-                            tag, data = salt.utils.event.MinionEvent.unpack(package)
-                            log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
-                            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-
-                        self.epub_sock.send(package)
+                    package = self.epull_sock.recv(zmq.NOBLOCK)
                 except Exception:
                     pass
 
+            masters = minions.keys()
+            shuffle(masters)
             # Do stuff per minion that we have
-            for master, minion in minions.items():
+            for master in masters:
+                minion = minions[master]
                 # if we haven't connected yet, lets attempt some more.
                 # make sure to keep seperate auth_wait times, since these
                 # are seperate masters
@@ -547,15 +538,19 @@ class MultiMinion(MinionBase):
                             continue
                     else:
                         continue
-                # run scheduled jobs if you have them
-                if 'minion' in minion:
-                    loop_interval = self.process_schedule(minion['minion'], loop_interval)
 
-                # run refresh jobs if you have them
-                if module_refresh:
-                    minion['minion'].module_refresh()
-                if pillar_refresh:
-                    minion['minion'].pillar_refresh()
+                # run scheduled jobs if you have them
+                loop_interval = self.process_schedule(minion['minion'], loop_interval)
+
+                # if you have an event to handle, do it on a single minion
+                # (first one to not throw an exception)
+                if package:
+                    try:
+                        minion['minion'].handle_event(package)
+                        package = None
+                        self.epub_sock.send(package)
+                    except:
+                        pass
 
                 # have the Minion class run anything it has to run
                 minion['generator'].next()
@@ -1509,6 +1504,10 @@ class Minion(MinionBase):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif package.startswith('__master_disconnected'):
+            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            # if the master disconnect event is for a different master, raise an exception
+            if data['master'] != self.opts['master']:
+                raise Exception()
             if self.connected:
                 # we are not connected anymore
                 self.connected = False
