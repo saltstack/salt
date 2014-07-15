@@ -508,10 +508,7 @@ class MultiMinion(MinionBase):
         while True:
             module_refresh = False
             pillar_refresh = False
-            for _, minion_map in minions.iteritems():
-                if 'minion' not in minion_map:
-                    continue
-                loop_interval = self.process_schedule(minion_map['minion'], loop_interval)
+
             socks = dict(self.poller.poll(1))
             if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
@@ -529,8 +526,12 @@ class MultiMinion(MinionBase):
                         self.epub_sock.send(package)
                 except Exception:
                     pass
-            # get commands from each master
+
+            # Do stuff per minion that we have
             for master, minion in minions.items():
+                # if we haven't connected yet, lets attempt some more.
+                # make sure to keep seperate auth_wait times, since these
+                # are seperate masters
                 if 'generator' not in minion:
                     if time.time() - minion['auth_wait'] > minion['last']:
                         minion['last'] = time.time()
@@ -546,10 +547,17 @@ class MultiMinion(MinionBase):
                             continue
                     else:
                         continue
+                # run scheduled jobs if you have them
+                if 'minion' in minion:
+                    loop_interval = self.process_schedule(minion['minion'], loop_interval)
+
+                # run refresh jobs if you have them
                 if module_refresh:
                     minion['minion'].module_refresh()
                 if pillar_refresh:
                     minion['minion'].pillar_refresh()
+
+                # have the Minion class run anything it has to run
                 minion['generator'].next()
 
 
