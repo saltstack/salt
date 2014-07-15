@@ -59,6 +59,24 @@ class RunnerModuleTest(integration.ClientCase):
             'token': token['token'],
         })
 
+    def test_cmd_sync(self):
+        low = {
+            'client': 'runner',
+            'fun': 'error.error',
+        }
+        low.update(self.eauth_creds)
+
+        self.runner.cmd_sync(low)
+
+    def test_cmd_async(self):
+        low = {
+            'client': 'runner',
+            'fun': 'error.error',
+        }
+        low.update(self.eauth_creds)
+
+        self.runner.cmd_async(low)
+
 
 if __name__ == '__main__':
     from integration import run_tests
