@@ -329,7 +329,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         return False
 
 
-def create_launch_configuration(name, image_id=None, key_name=None,
+def create_launch_configuration(name, image_id, key_name=None,
                                 security_groups=None, user_data=None,
                                 instance_type='m1.small', kernel_id=None,
                                 ramdisk_id=None, block_device_mappings=None,
