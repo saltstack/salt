@@ -220,7 +220,7 @@ class _RepoInfo(object):
     http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
     '''
     repo_types = {}
-    
+
     if HAS_ZYPP:
         repo_types = {
             zypp.RepoType.NONE_e: 'NONE',
