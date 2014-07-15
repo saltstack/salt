@@ -41,6 +41,7 @@ def present(name,
             login=None,
             replication=None,
             password=None,
+            refresh_password=None,
             groups=None,
             runas=None,
             user=None,
@@ -92,6 +93,18 @@ def present(name,
         If encrypted is None or True, the password will be automatically
         encrypted to the previous
         format if it is not already done.
+
+    refresh_password
+        Password refresh flag
+
+        Boolean attribute to specify whether to password comparison check
+        should be performed.
+
+        If refresh_password is None or False, the password will be automatically
+        updated without extra password change check.
+
+        This behaviour allows to execute in environments without superuser access
+        available, e.g. Amazon RDS for PostgreSQL
 
     groups
         A string of comma separated groups the group should be in
@@ -168,7 +181,7 @@ def present(name,
     # check if group exists
     mode = 'create'
     group_attr = __salt__['postgres.role_get'](
-        name, return_password=True, **db_args)
+        name, return_password=not refresh_password, **db_args)
     if group_attr is not None:
         mode = 'update'
 
@@ -200,7 +213,7 @@ def present(name,
             update['replication'] = replication
         if superuser is not None and group_attr['superuser'] != superuser:
             update['superuser'] = superuser
-        if password is not None and group_attr['password'] != password:
+        if password is not None and (refresh_password or group_attr['password'] != password):
             update['password'] = True
     if mode == 'create' or (mode == 'update' and update):
         if __opts__['test']:
