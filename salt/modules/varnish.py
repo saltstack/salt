@@ -14,7 +14,6 @@ Support for Varnish
 import logging
 import pipes
 import re
-import shlex
 
 # Import salt libs
 import salt.utils
@@ -34,7 +33,7 @@ def __virtual__():
     return False
 
 
-def _run_varnishadm(cmd, params=[], **kwargs):
+def _run_varnishadm(cmd, params=None, **kwargs):
     '''
     Execute varnishadm command
     return the output of the command
@@ -48,7 +47,8 @@ def _run_varnishadm(cmd, params=[], **kwargs):
     kwargs
         Additional options to pass to the salt cmd.run_all function
     '''
-    sanitized_params = [pipes.quote(p) for p in params if not p == None]
+    params = params or []
+    sanitized_params = [pipes.quote(p) for p in params if not p is None]
     cmd = 'varnishadm {0} {1}'.format(cmd, ' '.join(sanitized_params))
     log.debug('Executing: {0}'.format(cmd))
     return __salt__['cmd.run_all'](cmd, **kwargs)
