@@ -20,6 +20,8 @@ Module to provide Postgres compatibility to salt.
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 '''
+# This pylint error is popping up where there are no colons?
+# pylint: disable=E8203
 
 # Import python libs
 import datetime
