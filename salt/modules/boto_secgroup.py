@@ -273,7 +273,7 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     CLI examples::
 
         salt myminion boto_secgroup.delete mysecgroup
-        or 
+        or
         salt myminion boto_secgroup.delete mysecgroup vpc_id=vpc-1476ae71
         or
         salt myminion boto_secgroup.delete group_id=sg-3269ae58
@@ -313,7 +313,7 @@ def authorize(name=None, source_group_name=None,
     CLI examples::
 
         salt myminion boto_secgroup.authorize mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
-        or 
+        or
         salt myminion boto_secgroup.authorize mysecgroup vpc_id=vpc-1476ae71 ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
         or
         salt myminion boto_secgroup.authorize group_id=sg-3269ae58 ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
