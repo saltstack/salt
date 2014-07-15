@@ -294,7 +294,7 @@ class MasterSwarm(Swarm):
             cmd += ' -d &'
         subprocess.call(cmd, shell=True)
 
-    def mkconf(self):
+    def mkconf(self):  # pylint: disable=W0221
         '''
         Make a master config and write it'
         '''
