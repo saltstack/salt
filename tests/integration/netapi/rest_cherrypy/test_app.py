@@ -1,4 +1,6 @@
 # coding: utf-8
+import unittest
+import mock
 import urllib
 
 from tests.utils import BaseRestCherryPyTest
@@ -47,6 +49,13 @@ class TestLogin(BaseRestCherryPyTest):
             ('password', 'saltdev'),
             ('eauth', 'auto'))
 
+    @mock.patch('salt.auth.Resolver', autospec=True)
+    def setUp(self, Resolver, *args, **kwargs):
+        super(TestLogin, self).setUp(*args, **kwargs)
+
+        self.app.salt.auth.Resolver = Resolver
+        self.Resolver = Resolver
+
     def test_good_login(self):
         '''
         Test logging in
@@ -90,6 +99,15 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
             'webhook_disable_auth': True,
         },
     }
+
+    @mock.patch('salt.utils.event.get_event', autospec=True)
+    def setUp(self, get_event, *args, **kwargs):
+        '''
+        '''
+        super(TestWebhookDisableAuth, self).setUp(*args, **kwargs)
+
+        self.app.salt.utils.event.get_event = get_event
+        self.get_event = get_event
 
     def test_webhook_noauth(self):
         '''
