@@ -41,7 +41,6 @@ def __virtual__():
 
 def create(path,
            venv_bin=None,
-           no_site_packages=None,
            system_site_packages=False,
            distribute=False,
            clear=False,
@@ -63,9 +62,6 @@ def create(path,
     venv_bin : None (default 'virtualenv')
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
-    no_site_packages : None
-        Passthrough argument given to virtualenv if True. Deprecated since
-        ``salt>=0.17.0``. Use ``system_site_packages=False`` instead.
     system_site_packages : False
         Passthrough argument given to virtualenv or pyvenv
     distribute : False
@@ -107,16 +103,6 @@ def create(path,
     # raise CommandNotFoundError if venv_bin is missing
     salt.utils.check_or_die(venv_bin)
 
-    if no_site_packages is not None:
-        # Show a deprecation warning
-        salt.utils.warn_until(
-            'Helium',
-            '\'no_site_packages\' has been deprecated. Please start using '
-            '\'system_site_packages=False\' which means exactly the same '
-            'as \'no_site_packages=True\'. This warning and respective '
-            'workaround will be removed in Salt {version}'
-        )
-
     if runas is not None:
         # The user is using a deprecated argument, warn!
         salt.utils.warn_until(
@@ -135,14 +121,6 @@ def create(path,
     # Support deprecated 'runas' arg
     elif runas is not None and not user:
         user = str(runas)
-
-    if no_site_packages is True and system_site_packages is True:
-        raise salt.exceptions.CommandExecutionError(
-            '\'no_site_packages\' and \'system_site_packages\' are mutually '
-            'exclusive options. Please use only one, and prefer '
-            '\'system_site_packages\' since \'no_site_packages\' has been '
-            'deprecated.'
-        )
 
     cmd = [venv_bin]
 
@@ -184,8 +162,6 @@ def create(path,
                  ret['stdout'].strip().split('rc')[0].split('.')]
             )
 
-        if no_site_packages is True:
-            cmd.append('--no-site-packages')
         if distribute:
             if virtualenv_version_info >= (1, 10):
                 log.info(
@@ -230,12 +206,7 @@ def create(path,
         # ----- Stop the user if virtualenv only options are being used ----->
         # If any of the following values are not None, it means that the user
         # is actually passing a True or False value. Stop Him!
-        if no_site_packages is not None:
-            raise salt.exceptions.CommandExecutionError(
-                'The `no_site_packages`(`--no-site-packages`) option is not '
-                'supported by {0!r}'.format(venv_bin)
-            )
-        elif python is not None and python.strip() != '':
+        if python is not None and python.strip() != '':
             raise salt.exceptions.CommandExecutionError(
                 'The `python`(`--python`) option is not supported '
                 'by {0!r}'.format(venv_bin)
