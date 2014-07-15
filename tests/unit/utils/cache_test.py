@@ -24,22 +24,23 @@ class CacheDictTestCase(TestCase):
         Make sure you can instantiate etc.
         '''
         cd = cache.CacheDict(5)
-        assert isinstance(cd, cache.CacheDict)
+        self.assertIsInstance(cd, cache.CacheDict)
 
         # do some tests to make sure it looks like a dict
-        assert 'foo' not in cd
+        self.assertNotIn('foo', cd)
         cd['foo'] = 'bar'
-        assert cd['foo'] == 'bar'
+        self.assertEqual(cd['foo'], 'bar')
         del cd['foo']
-        assert 'foo' not in cd
+        self.assertNotIn('foo', cd)
 
     def test_ttl(self):
         cd = cache.CacheDict(0.1)
         cd['foo'] = 'bar'
-        assert 'foo' in cd
-        assert cd['foo'] == 'bar'
+        self.assertIn('foo', cd)
+        self.assertEqual(cd['foo'], 'bar')
         time.sleep(0.1)
-        assert 'foo' not in cd
+        self.assertNotIn('foo', cd)
+
         # make sure that a get would get a regular old key error
         self.assertRaises(KeyError, cd.__getitem__, 'foo')
 
