@@ -6,12 +6,13 @@ Support for Varnish
 
 .. note::
 
-    These functions are generic, and are designed to work with all
-    implementations of Varnish.
+    These functions are designed to work with all implementations of Varnish
+    from 3.x onwards
 '''
 
 # Import python libs
 import logging
+import pipes
 import re
 
 # Import salt libs
@@ -27,18 +28,30 @@ def __virtual__():
     '''
     Only load the module if varnish is installed
     '''
-    if salt.utils.which(_get_varnish_bin()):
+    if salt.utils.which('varnishd') and salt.utils.which('varnishadm'):
         return __virtualname__
     return False
 
 
-def _get_varnish_bin():
+def _run_varnishadm(cmd, params=None, **kwargs):
     '''
-    Helper module to resolve the platform to the correct name of the varnish
-    binary. Currently just returns 'varnishd' but this will allow future
-    revisions of this module to integrate nicely with the rest of the module.
+    Execute varnishadm command
+    return the output of the command
+
+    cmd
+        The command to run in varnishadm
+
+    params
+        Any additional args to add to the command line
+
+    kwargs
+        Additional options to pass to the salt cmd.run_all function
     '''
-    return 'varnishd'
+    params = params or []
+    sanitized_params = [pipes.quote(p) for p in params if p is not None]
+    cmd = 'varnishadm {0} {1}'.format(cmd, ' '.join(sanitized_params))
+    log.debug('Executing: {0}'.format(cmd))
+    return __salt__['cmd.run_all'](cmd, **kwargs)
 
 
 def version():
@@ -51,11 +64,40 @@ def version():
 
         salt '*' varnish.version
     '''
-    cmd = '{0} -V'.format(_get_varnish_bin())
+    cmd = 'varnishd -V'
     out = __salt__['cmd.run'](cmd)
-    ret = out.split(' ')
-    ret = re.findall(r'\d+', ret[1])
-    return ret[0]
+    ret = re.search(r'\(varnish-([^\)]+)\)', out).group(1)
+    return ret
+
+
+def ban(ban_expression):
+    '''
+    Add ban to the varnish cache
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' varnish.ban ban_expression
+    '''
+    return _run_varnishadm('ban', [ban_expression])['retcode'] == 0
+
+
+def ban_list():
+    '''
+    List varnish cache current bans
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' varnish.ban_list
+    '''
+    ret = _run_varnishadm('ban.list')
+    if ret['retcode']:
+        return False
+    else:
+        return ret['stdout'].split('\n')[1:]
 
 
 def purge():
@@ -68,13 +110,43 @@ def purge():
 
         salt '*' varnish.purge
     '''
-    ver = version()
-    log.debug('Purging varnish cache')
-    if ver.startswith('4'):
-        purge_cmd = 'ban .'
-    elif ver.startswith('3'):
-        purge_cmd = 'ban.url .'
-    elif ver.startswith('2'):
-        purge_cmd = 'url.purge .'
-    cmd = 'varnishadm {0}'.format(purge_cmd)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return ban('req.url ~ .')
+
+
+def param_set(param, value):
+    '''
+    Set a param in varnish cache
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' varnish.param_set param value
+    '''
+    return _run_varnishadm('param.set', [param, str(value)])['retcode'] == 0
+
+
+def param_show(param=None):
+    '''
+    Show params of varnish cache
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' varnish.param_show param
+    '''
+    ret = _run_varnishadm('param.show', [param])
+    if ret['retcode']:
+        return False
+    else:
+        result = {}
+        for line in ret['stdout'].split('\n'):
+            m = re.search(r'^(\w+)\s+(.*)$', line)
+            result[m.group(1)] = m.group(2)
+            if param:
+                # When we ask to varnishadm for a specific param, it gives full
+                # info on what that parameter is, so we just process the first
+                # line and we get out of the loop
+                break
+        return result
