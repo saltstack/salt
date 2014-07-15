@@ -2080,7 +2080,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if not prior_state:
         return prior_state
     if attachable(name):
-        if isinstance(keep_env, str):
+        if isinstance(keep_env, basestring):
             keep_env = keep_env.split(',')
         if keep_env:
             env = ' '.join('{0}=${0}'.format(x) for x in keep_env)
