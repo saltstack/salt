@@ -431,6 +431,7 @@ def list_repos():
         ret = {}
         for r in zypp.RepoManager().knownRepositories():
             ret[r.alias()] = get_repo(r.alias())
+        return ret
 
 
 @depends('zypp')
