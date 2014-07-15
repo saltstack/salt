@@ -205,7 +205,8 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_group_update(self):
         postgres.group_update(
             'testgroup',
@@ -357,7 +358,8 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update(self):
         postgres.user_update(
             'test_username',
@@ -382,7 +384,7 @@ class PostgresTestCase(TestCase):
                 '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'NOCREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
+                'NOCREATEROLE NOREPLICATION LOGIN '
                 'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
                 ' GRANT test_groups TO test_username[\'"]{0,1}',
                 postgres._run_psql.call_args[0][0])
@@ -390,7 +392,8 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update2(self):
         postgres.user_update(
             'test_username',
@@ -414,14 +417,15 @@ class PostgresTestCase(TestCase):
                 '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN;'
+                'CREATEROLE NOREPLICATION LOGIN;'
                 ' GRANT test_groups TO test_username\'',
                 postgres._run_psql.call_args[0][0])
         )
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update3(self):
         postgres.user_update(
             'test_username',
@@ -446,14 +450,15 @@ class PostgresTestCase(TestCase):
                 '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN NOPASSWORD;'
+                'CREATEROLE NOREPLICATION LOGIN NOPASSWORD;'
                 ' GRANT test_groups TO test_username\'',
                 postgres._run_psql.call_args[0][0])
         )
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update_encrypted_passwd(self):
         postgres.user_update(
             'test_username',
@@ -478,7 +483,7 @@ class PostgresTestCase(TestCase):
                 '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
+                'CREATEROLE NOREPLICATION LOGIN '
                 'ENCRYPTED PASSWORD '
                 '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
                 '; GRANT test_groups TO test_username[\'"]{0,1}',
