@@ -2236,7 +2236,7 @@ def set_tags(name=None,
 
         if resource_id is None:
             if instance_id is None:
-                instance_id = _get_node(name, location)['instanceId']
+                instance_id = _get_node(name, location)[name]['instanceId']
         else:
             instance_id = resource_id
 
@@ -2420,7 +2420,7 @@ def destroy(name, call=None):
         )
 
     node_metadata = _get_node(name)
-    instance_id = node_metadata['instanceId']
+    instance_id = node_metadata[name]['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
     protected = show_term_protect(
         name=name,
