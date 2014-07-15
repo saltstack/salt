@@ -72,7 +72,7 @@ def send_sms(profile, body, to, from_):
         ret['_error']['code'] = exc.code
         ret['_error']['msg'] = exc.msg
         ret['_error']['status'] = exc.status
-        log.debug('Could not send sms.')
+        log.debug('Could not send sms. Error: {0}'.format(ret))
         return ret
     ret['message'] = {}
     ret['message']['sid'] = message.sid
