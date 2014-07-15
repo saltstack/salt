@@ -452,38 +452,36 @@ class MultiMinion(MinionBase):
     def __init__(self, opts):
         super(MultiMinion, self).__init__(opts)
 
-    def _gen_minions(self):
+    def minions(self):
         '''
-        Set up and tune in the minion options
+        Return a dict of minion generators bound to the tune_in method
+
+        dict of master -> minion_mapping, the mapping contains:
+
+            opts: options used to create the minion
+            last: last auth attempt time
+            auth_wait: time to wait for next auth attempt
+            minion: minion object
+            generator: generator function (non-blocking tune_in)
         '''
         if not isinstance(self.opts['master'], list):
             log.error(
                 'Attempting to start a multimaster system with one master')
-            return False
-        minions = []
+            sys.exit(salt.exitcodes.EX_GENERIC)
+        ret = {}
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
+            ret[master] = {'opts': s_opts,
+                           'last': time.time(),
+                           'auth_wait': s_opts['acceptance_wait_time']}
             try:
-                minions.append(Minion(s_opts, 5, False))
+                minion = Minion(s_opts, 5, False)
+                ret[master]['minion'] = minion
+                ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
-                log.error('Error while bring up minion for multi-master. Is master responding?')
-                raise
-        return minions
+                log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
 
-    def minions(self):
-        '''
-        Return a list of minion generators bound to the tune_in method
-        '''
-        ret = {}
-        minions = self._gen_minions()
-        for minion in minions:
-            if isinstance(minion, dict):
-                ret[minion['master']] = minion
-            else:
-                ret[minion.opts['master']] = {
-                    'minion': minion,
-                    'generator': minion.tune_in_no_block()}
         return ret
 
     # Multi Master Tune In
@@ -499,17 +497,15 @@ class MultiMinion(MinionBase):
         loop_interval = int(self.opts['loop_interval'])
         last = time.time()
         auth_wait = self.opts['acceptance_wait_time']
-        max_wait = auth_wait * 6
+        max_wait = self.opts['acceptance_wait_time_max']
 
         while True:
             module_refresh = False
             pillar_refresh = False
-            for minion in minions.values():
-                if isinstance(minion, dict):
-                    minion = minion['minion']
-                if not hasattr(minion, 'schedule'):
+            for _, minion_map in minions.iteritems():
+                if 'minion' not in minion_map:
                     continue
-                loop_interval = self.process_schedule(minion, loop_interval)
+                loop_interval = self.process_schedule(minion_map['minion'], loop_interval)
             socks = dict(self.poller.poll(1))
             if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
@@ -530,18 +526,17 @@ class MultiMinion(MinionBase):
             # get commands from each master
             for master, minion in minions.items():
                 if 'generator' not in minion:
-                    if time.time() - auth_wait > last:
-                        last = time.time()
-                        if auth_wait < max_wait:
-                            auth_wait += auth_wait
+                    if time.time() - minion['auth_wait'] > minion['last']:
+                        minion['last'] = time.time()
+                        if minion['auth_wait'] < max_wait:
+                            minion['auth_wait'] += auth_wait
                         try:
-                            if not isinstance(minion, dict):
-                                minions[master] = {'minion': minion}
-                            t_minion = Minion(minion, 5, False)
+                            t_minion = Minion(minion['opts'], 5, False)
                             minions[master]['minion'] = t_minion
                             minions[master]['generator'] = t_minion.tune_in_no_block()
-                            auth_wait = self.opts['acceptance_wait_time']
+                            minions[master]['auth_wait'] = self.opts['acceptance_wait_time']
                         except SaltClientError:
+                            log.critical('Failed attempt again... {0}'.format(master))
                             continue
                     else:
                         continue
