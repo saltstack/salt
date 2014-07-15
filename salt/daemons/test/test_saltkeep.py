@@ -242,24 +242,25 @@ class BasicTestCase(unittest.TestCase):
         main.dumpRemotes()
 
         self.assertDictEqual(main.keep.loadAllRemoteData(),
-            {'3':
-                {'uid': 3,
-                 'name': data1['name'],
-                 'ha': ['127.0.0.1', 7532],
-                 'sid': 0,
-                 'joined': None,
-                 'acceptance': 1,
-                 'verhex': data1['verhex'],
-                 'pubhex': data1['pubhex']},
-            '4':
-                {'uid': 4,
-                 'name': data2['name'],
-                 'ha': ['127.0.0.1', 7533],
-                 'sid': 0,
-                 'joined': None,
-                 'acceptance': 1,
-                 'verhex': data2['verhex'],
-                 'pubhex': data2['pubhex']}})
+            {
+                'remote1':
+                    {'uid': 3,
+                     'name': data1['name'],
+                     'ha': ['127.0.0.1', 7532],
+                     'sid': 0,
+                     'joined': None,
+                     'acceptance': 1,
+                     'verhex': data1['verhex'],
+                     'pubhex': data1['pubhex']},
+                'remote2':
+                    {'uid': 4,
+                     'name': data2['name'],
+                     'ha': ['127.0.0.1', 7533],
+                     'sid': 0,
+                     'joined': None,
+                     'acceptance': 1,
+                     'verhex': data2['verhex'],
+                     'pubhex': data2['pubhex']}})
 
         # now recreate with saved data
         main.server.close()
@@ -335,7 +336,7 @@ class BasicTestCase(unittest.TestCase):
         other.dumpRemotes()
         self.assertDictEqual(other.keep.loadAllRemoteData(),
             {
-                '3':
+                'remote3':
                 {
                     'uid': 3,
                     'name': data3['name'],
@@ -346,7 +347,7 @@ class BasicTestCase(unittest.TestCase):
                     'verhex': data3['verhex'],
                     'pubhex': data3['pubhex']
                 },
-                '4':
+                'remote4':
                 {
                     'uid': 4,
                     'name': data4['name'],

@@ -32,8 +32,8 @@ class SaltKeep(RoadKeep):
                 local/
                     estate.ext
                 remote/
-                    estate.uid.ext
-                    estate.uid.ext
+                    estate.name.ext
+                    estate.name.ext
     '''
     LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto']
     LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid']
@@ -94,7 +94,7 @@ class SaltKeep(RoadKeep):
                         ('joined', remote.joined),
                     ])
         if self.verifyRemoteData(data, remoteFields =self.RemoteDumpFields):
-            self.dumpRemoteData(data, remote.uid)
+            self.dumpRemoteData(data, remote.name)
 
         self.saltRaetKey.status(remote.name,
                                 remote.uid,
@@ -104,7 +104,7 @@ class SaltKeep(RoadKeep):
     def loadRemote(self, remote):
         '''
         Load and Return the data from the remote estate file
-        Override this in sub class to change uid
+        Override this in sub class
         '''
         data = super(SaltKeep, self).loadRemote(remote)
         if not data:
@@ -135,10 +135,8 @@ class SaltKeep(RoadKeep):
         for status, mids in self.saltRaetKey.list_keys().items():
             for mid in mids:
                 keydata = self.saltRaetKey.read_remote(mid, status)
-                if keydata:
-                    uid = str(keydata['device_id'])
-                    if uid in data:
-                        data[uid].update(acceptance=raeting.ACCEPTANCES[status],
+                if keydata and data.get(mid):
+                    data[mid].update(acceptance=raeting.ACCEPTANCES[status],
                                          verhex=keydata['verify'],
                                          pubhex=keydata['pub'])
         return data
