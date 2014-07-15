@@ -78,7 +78,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.conn.get_all_groups(names=[name])
+        conn.get_all_groups(names=[name])
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
