@@ -449,6 +449,9 @@ class MultiMinion(MinionBase):
     defined in the master option and binds each minion object to a respective
     master.
     '''
+    # timeout for one of the minions to auth with a master
+    MINION_CONNECT_TIMEOUT = 5
+
     def __init__(self, opts):
         super(MultiMinion, self).__init__(opts)
 
@@ -476,7 +479,7 @@ class MultiMinion(MinionBase):
                            'last': time.time(),
                            'auth_wait': s_opts['acceptance_wait_time']}
             try:
-                minion = Minion(s_opts, 5, False)
+                minion = Minion(s_opts, self.MINION_CONNECT_TIMEOUT, False)
                 ret[master]['minion'] = minion
                 ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
@@ -495,7 +498,6 @@ class MultiMinion(MinionBase):
         # Prepare the minion generators
         minions = self.minions()
         loop_interval = int(self.opts['loop_interval'])
-        last = time.time()
         auth_wait = self.opts['acceptance_wait_time']
         max_wait = self.opts['acceptance_wait_time_max']
 
@@ -531,12 +533,12 @@ class MultiMinion(MinionBase):
                         if minion['auth_wait'] < max_wait:
                             minion['auth_wait'] += auth_wait
                         try:
-                            t_minion = Minion(minion['opts'], 5, False)
+                            t_minion = Minion(minion['opts'], self.MINION_CONNECT_TIMEOUT, False)
                             minions[master]['minion'] = t_minion
                             minions[master]['generator'] = t_minion.tune_in_no_block()
                             minions[master]['auth_wait'] = self.opts['acceptance_wait_time']
                         except SaltClientError:
-                            log.critical('Failed attempt again... {0}'.format(master))
+                            log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
                             continue
                     else:
                         continue
