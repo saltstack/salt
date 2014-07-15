@@ -48,7 +48,7 @@ def _run_varnishadm(cmd, params=None, **kwargs):
         Additional options to pass to the salt cmd.run_all function
     '''
     params = params or []
-    sanitized_params = [pipes.quote(p) for p in params if not p is None]
+    sanitized_params = [pipes.quote(p) for p in params if p is not None]
     cmd = 'varnishadm {0} {1}'.format(cmd, ' '.join(sanitized_params))
     log.debug('Executing: {0}'.format(cmd))
     return __salt__['cmd.run_all'](cmd, **kwargs)
