@@ -66,7 +66,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
@@ -122,7 +122,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
