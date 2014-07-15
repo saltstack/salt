@@ -3,7 +3,7 @@
 Manage Launch Configurations
 ============================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy Launch Configurations. Be aware that this interacts with
 Amazon's services, and so may incur charges.

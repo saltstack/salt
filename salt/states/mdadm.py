@@ -44,7 +44,7 @@ def present(name,
     '''
     Verify that the raid is present
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
     name
         The name of raid device to be created

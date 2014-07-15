@@ -1157,25 +1157,25 @@ def managed(name,
             spaces.
 
     contents_grains
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         Same as contents_pillar, but with grains
 
     contents_newline
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         When using contents, contents_pillar, or contents_grains, a newline is
         inserted into the data. When loading some data this newline is better
         left off.  Setting contents_newline to False will omit this newline.
 
     follow_symlinks : True
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         If the desired path is a symlink follow it and make changes to the
         file to which the symlink points.
 
     check_cmd
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         Do run the state only if the check_cmd succeeds
 
@@ -1491,7 +1491,7 @@ def directory(name,
         make room for the directory, unless backupname is set,
         then it will be renamed.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     backupname
         If the name of the directory exists and is not a directory, it will be
@@ -1499,7 +1499,7 @@ def directory(name,
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     '''
     # Remove trailing slash, if present
@@ -2983,7 +2983,7 @@ def prepend(name,
                   - salt://motd/hr-messages.tmpl
                   - salt://motd/general-messages.tmpl
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
@@ -3646,7 +3646,7 @@ def serialize(name,
         be parsed and the dataset passed in will be merged with the existing
         content
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     For example, this state:
 

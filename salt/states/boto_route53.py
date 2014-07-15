@@ -3,7 +3,7 @@
 Manage Route53 records
 ======================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and delete Route53 records. Be aware that this interacts with Amazon's
 services, and so may incur charges.

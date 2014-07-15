@@ -8,7 +8,7 @@ def fire_master(name, data):
     '''
     Fire an event on the Salt master event bus
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     name
         The tag for the event
@@ -47,7 +47,7 @@ def wait(name, sfun=None):
     '''
     Fire an event on the Salt master event bus if called from a watch statement
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Example:
 
