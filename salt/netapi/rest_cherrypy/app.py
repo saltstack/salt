@@ -1204,13 +1204,6 @@ class Events(object):
         This stream is formatted per the Server Sent Events (SSE) spec. Each
         event is formatted as JSON.
 
-        Browser clients currently lack Cross-origin resource sharing (CORS)
-        support for the ``EventSource()`` API. Cross-domain requests from a
-        browser may instead pass the :mailheader:`X-Auth-Token` value as an URL
-        parameter::
-
-            % curl -NsS localhost:8000/events/6d1b722e
-
         .. http:get:: /events
 
             :status 200: |200|
@@ -1249,6 +1242,18 @@ class Events(object):
         source.onopen = function() { console.debug('opening') };
         source.onerror = function(e) { console.debug('error!', e) };
         source.onmessage = function(e) { console.debug(e.data) };
+
+    Or using CORS:
+
+    .. code-block:: javascript
+
+        var source = new EventSource('/events', {withCredentials: true});
+
+    Some browser clients lack CORS support for the ``EventSource()`` API. Such
+    clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
+    parameter::
+
+        % curl -NsS localhost:8000/events/6d1b722e
 
     It is also possible to consume the stream via the shell.
 
