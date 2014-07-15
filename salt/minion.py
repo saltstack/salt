@@ -491,6 +491,10 @@ class MultiMinion(MinionBase):
     def tune_in(self):
         '''
         Bind to the masters
+
+        This loop will attempt to create connections to masters it hasn't connected
+        to yet, but once the initial connection is made it is up to ZMQ to do the
+        reconnect (don't know of an API to get the state here in salt)
         '''
         self._prepare_minion_event_system()
         self.poller.register(self.epull_sock, zmq.POLLIN)
