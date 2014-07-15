@@ -108,10 +108,18 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
         data = self.run_salt('-G "planets:pluto" test.ping')
+        expect = None
+        if self.master_opts['transport'] == 'zeromq':
+            expect = (
+                'No minions matched the target. '
+                'No command was sent, no jid was '
+                'assigned.'
+            )
+        elif self.master_opts['transport'] == 'raet':
+            expect = ''
         self.assertEqual(
             ''.join(data),
-            'No minions matched the target. No command was sent, no jid was '
-            'assigned.'
+            expect
         )
         # Nested grain (string value)
         data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
