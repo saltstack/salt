@@ -66,7 +66,7 @@ def _get_group_id(conn, name, vpc_id=None):
     Given a name or name and vpc_id return a group id or None.
     '''
     logging.debug('getting group_id for {0}'.format(name))
-    if name and vpc_id is None:
+    if vpc_id is None:
         group_filter = {'group-name': name}
         filtered_groups = conn.get_all_security_groups(filters=group_filter)
         # security groups can have the same name if groups exist in both
@@ -80,7 +80,7 @@ def _get_group_id(conn, name, vpc_id=None):
                               .format(name, filtered_groups[0].id))
                 return group.id
         return None
-    elif name and vpc_id:
+    elif vpc_id:
         group_filter = {'group-name': name, 'vpc_id': vpc_id}
         filtered_groups = conn.get_all_security_groups(filters=group_filter)
         if len(filtered_groups) == 1:
@@ -182,6 +182,7 @@ def get_config(name=None, group_id=None, vpc_id=None, region=None, key=None,
     if not (name or group_id):
         return None
     try:
+        sg = None
         if name:
             group_id = _get_group_id(conn, name, vpc_id)
         if group_id:
@@ -189,12 +190,7 @@ def get_config(name=None, group_id=None, vpc_id=None, region=None, key=None,
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             if len(filtered_groups) == 1:
                 sg = filtered_groups[0]
-            else:
-                # there was an error in which no groups or more than one group
-                # was found - return None
-                return None
-        else:
-            # neither a name or group_id was given, return {}
+        if sg is None:
             return {}
     except boto.exception.BotoServerError as e:
         msg = 'Failed to get config for security group {0}.'.format(name)
