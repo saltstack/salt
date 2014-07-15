@@ -428,8 +428,9 @@ def list_repos():
        salt '*' pkg.list_repos
     '''
     with _try_zypp():
-        return {r.alias(): get_repo(r.alias())
-                for r in zypp.RepoManager().knownRepositories()}
+        ret = {}
+        for r in zypp.RepoManager().knownRepositories():
+            ret[r.alias()] = get_repo(r.alias())
 
 
 @depends('zypp')
