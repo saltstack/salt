@@ -11,8 +11,6 @@ import stat
 import shutil
 import fnmatch
 import hashlib
-import msgpack
-import json
 
 # Import salt libs
 import salt.crypt
@@ -809,9 +807,9 @@ class RaetKey(Key):
         keys = self.list_keys()
         minions = []
         for key, val in keys.items():
-             minions.extend(val)
+            minions.extend(val)
 
-        m_cache = os.path.join(self.opts['cachedir'],'minions')
+        m_cache = os.path.join(self.opts['cachedir'], 'minions')
         if os.path.isdir(m_cache):
             for minion in os.listdir(m_cache):
                 if minion not in minions:
