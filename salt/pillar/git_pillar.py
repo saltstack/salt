@@ -13,7 +13,7 @@ so:
 The `root=` parameter is optional and used to set the subdirectory from where
 to look for Pillar files (such as ``top.sls``).
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
 Note that this is not the same thing as configuring pillar data using the
