@@ -822,7 +822,6 @@ def insert_system_path(opts, paths):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  check_dns=None,
                   minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
@@ -836,19 +835,6 @@ def minion_config(path,
         import salt.client
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
-    if check_dns is not None:
-        # All use of the `check_dns` arg was removed in `598d715`. The keyword
-        # argument was then removed in `9d893e4` and `**kwargs` was then added
-        # in `5d60f77` in order not to break backwards compatibility.
-        #
-        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop its use.
-        salt.utils.warn_until(
-            'Helium',
-            'The functionality behind the \'check_dns\' keyword argument is '
-            'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in Salt {version}.'
-        )
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 
@@ -1896,25 +1882,10 @@ def get_id(opts, minion_id=False):
 
 def apply_minion_config(overrides=None,
                         defaults=None,
-                        check_dns=None,
                         minion_id=False):
     '''
     Returns minion configurations dict.
     '''
-    if check_dns is not None:
-        # All use of the `check_dns` arg was removed in `598d715`. The keyword
-        # argument was then removed in `9d893e4` and `**kwargs` was then added
-        # in `5d60f77` in order not to break backwards compatibility.
-        #
-        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop its use.
-        salt.utils.warn_until(
-            'Helium',
-            'The functionality behind the \'check_dns\' keyword argument is '
-            'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in Salt {version}.'
-        )
-
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 
