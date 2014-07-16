@@ -5,7 +5,7 @@ InfluxDB - A distributed time series database
 Module to provide InfluxDB compatibility to Salt
 (compatible with InfluxDB version 0.5+)
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:    - influxdb Python module
 
