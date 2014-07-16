@@ -1045,23 +1045,6 @@ class OutputOptionsMixIn(object):
         self.config['selected_output_option'] = self.selected_output_option
 
 
-class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
-    # This should also be removed
-    _include_text_out_ = True
-
-    def __new__(cls, *args, **kwargs):
-        instance = super(OutputOptionsWithTextMixIn, cls).__new__(
-            cls, *args, **kwargs
-        )
-        utils.warn_until(
-            'Helium',
-            '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
-            'start using \'OutputOptionsMixIn\'; your code should not need '
-            'any further changes.'
-        )
-        return instance
-
-
 class CloudConfigMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = -11    # Evaluate before ConfigDirMixin
