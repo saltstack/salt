@@ -79,6 +79,7 @@ class BasicTestCase(unittest.TestCase):
         sockDirpath = os.path.join(dirpath, 'sock', name)
 
         opts = dict(
+                     id=name,
                      pki_dir=pkiDirpath,
                      sock_dir=sockDirpath,
                      cachedir=cacheDirpath,
@@ -242,24 +243,25 @@ class BasicTestCase(unittest.TestCase):
         main.dumpRemotes()
 
         self.assertDictEqual(main.keep.loadAllRemoteData(),
-            {'3':
-                {'uid': 3,
-                 'name': data1['name'],
-                 'ha': ['127.0.0.1', 7532],
-                 'sid': 0,
-                 'joined': None,
-                 'acceptance': 1,
-                 'verhex': data1['verhex'],
-                 'pubhex': data1['pubhex']},
-            '4':
-                {'uid': 4,
-                 'name': data2['name'],
-                 'ha': ['127.0.0.1', 7533],
-                 'sid': 0,
-                 'joined': None,
-                 'acceptance': 1,
-                 'verhex': data2['verhex'],
-                 'pubhex': data2['pubhex']}})
+            {
+                'remote1':
+                    {'uid': 3,
+                     'name': data1['name'],
+                     'ha': ['127.0.0.1', 7532],
+                     'sid': 0,
+                     'joined': None,
+                     'acceptance': 1,
+                     'verhex': data1['verhex'],
+                     'pubhex': data1['pubhex']},
+                'remote2':
+                    {'uid': 4,
+                     'name': data2['name'],
+                     'ha': ['127.0.0.1', 7533],
+                     'sid': 0,
+                     'joined': None,
+                     'acceptance': 1,
+                     'verhex': data2['verhex'],
+                     'pubhex': data2['pubhex']}})
 
         # now recreate with saved data
         main.server.close()
@@ -335,7 +337,7 @@ class BasicTestCase(unittest.TestCase):
         other.dumpRemotes()
         self.assertDictEqual(other.keep.loadAllRemoteData(),
             {
-                '3':
+                'remote3':
                 {
                     'uid': 3,
                     'name': data3['name'],
@@ -346,7 +348,7 @@ class BasicTestCase(unittest.TestCase):
                     'verhex': data3['verhex'],
                     'pubhex': data3['pubhex']
                 },
-                '4':
+                'remote4':
                 {
                     'uid': 4,
                     'name': data4['name'],
@@ -364,7 +366,7 @@ class BasicTestCase(unittest.TestCase):
 
     def testBootstrapClean(self):
         '''
-        Basic keep setup for stack keep and safe persistence load and dump
+        Bootstap to allowed
         '''
         console.terse("{0}\n".format(self.testBootstrapClean.__doc__))
 
@@ -453,10 +455,21 @@ class BasicTestCase(unittest.TestCase):
         remote = other.remotes.values()[0]
         self.assertTrue(remote.allowed)
 
+        for remote in main.remotes.values():
+            path = os.path.join(main.keep.remotedirpath,
+                    "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
+            self.assertTrue(os.path.exists(path))
+
+
+        # now delete a key and see if road keep file is also deleted
+        main.keep.saltRaetKey.delete_key(match=other.local.name)
+        remote = main.remotes[other.local.uid]
+        path = os.path.join(main.keep.remotedirpath,
+                "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
+        self.assertFalse(os.path.exists(path))
+
         main.server.close()
         other.server.close()
-
-
 
 def runOne(test):
     '''

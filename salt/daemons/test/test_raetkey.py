@@ -166,13 +166,13 @@ class BasicTestCase(unittest.TestCase):
 
 
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {2:
+        self.assertDictEqual(allremotekeys, {'other1':
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'accepted',
                                                   'pub': other1['pubhex'],
                                                   'device_id': 2},
-                                             3:
+                                             'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'accepted',
@@ -233,13 +233,13 @@ class BasicTestCase(unittest.TestCase):
 
 
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {2:
+        self.assertDictEqual(allremotekeys, {'other1':
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'pending',
                                                   'pub': other1['pubhex'],
                                                   'device_id': 2},
-                                             3:
+                                             'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'pending',
@@ -273,19 +273,122 @@ class BasicTestCase(unittest.TestCase):
 
 
         allremotekeys = self.mainKeeper.read_all_remote()
-        self.assertDictEqual(allremotekeys, {2:
+        self.assertDictEqual(allremotekeys, {'other1':
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'accepted',
                                                   'pub': other1['pubhex'],
                                                   'device_id': 2},
-                                             3:
+                                             'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'accepted',
                                                   'pub': other2['pubhex'],
                                                   'device_id': 3}})
 
+    def testDelete(self):
+        '''
+        Basic function of RaetKey to delete key
+        '''
+        console.terse("{0}\n".format(self.testDelete.__doc__))
+        self.opts['auto_accept'] = True
+        self.assertTrue(self.opts['auto_accept'])
+        self.assertDictEqual(self.mainKeeper.all_keys(), {'accepted': [],
+                                                            'local': [],
+                                                            'rejected': [],
+                                                            'pending': []})
+
+        localkeys = self.mainKeeper.read_local()
+        self.assertDictEqual(localkeys, {})
+
+        main = self.createRoadData(name='main', base=self.baseDirpath)
+        self.mainKeeper.write_local(main['prihex'], main['sighex'])
+        localkeys = self.mainKeeper.read_local()
+        self.assertDictEqual(localkeys, {'priv': main['prihex'],
+                                     'sign': main['sighex']})
+        allkeys = self.mainKeeper.all_keys()
+        self.assertDictEqual(allkeys, {'accepted': [],
+                                       'local': [self.localFilepath],
+                                       'rejected': [],
+                                       'pending': []})
+
+        other1 = self.createRoadData(name='other1', base=self.baseDirpath)
+        other2 = self.createRoadData(name='other2', base=self.baseDirpath)
+
+        status = self.mainKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
+        self.assertEqual(status, 'accepted')
+        status = self.mainKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
+        self.assertEqual(status, 'accepted')
+
+        allkeys = self.mainKeeper.all_keys()
+        self.assertDictEqual(allkeys, {'accepted': ['other1', 'other2'],
+                                'local': [self.localFilepath],
+                                'pending': [],
+                                'rejected': []} )
+
+        remotekeys = self.mainKeeper.read_remote(other1['name'])
+        self.assertDictEqual(remotekeys, {   'device_id': 2,
+                                             'minion_id': 'other1',
+                                             'pub': other1['pubhex'],
+                                             'verify': other1['verhex']} )
+
+        remotekeys = self.mainKeeper.read_remote(other2['name'])
+        self.assertDictEqual(remotekeys, {   'device_id': 3,
+                                               'minion_id': 'other2',
+                                               'pub': other2['pubhex'],
+                                               'verify': other2['verhex']} )
+
+        listkeys = self.mainKeeper.list_keys()
+        self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
+                                        'rejected': [],
+                                        'pending': []})
+
+
+        allremotekeys = self.mainKeeper.read_all_remote()
+        self.assertDictEqual(allremotekeys, {'other1':
+                                                 {'verify': other1['verhex'],
+                                                  'minion_id': 'other1',
+                                                  'acceptance': 'accepted',
+                                                  'pub': other1['pubhex'],
+                                                  'device_id': 2},
+                                             'other2':
+                                                 {'verify': other2['verhex'],
+                                                  'minion_id': 'other2',
+                                                  'acceptance': 'accepted',
+                                                  'pub': other2['pubhex'],
+                                                  'device_id': 3}})
+
+        self.mainKeeper.delete_key(match=other1['name'])
+
+        allkeys = self.mainKeeper.all_keys()
+        self.assertDictEqual(allkeys, {'accepted': ['other2'],
+                                'local': [self.localFilepath],
+                                'pending': [],
+                                'rejected': []} )
+
+        remotekeys = self.mainKeeper.read_remote(other1['name'])
+        self.assertDictEqual(remotekeys, {} )
+
+        remotekeys = self.mainKeeper.read_remote(other2['name'])
+        self.assertDictEqual(remotekeys, {   'device_id': 3,
+                                               'minion_id': 'other2',
+                                               'pub': other2['pubhex'],
+                                               'verify': other2['verhex']} )
+
+        listkeys = self.mainKeeper.list_keys()
+        self.assertDictEqual(listkeys, {'accepted': [ 'other2'],
+                                        'rejected': [],
+                                        'pending': []})
+
+
+        allremotekeys = self.mainKeeper.read_all_remote()
+        self.assertDictEqual(allremotekeys, {
+                                             'other2':
+                                                 {'verify': other2['verhex'],
+                                                  'minion_id': 'other2',
+                                                  'acceptance': 'accepted',
+                                                  'pub': other2['pubhex'],
+                                                  'device_id': 3}})
 
 
 
@@ -303,7 +406,8 @@ def runSome():
     '''
     tests =  []
     names = ['testAutoAccept',
-             'testManualAccept', ]
+             'testManualAccept',
+             'testDelete']
 
     tests.extend(map(BasicTestCase, names))
 
@@ -327,4 +431,4 @@ if __name__ == '__main__' and __package__ is None:
 
     #runSome()#only run some
 
-    #runOne('testManualAccept')
+    #runOne('testDelete')
