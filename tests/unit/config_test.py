@@ -12,7 +12,6 @@ import logging
 import os
 import shutil
 import tempfile
-import warnings
 from contextlib import contextmanager
 
 # Import Salt Testing libs
@@ -28,8 +27,7 @@ import salt.minion
 import salt.utils
 import salt.utils.network
 import integration
-from salt import config as sconfig, version as salt_version
-from salt.version import SaltStackVersion
+from salt import config as sconfig
 from salt.cloud.exceptions import SaltCloudConfigError
 
 # Import Third-Party Libs
@@ -364,65 +362,6 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
         self.assertEqual(syndic_opts['_minion_conf_file'], syndic_conf_path)
-
-    def test_check_dns_deprecation_warning(self):
-        helium_version = SaltStackVersion.from_name('Helium')
-        if salt_version.__version_info__ >= helium_version:
-            raise AssertionError(
-                'Failing this test on purpose! Please delete this test case, '
-                'the \'check_dns\' keyword argument and the deprecation '
-                'warnings in `salt.config.minion_config` and '
-                'salt.config.apply_minion_config`'
-            )
-
-        # Let's force the warning to always be thrown
-        warnings.resetwarnings()
-        warnings.filterwarnings(
-            'always', '(.*)check_dns(.*)', DeprecationWarning, 'salt.config'
-        )
-        with warnings.catch_warnings(record=True) as w:
-            sconfig.minion_config(None, None, check_dns=True)
-            self.assertEqual(
-                'The functionality behind the \'check_dns\' keyword argument '
-                'is no longer required, as such, it became unnecessary and is '
-                'now deprecated. \'check_dns\' will be removed in Salt '
-                '{0}.'.format(helium_version.formatted_version),
-                str(w[-1].message)
-            )
-
-        with warnings.catch_warnings(record=True) as w:
-            sconfig.apply_minion_config(
-                overrides=None, defaults=None, check_dns=True
-            )
-            self.assertEqual(
-                'The functionality behind the \'check_dns\' keyword argument '
-                'is no longer required, as such, it became unnecessary and is '
-                'now deprecated. \'check_dns\' will be removed in Salt '
-                '{0}.'.format(helium_version.formatted_version),
-                str(w[-1].message)
-            )
-
-        with warnings.catch_warnings(record=True) as w:
-            sconfig.minion_config(None, None, check_dns=False)
-            self.assertEqual(
-                'The functionality behind the \'check_dns\' keyword argument '
-                'is no longer required, as such, it became unnecessary and is '
-                'now deprecated. \'check_dns\' will be removed in Salt '
-                '{0}.'.format(helium_version.formatted_version),
-                str(w[-1].message)
-            )
-
-        with warnings.catch_warnings(record=True) as w:
-            sconfig.apply_minion_config(
-                overrides=None, defaults=None, check_dns=False
-            )
-            self.assertEqual(
-                'The functionality behind the \'check_dns\' keyword argument '
-                'is no longer required, as such, it became unnecessary and is '
-                'now deprecated. \'check_dns\' will be removed in Salt '
-                '{0}.'.format(helium_version.formatted_version),
-                str(w[-1].message)
-            )
 
     def test_issue_6714_parsing_errors_logged(self):
         try:
