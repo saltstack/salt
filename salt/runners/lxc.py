@@ -218,13 +218,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if approve_key and not explicit_auth:
         for name in names:
             seeds[name] = kwargs.get('seed', True)
-            try:
-                ping = client.cmd(name, 'test.ping', timeout=20).get(name, None)
-            except (TypeError, KeyError):
-                ping = False
-            curkey = os.path.join(__opts__['pki_dir'], 'minions', name)
-            # be sure not to seed an alrady seeded host
-            if ping or os.path.exists(curkey):
+            skey = salt.key.Key(__opts__)
+            if name in skey.list_all():
                 seeds[name] = False
             kv = salt.utils.virt.VirtKey(host, name, __opts__)
             if kv.authorize():
