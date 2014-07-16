@@ -244,7 +244,7 @@ def latest_version(*names, **kwargs):
     A specific repo can be requested using the ``fromrepo`` keyword argument,
     and the ``disableexcludes`` option is also supported.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
         Support for the ``disableexcludes`` option
 
     CLI Example:
@@ -448,7 +448,7 @@ def list_upgrades(refresh=True, **kwargs):
     supported, as used in pkg states, and the ``disableexcludes`` option is
     also supported.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
         Support for the ``disableexcludes`` option
 
     CLI Example:
@@ -484,7 +484,7 @@ def check_db(*names, **kwargs):
     supported, as used in pkg states, and the ``disableexcludes`` option is
     also supported.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
         Support for the ``disableexcludes`` option
 
     CLI Examples:
@@ -714,7 +714,7 @@ def install(name=None,
         Works with sources when the package header of the source can be
         matched to the name and version of an installed package.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     skip_verify
         Skip the GPG verification check (e.g., ``--nogpgcheck``)
@@ -742,7 +742,7 @@ def install(name=None,
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
 
     Multiple Package Installation Options:
@@ -905,7 +905,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
     Return a dict containing the new package names and versions::
 
@@ -936,7 +936,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     '''
     if salt.utils.is_true(refresh):
         refresh_db(**kwargs)
@@ -1040,7 +1040,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Hold packages with ``yum -q versionlock``.
 
@@ -1133,7 +1133,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Hold packages with ``yum -q versionlock``.
 
@@ -1727,7 +1727,7 @@ def expand_repo_def(repokwargs):
 
 def owner(*paths):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
     be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a

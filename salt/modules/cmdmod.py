@@ -1230,7 +1230,7 @@ def exec_code(lang, code, cwd=None):
 
 def run_chroot(root, cmd):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
     within a chroot, with dev and proc mounted in the chroot

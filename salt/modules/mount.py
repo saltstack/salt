@@ -515,7 +515,7 @@ def swapoff(name):
 
 def is_mounted(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Provide information if the path is mounted
 

@@ -662,7 +662,7 @@ def install(name=None,
 
             salt '*' pkg.install <package name> reinstall_requires=True force=True
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
             ``require`` kwarg renamed to ``reinstall_requires``
 
     fromrepo

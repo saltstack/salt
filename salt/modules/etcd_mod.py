@@ -57,7 +57,7 @@ def __virtual__():
 
 def get_(key, recurse=False, profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Get a value from etcd, by direct path
 
@@ -86,7 +86,7 @@ def get_(key, recurse=False, profile=None):
 
 def set_(key, value, profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Set a value in etcd, by direct path
 
@@ -111,7 +111,7 @@ def set_(key, value, profile=None):
 
 def ls_(path='/', profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return all keys and dirs inside a specific path
 
@@ -144,7 +144,7 @@ def ls_(path='/', profile=None):
 
 def rm_(key, recurse=False, profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete a key from etcd
 
@@ -172,7 +172,7 @@ def rm_(key, recurse=False, profile=None):
 
 def tree(path='/', profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Recurse through etcd and return all values
 

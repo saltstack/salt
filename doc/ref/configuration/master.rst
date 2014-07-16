@@ -432,7 +432,7 @@ public keys from minions.
 ``autosign_timeout``
 --------------------
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``120``
 
@@ -462,7 +462,7 @@ that trust is based on just the requesting minion id.
 ``autoreject_file``
 -------------------
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 Default: ``not defined``
 
@@ -944,8 +944,7 @@ translated into salt environments.
 
 .. note::
 
-    As of the upcoming **Helium** release (and right now in the development
-    branch), it is possible to have per-repo versions of the
+    As of 2014.7.0, it is possible to have per-repo versions of the
     :conf_master:`gitfs_base`, :conf_master:`gitfs_root`, and
     :conf_master:`gitfs_mountpoint` parameters. For example:
 
@@ -968,7 +967,7 @@ For more information on GitFS remotes, see the :ref:`GitFS Backend Walkthrough
 ``gitfs_provider``
 ******************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``gitpython``
 
@@ -1008,7 +1007,7 @@ is a security concern, you may want to try using the ssh transport.
 ``gitfs_mountpoint``
 ********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``''``
 
@@ -1042,7 +1041,7 @@ available to the Salt fileserver. Can be used in conjunction with
 
     gitfs_root: somefolder/otherfolder
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
 
    Ability to specify gitfs roots on a per-remote basis was added. See
    :conf_master:`here <gitfs_remotes>` for more info.
@@ -1056,7 +1055,7 @@ Default: ``master``
 
 Defines which branch/tag should be used as the ``base`` environment.
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     Can also be configured on a per-remote basis, see :conf_master:`here
     <gitfs_remotes>` for more info.
 
@@ -1069,7 +1068,7 @@ Defines which branch/tag should be used as the ``base`` environment.
 ``gitfs_env_whitelist``
 ***********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1097,7 +1096,7 @@ blacklist will be exposed as fileserver environments.
 ``gitfs_env_blacklist``
 ***********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1147,8 +1146,7 @@ translated into salt environments, as defined by the
 
 .. note::
 
-    As of the upcoming **Helium** release (and right now in the development
-    branch), it is possible to have per-repo versions of the
+    As of 2014.7.0, it is possible to have per-repo versions of the
     :conf_master:`hgfs_root`, :conf_master:`hgfs_mountpoint`,
     :conf_master:`hgfs_base`, and :conf_master:`hgfs_branch_method` parameters.
     For example:
@@ -1186,10 +1184,10 @@ Defines the objects that will be used as fileserver environments.
 
 .. note::
 
-    Starting in version 2014.1.0 (Hydrogen), the value of the
-    :conf_master:`hgfs_base` parameter defines which branch is used as the
-    ``base`` environment, allowing for a ``base`` environment to be used with
-    an :conf_master:`hgfs_branch_method` of ``bookmarks``.
+    Starting in version 2014.1.0, the value of the :conf_master:`hgfs_base`
+    parameter defines which branch is used as the ``base`` environment,
+    allowing for a ``base`` environment to be used with an
+    :conf_master:`hgfs_branch_method` of ``bookmarks``.
 
     Prior to this release, the ``default`` branch will be used as the ``base``
     environment.
@@ -1199,7 +1197,7 @@ Defines the objects that will be used as fileserver environments.
 ``hgfs_mountpoint``
 *******************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``''``
 
@@ -1235,7 +1233,7 @@ available to the Salt fileserver. Can be used in conjunction with
 
     hgfs_root: somefolder/otherfolder
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
 
    Ability to specify hgfs roots on a per-remote basis was added. See
    :conf_master:`here <hgfs_remotes>` for more info.
@@ -1245,7 +1243,7 @@ available to the Salt fileserver. Can be used in conjunction with
 ``hgfs_base``
 *************
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 Default: ``default``
 
@@ -1262,7 +1260,7 @@ bookmark should be used as the ``base`` environment.
 ``hgfs_env_whitelist``
 **********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1290,7 +1288,7 @@ blacklist will be exposed as fileserver environments.
 ``hgfs_env_blacklist``
 **********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1340,8 +1338,7 @@ become environments, with the trunk being the ``base`` environment.
 
 .. note::
 
-    As of the upcoming **Helium** release (and right now in the development
-    branch), it is possible to have per-repo versions of the following
+    As of 2014.7.0, it is possible to have per-repo versions of the following
     configuration parameters:
 
     * :conf_master:`svnfs_root`
@@ -1369,7 +1366,7 @@ become environments, with the trunk being the ``base`` environment.
 ``svnfs_mountpoint``
 ********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``''``
 
@@ -1405,7 +1402,7 @@ available to the Salt fileserver. Can be used in conjunction with
 
     svnfs_root: somefolder/otherfolder
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
 
    Ability to specify svnfs roots on a per-remote basis was added. See
    :conf_master:`here <svnfs_remotes>` for more info.
@@ -1415,7 +1412,7 @@ available to the Salt fileserver. Can be used in conjunction with
 ``svnfs_trunk``
 ***************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``trunk``
 
@@ -1432,7 +1429,7 @@ also be configured on a per-remote basis, see :conf_master:`here
 ``svnfs_branches``
 ******************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``branches``
 
@@ -1449,7 +1446,7 @@ also be configured on a per-remote basis, see :conf_master:`here
 ``svnfs_tags``
 **************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``tags``
 
@@ -1466,7 +1463,7 @@ for more info.
 ``svnfs_env_whitelist``
 ***********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1494,7 +1491,7 @@ will be exposed as fileserver environments.
 ``svnfs_env_blacklist``
 ***********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1525,7 +1522,7 @@ minion: MinionFS Remote File Server Backend
 ``minionfs_env``
 ****************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``base``
 
@@ -1540,7 +1537,7 @@ Environment from which MinionFS files are made available.
 ``minionfs_mountpoint``
 ***********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``''``
 
@@ -1560,7 +1557,7 @@ Specifies a path on the salt fileserver from which minionfs files are served.
 ``minionfs_whitelist``
 **********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 
@@ -1586,7 +1583,7 @@ exposed.
 ``minionfs_blacklist``
 **********************
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``[]``
 

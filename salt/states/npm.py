@@ -69,7 +69,7 @@ def installed(name,
     registry
         The NPM registry from which to install the package
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     force_reinstall
         Install the package even if it is already installed

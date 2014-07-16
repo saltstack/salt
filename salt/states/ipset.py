@@ -66,7 +66,7 @@ def __virtual__():
 
 def set_present(name, set_type, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify the chain is exist.
 
@@ -116,7 +116,7 @@ def set_present(name, set_type, family='ipv4', **kwargs):
 
 def set_absent(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify the set is absent.
 
@@ -164,7 +164,7 @@ def set_absent(name, family='ipv4', **kwargs):
 
 def present(name, entry=None, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Append a entry to a set
 
@@ -233,7 +233,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
 
 def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Remove a entry or entries from a chain
 
@@ -304,7 +304,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
 
 def flush(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Flush current ipset set
 

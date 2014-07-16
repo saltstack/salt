@@ -3,7 +3,7 @@
 Execution of MySQL queries
 ==========================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:   - MySQLdb Python module
 :configuration: See :py:mod:`salt.modules.mysql` for setup instructions.

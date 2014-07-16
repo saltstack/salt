@@ -93,7 +93,7 @@ def status(name, sig=None):
 
 def reload_(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Reload the named service
 
@@ -168,7 +168,7 @@ def _get_rc():
 
 def available(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
@@ -185,7 +185,7 @@ def available(name):
 
 def missing(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     The inverse of service.available.
     Returns ``True`` if the specified service is not available, otherwise returns
@@ -202,7 +202,7 @@ def missing(name):
 
 def get_all():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return all available boot services
 
@@ -224,7 +224,7 @@ def get_all():
 
 def get_enabled():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a list of service that are enabled on boot
 
@@ -243,7 +243,7 @@ def get_enabled():
 
 def enabled(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return True if the named service is enabled, false otherwise
 
@@ -258,7 +258,7 @@ def enabled(name):
 
 def get_disabled():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a set of services that are installed but disabled
 
@@ -277,7 +277,7 @@ def get_disabled():
 
 def disabled(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return True if the named service is disabled, false otherwise
 

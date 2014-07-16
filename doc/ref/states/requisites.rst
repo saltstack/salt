@@ -240,7 +240,7 @@ successfully.
 onfail
 ~~~~~~
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The ``onfail`` requisite allows for reactions to happen strictly as a response
 to the failure of another state. This can be used in a number of ways, such as
@@ -270,7 +270,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 onchanges
 ~~~~~~~~~
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The ``onchanges`` requisite makes a state only apply if the required states
 generate changes, and if the watched state's "result" is ``True``. This can be
@@ -401,11 +401,6 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
 Altering States
 ===============
 
-.. note::
-
-    The ``unless``, ``onlyif``, and ``check_cmd`` options will be supported
-    starting with the feature release codenamed Helium
-
 The state altering system is used to make sure that states are evaluated exactly
 as the user expects.  It can be used to double check that a state preformed
 exactly how it was expected to, or to make 100% sure that a state only runs
@@ -415,6 +410,8 @@ state is evaluated correctly.
 
 Unless
 ~~~~~~
+
+.. versionadded:: 2014.7.0
 
 Use unless to only run if any of the specified commands return False.
 
@@ -432,6 +429,8 @@ run.
 
 Onlyif
 ~~~~~~
+
+.. versionadded:: 2014.7.0
 
 Onlyif is the opposite of Unless.  If all of the commands in onlyif return True,
 then the state is run.
@@ -460,6 +459,8 @@ gluster commands return back a 0 ret value.
 
 Check_Cmd
 ~~~~~~~~~
+
+.. versionadded:: 2014.7.0
 
 Check Command is used for determining that a state did or did not run as
 expected.

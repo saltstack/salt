@@ -743,7 +743,7 @@ def get_block_device():
     '''
     Retrieve a list of disk devices
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 

@@ -8,11 +8,13 @@ import datetime
 import pprint
 
 # Import Salt Testing libs
+from tests.integration import ModuleCase
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.loader
 import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils import get_context
@@ -631,7 +633,53 @@ class TestCustomExtensions(TestCase):
     #     return
 
 
+class TestDotNotationLookup(ModuleCase):
+    '''
+    Tests to call Salt functions via Jinja with various lookup syntaxes
+    '''
+    def __init__(self, *args, **kwargs):
+        super(TestDotNotationLookup, self).__init__(*args, **kwargs)
+
+        pack = {
+            'test.ping': lambda: True,
+            'grains.get': lambda x: 'jerry',
+        }
+        render = salt.loader.render(self.minion_opts, pack)
+        self.jinja = render.get('jinja')
+
+    def render(self, tmpl_str, context=None):
+        return self.jinja(tmpl_str, context=context or {}, from_str=True).read()
+
+    def test_normlookup(self):
+        '''
+        Sanity-check the normal dictionary-lookup syntax for our stub function
+        '''
+        tmpl_str = '''Hello, {{ salt['test.ping']() }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, True.')
+
+    def test_dotlookup(self):
+        '''
+        Check calling a stub function using awesome dot-notation
+        '''
+        tmpl_str = '''Hello, {{ salt.test.ping() }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, True.')
+
+    def test_shadowed_dict_method(self):
+        '''
+        Check calling a stub function with a name that shadows a ``dict``
+        method name
+        '''
+        tmpl_str = '''Hello, {{ salt.grains.get('id') }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, jerry.')
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,
+            TestDotNotationLookup,
               needs_daemon=False)
