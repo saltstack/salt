@@ -12,7 +12,6 @@ import time
 import datetime
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
