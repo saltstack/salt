@@ -2,7 +2,7 @@
 '''
 Support for Varnish
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. note::
 
