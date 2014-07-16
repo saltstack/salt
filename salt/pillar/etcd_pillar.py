@@ -2,7 +2,7 @@
 '''
 Use etcd data as a Pillar source
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:  - python-etcd
 

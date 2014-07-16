@@ -186,7 +186,7 @@ Calling Salt Functions
 The Jinja renderer provides a shorthand lookup syntax for the ``salt``
 dictionary of :term:`execution function <Execution Function>`.
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 
@@ -200,7 +200,7 @@ Debugging
 The ``show_full_context`` function can be used to output all variables present
 in the current Jinja context.
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 

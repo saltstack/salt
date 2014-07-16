@@ -814,7 +814,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
     cwd : None
         Options path to the Git repository
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
 
     user : None
@@ -855,7 +855,7 @@ def config_get(cwd=None, setting_name=None, user=None):
     cwd : None
         Optional path to a Git repository
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
 
     user : None

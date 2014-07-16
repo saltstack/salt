@@ -152,7 +152,7 @@ def create(name,
     '''
     Create a RAID device.
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
     .. warning::
         Use with CAUTION, as this function can be very destructive if not used

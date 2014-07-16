@@ -238,5 +238,5 @@ If no job history is needed, the job cache can be disabled:
 If the job cache is necessary there are (currently) 2 options:
 - ext_job_cache: this will have the minions store their return data directly
     into a returner (not sent through the master)
-- master_job_cache (New in `Helium`): this will make the master store the job
+- master_job_cache (New in `2014.7.0`): this will make the master store the job
     data using a returner (instead of the local job cache on disk).

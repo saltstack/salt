@@ -344,7 +344,7 @@ def cpu_times(per_cpu=False):
 
 def virtual_memory():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a dict that describes statistics about system memory usage.
 
@@ -359,7 +359,7 @@ def virtual_memory():
 
 def swap_memory():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a dict that describes swap memory statistics.
 
@@ -374,7 +374,7 @@ def swap_memory():
 
 def physical_memory_usage():
     '''
-    .. deprecated:: Helium
+    .. deprecated:: 2014.7.0
         Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return a dict that describes free and available physical memory.
@@ -396,7 +396,7 @@ def physical_memory_usage():
 
 def virtual_memory_usage():
     '''
-    .. deprecated:: Helium
+    .. deprecated:: 2014.7.0
         Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return a dict that describes free and available memory, both physical
@@ -419,7 +419,7 @@ def virtual_memory_usage():
 
 def cached_physical_memory():
     '''
-    .. deprecated:: Helium
+    .. deprecated:: 2014.7.0
         Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return the amount cached memory.
@@ -441,7 +441,7 @@ def cached_physical_memory():
 
 def physical_memory_buffers():
     '''
-    .. deprecated:: Helium
+    .. deprecated:: 2014.7.0
         Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
 
     Return the amount of physical memory buffers.

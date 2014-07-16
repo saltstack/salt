@@ -58,7 +58,7 @@ def get_local_client(
         mopts=None,
         skip_perm_errors=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Read in the config and return the correct LocalClient object based on
     the configured transport
@@ -1587,7 +1587,7 @@ class Caller(object):
     Instantiate a new Caller() instance using a dictionary of the minion
     config:
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
         Pass the minion config as a dictionary.
 
     .. code-block:: python

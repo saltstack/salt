@@ -3,7 +3,7 @@
 Manage Elasticache
 ==================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create, destroy and update Elasticache clusters. Be aware that this interacts
 with Amazon's services, and so may incur charges.

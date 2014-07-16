@@ -2,7 +2,7 @@
 '''
 Module for managing container and VM images
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 '''
 
 # Import python libs

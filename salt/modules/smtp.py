@@ -2,7 +2,7 @@
 '''
 Module for Sending Messages via SMTP
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:   - smtplib python module
 :configuration: This module can be used by either passing a jid and password

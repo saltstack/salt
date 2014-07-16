@@ -48,7 +48,7 @@ The option can can also be set to a list of masters, enabling
       - address1
       - address2
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
 
     The master can be dynamically configured. The :conf_minion:`master` value
     can be set to an module function which will be executed and will assume
@@ -80,7 +80,7 @@ The option can can also be set to a list of masters, enabling
 ``master_type``
 ---------------
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``str``
 
@@ -110,7 +110,7 @@ in the list until it successfully connects.
 ``master_shuffle``
 ------------------
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Default: ``False``
 
@@ -753,7 +753,7 @@ Enables verification of the master-public-signature returned by the master in
 auth-replies. Please see the tutorial on how to configure this properly
 `Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 
@@ -774,7 +774,7 @@ The filename without the *.pub-suffix of the public that should be used for
 verifying the signature from the master. The file must be located in the minions
 pki-directory.
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 
@@ -791,7 +791,7 @@ If :conf_minion:`verify_master_pubkey_sign` is enabled, the signature is only ve
 if the public-key of the master changes. If the signature should always be verified,
 this can be set to ``True``.
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 

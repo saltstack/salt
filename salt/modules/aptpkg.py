@@ -369,7 +369,7 @@ def install(name=None,
         architecture designation (``:i386``, etc.) to the end of the package
         name.
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
 
         CLI Example:
 
@@ -592,7 +592,7 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
         Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
         is to use dist-upgrade.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -618,7 +618,7 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
 
 def hold(name=None, pkgs=None, sources=None, *kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Set package in 'hold' state, meaning it will not be upgraded.
 
@@ -691,7 +691,7 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Set package current in 'hold' state to install state,
     meaning it will be upgraded.
@@ -1756,7 +1756,7 @@ def _resolve_deps(name, pkgs, **kwargs):
     Installs missing dependencies and marks them as auto installed so they
     are removed when no more manually installed packages depend on them.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     :depends:   - python-apt module
     '''
@@ -1798,7 +1798,7 @@ def _resolve_deps(name, pkgs, **kwargs):
 
 def owner(*paths):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
     be passed. Like :mod:`pkg.version <salt.modules.aptpkg.version`, if a

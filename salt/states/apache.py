@@ -2,7 +2,7 @@
 '''
 Apache state
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Allows for inputting a yaml dictionary into a file for apache configuration
 files.
