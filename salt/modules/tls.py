@@ -156,6 +156,12 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
         ca authority name
     cacert_path
         absolute path to ca certificates root directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.maybe_fix_ssl_version test_ca /etc/certs
     '''
     set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
@@ -206,6 +212,12 @@ def ca_exists(ca_name, cacert_path=None):
 
     ca_name
         name of the CA
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.ca_exists test_ca /etc/certs
     '''
     set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
@@ -233,6 +245,12 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
         if true, return the certificate content instead of the path
     cacert_path
         absolute path to ca certificates root directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.get_ca test_ca as_text=False cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
     certp = '{0}/{1}/{2}_ca_cert.crt'.format(
