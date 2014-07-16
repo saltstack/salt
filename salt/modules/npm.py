@@ -71,7 +71,7 @@ def install(pkg=None,
     registry
         The NPM registry to install the package from.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 

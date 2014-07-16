@@ -190,7 +190,7 @@ def noop(*args, **kwargs):
 
 def enable():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Enable the puppet agent
 
@@ -218,7 +218,7 @@ def enable():
 
 def disable():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Disable the puppet agent
 
@@ -249,7 +249,7 @@ def disable():
 
 def status():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Display puppet agent status
 
@@ -290,7 +290,7 @@ def status():
 
 def summary():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Show a summary of the last puppet agent run
 
