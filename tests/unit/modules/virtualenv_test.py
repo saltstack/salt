@@ -151,17 +151,6 @@ class VirtualenvTestCase(TestCase):
                 runas=None
             )
 
-    def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
-                no_site_packages=True,
-                system_site_packages=True
-            )
-
     def test_unapplicable_options(self):
         # ----- Virtualenv using pyvenv options ----------------------------->
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -189,14 +178,6 @@ class VirtualenvTestCase(TestCase):
         virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'pyvenv'}
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
-                venv_bin='pyvenv',
-                no_site_packages=True
-            )
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
