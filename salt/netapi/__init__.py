@@ -22,12 +22,16 @@ class NetapiClient(object):
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
 
-    >>> client = NetapiClient(__opts__)
+    >>> client = NetapiClient()
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
+
+    :param mopts: A copy of the client_config dictionary if already loaded into memory.
+    :param opts: Ignored; preserved for backward-compat
     '''
-    def __init__(self, opts):
-        self.opts = opts
+    def __init__(self, opts=None, mopts=None):
+        self.opts = mopts or salt.config.client_config(os.path.join(
+            salt.syspaths.CONFIG_DIR, 'master'))
 
     def run(self, low):
         '''
@@ -55,7 +59,7 @@ class NetapiClient(object):
 
         :return: job ID
         '''
-        local = salt.client.get_local_client(self.opts['conf_file'])
+        local = salt.client.get_local_client(mopts=self.opts)
         return local.run_job(*args, **kwargs)
 
     def local(self, *args, **kwargs):
@@ -66,7 +70,7 @@ class NetapiClient(object):
 
         :return: Returns the result from the execution module
         '''
-        local = salt.client.get_local_client(self.opts['conf_file'])
+        local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd(*args, **kwargs)
 
     def local_batch(self, *args, **kwargs):
@@ -80,7 +84,7 @@ class NetapiClient(object):
         :return: Returns the result from the exeuction module for each batch of
             returns
         '''
-        local = salt.client.get_local_client(self.opts['conf_file'])
+        local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
 
     def runner(self, fun, **kwargs):
