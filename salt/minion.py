@@ -1198,10 +1198,7 @@ class Minion(MinionBase):
                    'the worker_threads value.').format(jid)
             log.warn(msg)
             return ''
-        if isinstance(ret_val, string_types) and not ret_val:
-            # The master AES key has changed, reauth
-            self.authenticate()
-            ret_val = channel.send(load)
+
         log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
