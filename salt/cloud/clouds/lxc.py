@@ -3,7 +3,7 @@
 Install Salt on an LXC Container
 ================================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''

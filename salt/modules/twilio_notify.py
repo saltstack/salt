@@ -2,7 +2,7 @@
 '''
 Module for notifications via Twilio
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:   - twilio python module
 :configuration: Configure this module by specifying the name of a configuration

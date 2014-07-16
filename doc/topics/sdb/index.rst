@@ -9,7 +9,7 @@ allow passwords to be stored in a secure database, such as one managed by the
 keyring package, rather than as plain-text files. However, as a generic database
 interface, it could conceptually be used for a number of other purposes.
 
-SDB was added to Salt in version Helium. SDB is currently experimental, and
+SDB was added to Salt in version 2014.7.0. SDB is currently experimental, and
 should probably not be used in production.
 
 

@@ -27,7 +27,7 @@ Communication with Salt and Salt satellite projects is done using Salt's own
 
 .. admonition:: salt-api
 
-    Prior to Salt's Helium release, netapi modules lived in the separate sister
+    Prior to Salt's 2014.7.0 release, netapi modules lived in the separate sister
     projected ``salt-api``. That project has been merged into the main Salt
     project.
 

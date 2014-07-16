@@ -514,14 +514,14 @@ def installed(
         Force the package to be held at the current installed version.
         Currently works with YUM & APT based systems.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     allow_updates
         Allow the package to be updated outside Salt's control (e.g. auto updates on Windows).
         This means a package on the Minion can have a newer version than the latest available
         in the repository without enforcing a re-installation of the package.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     Example:
 
@@ -537,7 +537,7 @@ def installed(
             - hold: False
 
     pkg_verify
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         For requested packages that are already installed and would not be targeted for
         upgrade or downgrade, use pkg.verify to determine if any of the files installed
@@ -1351,7 +1351,7 @@ def purged(name, pkgs=None, **kwargs):
 
 def uptodate(name, refresh=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify that the system is completely up to date.
 

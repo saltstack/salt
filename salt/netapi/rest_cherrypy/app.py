@@ -3,7 +3,7 @@
 A REST API for Salt
 ===================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 

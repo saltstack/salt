@@ -7,7 +7,7 @@ enhancements in the :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>`
 netapi module.
 
 Work to merge :program:`salt-api` into the main Salt distribution continues and
-it is likely to be included in Salt's Helium release.
+it is likely to be included in Salt's 2014.7.0 release.
 
 :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` changes
 ==================================================================

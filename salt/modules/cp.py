@@ -371,7 +371,7 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
         matching with a regex, the regex must be prefixed with ``E@``,
         otherwise the expression will be interpreted as a glob.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     exclude_pat : None
         Glob or regex to exclude certain files from being cached from the given
@@ -383,7 +383,7 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
             If used with ``include_pat``, files matching this pattern will be
             excluded from the subset of files defined by ``include_pat``.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
 
     CLI Examples:
@@ -676,7 +676,7 @@ def push_dir(path, glob=None):
     ``/var/cache/salt/master/minions/minion-id/files``).  It also has a glob
     for matching specific files using globbing.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Since this feature allows a minion to push files up to the master server it
     is disabled by default for security purposes. To enable, set ``file_recv``

@@ -65,7 +65,7 @@ def doc(*args):
 
 def state_doc(*args):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return the docstrings for all states. Optionally, specify a state or a
     function to narrow the selection.
@@ -115,7 +115,7 @@ def state_doc(*args):
 
 def runner_doc(*args):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return the docstrings for all runners. Optionally, specify a runner or a
     function to narrow the selection.
@@ -156,7 +156,7 @@ def runner_doc(*args):
 
 def returner_doc(*args):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return the docstrings for all returners. Optionally, specify a returner or a
     function to narrow the selection.
@@ -279,7 +279,7 @@ def argspec(module=''):
 
 def list_state_functions(*args, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List the functions for all state modules. Optionally, specify a state
     module or modules from which to list.
@@ -314,7 +314,7 @@ def list_state_functions(*args, **kwargs):
 
 def list_state_modules():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List the modules loaded on the minion
 
@@ -336,7 +336,7 @@ def list_state_modules():
 
 def list_runners():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List the runners loaded on the minion
 
@@ -358,7 +358,7 @@ def list_runners():
 
 def list_runner_functions(*args, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List the functions for all runner modules. Optionally, specify a runner
     module or modules from which to list.
@@ -393,7 +393,7 @@ def list_runner_functions(*args, **kwargs):
 
 def list_returners():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List the runners loaded on the minion
 
@@ -415,7 +415,7 @@ def list_returners():
 
 def list_returner_functions(*args, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List the functions for all returner modules. Optionally, specify a returner
     module or modules from which to list.

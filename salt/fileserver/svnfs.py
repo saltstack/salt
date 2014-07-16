@@ -14,7 +14,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
             - pysvn
 
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The paths to the trunk, branches, and tags have been made configurable, via
     the config options :conf_master:`svnfs_trunk`,
     :conf_master:`svnfs_branches`, and :conf_master:`svnfs_tags`.
