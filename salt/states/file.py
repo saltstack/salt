@@ -1164,9 +1164,10 @@ def managed(name,
     contents_newline
         .. versionadded:: 2014.7.0
 
-        When using contents, contents_pillar, or contents_grains, a newline is
-        inserted into the data. When loading some data this newline is better
-        left off.  Setting contents_newline to False will omit this newline.
+        When using contents, contents_pillar, or contents_grains, this option
+        ensures the file will have a newline at the end.
+        When loading some data this newline is better left off. Setting
+        contents_newline to False will omit this final newline.
 
     follow_symlinks : True
         .. versionadded:: 2014.7.0
