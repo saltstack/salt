@@ -117,7 +117,7 @@ class GitPillar(object):
                           opts_dict.get('git', None))
                 break
 
-            if (self.branch != parts[0] or self.rp_location != parts[1]):
+            if self.branch != parts[0] or self.rp_location != parts[1]:
                 continue
 
             rp_ = os.path.join(self.opts['cachedir'],
