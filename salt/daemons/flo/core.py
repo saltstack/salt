@@ -1030,7 +1030,10 @@ class NixExecutor(ioflo.base.deeding.Deed):
                 func = self.modules.value[data['fun']]
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     func,
-                    salt.utils.args.parse_input(data['arg']),
+                    #salt.utils.args.parse_input(data['arg']),
+                    #  Moved to old-style behavior to address issues
+                    #  in cmdmod.exec_code
+                    data['arg'],
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
