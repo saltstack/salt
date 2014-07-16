@@ -1219,7 +1219,7 @@ def exec_code(lang, code, cwd=None):
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
     codefile = salt.utils.mkstemp()
-    with salt.utils.fopen(codefile, 'w+') as fp_:
+    with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
