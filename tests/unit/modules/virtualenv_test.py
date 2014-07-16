@@ -8,7 +8,6 @@
 '''
 
 # Import python libraries
-import warnings
 import sys
 
 # Import Salt Testing libs
