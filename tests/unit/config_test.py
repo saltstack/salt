@@ -12,7 +12,6 @@ import logging
 import os
 import shutil
 import tempfile
-import warnings
 from contextlib import contextmanager
 
 # Import Salt Testing libs
@@ -28,8 +27,7 @@ import salt.minion
 import salt.utils
 import salt.utils.network
 import integration
-from salt import config as sconfig, version as salt_version
-from salt.version import SaltStackVersion
+from salt import config as sconfig
 from salt.cloud.exceptions import SaltCloudConfigError
 
 # Import Third-Party Libs
