@@ -806,32 +806,32 @@ class RaetKey(Key):
         '''
         Check the minion cache to make sure that old minion data is cleared
         '''
-        m_cache = os.path.join(self.opts['cachedir'], 'minions')
-        road_cache = os.path.join(
-            self.opts['cachedir'],
-            'raet',
-            'master',
-            'remote')
-        if not os.path.isdir(m_cache):
-            return
         keys = self.list_keys()
         minions = []
         for key, val in keys.items():
-            minions.extend(val)
-        for minion in os.listdir(m_cache):
-            if minion not in minions:
-                shutil.rmtree(os.path.join(m_cache, minion))
-        for road in os.listdir(road_cache):
-            path = os.path.join(road_cache, road)
-            with open(path, 'rb') as fp_:
-                if road.endswith('.msgpack'):
-                    data = msgpack.loads(fp_.read())
-                elif road.endswith('.json'):
-                    data = json.loads(fp_.read())
-                else:
-                    data = msgpack.loads(fp_.read())
-            if data['name'] not in minions:
-                os.remove(path)
+             minions.extend(val)
+
+        m_cache = os.path.join(self.opts['cachedir'],'minions')
+        if os.path.isdir(m_cache):
+            for minion in os.listdir(m_cache):
+                if minion not in minions:
+                    shutil.rmtree(os.path.join(m_cache, minion))
+
+        road_cache = os.path.join(self.opts['cachedir'],
+                                  'raet',
+                                  self.opts.get('id', 'master'),
+                                  'remote')
+        if os.path.isdir(road_cache):
+            for road in os.listdir(road_cache):
+                root, ext = os.path.splitext(road)
+                if ext not in ['.json', '.msgpack']:
+                    continue
+                prefix, sep, name = root.partition('.')
+                if not name or prefix != 'estate':
+                    continue
+                if name not in minions:
+                    path = os.path.join(road_cache, road)
+                    os.remove(path)
 
     def gen_keys(self):
         '''
@@ -1169,7 +1169,7 @@ class RaetKey(Key):
                 keydata = self.read_remote(mid, status)
                 if keydata:
                     keydata['acceptance'] = status
-                    data[keydata['device_id']] = keydata
+                    data[mid] = keydata
 
         return data
 

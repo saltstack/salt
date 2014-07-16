@@ -79,6 +79,7 @@ class BasicTestCase(unittest.TestCase):
         sockDirpath = os.path.join(dirpath, 'sock', name)
 
         opts = dict(
+                     id=name,
                      pki_dir=pkiDirpath,
                      sock_dir=sockDirpath,
                      cachedir=cacheDirpath,
@@ -365,7 +366,7 @@ class BasicTestCase(unittest.TestCase):
 
     def testBootstrapClean(self):
         '''
-        Basic keep setup for stack keep and safe persistence load and dump
+        Bootstap to allowed
         '''
         console.terse("{0}\n".format(self.testBootstrapClean.__doc__))
 
@@ -454,10 +455,21 @@ class BasicTestCase(unittest.TestCase):
         remote = other.remotes.values()[0]
         self.assertTrue(remote.allowed)
 
+        for remote in main.remotes.values():
+            path = os.path.join(main.keep.remotedirpath,
+                    "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
+            self.assertTrue(os.path.exists(path))
+
+
+        # now delete a key and see if road keep file is also deleted
+        main.keep.saltRaetKey.delete_key(match=other.local.name)
+        remote = main.remotes[other.local.uid]
+        path = os.path.join(main.keep.remotedirpath,
+                "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
+        self.assertFalse(os.path.exists(path))
+
         main.server.close()
         other.server.close()
-
-
 
 def runOne(test):
     '''
