@@ -126,3 +126,11 @@ New Modules
 Syslog-ng
 Oracle
 random
+
+Deprecations
+============
+
+salt.modules.virturalenv_mod
+----------------------------
+
+- Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)
