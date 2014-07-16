@@ -3,7 +3,7 @@
 Manage IAM roles.
 =================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 This module uses ``boto``, which can be installed via package, or pip.
 

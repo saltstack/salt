@@ -3,7 +3,7 @@
 Manage Security Groups
 ======================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy Security Groups. Be aware that this interacts with Amazon's
 services, and so may incur charges.

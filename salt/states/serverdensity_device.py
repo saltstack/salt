@@ -3,7 +3,7 @@
 Monitor Server with Server Density
 ==================================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 `Server Density <https://www.serverdensity.com/>`_
 Is a hosted monitoring service.

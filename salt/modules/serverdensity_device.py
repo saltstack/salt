@@ -3,7 +3,7 @@
 Wrapper around Server Density API
 =================================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 '''
 import requests
 import json

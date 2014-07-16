@@ -3,7 +3,7 @@
 Manage ELBs
 =================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy ELBs. Be aware that this interacts with Amazon's
 services, and so may incur charges.
