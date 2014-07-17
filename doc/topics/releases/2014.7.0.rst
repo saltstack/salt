@@ -146,3 +146,4 @@ salt.modules.virturalenv_mod
   - ``vm_config`` (deprecated)
   - ``vm_config_path`` (deprecated)
 - Removed deprecated ``libcloud_version`` function from ``salt/cloud/libcloudfuncs.py`` (deprecated)
+- Removed deprecated ``CloudConfigMixIn`` class from ``salt/utils/parsers.py`` (deprecated)
