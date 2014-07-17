@@ -53,7 +53,7 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       docker-registries:
-          https://index.docker.io/v1:
+          https://index.docker.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -64,13 +64,13 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       ac-docker-registries:
-          https://index.bar.io/v1:
+          https://index.bar.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
 
       ab-docker-registries:
-          https://index.foo.io/v1:
+          https://index.foo.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -80,11 +80,11 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       docker-registries:
-          https://index.bar.io/v1:
+          https://index.bar.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
-          https://index.foo.io/v1:
+          https://index.foo.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
