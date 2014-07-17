@@ -219,7 +219,14 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         for name in names:
             seeds[name] = kwargs.get('seed', True)
             skey = salt.key.Key(__opts__)
-            if name in skey.list_all():
+            seed = True
+            if name in skey.all_keys().get('minions', []):
+                try:
+                    if client.cmd(name, 'test.ping', timeout=20).get(name, None):
+                        seed = False
+                except (TypeError, KeyError):
+                    pass
+            if not seed:
                 seeds[name] = False
             kv = salt.utils.virt.VirtKey(host, name, __opts__)
             if kv.authorize():
