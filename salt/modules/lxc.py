@@ -1098,11 +1098,11 @@ def create(name, config=None, profile=None, options=None, **kwargs):
     fstype = select('fstype')
     size = select('size', '1G')
     image = select('image')
-    if backing in ['dir', 'overlayfs']:
+    if backing in ['dir', 'overlayfs', 'btrfs']:
         fstype = None
         size = None
     # some backends wont support some parameters
-    if backing in ['aufs', 'dir', 'overlayfs']:
+    if backing in ['aufs', 'dir', 'overlayfs', 'btrfs']:
         lvname = vgname = None
 
     if image:
