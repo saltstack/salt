@@ -38,11 +38,12 @@ def _format_response(response, msg):
 
 
 def _get_rabbitmq_plugin():
-    """Returns the rabbitmq-plugin command path if we're running an OS that
+    '''
+    Returns the rabbitmq-plugin command path if we're running an OS that
     doesn't put it in the standard /usr/bin or /usr/local/bin
     This works by taking the rabbitmq-server version and looking for where it
     seems to be hidden in /usr/lib.
-    """
+    '''
     rabbitmq = salt.utils.which('rabbitmq-plugins')
 
     if rabbitmq is None:
