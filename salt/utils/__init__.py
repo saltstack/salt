@@ -2075,21 +2075,6 @@ def argspec_report(functions, module=''):
     return ret
 
 
-def memoize(func):
-    '''
-    Deprecation warning wrapper since memoize is now on salt.utils.decorators
-    '''
-    warn_until(
-        'Helium',
-        'The \'memoize\' decorator was moved to \'salt.utils.decorators\', '
-        'please start importing it from there. This warning and wrapper '
-        'will be removed in Salt {version}.',
-        stacklevel=3
-
-    )
-    return real_memoize(func)
-
-
 def decode_list(data):
     '''
     JSON decodes as unicode, Jinja needs bytes...

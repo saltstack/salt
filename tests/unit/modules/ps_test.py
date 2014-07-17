@@ -114,22 +114,6 @@ class PsTestCase(TestCase):
         self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},
                              ps.swap_memory())
 
-    @patch('psutil.phymem_usage', new=MagicMock(return_value=STUB_PHY_MEM_USAGE))
-    def test_physical_memory_usage(self):
-        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500}, ps.physical_memory_usage())
-
-    @patch('psutil.virtmem_usage', new=MagicMock(return_value=STUB_PHY_MEM_USAGE))
-    def test_virtual_memory_usage(self):
-        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500}, ps.virtual_memory_usage())
-
-    # ps.cached_physical_memory is deprecated! See #9301
-    # def test_cached_physical_memory(self):
-    # pass
-
-    #ps.physical_memory_buffers is deprecated! See #9301
-    # def test_physical_memory_buffers(self):
-    #     pass
-
     @patch('psutil.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
     def test_disk_partitions(self):
         self.assertDictEqual(
