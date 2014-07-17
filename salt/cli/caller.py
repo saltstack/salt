@@ -24,6 +24,18 @@ from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 
+import logging
+log = logging.getLogger(__name__)
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+
+except ImportError:
+    # Don't die on missing transport libs since only one transport is required
+    pass
+
 # Custom exceptions
 from salt.exceptions import (
     SaltClientError,
@@ -32,8 +44,32 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 
-
 class Caller(object):
+    '''
+    Factory class to create salt-call callers for different transport
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        # Default to ZeroMQ for now
+        ttype = 'zeromq'
+
+        # determine the ttype
+        if 'transport' in opts:
+            ttype = opts['transport']
+        elif 'transport' in opts.get('pillar', {}).get('master', {}):
+            ttype = opts['pillar']['master']['transport']
+
+        # switch on available ttypes
+        if ttype == 'zeromq':
+            return ZeroMQCaller(opts, **kwargs)
+        elif ttype == 'raet':
+            return RAETCaller(opts, **kwargs)
+        else:
+            raise Exception('Callers are only defined for ZeroMQ and raet')
+            # return NewKindOfCaller(opts, **kwargs)
+
+
+class ZeroMQCaller(object):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     '''
@@ -56,6 +92,7 @@ class Caller(object):
         '''
         Call the module
         '''
+        # raet channel here
         ret = {}
         fun = self.opts['fun']
         ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
@@ -147,6 +184,7 @@ class Caller(object):
                 self.return_pub(mret)
             except Exception:
                 pass
+        # close raet channel here
         return ret
 
     def return_pub(self, ret):
@@ -193,3 +231,58 @@ class Caller(object):
                 sys.exit(ret['retcode'])
         except SaltInvocationError as err:
             raise SystemExit(err)
+
+
+class RAETCaller(ZeroMQCaller):
+    '''
+    Object to wrap the calling of local salt modules for the salt-call command
+    when transport is raet
+    '''
+    def __init__(self, opts):
+        '''
+        Pass in the command line options
+        '''
+        self.stack = self._setup_caller_stack(opts)
+        salt.transport.jobber_stack = self.stack
+
+        super(RAETCaller, self).__init__(opts)
+
+    def run(self):
+        '''
+        Execute the salt call logic
+        '''
+        try:
+            ret = self.call()
+            self.stack.server.close()
+            salt.transport.jobber_stack = None
+
+            salt.output.display_output(
+                    {'local': ret.get('return', {})},
+                    ret.get('out', 'nested'),
+                    self.opts)
+            if self.opts.get('retcode_passthrough', False):
+                sys.exit(ret['retcode'])
+        except SaltInvocationError as err:
+            raise SystemExit(err)
+
+    def _setup_caller_stack(self, opts):
+        '''
+        Setup and return the LaneStack and Yard used by by channel when global
+        not already setup such as in salt-call to communicate to-from the minion
+
+        '''
+        mid = opts['id']
+        sockdirpath = opts['sock_dir']
+        yid = nacling.uuid(size=18)
+        name = 'caller' + yid
+        stack = LaneStack(name=name,
+                          lanename=mid,
+                          sockdirpath=sockdirpath)
+
+        stack.Pk = raeting.packKinds.pack
+        stack.addRemote(RemoteYard(stack=stack,
+                                   name='manor',
+                                   lanename=mid,
+                                   dirpath=sockdirpath))
+        log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
+        return stack
