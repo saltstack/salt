@@ -365,7 +365,7 @@ def avail_locations(call=None):
     return ret
 
 
-def avail_images(call=None, location='local', img_type='vztpl'):
+def avail_images(call=None, location='local'):
     '''
     Return a list of the images that are on the provider
 
@@ -746,7 +746,7 @@ def create_node(vm_):
     return _parse_proxmox_upid(node, vm_)
 
 
-def show_instance(name, call=None, instance_type=None):
+def show_instance(name, call=None):
     '''
     Show the details from Proxmox concerning an instance
     '''
@@ -900,7 +900,7 @@ def set_vm_status(status, name=None, vmid=None):
     return False
 
 
-def get_vm_status(vmid=None, name=None, host=None, nodeType=None):
+def get_vm_status(vmid=None, name=None):
     '''
     Get the status for a VM, either via the ID or the hostname
     '''
