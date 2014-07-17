@@ -11,6 +11,13 @@ by setting the :conf_minion:`providers` parameter in your Minion config file lik
     providers:
       pkg: solarisips
 
+Or you can set the provider in sls for each pkg:
+.. code-block:: yaml
+
+    mypackage:
+      pkg.installed:
+        - provider: solarisips
+
 '''
 
 # Import python libs
