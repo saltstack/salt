@@ -18,7 +18,6 @@ import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils.event import tagify
-import salt.crypt
 
 
 class KeyCLI(object):
