@@ -4,6 +4,7 @@
 import os
 import yaml
 import shutil
+import time
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -40,19 +41,23 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         data = self.run_salt('-C "min* and not G@test_grain:foo" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         data = self.run_salt('-C "min* not G@test_grain:foo" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         match = 'P@test_grain:^cheese$ and * and G@test_grain:cheese'
         data = self.run_salt('-t 1 -C \'{0}\' test.ping'.format(match))
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         match = 'L@sub_minion and E@.*'
         data = self.run_salt('-t 1 -C "{0}" test.ping'.format(match))
         data = '\n'.join(data)
