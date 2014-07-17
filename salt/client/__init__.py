@@ -207,7 +207,8 @@ class LocalClient(object):
 
         return self.get_returns(pub_data['jid'],
                                 minions,
-                                self._get_timeout(timeout))
+                                self._get_timeout(timeout),
+                                pending_tags=[jid])
 
     def _check_pub_data(self, pub_data):
         '''
@@ -909,7 +910,8 @@ class LocalClient(object):
             self,
             jid,
             minions,
-            timeout=None):
+            timeout=None,
+            pending_tags=None):
         '''
         Get the returns for the command line interface via the event system
         '''
@@ -935,7 +937,7 @@ class LocalClient(object):
         while True:
             time_left = timeout_at - int(time.time())
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid)
+            raw = self.event.get_event(wait, jid, pending_tags=pending_tags)
             if raw is not None and 'return' in raw:
                 found.add(raw['id'])
                 ret[raw['id']] = raw['return']
