@@ -90,6 +90,12 @@ def state(
         A group of sls files to execute. This can be defined as a single string
         containing a single sls file, or a list of sls files
 
+    test
+        Pass ``test=true`` through to the state function
+
+    pillar
+        Pass the ``pillar`` kwarg through to the state function
+
     saltenv
         The default salt environment to pull sls files from
 
