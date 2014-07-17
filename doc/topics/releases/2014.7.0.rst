@@ -133,5 +133,12 @@ Deprecations
 salt.modules.virturalenv_mod
 ----------------------------
 
+- Removed deprecated ``memoize`` function from ``salt/utils/__init__.py`` (deprecated)
 - Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)
 - Removed deprecated ``check_dns`` argument from ``minion_config`` and ``apply_minion_config`` functions (deprecated)
+- Removed deprecated ``OutputOptionsWithTextMixIn`` class from ``salt/utils/parsers.py`` (deprecated)
+- Removed the following deprecated functions from ``salt/modules/ps.py``:
+  - ``physical_memory_usage`` (deprecated)
+  - ``virtual_memory_usage`` (deprecated)
+  - ``cached_physical_memory`` (deprecated)
+  - ``physical_memory_buffers`` (deprecated)
