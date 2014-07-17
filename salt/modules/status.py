@@ -547,7 +547,7 @@ def version():
 
 def master(master_ip=None, connected=True):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Fire an event if the minion gets disconnected from its master. This
     function is meant to be run via a scheduled job from the minion

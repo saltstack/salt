@@ -370,7 +370,7 @@ pillar, add a section like the following to the salt master config file:
     ext_pillar:
       - git: <branch> <repo> [root=<gitroot>]
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
 The ``<branch>`` param is the branch containing the pillar SLS tree. The

@@ -126,3 +126,12 @@ New Modules
 Syslog-ng
 Oracle
 random
+
+Deprecations
+============
+
+salt.modules.virturalenv_mod
+----------------------------
+
+- Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)
+- Removed deprecated ``check_dns`` argument from ``minion_config`` and ``apply_minion_config`` functions (deprecated)

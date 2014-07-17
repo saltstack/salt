@@ -26,7 +26,7 @@ def compound(tgt, minion_id=None):
     minion_id
         Specify the minion ID to match against the target expression
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -161,7 +161,7 @@ def list_(tgt, minion_id=None):
     minion_id
         Specify the minion ID to match against the target expression
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -189,7 +189,7 @@ def pcre(tgt, minion_id=None):
     minion_id
         Specify the minion ID to match against the target expression
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -217,7 +217,7 @@ def glob(tgt, minion_id=None):
     minion_id
         Specify the minion ID to match against the target expression
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -242,7 +242,7 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
     '''
     Return the first match in a dictionary of target patterns
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 

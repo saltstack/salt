@@ -501,6 +501,8 @@ class LoadPillar(ioflo.base.deeding.Deed):
             while self.udp_stack.value.rxMsgs:
                 msg, sender = self.udp_stack.value.rxMsgs.popleft()
                 self.pillar.value = msg.get('return', {})
+                if self.pillar.value is None:
+                    continue
                 self.opts.value['pillar'] = self.pillar.value
                 self.pillar_refresh.value = False
                 return

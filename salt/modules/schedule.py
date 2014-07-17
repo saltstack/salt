@@ -2,7 +2,7 @@
 '''
 Module for manging the Salt schedule on a minion
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 '''
 

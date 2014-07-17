@@ -1051,16 +1051,16 @@ def replace(path,
     :param append_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     :param prepend_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     :param not_found_content: Content to use for append/prepend if not found. If
         None (default), uses repl. Useful when repl uses references to group in
         pattern.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -1618,7 +1618,7 @@ def append(path, *args):
 
 def prepend(path, *args):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Prepend text to the beginning of a file
 
@@ -1653,7 +1653,7 @@ def prepend(path, *args):
 
 def write(path, *args):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Write text to a file, overwriting any existing contents.
 
@@ -2938,7 +2938,7 @@ def manage_file(name,
 
         salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '' '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
         ``follow_symlinks`` option added
 
     '''
@@ -3878,7 +3878,7 @@ def pardir():
     '''
     Return the relative parent directory path symbol for underlying OS
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This can be useful when constructing Salt Formulas.
 
@@ -3900,7 +3900,7 @@ def join(*args):
     '''
     Return a normalized file system path for the underlying OS
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This can be useful at the CLI but is frequently useful when scripting
     combining path variables:

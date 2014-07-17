@@ -834,7 +834,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
     Return the user's ssh keys on the minion
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -913,7 +913,7 @@ def hash_known_hosts(user=None, config=None):
 
     Hash all the hostnames in the known hosts file.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 

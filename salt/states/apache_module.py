@@ -3,7 +3,7 @@
 Manage Apache Modules
 =====================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Enable and disable apache modules.
 

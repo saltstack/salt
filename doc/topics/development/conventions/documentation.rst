@@ -112,7 +112,7 @@ denotes what Salt release will be affected. For example:
         '''
         Upper-case the given value
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         <...snip...>
         '''

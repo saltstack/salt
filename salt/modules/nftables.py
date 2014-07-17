@@ -437,7 +437,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
 def check_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Check for the existence of a chain in the table
 
@@ -495,7 +495,7 @@ def check_table(table=None, family='ipv4'):
 
 def new_table(table, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Create new custom table.
 
@@ -527,7 +527,7 @@ def new_table(table, family='ipv4'):
 
 def delete_table(table, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Create new custom table.
 
@@ -558,7 +558,7 @@ def delete_table(table, family='ipv4'):
 
 def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Create new chain to the specified table.
 
@@ -614,7 +614,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
 
 def delete_chain(table='filter', chain=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete the chain from the specified table.
 

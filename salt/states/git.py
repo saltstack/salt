@@ -433,7 +433,7 @@ def config(name,
            user=None,
            is_global=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Manage a git config setting for a user or repository
 

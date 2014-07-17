@@ -41,12 +41,12 @@ def get(key, default='', merge=False, delim=':'):
         Specify whether or not the retrieved values should be recursively
         merged into the passed default.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     delim
         Specify an alternate delimiter to use when traversing a nested dict
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 

@@ -84,7 +84,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
         Runner renamed from ``state.sls`` to ``state.orchestrate``
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
         Runner uses the pillar variable
     '''
@@ -134,7 +134,7 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
     '''
     Watch Salt's event bus and block until the given tag is matched
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This is useful for taking some simple action after an event is fired via
     the CLI without having to use Salt's Reactor.

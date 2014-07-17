@@ -80,7 +80,7 @@ def get(key, default='', delim=':'):
     delim
         Specify an alternate delimiter to use when traversing a nested dict
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 

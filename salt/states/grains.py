@@ -168,7 +168,7 @@ def list_absent(name, value):
 
 def absent(name, destructive=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete a grain from the grains config file
 
@@ -216,7 +216,7 @@ def absent(name, destructive=False):
 
 def append(name, value, convert=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Append a value to a list in the grains config file
 

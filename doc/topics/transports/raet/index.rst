@@ -9,7 +9,7 @@ The RAET Transport
 
     This document is also not yet complete
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The Reliable Asynchronous Event Transport, or RAET, is an alternative transport
 medium developed specifically with Salt in mind. It has been developed to

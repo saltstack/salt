@@ -531,7 +531,7 @@ def file_dict(*packages):
 
 def owner(*paths):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
     be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
