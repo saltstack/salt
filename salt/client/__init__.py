@@ -821,7 +821,12 @@ class LocalClient(object):
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid) if len(found.intersection(minions)) < len(minions) else None
+            raw = None
+            # Look for events if we haven't yet found all the minions or if we are still waiting for
+            # the syndics to report on how many minions they have forwarded the command to
+            if (len(found.intersection(minions)) < len(minions) or
+                    (self.opts['order_masters'] and syndic_wait < self.opts.get('syndic_wait', 1))):
+                raw = self.event.get_event(wait, jid)
             if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
