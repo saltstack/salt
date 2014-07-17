@@ -53,6 +53,7 @@ def state(
         ret='',
         highstate=None,
         sls=None,
+        top=None,
         env=None,
         test=False,
         expect_minions=False,
@@ -79,6 +80,10 @@ def state(
         Defaults to None, if set to True the target systems will ignore any
         sls references specified in the sls option and call state.highstate
         on the targeted minions
+
+    top
+        Should be the name of a top file. If set state.top is called with this
+        top file instead of state.sls.
 
     sls
         A group of sls files to execute. This can be defined as a single string
@@ -151,6 +156,9 @@ def state(
     cmd_kw['expect_minions'] = expect_minions
     if highstate:
         fun = 'state.highstate'
+    elif top:
+        fun = 'state.top'
+        cmd_kw['arg'].append(top)
     elif sls:
         fun = 'state.sls'
         if isinstance(sls, list):
