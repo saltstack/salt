@@ -1202,10 +1202,7 @@ class Minion(MinionBase):
                    'the worker_threads value.').format(jid)
             log.warn(msg)
             return ''
-        if isinstance(ret_val, string_types) and not ret_val:
-            # The master AES key has changed, reauth
-            self.authenticate()
-            ret_val = channel.send(load)
+
         log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
@@ -1615,10 +1612,6 @@ class Minion(MinionBase):
 
         # On first startup execute a state run if configured to do so
         self._state_run()
-        if self.opts['startup_states']:
-            startup_sleep_length = 0.5
-            log.debug('Sleeping for {0}s before running startup states'.format(startup_sleep_length))
-            time.sleep(startup_sleep_length)
 
         loop_interval = int(self.opts['loop_interval'])
 
