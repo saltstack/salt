@@ -7,6 +7,7 @@ data.
 
 # Import salt libs
 import salt.utils
+import salt.graints.core
 from salt.utils import decorators
 
 # Import python libs
@@ -36,6 +37,23 @@ def _format_response(response, msg):
     return {
         msg: response
     }
+
+
+def _get_rabbitmq_plugin():
+    """Returns the rabbitmq-plugin command path if we're running an OS that
+    doesn't put it in the standard /usr/bin or /usr/local/bin
+    This works by taking the rabbitmq-server version and looking for where it
+    seems to be hidden in /usr/lib.
+    """
+    rabbitmq = salt.utils.which('rabbitmq-plugins')
+
+    if rabbitmq is None:
+        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
+
+        path = '/usr/lib/rabbitmq/lib/rabbitmq_server-{0}/sbin/rabbitmq-plugins'
+        rabbitmq = path.format(version)
+
+    return rabbitmq
 
 
 def list_users(runas=None):
@@ -559,7 +577,9 @@ def plugin_is_enabled(name, runas=None):
 
         salt '*' rabbitmq.plugin_is_enabled foo
     '''
-    ret = __salt__['cmd.run']('rabbitmq-plugins list -m -e', runas=runas)
+    rabbitmq = _get_rabbitmq_plugin()
+    cmd = '{0} list -m -e'.format(rabbitmq)
+    ret = __salt__['cmd.run'](cmd, runas=runas)
     return bool(name in ret)
 
 
@@ -574,9 +594,11 @@ def enable_plugin(name, runas=None):
 
         salt '*' rabbitmq.enable_plugin foo
     '''
-    ret = __salt__['cmd.run_all'](
-            'rabbitmq-plugins enable {0}'.format(name),
-            runas=runas)
+    rabbitmq = _get_rabbitmq_plugin()
+    cmd = '{0} enable {1}'.format(rabbitmq, name)
+
+    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+
     return _format_response(ret, 'Enabled')
 
 
@@ -592,7 +614,9 @@ def disable_plugin(name, runas=None):
         salt '*' rabbitmq.disable_plugin foo
     '''
 
-    ret = __salt__['cmd.run_all'](
-            'rabbitmq-plugins disable {0}'.format(name),
-            runas=runas)
+    rabbitmq = _get_rabbitmq_plugin()
+    cmd = '{0} disable {1}'.format(rabbitmq, name)
+
+    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+
     return _format_response(ret, 'Disabled')
