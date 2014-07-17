@@ -120,7 +120,7 @@ class NetapiClient(object):
         :return: Returns the result from the wheel module
         '''
         kwargs['fun'] = fun
-        wheel = salt.wheel.Wheel(self.opts)
+        wheel = salt.wheel.WheelClient(self.opts)
         return wheel.master_call(**kwargs)
 
     def wheel_async(self, fun, **kwargs):
@@ -132,5 +132,5 @@ class NetapiClient(object):
         :return: Returns the result from the wheel module
         '''
         kwargs['fun'] = fun
-        wheel = salt.wheel.Wheel(self.opts)
+        wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
