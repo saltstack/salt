@@ -7,8 +7,6 @@ data.
 
 # Import salt libs
 import salt.utils
-import salt.graints.core
-from salt.utils import decorators
 
 # Import python libs
 import logging
@@ -566,7 +564,6 @@ def policy_exists(vhost, name, runas=None):
     return bool(vhost in policies and name in policies[vhost])
 
 
-@decorators.which('rabbitmq-plugins')
 def plugin_is_enabled(name, runas=None):
     '''
     Return whether the plugin is enabled.
@@ -583,7 +580,6 @@ def plugin_is_enabled(name, runas=None):
     return bool(name in ret)
 
 
-@decorators.which('rabbitmq-plugins')
 def enable_plugin(name, runas=None):
     '''
     Enable a RabbitMQ plugin via the rabbitmq-plugins command.
@@ -602,7 +598,6 @@ def enable_plugin(name, runas=None):
     return _format_response(ret, 'Enabled')
 
 
-@decorators.which('rabbitmq-plugins')
 def disable_plugin(name, runas=None):
     '''
     Disable a RabbitMQ plugin via the rabbitmq-plugins command.
