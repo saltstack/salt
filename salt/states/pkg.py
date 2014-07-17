@@ -391,7 +391,7 @@ def installed(
         pkg_verify=False,
         **kwargs):
     '''
-    Verify that the package is installed, and that it is the correct version
+    Ensure that the package is installed, and that it is the correct version
     (if specified).
 
     name
@@ -1006,8 +1006,8 @@ def latest(
         pkgs=None,
         **kwargs):
     '''
-    Verify that the named package is installed and the latest available
-    package. If the package can be updated this state function will update
+    Ensure that the named package is installed and the latest available
+    package. If the package can be updated, this state function will update
     the package. Generally it is better for the
     :mod:`installed <salt.states.pkg.installed>` function to be
     used, as :mod:`latest <salt.states.pkg.latest>` will update the package
