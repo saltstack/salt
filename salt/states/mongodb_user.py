@@ -19,8 +19,8 @@ def present(name,
             database="admin",
             user=None,
             password=None,
-            host=None,
-            port=None):
+            host="localhost",
+            port=27017):
     '''
     Ensure that the user is present with the specified properties
 
