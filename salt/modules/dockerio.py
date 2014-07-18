@@ -53,7 +53,7 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       docker-registries:
-          https://index.docker.io/v1:
+          https://index.docker.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -64,13 +64,13 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       ac-docker-registries:
-          https://index.bar.io/v1:
+          https://index.bar.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
 
       ab-docker-registries:
-          https://index.foo.io/v1:
+          https://index.foo.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -80,11 +80,11 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       docker-registries:
-          https://index.bar.io/v1:
+          https://index.bar.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
-          https://index.foo.io/v1:
+          https://index.foo.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -271,19 +271,19 @@ def _get_client(version=None, timeout=None):
     if not version:
         # set version that match docker deamon
         client._version = client.version()['ApiVersion']
-    client._auth_configs.update(_merge_auth_bits())
-    return client
 
-
-def _merge_auth_bits():
-    '''
-    Get the pillar configuration
-    '''
-    config = __pillar__.get('docker-registries', {})
+    # try to authenticate the client using credentials
+    # found in pillars
+    registry_auth_config = __pillar__.get('docker-registries', {})
     for k, data in __pillar__.items():
         if k.endswith('-docker-registries'):
-            config.update(data)
-    return config
+            registry_auth_config.update(data)
+
+    for registry, creds in registry_auth_config.items():
+        client.login(creds['username'], password=creds['password'],
+                     email=creds.get('email'), registry=registry)
+
+    return client
 
 
 def _get_image_infos(image):

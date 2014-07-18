@@ -53,8 +53,10 @@ def state(
         ret='',
         highstate=None,
         sls=None,
+        top=None,
         env=None,
         test=False,
+        pillar=None,
         expect_minions=False,
         fail_minions=None,
         allow_fail=0,
@@ -80,9 +82,19 @@ def state(
         sls references specified in the sls option and call state.highstate
         on the targeted minions
 
+    top
+        Should be the name of a top file. If set state.top is called with this
+        top file instead of state.sls.
+
     sls
         A group of sls files to execute. This can be defined as a single string
         containing a single sls file, or a list of sls files
+
+    test
+        Pass ``test=true`` through to the state function
+
+    pillar
+        Pass the ``pillar`` kwarg through to the state function
 
     saltenv
         The default salt environment to pull sls files from
@@ -151,6 +163,9 @@ def state(
     cmd_kw['expect_minions'] = expect_minions
     if highstate:
         fun = 'state.highstate'
+    elif top:
+        fun = 'state.top'
+        cmd_kw['arg'].append(top)
     elif sls:
         fun = 'state.sls'
         if isinstance(sls, list):
@@ -163,6 +178,9 @@ def state(
 
     if test:
         cmd_kw['kwarg']['test'] = test
+
+    if pillar:
+        cmd_kw['kwarg']['pillar'] = pillar
 
     cmd_kw['kwarg']['saltenv'] = __env__
 

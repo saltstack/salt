@@ -4652,3 +4652,9 @@ source_file = _build/locale/ref/modules/all/salt.modules.twilio_notify.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.twilio_notify.rst
 
+[salt.topics--tutorials--multimaster_pki]
+file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/multimaster_pki.po
+source_file = _build/locale/topics/tutorials/multimaster_pki.pot
+source_lang = en
+source_name = topics/tutorials/multimaster_pki.rst
+
