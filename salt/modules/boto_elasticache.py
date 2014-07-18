@@ -109,7 +109,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
              'preferred_availability_zone', 'security_groups',
              'cache_subnet_group_name', 'engine_version', 'cache_node_type',
              'notification_configuration', 'preferred_maintenance_window',
-             'configuration_endpoint', 'cache_nodes', 'cache_cluster_status']
+             'configuration_endpoint', 'cache_cluster_status']
     for key, val in cc.iteritems():
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
