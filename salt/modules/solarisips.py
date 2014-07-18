@@ -20,16 +20,12 @@ Or you can set the provider in sls for each pkg:
 
 '''
 
-# Import python libs
-import os
-import sys
-from pprint import pprint   # for install()
-
 # Import salt libs
 import salt.utils
 
 # Define the module's virtual name
 __virtualname__ = 'solarisips'
+
 
 def __virtual__():
     '''
@@ -38,6 +34,7 @@ def __virtual__():
     if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == '5.11':
         return __virtualname__
     return False
+
 
 ips_pkg_return_values = {
         0: 'Command succeeded.',
@@ -50,27 +47,30 @@ ips_pkg_return_values = {
         7: 'The image is currently in use by another process and cannot be modified.'
         }
 
+
 def _ips_get_pkgname(line):
     '''
     Extracts package name from "pkg list -v" output.
     Input: one line of the command output
-	Output: pkg name (e.g: "pkg://solaris/x11/library/toolkit/libxt")
+    Output: pkg name (e.g: "pkg://solaris/x11/library/toolkit/libxt")
     Example use:
     line = "pkg://solaris/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
     name = _ips_get_pkgname(line)
     '''
     return line.split()[0].split('@')[0].strip()
 
+
 def _ips_get_pkgversion(line):
     '''
     Extracts package version from "pkg list -v" output.
     Input: one line of the command output
-	Output: package version (e.g: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
+    Output: package version (e.g: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
     Example use:
     line = "pkg://solaris/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
     name = _ips_get_pkgversion(line)
     '''
     return line.split()[0].split('@')[1].strip()
+
 
 def refresh_db(full=False):
     '''
@@ -86,10 +86,11 @@ def refresh_db(full=False):
     else:
         return __salt__['cmd.retcode']('/bin/pkg refresh') == 0
 
+
 def upgrade_available(name):
     '''
     Check if there is an upgrade available for a certain package
-	Accepts full or partial FMRI. Returns all matches found.
+    Accepts full or partial FMRI. Returns all matches found.
 
     CLI Example::
 
@@ -109,8 +110,8 @@ def upgrade_available(name):
 def list_upgrades(refresh=False):
     '''
     Lists all packages available for update.
-	When run in global zone, it reports only upgradable packages for the global zone.
-	When run in non-global zone, it can report more upgradable packages than "pkg update -vn" because "pkg update" hides packages that require newer version of pkg://solaris/entire (which means that they can be upgraded only from global zone). Simply said: if you see pkg://solaris/entire in the list of upgrades, you should upgrade the global zone to get all possible updates.
+    When run in global zone, it reports only upgradable packages for the global zone.
+    When run in non-global zone, it can report more upgradable packages than "pkg update -vn" because "pkg update" hides packages that require newer version of pkg://solaris/entire (which means that they can be upgraded only from global zone). Simply said: if you see pkg://solaris/entire in the list of upgrades, you should upgrade the global zone to get all possible updates.
     You can force full pkg DB refresh before listing.
 
     CLI Example::
@@ -121,7 +122,7 @@ def list_upgrades(refresh=False):
     if salt.utils.is_true(refresh):
         refresh_db(full=True)
     upgrades = {}
-	# awk is in core-os package so we can use it without checking
+    # awk is in core-os package so we can use it without checking
     lines = __salt__['cmd.run_stdout'](
         "/bin/pkg list -Hu | /bin/awk '{print $1}' | /bin/xargs pkg list -Hnv").splitlines()
     for line in lines:
@@ -195,12 +196,12 @@ def list_pkgs(versions_as_list=False, **kwargs):
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
-    
+
 
 def version(*names, **kwargs):
     '''
     Common interface for obtaining the version of installed packages.
-	Accepts full or partial FMRI. If called using pkg_resource, full FMRI is required.
+    Accepts full or partial FMRI. If called using pkg_resource, full FMRI is required.
 
     CLI Example::
 
@@ -226,7 +227,7 @@ def latest_version(name, **kwargs):
     '''
     The available version of the package in the repository.
     In case of multiple match, it returns list of all matched packages.
-	Accepts full or partial FMRI.
+    Accepts full or partial FMRI.
 
     CLI Example::
 
@@ -268,6 +269,7 @@ def get_fmri(name, **kwargs):
         ret.append(_ips_get_pkgname(line))
 
     return ret
+
 
 def normalize_name(name, **kwargs):
     '''
@@ -324,7 +326,7 @@ def search(name, versions_as_list=False, **kwargs):
     cmd = '/bin/pkg list -aHv {0}'.format(name)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode'] != 0:
-		# error = nothing found
+        # error = nothing found
         return {}
     # no error, processing pkg listing
     # column 1 is full FMRI name in form pkg://publisher/pkg/name@version
@@ -337,10 +339,11 @@ def search(name, versions_as_list=False, **kwargs):
         __salt__['pkg_resource.stringify'](ret)
     return ret
 
+
 def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwargs):
     '''
     Install the named package using the IPS pkg command.
-	Accepts full or partial FMRI.
+    Accepts full or partial FMRI.
 
     Returns a dict containing the new package names and versions::
 
@@ -356,9 +359,9 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     CLI Example::
 
-		salt '*' pkg.install vim
-		salt '*' pkg.install pkg://solaris/editor/vim
-		salt '*' pkg.install pkg://solaris/editor/vim refresh=True
+        salt '*' pkg.install vim
+        salt '*' pkg.install pkg://solaris/editor/vim
+        salt '*' pkg.install pkg://solaris/editor/vim refresh=True
     '''
     if not pkgs:
         if is_installed(name):
@@ -371,7 +374,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     if pkgs:    # multiple packages specified
         for pkg in pkgs:
             if pkg.items()[0][1]:   # version specified
-                pkg2inst += '{0}@{1} '.format(pkg.items()[0][0],pkg.items()[0][1])
+                pkg2inst += '{0}@{1} '.format(pkg.items()[0][0], pkg.items()[0][1])
             else:
                 pkg2inst += '{0} '.format(pkg.items()[0][0])
         print 'Installing these packages instead of {0}: {1}'.format(name, pkg2inst)
@@ -401,8 +404,8 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     changes = salt.utils.compare_dicts(old, new)
 
-    if ret['retcode'] != 0: # there's something worth looking at
-        output = {}         # so we're adding some additional info
+    if ret['retcode'] != 0:     # there's something worth looking at
+        output = {}             # so we're adding some additional info
         output['changes'] = changes
         output['retcode'] = ips_pkg_return_values[ret['retcode']]   # translate error code
         output['message'] = ret['stderr'] + '\n'
@@ -468,13 +471,13 @@ def remove(name=None, pkgs=None, **kwargs):
     # Compare the pre and post remove package objects and report the uninstalled pkgs.
     changes = salt.utils.compare_dicts(old, new)
 
-    if ret['retcode'] != 0: # there's something worth looking at
-        output = {}         # so we're adding some additional info
+    if ret['retcode'] != 0:     # there's something worth looking at
+        output = {}             # so we're adding some additional info
         output['changes'] = changes
         output['retcode'] = ips_pkg_return_values[ret['retcode']]   # translate error code
         output['message'] = ret['stderr'] + '\n'
         return output
-    
+
     # No error occured
     return changes
 
@@ -490,4 +493,3 @@ def purge(name, **kwargs):
         salt '*' pkg.purge <package name>
     '''
     return remove(name, **kwargs)
-
