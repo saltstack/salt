@@ -71,6 +71,7 @@ class RAETChannel(Channel):
         not already setup such as in salt-call to communicate to-from the minion
 
         '''
+        import wingdbstub
         mid = self.opts['id']
         yid = nacling.uuid(size=18)
         name = 'channel' + yid
