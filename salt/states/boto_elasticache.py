@@ -104,7 +104,6 @@ def present(
         notification_topic_arn=None,
         preferred_maintenance_window=None,
         wait=True,
-        cache_nodes=None,
         region=None,
         key=None,
         keyid=None,
