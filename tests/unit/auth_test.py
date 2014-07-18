@@ -15,6 +15,16 @@ from salt import auth
 
 ensure_in_syspath('../')
 
+try:
+    import zmq
+except ImportError:
+    # Running as purely local
+    pass
+
+NO_LONG_IPC = False
+if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
+    NO_LONG_IPC = True
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LoadAuthTestCase(TestCase):
@@ -63,6 +73,8 @@ class LoadAuthTestCase(TestCase):
             format_call_mock.assert_has_calls(expected_ret)
 
 
+@skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping MaserACLTestCase tests!")
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('zmq.Context', MagicMock())
 @patch('salt.payload.Serial.dumps', MagicMock())
 @patch('salt.master.tagify', MagicMock())
