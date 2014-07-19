@@ -92,18 +92,6 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     raise ImportError(errormsg)
 
 
-def libcloud_version():
-    '''
-    Require the minimal libcloud version
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        'Please stop using \'salt.cloud.libcloudfuns.libcloud_version()\'. '
-        'Instead use \'salt.cloud.libcloudfuns.check_libcloud_version()\'.'
-    )
-    return check_libcloud_version()
-
-
 def get_node(conn, name):
     '''
     Return a libcloud node for the named VM

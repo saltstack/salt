@@ -955,63 +955,16 @@ def apply_sdb(opts, sdb_opts=None):
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
-                 vm_config_path=None, vm_config=None,
                  profiles_config_path=None, profiles_config=None):
     '''
     Read in the salt cloud config and return the dict
     '''
-    if vm_config and profiles_config:
-        # This is a bad API usage
-        raise RuntimeError(
-            '`vm_config` and `profiles_config` are mutually exclusive and '
-            '`vm_config` is being deprecated in favor of `profiles_config`.'
-        )
-    elif vm_config:
-        salt.utils.warn_until(
-            'Helium',
-            'The support for `vm_config` has been deprecated and will be '
-            'removed in Salt Helium. Please use `profiles_config`.'
-        )
-        profiles_config = vm_config
-        vm_config = None
-    if vm_config_path and profiles_config_path:
-        # This is a bad API usage
-        raise RuntimeError(
-            '`vm_config_path` and `profiles_config_path` are mutually '
-            'exclusive and `vm_config_path` is being deprecated in favor of '
-            '`profiles_config_path`'
-        )
-    elif vm_config_path:
-        salt.utils.warn_until(
-            'Helium',
-            'The support for `vm_config_path` has been deprecated and will be '
-            'removed in Salt Helium. Please use `profiles_config_path`.'
-        )
-        profiles_config_path = vm_config_path
-        vm_config_path = None
-
     # Load the cloud configuration
     overrides = load_config(
         path,
         env_var,
         os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
     )
-
-    if 'vm_config' in overrides and 'profiles_config' in overrides:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
-            '`vm_config` and `profiles_config` are mutually exclusive and '
-            '`vm_config` is being deprecated in favor of `profiles_config`.'
-        )
-    elif 'vm_config' in overrides:
-        salt.utils.warn_until(
-            'Helium',
-            'The support for `vm_config` has been deprecated and will be '
-            'removed in Salt Helium. Please use `profiles_config`.'
-            'Please update the could configuration file(s).'
-
-        )
-        overrides['profiles_config'] = overrides.pop('vm_config')
-
     if path:
         config_dir = os.path.dirname(path)
     else:
