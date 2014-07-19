@@ -7,11 +7,11 @@ Package support for openSUSE via the zypper package manager
 import copy
 import logging
 import re
-from contextlib import contextmanager
+from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
 import salt.utils
-from salt.utils.decorators import depends
+from salt.utils.decorators import depends as _depends
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError)
 
@@ -386,7 +386,7 @@ class _RepoInfo(object):
         # self._check_only_mirrorlist_or_url()
 
 
-@contextmanager
+@_contextmanager
 def _try_zypp():
     '''
     Convert errors like:
@@ -400,7 +400,7 @@ def _try_zypp():
         raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
 
 
-@depends('zypp')
+@_depends('zypp')
 def _get_zypp_repo(repo, **kwargs):
     '''
     Get zypp._RepoInfo object by repo alias.
@@ -409,7 +409,7 @@ def _get_zypp_repo(repo, **kwargs):
         return zypp.RepoManager().getRepositoryInfo(repo)
 
 
-@depends('zypp')
+@_depends('zypp')
 def get_repo(repo, **kwargs):
     '''
     Display a repo.
@@ -424,7 +424,7 @@ def get_repo(repo, **kwargs):
     return r.options
 
 
-@depends('zypp')
+@_depends('zypp')
 def list_repos():
     '''
     Lists all repos.
@@ -442,7 +442,7 @@ def list_repos():
         return ret
 
 
-@depends('zypp')
+@_depends('zypp')
 def del_repo(repo, **kwargs):
     '''
     Delete a repo.
@@ -461,7 +461,7 @@ def del_repo(repo, **kwargs):
         repo, r.path().c_str())
 
 
-@depends('zypp')
+@_depends('zypp')
 def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
