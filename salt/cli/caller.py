@@ -44,6 +44,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 
+
 class Caller(object):
     '''
     Factory class to create salt-call callers for different transport
