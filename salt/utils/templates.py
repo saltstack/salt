@@ -368,6 +368,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             os.path.basename(sfn).split('.')[0],
             sfn
             )
+    # File templates need these set as __var__
+    if not '__env__' in kwargs:
+        setattr(mod, '__env__', kwargs['saltenv'])
+        builtins = ['salt', 'grains', 'pillar', 'opts']
+        for builtin in builtins:
+            arg = '__{0}__'.format(builtin)
+            setattr(mod, arg, kwargs[builtin])
+
     for kwarg in kwargs:
         setattr(mod, kwarg, kwargs[kwarg])
 
