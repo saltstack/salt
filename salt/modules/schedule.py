@@ -694,8 +694,8 @@ def move(name, target, **kwargs):
             out = delete(name)
             schedule_opts = []
             for key, value in __opts__['schedule'][name].iteritems():
-                    temp = '{0}={1}'.format(key, value)
-                    schedule_opts.append(temp)
+                temp = '{0}={1}'.format(key, value)
+                schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
 
             # Get errors and list of affeced minions
@@ -726,8 +726,8 @@ def move(name, target, **kwargs):
             out = delete(name, where='pillar')
             schedule_opts = []
             for key, value in __opts__['schedule'][name].iteritems():
-                    temp = '{0}={1}'.format(key, value)
-                    schedule_opts.append(temp)
+                temp = '{0}={1}'.format(key, value)
+                schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
 
             # Get errors and list of affeced minions
@@ -781,8 +781,8 @@ def copy(name, target, **kwargs):
         else:
             schedule_opts = []
             for key, value in __opts__['schedule'][name].iteritems():
-                    temp = '{0}={1}'.format(key, value)
-                    schedule_opts.append(temp)
+                temp = '{0}={1}'.format(key, value)
+                schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
 
             # Get errors and list of affeced minions
@@ -812,8 +812,8 @@ def copy(name, target, **kwargs):
         else:
             schedule_opts = []
             for key, value in __opts__['schedule'][name].iteritems():
-                    temp = '{0}={1}'.format(key, value)
-                    schedule_opts.append(temp)
+                temp = '{0}={1}'.format(key, value)
+                schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
 
             # Get errors and list of affeced minions
