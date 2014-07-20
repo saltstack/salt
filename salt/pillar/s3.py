@@ -193,7 +193,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
     '''
 
     # helper s3 query function
-    def __get_s3_meta(bucket):
+    def __get_s3_meta():
         return s3.query(
             key=creds.key,
             keyid=creds.keyid,
@@ -207,10 +207,10 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
         return filter(lambda k: 'Key' in k, s3_meta)
 
     # pull out the environment dirs (e.g. the root dirs)
-    def __get_pillar_environments_from_s3_meta(s3_meta):
-        environments = map(lambda k: (os.path.dirname(k['Key'])
-                           .split('/', 1))[0], files)
-
+    def __get_pillar_environments(files):
+        environments = map(
+            lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files
+        )
         return set(environments)
 
     log.debug('Refreshing S3 buckets pillar cache file')
@@ -223,7 +223,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
         log.debug('Single environment per bucket mode')
 
         bucket_files = {}
-        s3_meta = __get_s3_meta(bucket)
+        s3_meta = __get_s3_meta()
 
         # s3 query returned something
         if s3_meta:
@@ -234,12 +234,12 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
     else:
         # Multiple environments per buckets
         log.debug('Multiple environment per bucket mode')
-        s3_meta = __get_s3_meta(bucket)
+        s3_meta = __get_s3_meta()
 
         # s3 query returned data
         if s3_meta:
             files = __get_pillar_files_from_s3_meta(s3_meta)
-            environments = __get_pillar_environments_from_s3_meta(s3_meta)
+            environments = __get_pillar_environments(files)
 
             # pull out the files for the environment
             for saltenv in environments:
