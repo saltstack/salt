@@ -691,7 +691,6 @@ def move(name, target, **kwargs):
         if 'test' in kwargs and kwargs['test']:
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
-            out = delete(name)
             schedule_opts = []
             for key, value in __opts__['schedule'][name].iteritems():
                 temp = '{0}={1}'.format(key, value)
@@ -715,6 +714,7 @@ def move(name, target, **kwargs):
                 ret['minions'] = errors
                 return ret
             else:
+                delete(name)
                 ret['result'] = True
                 ret['comment'] = 'Moved Job {0} from schedule.'.format(name)
                 ret['minions'] = minions
@@ -723,7 +723,6 @@ def move(name, target, **kwargs):
         if 'test' in kwargs and kwargs['test']:
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
-            out = delete(name, where='pillar')
             schedule_opts = []
             for key, value in __opts__['schedule'][name].iteritems():
                 temp = '{0}={1}'.format(key, value)
@@ -747,6 +746,7 @@ def move(name, target, **kwargs):
                 ret['minions'] = errors
                 return ret
             else:
+                delete(name, where='pillar')
                 ret['result'] = True
                 ret['comment'] = 'Moved Job {0} from schedule.'.format(name)
                 ret['minions'] = minions
@@ -803,7 +803,7 @@ def copy(name, target, **kwargs):
                 return ret
             else:
                 ret['result'] = True
-                ret['comment'] = 'Moved Job {0} from schedule.'.format(name)
+                ret['comment'] = 'Copied Job {0} from schedule to minion(s).'.format(name)
                 ret['minions'] = minions
                 return ret
     elif 'schedule' in __pillar__ and name in __pillar__['schedule']:
@@ -834,7 +834,7 @@ def copy(name, target, **kwargs):
                 return ret
             else:
                 ret['result'] = True
-                ret['comment'] = 'Moved Job {0} from schedule.'.format(name)
+                ret['comment'] = 'Copied Job {0} from schedule to minion(s).'.format(name)
                 ret['minions'] = minions
                 return ret
     else:
