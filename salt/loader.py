@@ -387,6 +387,13 @@ def call(fun, **kwargs):
     load = Loader(module_dirs)
     return load.call(fun, args)
 
+def keystores(opts, name):
+    '''
+    load all available keystores
+    '''
+    load = _create_loader(opts, 'keystores', 'rawmodule')
+    return load.gen_module(name, None)
+
 
 def runner(opts):
     '''
