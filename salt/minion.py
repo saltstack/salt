@@ -549,7 +549,7 @@ class MultiMinion(MinionBase):
                         minion['minion'].handle_event(package)
                         package = None
                         self.epub_sock.send(package)
-                    except:
+                    except Exception:
                         pass
 
                 # have the Minion class run anything it has to run
