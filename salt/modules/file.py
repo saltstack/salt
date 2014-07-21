@@ -3615,6 +3615,9 @@ def list_backups(path, limit=None):
     # Figure out full path of location of backup file in minion cache
     bkdir = os.path.join(bkroot, parent_dir[1:])
 
+    if not os.path.isdir(bkdir):
+        return {}
+
     files = {}
     for fn in [x for x in os.listdir(bkdir)
                if os.path.isfile(os.path.join(bkdir, x))]:

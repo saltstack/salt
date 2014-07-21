@@ -142,3 +142,8 @@ salt.modules.virturalenv_mod
   - ``virtual_memory_usage`` (deprecated)
   - ``cached_physical_memory`` (deprecated)
   - ``physical_memory_buffers`` (deprecated)
+- Removed deprecated cloud arguments from ``cloud_config`` function in ``salt/config.py``:
+  - ``vm_config`` (deprecated)
+  - ``vm_config_path`` (deprecated)
+- Removed deprecated ``libcloud_version`` function from ``salt/cloud/libcloudfuncs.py`` (deprecated)
+- Removed deprecated ``CloudConfigMixIn`` class from ``salt/utils/parsers.py`` (deprecated)

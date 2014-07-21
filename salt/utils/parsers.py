@@ -1045,138 +1045,6 @@ class OutputOptionsMixIn(object):
         self.config['selected_output_option'] = self.selected_output_option
 
 
-class CloudConfigMixIn(object):
-    __metaclass__ = MixInMeta
-    _mixin_prio_ = -11    # Evaluate before ConfigDirMixin
-
-    def _mixin_setup(self):
-        group = self.config_group = optparse.OptionGroup(
-            self,
-            'Configuration Options',
-            # Include description here as a string
-        )
-        group.add_option(
-            '-C', '--cloud-config',
-            default=None,
-            help='DEPRECATED. The location of the salt-cloud config file.'
-        )
-        group.add_option(
-            '-M', '--master-config',
-            default=None,
-            help='DEPRECATED. The location of the salt master config file.'
-        )
-        group.add_option(
-            '-V', '--profiles', '--vm_config',
-            dest='vm_config',
-            default=None,
-            help='DEPRECATED. The location of the salt.cloud VM config file.'
-        )
-        group.add_option(
-            '--providers-config',
-            default=None,
-            help='DEPRECATED. The location of the salt cloud VM providers '
-                 'configuration file.'
-        )
-        self.add_option_group(group)
-
-    def __assure_absolute_paths(self, name):
-        # Need to check if file exists?
-        optvalue = getattr(self.options, name)
-        if optvalue:
-            setattr(self.options, name, os.path.abspath(optvalue))
-
-    def _mixin_after_parsed(self):
-        for option in self.config_group.option_list:
-            if option.dest is None:
-                # This should not happen.
-                #
-                # --version does not have dest attribute set for example.
-                # All options defined by us, even if not explicitly(by kwarg),
-                # will have the dest attribute set
-                continue
-            self.__assure_absolute_paths(option.dest)
-
-        # Grab data from the 4 sources (done in self.process_cloud_config)
-        # 1st - Master config
-        # 2nd - Override master config with salt-cloud config
-        # 3rd - Include Cloud Providers
-        # 4th - Include VM config
-        # 5th - Override config with cli options
-        # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
-
-        # Remove log_level_logfile from config if set to None so it can be
-        # equal to console log_level
-        if self.config['log_level_logfile'] is None:
-            self.config.pop('log_level_logfile')
-
-    def process_cloud_config(self):
-        if self.options.cloud_config is not None:
-
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--cloud-config\' has been deprecated. Instead, store '
-                'all of the salt cloud related configuration files in a single '
-                'directory and pass that directory to \'--config-dir\'. This '
-                'support will be removed in Salt Helium. Note that the '
-                '\'SALT_CLOUD_CONFIG\' environment variable is still valid.'
-            )
-
-    def process_vm_config(self):
-        if self.options.vm_config is not None:
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--vm_config\' has been deprecated. Instead, store all '
-                'of the salt cloud related configuration files in a single '
-                'directory and pass that directory to \'--config-dir\'. This '
-                'support will be removed in Salt Helium. Note that the '
-                '\'SALT_CLOUDVM_CONFIG\' environment variable is still valid and '
-                'you can also set an absolute path to this setting on the main '
-                'cloud configuration file under \'vm_config\'.'
-            )
-
-    def process_providers_config(self):
-        if self.options.providers_config is not None:
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--providers-config\' has been deprecated. Instead, '
-                'store all of the salt cloud related configuration files in a '
-                'single directory and pass that directory to \'--config-dir\'. '
-                'This support will be removed in Salt Helium. Note that the '
-                '\'SALT_CLOUD_PROVIDERS_CONFIG\' environment variable is still '
-                'valid and you can also set an absolute path to this setting on '
-                'the main cloud configuration file under \'providers_config\'.'
-            )
-
-    def process_master_config(self):
-        if self.options.master_config is not None:
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--master-config\' has been deprecated. Instead, store '
-                'all of the salt cloud related configuration files in a single '
-                'directory and pass that directory to \'--config-dir\'. This '
-                'support will be removed in Salt Helium. Note that the '
-                '\'SALT_MASTER_CONFIG\' environment variable is still valid and '
-                'you can also set an absolute path to this setting on the main '
-                'cloud configuration file under \'providers_config\'.'
-            )
-
-
 class ExecutionOptionsMixIn(object):
     __metaclass__ = MixInMeta
     _mixin_prio_ = 10
@@ -2360,7 +2228,6 @@ class SaltCloudParser(OptionParser,
                       MergeConfigMixIn,
                       OutputOptionsMixIn,
                       ConfigDirMixIn,
-                      CloudConfigMixIn,
                       CloudQueriesMixIn,
                       ExecutionOptionsMixIn,
                       CloudProvidersListsMixIn,
@@ -2405,11 +2272,6 @@ class SaltCloudParser(OptionParser,
 
     def setup_config(self):
         try:
-            return config.cloud_config(
-                self.options.cloud_config or self.get_config_file_path(),
-                master_config_path=self.options.master_config,
-                providers_config_path=self.options.providers_config,
-                profiles_config_path=self.options.vm_config
-            )
+            return config.cloud_config(self.get_config_file_path())
         except salt.cloud.exceptions.SaltCloudConfigError as exc:
             self.error(exc)

@@ -417,31 +417,6 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
 
     # cloud_config tests
 
-    def test_cloud_config_vm_profiles_config(self):
-        '''
-        Tests passing in vm_config and profiles_config.
-        This scenario is a bad use of the API.
-        '''
-        self.assertRaises(RuntimeError, sconfig.cloud_config, PATH,
-                          vm_config='test', profiles_config='test')
-
-    def test_cloud_config_vm_profiles_config_path(self):
-        '''
-        Tests passing in vm_config_path and profiles_config_path.
-        This scenario is a bad use of the API.
-        '''
-        self.assertRaises(RuntimeError, sconfig.cloud_config, PATH,
-                          vm_config_path='test', profiles_config_path='test')
-
-    @patch('salt.config.load_config',
-           MagicMock(return_value={'vm_config': 'foo', 'profiles_config': 'bar'}))
-    def test_cloud_config_overrides_bad_api(self):
-        '''
-        Tests passing in vm_config and profiles_config through the overrides
-        cloud config path
-        '''
-        self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH)
-
     @patch('salt.config.load_config', MagicMock(return_value={}))
     def test_cloud_config_double_master_path(self):
         '''

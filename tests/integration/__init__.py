@@ -69,8 +69,12 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 
+if os.uname()[0] == 'Darwin':
+    SYS_TMP_DIR = '/tmp'
+else:
+    SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
+
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
