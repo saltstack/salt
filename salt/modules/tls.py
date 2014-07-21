@@ -623,7 +623,7 @@ def create_self_signed_cert(tls_dir='tls',
     '''
     set_ca_path(cacert_path)
 
-    if not os.path.exists('{0}/{1}/certs/'.format(cert_base_path(tls_dir))):
+    if not os.path.exists('{0}/{1}/certs/'.format(cert_base_path(), tls_dir)):
         os.makedirs("{0}/{1}/certs/".format(cert_base_path(),
                                             tls_dir))
 
