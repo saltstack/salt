@@ -1633,7 +1633,7 @@ def push(repo, quiet=False):
 
     .. code-block:: bash
 
-        salt '*' docker.push <repository> [quiet=True|False] 
+        salt '*' docker.push <repository> [quiet=True|False]
     '''
     client = _get_client()
     status = base_status.copy()
