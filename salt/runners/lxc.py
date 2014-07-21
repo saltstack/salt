@@ -216,16 +216,17 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     approve_key = kw.get('approve_key', True)
     seeds = {}
     if approve_key and not explicit_auth:
+        skey = salt.key.Key(__opts__)
+        all_minions = skey.all_keys().get('minions', [])
         for name in names:
-            seeds[name] = kwargs.get('seed', True)
-            try:
-                ping = client.cmd(name, 'test.ping', timeout=20).get(name, None)
-            except (TypeError, KeyError):
-                ping = False
-            curkey = os.path.join(__opts__['pki_dir'], 'minions', name)
-            # be sure not to seed an alrady seeded host
-            if ping or os.path.exists(curkey):
-                seeds[name] = False
+            seed = kwargs.get('seed', True)
+            if name in all_minions:
+                try:
+                    if client.cmd(name, 'test.ping', timeout=20).get(name, None):
+                        seed = False
+                except (TypeError, KeyError):
+                    pass
+            seeds[name] = seed
             kv = salt.utils.virt.VirtKey(host, name, __opts__)
             if kv.authorize():
                 log.info('Container key will be preauthorized')
