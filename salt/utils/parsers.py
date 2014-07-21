@@ -2272,11 +2272,6 @@ class SaltCloudParser(OptionParser,
 
     def setup_config(self):
         try:
-            return config.cloud_config(
-                self.options.cloud_config or self.get_config_file_path(),
-                master_config_path=self.options.master_config,
-                providers_config_path=self.options.providers_config,
-                profiles_config_path=self.options.vm_config
-            )
+            return config.cloud_config(self.get_config_file_path())
         except salt.cloud.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
