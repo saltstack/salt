@@ -1618,7 +1618,7 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo):
+def push(repo, quiet=False):
     '''
     Pushes an image from any registry. See documentation at top of this page to
     configure authenticated access
@@ -1626,11 +1626,14 @@ def push(repo):
     repo
         name of repository
 
+    quiet
+        set as ``True`` to quiet output, Default is ``False``
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' docker.push <repository>
+        salt '*' docker.push <repository> [quiet=True|False] 
     '''
     client = _get_client()
     status = base_status.copy()
@@ -1640,7 +1643,10 @@ def push(repo):
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
             if image_logs:
-                status['out'] = image_logs
+                if not quiet:
+                    status['out'] = image_logs
+                else:
+                    status['out'] = None
                 laststatus = image_logs[2].get('status', None)
                 if laststatus and (
                     ('already pushed' in laststatus)
