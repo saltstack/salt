@@ -730,8 +730,9 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_yard is not None:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.uids:
-                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
+            if d_yard in self.uxd_stack.value.nameRemotes:
+                self.uxd_stack.value.transmit(msg,
+                        self.uxd_stack.value.nameRemotes[d_yard].uid)
                 return
             return
         if d_share is None:
@@ -747,7 +748,7 @@ class Router(ioflo.base.deeding.Deed):
             if 'load' in msg:
                 msg['load']['id'] = sender
                 self.uxd_stack.value.transmit(msg,
-                        self.uxd_stack.value.uids.get(next(self.workers.value)))
+                        self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -770,7 +771,7 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.udp_stack.value.local:
             # Forward to the correct estate
-            eid = self.udp_stack.value.uids.get(d_estate)
+            eid = self.udp_stack.value.fetchUidByName(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
         if d_share == 'pub_ret':
@@ -780,8 +781,9 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_yard != self.uxd_stack.value.local.name:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.uids:
-                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
+            if d_yard in self.uxd_stack.value.nameRemotes:
+                self.uxd_stack.value.transmit(msg,
+                        self.uxd_stack.value.nameRemotes[d_yard].uid)
                 return
             return
         if d_share is None:
@@ -790,7 +792,7 @@ class Router(ioflo.base.deeding.Deed):
             return
         elif d_share == 'local_cmd':
             self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.uids.get(next(self.workers.value)))
+                    self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
@@ -840,14 +842,14 @@ class Eventer(ioflo.base.deeding.Deed):
         if event.get('tag') == 'module_refresh':
             self.module_refresh.value = True
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.uids:
+            if y_name not in self.uxd_stack.value.nameRemotes:
                 rm_.append(y_name)
                 continue
             route = {'src': ('router', self.uxd_stack.value.local.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
             self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.uids.get(y_name))
+                    self.uxd_stack.value.fetchUidByName(y_name))
             self.uxd_stack.value.serviceAll()
         for y_name in rm_:
             self.event_yards.value.remove(y_name)
@@ -888,9 +890,9 @@ class SaltPublisher(ioflo.base.deeding.Deed):
         '''
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
-        minions = self.availables.value & set(self.stack.value.uids.keys())
+        minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
         for minion in minions:
-            eid = self.stack.value.uids.get(minion)
+            eid = self.stack.value.fetchUidByName(minion)
             if eid:
                 route = {
                         'dst': (minion, None, 'fun'),
@@ -974,7 +976,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        stack.transmit(msg, stack.uids.get('manor'))
+        stack.transmit(msg, stack.fetchUidByName('manor'))
         stack.serviceAll()
 
     def action(self):
