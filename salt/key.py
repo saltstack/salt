@@ -18,6 +18,7 @@ import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils.event import tagify
+import salt.loader
 
 
 class KeyCLI(object):
@@ -26,7 +27,15 @@ class KeyCLI(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        if self.opts['transport'] == 'zeromq':
+        self.opts['keystore'] = 'mysql'
+
+        if self.opts['keystore']:
+            self.key = ExtKey(opts)
+            self.acc = 'minions'
+            self.pend = 'minions_pre'
+            self.rej = 'minions_rejected'
+
+        elif self.opts['transport'] == 'zeromq':
             self.key = Key(opts)
             self.acc = 'minions'
             self.pend = 'minions_pre'
@@ -779,6 +788,134 @@ class Key(object):
                     path = os.path.join(self.opts['pki_dir'], status, key)
                 ret[status][key] = salt.utils.pem_finger(path)
         return ret
+
+
+class ExtKey(Key):
+    '''
+    The ExtKey-Class acts as a data-agnostic bridge between salt and external
+    keystores like redis, mysql, etc. External keystores are located in the
+    keystores-directory and contain the actual implementation.
+
+    To stay compatible with the usual key-functions like generating keys or
+    signatures, ExtKey() inherits from Key() and only overwrites functions
+    where necessary to interact with the external keystores.
+    '''
+
+    def __init__(self, opts):
+        self.opts = opts
+        super(ExtKey, self).__init__(self.opts)
+        self._load_keystore()
+
+    def _load_keystore(self):
+        self.keystore = salt.loader.keystore(self.opts,
+                                             self.opts['keystore'])
+        if not self.keystore:
+            msg = ('Failed to load keystore-module {0}. It could not be '
+                   'located in the keystore directory'.format(self.opts['keystore']))
+            print(msg)
+            sys.exit(1)
+
+    def name_match(self, match, full=False):
+        '''
+        Accept a glob which to match the of a key and return the key's location
+        '''
+        return self.keystore['name_match'](match, full)
+
+    def dict_match(self, match_dict):
+        '''
+        Accept a dictionary of keys and return the current state of the
+        specified keys
+        '''
+        return self.keystore['dict_match'](match_dict)
+
+    def list_keys(self):
+        '''
+        Return a dict of managed keys and what the key status are
+        '''
+        return self.keystore['list_keys']()
+
+    def all_keys(self):
+        '''
+        Merge managed keys with local keys
+        '''
+        ret = self.keystore.list_keys()
+        ret.update(self.local_keys())
+        return ret
+
+    def list_status(self, match):
+        '''
+        Return a dict of managed keys under a named status
+        '''
+        return self.keystore['list_status'](match)
+
+    def key_str(self, match):
+        '''
+        Return the specified public key or keys based on a glob
+        '''
+        return self.keystore['key_str'](match)
+
+    def key_str_all(self):
+        '''
+        Return all managed key strings
+        '''
+        return self.keystore['key_str_all']()
+
+    def accept(self, match=None, match_dict=None, include_rejected=False):
+        '''
+        Accept public keys. If "match" is passed, it is evaluated as a glob.
+        Pre-gathered matches can also be passed via "match_dict".
+        '''
+        return self.keystore['accept'](match,
+                                       match_dict,
+                                       include_rejected=include_rejected)
+
+    def accept_all(self):
+        '''
+        Accept all keys in pre
+        '''
+        return self.keystore['accept_all']()
+
+    def delete_key(self, match=None, match_dict=None):
+        '''
+        Delete public keys. If "match" is passed, it is evaluated as a glob.
+        Pre-gathered matches can also be passed via "match_dict".
+        '''
+        return self.keystore['delete_key'](match=match,
+                                           match_dict=match_dict)
+
+    def delete_all(self):
+        '''
+        Delete all keys
+        '''
+        return self.keystore['delete_all']()
+
+
+    def reject(self, match=None, match_dict=None, include_accepted=False):
+        '''
+        Reject public keys. If "match" is passed, it is evaluated as a glob.
+        Pre-gathered matches can also be passed via "match_dict".
+        '''
+        return self.keystore['reject'](match=match,
+                                       match_dict=match_dict,
+                                       include_accepted=include_accepted)
+
+    def reject_all(self):
+        '''
+        Reject all keys in pre
+        '''
+        return self.keystore['reject_all']()
+
+    def finger(self, match):
+        '''
+        Return the fingerprint for a specified key
+        '''
+        return self.keystore['finger']()
+
+    def finger_all(self):
+        '''
+        Return fingerprints for all keys
+        '''
+        return self.keystore['finger_all']()
 
 
 class RaetKey(Key):
