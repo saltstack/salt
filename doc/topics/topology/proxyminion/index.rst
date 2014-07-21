@@ -59,7 +59,7 @@ that may already contain all the details of proxy targets.  To use static files
 in pillar_roots, pattern your files after the following examples, which are
 based on the diagram above:
 
-``/srv/salt/pillar/top.sls``
+``/srv/pillar/top.sls``
 
 .. code-block:: yaml
 
@@ -72,7 +72,7 @@ based on the diagram above:
         - smsgateway
 
 
-``/srv/salt/pillar/networkswitches.sls``
+``/srv/pillar/networkswitches.sls``
 
 .. code-block:: yaml
 
@@ -93,7 +93,7 @@ based on the diagram above:
         username: root
         passwd: letmein
 
-``/srv/salt/pillar/reallydumbdevices.sls``
+``/srv/pillar/reallydumbdevices.sls``
 
 .. code-block:: yaml
 
@@ -107,7 +107,7 @@ based on the diagram above:
       dumbdevice6:
         proxytype: 433mhz_wireless
 
-``/srv/salt/pillar/smsgateway.sls``
+``/srv/pillar/smsgateway.sls``
 
 .. code-block:: yaml
 
