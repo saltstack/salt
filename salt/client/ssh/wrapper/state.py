@@ -74,7 +74,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
-            cmd,
+            cmd.split(' '),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
@@ -117,7 +117,7 @@ def low(data, **kwargs):
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
-            cmd,
+            cmd.split(' '),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
@@ -152,7 +152,7 @@ def high(data, **kwargs):
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
-            cmd,
+            cmd.split(' '),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
@@ -190,7 +190,7 @@ def highstate(test=None, **kwargs):
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
-            cmd,
+            cmd.split(' '),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
@@ -237,7 +237,7 @@ def top(topfn, test=None, **kwargs):
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
             __opts__,
-            cmd,
+            cmd.split(' '),
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
