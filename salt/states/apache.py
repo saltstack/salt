@@ -13,17 +13,17 @@ the above word between angle brackets (<>).
 .. code-block:: yaml
 
     /etc/httpd/conf.d/website.com.conf:
-      apache.config:
+      apache.configfile:
         - config:
           - VirtualHost:
               this: '*:80'
               ServerName:
-                -website.com
+                - website.com
               ServerAlias:
                 - www.website.com
                 - dev.website.com
               ErrorLog: logs/website.com-error_log
-              CustomLog: logs/website.com-access_log combinded
+              CustomLog: logs/website.com-access_log combined
               DocumentRoot: /var/www/vhosts/website.com
               Directory:
                 this: /var/www/vhosts/website.com
