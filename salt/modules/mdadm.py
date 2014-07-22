@@ -198,13 +198,6 @@ def create(name,
 
     For more info, read the ``mdadm(8)`` manpage
     '''
-    cmd_args = {}
-
-    cmd_args['name'] = name
-    cmd_args['level'] = level
-    cmd_args['devices'] = ' '.join(devices)
-    cmd_args['raid-devices'] = len(devices)
-
     opts = ''
     for key in kwargs:
         if not key.startswith('__'):
@@ -213,13 +206,11 @@ def create(name,
             else:
                 opts += '--{0}={1} '.format(key, kwargs[key])
 
-    cmd_args['raw_args'] = opts
-
-    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(cmd_args['name'],
-            cmd_args['raw_args'],
-            cmd_args['level'],
-            cmd_args['raid-devices'],
-            cmd_args['devices'])
+    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(name,
+            opts,
+            level,
+            len(devices),
+            ' '.join(devices))
 
     if test_mode is True:
         return cmd
