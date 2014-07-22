@@ -806,8 +806,8 @@ class Single(object):
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
         self.shell.send(
                 trans_tar,
-                '/tmp/salt_state.tgz')
-        self.arg_str = 'state.pkg /tmp/salt_state.tgz test={0}'.format(test)
+                '/tmp/.salt/salt_state.tgz')
+        self.arg_str = 'state.pkg /tmp/.salt/salt_state.tgz test={0}'.format(test)
 
 
 class SSHState(salt.state.State):
