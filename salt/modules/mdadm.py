@@ -210,6 +210,8 @@ def create(name,
 
     if raid_devices is None:
         cmd_args['raid-devices'] = len(devices)
+    else:
+        cmd_args['raid-devices'] = raid_devices
 
     opts = ''
     for key in kwargs:
