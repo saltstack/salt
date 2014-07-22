@@ -158,7 +158,7 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
                  exit 1
              fi
          else
-             mkdir -m 0700 -p /tmp/.salt
+             rm -rf /tmp/.salt && mkdir -m 0700 -p /tmp/.salt
              echo "{1}"
              echo "deploy"
              exit 1
