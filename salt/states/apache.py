@@ -51,24 +51,12 @@ def __virtual__():
     return 'apache.config' in __salt__
 
 
-def _check_name(name):
+def configfile(name, config):
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
-    if salt.utils.cloud.check_name(
-        name, ' a-zA-Z0-9.,_/\[\]\(\)\<\>\'*+:-'  # pylint: disable=W1401
-    ):
-        ret['comment'] = 'Invalid characters in name.'
-        ret['result'] = False
-        return ret
-    else:
-        ret['result'] = True
-        return ret
 
-
-def configfile(name, config):
-    ret = _check_name(str(config))
     configs = __salt__['apache.config'](name, config, edit=False)
     current_configs = ''
     if os.path.exists(name):
