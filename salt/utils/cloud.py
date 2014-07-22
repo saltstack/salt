@@ -978,6 +978,7 @@ def deploy_script(host,
                 'timeout': ssh_timeout,
                 'display_ssh_output': display_ssh_output,
                 'sudo_password': sudo_password,
+                'sftp': opts.get('use_sftp', False)
             }
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
@@ -1014,14 +1015,14 @@ def deploy_script(host,
 
             # Minion configuration
             if minion_pem:
-                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
                 ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1034,12 +1035,12 @@ def deploy_script(host,
                     )
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
-                    sftp_file(
+                    scp_file(
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
                         kwargs
                     )
-                sftp_file(
+                scp_file(
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
                     kwargs
@@ -1047,7 +1048,7 @@ def deploy_script(host,
 
             # Master configuration
             if master_pem:
-                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
                 ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
@@ -1055,7 +1056,7 @@ def deploy_script(host,
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1067,7 +1068,7 @@ def deploy_script(host,
                         'Loading from YAML ...'
                     )
 
-                sftp_file(
+                scp_file(
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
                     kwargs
@@ -1106,7 +1107,7 @@ def deploy_script(host,
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    sftp_file(rpath, minion_key, kwargs)
+                    scp_file(rpath, minion_key, kwargs)
 
                 if kwargs['username'] != 'root':
                     root_cmd(
@@ -1124,7 +1125,7 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
                 ret = root_cmd(
                     ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
                      'exit $?').format(tmp_dir),
@@ -1186,7 +1187,7 @@ def deploy_script(host,
                     environ_script_contents.append(deploy_command)
 
                     # Upload our environ setter wrapper
-                    sftp_file(
+                    scp_file(
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
                         kwargs
@@ -1372,15 +1373,15 @@ def _exec_ssh_cmd(cmd,
     return 1
 
 
-def sftp_file(dest_path, contents, kwargs):
+def scp_file(dest_path, contents, kwargs):
     '''
-    Use sftp to copy a file to a server
+    Use scp or sftp to copy a file to a server
     '''
     tmpfh, tmppath = tempfile.mkstemp()
     with salt.utils.fopen(tmppath, 'w') as tmpfile:
         tmpfile.write(contents)
 
-    log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs['hostname']))
+    log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
     ssh_args = [
         # Don't add new hosts to the host key database
@@ -1436,11 +1437,16 @@ def sftp_file(dest_path, contents, kwargs):
                 ssh_gateway_port
             )
         ])
-
-    cmd = 'sftp {0} {2[username]}@{2[hostname]} <<< "put {1} {3}"'.format(
-        ' '.join(ssh_args), tmppath, kwargs, dest_path
-    )
-    log.debug('SFTP command: {0!r}'.format(cmd))
+    if kwargs.get('use_sftp', False) is True:
+        cmd = 'sftp {0} {2[username]}@{2[hostname]} <<< "put {1} {3}"'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
+        log.debug('SFTP command: {0!r}'.format(cmd))
+    else:
+        cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
+        log.debug('SCP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
                             error_msg='Failed to upload file {0!r}: {1}\n{2}',
                             **kwargs)
