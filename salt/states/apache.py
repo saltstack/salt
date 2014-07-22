@@ -43,9 +43,6 @@ from __future__ import with_statement, print_function
 # Import python libs
 import os.path
 
-# Import salt libs
-import salt.utils.cloud
-
 
 def __virtual__():
     return 'apache.config' in __salt__
