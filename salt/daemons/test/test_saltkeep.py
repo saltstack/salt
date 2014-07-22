@@ -210,7 +210,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.keep.auto)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
-                                                         'name': 'main',
+                                                         'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
                                                          'sid': 0,
@@ -218,6 +218,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': True,
+                                                         'role': mainData['name'],
                                                          })
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
@@ -252,7 +253,8 @@ class BasicTestCase(unittest.TestCase):
                      'joined': None,
                      'acceptance': 1,
                      'verhex': data1['verhex'],
-                     'pubhex': data1['pubhex']},
+                     'pubhex': data1['pubhex'],
+                     'role': data1['name'],},
                 'remote2':
                     {'uid': 4,
                      'name': data2['name'],
@@ -261,7 +263,9 @@ class BasicTestCase(unittest.TestCase):
                      'joined': None,
                      'acceptance': 1,
                      'verhex': data2['verhex'],
-                     'pubhex': data2['pubhex']}})
+                     'pubhex': data2['pubhex'],
+                     'role': data2['name'],}
+            })
 
         # now recreate with saved data
         main.server.close()
@@ -304,7 +308,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'uid': 0,
-                                'name': 'other',
+                                'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
                                 'sid': 0,
@@ -312,6 +316,7 @@ class BasicTestCase(unittest.TestCase):
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': True,
+                                'role': otherData['name'],
                             })
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
@@ -346,7 +351,8 @@ class BasicTestCase(unittest.TestCase):
                     'joined': None,
                     'acceptance': 1,
                     'verhex': data3['verhex'],
-                    'pubhex': data3['pubhex']
+                    'pubhex': data3['pubhex'],
+                    'role': data3['name'],
                 },
                 'remote4':
                 {
@@ -357,7 +363,8 @@ class BasicTestCase(unittest.TestCase):
                     'joined': None,
                     'acceptance': 1,
                     'verhex': data4['verhex'],
-                    'pubhex': data4['pubhex']
+                    'pubhex': data4['pubhex'],
+                    'role': data4['name'],
                 }
             })
 
@@ -394,7 +401,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertTrue(main.keep.auto)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
-                                                         'name': 'main',
+                                                         'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
                                                          'sid': 0,
@@ -402,6 +409,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': True,
+                                                         'role': mainData['name'],
                                                          })
 
         opts = self.createOpts(name='other',
@@ -429,7 +437,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'uid': 0,
-                                'name': 'other',
+                                'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
                                 'sid': 0,
@@ -437,6 +445,7 @@ class BasicTestCase(unittest.TestCase):
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': True,
+                                'role': otherData['name'],
                             })
 
         self.join(other, main)
@@ -509,4 +518,4 @@ if __name__ == '__main__' and __package__ is None:
 
     runSome()#only run some
 
-    #runOne('testBootstrapClean')
+    #runOne('testBasic')
