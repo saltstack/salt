@@ -96,14 +96,7 @@ stop() {
             RETVAL=1
         fi
     else
-        if [ -f $PID_FILE ] && cat $PID_FILE | xargs pkill -P &> /dev/null; then
-            success
-            RETVAL=0
-            rm -f $PID_FILE
-        else
-            failure "$PID_FILE does not exist or could not kill."
-            RETVAL=1
-        fi
+        killproc $PROCESS
     fi
     RETVAL=$?
     echo

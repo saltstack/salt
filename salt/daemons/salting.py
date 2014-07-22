@@ -35,10 +35,10 @@ class SaltKeep(RoadKeep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto']
-    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid']
-    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex']
-    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined']
+    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto', 'role']
+    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'role']
+    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex', 'role']
+    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
 
     Auto = False #auto accept
 
@@ -76,6 +76,7 @@ class SaltKeep(RoadKeep):
                         ('main', local.main),
                         ('sid', local.sid),
                         ('neid', local.neid),
+                        ('role', local.role),
                     ])
         if self.verifyLocalData(data, localFields = self.LocalDumpFields):
             self.dumpLocalData(data)
@@ -92,6 +93,7 @@ class SaltKeep(RoadKeep):
                         ('ha', remote.ha),
                         ('sid', remote.sid),
                         ('joined', remote.joined),
+                        ('role', remote.role),
                     ])
         if self.verifyRemoteData(data, remoteFields =self.RemoteDumpFields):
             self.dumpRemoteData(data, remote.name)
