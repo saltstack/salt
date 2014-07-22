@@ -119,7 +119,7 @@ class RAETChannel(Channel):
         src = (mid, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, self.stack.uids['manor'])
+        self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
         while track not in jobber_rxMsgs:
             self.stack.serviceAll()
             while self.stack.rxMsgs:
@@ -131,7 +131,7 @@ class RAETChannel(Channel):
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError
-                self.stack.transmit(msg, self.stack.uids['manor'])
+                self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
                 tried += 1
             time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
