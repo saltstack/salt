@@ -10,11 +10,12 @@
 '''
 
 # Import python libs
+import os
 import sys
 import random
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -45,6 +46,7 @@ class VTTestCase(TestCase):
         terminal.wait()
         terminal.close()
 
+    @skipIf(os.uname()[0] == 'Darwin', 'OS X does not support procfs - skipping!')
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
         # Get current number of PTY's
