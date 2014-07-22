@@ -9,7 +9,13 @@ A state module for creating or destroying software RAID devices.
 
     /dev/md0:
       raid.present:
-        - opts: level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde
+        - level: 5
+        - devices:
+          - /dev/xvdd
+          - /dev/xvde
+          - /dev/xvdf
+        - chunk: 256
+        - run: True
 '''
 
 # Import python libs
