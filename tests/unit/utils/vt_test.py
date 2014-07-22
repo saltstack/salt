@@ -13,14 +13,15 @@
 import os
 import sys
 import random
+import subprocess
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-from salt.utils import vt
+from salt.utils import vt, fopen
 
 
 class VTTestCase(TestCase):
@@ -46,12 +47,21 @@ class VTTestCase(TestCase):
         terminal.wait()
         terminal.close()
 
-    @skipIf(os.uname()[0] == 'Darwin', 'OS X does not support procfs - skipping!')
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
         # Get current number of PTY's
         try:
-            nr_ptys = int(open('/proc/sys/kernel/pty/nr').read().strip())
+            if os.path.exists('/proc/sys/kernel/pty/nr'):
+                with fopen('/proc/sys/kernel/pty/nr') as fh_:
+                    nr_ptys = int(fh_.read().strip())
+            else:
+                proc = subprocess.Popen(
+                    'sysctl -a 2> /dev/null | grep pty.nr | awk \'{print $3}\'',
+                    shell=True,
+                    stdout=subprocess.PIPE
+                )
+                stdout, _ = proc.communicate()
+                nr_ptys = int(stdout.strip())
         except (ValueError, OSError, IOError):
             self.fail('Unable to find out how many PTY\'s are open')
 
