@@ -89,7 +89,6 @@ class DNSUtilTestCase(TestCase):
                          msg='Did not detect valid hours as invalid')
 
     def test_to_seconds_day(self):
-        print dnsutil._to_seconds('1d')
         self.assertEqual(dnsutil._to_seconds('1D'), 86400,
                          msg='Did not detect valid day as invalid')
 
