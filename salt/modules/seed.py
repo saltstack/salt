@@ -15,6 +15,7 @@ import tempfile
 import salt.crypt
 import salt.utils
 import salt.config
+import salt.syspaths
 
 
 # Set up logging
@@ -149,17 +150,11 @@ def _install(mpt):
     install it.
     Return True if install is successful or already installed.
     '''
-
     # Verify that the boostrap script is downloaded
-    bs_ = __salt__['config.gather_bootstrap_script']()
-    log.warn('bootstrap: {0}'.format(bs_))
-    # Apply the minion config
-    # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh /tmp/bootstrap.sh -c /tmp; fi'
+    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
     return not _chroot_exec(mpt, cmd)
 
 
