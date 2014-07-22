@@ -11,6 +11,8 @@ import stat
 import shutil
 import fnmatch
 import hashlib
+import json
+import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -827,9 +829,14 @@ class RaetKey(Key):
                 prefix, sep, name = root.partition('.')
                 if not name or prefix != 'estate':
                     continue
-                if name not in minions:
-                    path = os.path.join(road_cache, road)
-                    os.remove(path)
+                path = os.path.join(road_cache, road)
+                with salt.utils.fopen(path, 'rb') as fp_:
+                    if ext == '.json':
+                        data = json.load(fp_)
+                    elif ext == '.msgpack':
+                        data = msgpack.load(fp_)
+                    if data['role'] not in minions:
+                        os.remove(path)
 
     def gen_keys(self):
         '''
@@ -876,13 +883,7 @@ class RaetKey(Key):
                 'device_id': device_id,
                 'pub': pub,
                 'verify': verify}
-        if self.opts['open_mode']:
-            if os.path.isfile(acc_path):
-                # The minion id has been accepted, verify the key strings
-                with salt.utils.fopen(acc_path, 'rb') as fp_:
-                    keydata = self.serial.loads(fp_.read())
-                if keydata['pub'] == pub and keydata['verify'] == verify:
-                    return 'accepted'
+        if self.opts['open_mode']: # always accept and overwrite
             with salt.utils.fopen(acc_path, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(keydata))
                 return 'accepted'
