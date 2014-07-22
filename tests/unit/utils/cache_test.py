@@ -38,7 +38,7 @@ class CacheDictTestCase(TestCase):
         cd['foo'] = 'bar'
         self.assertIn('foo', cd)
         self.assertEqual(cd['foo'], 'bar')
-        time.sleep(0.1)
+        time.sleep(0.2)
         self.assertNotIn('foo', cd)
 
         # make sure that a get would get a regular old key error
