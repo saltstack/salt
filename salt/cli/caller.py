@@ -24,7 +24,6 @@ from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 
-import logging
 log = logging.getLogger(__name__)
 
 try:
