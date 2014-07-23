@@ -21,7 +21,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-from salt.utils import vt, fopen
+from salt.utils import fopen, is_darwin, vt
 
 
 class VTTestCase(TestCase):
@@ -65,6 +65,9 @@ class VTTestCase(TestCase):
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
             except (ValueError, OSError, IOError):
+                if is_darwin():
+                    # We're unable to findout how many PTY's are open
+                    self.skipTest('Unable to find out how many PTY\'s are open on Darwin')
                 self.fail('Unable to find out how many PTY\'s are open')
 
         nr_ptys = current_pty_count()
