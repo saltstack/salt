@@ -365,7 +365,7 @@ def avail_locations(call=None):
     return ret
 
 
-def avail_images(call=None, location='local', img_type='vztpl'):
+def avail_images(call=None, location='local'):
     '''
     Return a list of the images that are on the provider
 
@@ -746,7 +746,7 @@ def create_node(vm_):
     return _parse_proxmox_upid(node, vm_)
 
 
-def show_instance(name, call=None, instance_type=None):
+def show_instance(name, call=None):
     '''
     Show the details from Proxmox concerning an instance
     '''
@@ -804,7 +804,7 @@ def wait_for_state(vmid, node, nodeType, state, timeout=300):
     Wait until a specific state has been reached on  a node
     '''
     start_time = time.time()
-    node = get_vm_status(vmid=vmid, host=node, nodeType=nodeType)
+    node = get_vm_status(vmid=vmid)
     if not node:
         log.error('wait_for_state: No VM retrieved based on given criteria.')
         raise SaltCloudExecutionFailure
@@ -820,7 +820,7 @@ def wait_for_state(vmid, node, nodeType, state, timeout=300):
             log.debug('Timeout reached while waiting for {0} to '
                       'become {1}'.format(node['name'], state))
             return False
-        node = get_vm_status(vmid=vmid, host=node, nodeType=nodeType)
+        node = get_vm_status(vmid=vmid)
         log.debug('State for {0} is: "{1}" instead of "{2}"'.format(
                   node['name'], node['status'], state))
 
@@ -900,7 +900,7 @@ def set_vm_status(status, name=None, vmid=None):
     return False
 
 
-def get_vm_status(vmid=None, name=None, host=None, nodeType=None):
+def get_vm_status(vmid=None, name=None):
     '''
     Get the status for a VM, either via the ID or the hostname
     '''

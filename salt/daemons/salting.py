@@ -35,10 +35,10 @@ class SaltKeep(RoadKeep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto']
-    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid']
-    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex']
-    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined']
+    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto', 'role']
+    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'role']
+    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex', 'role']
+    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
 
     Auto = False #auto accept
 
@@ -76,6 +76,7 @@ class SaltKeep(RoadKeep):
                         ('main', local.main),
                         ('sid', local.sid),
                         ('neid', local.neid),
+                        ('role', local.role),
                     ])
         if self.verifyLocalData(data, localFields = self.LocalDumpFields):
             self.dumpLocalData(data)
@@ -92,11 +93,12 @@ class SaltKeep(RoadKeep):
                         ('ha', remote.ha),
                         ('sid', remote.sid),
                         ('joined', remote.joined),
+                        ('role', remote.role),
                     ])
-        if self.verifyRemoteData(data, remoteFields =self.RemoteDumpFields):
+        if self.verifyRemoteData(data, remoteFields=self.RemoteDumpFields):
             self.dumpRemoteData(data, remote.name)
 
-        self.saltRaetKey.status(remote.name,
+        self.saltRaetKey.status(remote.role,
                                 remote.uid,
                                 remote.pubber.keyhex,
                                 remote.verfer.keyhex)
@@ -110,7 +112,7 @@ class SaltKeep(RoadKeep):
         if not data:
             return None
 
-        mid = remote.name
+        mid = remote.role
         statae = raeting.ACCEPTANCES.keys()
         for status in statae:
             keydata = self.saltRaetKey.read_remote(mid, status)
@@ -130,16 +132,18 @@ class SaltKeep(RoadKeep):
         '''
         Load and Return the data from the all the remote estate files
         '''
-        data = super(SaltKeep, self).loadAllRemoteData()
+        keeps = super(SaltKeep, self).loadAllRemoteData()
 
         for status, mids in self.saltRaetKey.list_keys().items():
             for mid in mids:
                 keydata = self.saltRaetKey.read_remote(mid, status)
-                if keydata and data.get(mid):
-                    data[mid].update(acceptance=raeting.ACCEPTANCES[status],
+                if keydata:
+                    for name, data in keeps.items():
+                        if data['role'] == mid:
+                            keeps[name].update(acceptance=raeting.ACCEPTANCES[status],
                                          verhex=keydata['verify'],
                                          pubhex=keydata['pub'])
-        return data
+        return keeps
 
     def clearAllRemoteData(self):
         '''
@@ -148,15 +152,15 @@ class SaltKeep(RoadKeep):
         super(SaltKeep, self).clearAllRemoteData()
         self.saltRaetKey.delete_all()
 
-    def replaceRemote(self, remote, old):
+    def replaceRemoteRole(self, remote, old):
         '''
-        Replace the safe keep key file at old name given remote.name has changed
-        Assumes name uniqueness already taken care of
+        Replace the Salt RaetKey record at old role when remote.role has changed
         '''
-        new = remote.name
+        new = remote.role
         if new != old:
-            self.dumpRemote(remote) #will be pending by default unless autoaccept
+            #self.dumpRemote(remote)
             # manually fix up acceptance if not pending
+            # will be pending by default unless autoaccept
             if remote.acceptance == raeting.acceptances.accepted:
                 self.acceptRemote(remote)
             elif remote.acceptance == raeting.acceptances.rejected:
@@ -169,7 +173,7 @@ class SaltKeep(RoadKeep):
         Evaluate acceptance status of remote estate per its keys
         persist key data differentially based on status
         '''
-        status = raeting.ACCEPTANCES[self.saltRaetKey.status(remote.name,
+        status = raeting.ACCEPTANCES[self.saltRaetKey.status(remote.role,
                                                              remote.eid,
                                                              pubhex,
                                                              verhex)]
@@ -188,7 +192,7 @@ class SaltKeep(RoadKeep):
         Set acceptance status to rejected
         '''
         remote.acceptance = raeting.acceptances.rejected
-        mid = remote.name
+        mid = remote.role
         self.saltRaetKey.reject(match=mid, include_accepted=True)
 
     def pendRemote(self, remote):
@@ -202,7 +206,7 @@ class SaltKeep(RoadKeep):
         Set acceptance status to accepted
         '''
         remote.acceptance = raeting.acceptances.accepted
-        mid = remote.name
+        mid = remote.role
         self.saltRaetKey.accept(match=mid, include_rejected=True)
 
 def clearAllKeep(dirpath):
