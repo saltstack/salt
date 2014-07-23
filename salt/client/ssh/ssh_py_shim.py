@@ -146,6 +146,12 @@ def main(argv):
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
 
+    #Fix parameter passing issue
+    if len(ARGS) == 1:
+        argv_prepared = ARGS[0].split()
+    else:
+        argv_prepared = ARGS
+
     salt_argv = [
         sys.executable,
         salt_call_path,
@@ -154,7 +160,8 @@ def main(argv):
         '-l', 'quiet',
         '-c', OPTIONS.saltdir,
         '--',
-    ] + ARGS
+    ] + argv_prepared
+
     sys.stderr.write('SALT_ARGV: {0}\n'.format(salt_argv))
 
     # Only emit the delimiter on *both* stdout and stderr when completely successful.
