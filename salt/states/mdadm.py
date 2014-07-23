@@ -45,7 +45,6 @@ def __virtual__():
 def present(name,
             level,
             devices,
-            raid_devices=None,
             **kwargs):
     '''
     Verify that the raid is present
@@ -60,9 +59,6 @@ def present(name,
 
     devices
         A list of devices used to build the array.
-
-    raid_devices
-        The number of devices in the array.  If not specified, the number of devices will be counted.
 
     Example:
 
@@ -94,7 +90,6 @@ def present(name,
         res = __salt__['raid.create'](name,
                                       level,
                                       devices,
-                                      raid_devices,
                                       test_mode=True,
                                       **kwargs)
         ret['comment'] = 'Raid will be created with: {0}'.format(res)
@@ -105,7 +100,6 @@ def present(name,
     __salt__['raid.create'](name,
                             level,
                             devices,
-                            raid_devices,
                             **kwargs)
 
     raids = __salt__['raid.list']()
