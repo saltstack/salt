@@ -4,8 +4,10 @@ import re
 import fnmatch
 import shlex
 import pprint
+import json
 import salt.loader
 import salt.utils
+import subprocess
 
 
 CONVERSION = {
@@ -13,7 +15,7 @@ CONVERSION = {
     'ansible_ssh_port': 'port',
     'ansible_ssh_user': 'user',
     'ansible_ssh_pass': 'passwd',
-    'ansible_sudo_pass': 'passwd',
+    'ansible_sudo_pass': 'sudo',
     'ansible_ssh_private_key_file': 'priv'
 }
 
@@ -31,7 +33,10 @@ def targets(tgt, tgt_type='glob', **kwargs):
         hosts = os.path.join(__opts__['conf_file'], 'hosts')
 
     rend = salt.loader.render(__opts__, {})
-    imatcher = Inventory(hosts)
+    if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
+        imatcher = Script(hosts)
+    else:
+        imatcher = Inventory(hosts)
     return getattr(imatcher, 'get_{0}'.format(tgt_type))(tgt)
 
 
@@ -67,6 +72,8 @@ class Inventory(object):
         for arg in line_args[1:]:
             key, value = arg.split('=')
             host[name][CONVERSION[key]] = value
+        if 'sudo' in host[name]:
+            host[name]['passwd'], host[name]['sudo'] = host[name]['sudo'], True
         if self.groups.get(varname, ''):
             self.groups[varname].update(host)
         else:
@@ -112,3 +119,48 @@ class Inventory(object):
                 
     def get_hostvars(self):
         return self.hostvars
+
+
+class Script(Inventory):
+    def __init__(self, inventory_file='/etc/salt/hosts2'):
+        inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
+        self.inventory = json.loads(inventory)
+        self.meta = self.inventory.get('_meta', {})
+        self.groups = dict()
+        self.hostvars = dict()
+        self.parents = dict()
+        for key, value in self.inventory.items():
+            if key == '_meta':
+                continue
+            if 'hosts' in value:
+                self._parse_groups(key, value['hosts'])
+            if 'children' in value:
+                self._parse_parents(key, value['children'])
+            if 'hostvars' in value:
+                self._parse_hostvars(key, value['hostvars'])
+
+    def _parse_groups(self, key, value):
+        host = dict()
+        if key not in self.groups:
+            self.groups[key] = dict()
+        for server in value:
+            tmp = self.meta.get('hostvars', {}).get(server, False)
+            if tmp is not False:
+                if server not in host:
+                    host[server] = dict()
+                for tmpkey, tmpval in tmp.items():
+                    host[server][CONVERSION[tmpkey]] = tmpval
+                if 'sudo' in host[server]:
+                    host[server]['passwd'], host[server]['sudo'] = host[server]['sudo'], True
+
+        self.groups[key].update(host)
+
+    def _parse_hostvars(self, key, value):
+        if key not in self.hostvars:
+            self.hostvars[key] = dict()
+        self.hostvars[key] = value
+
+    def _parse_parents(self, key, value):
+        if key not in self.parents:
+            self.parents[key] = []
+        self.parents[key].extend(value)
