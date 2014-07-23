@@ -67,15 +67,26 @@ def peered(name):
     ret['comment'] = __salt__['glusterfs.peer'](name)
 
     newpeers = __salt__['glusterfs.list_peers']()
-    if name in newpeers:
-        ret['result'] = True
-        ret['changes'] = {'new': newpeers, 'old': peers}
-    elif name == socket.gethostname().split('.')[0]:
-        ret['result'] = True
-        return ret
-    elif 'on localhost not needed' in ret['comment']:
-        ret['result'] = True
-        ret['comment'] = 'Peering with localhost is not needed'
+    #Make some variables for things we'll be evaluating shortly
+    hostname_list = socket.gethostname().split('.')
+    hostname = socket.gethostname()
+    if newpeers:
+        if name in newpeers:
+            ret['result'] = True
+            ret['changes'] = {'new': newpeers, 'old': peers}
+        #In case the hostname doesn't have any periods in it
+        elif name == hostname:
+            ret['result'] = True
+            return ret
+        #The original code used index [2]. I'd have used [1]
+        # since that would find the 'example' in the www.example.com
+        # I'm not sure it makes sense, but it also didn't work right.
+        elif (len(hostname_list) > 2) and name == hostname_list[2]:
+            ret['result'] = True
+            return ret
+        elif 'on localhost not needed' in ret['comment']:
+            ret['result'] = True
+            ret['comment'] = 'Peering with localhost is not needed'
     else:
         ret['result'] = False
     return ret
