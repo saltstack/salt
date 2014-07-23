@@ -140,19 +140,15 @@
 # If authentication failes due to SaltReqTimeoutError, continue without ending minion.
 #auth_safemode: True
 
-# If the minion hits an error that is recoverable, restart the minion.
-#restart_on_error: False
-
 # Ping Master to ensure connection is alive (minutes).
 # TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
 #ping_interval: 0
 
 # To auto recover Minions if Master changes IP address (DDNS)
 #
-#    auth_tries: 10
+#    auth_tries: 5
 #    auth_safemode: False
 #    ping_interval: 90
-#    restart_on_error: True
 #
 # Minions wont know master is missing untill a ping fails.  After the ping fail,
 # the minion will attempt authentication and likly fails out and cause a restart.
