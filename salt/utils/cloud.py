@@ -1475,7 +1475,7 @@ def smb_file(dest_path, contents, kwargs):
     cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
         kwargs['creds'], src_dir, src_file, dest_dir, dest_file
     )
-    log.debug('SFTP command: {0!r}'.format(cmd))
+    log.debug('SMB command: {0!r}'.format(cmd))
     win_cmd(cmd)
 
 
