@@ -602,8 +602,14 @@ class Single(object):
             passed_time = (time.time() - os.stat(datap).st_mtime) / 60
             if passed_time > self.opts.get('cache_life', 60):
                 refresh = True
+
+        conf_grains = {}
         if self.opts.get('refresh_cache'):
             refresh = True
+            #Save conf file grains before they get clobbered
+            if 'ssh_grains' in self.opts:
+                conf_grains = self.opts['ssh_grains']
+
         if refresh:
             # Make the datap
             # TODO: Auto expire the datap
@@ -637,6 +643,15 @@ class Single(object):
             data = self.serial.load(fp_)
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
+
+        #Restore master grains
+        for grain in conf_grains:
+            opts['grains'][grain] = conf_grains[grain]
+        #Enable roster grains support
+        if 'grains' in self.target:
+            for grain in self.target['grains']:
+                opts['grains'][grain] = self.target['grains'][grain]
+
         opts['pillar'] = data.get('pillar')
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
