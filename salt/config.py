@@ -369,7 +369,7 @@ DEFAULT_MINION_OPTS = {
     'ioflo_period': 0.1,
     'ioflo_realtime': True,
     'raet_port': 4510,
-    'ping_interval': 0,
+    'ping_interval': 90,
     'username': None,
     'password': None,
     'zmq_filtering': False,
