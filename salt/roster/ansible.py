@@ -1,11 +1,12 @@
-from __future__ import print_function
+# -*- coding: utf-8 -*-
+'''
+Read in an Ansible inventory file or script
+'''
 import os
 import re
 import fnmatch
 import shlex
-import pprint
 import json
-import salt.loader
 import salt.utils
 import subprocess
 
@@ -19,10 +20,11 @@ CONVERSION = {
     'ansible_ssh_private_key_file': 'priv'
 }
 
-import logging
-log = logging.getLogger(__name__)
-
 def targets(tgt, tgt_type='glob', **kwargs):
+    '''
+    Return the targets from the ansible inventory_file
+    Default: /etc/salt/hosts
+    '''
     if tgt == 'all':
         tgt = '*':
     if __opts__.get('inventory_file', False) is not False:
@@ -34,7 +36,6 @@ def targets(tgt, tgt_type='glob', **kwargs):
     else:
         hosts = os.path.join(__opts__['conf_file'], 'hosts')
 
-    rend = salt.loader.render(__opts__, {})
     if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
         imatcher = Script(tgt, tgt_type='glob', hosts=hosts)
     else:
@@ -43,6 +44,9 @@ def targets(tgt, tgt_type='glob', **kwargs):
 
 
 class Inventory(object):
+    '''
+    Matcher for static inventory files
+    '''
     def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/hosts'):
         self.tgt = tgt
         self.tgt_type = tgt_type
@@ -70,6 +74,9 @@ class Inventory(object):
                 getattr(self, proc)(line, varname)
 
     def _parse_group_line(self, line, varname):
+        '''
+        Parse lines in the inventory file that are under the same group block
+        '''
         line_args = shlex.split(line)
         name = line_args[0]
         host = {line_args[0]: dict()}
@@ -84,17 +91,26 @@ class Inventory(object):
             self.groups[varname] = host
 
     def _parse_hostvars_line(self, line, varname):
+        '''
+        Parse lines in the inventory file that are under the same [*:vars] block
+        '''
         key, value = line.split('=')
         if varname not in self.hostvars:
             self.hostvars[varname] = dict()
         self.hostvars[varname][key] = value
 
     def _parse_parents_line(self, line, varname):
+        '''
+        Parse lines in the inventory file that are under the same [*:children] block
+        '''
         if varname not in self.parents:
             self.parents[varname] = []
         self.parents[varname].append(line)
 
     def targets(self):
+        '''
+        Execute the correct tgt_type routine and return
+        '''
         try:
             return getattr(self, 'get_{0}'.format(self.tgt_type))()
         except AttributeError:
@@ -102,6 +118,9 @@ class Inventory(object):
 
 
     def get_glob(self):
+        '''
+        Return minions that match via glob
+        '''
         ret = dict()
         for key, value in self.groups.items():
             for host, info in value.items():
@@ -116,6 +135,9 @@ class Inventory(object):
         return ret
 
     def _get_parent(self, parent_nodegroup):
+        '''
+        Recursively resolve all [*:children] group blocks
+        '''
         ret = dict()
         for nodegroup in self.parents[parent_nodegroup]:
             if nodegroup in self.parents:
@@ -124,11 +146,10 @@ class Inventory(object):
                 ret.update(self.groups[nodegroup])
         return ret
                 
-    def get_hostvars(self):
-        return self.hostvars
-
-
 class Script(Inventory):
+    '''
+    Matcher for Inventory scripts
+    '''
     def __init__(self, inventory_file='/etc/salt/hosts2'):
         self.tgt = tgt
         self.tgt_type = tgt_type
@@ -149,6 +170,9 @@ class Script(Inventory):
                 self._parse_hostvars(key, value['hostvars'])
 
     def _parse_groups(self, key, value):
+        '''
+        Parse group data from inventory_file
+        '''
         host = dict()
         if key not in self.groups:
             self.groups[key] = dict()
@@ -165,11 +189,17 @@ class Script(Inventory):
         self.groups[key].update(host)
 
     def _parse_hostvars(self, key, value):
+        '''
+        Parse hostvars data from inventory_file
+        '''
         if key not in self.hostvars:
             self.hostvars[key] = dict()
         self.hostvars[key] = value
 
     def _parse_parents(self, key, value):
+        '''
+        Parse children data from inventory_file
+        '''
         if key not in self.parents:
             self.parents[key] = []
         self.parents[key].extend(value)
