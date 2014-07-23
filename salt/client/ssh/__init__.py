@@ -647,8 +647,10 @@ class Single(object):
         result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
-        ret = json.dumps({'local': result})
-        return ret
+        if 'local' in result:
+            return json.dumps(result)
+        else:
+            return json.dumps({'local': result})
 
     def _cmd_str(self):
         '''
