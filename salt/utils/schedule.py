@@ -365,21 +365,28 @@ class Schedule(object):
                 fn_ = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn_, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
-                    if 'schedule' in job:
-                        log.debug('schedule.handle_func: Checking job against '
-                                  'fun {0}: {1}'.format(ret['fun'], job))
-                        if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
-                            jobcount += 1
-                            log.debug(
-                                'schedule.handle_func: Incrementing jobcount, now '
-                                '{0}, maxrunning is {1}'.format(
-                                    jobcount, data['maxrunning']))
-                            if jobcount >= data['maxrunning']:
+                    if job:
+                        if 'schedule' in job:
+                            log.debug('schedule.handle_func: Checking job against '
+                                      'fun {0}: {1}'.format(ret['fun'], job))
+                            if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
+                                jobcount += 1
                                 log.debug(
-                                    'schedule.handle_func: The scheduled job {0} '
-                                    'was not started, {1} already running'.format(
-                                        ret['schedule'], data['maxrunning']))
-                                return False
+                                    'schedule.handle_func: Incrementing jobcount, now '
+                                    '{0}, maxrunning is {1}'.format(
+                                        jobcount, data['maxrunning']))
+                                if jobcount >= data['maxrunning']:
+                                    log.debug(
+                                        'schedule.handle_func: The scheduled job {0} '
+                                        'was not started, {1} already running'.format(
+                                            ret['schedule'], data['maxrunning']))
+                                    return False
+                    else:
+                        try:
+                            log.info('Invalid job file found.  Removing.')
+                            os.remove(fn_)
+                        except OSError:
+                            log.info('Unable to remove file: {0}.'.format(fn_))
 
         salt.utils.daemonize_if(self.opts)
 
