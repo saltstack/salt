@@ -9,9 +9,6 @@ import os
 import sys
 import traceback
 import logging
-import multiprocessing
-from random import randint
-import time
 
 # Import salt libs
 import salt
@@ -61,63 +58,8 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
 
-    if '--disable-keepalive' in sys.argv:
-        sys.argv.remove('--disable-keepalive')
-        minion = salt.Minion()
-        minion.start()
-    else:
-        if '-d' in sys.argv or '--daemon' in sys.argv:
-            # disable daemonize on sub proccesses
-            if '-d' in sys.argv:
-                sys.argv.remove('-d')
-            if '--daemon' in sys.argv:
-                sys.argv.remove('--daemon')
-            # daemonize current process
-            salt.utils.daemonize()
-
-        def minion_process(q):
-            # new minions creates globals that are tricky to cleanup.
-            # running the minion in a new process/thread forces good cleanup
-            minion = None
-            try:
-                minion = salt.Minion()
-                minion.start()
-                q.put(0)
-            except Exception, err:
-                log.error(err)
-                log.warn('** Restarting minion **')
-                delay = 60
-                if minion is None:
-                    if hasattr(minion, 'config'):
-                        delay = minion.config.get('random_reauth_delay', 60)
-                random_delay = randint(1, delay)
-                log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
-                q.put(random_delay)
-
-        while True:
-            #import threading
-            #import Queue
-            #q = Queue.Queue()
-            #proc = threading.Thread(target=minion_process, args=(q,))
-            q = multiprocessing.Queue()
-            proc = multiprocessing.Process(target=minion_process, args=(q,))
-            proc.start()
-            try:
-                proc.join()
-            except KeyboardInterrupt, err:
-                return 0
-
-            restart_delay = q.get()
-            if restart_delay == 0:
-                break
-            time.sleep(restart_delay)
-
-            # when starting minion in new process we need to reset logging because
-            # creating a new minion object will cause extra log handlers to accumulate
-            rlogger = logging.getLogger()
-            for h in rlogger.handlers:
-                rlogger.removeHandler(h)
-            logging.basicConfig()
+    minion = salt.Minion()
+    minion.start()
 
 
 def salt_syndic():
