@@ -616,12 +616,19 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
+
+            if '_error' in opts_pkg:
+                #Refresh failed
+                ret = json.dumps({'local': opts_pkg['_error']})
+                return ret
+
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')
                     )
+
             pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
