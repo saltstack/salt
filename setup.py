@@ -599,6 +599,7 @@ FREEZER_INCLUDES = [
     'sqlite3',
     'email',
     'email.mime.*',
+    'requests',
     'sqlite3',
 ]
 
