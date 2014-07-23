@@ -2,6 +2,8 @@
 '''
 Module to provide redis functionality to Salt
 
+.. versionadded:: 2014.7.0
+
 :configuration: This module requires the redis python module and uses the
     following defaults which may be overridden in the minion configuration:
 
