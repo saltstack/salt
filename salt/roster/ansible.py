@@ -1,7 +1,11 @@
 from __future__ import print_function
+import os
 import re
 import shlex
 import pprint
+import salt.loader
+import salt.utils
+
 
 CONVERSION = {
     'ansible_ssh_host': 'host',
@@ -16,10 +20,19 @@ import logging
 log = logging.getLogger(__name__)
 
 def targets(tgt, tgt_type='glob', **kwargs):
-    imatcher = Inventory()
-    matches = imatcher.get_groups(tgt)
-    log.info(matches)
-    return matches
+    if __opts__.get('inventory_file', False) is not False:
+        hosts = __opts__.get('inventory_file')
+    elif os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
+        hosts = os.path.join(
+                os.path.dirname(__opts__['conf_file']),
+                'hosts')
+    else:
+        hosts = os.path.join(__opts__['conf_file'], 'hosts')
+
+    rend = salt.loader.render(__opts__, {})
+    imatcher = Inventory(hosts)
+    return getattr(imatcher, 'get_{0}'.format(tgt_type))(tgt)
+
 
 class Inventory(object):
     def __init__(self, hosts='/etc/salt/hosts'):
@@ -27,7 +40,7 @@ class Inventory(object):
         self.hostvars = dict()
         blocks = re.compile('^\[.*\]$')
         hostvar = re.compile('^\[.*:vars\]$')
-        with open(hosts) as config:
+        with salt.utils.fopen(hosts) as config:
             for line in config.read().split('\n'):
                 if not line or line.startswith('#'):
                     continue
@@ -59,9 +72,14 @@ class Inventory(object):
           self.hostvars[varname] = dict()
       self.hostvars[varname][key] = value
 
-    def get_groups(self, tgt):
-        log.info(self.groups[tgt])
-        return self.groups.get(tgt)
+    def get_glob(self, tgt):
+        ret = dict()
+        for key, value in self.groups.items():
+            ret.update(value)
+        return ret
+
+    def get_nodegroup(self, tgt):
+        return self.groups[tgt]
                 
     def get_hostvars(self):
         return self.hostvars
