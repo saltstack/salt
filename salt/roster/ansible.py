@@ -38,9 +38,9 @@ class Inventory(object):
                     self.hostvars[varname][key] = value
                 if groups:
                     if varname in self.groups and self.groups[varname]:
-                        self.groups[varname].append(self._parse_host_line(line))
+                        self.groups[varname].update(self._parse_host_line(line))
                     else:
-                        self.groups[varname] = [self._parse_host_line(line)]
+                        self.groups[varname] = self._parse_host_line(line)
 
     def _parse_host_line(self, line):
         line_args = line.split(' ')
