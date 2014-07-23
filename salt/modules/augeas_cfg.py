@@ -89,6 +89,8 @@ def execute(context=None, lens=None, commands=()):
     '''
     Execute Augeas commands
 
+    .. versionadded:: 2014.7.0
+
     CLI Example:
 
     .. code-block:: bash
