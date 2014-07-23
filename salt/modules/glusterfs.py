@@ -31,6 +31,25 @@ def list_peers():
     .. code-block:: bash
 
         salt '*' glusterfs.list_peers
+
+    GLUSTER direct CLI example (to show what salt is sending to gluster):
+
+        $ gluster peer status
+
+    GLUSTER CLI 3.4.4 return example (so we know what we are parsing):
+
+        Number of Peers: 2
+
+        Hostname: ftp2
+        Port: 24007
+        Uuid: cbcb256b-e66e-4ec7-a718-21082d396c24
+        State: Peer in Cluster (Connected)
+
+        Hostname: ftp3
+        Uuid: 5ea10457-6cb2-427b-a770-7897509625e9
+        State: Peer in Cluster (Connected)
+
+
     '''
     get_peer_list = 'gluster peer status | awk \'/Hostname/ {print $2}\''
     result = __salt__['cmd.run'](get_peer_list)
@@ -52,6 +71,23 @@ def peer(name):
     .. code-block:: bash
 
         salt 'one.gluster.*' glusterfs.peer two
+
+    GLUSTER direct CLI example (to show what salt is sending to gluster):
+
+        $ gluster peer probe ftp2
+
+    GLUSTER CLI 3.4.4 return example (so we know what we are parsing):
+        #if the "peer" is the local host:
+        peer probe: success: on localhost not needed
+
+        #if the peer was just added:
+        peer probe: success
+
+        #if the peer was already part of the cluster:
+        peer probe: success: host ftp2 port 24007 already in peer list
+
+
+
     '''
     if suc.check_name(name, 'a-zA-Z0-9._-'):
         return 'Invalid characters in peer name'
