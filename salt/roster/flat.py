@@ -13,6 +13,9 @@ import salt.loader
 from salt.template import compile_template
 from salt._compat import string_types
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def targets(tgt, tgt_type='glob', **kwargs):
     '''
@@ -62,6 +65,7 @@ class RosterMatcher(object):
                 data = self.get_data(minion)
                 if data:
                     minions[minion] = data
+        log.info('minions list: {0}'.format(minions))
         return minions
 
     def ret_pcre_minions(self):

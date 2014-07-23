@@ -1,5 +1,6 @@
 from __future__ import print_function
 import re
+import shlex
 import pprint
 
 CONVERSION = {
@@ -11,8 +12,17 @@ CONVERSION = {
     'ansible_ssh_private_key_file': 'priv'
 }
 
+import logging
+log = logging.getLogger(__name__)
+
+def targets(tgt, tgt_type='glob', **kwargs):
+    imatcher = Inventory()
+    matches = imatcher.get_groups(tgt)
+    log.info(matches)
+    return matches
+
 class Inventory(object):
-    def __init__(self, hosts='hosts'):
+    def __init__(self, hosts='/etc/salt/hosts'):
         self.groups = dict()
         self.hostvars = dict()
         blocks = re.compile('^\[.*\]$')
@@ -23,39 +33,35 @@ class Inventory(object):
                     continue
                 if blocks.match(line):
                     if hostvar.match(line):
-                        hostvars = True
-                        groups = False
+                        proc = '_parse_hostvars_line'
                         varname = line[:-5].strip('[')
                     else:
-                        hostvars = False
-                        groups = True
+                        proc = '_parse_group_line'
                         varname = line.strip('[]')
                     continue
-                if hostvars:
-                    key, value = self._parse_hostvars_line(line)
-                    if varname not in self.hostvars:
-                        self.hostvars[varname] = dict()
-                    self.hostvars[varname][key] = value
-                if groups:
-                    if varname in self.groups and self.groups[varname]:
-                        self.groups[varname].update(self._parse_host_line(line))
-                    else:
-                        self.groups[varname] = self._parse_host_line(line)
+                getattr(self, proc)(line, varname)
 
-    def _parse_host_line(self, line):
-        line_args = line.split(' ')
+    def _parse_group_line(self, line, varname):
+        line_args = shlex.split(line)
         name = line_args[0]
         host = {line_args[0]: dict()}
         for arg in line_args[1:]:
             key, value = arg.split('=')
             host[name][CONVERSION[key]] = value
-        return host
+        if self.groups.get(varname, ''):
+            self.groups[varname].update(host)
+        else:
+            self.groups[varname] = host
 
-    def _parse_hostvars_line(self, line):
-        return line.split('=')
+    def _parse_hostvars_line(self, line, varname):
+      key, value = line.split('=')
+      if varname not in self.hostvars:
+          self.hostvars[varname] = dict()
+      self.hostvars[varname][key] = value
 
-    def get_groups(self):
-        return self.groups
+    def get_groups(self, tgt):
+        log.info(self.groups[tgt])
+        return self.groups.get(tgt)
                 
     def get_hostvars(self):
         return self.hostvars
