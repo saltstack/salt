@@ -260,8 +260,6 @@ def versions():
         else:
             for minion in sorted(version_status[key]):
                 ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
-
-
     salt.output.display_output(ret, '', __opts__)
     return ret
 
