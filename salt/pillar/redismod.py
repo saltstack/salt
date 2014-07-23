@@ -3,6 +3,8 @@
 Read pillar data from a Redis backend
 =====================================
 
+.. versionadded:: 2014.7.0
+
 :depends:   - redis Python module (on master)
 
 Salt Master Redis Configuration
