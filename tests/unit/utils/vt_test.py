@@ -49,21 +49,25 @@ class VTTestCase(TestCase):
 
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
-        # Get current number of PTY's
-        try:
-            if os.path.exists('/proc/sys/kernel/pty/nr'):
-                with fopen('/proc/sys/kernel/pty/nr') as fh_:
-                    nr_ptys = int(fh_.read().strip())
-            else:
+
+        def current_pty_count():
+            # Get current number of PTY's
+            try:
+                if os.path.exists('/proc/sys/kernel/pty/nr'):
+                    with fopen('/proc/sys/kernel/pty/nr') as fh_:
+                        return int(fh_.read().strip())
+
                 proc = subprocess.Popen(
                     'sysctl -a 2> /dev/null | grep pty.nr | awk \'{print $3}\'',
                     shell=True,
                     stdout=subprocess.PIPE
                 )
                 stdout, _ = proc.communicate()
-                nr_ptys = int(stdout.strip())
-        except (ValueError, OSError, IOError):
-            self.fail('Unable to find out how many PTY\'s are open')
+                return int(stdout.strip())
+            except (ValueError, OSError, IOError):
+                self.fail('Unable to find out how many PTY\'s are open')
+
+        nr_ptys = current_pty_count()
 
         # Using context manager's
         for idx in range(0, nr_ptys + n_executions):
@@ -74,7 +78,7 @@ class VTTestCase(TestCase):
                                 stream_stderr=False) as terminal:
                     terminal.wait()
                 try:
-                    if int(open('/proc/sys/kernel/pty/nr').read().strip()) > (nr_ptys + (n_executions/2)):
+                    if current_pty_count() > (nr_ptys + (n_executions/2)):
                         self.fail('VT is not cleaning up PTY\'s')
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')
@@ -94,7 +98,7 @@ class VTTestCase(TestCase):
                                        stream_stderr=False)
                 terminal.wait()
                 try:
-                    if int(open('/proc/sys/kernel/pty/nr').read().strip()) > (nr_ptys + (n_executions/2)):
+                    if current_pty_count() > (nr_ptys + (n_executions/2)):
                         self.fail('VT is not cleaning up PTY\'s')
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')
