@@ -123,9 +123,10 @@ All of the fileserver backends have been overhauled to be faster, lighter and mo
 New Modules
 ===========
 
-Syslog-ng
-Oracle
-random
+- Syslog-ng
+- Oracle
+- Random
+- Redis
 
 Deprecations
 ============
