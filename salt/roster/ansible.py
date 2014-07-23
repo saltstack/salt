@@ -23,6 +23,8 @@ import logging
 log = logging.getLogger(__name__)
 
 def targets(tgt, tgt_type='glob', **kwargs):
+    if tgt == 'all':
+        tgt = '*':
     if __opts__.get('inventory_file', False) is not False:
         hosts = __opts__.get('inventory_file')
     elif os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
@@ -34,14 +36,16 @@ def targets(tgt, tgt_type='glob', **kwargs):
 
     rend = salt.loader.render(__opts__, {})
     if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
-        imatcher = Script(hosts)
+        imatcher = Script(tgt, tgt_type='glob', hosts=hosts)
     else:
-        imatcher = Inventory(hosts)
-    return getattr(imatcher, 'get_{0}'.format(tgt_type))(tgt)
+        imatcher = Inventory(tgt, tgt_type='glob', inventory_file=hosts)
+    return imatcher.targets()
 
 
 class Inventory(object):
-    def __init__(self, hosts='/etc/salt/hosts'):
+    def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/hosts'):
+        self.tgt = tgt
+        self.tgt_type = tgt_type
         self.groups = dict()
         self.hostvars = dict()
         self.parents = dict()
@@ -90,12 +94,25 @@ class Inventory(object):
             self.parents[varname] = []
         self.parents[varname].append(line)
 
-    def get_glob(self, tgt):
+    def targets(self):
+        try:
+            return getattr(self, 'get_{0}'.format(self.tgt_type))()
+        except AttributeError:
+            return {}
+
+
+    def get_glob(self):
         ret = dict()
         for key, value in self.groups.items():
             for host, info in value.items():
-                if fnmatch.fnmatch(host, tgt):
+                if fnmatch.fnmatch(host, self.tgt):
                     ret[host] = info
+        for nodegroup in self.groups:
+            if fnmatch.fnmatch(nodegroup, self.tgt):
+                ret.update(self.groups[nodegroup])
+        for parent_nodegroup in self.parents:
+            if fnmatch.fnmatch(parent_nodegroup, self.tgt):
+              ret.update(self._get_parent(parent_nodegroup))
         return ret
 
     def _get_parent(self, parent_nodegroup):
@@ -106,16 +123,6 @@ class Inventory(object):
             elif nodegroup in self.groups:
                 ret.update(self.groups[nodegroup])
         return ret
-
-    def get_nodegroup(self, tgt):
-        ret = dict()
-        for nodegroup in self.groups:
-            if fnmatch.fnmatch(nodegroup, tgt):
-                ret.update(self.groups[nodegroup])
-        for parent_nodegroup in self.parents:
-            if fnmatch.fnmatch(parent_nodegroup, tgt):
-              ret.update(self._get_parent(parent_nodegroup))
-        return ret
                 
     def get_hostvars(self):
         return self.hostvars
@@ -123,6 +130,8 @@ class Inventory(object):
 
 class Script(Inventory):
     def __init__(self, inventory_file='/etc/salt/hosts2'):
+        self.tgt = tgt
+        self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
         self.inventory = json.loads(inventory)
         self.meta = self.inventory.get('_meta', {})
