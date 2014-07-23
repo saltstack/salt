@@ -72,7 +72,7 @@ class SaltKeep(RoadKeep):
         data = super(SaltKeep, self).loadRemoteData(name)
         if not data:
             return None
-        
+
         mid = data['role']
         statae = raeting.ACCEPTANCES.keys()
         for status in statae:
@@ -86,8 +86,8 @@ class SaltKeep(RoadKeep):
         data.update(acceptance=raeting.ACCEPTANCES[status],
                     verhex=keydata['verify'],
                     pubhex=keydata['pub'])
-        
-        return data    
+
+        return data
 
     def loadAllRemoteData(self):
         '''
@@ -112,7 +112,7 @@ class SaltKeep(RoadKeep):
         '''
         super(SaltKeep, self).clearAllRemoteData()
         self.saltRaetKey.delete_all()
-        
+
     def dumpLocal(self, local):
         '''
         Dump local estate
@@ -147,7 +147,6 @@ class SaltKeep(RoadKeep):
             self.dumpRemoteData(data, remote.name)
 
         self.saltRaetKey.status(remote.role,
-                                remote.uid,
                                 remote.pubber.keyhex,
                                 remote.verfer.keyhex)
 
@@ -198,7 +197,6 @@ class SaltKeep(RoadKeep):
         persist key data differentially based on status
         '''
         status = raeting.ACCEPTANCES[self.saltRaetKey.status(remote.role,
-                                                             remote.eid,
                                                              pubhex,
                                                              verhex)]
 
