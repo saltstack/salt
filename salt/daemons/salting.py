@@ -192,7 +192,7 @@ class SaltKeep(RoadKeep):
 
             self.saltRaetKey.delete_key(old) #now delete old key file
 
-    def statusRemote(self, remote, verhex, pubhex, main=True):
+    def statusRemote(self, remote, verhex, pubhex, main=True, dump=True):
         '''
         Evaluate acceptance status of remote estate per its keys
         persist key data differentially based on status
