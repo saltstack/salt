@@ -88,6 +88,14 @@ def _lstrip_word(word, prefix):
 def execute(context=None, lens=None, commands=()):
     '''
     Execute Augeas commands
+
+    .. versionadded:: 2014.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' augeas.execute commands='["set bind 0.0.0.0", "set maxmemory 1G"]'
     '''
     ret = {'retval': False}
 
