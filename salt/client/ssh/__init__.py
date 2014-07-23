@@ -622,12 +622,19 @@ class Single(object):
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
+
+            if '_error' in opts_pkg:
+                #Refresh failed
+                ret = json.dumps({'local': opts_pkg['_error']})
+                return ret
+
             pillar = salt.pillar.Pillar(
                     opts_pkg,
                     opts_pkg['grains'],
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')
                     )
+
             pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
@@ -662,8 +669,10 @@ class Single(object):
         result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
-        ret = json.dumps({'local': result})
-        return ret
+        if 'local' in result:
+            return json.dumps(result)
+        else:
+            return json.dumps({'local': result})
 
     def _cmd_str(self):
         '''
