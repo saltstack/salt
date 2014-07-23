@@ -883,7 +883,7 @@ class RaetKey(Key):
                 'device_id': device_id,
                 'pub': pub,
                 'verify': verify}
-        if self.opts['open_mode']: # always accept and overwrite
+        if self.opts['open_mode']:  # always accept and overwrite
             with salt.utils.fopen(acc_path, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(keydata))
                 return 'accepted'
