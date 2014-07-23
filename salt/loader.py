@@ -387,6 +387,19 @@ def call(fun, **kwargs):
     load = Loader(module_dirs)
     return load.call(fun, args)
 
+def keystore(opts, name):
+    '''
+    try loading the given keystore by name
+    '''
+    load = _create_loader(opts, 'keystores', 'rawmodule')
+    mod_funcs = load.gen_module(name, None)
+    ret_funcs = {}
+    for func in mod_funcs.keys():
+        mod, func_name = func.split('.')
+        ret_funcs[func_name] = mod_funcs[func]
+    return ret_funcs
+
+
 
 def runner(opts):
     '''
