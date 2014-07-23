@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import re
+import fnmatch
 import shlex
 import pprint
 import salt.loader
@@ -38,8 +39,10 @@ class Inventory(object):
     def __init__(self, hosts='/etc/salt/hosts'):
         self.groups = dict()
         self.hostvars = dict()
+        self.parents = dict()
         blocks = re.compile('^\[.*\]$')
-        hostvar = re.compile('^\[.*:vars\]$')
+        hostvar = re.compile('^\[([^:]+):vars\]$')
+        parents = re.compile('^\[([^:]+):children\]$')
         with salt.utils.fopen(hosts) as config:
             for line in config.read().split('\n'):
                 if not line or line.startswith('#'):
@@ -47,7 +50,10 @@ class Inventory(object):
                 if blocks.match(line):
                     if hostvar.match(line):
                         proc = '_parse_hostvars_line'
-                        varname = line[:-5].strip('[')
+                        varname = hostvar.match(line).groups()[0]
+                    elif parents.match(line):
+                        proc = '_parse_parents_line'
+                        varname = parents.match(line).groups()[0]
                     else:
                         proc = '_parse_group_line'
                         varname = line.strip('[]')
@@ -67,25 +73,42 @@ class Inventory(object):
             self.groups[varname] = host
 
     def _parse_hostvars_line(self, line, varname):
-      key, value = line.split('=')
-      if varname not in self.hostvars:
-          self.hostvars[varname] = dict()
-      self.hostvars[varname][key] = value
+        key, value = line.split('=')
+        if varname not in self.hostvars:
+            self.hostvars[varname] = dict()
+        self.hostvars[varname][key] = value
+
+    def _parse_parents_line(self, line, varname):
+        if varname not in self.parents:
+            self.parents[varname] = []
+        self.parents[varname].append(line)
 
     def get_glob(self, tgt):
         ret = dict()
         for key, value in self.groups.items():
-            ret.update(value)
+            for host, info in value.items():
+                if fnmatch.fnmatch(host, tgt):
+                    ret[host] = info
+        return ret
+
+    def _get_parent(self, parent_nodegroup):
+        ret = dict()
+        for nodegroup in self.parents[parent_nodegroup]:
+            if nodegroup in self.parents:
+                ret.update(self._get_parent(nodegroup))
+            elif nodegroup in self.groups:
+                ret.update(self.groups[nodegroup])
         return ret
 
     def get_nodegroup(self, tgt):
-        return self.groups[tgt]
+        ret = dict()
+        for nodegroup in self.groups:
+            if fnmatch.fnmatch(nodegroup, tgt):
+                ret.update(self.groups[nodegroup])
+        for parent_nodegroup in self.parents:
+            if fnmatch.fnmatch(parent_nodegroup, tgt):
+              ret.update(self._get_parent(parent_nodegroup))
+        return ret
                 
     def get_hostvars(self):
         return self.hostvars
-
-
-if __name__ == '__main__':
-    inventory = Inventory()
-    print(pprint.pformat(inventory.get_groups()))
-    print(pprint.pformat(inventory.get_hostvars()))
