@@ -112,7 +112,7 @@ fi
 
 SUDO=""
 if [ -n "{{SUDO}}" ]; then
-    SUDO="sudo root -c"
+    SUDO="sudo"
 fi
 
 EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}    # Python interpreter is too old and incompatible
