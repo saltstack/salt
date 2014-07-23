@@ -28,6 +28,15 @@ This has also been tested to work with pipes, if needed:
     script_args: | head
 
 
+Use SFTP to transfer files
+==========================
+Some distributions do not have scp distributed with the ssh package.  The
+solution is to use sftp with the `use_sftp` flag
+
+.. code-block:: yaml
+    use_sftp: True
+
+
 Sync After Install
 ==================
 Salt allows users to create custom modules, grains and states which can be 
