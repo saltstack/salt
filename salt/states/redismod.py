@@ -3,7 +3,7 @@
 Management of Redis server
 ==========================
 
-.. versionadded:: v2014.04
+.. versionadded:: 2014.7.0
 
 :depends:   - redis Python module
 :configuration: See :py:mod:`salt.modules.redis` for setup instructions.
