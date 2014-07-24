@@ -68,7 +68,8 @@ def peered(name):
 
     newpeers = __salt__['glusterfs.list_peers']()
     #if newpeers was null, we know something didn't work.
-    if newpeers and name in newpeers
+    if newpeers:
+        if name in newpeers:
             ret['result'] = True
             ret['changes'] = {'new': newpeers, 'old': peers}
         #In case the hostname doesn't have any periods in it
