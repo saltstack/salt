@@ -8,7 +8,7 @@ salt as different environments.
 To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
 master config file.
 
-As of the :strong:`Helium` release, the Git fileserver backend will support
+As of the next feature release, the Git fileserver backend will support
 `GitPython`_, `pygit2`_, and `dulwich`_ to provide the Python interface to git.
 If more than one of these are present, the order of preference for which one
 will be chosen is the same as the order in which they were listed: GitPython,
@@ -22,8 +22,9 @@ to specify which provider should be used.
 
 .. note:: Minimum requirements
 
-    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well as
-    git itself.
+    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well
+    as git itself. Instructions for installing GitPython can be found
+    :ref:`here <gitfs-dependencies>`.
 
     Using `pygit2`_ requires a minimum pygit2 version of 0.19.0. Additionally,
     using pygit2 as a provider requires `libgit2`_ 0.19.0 or newer, as well as
@@ -278,7 +279,7 @@ def __virtual__():
     Only load if the desired provider module is present and gitfs is enabled
     properly in the master config file.
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     try:
         return __virtualname__ if _get_provider() else False
@@ -340,7 +341,6 @@ def _get_tree_gitpython(repo, tgt_env):
             if isinstance(ref, (git.RemoteReference, git.TagReference)):
                 parted = ref.name.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                rspec = rspec.replace('/', '_')
                 if rspec == tgt_env:
                     return ref.commit.tree
 
@@ -368,7 +368,6 @@ def _get_tree_pygit2(repo, tgt_env):
             if rtype in ('remotes', 'tags'):
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                rspec = rspec.replace('/', '_')
                 if rspec == tgt_env and _env_is_exposed(rspec):
                     return repo['repo'].lookup_reference(ref).get_object().tree
 
@@ -398,7 +397,6 @@ def _get_tree_dulwich(repo, tgt_env):
         for ref in sorted(_dulwich_env_refs(refs)):
             # ref will be something like 'refs/heads/master'
             rtype, rspec = ref[5:].split('/', 1)
-            rspec = rspec.replace('/', '_')
             if rspec == tgt_env and _env_is_exposed(rspec):
                 if rtype == 'heads':
                     commit = repo['repo'].get_object(refs[ref])
@@ -589,6 +587,9 @@ def init():
                     'hash': repo_hash,
                     'cachedir': rp_
                 })
+                # Strip trailing slashes from the gitfs root as these cause
+                # path searches to fail.
+                repo_conf['root'] = repo_conf['root'].rstrip(os.path.sep)
                 repos.append(repo_conf)
 
         except Exception as exc:
@@ -915,7 +916,6 @@ def _envs_gitpython(repo):
     for ref in repo['repo'].refs:
         parted = ref.name.partition('/')
         rspec = parted[2] if parted[2] else parted[0]
-        rspec = rspec.replace('/', '_')
         if isinstance(ref, git.Head):
             if rspec == repo['base']:
                 rspec = 'base'
@@ -940,7 +940,6 @@ def _envs_pygit2(repo):
             if rspec not in stale_refs:
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                rspec = rspec.replace('/', '_')
                 if rspec == repo['base']:
                     rspec = 'base'
                 if _env_is_exposed(rspec):
@@ -959,7 +958,6 @@ def _envs_dulwich(repo):
     for ref in _dulwich_env_refs(repo['repo'].get_refs()):
         # ref will be something like 'refs/heads/master'
         rtype, rspec = ref[5:].split('/', 1)
-        rspec = rspec.replace('/', '_')
         if rtype == 'heads':
             if rspec == repo['base']:
                 rspec = 'base'
@@ -1105,7 +1103,15 @@ def serve_file(load, fnd):
 
     ret = {'data': '',
            'dest': ''}
-    if not all(x in load for x in ('path', 'loc', 'saltenv')):
+    required_load_keys = set(['path', 'loc', 'saltenv'])
+    if not all(x in load for x in required_load_keys):
+        log.debug(
+            'Not all of the required key in load are present. Missing: {0}'.format(
+                ', '.join(
+                    required_load_keys.difference(load.keys())
+                )
+            )
+        )
         return ret
     if not fnd['path']:
         return ret
@@ -1144,6 +1150,8 @@ def file_hash(load, fnd):
                             '{0}.hash.{1}'.format(relpath,
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
+        if not os.path.exists(os.path.dirname(hashdest)):
+            os.makedirs(os.path.dirname(hashdest))
         with salt.utils.fopen(path, 'rb') as fp_:
             ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
                 fp_.read()).hexdigest()
@@ -1175,8 +1183,14 @@ def _file_lists(load, form):
         except os.error:
             log.critical('Unable to make cachedir {0}'.format(list_cachedir))
             return []
-    list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
-    w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
+    list_cache = os.path.join(
+        list_cachedir,
+        '{0}.p'.format(load['saltenv'].replace(os.path.sep, '_|-'))
+    )
+    w_lock = os.path.join(
+        list_cachedir,
+        '.{0}.w'.format(load['saltenv'].replace(os.path.sep, '_|-'))
+    )
     cache_match, refresh_cache, save_cache = \
         salt.fileserver.check_file_list_cache(
             __opts__, form, list_cache, w_lock

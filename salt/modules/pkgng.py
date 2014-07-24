@@ -147,7 +147,7 @@ def version(*names, **kwargs):
         Return a nested dictionary containing both the origin name and version
         for each specified package.
 
-        .. versionadded:: 2014.1.0 (Hydrogen)
+        .. versionadded:: 2014.1.0
 
 
     CLI Example:
@@ -198,8 +198,8 @@ def refresh_db(jail=None, chroot=None, force=False):
         ``jail`` is specified)
 
     force
-        Force a full download of the repository catalogue without regard to the
-        respective ages of the local and remote copies of the catalogue.
+        Force a full download of the repository catalog without regard to the
+        respective ages of the local and remote copies of the catalog.
 
         CLI Example:
 
@@ -249,7 +249,7 @@ def latest_version(*names, **kwargs):
         cmd = '{0} search {1}'.format(_pkg(jail, chroot), name)
         pkgver = _get_version(
             name,
-            __salt__['cmd.run'](cmd, output_loglevel='debug')
+            __salt__['cmd.run'](cmd, output_loglevel='trace')
         )
         if pkgver is not None:
             installed = pkgs.get(name, [])
@@ -288,14 +288,14 @@ def list_pkgs(versions_as_list=False,
         List the packages in the specified jail
 
     chroot
-        List the pacakges in the specified chroot (ignored if ``jail`` is
+        List the packages in the specified chroot (ignored if ``jail`` is
         specified)
 
     with_origin : False
         Return a nested dictionary containing both the origin name and version
         for each installed package.
 
-        .. versionadded:: 2014.1.0 (Hydrogen)
+        .. versionadded:: 2014.1.0
 
     CLI Example:
 
@@ -329,7 +329,7 @@ def list_pkgs(versions_as_list=False,
     ret = {}
     origins = {}
     cmd = '{0} info -ao'.format(_pkg(jail, chroot))
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         if not line:
             continue
@@ -437,7 +437,7 @@ def stats(local=False, remote=False, jail=None, chroot=None):
 
     res = __salt__['cmd.run'](
         '{0} stats {1}'.format(_pkg(jail, chroot), opts),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     res = [x.strip("\t") for x in res.split("\n")]
     return res
@@ -478,7 +478,7 @@ def backup(file_name, jail=None, chroot=None):
     '''
     res = __salt__['cmd.run'](
         '{0} backup -d {1!r}'.format(_pkg(jail, chroot), file_name),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     return res.split('...')[1]
 
@@ -518,7 +518,7 @@ def restore(file_name, jail=None, chroot=None):
     '''
     return __salt__['cmd.run'](
         '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -553,7 +553,7 @@ def audit(jail=None, chroot=None):
     '''
     return __salt__['cmd.run'](
         '{0} audit -F'.format(_pkg(jail, chroot)),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -589,7 +589,7 @@ def install(name=None,
         Install the package into the specified jail
 
     chroot
-        Install the paackage into the specified chroot (ignored if ``jail`` is
+        Install the package into the specified chroot (ignored if ``jail`` is
         specified)
 
     orphan
@@ -622,7 +622,7 @@ def install(name=None,
             salt '*' pkg.install <package name> glob=True
 
     local
-        Do not update the repository catalogues with ``pkg-update(8)``.  A
+        Do not update the repository catalogs with ``pkg-update(8)``.  A
         value of ``True`` here is equivalent to using the ``-U`` flag with
         ``pkg install``.
 
@@ -662,7 +662,7 @@ def install(name=None,
 
             salt '*' pkg.install <package name> reinstall_requires=True force=True
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
             ``require`` kwarg renamed to ``reinstall_requires``
 
     fromrepo
@@ -753,7 +753,7 @@ def install(name=None,
     cmd = '{0} {1} {2} {3} {4}'.format(
         _pkg(jail, chroot), pkg_cmd, repo_opts, opts, ' '.join(targets)
     )
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
@@ -793,7 +793,7 @@ def remove(name=None,
         Delete the package from the specified jail
 
     chroot
-        Delete the paackage grom the specified chroot (ignored if ``jail`` is
+        Delete the package from the specified chroot (ignored if ``jail`` is
         specified)
 
     all_installed
@@ -895,7 +895,7 @@ def remove(name=None,
     cmd = '{0} delete {1} {2}'.format(
         _pkg(jail, chroot), opts, ' '.join(targets)
     )
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
@@ -949,7 +949,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
             salt '*' pkg.upgrade force=True
 
     local
-        Do not update the repository catalogues with ``pkg-update(8)``. A value
+        Do not update the repository catalogs with ``pkg-update(8)``. A value
         of ``True`` here is equivalent to using the ``-U`` flag with ``pkg
         upgrade``.
 
@@ -961,7 +961,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
     dryrun
         Dry-run mode: show what packages have updates available, but do not
-        perform any upgrades. Repository catalogues will be updated as usual
+        perform any upgrades. Repository catalogs will be updated as usual
         unless the local option is also given.
 
         CLI Example:
@@ -984,7 +984,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
     return __salt__['cmd.run'](
         '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1002,7 +1002,7 @@ def clean(jail=None, chroot=None):
     '''
     return __salt__['cmd.run'](
         '{0} clean'.format(_pkg(jail, chroot)),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1033,7 +1033,7 @@ def autoremove(jail=None, chroot=None, dryrun=False):
         opts = '-' + opts
     return __salt__['cmd.run'](
         '{0} autoremove {1}'.format(_pkg(jail, chroot), opts),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1109,7 +1109,7 @@ def check(jail=None,
 
     return __salt__['cmd.run'](
         '{0} check {1}'.format(_pkg(jail, chroot), opts),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1170,7 +1170,7 @@ def which(path, jail=None, chroot=None, origin=False, quiet=False):
         opts = '-' + opts
     return __salt__['cmd.run'](
         '{0} which {1} {2}'.format(_pkg(jail, chroot), opts, path),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1357,7 +1357,7 @@ def search(name,
 
     return __salt__['cmd.run'](
         '{0} search {1} {2}'.format(_pkg(jail, chroot), opts, name),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1456,7 +1456,7 @@ def fetch(name,
             salt '*' pkg.fetch <extended regular expression> pcre=True
 
     local
-        Skip updating the repository catalogues with pkg-update(8). Use the
+        Skip updating the repository catalogs with pkg-update(8). Use the
         local cache only.
 
         CLI Example:
@@ -1501,7 +1501,7 @@ def fetch(name,
         '{0} fetch -y {1} {2} {3}'.format(
             _pkg(jail, chroot), repo_opts, opts, name
         ),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
 
@@ -1567,5 +1567,5 @@ def updating(name,
 
     return __salt__['cmd.run'](
         '{0} updating {1} {2}'.format(_pkg(jail, chroot), opts, name),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )

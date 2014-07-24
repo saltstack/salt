@@ -582,9 +582,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             else:
                 _raise_error_iface(iface, opts['addr'], ['AA:BB:CC:DD:EE:FF'])
         else:
-            ifaces = __salt__['network.interfaces']()
-            if iface in ifaces and 'hwaddr' in ifaces[iface]:
-                result['addr'] = ifaces[iface]['hwaddr']
+            # If interface type is slave for bond, not setting hwaddr
+            if iface_type != 'slave':
+                ifaces = __salt__['network.interfaces']()
+                if iface in ifaces and 'hwaddr' in ifaces[iface]:
+                    result['addr'] = ifaces[iface]['hwaddr']
 
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
@@ -669,7 +671,7 @@ def _parse_routes(iface, opts):
     # Normalize keys
     opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
     result = {}
-    if not 'routes' in opts:
+    if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')
 
     for opt in opts:
@@ -689,7 +691,7 @@ def _parse_network_settings(opts, current):
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    if not 'enabled' in opts:
+    if 'enabled' not in opts:
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
@@ -706,7 +708,7 @@ def _parse_network_settings(opts, current):
     else:
         _raise_error_network('networking', valid)
 
-    if not 'hostname' in opts:
+    if 'hostname' not in opts:
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
@@ -1027,7 +1029,7 @@ def apply_network_settings(**settings):
 
         salt '*' ip.apply_network_settings
     '''
-    if not 'require_reboot' in settings:
+    if 'require_reboot' not in settings:
         settings['require_reboot'] = False
 
     if settings['require_reboot'] in _CONFIG_TRUE:

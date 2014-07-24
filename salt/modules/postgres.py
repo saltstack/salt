@@ -20,6 +20,8 @@ Module to provide Postgres compatibility to salt.
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 '''
+# This pylint error is popping up where there are no colons?
+# pylint: disable=E8203
 
 # Import python libs
 import datetime
@@ -106,6 +108,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
 
     ret = __salt__[run_cmd](cmd, **kwargs)
 
+    if ret.get('retcode', 0) != 0:
+        log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
 
@@ -159,7 +163,7 @@ def _parsed_version(user=None, host=None, port=None, maintenance_db=None,
     if psql_version:
         return distutils.version.LooseVersion(psql_version)
     else:
-        log.warning('Attempt to parse version of Postgres server failed.'
+        log.warning('Attempt to parse version of Postgres server failed. '
                     'Is the server responding?')
         return None
 
@@ -200,9 +204,8 @@ def _psql_cmd(*args, **kwargs):
 
     cmd = [salt.utils.which('psql'),
            '--no-align',
-           '--no-readline']
-    if password is None:
-        cmd += ['--no-password']
+           '--no-readline',
+           '--no-password']         # It is never acceptable to issue a password prompt.
     if user:
         cmd += ['--username', user]
     if host:
@@ -237,7 +240,11 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                password=None, runas=None):
     '''
     Run an SQL-Query and return the results as a list. This command
-    only supports SELECT statements.
+    only supports SELECT statements.  This limitation can be worked around
+    with a query like this:
+
+    WITH updated AS (UPDATE pg_authid SET rolconnlimit = 2000 WHERE
+    rolname = 'rolename' RETURNING rolconnlimit) SELECT * FROM updated;
 
     CLI Example:
 
@@ -258,7 +265,6 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                                    host=host, user=user, port=port,
                                    maintenance_db=maintenance_db,
                                    password=password)
-
     if cmdret['retcode'] > 0:
         return ret
 
@@ -390,7 +396,7 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
              password=None, tablespace=None, owner=None,
              runas=None):
     '''
-    Change tablesbase or/and owner of databse.
+    Change tablespace or/and owner of database.
 
     CLI Example:
 
@@ -469,12 +475,19 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
                           maintenance_db=maintenance_db,
                           password=password,
                           runas=runas)
-    if ver >= distutils.version.LooseVersion('9.1'):
-        replication_column = 'pg_roles.rolreplication'
+    if ver:
+        if ver >= distutils.version.LooseVersion('9.1'):
+            replication_column = 'pg_roles.rolreplication'
+        else:
+            replication_column = 'NULL'
     else:
-        replication_column = 'NULL'
+        log.error('Could not retrieve Postgres version. Is Postgresql server running?')
+        return False
 
-    query = (
+    # will return empty string if return_password = False
+    _x = lambda s: s if return_password else ''
+
+    query = (''.join([
         'SELECT '
         'pg_roles.rolname as "name",'
         'pg_roles.rolsuper as "superuser", '
@@ -486,13 +499,12 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         '{0} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-        'pg_roles.rolconfig  as "defaults variables", '
-        'COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '
+        'pg_roles.rolconfig  as "defaults variables" '
+        , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
         'FROM pg_roles '
-        'LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid '
-        'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
-        .format(replication_column)
-    )
+        , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
+        , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
+    ]).format(replication_column))
 
     rows = psql_query(query,
                       runas=runas,
@@ -553,7 +565,11 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
                           password=password,
                           runas=runas,
                           return_password=return_password)
-    return all_users.get(name, None)
+    try:
+        return all_users.get(name, None)
+    except AttributeError:
+        log.error('Could not retrieve Postgres role. Is Postgres running?')
+        return False
 
 
 def user_exists(name,
@@ -577,7 +593,7 @@ def user_exists(name,
                  maintenance_db=maintenance_db,
                  password=password,
                  runas=runas,
-                 return_password=True))
+                 return_password=False))
 
 
 def _add_role_flag(string,
@@ -624,7 +640,8 @@ def _role_cmd_args(name,
                    superuser=None,
                    groups=None,
                    replication=None,
-                   rolepassword=None):
+                   rolepassword=None,
+                   db_role=None):
     if createuser is not None and superuser is None:
         superuser = createuser
     if inherit is None:
@@ -657,11 +674,15 @@ def _role_cmd_args(name,
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
                                     encrypted=encrypted))
+    skip_superuser = False
+    if bool(db_role) and bool(superuser) == bool(db_role['superuser']):
+        skip_superuser = True
     flags = (
         {'flag': 'INHERIT', 'test': inherit},
         {'flag': 'CREATEDB', 'test': createdb},
         {'flag': 'CREATEROLE', 'test': createroles},
-        {'flag': 'SUPERUSER', 'test': superuser},
+        {'flag': 'SUPERUSER', 'test': superuser,
+         'skip': skip_superuser},
         {'flag': 'REPLICATION', 'test': replication},
         {'flag': 'LOGIN', 'test': login},
         {'flag': 'ENCRYPTED',
@@ -804,11 +825,18 @@ def _role_update(name,
     '''
     Updates a postgres role.
     '''
+    role = role_get(name,
+                    user=user,
+                    host=host,
+                    port=port,
+                    maintenance_db=maintenance_db,
+                    password=password,
+                    runas=runas,
+                    return_password=False)
 
     # check if user exists
-    if not user_exists(name, user, host, port, maintenance_db, password,
-                       runas=runas):
-        log.info('{0} {1!r} does not exist'.format(typ_.capitalize(), name))
+    if not bool(role):
+        log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
@@ -823,7 +851,8 @@ def _role_update(name,
         superuser=superuser,
         groups=groups,
         replication=replication,
-        rolepassword=rolepassword
+        rolepassword=rolepassword,
+        db_role=role
     ))
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 runas=runas, host=host, user=user, port=port,

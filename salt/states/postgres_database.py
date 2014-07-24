@@ -71,7 +71,7 @@ def present(name,
         System user all operations should be performed on behalf of
 
     db_user
-        database username if different from config or defaul
+        database username if different from config or default
 
     db_password
         user password if any password for a specified user

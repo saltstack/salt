@@ -56,6 +56,11 @@ these states. Here is some example SLS:
     ``python-software-properties`` package, a missing dependency on pycurl, so
     ``python-pycurl`` will need to be manually installed if it is not present
     once ``python-software-properties`` is installed.
+
+    On Ubuntu & Debian systems, the ```python-apt`` package is required to be installed.
+    To check if this package is installed, run ``dpkg -l python-software-properties``.
+    ``python-apt`` will need to be manually installed if it is not present.
+
 '''
 
 # Import python libs
@@ -81,7 +86,6 @@ def managed(name, **kwargs):
     name
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
-
 
     For yum-based systems, take note of the following configuration values:
 
@@ -148,8 +152,13 @@ def managed(name, **kwargs):
                 - name: deb http://us.archive.ubuntu.com/ubuntu precise main
 
     disabled
-        On apt-based systems, disabled toggles whether or not the repo is
-        used for resolving dependencies and/or installing packages
+        Toggles whether or not the repo is used for resolving dependencies
+        and/or installing packages.
+
+    enabled
+        Enables the repository, even if the repository has been disabled, in
+        order for the respective package requiring the repository can be found
+        and installed.
 
     comps
         On apt-based systems, comps dictate the types of packages to be
@@ -184,10 +193,14 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    refresh_db
+       If set to false this will skip refreshing the apt package database on
+       debian based systems.
+
     require_in
-        Set this to a list of pkg.installed or pkg.latest to trigger the
-        running of apt-get update prior to attempting to install these
-        packages. Setting a require in the pkg will not work for this.
+       Set this to a list of pkg.installed or pkg.latest to trigger the
+       running of apt-get update prior to attempting to install these
+       packages. Setting a require in the pkg will not work for this.
     '''
     ret = {'name': name,
            'changes': {},
@@ -268,7 +281,10 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+        if __grains__['os_family'] == 'Debian':
+            __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+        else:
+            __salt__['pkg.mod_repo'](**kwargs)
     except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.
@@ -276,11 +292,6 @@ def managed(name, **kwargs):
         ret['comment'] = \
             'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
-    else:
-        # Repo was modified, refresh the pkg db if on an apt-based OS. Other
-        # package managers do this sort of thing automatically.
-        if __grains__['os_family'] == 'Debian':
-            __salt__['pkg.refresh_db']()
 
     try:
         repodict = __salt__['pkg.get_repo'](

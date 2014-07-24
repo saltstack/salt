@@ -30,7 +30,7 @@ def _check_pkgin():
         # pkgin was not found in $PATH, try to find it via LOCALBASE
         localbase = __salt__['cmd.run'](
             'pkg_info -Q LOCALBASE pkgin',
-            output_loglevel='debug'
+            output_loglevel='trace'
         )
         if localbase is not None:
             ppath = '{0}/bin/pkgin'.format(localbase)
@@ -47,7 +47,7 @@ def _supports_regex():
     '''
     ppath = _check_pkgin()
     version_string = __salt__['cmd.run'](
-        '{0} -v'.format(ppath), output_loglevel='debug'
+        '{0} -v'.format(ppath), output_loglevel='trace'
     )
     if version_string is None:
         # Dunno why it would, but...
@@ -98,7 +98,7 @@ def search(pkg_name):
 
     out = __salt__['cmd.run'](
         '{0} se {1}'.format(pkgin, pkg_name),
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     for line in out.splitlines():
         if line:
@@ -141,7 +141,7 @@ def latest_version(*names, **kwargs):
             name = '^{0}$'.format(name)
         out = __salt__['cmd.run'](
             '{0} se {1}'.format(pkgin, name),
-            output_loglevel='debug'
+            output_loglevel='trace'
         )
         for line in out.splitlines():
             p = line.split()  # pkgname-version status
@@ -196,7 +196,7 @@ def refresh_db():
     pkgin = _check_pkgin()
 
     if pkgin:
-        __salt__['cmd.run']('{0} up'.format(pkgin), output_loglevel='debug')
+        __salt__['cmd.run']('{0} up'.format(pkgin), output_loglevel='trace')
 
     return {}
 
@@ -227,7 +227,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
 
-    out = __salt__['cmd.run'](pkg_command, output_loglevel='debug')
+    out = __salt__['cmd.run'](pkg_command, output_loglevel='trace')
     for line in out.splitlines():
         try:
             pkg, ver = line.split(' ')[0].rsplit('-', 1)
@@ -333,11 +333,11 @@ def install(name=None, refresh=False, fromrepo=None,
     __salt__['cmd.run'](
         '{0} {1}'.format(cmd, ' '.join(args)),
         env=env,
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     new = list_pkgs()
 
-    rehash()
+    _rehash()
     return salt.utils.compare_dicts(old, new)
 
 
@@ -426,7 +426,7 @@ def remove(name=None, pkgs=None, **kwargs):
     else:
         cmd = 'pkg_remove {0}'.format(for_remove)
 
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     new = list_pkgs()
 
     return salt.utils.compare_dicts(old, new)
@@ -463,21 +463,15 @@ def purge(name=None, pkgs=None, **kwargs):
     return remove(name=name, pkgs=pkgs)
 
 
-def rehash():
+def _rehash():
     '''
     Recomputes internal hash table for the PATH variable.
     Use whenever a new command is created during the current
     session.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.rehash
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='debug')
+    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
-        __salt__['cmd.run']('rehash', output_loglevel='debug')
+        __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 
 def file_list(package):
@@ -513,7 +507,7 @@ def file_dict(package):
     files[package] = None
 
     cmd = 'pkg_info -qL {0}'.format(package)
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
     for line in ret['stderr'].splitlines():
         errors.append(line)
