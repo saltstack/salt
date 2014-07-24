@@ -119,7 +119,7 @@ class SaltNova(object):
             self.kwargs['auth_plugin'] = auth_plugin
             self.kwargs['auth_system'] = os_auth_plugin
 
-        if 'api_key' not in self.kwargs.keys():
+        if not self.kwargs.get('api_key', None):
             self.kwargs['api_key'] = password
         extensions = []
         if 'extensions' in kwargs:
