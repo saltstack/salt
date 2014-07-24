@@ -108,6 +108,7 @@ CONVERSION = {
     'ansible_ssh_private_key_file': 'priv'
 }
 
+
 def targets(tgt, tgt_type='glob', **kwargs):
     '''
     Return the targets from the ansible inventory_file
@@ -131,7 +132,47 @@ def targets(tgt, tgt_type='glob', **kwargs):
     return imatcher.targets()
 
 
-class Inventory(object):
+class Target(object):
+    def targets(self):
+        '''
+        Execute the correct tgt_type routine and return
+        '''
+        try:
+            return getattr(self, 'get_{0}'.format(self.tgt_type))()
+        except AttributeError:
+            return {}
+
+    def get_glob(self):
+        '''
+        Return minions that match via glob
+        '''
+        ret = dict()
+        for key, value in self.groups.items():
+            for host, info in value.items():
+                if fnmatch.fnmatch(host, self.tgt):
+                    ret[host] = info
+        for nodegroup in self.groups:
+            if fnmatch.fnmatch(nodegroup, self.tgt):
+                ret.update(self.groups[nodegroup])
+        for parent_nodegroup in self.parents:
+            if fnmatch.fnmatch(parent_nodegroup, self.tgt):
+                ret.update(self._get_parent(parent_nodegroup))
+        return ret
+
+    def _get_parent(self, parent_nodegroup):
+        '''
+        Recursively resolve all [*:children] group blocks
+        '''
+        ret = dict()
+        for nodegroup in self.parents[parent_nodegroup]:
+            if nodegroup in self.parents:
+                ret.update(self._get_parent(nodegroup))
+            elif nodegroup in self.groups:
+                ret.update(self.groups[nodegroup])
+        return ret
+
+
+class Inventory(Target):
     '''
     Matcher for static inventory files
     '''
@@ -141,9 +182,9 @@ class Inventory(object):
         self.groups = dict()
         self.hostvars = dict()
         self.parents = dict()
-        blocks = re.compile('^\[.*\]$')
-        hostvar = re.compile('^\[([^:]+):vars\]$')
-        parents = re.compile('^\[([^:]+):children\]$')
+        blocks = re.compile(r'^\[.*\]$')
+        hostvar = re.compile(r'^\[([^:]+):vars\]$')
+        parents = re.compile(r'^\[([^:]+):children\]$')
         with salt.utils.fopen(inventory_file) as config:
             for line in config.read().split('\n'):
                 if not line or line.startswith('#'):
@@ -195,47 +236,8 @@ class Inventory(object):
             self.parents[varname] = []
         self.parents[varname].append(line)
 
-    def targets(self):
-        '''
-        Execute the correct tgt_type routine and return
-        '''
-        try:
-            return getattr(self, 'get_{0}'.format(self.tgt_type))()
-        except AttributeError:
-            return {}
 
-
-    def get_glob(self):
-        '''
-        Return minions that match via glob
-        '''
-        ret = dict()
-        for key, value in self.groups.items():
-            for host, info in value.items():
-                if fnmatch.fnmatch(host, self.tgt):
-                    ret[host] = info
-        for nodegroup in self.groups:
-            if fnmatch.fnmatch(nodegroup, self.tgt):
-                ret.update(self.groups[nodegroup])
-        for parent_nodegroup in self.parents:
-            if fnmatch.fnmatch(parent_nodegroup, self.tgt):
-              ret.update(self._get_parent(parent_nodegroup))
-        return ret
-
-    def _get_parent(self, parent_nodegroup):
-        '''
-        Recursively resolve all [*:children] group blocks
-        '''
-        ret = dict()
-        for nodegroup in self.parents[parent_nodegroup]:
-            if nodegroup in self.parents:
-                ret.update(self._get_parent(nodegroup))
-            elif nodegroup in self.groups:
-                ret.update(self.groups[nodegroup])
-        return ret
-
-
-class Script(Inventory):
+class Script(Target):
     '''
     Matcher for Inventory scripts
     '''
