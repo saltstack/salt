@@ -26,9 +26,9 @@ def targets(tgt, tgt_type='glob', **kwargs):
     Default: /etc/salt/hosts
     '''
     if tgt == 'all':
-        tgt = '*':
-    if __opts__.get('inventory_file', False) is not False:
-        hosts = __opts__.get('inventory_file')
+        tgt = '*'
+    if __opts__.get('roster_file', False) is not False:
+        hosts = __opts__.get('roster_file')
     elif os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
         hosts = os.path.join(
                 os.path.dirname(__opts__['conf_file']),
@@ -37,7 +37,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
         hosts = os.path.join(__opts__['conf_file'], 'hosts')
 
     if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
-        imatcher = Script(tgt, tgt_type='glob', hosts=hosts)
+        imatcher = Script(tgt, tgt_type='glob', inventory_file=hosts)
     else:
         imatcher = Inventory(tgt, tgt_type='glob', inventory_file=hosts)
     return imatcher.targets()
@@ -56,7 +56,7 @@ class Inventory(object):
         blocks = re.compile('^\[.*\]$')
         hostvar = re.compile('^\[([^:]+):vars\]$')
         parents = re.compile('^\[([^:]+):children\]$')
-        with salt.utils.fopen(hosts) as config:
+        with salt.utils.fopen(inventory_file) as config:
             for line in config.read().split('\n'):
                 if not line or line.startswith('#'):
                     continue
@@ -150,7 +150,7 @@ class Script(Inventory):
     '''
     Matcher for Inventory scripts
     '''
-    def __init__(self, inventory_file='/etc/salt/hosts2'):
+    def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/hosts'):
         self.tgt = tgt
         self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
