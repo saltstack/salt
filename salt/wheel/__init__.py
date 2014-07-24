@@ -4,11 +4,13 @@ Modules used to control the master itself
 '''
 #import python libs
 import collections
-
 import os
+import time
+
 # Import salt libs
 from salt import syspaths
 import salt.config
+import salt.exceptions
 import salt.loader
 import salt.payload
 import salt.utils
@@ -78,7 +80,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 raise_error(**ret['error'])
         return ret
 
-    def cmd_sync(self, low):
+    def cmd_sync(self, low, timeout=None):
         '''
         Execute a wheel function synchronously; eauth is respected
 
@@ -101,6 +103,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         job = self.master_call(**low)
         ret_tag = tagify('ret', base=job['tag'])
 
+        timelimit = time.time() + (timeout or 300)
         while True:
             ret = sevent.get_event(full=True)
             if ret is None:
@@ -108,6 +111,11 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
             if ret['tag'] == ret_tag:
                 return ret['data']['return']
+
+            if time.time() > timelimit:
+                raise salt.exceptions.SaltClientTimeout(
+                    "WheelClient job '%s' timed out", job['jid'],
+                    jid=job['jid'])
 
     def cmd_async(self, low):
         '''

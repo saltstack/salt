@@ -7,6 +7,7 @@ Execute salt convenience routines
 from __future__ import print_function
 import collections
 import logging
+import time
 
 # Import salt libs
 import salt.exceptions
@@ -154,7 +155,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         return self.master_call(**low)
 
-    def cmd_sync(self, low):
+    def cmd_sync(self, low, timeout=None):
         '''
         Execute a runner function synchronously; eauth is respected
 
@@ -175,10 +176,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         job = self.master_call(**low)
         ret_tag = tagify('ret', base=job['tag'])
 
+        timelimit = time.time() + (timeout or 300)
         while True:
             ret = sevent.get_event(full=True)
             if ret is None:
-                continue
+                if time.time() > timelimit:
+                    raise salt.exceptions.SaltClientTimeout(
+                        "RunnerClient job '{0}' timed out".format(job['jid']),
+                        jid=job['jid'])
+                else:
+                    continue
 
             if ret['tag'] == ret_tag:
                 return ret['data']['return']

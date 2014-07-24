@@ -87,7 +87,7 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
 
-    def runner(self, fun, **kwargs):
+    def runner(self, fun, timeout=None, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
 
@@ -97,7 +97,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs)
+        return runner.cmd_sync(kwargs, timeout=timeout)
 
     def runner_async(self, fun, **kwargs):
         '''
@@ -109,7 +109,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs)
+        return runner.cmd_async(kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
