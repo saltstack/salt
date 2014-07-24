@@ -133,31 +133,16 @@
 # Unless your master is under unusually heavy load, this should be left at the default.
 #auth_timeout: 60
 
-
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to authenticate.
 #auth_tries: 1
 
-# If authentication failes due to SaltReqTimeoutError, continue without ending minion.
-#auth_safemode: True
-
-# If the minion hits an error that is recoverable, restart the minion.
-#restart_on_error: False
+# If authentication failes due to SaltReqTimeoutError during a ping_interval,
+# cause sub minion proccess to restart.
+#auth_safemode: False
 
 # Ping Master to ensure connection is alive (minutes).
 # TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
-#ping_interval: 0
-
-# To auto recover Minions if Master changes IP address (DDNS)
-#
-#    auth_tries: 10
-#    auth_safemode: False
-#    ping_interval: 90
-#    restart_on_error: True
-#
-# Minions wont know master is missing untill a ping fails.  After the ping fail,
-# the minion will attempt authentication and likly fails out and cause a restart.
-# When the minion restarts it will resolve the Masters IP and attempt to reconnect.
-
+#ping_interval: 90
 
 # If you don't have any problems with syn-floods, dont bother with the
 # three recon_* settings described below, just leave the defaults!

@@ -7,8 +7,6 @@ Make me some salt!
 import os
 import sys
 import warnings
-import time
-from random import randint
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
@@ -43,7 +41,7 @@ try:
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit, MasterExit, SaltClientError
+from salt.exceptions import SaltSystemExit, MasterExit
 
 
 # Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
@@ -157,65 +155,64 @@ class Minion(parsers.MinionOptionParser):
 
             super(YourSubClass, self).prepare()
         '''
-        if not hasattr(self, 'config'):
-            self.parse_args()
+        self.parse_args()
 
-            try:
-                if self.config['verify_env']:
-                    confd = self.config.get('default_include')
-                    if confd:
-                        # If 'default_include' is specified in config, then use it
-                        if '*' in confd:
-                            # Value is of the form "minion.d/*.conf"
-                            confd = os.path.dirname(confd)
-                        if not os.path.isabs(confd):
-                            # If configured 'default_include' is not an absolute
-                            # path, consider it relative to folder of 'conf_file'
-                            # (/etc/salt by default)
-                            confd = os.path.join(
-                                os.path.dirname(self.config['conf_file']), confd
-                            )
-                    else:
+        try:
+            if self.config['verify_env']:
+                confd = self.config.get('default_include')
+                if confd:
+                    # If 'default_include' is specified in config, then use it
+                    if '*' in confd:
+                        # Value is of the form "minion.d/*.conf"
+                        confd = os.path.dirname(confd)
+                    if not os.path.isabs(confd):
+                        # If configured 'default_include' is not an absolute
+                        # path, consider it relative to folder of 'conf_file'
+                        # (/etc/salt by default)
                         confd = os.path.join(
-                            os.path.dirname(self.config['conf_file']), 'minion.d'
+                            os.path.dirname(self.config['conf_file']), confd
                         )
-                    v_dirs = [
-                            self.config['pki_dir'],
-                            self.config['cachedir'],
-                            self.config['sock_dir'],
-                            self.config['extension_modules'],
-                            confd,
-                        ]
-                    if self.config.get('transport') == 'raet':
-                        v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
-                        v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
-                        v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
-                        v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
-                    verify_env(
-                        v_dirs,
-                        self.config['user'],
-                        permissive=self.config['permissive_pki_access'],
-                        pki_dir=self.config['pki_dir'],
+                else:
+                    confd = os.path.join(
+                        os.path.dirname(self.config['conf_file']), 'minion.d'
                     )
-                    logfile = self.config['log_file']
-                    if logfile is not None and not logfile.startswith(('tcp://',
-                                                                    'udp://',
-                                                                    'file://')):
-                        # Logfile is not using Syslog, verify
-                        current_umask = os.umask(0077)
-                        verify_files([logfile], self.config['user'])
-                        os.umask(current_umask)
-            except OSError as err:
-                logger.exception('Failed to prepare salt environment')
-                sys.exit(err.errno)
-
-            self.setup_logfile_logger()
-            logger.info(
-                'Setting up the Salt Minion "{0}"'.format(
-                    self.config['id']
+                v_dirs = [
+                        self.config['pki_dir'],
+                        self.config['cachedir'],
+                        self.config['sock_dir'],
+                        self.config['extension_modules'],
+                        confd,
+                    ]
+                if self.config.get('transport') == 'raet':
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
+                verify_env(
+                    v_dirs,
+                    self.config['user'],
+                    permissive=self.config['permissive_pki_access'],
+                    pki_dir=self.config['pki_dir'],
                 )
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith(('tcp://',
+                                                                'udp://',
+                                                                'file://')):
+                    # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0077)
+                    verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
+        except OSError as err:
+            logger.exception('Failed to prepare salt environment')
+            sys.exit(err.errno)
+
+        self.setup_logfile_logger()
+        logger.info(
+            'Setting up the Salt Minion "{0}"'.format(
+                self.config['id']
             )
-            migrations.migrate_paths(self.config)
+        )
+        migrations.migrate_paths(self.config)
         if self.config['transport'].lower() == 'zeromq':
             # Late import so logging works correctly
             import salt.minion
@@ -248,29 +245,18 @@ class Minion(parsers.MinionOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        reconnect = True
-        while reconnect:
-            reconnect = False
-            try:
-                self.prepare()
-                if check_user(self.config['user']):
-                    self.minion.tune_in()
-            except (KeyboardInterrupt, SaltSystemExit) as exc:
-                logger.warn('Stopping the Salt Minion')
-                if isinstance(exc, KeyboardInterrupt):
-                    logger.warn('Exiting on Ctrl-c')
-                else:
-                    logger.error(str(exc))
-            except SaltClientError as exc:
-                logger.error(exc)
-                if self.config.get('restart_on_error'):
-                    logger.warn('** Restarting minion **')
-                    s = randint(0, self.config.get('random_reauth_delay', 10))
-                    logger.info('Sleeping random_reauth_delay of {0} seconds'.format(s))
-                    time.sleep(s)
-                    reconnect = True
-            finally:
-                self.shutdown()
+        try:
+            self.prepare()
+            if check_user(self.config['user']):
+                self.minion.tune_in()
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
+            logger.warn('Stopping the Salt Minion')
+            if isinstance(exc, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(exc))
+        finally:
+            self.shutdown()
 
     def shutdown(self):
         '''
