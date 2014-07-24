@@ -36,12 +36,10 @@ fact that the data is uniform and not deeply nested.
 Nested Dicts (key=value)
 ------------------------
 
-When :ref:`dicts <python2:typesmapping>` are more deeply nested, they no longer
-follow the same indentation logic. This is rarely something that comes up in
-Salt, since deeply nested options like these are discouraged when making State
-modules, but some do exist. A good example of this can be found in the
-``context`` and ``default`` options from the :doc:`file.managed
-</ref/states/all/salt.states.file>` state:
+When :ref:`dicts <python2:typesmapping>` are nested within other data
+structures (particularly lists), the indentation logic sometimes changes.
+Examples of where this might happen include ``context`` and ``default`` options
+from the :doc:`file.managed </ref/states/all/salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -61,8 +59,9 @@ modules, but some do exist. A good example of this can be found in the
 
 Notice that while the indentation is two spaces per level, for the values under
 the ``context`` and ``defaults`` options there is a four-space indent. If only
-two spaces are used to indent, then the information will not be loaded
-correctly. If using a double indent is not desirable, then a deeply-nested dict
+two spaces are used to indent, then those keys will be considered part of the
+same dictionary that contains the ``context`` key, and so the data will not be
+loaded correctly.  If using a double indent is not desirable, then a deeply-nested dict
 can be declared with curly braces:
 
 .. code-block:: yaml
@@ -80,6 +79,28 @@ can be declared with curly braces:
         - defaults: {
           custom_var: "default value",
           other_var: 123 }
+
+Here is a more concrete example of how YAML actually handles these
+indentations, using the Python interpreter on the command line:
+
+.. code-block:: python
+
+    >>> import yaml
+    >>> yaml.safe_load('''mystate:
+    ...   file.managed:
+    ...     - context:
+    ...         some: var''')
+    {'mystate': {'file.managed': [{'context': {'some': 'var'}}]}}
+    >>> yaml.safe_load('''mystate:
+    ...   file.managed:
+    ...     - context:
+    ...       some: var''')
+    {'mystate': {'file.managed': [{'some': 'var', 'context': None}]}}
+
+Note that in the second example, ``some`` is added as another key in the same
+dictionary, whereas in the first example, it's the start of a new dictionary.
+That's the distinction. ``context`` is a common example because it is a keyword
+arg for many functions, and should contain a dictionary.
 
 
 True/False, Yes/No, On/Off

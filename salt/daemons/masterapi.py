@@ -5,9 +5,12 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
+import fnmatch
+import logging
 import os
 import re
-import logging
+import time
+import stat
 try:
     import pwd
 except ImportError:
@@ -51,6 +54,10 @@ def init_git_pillar(opts):
     pillargitfs = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
+            try:
+                import git
+            except ImportError:
+                return pillargitfs
             parts = opts_dict['git'].strip().split()
             try:
                 br = parts[0]
@@ -73,9 +80,9 @@ def init_git_pillar(opts):
 
 def clean_fsbackend(opts):
     '''
-    Clean ou the old fileserver backends
+    Clean out the old fileserver backends
     '''
-    # Clear remote fileserver backend env cache so it gets recreated
+    # Clear remote fileserver backend caches so they get recreated
     for backend in ('git', 'hg', 'svn'):
         if backend in opts['fileserver_backend']:
             env_cache = os.path.join(
@@ -87,11 +94,47 @@ def clean_fsbackend(opts):
                 log.debug('Clearing {0}fs env cache'.format(backend))
                 try:
                     os.remove(env_cache)
-                except (IOError, OSError) as exc:
+                except OSError as exc:
                     log.critical(
                         'Unable to clear env cache file {0}: {1}'
                         .format(env_cache, exc)
                     )
+
+            file_lists_dir = os.path.join(
+                opts['cachedir'],
+                'file_lists',
+                '{0}fs'.format(backend)
+            )
+            try:
+                file_lists_caches = os.listdir(file_lists_dir)
+            except OSError:
+                continue
+            for file_lists_cache in fnmatch.filter(file_lists_caches, '*.p'):
+                cache_file = os.path.join(file_lists_dir, file_lists_cache)
+                try:
+                    os.remove(cache_file)
+                except OSError as exc:
+                    log.critical(
+                        'Unable to file_lists cache file {0}: {1}'
+                        .format(cache_file, exc)
+                    )
+
+
+def clean_expired_tokens(opts):
+    '''
+    Clean expired tokens from the master
+    '''
+    serializer = salt.payload.Serial(opts)
+    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
+        for token in filenames:
+            token_path = os.path.join(dirpath, token)
+            with salt.utils.fopen(token_path) as token_file:
+                token_data = serializer.loads(token_file.read())
+                if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
+                    try:
+                        os.remove(token_path)
+                    except (IOError, OSError):
+                        pass
 
 
 def clean_old_jobs(opts):
@@ -176,6 +219,130 @@ def fileserver_update(fileserver):
             'Exception {0} occurred in file server update'.format(exc),
             exc_info=log.isEnabledFor(logging.DEBUG)
         )
+
+
+class AutoKey(object):
+    '''
+    Impliment the methods to run auto key acceptance and rejection
+    '''
+    def __init__(self, opts):
+        self.opts = opts
+
+    def check_permissions(self, filename):
+        '''
+        Check if the specified filename has correct permissions
+        '''
+        if salt.utils.is_windows():
+            return True
+
+        # After we've ascertained we're not on windows
+        try:
+            user = self.opts['user']
+            pwnam = pwd.getpwnam(user)
+            uid = pwnam[2]
+            gid = pwnam[3]
+            groups = salt.utils.get_gid_list(user, include_default=False)
+        except KeyError:
+            log.error(
+                'Failed to determine groups for user {0}. The user is not '
+                'available.\n'.format(
+                    user
+                )
+            )
+            return False
+
+        fmode = os.stat(filename)
+
+        if os.getuid() == 0:
+            if fmode.st_uid == uid or fmode.st_gid != gid:
+                return True
+            elif self.opts.get('permissive_pki_access', False) \
+                    and fmode.st_gid in groups:
+                return True
+        else:
+            if stat.S_IWOTH & fmode.st_mode:
+                # don't allow others to write to the file
+                return False
+
+            # check group flags
+            if self.opts.get('permissive_pki_access', False) and stat.S_IWGRP & fmode.st_mode:
+                return True
+            elif stat.S_IWGRP & fmode.st_mode:
+                return False
+
+            # check if writable by group or other
+            if not (stat.S_IWGRP & fmode.st_mode or
+                    stat.S_IWOTH & fmode.st_mode):
+                return True
+
+        return False
+
+    def check_signing_file(self, keyid, signing_file):
+        '''
+        Check a keyid for membership in a signing file
+        '''
+        if not signing_file or not os.path.exists(signing_file):
+            return False
+
+        if not self.check_permissions(signing_file):
+            message = 'Wrong permissions for {0}, ignoring content'
+            log.warn(message.format(signing_file))
+            return False
+
+        with salt.utils.fopen(signing_file, 'r') as fp_:
+            for line in fp_:
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                else:
+                    if salt.utils.expr_match(keyid, line):
+                        return True
+        return False
+
+    def check_autosign_dir(self, keyid):
+        '''
+        Check a keyid for membership in a autosign directory.
+        '''
+        autosign_dir = os.path.join(self.opts['pki_dir'], 'minions_autosign')
+
+        # cleanup expired files
+        expire_minutes = self.opts.get('autosign_expire_minutes', 10)
+        if expire_minutes > 0:
+            min_time = time.time() - (60 * int(expire_minutes))
+            for root, dirs, filenames in os.walk(autosign_dir):
+                for f in filenames:
+                    stub_file = os.path.join(autosign_dir, f)
+                    mtime = os.path.getmtime(stub_file)
+                    if mtime < min_time:
+                        log.warn('Autosign keyid expired {0}'.format(stub_file))
+                        os.remove(stub_file)
+
+        stub_file = os.path.join(autosign_dir, keyid)
+        if not os.path.exists(stub_file):
+            return False
+        os.remove(stub_file)
+        return True
+
+    def check_autoreject(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be rejected.
+        '''
+        return self.check_signing_file(
+            keyid,
+            self.opts.get('autoreject_file', None)
+        )
+
+    def check_autosign(self, keyid):
+        '''
+        Checks if the specified keyid should automatically be signed.
+        '''
+        if self.opts['auto_accept']:
+            return True
+        if self.check_signing_file(keyid, self.opts.get('autosign_file', None)):
+            return True
+        if self.check_autosign_dir(keyid):
+            return True
+        return False
 
 
 class RemoteFuncs(object):
@@ -276,12 +443,49 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
-    def _mine_get(self, load):
+    def _ext_nodes(self, load, skip_verify=False):
+        '''
+        Return the results from an external node classifier if one is
+        specified
+        '''
+        if not skip_verify:
+            if 'id' not in load:
+                log.error('Received call for external nodes without an id')
+                return {}
+            if not salt.utils.verify.valid_id(self.opts, load['id']):
+                return {}
+        # Evaluate all configured master_tops interfaces
+
+        opts = {}
+        grains = {}
+        ret = {}
+
+        if 'opts' in load:
+            opts = load['opts']
+            if 'grains' in load['opts']:
+                grains = load['opts']['grains']
+        for fun in self.tops:
+            if fun not in self.opts.get('master_tops', {}):
+                continue
+            try:
+                ret.update(self.tops[fun](opts=opts, grains=grains))
+            except Exception as exc:
+                # If anything happens in the top generation, log it and move on
+                log.error(
+                    'Top function {0} failed with error {1} for minion '
+                    '{2}'.format(
+                        fun, exc, load['id']
+                    )
+                )
+        return ret
+
+    def _mine_get(self, load, skip_verify=False):
         '''
         Gathers the data from the specified minions' mine
         '''
-        if any(key not in load for key in ('id', 'tgt', 'fun')):
-            return {}
+        if not skip_verify:
+            if any(key not in load for key in ('id', 'tgt', 'fun')):
+                return {}
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -316,12 +520,13 @@ class RemoteFuncs(object):
                 continue
         return ret
 
-    def _mine(self, load):
+    def _mine(self, load, skip_verify=False):
         '''
         Return the mine data
         '''
-        if 'id' not in load or 'data' not in load:
-            return False
+        if not skip_verify:
+            if 'id' not in load or 'data' not in load:
+                return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -361,11 +566,11 @@ class RemoteFuncs(object):
                     return False
         return True
 
-    def _mine_flush(self, load):
+    def _mine_flush(self, load, skip_verify=False):
         '''
         Allow the minion to delete all of its own mine contents
         '''
-        if 'id' not in load:
+        if not skip_verify and 'id' not in load:
             return False
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
@@ -391,7 +596,14 @@ class RemoteFuncs(object):
         if os.path.isabs(load['path']) or '../' in load['path']:
             # Can overwrite master files!!
             return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
         file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+
+        if 'loc' in load and load['loc'] < 0:
+            log.error('Invalid file pointer: load[loc] < 0')
+            return False
+
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
             log.error(
                 'Exceeding file_recv_max_size limit: {0}'.format(
@@ -434,7 +646,8 @@ class RemoteFuncs(object):
                 load.get('saltenv', load.get('env')),
                 load.get('ext'),
                 self.mminion.functions)
-        data = pillar.compile_pillar()
+        pillar_dirs = {}
+        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -522,7 +735,7 @@ class RemoteFuncs(object):
             return {}
         if not isinstance(self.opts['peer_run'], dict):
             return {}
-        if any(key not in load for key in ('fun', 'arg', 'id', 'tok')):
+        if any(key not in load for key in ('fun', 'arg', 'id')):
             return {}
         perms = set()
         for match in self.opts['peer_run']:
@@ -535,6 +748,13 @@ class RemoteFuncs(object):
             if re.match(perm, load['fun']):
                 good = True
         if not good:
+            # The minion is not who it says it is!
+            # We don't want to listen to it!
+            log.warn(
+                    'Minion id {0} is not who it says it is!'.format(
+                    load['id']
+                    )
+            )
             return {}
         # Prepare the runner object
         opts = {'fun': load['fun'],
@@ -546,25 +766,25 @@ class RemoteFuncs(object):
         runner = salt.runner.Runner(opts)
         return runner.run()
 
-    def pub_ret(self, load):
+    def pub_ret(self, load, skip_verify=False):
         '''
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
         '''
-        if any(key not in load for key in ('jid', 'id', 'tok')):
+        if not skip_verify and any(key not in load for key in ('jid', 'id')):
             return {}
-        # Check that this minion can access this data
-        auth_cache = os.path.join(
-                self.opts['cachedir'],
-                'publish_auth')
-        if not os.path.isdir(auth_cache):
-            os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, load['jid'])
-        with salt.utils.fopen(jid_fn, 'r') as fp_:
-            if not load['id'] == fp_.read():
-                return {}
-        # Grab the latest and return
-        return self.local.get_cache_returns(load['jid'])
+        else:
+            auth_cache = os.path.join(
+                    self.opts['cachedir'],
+                    'publish_auth')
+            if not os.path.isdir(auth_cache):
+                os.makedirs(auth_cache)
+            jid_fn = os.path.join(auth_cache, load['jid'])
+            with salt.utils.fopen(jid_fn, 'r') as fp_:
+                if not load['id'] == fp_.read():
+                    return {}
+
+            return self.local.get_cache_returns(load['jid'])
 
     def minion_pub(self, load):
         '''
@@ -584,6 +804,8 @@ class RemoteFuncs(object):
         This configuration will only allow the minion foo.example.com to
         execute commands from the test module
         '''
+        if not self.__verify_minion_publish(load):
+            return {}
         # Set up the publication payload
         pub_load = {
             'fun': load['fun'],
@@ -613,12 +835,12 @@ class RemoteFuncs(object):
                 'publish_auth')
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
-        jid_fn = os.path.join(auth_cache, ret['jid'])
+        jid_fn = os.path.join(auth_cache, str(ret['jid']))
         with salt.utils.fopen(jid_fn, 'w+') as fp_:
             fp_.write(load['id'])
         return ret
 
-    def minion_publish(self, load):
+    def minion_publish(self, load, skip_verify=False):
         '''
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
@@ -660,7 +882,7 @@ class RemoteFuncs(object):
                 pub_load['timeout'] = int(load['timeout'])
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
-                        load['tmo'])
+                        load['timeout'])
                 log.warn(msg)
                 return {}
         if 'tgt_type' in load:
@@ -686,7 +908,7 @@ class RemoteFuncs(object):
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
         for key, val in self.local.get_cache_returns(ret['__jid__']).items():
-            if not key in ret:
+            if key not in ret:
                 ret[key] = val
         if load.get('form', '') != 'full':
             ret.pop('__jid__')
@@ -739,7 +961,6 @@ class LocalFuncs(object):
         '''
         Send a master control function back to the runner system
         '''
-        # All runner ops pass through eauth
         if 'token' in load:
             try:
                 token = self.loadauth.get_tok(load['token'])
@@ -786,7 +1007,7 @@ class LocalFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                      message=exc.message))
 
         if 'eauth' not in load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1083,14 +1304,18 @@ class LocalFuncs(object):
                 )
                 return ''
             if not token:
-                log.warning('Authentication failure of type "token" occurred.')
+                log.warning('Authentication failure of type "token" occurred. \
+                            Token could not be retrieved.')
                 return ''
             if token['eauth'] not in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" occurred.')
+                log.warning('Authentication failure of type "token" occurred. \
+                            Authentication type of {0} not present.').format(token['eauth'])
                 return ''
             if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
                     ('*' in self.opts['external_auth'][token['eauth']])):
-                log.warning('Authentication failure of type "token" occurred.')
+                log.warning('Authentication failure of type "token" occurred. \
+                            Token does not verify against eauth provider: {0}').format(
+                                    self.opts['external_auth'])
                 return ''
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][token['eauth']][token['name']]

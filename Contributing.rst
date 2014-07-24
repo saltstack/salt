@@ -66,8 +66,8 @@ salt's code.
 
 
 .. _`report an issue`: https://github.com/saltstack/salt/issues
-.. _`Salt's documentation`: http://docs.saltstack.org/en/latest/index.html
-.. _`Developing Salt`: http://docs.saltstack.com/topics/hacking.html
-.. _`pull request`: http://docs.saltstack.com/topics/hacking.html#sending-a-github-pull-request
+.. _`Salt's documentation`: http://docs.saltstack.com/en/latest/index.html
+.. _`Developing Salt`: http://docs.saltstack.com/en/latest/topics/development/hacking.html
+.. _`pull request`: http://docs.saltstack.com/en/latest/topics/development/contributing.html#sending-a-github-pull-request
 
 .. vim: fenc=utf-8 spell spl=en

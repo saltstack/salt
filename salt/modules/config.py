@@ -11,6 +11,7 @@ import os
 import salt.utils
 import salt._compat
 import salt.syspaths as syspaths
+import salt.utils.sdb as sdb
 
 __proxyenabled__ = ['*']
 
@@ -197,7 +198,7 @@ def get(key, default=''):
     '''
     .. versionadded: 0.14.0
 
-    Attempt to retrieve the named value from opts, pillar, grains of the master
+    Attempt to retrieve the named value from opts, pillar, grains or the master
     config, if the named value is not available return the passed default.
     The default return is an empty string.
 
@@ -224,18 +225,22 @@ def get(key, default=''):
 
         salt '*' config.get pkg:apache
     '''
-    ret = salt.utils.traverse_dict(__opts__, key, '_|-')
+    ret = salt.utils.traverse_dict_and_list(__opts__, key, '_|-')
     if ret != '_|-':
-        return ret
-    ret = salt.utils.traverse_dict(__grains__, key, '_|-')
+        return sdb.sdb_get(ret, __opts__)
+
+    ret = salt.utils.traverse_dict_and_list(__grains__, key, '_|-')
     if ret != '_|-':
-        return ret
-    ret = salt.utils.traverse_dict(__pillar__, key, '_|-')
+        return sdb.sdb_get(ret, __opts__)
+
+    ret = salt.utils.traverse_dict_and_list(__pillar__, key, '_|-')
     if ret != '_|-':
-        return ret
-    ret = salt.utils.traverse_dict(__pillar__.get('master', {}), key, '_|-')
+        return sdb.sdb_get(ret, __opts__)
+
+    ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
     if ret != '_|-':
-        return ret
+        return sdb.sdb_get(ret, __opts__)
+
     return default
 
 
@@ -260,7 +265,7 @@ def dot_vals(value):
     return ret
 
 
-def gather_bootstrap_script():
+def gather_bootstrap_script(bootstrap=None):
     '''
     Download the salt-bootstrap script, and return the first location
     downloaded to.
@@ -271,6 +276,6 @@ def gather_bootstrap_script():
 
         salt '*' config.gather_bootstrap_script
     '''
-    ret = salt.utils.cloud.update_bootstrap(__opts__)
+    ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]

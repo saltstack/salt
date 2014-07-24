@@ -12,10 +12,10 @@ In other words, Salt will connect to a minion, then from that minion:
 - Provision and configure a container for networking access
 - Use :ref:`saltify <config_saltify>` to deploy salt and re-attach to master
 
-Limitation
+Limitations
 ------------
 - You can only act on one minion and one provider at a time.
-- Listing images must be targeted to a particular driver (nothing will be
+- Listing images must be targeted to a particular LXC provider (nothing will be
   outputted with ``all``)
 
 Operation
@@ -26,9 +26,9 @@ and allows other custom association code.
 
 Order of operation:
 
-- Spin up the LXC template container using :mod:`the LXC execution module
+- Create the LXC container using :mod:`the LXC execution module
   <salt.modules.lxc>` on the desired minion (clone or template)
-- Change LXC config option (if any need to be changed)
+- Change LXC config options (if any need to be changed)
 - Start container
 - Change base passwords if any
 - Change base DNS configuration if necessary
@@ -41,11 +41,11 @@ Order of operation:
 Provider configuration
 ----------------------
 
-Here is a simple configuration example:
+Here is a simple provider configuration:
 
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud.providers or any file in the
+    # Note: This example goes in /etc/salt/cloud.providers or any file in the
     # /etc/salt/cloud.providers.d/ directory.
     devhost10-lxc:
       target: devhost10
@@ -54,71 +54,74 @@ Here is a simple configuration example:
 Profile configuration
 ---------------------
 
-Here are the options to configure your containers::
+Here are the options to configure your containers:
 
-    target
+.. code-block:: text
+
+    ``target``
         Host minion id to install the lxc Container into
-    profile
-        lxc pillar profile
-    Container creation/clone options
-        Use a container using clone
-            from_container
+    ``profile``
+        Name of the profile containing the LXC configuration
+
+    Container creation/clone options:
+        Create a container by cloning:
+            ``from_container``
                 Name of an original container using clone
-            snapshot
+            ``snapshot``
                 Do we use snapshots on cloned filesystems
-        lxc template using total creation
+        Create a container from scratch using an LXC template:
             image
                 template to use
             backing
                 Backing store type (None, lvm, brtfs)
             lvname
-                LVM lvname if any
+                LVM logical volume name, if any
             fstype
-                fstype
+                Type of filesystem
     size
         Size of the containera (for brtfs, or lvm)
     vgname
-        LVM vgname if any
+        LVM Volume Group name, if any
     users
-        sysadmin users [ubuntu] of the container
+        Names of the users to be pre-created inside the container
     ssh_username
-        sysadmin ssh_username (ubuntu) of the container
+        Username of the SSH systems administrator inside the container
     sudo
         Do we use sudo
     ssh_gateway
-        if the minion is not in your 'topmaster' networ, use
+        if the minion is not in your 'topmaster' network, use
         that gateway to connect to the lxc container.
         This may be the public ip of the hosting minion
     ssh_gateway_key
-        When using gateway, additionnal parameters as in saltify
+        When using gateway, the ssh key of the gateway user (passed to saltify)
     ssh_gateway_port
-        When using gateway, additionnal parameters as in saltify
+        When using gateway, the ssh port of the gateway (passed to saltify)
     ssh_gateway_user
-        When using gateway, additionnal parameters as in saltify
+        When using gateway, user to login as via SSH (passed to saltify)
     password
-        password for root and sysadmin (ubuntu)
+        password for root and sysadmin (see "users" parameter above)
     mac
-        mac address to associate
+        mac address to assign to the container's network interface
     ip
-        ip to link to
+        IP address to assign to the container's network interface
     netmask
-        netmask for ip
+        netmask for the network interface's IP
     bridge
-        bridge to use
+        bridge under which the container's network interface will be enslaved
     dnsservers
-        optionnal list of dns servers to use
-        Will be restricted to that list if used
+        List of DNS servers to use--this is optional.  If present, DNS
+        servers will be restricted to that list if used
     lxc_conf_unset
-        Configuration variables to unset in lxc conf
+        Configuration variables to unset in this container's LXC configuration
     lxc_conf
-        LXC configuration variables to set in lxc_conf
+        LXC configuration variables to add in this container's LXC configuration
     minion
-        minion configuration (as usual with salt cloud)
+        minion configuration (see :doc:`Minion Configuration in Salt Cloud </topics/cloud/config>`)
 
 
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud.profile or any file in the
+    # Note: This example would go in /etc/salt/cloud.profile or any file in the
     # /etc/salt/cloud.profile.d/ directory.
     devhost10-lxc:
       provider: devhost10-lxc

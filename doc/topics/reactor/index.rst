@@ -1,8 +1,7 @@
 .. _reactor:
 
-.. index:: Reactor
-    single: Reactor; events
-    see: events; Reactor
+.. index:: ! Reactor, Salt Reactor
+    seealso: Event; Reactor
 
 ==============
 Reactor System
@@ -120,7 +119,7 @@ Example usage:
 
 .. code-block:: bash
 
-    wget https://raw.github.com/saltstack/salt/develop/tests/eventlisten.py
+    wget https://raw.githubusercontent.com/saltstack/salt/develop/tests/eventlisten.py
     python eventlisten.py
 
     # OR
@@ -160,7 +159,9 @@ what the master does in response to that event, and it will also include the
 rendered SLS file (or any errors generated while rendering the SLS file).
 
 1.  Stop the master.
-2.  Start the master manually::
+2.  Start the master manually:
+
+    .. code-block:: bash
 
         salt-master -l debug
 
@@ -198,7 +199,7 @@ the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
 method, not the remote method. A field starts with :strong:`cmd` to use the
 :strong:`LocalClient` subsystem. The result is, to execute a remote command, 
-a reactor fomular would look like this:
+a reactor formula would look like this:
 
 .. code-block:: yaml
 
@@ -298,7 +299,7 @@ won't yet direct traffic to it.
         {% endif %}
         {% endfor %}
 
-A complete example
+A Complete Example
 ==================
 
 In this example, we're going to assume that we have a group of servers that
@@ -306,7 +307,7 @@ will come online at random and need to have keys automatically accepted. We'll
 also add that we don't want all servers being automatically accepted. For this
 example, we'll assume that all hosts that have an id that starts with 'ink'
 will be automatically accepted and have state.highstate executed. On top of
-thise, we're going to add that a host coming up that was replaced (meaning a new
+this, we're going to add that a host coming up that was replaced (meaning a new
 key) will also be accepted.
 
 Our master configuration will be rather simple. All minions that attempte to
@@ -328,9 +329,9 @@ In this sls file, we say that if the key was rejected we will delete the key on
 the master and then also tell the master to ssh in to the minion and tell it to
 restart the minion, since a minion process will die if the key is rejected.
 
-We also say that if the key is pending and the id starts with ink we will accept
-the key. A minion that is waiting on a pending key will retry authentication
-authentication every ten second by default.
+We also say that if the key is pending and the id starts with ink we will
+accept the key. A minion that is waiting on a pending key will retry
+authentication every ten seconds by default.
 
 :file:`/srv/reactor/auth-pending.sls`:
 
@@ -366,3 +367,40 @@ Ink servers in the master configuration.
     highstate_run:
       cmd.state.highstate:
         - tgt: {{ data['id'] }}
+
+.. _minion-start-reactor:
+
+Syncing Custom Types on Minion Start
+====================================
+
+Salt will sync all custom types (by running a :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>`) on every highstate. However, there is a
+chicken-and-egg issue where, on the initial highstate, a minion will not yet
+have these custom types synced when the top file is first compiled. This can be
+worked around with a simple reactor which watches for ``minion_start`` events,
+which each minion fires when it first starts up and connects to the master.
+
+On the master, create **/srv/reactor/sync_grains.sls** with the following
+contents:
+
+.. code-block:: yaml
+
+    sync_grains:
+      cmd.saltutil.sync_grains:
+        - tgt: {{ data['id'] }}
+
+And in the master config file, add the following reactor configuration:
+
+.. code-block:: yaml
+
+    reactor:
+      - 'minion_start':
+        - /srv/reactor/sync_grains.sls
+
+This will cause the master to instruct each minion to sync its custom grains
+when it starts, making these grains available when the initial highstate is
+executed.
+
+Other types can be synced by replacing ``cmd.saltutil.sync_grains`` with
+``cmd.saltutil.sync_modules``, ``cmd.saltutil.sync_all``, or whatever else
+suits the intended use case.

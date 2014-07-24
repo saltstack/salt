@@ -3,6 +3,7 @@
 '''
 Sphinx documentation for Salt
 '''
+import functools
 import sys
 import os
 import types
@@ -15,7 +16,7 @@ class Mock(object):
     '''
     Mock out specified imports
 
-    This allows autodoc to do it's thing without having oodles of req'd
+    This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
     http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
@@ -24,10 +25,14 @@ class Mock(object):
         pass
 
     def __call__(self, *args, **kwargs):
-        return Mock()
+        ret = Mock()
+        # If mocked function is used as a decorator, expose decorated function.
+        # if args and callable(args[-1]):
+        #     functools.update_wrapper(ret, args[0])
+        return ret
 
     @classmethod
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         if name in ('__file__', '__path__'):
             return '/dev/null'
         else:
@@ -48,7 +53,8 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.scanner',
     'zmq',
-    # salt.cloud
+
+    # third-party libs for cloud modules
     'libcloud',
     'libcloud.compute',
     'libcloud.compute.base',
@@ -60,6 +66,27 @@ MOCK_MODULES = [
     'libcloud.loadbalancer.providers',
     'libcloud.common',
     'libcloud.common.google',
+
+    # third-party libs for netapi modules
+    'cherrypy',
+    'cherrypy.lib',
+    'cherrypy.process',
+    'cherrypy.wsgiserver',
+    'cherrypy.wsgiserver.ssl_builtin',
+
+    'tornado',
+    'tornado.concurrent',
+    'tornado.gen',
+    'tornado.httpserver',
+    'tornado.ioloop',
+    'tornado.web',
+    'tornado.websocket',
+
+    'ws4py',
+    'ws4py.server',
+    'ws4py.server.cherrypyserver',
+    'ws4py.websocket',
+
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
@@ -122,8 +149,9 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.3'
+release = '2014.1.7'
 
+spelling_lang = 'en_US'
 language = 'en'
 locale_dirs = [
     '_locale',
@@ -139,10 +167,18 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.extlinks',
     'sphinx.ext.intersphinx',
+    'httpdomain',
     'youtube',
     'saltautodoc', # Must be AFTER autodoc
     'shorturls',
 ]
+
+try:
+    import sphinxcontrib.spelling
+except ImportError:
+    pass
+else:
+    extensions += ['sphinxcontrib.spelling']
 
 modindex_common_prefix = ['salt.']
 
@@ -151,6 +187,9 @@ autosummary_generate = True
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |saltrepo| replace:: https://github.com/saltstack/salt
+.. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
+.. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
+.. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 """
 
 # A shortcut for linking to tickets on the GitHub issue tracker
@@ -180,10 +219,10 @@ html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
 # Set a var if we're building docs for the live site or not
-html_docs_saltstack_org = 'SALT_GOOGLE_SEARCH' in os.environ
+on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 # Use Google customized search or use Sphinx built-in JavaScript search
-if html_docs_saltstack_org:
+if on_saltstack:
     html_search_template = 'googlesearch.html'
 else:
     html_search_template = 'searchbox.html'
@@ -193,25 +232,29 @@ html_additional_pages = {
 }
 
 html_default_sidebars = [
+    html_search_template,
+    'version.html',
     'localtoc.html',
     'relations.html',
     'sourcelink.html',
-    html_search_template,
+    'saltstack.html',
 ]
 html_sidebars = {
     'ref/**/all/salt.*': [
+        html_search_template,
+        'version.html',
         'modules-sidebar.html',
         'localtoc.html',
         'relations.html',
         'sourcelink.html',
-        html_search_template,
+        'saltstack.html',
     ],
     'ref/formula/all/*': [
     ],
 }
 
 html_context = {
-    'docs_saltstack_org': html_docs_saltstack_org,
+    'on_saltstack': on_saltstack,
     'html_default_sidebars': html_default_sidebars,
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
@@ -230,6 +273,18 @@ latex_documents = [
 ]
 
 latex_logo = '_static/salt-logo.pdf'
+
+latex_elements = {
+    'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
+    'utf8extra': '',
+    'preamble': '''
+
+\usepackage{fontspec}
+\setsansfont{DejaVu Sans}
+\setromanfont{DejaVu Serif}
+\setmonofont{DejaVu Sans Mono}
+''',
+}
 
 ### Linkcheck options
 linkcheck_ignore = [r'http://127.0.0.1',
@@ -254,6 +309,8 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'dash-feed://',
                     r'https://github.com/saltstack/salt/',
                     r'http://bootstrap.saltstack.org',
+                    r'https://bootstrap.saltstack.com',
+                    r'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh',
                     r'media.readthedocs.org/dash/salt/latest/salt.xml',
                     r'https://portal.aws.amazon.com/gp/aws/securityCredentials',
                     r'https://help.github.com/articles/fork-a-repo',
@@ -281,6 +338,7 @@ man_pages = [
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
     ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
     ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
+    ('ref/cli/salt-api', 'salt-api', 'salt-api Command', authors, 1),
 ]
 
 

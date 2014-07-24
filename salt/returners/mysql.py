@@ -60,6 +60,8 @@ Required python modules: MySQLdb
 
     salt '*' test.ping --return mysql
 '''
+# Let's not allow PyLint complain about string substitution
+# pylint: disable=W1321,E1321
 
 # Import python libs
 from contextlib import contextmanager

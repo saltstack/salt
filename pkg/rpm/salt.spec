@@ -12,7 +12,7 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 0.5.4
+%define _salttesting_ver 2014.4.24
 
 Name: salt
 Version: %{salt_version}
@@ -31,7 +31,7 @@ Source5: %{name}-master.service
 Source6: %{name}-syndic.service
 Source7: %{name}-minion.service
 Source8: README.fedora
-Patch0: fix-setup-py.patch
+Source9: logrotate.salt
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -139,8 +139,6 @@ Salt minion is queried and controlled from the master.
 
 %prep
 %setup -c
-cd %{name}-%{version}
-%patch0 -p1
 %setup -T -D -a 1
 
 %build
@@ -164,6 +162,8 @@ install -p -m 0644 %{SOURCE7} $RPM_BUILD_ROOT%{_unitdir}/
 %endif
 
 install -p %{SOURCE8} .
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/
+install -p %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/salt
 
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/salt/
 install -p -m 0640 conf/minion $RPM_BUILD_ROOT%{_sysconfdir}/salt/minion
@@ -183,6 +183,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/LICENSE
 %{python_sitelib}/%{name}/*
 %{python_sitelib}/%{name}-%{version}-py?.?.egg-info
+%{_sysconfdir}/logrotate.d/salt
 %doc %{_mandir}/man7/salt.7.*
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/README.fedora
 
@@ -325,6 +326,18 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-3
+- Add logrotate script
+
+* Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-2
+- Update to bugfix release 2014.1.7
+
+* Wed Jun 11 2014 Erik Johnson <erik@saltstack.com> - 2014.1.5-1
+- Update to bugfix release 2014.1.5
+
+* Tue May 6 2014 Erik Johnson <erik@saltstack.com> - 2014.1.4-1
+- Update to bugfix release 2014.1.4
+
 * Fri Apr 18 2014 Erik Johnson <erik@saltstack.com> - 2014.1.3-1
 - Update to bugfix release 2014.1.3
 

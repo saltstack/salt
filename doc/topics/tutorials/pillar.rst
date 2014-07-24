@@ -7,14 +7,14 @@ Pillar Walkthrough
     This walkthrough assumes that the reader has already completed the initial
     Salt :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
-Pillars are tree-like structures of data defined on the Salt Master and passed 
+Pillars are tree-like structures of data defined on the Salt Master and passed
 through to minions. They allow confidential, targeted data to be securely sent
 only to the relevant minion.
 
 .. note::
 
     Grains and Pillar are sometimes confused, just remember that Grains
-    is data about a minion which is stored or generated from the minion.
+    are data about a minion which is stored or generated from the minion.
     This is why information like the OS and CPU type are found in Grains.
     Pillar is information about a minion or many minions stored or generated
     on the Salt Master.
@@ -23,7 +23,7 @@ Pillar data is useful for:
 
 Highly Sensitive Data:
     Information transferred via pillar is guaranteed to only be presented to
-    the minions that are targeted, making Pillar suitable 
+    the minions that are targeted, making Pillar suitable
     for managing security information, such as cryptographic keys and
     passwords.
 Minion Configuration:
@@ -38,7 +38,7 @@ Arbitrary Data:
     key/value store can be defined making it easy to iterate over a group
     of values in sls formulas
 
-Pillar is therefore one of the most important systems when using Salt, this
+Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
 and then to dive into the capabilities of Pillar and where the data is
 available.
@@ -107,7 +107,7 @@ The key ``info`` should now appear in the returned pillar data.
 More Complex Data
 ~~~~~~~~~~~~~~~~~
 
-Unlike states, pillar files do not need to define :strong:`formulas`. 
+Unlike states, pillar files do not need to define :strong:`formulas`.
 This example sets up user data with a UID:
 
 ``/srv/pillar/users/init.sls``:
@@ -153,13 +153,13 @@ state, you can use Jinja:
 This approach allows for users to be safely defined in a pillar and then the
 user data is applied in an sls file.
 
-Paramaterizing States With Pillar
+Parameterizing States With Pillar
 =================================
 
-Pillar data can be accessed in state files to customise behaviour for each 
-minion. All pillar (and grain) data applicable to each minion is substituted 
+Pillar data can be accessed in state files to customise behavior for each
+minion. All pillar (and grain) data applicable to each minion is substituted
 into the state files through templating before being run. Typical uses
-include setting directories appropriate for the minion and skipping states 
+include setting directories appropriate for the minion and skipping states
 that don't apply.
 
 A simple example is to set up a mapping of package names in pillar for

@@ -32,6 +32,7 @@ States
     states_pt3
     states_pt4
     states_pt5
+    syslog_ng-state-usage
 
 Advanced Topics
 ================
@@ -42,13 +43,14 @@ Advanced Topics
     minionfs
     esky
     multimaster
+    multimaster_pki
     preseed_key
     salt_bootstrap
     gitfs
     walkthrough_macosx
     writing_tests
 
-Salt Cloud
+Salt Virt
 ==========
 .. toctree::
     :maxdepth: 2
@@ -61,4 +63,13 @@ Halite
     :maxdepth: 2
 
     halite
+
+Using Salt at scale
+===================
+.. toctree::
+    :maxdepth: 2
+    intro_scale
+    the_master
+    the_minion
+
 

@@ -214,12 +214,14 @@ Print all keys\(aq fingerprints.
 .B \-\-gen\-keys=GEN_KEYS
 Set a name to generate a keypair for use with salt
 .UNINDENT
+
 .INDENT 0.0
 .TP
 .B \-\-gen\-keys\-dir=GEN_KEYS_DIR
 Set the directory to save the generated keypair.  Only works
 with \(aqgen_keys_dir\(aq option; default is the current directory.
 .UNINDENT
+
 .INDENT 0.0
 .TP
 .B \-\-keysize=KEYSIZE
@@ -227,6 +229,78 @@ Set the keysize for the generated key, only works with
 the \(aq\-\-gen\-keys\(aq option, the key size must be 2048 or
 higher, otherwise it will be rounded up to 2048. The
 default is 2048.
+.UNINDENT
+
+.INDENT 0.0
+.TP
+.B \-\-gen-signature
+Generate the signature file named master_pubkey_signature  for the
+salt-masters public key. The signatur itself can be send to the
+minions in auth-replies and enables the minions to verify
+the salt-masters public-key cryptographically. This requires a new
+signing-key-pair which can be auto-created with the --auto-create
+parameter.
+.UNINDENT
+
+.INDENT 0.0
+.TP
+.B \-\-signature-path
+Target path for the signature file (must already exist)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-auto-create
+Auto-Create a signing key-pair if it does not yet exist
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pub=PUB
+The path to the public-key file to generate a signature for
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-priv=PRIV
+The path to the private-key file to generate a signature with
+.UNINDENT
+
+Example which will auto-create a default master_sign.* key-pair and
+a signature file named master_pubkey_signature for an already
+existing master.pub key
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt-key --gen-signature --auto-create
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+
+Example which will auto-create a new key-pair called signature.* and the
+signature itself for an already existing master.pub
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt-key --gen-signature --auto-create --key-pair signature
+.UNINDENT
+.UNINDENT
+.ft P
+.fi
+
+Example with specific pub- and private key-files which creates the signature for
+the given public key
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt-key --gen-signature --pub /etc/salt/pki/master/master.pub --priv /root/signature.pem
+.ft P
+.fi
+.UNINDENT
 .UNINDENT
 .SH SEE ALSO
 .sp

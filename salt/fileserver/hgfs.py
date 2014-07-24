@@ -16,7 +16,7 @@ will set the desired branch method. Possible values are: ``branches``,
 ``default`` branch will be mapped to ``base``.
 
 
-.. versionchanged:: 2014.1.0 (Hydrogen)
+.. versionchanged:: 2014.1.0
     The :conf_master:`hgfs_base` master config parameter was added, allowing
     for a branch other than ``default`` to be used for the ``base``
     environment, and allowing for a ``base`` environment to be specified when
@@ -62,7 +62,7 @@ def __virtual__():
     '''
     Only load if mercurial is available
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     if not HAS_HG:
         log.error('Mercurial fileserver backend is enabled in configuration '

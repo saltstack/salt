@@ -221,7 +221,7 @@ def ext_pillar(minion_id,
                     # Check that the human-friendly name given is valid (will
                     # be able to pick up a value from the query) and unique
                     # (since we're using it as the key in a dictionary)
-                    if not name_field in model:
+                    if name_field not in model:
                         raise salt.exceptions.SaltException(
                             "Name '{0}' not found in returned fields.".format(
                                 name_field))

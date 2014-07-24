@@ -84,7 +84,7 @@ def detail(device='/dev/md0'):
             continue
         if ' ' not in line:
             continue
-        if not ':' in line:
+        if ':' not in line:
             if '/dev/' in line:
                 comps = line.split()
                 state = comps[4:-1]
@@ -143,80 +143,74 @@ def destroy(device):
         return False
 
 
-def create(*args):
+def create(name,
+           level,
+           devices,
+           test_mode=False,
+           **kwargs):
     '''
     Create a RAID device.
+
+    .. versionchanged:: 2014.7.0
 
     .. warning::
         Use with CAUTION, as this function can be very destructive if not used
         properly!
 
-    Use this module just as a regular mdadm command.
-
-    For more info, read the ``mdadm(8)`` manpage
-
-    NOTE: It takes time to create a RAID array. You can check the progress in
-    "resync_status:" field of the results from the following command:
-
-    .. code-block:: bash
-
-        salt '*' raid.detail /dev/md0
-
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 ['/dev/xvdd', '/dev/xvde'] test_mode=True
 
-    .. note:: Test mode
+    .. note::
 
         Adding ``test_mode=True`` as an argument will print out the mdadm
         command that would have been run.
 
-    :param args: The arguments u pass to this function.
-    :param arguments:
-        arguments['new_array']: The name of the new RAID array that will be created.
-        arguments['opt_val']: Option with Value. Example: raid-devices=2
-        arguments['opt_raw']: Option without Value. Example: force
-        arguments['disks_to_array']: The disks that will be added to the new raid.
-    :return:
+    name
+        The name of the array to create.
+
+    level
+        The RAID level to use when creating the raid.
+
+    devices
+        A list of devices used to build the array.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
         test_mode=True:
             Prints out the full command.
         test_mode=False (Default):
             Executes command on remote the host(s) and
             Prints out the mdadm output.
+
+    .. note::
+
+        It takes time to create a RAID array. You can check the progress in
+        "resync_status:" field of the results from the following command:
+
+        .. code-block:: bash
+
+            salt '*' raid.detail /dev/md0
+
+    For more info, read the ``mdadm(8)`` manpage
     '''
-    test_mode = False
-    arguments = {'new_array': '', 'opt_val': {}, 'opt_raw': [], "disks_to_array": []}
-
-    for arg in args:
-        if arg.startswith('test_mode'):
-            test_mode = bool(arg.split('=')[-1])
-        elif arg.startswith('/dev/') is True:
-            if arg.startswith('/dev/md') is True:
-                arguments['new_array'] = arg
+    opts = ''
+    for key in kwargs:
+        if not key.startswith('__'):
+            if kwargs[key] is True:
+                opts += '--{0} '.format(key)
             else:
-                arguments['disks_to_array'].append(arg)
-        elif '=' in arg:
-            opt, val = arg.split('=')
-            arguments['opt_val'][opt] = val
-        elif str(arg) in ['readonly', 'run', 'force']:
-            arguments['opt_raw'].append(arg)
-        elif str(arg) in ['missing']:
-            arguments['disks_to_array'].append(arg)
-        else:
-            msg = "Invalid argument - {0} !"
-            raise CommandExecutionError(msg.format(arg))
+                opts += '--{0}={1} '.format(key, kwargs[key])
 
-    cmd = "echo y | mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}"
-    cmd = cmd.format(new_array=arguments['new_array'],
-                     opts_raw=(' --' + ' --'.join(arguments['opt_raw'])
-                               if len(arguments['opt_raw']) > 0
-                               else ''),
-                     opts_val=(' --' + ' --'.join(key + '=' + arguments['opt_val'][key] for key in arguments['opt_val'])
-                               if len(arguments['opt_val']) > 0
-                               else ''),
-                     disks_to_array=' '.join(arguments['disks_to_array']))
+    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(name,
+            opts,
+            level,
+            len(devices),
+            ' '.join(devices))
 
     if test_mode is True:
         return cmd

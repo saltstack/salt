@@ -14,7 +14,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
             - pysvn
 
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The paths to the trunk, branches, and tags have been made configurable, via
     the config options :conf_master:`svnfs_trunk`,
     :conf_master:`svnfs_branches`, and :conf_master:`svnfs_tags`.
@@ -58,7 +58,7 @@ def __virtual__():
     '''
     Only load if subversion is available
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     if not HAS_SVN:
         log.error('Subversion fileserver backend is enabled in configuration '

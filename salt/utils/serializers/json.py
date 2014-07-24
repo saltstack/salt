@@ -47,7 +47,7 @@ def serialize(obj, **options):
     """
     Serialize Python data to JSON.
 
-    :param obj: the datastructure to serialize
+    :param obj: the data structure to serialize
     :param options: options given to lower json/simplejson module.
     """
 

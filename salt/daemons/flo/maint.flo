@@ -1,4 +1,4 @@
-# Maintinance process floscript
+# Maintenance process floscript
 
 house master
 
@@ -23,6 +23,6 @@ framer backends be active first start
     frame start
         do update backends
 
-framer sceduler be active first start
+framer scheduler be active first start
     frame start
         do schedule

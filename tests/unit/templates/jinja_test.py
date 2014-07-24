@@ -177,7 +177,7 @@ class TestGetTemplate(TestCase):
 
     def test_macro_additional_log_for_generalexc(self):
         '''
-        If we failed in a macro because of eg a typeerror, get
+        If we failed in a macro because of e.g. a TypeError, get
         more output from trace.
         '''
         expected = r'''Jinja error:.*division.*
@@ -373,7 +373,7 @@ class TestGetTemplate(TestCase):
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
@@ -384,7 +384,7 @@ class TestGetTemplate(TestCase):
 
     def test_render_with_undefined_variable_utf8(self):
         template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
@@ -395,7 +395,7 @@ class TestGetTemplate(TestCase):
 
     def test_render_with_undefined_variable_unicode(self):
         template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,

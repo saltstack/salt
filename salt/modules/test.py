@@ -34,8 +34,9 @@ def echo(text):
 
 def ping():
     '''
-    Just used to make sure the minion is up and responding
-    Return True
+    Used to make sure the minion is up and responding. Not an ICMP ping.
+
+    Returns ``True``.
 
     CLI Example:
 
@@ -429,7 +430,7 @@ def rand_str(size=9999999999):
     Return a random string
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt '*' test.rand_str

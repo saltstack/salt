@@ -192,8 +192,8 @@ def run(name, **kwargs):
             mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
-    except Exception:
-        ret['comment'] = 'Module function {0} threw an exception'.format(name)
+    except Exception as e:
+        ret['comment'] = 'Module function {0} threw an exception. Exception: {1}'.format(name, e)
         ret['result'] = False
         return ret
     else:

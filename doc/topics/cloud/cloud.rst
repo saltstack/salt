@@ -234,7 +234,7 @@ excellent example is in the Azure driver.
 
 The destroy() Function
 ----------------------
-This function irreversably destroys a virtual machine on the cloud provider.
+This function irreversibly destroys a virtual machine on the cloud provider.
 Before doing so, it should fire an event on the Salt event bus. The tag for this
 event is ``salt/cloud/<vm name>/destroying``. Once the virtual machine has been
 destroyed, another event is fired. The tag for that event is

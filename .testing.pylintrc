@@ -44,6 +44,7 @@ disable=R,
   C0204,
   C0301,
   C0302,
+  C0330,
   W0110,
   W0122,
   W0142,
@@ -68,7 +69,10 @@ disable=R,
   E8125,
   E8126,
   E8127,
-  E8128
+  E8128,
+  E8129,
+  E8131,
+  E8265
 
 # Disabled:
 # R* [refactoring suggestions & reports]
@@ -83,6 +87,7 @@ disable=R,
 # C0204 (bad-mcs-classmethod-argument)
 # C0301 (line-too-long)
 # C0302 (too-many-lines)
+# C0330 (bad-continuation)
 # W0110 (deprecated-lambda)
 # W0122 (exec-statement)
 # W0142 (star-args)
@@ -101,6 +106,7 @@ disable=R,
 # F0401 (import-error)
 #
 # E812* All PEP8 E12*
+# E8265 PEP8 E265 - block comment should start with "# "
 # E8501 PEP8 line too long
 
 [REPORTS]

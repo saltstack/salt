@@ -13,12 +13,21 @@ Full list of builtin state modules
     alias
     alternatives
     apache
+    apache_module
     apt
     archive
     at
     augeas
     aws_sqs
     blockdev
+    boto_asg
+    boto_elasticache
+    boto_elb
+    boto_iam_role
+    boto_lc
+    boto_route53
+    boto_secgroup
+    boto_sqs
     cloud
     cmd
     composer
@@ -96,10 +105,12 @@ Full list of builtin state modules
     rabbitmq_vhost
     rbenv
     rdp
+    redismod
     reg
     rvm
     saltmod
     selinux
+    serverdensity_device
     service
     smtp
     ssh_auth
@@ -109,6 +120,7 @@ Full list of builtin state modules
     supervisord
     svn
     sysctl
+    syslog_ng
     test
     timezone
     tomcat

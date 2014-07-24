@@ -485,8 +485,8 @@ class PyDSLRendererTestCase(TestCase):
                 #!pydsl
                 success = True
                 '''))
-            state_highstate({'base': ['b.sls']}, dirpath)
-            state_highstate({'base': ['c.sls', 'd.sls']}, dirpath)
+            state_highstate({'base': ['b']}, dirpath)
+            state_highstate({'base': ['c', 'd']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 

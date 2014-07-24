@@ -273,7 +273,7 @@ class APIClient(object):
             raise EauthAuthenticationError(
                 "Authentication failed with {0}.".format(repr(ex)))
 
-        if not 'token' in tokenage:
+        if 'token' not in tokenage:
             raise EauthAuthenticationError("Authentication failed with provided credentials.")
 
         # Grab eauth config for the current backend for the current user

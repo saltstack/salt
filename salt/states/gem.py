@@ -4,7 +4,7 @@ Installation of Ruby modules packaged as gems
 =============================================
 
 A state module to manage rubygems. Gems can be set up to be installed
-or removed. This module will use RVM if it is installed. In that case,
+or removed. This module will use RVM or rbenv if they are installed. In that case,
 you can specify what ruby version and gemset to target.
 
 .. code-block:: yaml
@@ -40,7 +40,7 @@ def installed(name,          # pylint: disable=C0103
         The name of the gem to install
 
     ruby: None
-        For RVM installations: the ruby version and gemset to target.
+        For RVM or rbenv installations: the ruby version and gemset to target.
 
     runas: None
         The user under which to run the ``gem`` command
@@ -89,11 +89,11 @@ def installed(name,          # pylint: disable=C0103
         runas = None
 
     gems = __salt__['gem.list'](name, ruby, runas=user)
-    if name in gems and version and version in gems[name]:
+    if name in gems and version is not None and version in gems[name]:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
-    elif name in gems:
+    elif name in gems and version is None:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
@@ -125,7 +125,7 @@ def removed(name, ruby=None, runas=None, user=None):
         The name of the gem to uninstall
 
     ruby: None
-        For RVM installations: the ruby version and gemset to target.
+        For RVM or rbenv installations: the ruby version and gemset to target.
 
     runas: None
         The user under which to run the ``gem`` command

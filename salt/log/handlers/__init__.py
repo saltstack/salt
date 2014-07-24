@@ -42,7 +42,7 @@ if sys.version_info < (2, 7):
 
 class TemporaryLoggingHandler(logging.NullHandler):
     '''
-    This logging handler will store all the log records up to it's maximum
+    This logging handler will store all the log records up to its maximum
     queue size at which stage the first messages stored will be dropped.
 
     Should only be used as a temporary logging handler, while the logging

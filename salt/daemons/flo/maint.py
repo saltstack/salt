@@ -4,6 +4,7 @@ Define the behaviors used in the maintinance process
 '''
 # Import python libs
 import multiprocessing
+import os
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -38,12 +39,19 @@ class ForkMaint(ioflo.base.deeding.Deed):
         '''
         behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value))]
+
+        console_logdir = self.opts.value.get('ioflo_console_logdir', '')
+        if console_logdir:
+            consolepath = os.path.join(console_logdir, 'maintenance.log')
+        else:  # empty means log to std out
+            consolepath = ''
+
         ioflo.app.run.start(
-                name='maintiance',
-                period=float(self.opts.value['ioflo_period']),
+                name='maintenance',
+                period=float(self.opts.value['loop_interval']),
                 stamp=0.0,
                 real=self.opts.value['ioflo_realtime'],
-                filepath=self.opts.value['maintinance_floscript'],
+                filepath=self.opts.value['maintenance_floscript'],
                 behaviors=behaviors,
                 username="",
                 password="",
@@ -52,6 +60,7 @@ class ForkMaint(ioflo.base.deeding.Deed):
                 metas=None,
                 preloads=preloads,
                 verbose=int(self.opts.value['ioflo_verbose']),
+                consolepath=consolepath,
                 )
 
     def action(self):

@@ -5,7 +5,7 @@ correct cloud modules
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import print_function, generators
 import copy
 import os
 import traceback
@@ -51,7 +51,7 @@ except ImportError:
 def communicator(func):
     '''Warning, this is a picklable decorator !'''
     def _call(queue, args, kw):
-        '''called with [queue, args, kwargs] as first optionnal arg'''
+        '''called with [queue, args, kwargs] as first optional arg'''
         kw['queue'] = queue
         ret = None
         try:
@@ -110,7 +110,7 @@ def enter_mainloop(target,
 
     mapped_args
         a list of one or more arguments combinations to call the function with
-        eg (foo, [[1], [2]]) will call::
+        e.g. (foo, [[1], [2]]) will call::
 
                 foo([1])
                 foo([2])
@@ -171,11 +171,25 @@ class CloudClient(object):
     '''
     The client class to wrap cloud interactions
     '''
-    def __init__(self, path=None, opts=None, config_dir=None):
+    def __init__(self, path=None, opts=None, config_dir=None, pillars=None):
         if opts:
             self.opts = opts
         else:
             self.opts = salt.config.cloud_config(path)
+
+        if pillars:
+            for name, provider in pillars.pop('providers', {}).items():
+                driver = provider['provider']
+                provider['profiles'] = {}
+                self.opts['providers'].update({name: {driver: provider}})
+            for name, profile in pillars.pop('profiles', {}).items():
+                provider = profile['provider'].split(':')[0]
+                driver = self.opts['providers'][provider].keys()[0]
+                profile['provider'] = '{0}:{1}'.format(provider, driver)
+                profile['profile'] = name
+                self.opts['profiles'].update({name: profile})
+                self.opts['providers'][provider][driver]['profiles'].update({name: profile})
+            self.opts.update(pillars)
 
     def _opts_defaults(self, **kwargs):
         '''
@@ -194,7 +208,26 @@ class CloudClient(object):
         opts['show_deploy_args'] = False
         opts['script_args'] = ''
         # Update it with the passed kwargs
+        if 'kwargs' in kwargs:
+            opts.update(kwargs['kwargs'])
         opts.update(kwargs)
+        profile = opts.get('profile', None)
+        # filter other profiles if one is specified
+        if profile:
+            for _profile in [a for a in opts.get('profiles', {})]:
+                if not _profile == profile:
+                    opts['profiles'].pop(_profile)
+            # if profile is specified and we have enougth info about providers
+            # also filter them to speedup methods like
+            # __filter_non_working_providers
+            providers = [a.get('provider', '').split(':')[0]
+                         for a in opts['profiles'].values()
+                         if a.get('provider', '')]
+            if providers:
+                _providers = opts.get('providers', {})
+                for p in [a for a in _providers]:
+                    if p not in providers:
+                        _providers.pop(p)
         return opts
 
     def low(self, fun, low):
@@ -269,6 +302,7 @@ class CloudClient(object):
         '''
         if not vm_overrides:
             vm_overrides = {}
+        kwargs['profile'] = profile
         mapper = salt.cloud.Map(self._opts_defaults(**kwargs))
         if isinstance(names, str):
             names = names.split(',')
@@ -328,7 +362,7 @@ class CloudClient(object):
                 mapper.create(vm_))
         return ret
 
-    def volume_action(self, provider, names, action, **kwargs):
+    def extra_action(self, names, provider, action, **kwargs):
         '''
         Perform actions with block storage devices
 
@@ -336,8 +370,11 @@ class CloudClient(object):
 
         .. code-block:: python
 
-            client.volume_action(names=['myblock'], action='create',
+            client.extra_action(names=['myblock'], action='volume_create',
                 provider='my-nova', kwargs={'voltype': 'SSD', 'size': 1000}
+            )
+            client.extra_action(names=['salt-net'], action='network_create',
+                provider='my-nova', kwargs={'cidr': '192.168.100.0/24'}
             )
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
@@ -351,13 +388,13 @@ class CloudClient(object):
 
         ret = {}
         for name in names:
-            volume_ = kwargs.copy()
-            volume_['name'] = name
-            volume_['provider'] = provider
-            volume_['profile'] = None
-            volume_['action'] = action
+            extra_ = kwargs.copy()
+            extra_['name'] = name
+            extra_['provider'] = provider
+            extra_['profile'] = None
+            extra_['action'] = action
             ret[name] = salt.utils.cloud.simple_types_filter(
-                mapper.volumes(volume_)
+                mapper.extras(extra_)
             )
         return ret
 
@@ -531,10 +568,16 @@ class Cloud(object):
         # Optimize Providers
         opts['providers'] = self._optimize_providers(opts['providers'])
         for alias, drivers in opts['providers'].iteritems():
+            # Make temp query for this driver to avoid overwrite next
+            this_query = query
             for driver, details in drivers.iteritems():
-                if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                    query = 'list_nodes_min'
-                fun = '{0}.{1}'.format(driver, query)
+                # If driver has function list_nodes_min, just replace it
+                # with query param to check existing vms on this driver
+                # for minimum information, Othwise still use query param.
+                if 'selected_query_option' not in opts:
+                    if '{0}.list_nodes_min'.format(driver) in self.clouds:
+                        this_query = 'list_nodes_min'
+                fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
                         'Public cloud provider {0} is not available'.format(
@@ -546,7 +589,7 @@ class Cloud(object):
                 multiprocessing_data.append({
                     'fun': fun,
                     'opts': opts,
-                    'query': query,
+                    'query': this_query,
                     'alias': alias,
                     'driver': driver
                 })
@@ -859,7 +902,7 @@ class Cloud(object):
             for obj in output_multip:
                 ret_multip.update(obj)
 
-            # build up a datastructure similar to what the non-parallel
+            # build up a data structure similar to what the non-parallel
             # destroy uses
             for obj in parallel_data:
                 alias = obj['alias']
@@ -1160,19 +1203,19 @@ class Cloud(object):
             output['ret'] = action_out
         return output
 
-    def volumes(self, volume_):
+    def extras(self, extra_):
         '''
-        Volume actions
+        Extra actions
         '''
         output = {}
 
-        alias, driver = volume_['provider'].split(':')
-        fun = '{0}.volume_{1}'.format(driver, volume_['action'])
+        alias, driver = extra_['provider'].split(':')
+        fun = '{0}.{1}'.format(driver, extra_['action'])
         if fun not in self.clouds:
             log.error(
                 'Creating {0[name]!r} using {0[provider]!r} as the provider '
                 'cannot complete since {1!r} is not available'.format(
-                    volume_,
+                    extra_,
                     driver
                 )
             )
@@ -1181,16 +1224,16 @@ class Cloud(object):
         try:
             with context.func_globals_inject(
                 self.clouds[fun],
-                __active_provider_name__=volume_['provider']
+                __active_provider_name__=extra_['provider']
             ):
-                output = self.clouds[fun](**volume_)
+                output = self.clouds[fun](**extra_)
         except KeyError as exc:
             log.exception(
                 (
-                    'Failed to perform {0[provider]}.volume_{0[action]} '
+                    'Failed to perform {0[provider]}.{0[action]} '
                     'on {0[name]}. '
                     'Configuration value {1} needs to be set'
-                ).format(volume_, exc)
+                ).format(extra_, exc)
             )
         return output
 
@@ -1287,6 +1330,9 @@ class Cloud(object):
                     if not names:
                         break
                     if vm_name not in names:
+                        log.debug('vm:{0} in provider:{1} is not in name list:{2!r}'.format(
+                            vm_name, driver, names
+                        ))
                         continue
                     with context.func_globals_inject(
                         self.clouds[fun],
@@ -1677,7 +1723,7 @@ class Map(Cloud):
                         overrides[setting] = overrides.pop(deprecated)
 
                 # merge minion grains from map file
-                if 'minion' in overrides:
+                if 'minion' in overrides and 'minion' in nodedata:
                     if 'grains' in overrides['minion']:
                         if 'grains' in nodedata['minion']:
                             nodedata['minion']['grains'].update(
@@ -1874,7 +1920,7 @@ class Map(Cloud):
             if master_profile['minion'].get('local_master', False) and \
                     master_profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
-                # explicitely saying it's the local one
+                # explicitly saying it's the local one
                 local_master = True
 
             out = self.create(master_profile, local_master=local_master)
@@ -1939,7 +1985,7 @@ class Map(Cloud):
             if 'minion' in profile and profile['minion'].get('local_master', False) and \
                     profile['minion'].get('master', None) is not None:
                 # The minion is explicitly defining a master and it's
-                # explicitely saying it's the local one
+                # explicitly saying it's the local one
                 local_master = True
 
             if master_finger is not None and local_master is False:

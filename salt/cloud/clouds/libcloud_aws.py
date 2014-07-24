@@ -248,7 +248,7 @@ def ssh_username(vm_):
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time
     # might need to pass before the remote service is available for logins and
-    # the proper username might have passed it's iteration.
+    # the proper username might have passed its iteration.
     # This has detected in a CentOS 5.7 EC2 image
     usernames.extend(initial)
     return usernames
@@ -427,8 +427,14 @@ def create(vm_):
                     username=user,
                     ssh_timeout=config.get_cloud_config_value(
                         'wait_for_passwd_timeout', vm_, __opts__,
-                        default=1 * 60),
-                    key_filename=key_filename):
+                        default=1 * 60
+                    ),
+                    key_filename=key_filename,
+                    known_hosts_file=config.get_cloud_config_value(
+                        'known_hosts_file', vm_, __opts__,
+                        default='/dev/null'
+                    ),
+                ):
                 username = user
                 break
         else:
@@ -522,7 +528,7 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
@@ -615,7 +621,9 @@ def set_tags(name, tags, call=None):
     '''
     Set tags for a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
     '''
@@ -670,7 +678,9 @@ def del_tags(name, kwargs, call=None):
     '''
     Delete tags for a node
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a del_tags mymachine tag1,tag2,tag3
     '''
@@ -707,7 +717,9 @@ def rename(name, kwargs, call=None):
     '''
     Properly rename a node. Pass in the new name as "new name".
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a rename mymachine newname=yourmachine
     '''
@@ -771,4 +783,8 @@ def destroy(name):
                 name
             )
         )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return ret

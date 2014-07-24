@@ -3,7 +3,7 @@
 A dead simple module wrapping calls to the Chocolatey package manager
 (http://chocolatey.org)
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 '''
 
 import logging
@@ -42,13 +42,14 @@ def _find_chocolatey():
     '''
     Returns the full path to chocolatey.bat on the host.
     '''
-    choc_default = 'C:\\Chocolatey\\bin\\chocolatey.bat'
+    choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
+                     'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
 
-    choc_path = __salt__['cmd.which']('chocolatey.bat')
+    choc_path = __salt__['cmd.which']('chocolatey.exe')
     if not choc_path:
-        if __salt__['cmd.has_exec'](choc_default):
-            choc_path = choc_default
-
+        for choc_dir in choc_defaults:
+            if __salt__['cmd.has_exec'](choc_dir):
+                choc_path = choc_dir
     return choc_path
 
 

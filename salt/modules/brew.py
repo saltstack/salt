@@ -32,7 +32,7 @@ def _list_taps():
     List currently installed brew taps
     '''
     cmd = 'brew tap'
-    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
 
 
 def _tap(tap, runas=None):
@@ -55,7 +55,7 @@ def _homebrew_bin():
     '''
     Returns the full path to the homebrew binary in the PATH
     '''
-    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='debug')
+    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='trace')
     ret += '/bin/brew'
     return ret
 
@@ -88,7 +88,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = 'brew list --versions'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         try:
             name_and_versions = line.split(' ')
@@ -193,7 +193,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -212,7 +212,7 @@ def refresh_db():
     cmd = 'brew update'
     user = __salt__['file.get_user'](_homebrew_bin())
 
-    if __salt__['cmd.retcode'](cmd, runas=user, output_loglevel='debug'):
+    if __salt__['cmd.retcode'](cmd, runas=user):
         log.error('Failed to update')
         return False
 
@@ -248,7 +248,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         Options to pass to brew. Only applies to initial install. Due to how brew
         works, modifying chosen options requires a full uninstall followed by a
         fresh install. Note that if "pkgs" is used, all options will be passed
-        to all packages. Unreconized options for a package will be silently
+        to all packages. Unrecognized options for a package will be silently
         ignored by brew.
 
         CLI Example:
@@ -315,8 +315,8 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
     __salt__['cmd.run'](
         cmd,
-        runas=user if user != __opts__['user'] else __opts__['user'],
-        output_loglevel='debug'
+        runas=user if user != __opts__['user'] else None,
+        output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -335,7 +335,7 @@ def list_upgrades():
     '''
     cmd = 'brew outdated'
 
-    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
 
 
 def upgrade_available(pkg):
@@ -379,7 +379,7 @@ def upgrade(refresh=True):
     __salt__['cmd.run'](
         cmd,
         runas=user if user != __opts__['user'] else __opts__['user'],
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
 
     __context__.pop('pkg.list_pkgs', None)

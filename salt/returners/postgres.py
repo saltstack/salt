@@ -60,6 +60,8 @@ Required python modules: psycopg2
 
     salt '*' test.ping --return postgres
 '''
+# Let's not allow PyLint complain about string substitution
+# pylint: disable=W1321,E1321
 
 # Import python libs
 import json

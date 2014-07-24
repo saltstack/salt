@@ -213,16 +213,16 @@ def get(key, default=''):
 
         salt '*' config.get pkg:apache
     '''
-    ret = salt.utils.traverse_dict(__opts__, key, '_|-')
+    ret = salt.utils.traverse_dict_and_list(__opts__, key, '_|-')
     if ret != '_|-':
         return ret
-    ret = salt.utils.traverse_dict(__grains__, key, '_|-')
+    ret = salt.utils.traverse_dict_and_list(__grains__, key, '_|-')
     if ret != '_|-':
         return ret
-    ret = salt.utils.traverse_dict(__pillar__, key, '_|-')
+    ret = salt.utils.traverse_dict_and_list(__pillar__, key, '_|-')
     if ret != '_|-':
         return ret
-    ret = salt.utils.traverse_dict(__pillar__.get('master', {}), key, '_|-')
+    ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
     if ret != '_|-':
         return ret
     return default

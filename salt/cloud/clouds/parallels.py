@@ -497,9 +497,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         }
 
     if args:
-        path += '?%s'
         params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params, **kwargs)
+        req = urllib2.Request(url='{0}?{1}'.format(path, params), **kwargs)
     else:
         req = urllib2.Request(url=path, **kwargs)
 
@@ -560,7 +559,14 @@ def show_image(kwargs, call=None):
         )
 
     items = query(action='template', command=kwargs['image'])
-    return {items.attrib['name']: items.attrib}
+    if 'error' in items:
+        return items['error']
+
+    ret = {}
+    for item in items:
+        ret.update({item.attrib['name']: item.attrib})
+
+    return ret
 
 
 def show_instance(name, call=None):
@@ -586,6 +592,8 @@ def show_instance(name, call=None):
             children = item._children
             for child in children:
                 ret[item.tag][child.tag] = child.attrib
+
+    salt.utils.cloud.cache_node(ret, __active_provider_name__, __opts__)
     return ret
 
 
@@ -608,7 +616,9 @@ def destroy(name, call=None):
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -649,6 +659,9 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return {'Destroyed': '{0} was destroyed.'.format(name)}
 
 
@@ -656,7 +669,9 @@ def start(name, call=None):
     '''
     Start a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a start mymachine
     '''
@@ -677,7 +692,9 @@ def stop(name, call=None):
     '''
     Stop a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a stop mymachine
     '''

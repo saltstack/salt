@@ -7,9 +7,11 @@ Module for managing timezone on POSIX-like systems.
 import os
 import hashlib
 import logging
+import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -34,9 +36,16 @@ def get_zone():
         salt '*' timezone.get_zone
     '''
     cmd = ''
-    if 'Arch' in __grains__['os_family']:
-        cmd = ('timedatectl | grep Timezone |'
-               'sed -e"s/: /=/" -e"s/^[ \t]*//" | cut -d" " -f1')
+    if salt.utils.which('timedatectl'):
+        out = __salt__['cmd.run']('timedatectl')
+        for line in (x.strip() for x in out.splitlines()):
+            try:
+                return re.match(r'Time ?zone:\s+(\S+)', line).group(1)
+            except AttributeError:
+                pass
+        raise CommandExecutionError(
+            'Failed to parse timedatectl output, this is likely a bug'
+        )
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Suse' in __grains__['os_family']:
@@ -156,11 +165,21 @@ def zone_compare(timezone):
         return 'Error: {0} does not exist.'.format(tzfile)
 
     hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    with salt.utils.fopen(zonepath, 'r') as fp_:
-        usrzone = hash_type(fp_.read()).hexdigest()
 
-    with salt.utils.fopen(tzfile, 'r') as fp_:
-        etczone = hash_type(fp_.read()).hexdigest()
+    try:
+        with salt.utils.fopen(zonepath, 'r') as fp_:
+            usrzone = hash_type(fp_.read()).hexdigest()
+    except IOError as exc:
+        raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
+
+    try:
+        with salt.utils.fopen(tzfile, 'r') as fp_:
+            etczone = hash_type(fp_.read()).hexdigest()
+    except IOError as exc:
+        raise CommandExecutionError(
+            'Problem reading timezone file {0}: {1}'
+            .format(tzfile, exc.strerror)
+        )
 
     if usrzone == etczone:
         return True
@@ -178,13 +197,20 @@ def get_hwclock():
         salt '*' timezone.get_hwclock
     '''
     cmd = ''
-    if 'Arch' in __grains__['os_family']:
-        cmd = ('timedatectl | grep "RTC in local TZ" | '
-               'sed -e"s/^[ \t]*//" | cut -d" " -f5')
-        if __salt__['cmd.run'](cmd) == 'yes':
-            return 'localtime'
-        else:
-            return 'UTC'
+    if salt.utils.which('timedatectl'):
+        out = __salt__['cmd.run']('timedatectl')
+        for line in (x.strip() for x in out.splitlines()):
+            if 'rtc in local tz' in line.lower():
+                try:
+                    if line.split(':')[-1].strip().lower() == 'yes':
+                        return 'localtime'
+                    else:
+                        return 'UTC'
+                except IndexError:
+                    pass
+        raise CommandExecutionError(
+            'Failed to parse timedatectl output, this is likely a bug'
+        )
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'tail -n 1 /etc/adjtime'
         return __salt__['cmd.run'](cmd)

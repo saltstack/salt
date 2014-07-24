@@ -121,8 +121,13 @@ def update():
     if os.path.exists(mtime_map_path):
         with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
             for line in fp_:
-                file_path, mtime = line.split(':', 1)
-                old_mtime_map[file_path] = mtime
+                try:
+                    file_path, mtime = line.split(':', 1)
+                    old_mtime_map[file_path] = mtime
+                except ValueError:
+                    # Document the invalid entry in the log
+                    log.warning('Skipped invalid cache mtime entry in {0}: {1}'
+                                .format(mtime_map_path, line))
 
     # generate the new map
     new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])

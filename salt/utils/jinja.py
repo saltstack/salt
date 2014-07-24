@@ -15,6 +15,7 @@ from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
+import jinja2
 import yaml
 
 # Import salt libs
@@ -104,6 +105,8 @@ class SaltCacheLoader(BaseLoader):
             raise TemplateNotFound(template)
 
         self.check_cache(template)
+
+        # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
             filepath = path.join(spath, template)
             try:
@@ -120,6 +123,8 @@ class SaltCacheLoader(BaseLoader):
             except IOError:
                 # there is no file under current path
                 continue
+        # pylint: enable=cell-var-from-loop
+
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
 
@@ -188,13 +193,18 @@ def ensure_sequence_filter(data):
     return data
 
 
+@jinja2.contextfunction
+def show_full_context(c):
+    return c
+
+
 class SerializerExtension(Extension, object):
     '''
     Yaml and Json manipulation.
 
     **Format filters**
 
-    Allows to jsonify or yamlify any datastructure. For example, this dataset:
+    Allows to jsonify or yamlify any data structure. For example, this dataset:
 
     .. code-block:: python
 
@@ -211,11 +221,30 @@ class SerializerExtension(Extension, object):
         json = {{ data|json }}
         python = {{ data|python }}
 
-    will be rendered has::
+    will be rendered as::
 
         yaml = {bar: 42, baz: [1, 2, 3], foo: true, qux: 2.0}
         json = {"baz": [1, 2, 3], "foo": true, "bar": 42, "qux": 2.0}
         python = {'bar': 42, 'baz': [1, 2, 3], 'foo': True, 'qux': 2.0}
+
+    The yaml filter takes an optional flow_style parameter to control the
+    default-flow-style parameter of the YAML dumper.
+
+    .. code-block:: jinja
+
+        {{ data|yaml(False)}}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        bar: 42
+        baz:
+          - 1
+          - 2
+          - 3
+        foo: true
+        qux: 2.0
 
     **Load filters**
 
@@ -238,7 +267,7 @@ class SerializerExtension(Extension, object):
     Salt implements **import_yaml** and **import_json** tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
-    Syntaxe are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
+    Syntaxes are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
     and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
 
     For example:
@@ -335,8 +364,8 @@ class SerializerExtension(Extension, object):
     def format_json(self, value):
         return Markup(json.dumps(value, sort_keys=True).strip())
 
-    def format_yaml(self, value):
-        return Markup(yaml.dump(value, default_flow_style=True,
+    def format_yaml(self, value, flow_style=True):
+        return Markup(yaml.dump(value, default_flow_style=flow_style,
                                 Dumper=OrderedDictDumper).strip())
 
     def format_python(self, value):

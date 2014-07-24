@@ -92,18 +92,6 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     raise ImportError(errormsg)
 
 
-def libcloud_version():
-    '''
-    Require the minimal libcloud version
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        'Please stop using \'salt.cloud.libcloudfuns.libcloud_version()\'. '
-        'Instead use \'salt.cloud.libcloudfuns.check_libcloud_version()\'.'
-    )
-    return check_libcloud_version()
-
-
 def get_node(conn, name):
     '''
     Return a libcloud node for the named VM
@@ -111,6 +99,7 @@ def get_node(conn, name):
     nodes = conn.list_nodes()
     for node in nodes:
         if node.name == name:
+            salt.utils.cloud.cache_node(salt.utils.cloud.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
             return node
 
 
@@ -384,7 +373,10 @@ def destroy(name, conn=None, call=None):
             transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
-            salt.utils.cloud.remove_sshkey(node.public_ips[0])
+            salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
+        if __opts__.get('update_cachedir', False) is True:
+            salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
         return True
 
     log.error('Failed to Destroy VM: {0}'.format(name))
@@ -465,6 +457,8 @@ def list_nodes_full(conn=None, call=None):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']
+
+    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
@@ -490,6 +484,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 

@@ -129,7 +129,7 @@ def available():
     for root, dirs, files in os.walk(mod_dir):
         for fn_ in files:
             if '.ko' in fn_:
-                ret.append(fn_[:fn_.index('.ko')])
+                ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))
     return sorted(list(ret))
 
 

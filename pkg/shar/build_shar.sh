@@ -1,16 +1,21 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # Name:     build_shar.sh
-# Requires: python-pip, gcc, gcc-c++, swig, sharutils, and the develepment
-#           headers for both python and openssl
+# Requires: python-virtualenv, gcc, gcc-c++, swig, sharutils, and the
+#           develepment headers for both python and openssl
 #
 # This script will use GNU sharutils to build an installable shar archive, with
-# an install prefix of "/opt". This has a couple uses:
+# an install prefix of "/opt" (unless overridden with the '-p' option). This
+# has a couple uses:
 #
 #   1. Installing salt (by su'ing to root and running "sh /path/to/sharfile")
 #   2. To be used as a basis for creating your own salt rpm/deb.
 #
 # It will fetch libzmq and build it as a pyzmq extension.
+#
+# IMPORTANT: Unpacking the shar requires uudecode, which is distributed along
+# with sharutils. Thus, you should have sharutils installed on any host which
+# will need to unpack the shar archive.
 #
 # The script is capable of building a shar archive using several methods:
 #
@@ -22,15 +27,17 @@
 # Additionally, it is possible to specify a build_id which will be added to the
 # shar filename, useful for telling apart individual shars.
 #
-# It is recommended to run this script on a machine which does not have any of
-# the Salt dependencies already installed.
+# By default, the script will download dependencies using pip, but the '-d'
+# option can be used to specify directory from which dependencies will be
+# sourced. Any missing dependencies will be retrieved with pip.
+#
+# It is strongly recommended to run this script on a machine which does not
+# have any of the Salt dependencies already installed, because if the script
+# detects that ZeroMQ is already installed, then pyzmq's setup.py will not
+# build a bundled ZeroMQ.
 #
 # Run the script with -h for usage details.
 #
-
-
-# Terminate script if any command fails
-set -o errexit
 
 ################################# FUNCTIONS ##################################
 
@@ -116,7 +123,7 @@ function _get_requirements {
         # Either custom requirements were passed, or a salt tarball was
         # provided. Either way, we're going to be telling pip to download
         # tarballs using the instructions in the requirements.txt.
-        output=`"$PIP" install $PIP_OPTS --download "$srcdir" --requirement "$requirements"`; return_code=$?
+        output=`pip install $PIP_OPTS --download "$srcdir" --requirement "$requirements"`; return_code=$?
     else
         # Neither -r nor -s was specified. We are just downloading the current
         # version of salt from pip, and letting pip resolve dependencies rather
@@ -124,7 +131,7 @@ function _get_requirements {
         #
         # If -v was provided, then pip will download the specified version,
         # otherwise this variable will be blank.
-        output=`"$PIP" install $PIP_OPTS --download "$srcdir" salt$version`; return_code=$?
+        output=`pip install $PIP_OPTS --download "$srcdir" "salt${version}"`; return_code=$?
     fi
     _log "$output"
     test "$return_code" -eq 0 || _error 'Failed to download tarballs. Aborting.'
@@ -143,16 +150,28 @@ function _unpack_salt_tarball {
 }
 
 function _usage {
-    printf "USAGE: build_shar.sh [-i <build_id>] [-r <requirements file> | -s <alternate salt tarball> | -v <version from pypi>]\n\n" 1>&2
+    printf "USAGE: build_shar.sh [-i <build_id>] [-d <dependency_dir>] [-p <prefix>] [-r <requirements file> | -s <alternate salt tarball> | -v <version from pypi>]\n\n" 1>&2
     exit 2
 }
 
 #################################### MAIN ####################################
 
-while getopts hi:r:s:v: opt; do
+# Set up logging
+orig_cwd="`pwd`"
+logfile="${orig_cwd}/install.`date +%Y%m%d%H%M%S`.log"
+echo "Install log location: $logfile"
+
+prefix='/opt'
+while getopts d:hi:p:r:s:v: opt; do
     case "$opt" in
+        d)
+            deps_dir=$OPTARG
+            test -d "$deps_dir" || _error "Dependencies dir $deps_dir does not exist"
+            ;;
         i)
             build_id=$OPTARG;;
+        p)
+            prefix=$OPTARG;;
         r)
             requirements=$OPTARG
             test -f "$requirements" || _error "Requirements file $requirements does not exist"
@@ -168,6 +187,11 @@ while getopts hi:r:s:v: opt; do
     esac
 done
 
+case "$prefix" in
+    /*) ;;
+    *) _error "Prefix path must be absolute" ;;
+esac
+
 # Make sure that only one of -r/-s/-v was specified
 opt_count=0
 for opt in "$requirements" "$salt_tarball" "$version"; do
@@ -178,42 +202,43 @@ test $opt_count -ge 2 && _usage
 # If version was provided, prepend with "==" for later use in pip command
 test -n "$version" && version="==${version}"
 
-# Set up logging
-orig_cwd="`pwd`"
-logfile="${orig_cwd}/install.`date +%Y%m%d%H%M%S`.log"
-echo "Install log location: $logfile"
-
 # Make needed directories
 srcdir="${orig_cwd}/src"
 pkgdir="${orig_cwd}/pkg"
 test -d "$srcdir" || mkdir "$srcdir"
 _log "Source directory: $srcdir"
 if test -d "$pkgdir"; then
-    _log "Removing $pkgdir"
+    _log "Removing existing package directory $pkgdir"
     rm -rf "$pkgdir"
-    _log "Creating $pkgdir"
-    mkdir "$pkgdir"
 fi
-_log "Package directory: $pkgdir"
+_log "Creating package directory $pkgdir"
+mkdir "$pkgdir"
 
-# Make sure pip is available
-test -z "$PYTHON" && PYTHON=`command -v python`
-test -z "$PYTHON" && _error 'Python not present'
-_display "Python == $PYTHON"
-if ! test -x "`command -v $PYTHON`"; then
-    _error "$PYTHON is not executable"
+# Make sure virtualenv is available
+test -z "$VIRTUALENV" && VIRTUALENV=`command -v virtualenv`
+test -z "$VIRTUALENV" && _error 'virtualenv not present'
+_display "virtualenv == $VIRTUALENV"
+if ! test -x "`command -v $VIRTUALENV`"; then
+    _error "$VIRTUALENV is not executable"
 fi
 
-# Make sure pip is available
-test -z "$PIP" && PIP=`command -v pip`
-test -z "$PIP" && _error 'pip not present'
-_display "pip == $PIP"
-if ! test -x "`command -v $PIP`"; then
-    _error "$PIP is not executable"
-fi
+# Make sure we're using an up-to-date version of pip in the virtualenv, as
+# older pip versions have issues with pip install --download, silently not
+# downloading some tarballs.
+cd "$orig_cwd"
+venv_name=`mktemp -d venv.XXXXXX`
+venv_path="${orig_cwd}/${venv_name}"
+_display "Creating temp virtualenv at $venv_path"
+output=`"$VIRTUALENV" $venv_name`
+_log "$output"
+_display "Activating temp virtualenv"
+source "${venv_path}/bin/activate"
+_display "Updating pip in temp virtualenv"
+output=`pip install --upgrade pip`
+_log "$output"
 
 # Check if wheel is supported in current version of pip
-"$PIP" help install 2>/dev/null | egrep --quiet '(--)no-use-wheel' && PIP_OPTS='--no-use-wheel' || PIP_OPTS=''
+pip help install 2>/dev/null | egrep --quiet '(--)no-use-wheel' && PIP_OPTS='--no-use-wheel' || PIP_OPTS=''
 
 # Make sure swig is available
 test -z "$SWIG" && SWIG=`command -v swig`
@@ -228,9 +253,7 @@ test -n "`command -v gcc`" && _display 'gcc found' || _error 'gcc not installed'
 test -n "`command -v g++`" && _display 'g++ found' || _error 'g++ not installed'
 test -n "`command -v shar`" && _display 'sharutils found' || _error 'sharutils not installed'
 
-# Build a couple commands for later
-INSTALL="${PYTHON} setup.py install --root=${pkgdir} --prefix=/opt"
-FETCH_LIBZMQ="${PYTHON} setup.py fetch_libzmq"
+INSTALL="python setup.py install --root=${pkgdir} --prefix=${prefix}"
 
 if test -n "$salt_tarball"; then
     cp "$salt_tarball" "$srcdir" || _error "Unable to copy salt tarball to $srcdir"
@@ -242,6 +265,11 @@ else
     _get_requirements
     _unpack_salt_tarball
 fi
+
+_display "Deactivating temp virtualenv"
+deactivate
+_display "Destroying temp virtualenv at $venv_path"
+rm -rf "$venv_path"
 
 _display "Reading requirements from $requirements"
 deps=()
@@ -257,6 +285,15 @@ done
 # Install the deps
 for dep in "${deps[@]}"; do
     tarball=$(_find_tarball "$dep" "$srcdir")
+    if test -n "$deps_dir"; then
+        deps_dir_tarball=$(_find_tarball "$dep" "$deps_dir")
+        if test -n "$deps_dir_tarball"; then
+            _display "Using dependency tarball from $deps_dir for $dep"
+            rm -f "$tarball"
+            cp "${deps_dir}/${deps_dir_tarball}" "$srcdir"
+            tarball="${deps_dir_tarball}"
+        fi
+    fi
     cd "$srcdir"
     src=${tarball%%.tar*}
     _display "Unpacking $src"
@@ -265,9 +302,16 @@ for dep in "${deps[@]}"; do
     cd "$src"
     # Fetch libzmq so bundled build works on CentOS 5
     if test "${src:0:5}" == 'pyzmq'; then
-        _display "Fetching libzmq"
-        output=`$FETCH_LIBZMQ 2>&1`; return_code=$?
-        test "$return_code" -eq 0 || _error 'Failed to fetch libzmq. Aborting.'
+        zeromq_spec="bundled/zeromq/zeromq.spec"
+        if ! test -f "$zeromq_spec"; then
+            _display "Fetching libzmq"
+            output=`python setup.py fetch_libzmq 2>&1`; return_code=$?
+            test "$return_code" -eq 0 || _error 'Failed to fetch libzmq. Aborting.'
+        else
+            _display "Bundled ZeroMQ detected"
+        fi
+        zeromq_version=`egrep '^Version' "$zeromq_spec" | awk '{print $2}'`
+        _display "ZeroMQ version: $zeromq_version"
     fi
     _display "Installing $src"
     if test "${src:0:8}" == 'M2Crypto'; then
@@ -286,6 +330,9 @@ _display "Installing $salt_release"
 output=`$INSTALL 2>&1`; return_code=$?
 _log "$output"
 test "$return_code" -eq 0 || _error "Failed to install $salt_release. Aborting."
+_log 'Compressing man pages'
+output=`find "${pkgdir}${prefix}/share/man" -type f -not -name '*.gz' -exec gzip {} \;`
+_log "$output"
 
 # Everything worked, make the shar
 test -n "$build_id" && build_id="-${build_id}"
@@ -294,7 +341,7 @@ sharlog="${pkg}.log"
 _display "Packaging Salt... Destination: $pkg"
 _display "shar log will be written to $sharlog"
 cd "$pkgdir"
-shar opt >"$pkg" 2>"$sharlog"
+shar ${prefix#/} >"$pkg" 2>"$sharlog"
 test "$?" -eq 0 || _error 'shar file build failed'
 
 # Done!

@@ -190,19 +190,19 @@ The following is a simplistic example of a full state module and function.
 Remember to call out to execution modules to perform all the real work. The
 state module should only perform "before" and "after" checks.
 
-1.  Make a custom state module by putting the code in the following file::
+1.  Make a custom state module by putting the code into a file at the following
+    path: **/srv/salt/_states/my_custom_state.py**.
 
-        /srv/salt/_states/my_custom_state.py
+2.  Distribute the custom state module to the minions:
 
-2.  Distribute the custom state module to the minions::
+    .. code-block:: bash
 
         salt '*' saltutil.sync_states
 
-3.  Write a new state to use the custom state by making a new state file::
+3.  Write a new state to use the custom state by making a new state file, for
+    instance **/srv/salt/my_custom_state.sls**.
 
-        /srv/salt/my_custom_state.sls
-
-4.  Call your custom state with the following syntax:
+4.  Add the following SLS configuration to the file created in Step 3:
 
     .. code-block:: yaml
 

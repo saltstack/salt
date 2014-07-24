@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.states.pip
@@ -20,7 +18,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_account
+    with_system_user
 )
 ensure_in_syspath('../../')
 
@@ -177,7 +175,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue-6912', on_existing='delete', delete=True)
+    @with_system_user('issue-6912', on_existing='delete', delete=True)
     def test_issue_6912_wrong_owner(self, username):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, '6912-wrong-owner'
@@ -417,15 +415,6 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # We're using the base environment but we're passing the prod
             # environment as an url arg to salt://
-            ret = self.run_state(
-                'pip.installed', name='', bin_env=venv_dir,
-                requirements='salt://prod-env-requirements.txt?env=prod'
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
-            )
             ret = self.run_state(
                 'pip.installed', name='', bin_env=venv_dir,
                 requirements='salt://prod-env-requirements.txt?saltenv=prod'

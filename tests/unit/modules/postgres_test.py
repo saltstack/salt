@@ -63,7 +63,7 @@ class PostgresTestCase(TestCase):
                           owner='otheruser',
                           runas='foo')
         postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
             '--host testhost --port testport --dbname maint_db '
             '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
             host='testhost', user='testuser',
@@ -84,7 +84,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
             '--host testhost --port testport --dbname maint_db -c '
             '\'CREATE DATABASE "dbname" '
             'WITH TABLESPACE = testspace OWNER = "otheruser"\'',
@@ -151,7 +151,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --username testuser "
+            "/usr/bin/pgsql --no-align --no-readline --no-password --username testuser "
             "--host testhost --port testport --dbname maint_db "
             "-c 'DROP DATABASE test_db'",
             host='testhost', user='testuser',
@@ -178,7 +178,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
             '--host testhost --port testport '
             '--dbname maint_db -c (\'|\")CREATE ROLE',
             postgres._run_psql.call_args[0][0]))
@@ -197,7 +197,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --username testuser "
+            "/usr/bin/pgsql --no-align --no-readline --no-password --username testuser "
             "--host testhost --port testport "
             "--dbname maint_db -c 'DROP ROLE testgroup'",
             host='testhost', user='testuser',
@@ -205,7 +205,8 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_group_update(self):
         postgres.group_update(
             'testgroup',
@@ -252,7 +253,7 @@ class PostgresTestCase(TestCase):
         )
         call = postgres._run_psql.call_args[0][0]
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username testuser'
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser'
             ' --host testhost --port testport'
             ' --dbname maint_test -c (\'|\")CREATE ROLE',
             call))
@@ -349,7 +350,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         postgres._run_psql.assert_called_once_with(
-            "/usr/bin/pgsql --no-align --no-readline --username test_user "
+            "/usr/bin/pgsql --no-align --no-readline --no-password --username test_user "
             "--host test_host --port test_port "
             "--dbname maint_db -c 'DROP ROLE test_user'",
             host='test_host', port='test_port', user='test_user',
@@ -357,7 +358,8 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update(self):
         postgres.user_update(
             'test_username',
@@ -379,10 +381,10 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'NOCREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
+                'NOCREATEROLE NOREPLICATION LOGIN '
                 'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
                 ' GRANT test_groups TO test_username[\'"]{0,1}',
                 postgres._run_psql.call_args[0][0])
@@ -390,7 +392,8 @@ class PostgresTestCase(TestCase):
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update2(self):
         postgres.user_update(
             'test_username',
@@ -411,17 +414,18 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN;'
+                'CREATEROLE NOREPLICATION LOGIN;'
                 ' GRANT test_groups TO test_username\'',
                 postgres._run_psql.call_args[0][0])
         )
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update3(self):
         postgres.user_update(
             'test_username',
@@ -443,17 +447,18 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c \'ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN NOPASSWORD;'
+                'CREATEROLE NOREPLICATION LOGIN NOPASSWORD;'
                 ' GRANT test_groups TO test_username\'',
                 postgres._run_psql.call_args[0][0])
         )
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
-    @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
+    @patch('salt.modules.postgres.role_get',
+           Mock(return_value={'superuser': False}))
     def test_user_update_encrypted_passwd(self):
         postgres.user_update(
             'test_username',
@@ -475,10 +480,10 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(
             re.match(
-                '/usr/bin/pgsql --no-align --no-readline --username test_user '
+                '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
                 '--host test_host --port test_port --dbname test_maint '
                 '-c [\'"]{0,1}ALTER ROLE test_username WITH  INHERIT NOCREATEDB '
-                'CREATEROLE NOSUPERUSER NOREPLICATION LOGIN '
+                'CREATEROLE NOREPLICATION LOGIN '
                 'ENCRYPTED PASSWORD '
                 '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
                 '; GRANT test_groups TO test_username[\'"]{0,1}',
@@ -497,7 +502,7 @@ class PostgresTestCase(TestCase):
             runas='foo'
         )
         self.assertTrue(re.match(
-            '/usr/bin/pgsql --no-align --no-readline --username test_user '
+            '/usr/bin/pgsql --no-align --no-readline --no-password --username test_user '
             '--host test_host --port test_port '
             '--dbname test_maint '
             '-c (\'|\")SELECT setting FROM pg_catalog.pg_settings',

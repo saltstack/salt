@@ -26,6 +26,8 @@ This module requires the ``augeas`` Python module.
 
 # Import python libs
 import os
+import re
+import logging
 
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False
@@ -37,6 +39,8 @@ except ImportError:
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'augeas'
@@ -54,7 +58,7 @@ def __virtual__():
 def _recurmatch(path, aug):
     '''
     Recursive generator providing the infrastructure for
-    augtools print behaviour.
+    augtools print behavior.
 
     This function is based on test_augeas.py from
     Harald Hoyer <harald@redhat.com>  in the python-augeas
@@ -79,6 +83,93 @@ def _lstrip_word(word, prefix):
     if str(word).startswith(prefix):
         return str(word)[len(prefix):]
     return word
+
+
+def execute(context=None, lens=None, commands=()):
+    '''
+    Execute Augeas commands
+
+    .. versionadded:: 2014.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' augeas.execute commands='["set bind 0.0.0.0", "set maxmemory 1G"]'
+    '''
+    ret = {'retval': False}
+
+    method_map = {
+        'set':    'set',
+        'mv':     'move',
+        'move':   'move',
+        'ins':    'insert',
+        'insert': 'insert',
+        'rm':     'remove',
+        'remove': 'remove',
+    }
+
+    flags = Augeas.NO_MODL_AUTOLOAD if lens else Augeas.NONE
+    aug = Augeas(flags=flags)
+
+    if lens:
+        aug.add_transform(lens, re.sub('^/files', '', context))
+        aug.load()
+
+    for command in commands:
+        # first part up to space is always the command name (ie: set, move)
+        cmd, arg = command.split(' ', 1)
+        if cmd not in method_map:
+            ret['error'] = 'Command {0} is not supported (yet)'.format(cmd)
+            return ret
+
+        method = method_map[cmd]
+
+        try:
+            if method == 'set':
+                path, value, remainder = re.split('([^\'" ]+|"[^"]+"|\'[^\']+\')$', arg, 1)
+                if context:
+                    path = os.path.join(context.rstrip('/'), path.lstrip('/'))
+                value = value.strip('"').strip("'")
+                args = {'path': path, 'value': value}
+            elif method == 'move':
+                path, dst = arg.split(' ', 1)
+                if context:
+                    path = os.path.join(context.rstrip('/'), path.lstrip('/'))
+                args = {'src': path, 'dst': dst}
+            elif method == 'insert':
+                path, where, label = re.split(' (before|after) ', arg)
+                if context:
+                    path = os.path.join(context.rstrip('/'), path.lstrip('/'))
+                args = {'path': path, 'label': label, 'before': where == 'before'}
+            elif method == 'remove':
+                path = arg
+                if context:
+                    path = os.path.join(context.rstrip('/'), path.lstrip('/'))
+                args = {'path': path}
+        except ValueError as err:
+            log.error(str(err))
+            ret['error'] = 'Invalid formatted command, ' \
+                           'see debug log for details: {0}'.format(arg)
+            return ret
+
+        log.debug('{0}: {1}'.format(method, args))
+
+        func = getattr(aug, method)
+        func(**args)
+
+    try:
+        aug.save()
+        ret['retval'] = True
+    except IOError as err:
+        ret['error'] = str(err)
+
+        if lens and not lens.endswith('.lns'):
+            ret['error'] += '\nLenses are normally configured as "name.lns". ' \
+                            'Did you mean "{0}.lns"?'.format(lens)
+
+    aug.close()
+    return ret
 
 
 def get(path, value=''):

@@ -67,7 +67,7 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return "<PamMessage %i '%s'>" % (self.msg_style, self.msg)
+        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -80,7 +80,7 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return "<PamResponse %i '%s'>" % (self.resp_retcode, self.resp)
+        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(c_int,
@@ -170,7 +170,7 @@ def auth(username, password, **kwargs):
 
 def groups(username, *args, **kwargs):
     '''
-    Retreive groups for a given user for this auth provider
+    Retrieve groups for a given user for this auth provider
 
     Uses system groups
     '''

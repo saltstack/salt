@@ -5,6 +5,8 @@
 Synopsis
 ========
 
+.. code-block:: bash
+
     salt-ssh '*' [ options ] sys.doc
 
     salt-ssh -E '.*' [ options ] sys.doc cmd
@@ -36,7 +38,7 @@ Options
     default roster file is called ``roster`` and is found in the same directory
     as the master config file.
 
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
 .. option:: --refresh, --refresh-cache
 

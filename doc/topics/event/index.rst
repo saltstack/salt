@@ -1,3 +1,8 @@
+.. _events:
+
+.. index:: ! Event, event bus, event system
+    see: Reactor; Event
+
 =================
 Salt Event System
 =================
@@ -9,6 +14,14 @@ The event system is comprised of a two primary components:
 
     * The event sockets which publishes events.
     * The event library which can listen to events and send events into the salt system.
+
+Event types
+===========
+
+.. toctree::
+    :maxdepth: 2
+
+    master_events
 
 Listening for Events
 ====================

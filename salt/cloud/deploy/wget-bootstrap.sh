@@ -7,11 +7,11 @@
 # 
 # It has been designed as an example, to be customized for your own needs.
 
-wget -O - http://bootstrap.saltstack.org | sudo sh -s -- "$@"
+wget -O - https://bootstrap.saltstack.com | sudo sh -s -- "$@"
 
 # By default, Salt Cloud now places the minion's keys and configuration in
 # /tmp/.saltcloud/ before executing the deploy script. After it has executed,
 # these temporary files are removed. If you don't want salt-bootstrap to handle
 # these files, comment out the above command, and uncomment the below command.
 
-#wget -O - http://bootstrap.saltstack.org | sudo sh
+#wget -O - https://bootstrap.saltstack.com | sudo sh

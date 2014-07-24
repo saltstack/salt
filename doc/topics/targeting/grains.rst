@@ -18,6 +18,11 @@ information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
 
+.. note::
+
+    Grains resolve to lowercase letters. For example, ``FOO`` and ``foo``
+    target the same grain.
+
 Match all CentOS minions:
 
 .. code-block:: bash
@@ -109,20 +114,20 @@ the following configuration:
 .. code-block:: yaml
 
     'node_type:web':
-        - match: grain
-        - webserver
+      - match: grain
+      - webserver
 
     'node_type:postgres':
-        - match: grain
-        - database
+      - match: grain
+      - database
 
     'node_type:redis':
-        - match: grain
-        - redis
+      - match: grain
+      - redis
 
     'node_type:lb':
-        - match: grain
-        - lb
+      - match: grain
+      - lb
         
 For this example to work, you would need to have defined the grain
 ``node_type`` for the minions you wish to match. This simple example is nice,
@@ -134,9 +139,9 @@ can be used to simplify the the :term:`top file`.
     {% set node_type = salt['grains.get']('node_type', '') %}
 
     {% if node_type %}
-        'node_type:{{ self }}':
-            - match: grain
-            - {{ self }}
+      'node_type:{{ self }}':
+        - match: grain
+        - {{ self }}
     {% endif %}
 
 Using Jinja templating, only one match entry needs to be defined.
@@ -170,11 +175,18 @@ Before adding a grain to Salt, consider what the grain is and remember that
 grains need to be static data. If the data is something that is likely to
 change, consider using :doc:`Pillar <../pillar/index>` instead.
 
+.. warning::
+
+    Custom grains will not be available in the top file until after the first
+    :ref:`highstate <running-highstate>`. To make custom grains available on a
+    minion's first highstate, it is recommended to use :ref:`this example
+    <minion-start-reactor>` to ensure that the custom grains are synced when
+    the minion starts.
 
 Precedence
 ==========
 
-Core grains can be overriden by custom grains. As there are several ways of
+Core grains can be overridden by custom grains. As there are several ways of
 defining custom grains, there is an order of precedence which should be kept in
 mind when defining them. The order of evaluation is as follows:
 

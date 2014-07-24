@@ -10,7 +10,9 @@ def _fallbackfunc():
 
 def working_function():
     '''
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
     '''
     return True
 

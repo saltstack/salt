@@ -156,7 +156,7 @@ def verify_files(files, user):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(2)
+        sys.exit(os.EX_NOUSER)
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
@@ -197,7 +197,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(2)
+        sys.exit(os.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue
@@ -228,6 +228,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                     os.chown(dir_, uid, gid)
             for subdir in [a for a in os.listdir(dir_) if 'jobs' not in a]:
                 fsubdir = os.path.join(dir_, subdir)
+                if '{0}jobs'.format(os.path.sep) in fsubdir:
+                    continue
                 for root, dirs, files in os.walk(fsubdir):
                     for name in files:
                         if name.startswith('.'):
@@ -339,7 +341,7 @@ def list_path_traversal(path):
     return out
 
 
-def check_path_traversal(path, user='root'):
+def check_path_traversal(path, user='root', skip_perm_errors=False):
     '''
     Walk from the root up to a directory and verify that the current
     user has access to read each directory. This is used for  making
@@ -360,6 +362,12 @@ def check_path_traversal(path, user='root'):
                 else:
                     msg += ' Please give {0} read permissions.'.format(user,
                                                                        tpath)
+
+            # We don't need to bail on config file permission errors
+            # if the CLI
+            # process is run with the -a flag
+            if skip_perm_errors:
+                return
             # Propagate this exception up so there isn't a sys.exit()
             # in the middle of code that could be imported elsewhere.
             raise SaltClientError(msg)

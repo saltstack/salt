@@ -98,6 +98,7 @@ TAGS = {
     'wheel': 'wheel',  # prefix for all salt/wheel events
     'cloud': 'cloud',  # prefix for all salt/cloud events
     'fileserver': 'fileserver',  # prefix for all salt/fileserver events
+    'queue': 'queue',  # prefix for all salt/queue events
 }
 
 
@@ -111,7 +112,10 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node, sock_dir, listen)
+        return salt.utils.raetevent.SaltEvent(node,
+                                              sock_dir=sock_dir,
+                                              listen=listen,
+                                              opts=opts)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -158,12 +162,9 @@ class SaltEvent(object):
         use for firing and listening to events
         '''
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        # Substr the first 10 chars off, because some algorithms produce
-        # longer hashes than others, and may exceed the IPC maximum length
-        # for UNIX sockets.
-        id_hash = hash_type(self.opts.get('id', '')).hexdigest()
-        if self.opts.get('hash_type', 'md5') == 'sha256':
-            id_hash = id_hash[:10]
+        # Only use the first 10 chars to keep longer hashes from exceeding the
+        # max socket path length.
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -352,9 +353,12 @@ class SaltEvent(object):
             tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
         else:  # new style longer than 20 chars
             tagend = TAGEND
-
+        serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
+                self.opts.get('max_event_size', 1048576),
+                is_msgpacked=True
+                )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, self.serial.dumps(data))
+        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
             self.push.send(event)
         except Exception as ex:
@@ -471,6 +475,7 @@ class EventPublisher(Process):
         '''
         Bind the pub and pull sockets for events
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
@@ -616,6 +621,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
         for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
@@ -669,7 +675,7 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].low(fun, kwargs)
+        return self.client_cache['runner'].async(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
@@ -698,7 +704,9 @@ class StateFire(object):
         '''
         Fire an event off on the master server
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''

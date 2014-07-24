@@ -8,6 +8,11 @@ masters and facilitates multiple points of communication out to minions. When
 using a multi-master setup, all masters are running hot, and any active master
 can be used to send commands out to the minions.
 
+.. note::
+    If you need failover capabilities with multiple masters, there is also a
+    MultiMaster-PKI setup available, that uses a different topology
+    `MultiMaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+
 In 0.16.0, the masters do not share any information, keys need to be accepted
 on both masters, and shared files need to be shared manually or use tools like
 the git fileserver backend to ensure that the :conf_master:`file_roots` are

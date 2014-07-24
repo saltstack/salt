@@ -198,13 +198,17 @@ The easiest way to accept the minion key is to accept all pending keys:
     public key. This fingerprint can then be compared against the fingerprint
     generated on the minion.
 
-    On the master::
+    On the master:
+
+    .. code-block: bash
 
         # salt-key -f foo.domain.com
         Unaccepted Keys:
         foo.domain.com:  39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
 
-    On the minion::
+    On the minion:
+
+    .. code-block: bash
 
         # salt-call key.finger --local
         local:
@@ -333,6 +337,30 @@ addresses, etc:
 .. code-block:: bash
 
     salt '*' network.interfaces
+
+
+Changing the Output Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default output format used for most Salt commands is called the ``nested``
+outputter, but there are several other outputters that can be used to change
+the way the output is displayed. For instance, the ``pprint`` outputter can be
+used to display the return data using Python's ``pprint`` module:
+
+.. code-block:: bash
+
+    root@saltmaster:~# salt myminion grains.item pythonpath --out=pprint
+    {'myminion': {'pythonpath': ['/usr/lib64/python2.7',
+                                 '/usr/lib/python2.7/plat-linux2',
+                                 '/usr/lib64/python2.7/lib-tk',
+                                 '/usr/lib/python2.7/lib-tk',
+                                 '/usr/lib/python2.7/site-packages',
+                                 '/usr/lib/python2.7/site-packages/gst-0.10',
+                                 '/usr/lib/python2.7/site-packages/gtk-2.0']}}
+
+The full list of Salt outputters, as well as example output, can be found
+:ref:`here <all-salt.output>`.
+
 
 ``salt-call``
 ~~~~~~~~~~~~~

@@ -10,6 +10,7 @@ Full list of Salt Cloud modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    aliyun
     botocore_aws
     cloudstack
     digital_ocean

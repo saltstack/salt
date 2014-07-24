@@ -94,6 +94,10 @@
 # to False
 #color: True
 
+# Do not strip off the colored output from nested results and states outputs
+# (true by default)
+# strip_colors: false
+
 # Set the directory used to hold unix sockets
 #sock_dir: /var/run/salt/master
 
@@ -112,6 +116,11 @@
 
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
+
+# Passing very large events can cause the minion to consume large amounts of
+# memory. This value tunes the maximum size of a message allowed onto the
+# master event bus. The value is expressed in bytes.
+#max_event_size: 1048576
 
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
@@ -141,6 +150,12 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
+# Time in minutes that a incomming public key with a matching name found in
+# pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
+# are removed when the master checks the minion_autosign directory.
+# 0 equals no timeout
+# autosign_timeout: 120
+
 # If the autosign_file is specified, incoming keys specified in the
 # autosign_file will be automatically accepted. This is insecure.  Regular
 # expressions as well as globing lines are supported.
@@ -149,7 +164,7 @@
 # Works like autosign_file, but instead allows you to specify minion IDs for
 # which keys will automatically be rejected. Will override both membership in
 # the autosign_file and the auto_accept setting.
-#autoreject_file: /etc/salt/autosign.conf
+#autoreject_file: /etc/salt/autoreject.conf
 
 # Enable permissive access to the salt keys.  This allows you to run the
 # master or minion as root, but have a non-root group be given access to
@@ -216,9 +231,8 @@
 # no signature, it will still be accepted, and a warning message will be logged.
 # Conversely, if sign_pub_messages is False, but a minion receives a signed
 # message it will be accepted, the signature will not be checked, and a warning message
-# will be logged.  This behavior will go away in Salt 0.17.6 (or Hydrogen RC1, whichever
-# comes first) and these two situations will cause minion to throw an exception and
-# drop the message.
+# will be logged. This behavior went away in Salt 2014.1.0 and these two situations
+# will cause minion to throw an exception and drop the message.
 #
 # sign_pub_messages: False
 

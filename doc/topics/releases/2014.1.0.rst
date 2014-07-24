@@ -18,7 +18,8 @@ testing making roughly double the coverage in the Salt tests, and comes with
 many new features.
 
 2014.1.0 is the first release to follow the new date-based release naming
-system.
+system. See the :doc:`version numbers</topics/releases/version_numbers>`
+page for more details.
 
 Major Features
 ==============

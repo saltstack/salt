@@ -5,6 +5,14 @@ Troubleshooting Salt Cloud
 This page describes various steps for troubleshooting problems that may arise
 while using Salt Cloud.
 
+Virtual Machines Are Created, But Do Not Respond
+================================================
+
+Are TCP ports 4505 and 4506 open on the master? This is easy to overlook on new
+masters. Information on how to open firewall ports on various platforms can be
+found :doc:`here </topics/tutorials/firewall>`.
+
+
 Generic Troubleshooting Steps
 =============================
 This section describes a set of instructions that are useful to a large number

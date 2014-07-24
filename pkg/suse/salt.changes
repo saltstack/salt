@@ -1,4 +1,87 @@
 -------------------------------------------------------------------
+Thu Jul 10 18:25:05 UTC 2014 - aboe76@gmail.com
+
+- Update to 2014.7
+  This release was a hotfix release for the regression listed above which was present in the 2014.1.6 
+- Fix batch mode regression (issue 14046)
+
+-------------------------------------------------------------------
+Wed Jul  9 06:42:05 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.6
+- Fix extra iptables --help output (Sorry!) (issue 13648, issue 13507, issue 13527, issue 13607)
+- Fix mount.active for Solaris
+- Fix support for allow-hotplug statement in debian_ip network module
+- Add sqlite3 to esky builds
+- Fix jobs.active output (issue 9526)
+- Fix the virtual grain for Xen (issue 13534)
+- Fix eauth for batch mode (issue 9605)
+- Fix force-related issues with tomcat support (issue 12889)
+- Fix KeyError when cloud mapping
+- Fix salt-minion restart loop in Windows (issue 12086)
+- Fix detection of service virtual module on Fedora minions
+- Fix traceback with missing ipv4 grain (issue 13838)
+- Fix issue in roots backend with invalid data in mtime_map (issue 13836)
+- Fix traceback in jobs.active (issue 11151)
+
+-------------------------------------------------------------------
+Wed Jun 11 18:53:38 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.5
+- Add function for finding cached job on the minion
+- Fix for minion caching jobs when master is down
+- Bump default `syndic_wait` to 5 to fix syndic-related problems
+  (issue 12262)
+- Fix false positive error in logs for `makeconf` state (issue 9762)
+- Fix for extra blank lines in `file.blockreplace` (issue 12422)
+- Use system locale for ports package installations
+- Fix for `cmd_iter`/`cmd_iter_no_block` blocking issues (issue 12617)
+- Fix traceback when syncing custom types (issue 12883)
+- Fix cleaning directory symlinks in `file.directory`
+- Add performance optimizations for `saltutil.sync_all` and
+  `state.highstate`
+- Fix possible error in `saltutil.running`
+- Fix for kmod modules with dashes (issue 13239)
+- Fix possible race condition for Windows minions in state module reloading
+  (issue 12370)
+- Fix bug with roster for `passwd`s that are loaded as non-string objects
+  (issue 13249)
+- Keep duplicate version numbers from showing up in `pkg.list_pkgs` output
+- Fixes for Jinja renderer, timezone mod`module
+  <salt.modules.timezone>`/mod`state <salt.states.timezone>` (issue 12724)
+- Fix timedatectl parsing for systemd>=210 (issue 12728)
+- Removed the deprecated external nodes classifier (originally accessible by
+  setting a value for external_nodes in the master configuration file).  Note
+  that this functionality has been marked deprecated for some time and was
+  replaced by the more general doc`master tops <topics/master_tops>` system.
+- More robust escaping of ldap filter strings.
+- Fix trailing slash in conf_master`gitfs_root` causing files not to be
+  available (issue 13185)
+
+-------------------------------------------------------------------
+Tue Jun 10 21:10:44 UTC 2014 - aboe76@gmail.com
+
+- added bash completion package
+
+-------------------------------------------------------------------
+Mon May  5 18:19:29 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.4
+  - Fix setup.py dependency issue (issue 12031)
+  - Fix handling for IOErrors under certain circumstances (issue 11783 and issue 11853)
+  - Fix fatal exception when `/proc/1/cgroup` is not readable (issue 11619)
+  - Fix os grains for OpenSolaris (issue 11907)
+  - Fix `lvs.zero` module argument pass-through (issue 9001)
+  - Fix bug in `debian_ip` interaction with `network.system` state (issue 11164)
+  - Remove bad binary package verification code (issue 12177)
+  - Fix traceback in solaris package installation (issue 12237)
+  - Fix `file.directory` state symlink handling (issue 12209)
+  - Remove `external_ip` grain
+  - Fix `file.managed` makedirs issues (issue 10446)
+  - Fix hang on non-existent Windows drive letter for `file` module (issue 9880)
+  - Fix salt minion caching all users on the server (issue 9743)
+
+-------------------------------------------------------------------
 Thu Apr 17 18:06:56 UTC 2014 - aboe76@gmail.com
 
 - Updated to 2014.1.3

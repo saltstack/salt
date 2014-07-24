@@ -21,7 +21,7 @@ This process does work on Windows. Follow the directions at
 installing Salt in Windows. Only the 32-bit Python and dependencies have been
 tested, but they have been tested on 64-bit Windows.
 
-You will need to install ``esky`` and ``bbfreeze`` from Pypi in order to enable
+You will need to install ``esky`` and ``bbfreeze`` from PyPI in order to enable
 the ``bdist_esky`` command in ``setup.py``.
 
 Building and Freezing
@@ -36,7 +36,7 @@ versioned ``salt-VERSION.zip`` in ``dist/`` if everything went smoothly.
 Windows
 -------
 You will need to add ``C:\Python27\lib\site-packages\zmq`` to your PATH
-variable. This helps bbfreeze find the zmq dll so it can pack it up.
+variable. This helps bbfreeze find the zmq DLL so it can pack it up.
 
 Using the Frozen Build
 ======================

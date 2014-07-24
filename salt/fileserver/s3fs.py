@@ -59,7 +59,7 @@ structure::
 
     s3://<bucket name>/<environment>/<files>
 
-.. note:: This fileserver back-end requires the use of the MD5 hashing algorightm.
+.. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
     MD5 may not be compliant with all security policies.
 '''
 
@@ -102,8 +102,6 @@ def update():
     metadata = _init()
 
     if _s3_sync_on_update:
-        key, keyid, service_url = _get_s3_key()
-
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')
         for saltenv, env_meta in metadata.iteritems():
@@ -318,8 +316,11 @@ def _get_s3_key():
     service_url = __opts__['s3.service_url'] \
         if 's3.service_url' in __opts__ \
         else None
+    verify_ssl = __opts__['s3.verify_ssl'] \
+        if 's3.verify_ssl' in __opts__ \
+        else None
 
-    return key, keyid, service_url
+    return key, keyid, service_url, verify_ssl
 
 
 def _init():
@@ -383,7 +384,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url = _get_s3_key()
+    key, keyid, service_url, verify_ssl = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -393,6 +394,7 @@ def _refresh_buckets_cache_file(cache_file):
                 keyid=keyid,
                 bucket=bucket,
                 service_url=service_url,
+                verify_ssl=verify_ssl,
                 return_bin=False)
 
     if _is_env_per_bucket():
@@ -420,7 +422,7 @@ def _refresh_buckets_cache_file(cache_file):
             if not s3_meta:
                 continue
 
-            # pull out the environment dirs (eg. the root dirs)
+            # pull out the environment dirs (e.g. the root dirs)
             files = filter(lambda k: 'Key' in k, s3_meta)
             environments = map(lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files)
             environments = set(environments)
@@ -524,12 +526,13 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
             return
 
     # ... or get the file from S3
-    key, keyid, service_url = _get_s3_key()
+    key, keyid, service_url, verify_ssl = _get_s3_key()
     s3.query(
         key=key,
         keyid=keyid,
         bucket=bucket_name,
         service_url=service_url,
+        verify_ssl=verify_ssl,
         path=urllib.quote(path),
         local_file=cached_file_path
     )

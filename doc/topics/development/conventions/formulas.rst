@@ -46,9 +46,17 @@ States so this is a quick and natural way to use Formulas.
 
 .. seealso:: :ref:`Setting up GitFS <tutorial-gitfs>`
 
-1.  Add one or more Formula repository URLs as remotes in the
+1.  Fork one or more Formula repositories to your own Github account.
+2.  Add the forked repository URLs as remotes in the
     :conf_master:`gitfs_remotes` list in the Salt Master configuration file.
-2.  Restart the Salt master.
+3.  Restart the Salt master.
+
+.. note::
+
+    Although it is possible to add the formula URLs to Gitfs without forking
+    first, this is not recommended.  Relying on a repository that one does not
+    directly control could result in problems if there is upstream breakage in
+    the repo.
 
 Adding a Formula directory manually
 -----------------------------------
@@ -164,7 +172,7 @@ on GitHub.
     when it is ready. We will add you to the contributors team on the
     `saltstack-formulas`_ organization and help you transfer the repository
     over. Ping a SaltStack employee on IRC (``#salt`` on Freenode) or send an
-    email to the Salt mailing list.
+    email to the `salt-users`_ mailing list.
 
     There are a lot of repositories in that organization! Team members can
     manage which repositories they are subscribed to on GitHub's watching page:
@@ -173,7 +181,9 @@ on GitHub.
 Repository structure
 --------------------
 
-A basic Formula repository should have the following layout::
+A basic Formula repository should have the following layout:
+
+.. code-block:: text
 
     foo-formula
     |-- foo/
@@ -369,7 +379,9 @@ in child states build on top of the basic states.
 
 For example, the root Apache should only install the Apache httpd server and
 make sure the httpd service is running. It can then be used by more advanced
-states::
+states:
+
+.. code-block:: yaml
 
     # apache/init.sls
     httpd:

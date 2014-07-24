@@ -1,3 +1,5 @@
+.. _module-sync:
+
 ===========================
 Dynamic Module Distribution
 ===========================

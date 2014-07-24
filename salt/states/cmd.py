@@ -34,10 +34,20 @@ touch /tmp/foo if it does not exist.
 
 .. note::
 
-    The ``creates`` option is only supported in releases greater than or
-    equal to 2014.1.0.
+    The ``creates`` option was added to version 2014.7.0
 
-Note that when executing a command or script, the state (i.e., changed or not)
+Salt determines whether the ``cmd`` state is successfully enforced based on the exit
+code returned by the command. If the command returns a zero exit code, then salt
+determines that the state was successfully enforced. If the script returns a non-zero
+exit code, then salt determines that it failed to successfully enforce the state.
+If a command returns a non-zero exit code but you wish to treat this as a success,
+then you must place the command in a script and explicitly set the exit code of
+the script to zero.
+
+Please note that the success or failure of the state is not affected by whether a state
+change occurred nor the stateful argument.
+
+When executing a command or script, the state (i.e., changed or not)
 of the command is unknown to Salt's state system. Therefore, by default, the
 ``cmd`` state assumes that any command execution results in a changed state.
 
@@ -72,30 +82,34 @@ a simple protocol described below:
    state.`
 
    Here's an example of how one might write a shell script for use with a
-   stateful command::
+   stateful command:
 
-    #!/bin/bash
-    #
-    echo "Working hard..."
+   .. code-block:: bash
 
-    # writing the state line
-    echo  # an empty line here so the next line will be the last.
-    echo "changed=yes comment='something has changed' whatever=123"
+       #!/bin/bash
+       #
+       echo "Working hard..."
 
-   And an example SLS file using this module::
+       # writing the state line
+       echo  # an empty line here so the next line will be the last.
+       echo "changed=yes comment='something has changed' whatever=123"
 
-    Run myscript:
-      cmd.run:
-        - name: /path/to/myscript
-        - cwd: /
-        - stateful: True
+   And an example SLS file using this module:
 
-    Run only if myscript changed something:
-      cmd.wait:
-        - name: echo hello
-        - cwd: /
-        - watch:
-            - cmd: Run myscript
+   .. code-block:: yaml
+
+       Run myscript:
+         cmd.run:
+           - name: /path/to/myscript
+           - cwd: /
+           - stateful: True
+
+       Run only if myscript changed something:
+         cmd.wait:
+           - name: echo hello
+           - cwd: /
+           - watch:
+               - cmd: Run myscript
 
    Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
@@ -147,7 +161,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-How do I create a environment from a pillar map?
+How do I create an environment from a pillar map?
 -------------------------------------------------------------------------------
 
 The map that comes from a pillar cannot be directly consumed by the env option.
@@ -187,7 +201,7 @@ log = logging.getLogger(__name__)
 
 def _reinterpreted_state(state):
     '''
-    Re-interpret the state returned by salt.sate.run using our protocol.
+    Re-interpret the state returned by salt.state.run using our protocol.
     '''
     ret = state['changes']
     state['changes'] = {}
@@ -259,7 +273,7 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def _run_check(cmd_kwargs, onlyif, unless, group, creates):
+def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     '''
     Execute the onlyif and unless logic.
     Return a result dict if:
@@ -268,6 +282,10 @@ def _run_check(cmd_kwargs, onlyif, unless, group, creates):
     * unless succeeded (unless == 0)
     else return True
     '''
+    # never use VT for onlyif/unless executions because this will lead
+    # to quote problems
+    cmd_kwargs = copy.deepcopy(cmd_kwargs)
+    cmd_kwargs['use_vt'] = False
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
@@ -341,6 +359,8 @@ def wait(name,
          env=(),
          stateful=False,
          umask=None,
+         output_loglevel='debug',
+         use_vt=False,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it
@@ -400,7 +420,17 @@ def wait(name,
     creates
         Only run if the file specified by ``creates`` does not exist.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -425,6 +455,8 @@ def wait_script(name,
                 env=None,
                 stateful=False,
                 umask=None,
+                use_vt=False,
+                output_loglevel='debug',
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -492,6 +524,17 @@ def wait_script(name,
     stateful
         The command being executed is expected to return data about executing
         a state
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
+     output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -511,9 +554,10 @@ def run(name,
         env=None,
         stateful=False,
         umask=None,
-        output_loglevel='info',
+        output_loglevel='debug',
         quiet=False,
         timeout=None,
+        use_vt=False,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -573,13 +617,13 @@ def run(name,
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
-        Note that the command being run will still be logged at loglevel INFO
+        Note that the command being run will still be logged (loglevel: DEBUG)
         regardless, unless ``quiet`` is used for this value.
 
     quiet
         The command will be executed quietly, meaning no log entries of the
         actual command or its return data. This is deprecated as of the
-        **2014.1.0 (Hydrogen)** release, and is being replaced with
+        **2014.1.0** release, and is being replaced with
         ``output_loglevel: quiet``.
 
     timeout
@@ -589,7 +633,12 @@ def run(name,
     creates
         Only run if the file specified by ``creates`` does not exist.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
 
     .. note::
 
@@ -640,6 +689,7 @@ def run(name,
 
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
+                  'use_vt': use_vt,
                   'shell': shell or __grains__['shell'],
                   'env': env,
                   'umask': umask,
@@ -647,7 +697,7 @@ def run(name,
                   'quiet': quiet}
 
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, group, creates)
+        cret = mod_run_check(cmd_kwargs, onlyif, unless, group, creates)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -689,6 +739,8 @@ def script(name,
            stateful=False,
            umask=None,
            timeout=None,
+           use_vt=False,
+           output_loglevel='debug',
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -768,7 +820,18 @@ def script(name,
     creates
         Only run if the file specified by ``creates`` does not exist.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -804,6 +867,8 @@ def script(name,
                        'template': template,
                        'umask': umask,
                        'timeout': timeout,
+                       'output_loglevel': output_loglevel,
+                       'use_vt': use_vt,
                        'saltenv': __env__})
 
     run_check_cmd_kwargs = {
@@ -821,7 +886,7 @@ def script(name,
         cmd_kwargs.update({'args': name.split(' ', 1)[1]})
 
     try:
-        cret = _run_check(
+        cret = mod_run_check(
             run_check_cmd_kwargs, onlyif, unless, group, creates
         )
         if isinstance(cret, dict):
@@ -865,6 +930,8 @@ def call(name,
          onlyif=None,
          unless=None,
          creates=None,
+         output_loglevel='debug',
+         use_vt=False,
          **kwargs):
     '''
     Invoke a pre-defined Python function with arguments specified in the state
@@ -907,11 +974,13 @@ def call(name,
                   'runas': kwargs.get('user'),
                   'shell': kwargs.get('shell') or __grains__['shell'],
                   'env': kwargs.get('env'),
+                  'use_vt': use_vt,
+                  'output_loglevel': output_loglevel,
                   'umask': kwargs.get('umask')}
     if HAS_GRP:
         pgid = os.getegid()
     try:
-        cret = _run_check(cmd_kwargs, onlyif, unless, None, creates)
+        cret = mod_run_check(cmd_kwargs, onlyif, unless, None, creates)
         if isinstance(cret, dict):
             ret.update(cret)
             return ret
@@ -941,6 +1010,8 @@ def wait_call(name,
               unless=None,
               creates=None,
               stateful=False,
+              use_vt=False,
+              output_loglevel='debug',
               **kwargs):
     # Ignoring our arguments is intentional.
     return {'name': name,

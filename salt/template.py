@@ -133,8 +133,8 @@ def template_shebang(template, renderers, default):
     with salt.utils.fopen(template, 'r') as ifile:
         line = ifile.readline()
 
-        # Check if it starts with a shebang
-        if line.startswith('#!'):
+        # Check if it starts with a shebang and not a path
+        if line.startswith('#!') and not line.startswith('#!/'):
 
             # pull out the shebang data
             render_pipe = check_render_pipe_str(line.strip()[2:], renderers)
@@ -150,17 +150,20 @@ def template_shebang(template, renderers, default):
 #
 OLD_STYLE_RENDERERS = {}
 
-for comb in """
+for comb in '''
     yaml_jinja
     yaml_mako
     yaml_wempy
     json_jinja
     json_mako
     json_wempy
-    """.strip().split():
+    yamlex_jinja
+    yamlexyamlex_mako
+    yamlexyamlex_wempy
+    '''.strip().split():
 
     fmt, tmpl = comb.split('_')
-    OLD_STYLE_RENDERERS[comb] = "%s|%s" % (tmpl, fmt)
+    OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)
 
 
 def check_render_pipe_str(pipestr, renderers):

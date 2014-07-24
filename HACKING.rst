@@ -162,11 +162,18 @@ Activate the virtualenv::
 
     source /path/to/your/virtualenv/bin/activate
 
-Install Salt (and dependencies) into the virtualenv::
+Install Salt (and dependencies) into the virtualenv.
 
-    pip install -r requirements.txt
+ZeroMQ Transport:
+
+.. code-block:: bash
+
+    pip install -r zeromq-requirements.txt
     pip install psutil
     pip install -e .
+
+
+.. note:: Installing M2Crypto
 
 .. note:: Installing M2Crypto
 
@@ -175,6 +182,15 @@ Install Salt (and dependencies) into the virtualenv::
     while installing M2Crypto, try installing it with the following command::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
+
+
+RAET Transport:
+
+.. code-block:: bash
+
+    pip install -r raet-requirements.txt
+    pip install psutil
+    pip install -e .
 
 
 Running a self-contained development version

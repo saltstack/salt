@@ -141,7 +141,7 @@ def _linux_gpu_data():
 
     lspci = salt.utils.which('lspci')
     if not lspci:
-        log.info(
+        log.debug(
             'The `lspci` binary is not available on the system. GPU grains '
             'will not be available.'
         )
@@ -173,7 +173,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: \'{0}\''.format(line))
+                log.debug('Unexpected lspci output: {0!r}'.format(line))
 
         if error:
             log.warn(
@@ -424,7 +424,7 @@ def _virtual(osdata):
         if not cmd:
             continue
 
-        cmd = '%s %s' % (command, ' '.join(args))
+        cmd = '{0} {1}'.format(command, ' '.join(args))
 
         ret = __salt__['cmd.run_all'](cmd)
 
@@ -433,7 +433,7 @@ def _virtual(osdata):
                 if salt.utils.is_windows():
                     continue
                 log.warn(
-                    'Although \'{0}\' was found in path, the current user '
+                    'Although {0!r} was found in path, the current user '
                     'cannot execute it. Grains output might not be '
                     'accurate.'.format(command)
                 )
@@ -512,8 +512,14 @@ def _virtual(osdata):
     if osdata['kernel'] in choices:
         if os.path.isfile('/proc/1/cgroup'):
             try:
-                if ':/lxc/' in salt.utils.fopen('/proc/1/cgroup', 'r').read():
+                if ':/lxc/' in salt.utils.fopen(
+                    '/proc/1/cgroup', 'r'
+                ).read():
                     grains['virtual_subtype'] = 'LXC'
+                if ':/docker/' in salt.utils.fopen(
+                    '/proc/1/cgroup', 'r'
+                ).read():
+                    grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
         if isdir('/proc/vz'):
@@ -521,7 +527,17 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
-        elif isdir('/proc/sys/xen') or \
+        # Provide additional detection for OpenVZ
+        if os.path.isfile('/proc/self/status'):
+            with salt.utils.fopen('/proc/self/status') as status_file:
+                vz_re = re.compile(r'^envID:\s+(\d+)$')
+                for line in status_file:
+                    vz_match = vz_re.match(line.rstrip('\n'))
+                    if vz_match and int(vz_match.groups()[0]) != 0:
+                        grains['virtual'] = 'openvzve'
+                    elif vz_match and int(vz_match.groups()[0]) == 0:
+                        grains['virtual'] = 'openvzhn'
+        if isdir('/proc/sys/xen') or \
                 isdir('/sys/bus/xen') or isdir('/proc/xen'):
             if os.path.isfile('/proc/xen/xsd_kva'):
                 # Tested on CentOS 5.3 / 2.6.18-194.26.1.el5xen
@@ -595,7 +611,7 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in __salt__['cmd.run'](
                     '{0} -n machdep.cpu_brand'.format(sysctl)):
                 grains['virtual'] = 'kvm'
-            elif not 'invalid' in __salt__['cmd.run'](
+            elif 'invalid' not in __salt__['cmd.run'](
                     '{0} -n machdep.xen.suspend'.format(sysctl)):
                 grains['virtual'] = 'Xen PV DomU'
             elif 'VMware' in __salt__['cmd.run'](
@@ -797,8 +813,11 @@ def os_data():
     # Ubuntu 10.04
     # ('Linux', 'MINIONNAME', '2.6.32-38-server',
     # '#83-Ubuntu SMP Wed Jan 4 11:26:59 UTC 2012', 'x86_64', '')
+
+    # pylint: disable=unpacking-non-sequence
     (grains['kernel'], grains['nodename'],
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
+    # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_windows():
         grains['osrelease'] = grains['kernelrelease']
@@ -1024,6 +1043,14 @@ def os_data():
             os=grains['osfullname'],
             ver=grains['osrelease'])
 
+    if grains.get('osrelease', ''):
+        osrelease_info = grains['osrelease'].split('.')
+        for idx, value in enumerate(osrelease_info):
+            if not value.isdigit():
+                continue
+            osrelease_info[idx] = int(value)
+        grains['osrelease_info'] = tuple(osrelease_info)
+
     return grains
 
 
@@ -1222,6 +1249,15 @@ def pythonpath():
     return {'pythonpath': sys.path}
 
 
+def pythonexecutable():
+    '''
+    Return the python executable in use
+    '''
+    # Provides:
+    #   pythonexecutable
+    return {'pythonexecutable': sys.executable}
+
+
 def saltpath():
     '''
     Return the path of the salt module
@@ -1286,7 +1322,7 @@ def _dmidecode_data(regex_dict):
     elif salt.utils.which('smbios'):
         out = __salt__['cmd.run']('smbios')
     else:
-        log.warning(
+        log.debug(
             'The `dmidecode` binary is not available on the system. GPU '
             'grains will not be available.'
         )

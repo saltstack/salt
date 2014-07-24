@@ -111,7 +111,7 @@ def ec2_credentials_create(user_id=None, name=None,
                            tenant_id=None, tenant=None,
                            profile=None, **connection_args):
     '''
-    Create EC2-compatibile credentials for user per tenant
+    Create EC2-compatible credentials for user per tenant
 
     CLI Examples:
 
@@ -146,7 +146,7 @@ def ec2_credentials_create(user_id=None, name=None,
 def ec2_credentials_delete(user_id=None, name=None, access_key=None,
                            profile=None, **connection_args):
     '''
-    Delete EC2-compatibile credentials
+    Delete EC2-compatible credentials
 
     CLI Examples:
 
@@ -288,7 +288,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
         salt '*' keystone.endpoint_create nova 'http://public/url'
             'http://internal/url' 'http://adminurl/url' region
     '''
-    kstone = auth(profile)
+    kstone = auth(profile, **connection_args)
     keystone_service = service_get(name=service, **connection_args)
     if not keystone_service or 'Error' in keystone_service:
         return {'Error': 'Could not find the specified service'}
@@ -310,7 +310,7 @@ def endpoint_delete(service, profile=None, **connection_args):
 
         salt '*' keystone.endpoint_delete nova
     '''
-    kstone = auth(profile)
+    kstone = auth(profile, **connection_args)
     endpoint = endpoint_get(service, profile, **connection_args)
     if not endpoint or 'Error' in endpoint:
         return {'Error': 'Could not find any endpoints for the service'}
@@ -439,7 +439,7 @@ def service_delete(service_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.service_delete c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_delete name=nova
     '''
-    kstone = auth(profile)
+    kstone = auth(profile, **connection_args)
     if name:
         service_id = service_get(name=name, profile=profile,
                                  **connection_args)[name]['id']

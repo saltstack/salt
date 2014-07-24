@@ -9,14 +9,15 @@ import os
 import stat
 
 from ioflo.base.odicting import odict
+from ioflo.base.consoling import getConsole
+console = getConsole()
 
 import salt.daemons.flo
-
 
 def test():
     """ Execute run.start """
 
-    pkiDirpath = os.path.join('/tmp', 'raet', 'keyo', 'master', 'pki')
+    pkiDirpath = os.path.join('/tmp', 'raet', 'testo', 'master', 'pki')
     if not os.path.exists(pkiDirpath):
         os.makedirs(pkiDirpath)
 
@@ -68,4 +69,5 @@ def test():
     master.start(behaviors=['raet.flo.behaving'])
 
 if __name__ == '__main__':
+    console.reinit(verbosity=console.Wordage.concise)
     test()

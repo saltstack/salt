@@ -36,7 +36,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(1)
+        #sys.exit(salt.exitcodes.EX_GENERIC)
         available = False
 
 
@@ -111,7 +111,7 @@ deserialize = _deserialize
 serialize.__doc__ = '''
     Serialize Python data to MsgPack.
 
-    :param obj: the datastructure to serialize
+    :param obj: the data structure to serialize
     :param options: options given to lower msgpack module.
 '''
 

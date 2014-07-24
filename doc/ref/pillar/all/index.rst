@@ -15,6 +15,7 @@ Full list of builtin pillar modules
     cobbler
     django_orm
     etcd_pillar
+    foreman
     git_pillar
     hiera
     libvirt
@@ -23,4 +24,5 @@ Full list of builtin pillar modules
     pillar_ldap
     puppet
     reclass_adapter
+    redismod
     virtkey

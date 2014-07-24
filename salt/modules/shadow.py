@@ -13,6 +13,12 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
+try:
+    import salt.utils.pycrypto
+    HAS_CRYPT = True
+except ImportError:
+    HAS_CRYPT = False
 
 
 def __virtual__():
@@ -129,6 +135,56 @@ def set_mindays(name, mindays):
     return False
 
 
+def gen_password(password, crypt_salt=None, algorithm='sha512'):
+    '''
+    Generate hashed password
+
+    password
+        Plaintext password to be hashed.
+
+    crypt_salt
+        Crpytographic salt. If not given, a random 8-character salt will be
+        generated.
+
+    algorithm
+        The following hash algorithms are supported:
+
+        * md5
+        * blowfish (not in mainline glibc, only available in distros that add it)
+        * sha256
+        * sha512 (default)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.gen_password 'I_am_password'
+        salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
+    '''
+    if not HAS_CRYPT:
+        raise CommandExecutionError(
+                'gen_password is not available on this operating system '
+                'because the "crypt" python module is not available.'
+                )
+    return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
+
+
+def del_password(name):
+    '''
+    Delete the password from name user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.del_password username
+    '''
+    cmd = 'passwd -d {0}'.format(name)
+    __salt__['cmd.run'](cmd, output_loglevel='quiet')
+    uinfo = info(name)
+    return not uinfo['passwd']
+
+
 def set_password(name, password, use_usermod=False):
     '''
     Set the password for a named user. The password must be a properly defined
@@ -223,7 +279,7 @@ def set_date(name, date):
 
 def set_expire(name, expire):
     '''
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
     Sets the value for the date the account expires as days since the epoch
     (January 1, 1970). Using a value of -1 will clear expiration. See man

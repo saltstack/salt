@@ -3,6 +3,9 @@
 Support for Linux LVM2
 '''
 
+# Import python libs
+import os.path
+
 # Import salt libs
 import salt.utils
 
@@ -190,6 +193,8 @@ def pvcreate(devices, **kwargs):
 
     cmd = 'pvcreate'
     for device in devices.split(','):
+        if not os.path.exists(device):
+            return '{0} does not exist'.format(device)
         cmd += ' {0}'.format(device)
     valid = ('metadatasize', 'dataalignment', 'dataalignmentoffset',
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
@@ -198,6 +203,25 @@ def pvcreate(devices, **kwargs):
     for var in kwargs.keys():
         if kwargs[var] and var in valid:
             cmd += ' --{0} {1}'.format(var, kwargs[var])
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out[0]
+
+
+def pvremove(devices):
+    '''
+    Remove a physical device being used as an LVM physical volume
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt mymachine lvm.pvremove /dev/sdb1,/dev/sdb2
+    '''
+    cmd = 'pvremove -y'
+    for device in devices.split(','):
+        if not __salt__['lvm.pvdisplay'](device):
+            return '{0} is not a physical volume'.format(device)
+        cmd += ' {0}'.format(device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out[0]
 

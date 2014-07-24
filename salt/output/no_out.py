@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Display no output.
+Display no output
+=================
+
+No output is produced when this outputter is selected
 '''
 
 # Define the module's virtual name

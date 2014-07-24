@@ -42,19 +42,24 @@ log = logging.getLogger(__name__)
 STATE_INTERNAL_KEYWORDS = frozenset([
     # These are keywords passed to state module functions which are to be used
     # by salt in this state module and not on the actual state module function
+    'check_cmd',
+    'fail_hard',
     'fun',
+    'onchanges',
+    'onfail',
+    'onlyif',
     'order',
-    'state',
-    'watch',
-    'watch_in',
     'prereq',
     'prereq_in',
+    'reload_modules',
     'require',
     'require_in',
-    'onfail',
-    'fail_hard',
-    'reload_modules',
     'saltenv',
+    'state',
+    'unless',
+    'use',
+    'watch',
+    'watch_in',
     '__id__',
     '__sls__',
     '__env__',
@@ -66,6 +71,13 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     '__pub_ret',
     '__pub_tgt_type',
 ])
+
+
+def _odict_hashable(self):
+    return id(self)
+
+
+OrderedDict.__hash__ = _odict_hashable
 
 
 def split_low_tag(tag):
@@ -85,6 +97,14 @@ def _gen_tag(low):
     Generate the running dict tag string from the low data structure
     '''
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+
+
+def _l_tag(name, id_):
+    low = {'name': 'listen_{0}'.format(name),
+           '__id__': 'listen_{0}'.format(id_),
+           'state': 'Listen_Error',
+           'fun': 'Listen_Error'}
+    return _gen_tag(low)
 
 
 def trim_req(req):
@@ -472,9 +492,14 @@ class Compiler(object):
                                 chunk.update(arg)
                 if names:
                     name_order = 1
-                    for low_name in names:
+                    for entry in names:
                         live = copy.deepcopy(chunk)
-                        live['name'] = low_name
+                        if isinstance(entry, dict):
+                            low_name = entry.keys()[0]
+                            live['name'] = low_name
+                            live.update(entry[low_name][0])
+                        else:
+                            live['name'] = entry
                         live['name_order'] = name_order
                         name_order = name_order + 1
                         for fun in funcs:
@@ -572,6 +597,79 @@ class State(object):
                     return
                 self.mod_init.add(low['state'])
 
+    def _mod_aggregate(self, low, running, chunks):
+        '''
+        Execute the aggregation systems to runtime modify the low chunk
+        '''
+        agg_opt = self.functions['config.option']('state_aggregate')
+        if low.get('aggregate') is True:
+            agg_opt = low['aggregate']
+        if agg_opt is True:
+            agg_opt = [low['state']]
+        else:
+            return low
+        if low['state'] in agg_opt and not low.get('__agg__'):
+            agg_fun = '{0}.mod_aggregate'.format(low['state'])
+            if agg_fun in self.states:
+                try:
+                    low = self.states[agg_fun](low, chunks, running)
+                    low['__agg__'] = True
+                except TypeError:
+                    log.error('Failed to execute aggregate for state {0}'.format(low['state']))
+        return low
+
+    def _run_check(self, low_data):
+        '''
+        Check that unless doesn't return 0, and that onlyif returns a 0.
+        '''
+        ret = {'result': False}
+        if 'onlyif' in low_data:
+            if not isinstance(low_data['onlyif'], list):
+                low_data_onlyif = [low_data['onlyif']]
+            else:
+                low_data_onlyif = low_data['onlyif']
+            for entry in low_data_onlyif:
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+                log.debug('Last command return code: {0}'.format(cmd))
+                if cmd != 0 and ret['result'] is False:
+                    ret.update({'comment': 'onlyif execution failed', 'result': True})
+                elif cmd == 0:
+                    ret.update({'comment': 'onlyif execution succeeded', 'result': False})
+                    return ret
+            return ret
+
+        if 'unless' in low_data:
+            if not isinstance(low_data['unless'], list):
+                low_data_unless = [low_data['unless']]
+            else:
+                low_data_unless = low_data['unless']
+            for entry in low_data_unless:
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+                log.debug('Last command return code: {0}'.format(cmd))
+                if cmd == 0 and ret['result'] is False:
+                    ret.update({'comment': 'unless execution succeeded', 'result': True})
+                elif cmd != 0:
+                    ret.update({'comment': 'unless execution failed', 'result': False})
+                    return ret
+
+        # No reason to stop, return ret
+        return ret
+
+    def _run_check_cmd(self, low_data):
+        '''
+        Alter the way a successfull state run is determined
+        '''
+        ret = {'result': False}
+        for entry in low_data['check_cmd']:
+            cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+            log.debug('Last command return code: {0}'.format(cmd))
+            if cmd == 0 and ret['result'] is False:
+                ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
+            elif cmd != 0:
+                ret.update({'comment': 'check_cmd determined the state failed', 'result': False})
+                return ret
+        return ret
+
     def load_modules(self, data=None):
         '''
         Load the modules into the state
@@ -612,7 +710,7 @@ class State(object):
             # order for the newly installed package to be importable.
             reload(site)
         self.load_modules()
-        if not self.opts.get('local', False):
+        if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
     def check_refresh(self, data, ret):
@@ -981,9 +1079,14 @@ class State(object):
                                 chunk[key] = val
                 if names:
                     name_order = 1
-                    for low_name in names:
+                    for entry in names:
                         live = copy.deepcopy(chunk)
-                        live['name'] = low_name
+                        if isinstance(entry, dict):
+                            low_name = entry.keys()[0]
+                            live['name'] = low_name
+                            live.update(entry[low_name][0])
+                        else:
+                            live['name'] = entry
                         live['name_order'] = name_order
                         name_order = name_order + 1
                         for fun in funcs:
@@ -1017,8 +1120,12 @@ class State(object):
                         name = id_
                     else:
                         errors.append(
-                            'Cannot extend ID {0} in \'{1}:{2}\'. It is not '
-                            'part of the high state.'.format(
+                            'Cannot extend ID \'{0}\' in \'{1}:{2}\'. It is not '
+                            'part of the high state.\n'
+                            'This is likely due to a missing include statement '
+                            'or an incorrectly typed ID.\nEnsure that a '
+                            'state with an ID of \'{0}\' is available\nin '
+                            'environment \'{1}\' and to SLS \'{2}\''.format(
                                 name,
                                 body.get('__env__', 'base'),
                                 body.get('__sls__', 'base'))
@@ -1323,7 +1430,8 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
-        log.info('Running state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
+        start_time = datetime.datetime.now()
+        log.info('Running state [{0}] at time {1}'.format(low['name'], start_time.time().isoformat()))
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1339,6 +1447,8 @@ class State(object):
             format_log(ret)
             self.check_refresh(low, ret)
             return ret
+        else:
+            ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         if not low.get('__prereq__'):
             log.info(
@@ -1379,6 +1489,10 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
+            if ('unless' in low and '{0[state]}.mod_run_check'.format(low) not in self.states) or \
+                    ('onlyif' in low and '{0[state]}.mod_run_check'.format(low) not in self.states):
+                ret.update(self._run_check(low))
+
             if 'saltenv' in low:
                 inject_globals['__env__'] = low['saltenv']
             elif isinstance(cdata['kwargs'].get('env', None), string_types):
@@ -1396,11 +1510,14 @@ class State(object):
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
 
-            with context.func_globals_inject(self.states[cdata['full']],
-                                             **inject_globals):
-                ret = self.states[cdata['full']](*cdata['args'],
-                                                 **cdata['kwargs'])
-                self.verify_ret(ret)
+            if 'result' not in ret or ret['result'] is False:
+                with context.func_globals_inject(self.states[cdata['full']],
+                                                 **inject_globals):
+                    ret = self.states[cdata['full']](*cdata['args'],
+                                                     **cdata['kwargs'])
+            if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
+                ret.update(self._run_check_cmd(low))
+            self.verify_ret(ret)
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
@@ -1441,7 +1558,10 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
-        log.info('Completed state [{0}] at time {1}'.format(low['name'], datetime.datetime.now().time().isoformat()))
+        finish_time = datetime.datetime.now()
+        ret['start_time'] = start_time.time().isoformat()
+        ret['duration'] = (finish_time - start_time).microseconds / 1000
+        log.info('Completed state [{0}] at time {1}'.format(low['name'], finish_time.time().isoformat()))
         return ret
 
     def call_chunks(self, chunks):
@@ -1591,6 +1711,7 @@ class State(object):
         Check if a chunk has any requires, execute the requires and then
         the chunk
         '''
+        low = self._mod_aggregate(low, running, chunks)
         self._mod_init(low)
         tag = _gen_tag(low)
         if not low.get('prerequired'):
@@ -1732,6 +1853,61 @@ class State(object):
             self.event(running[tag], len(chunks))
         return running
 
+    def call_listen(self, chunks, running):
+        '''
+        Find all of the lesten routines and call the associated mod_match runs
+        '''
+        listeners = []
+        crefs = {}
+        for chunk in chunks:
+            crefs[(chunk['state'], chunk['name'])] = chunk
+            crefs[(chunk['state'], chunk['__id__'])] = chunk
+            if 'listen' in chunk:
+                listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
+            if 'listen_in' in chunk:
+                for l_in in chunk['listen_in']:
+                    for key, val in l_in.items():
+                        listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
+        mod_watchers = []
+        errors = {}
+        for l_dict in listeners:
+            for key, val in l_dict.items():
+                for listen_to in val:
+                    for lkey, lval in listen_to.items():
+                        if (lkey, lval) not in crefs:
+                            rerror = {_l_tag(lkey, lval):
+                                         {'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
+                                          'name': 'listen_{0}:{1}'.format(lkey, lval),
+                                          'result': False,
+                                          'changes': {}}}
+                            errors.update(rerror)
+                            continue
+                        to_tag = _gen_tag(crefs[(lkey, lval)])
+                        if to_tag not in running:
+                            continue
+                        if running[to_tag]['changes']:
+                            if key not in crefs:
+                                rerror = {_l_tag(key[0], key[1]):
+                                             {'comment': 'Referenced state {0}: {1} does not exist'.format(key[0], key[1]),
+                                              'name': 'listen_{0}:{1}'.format(key[0], key[1]),
+                                              'result': False,
+                                              'changes': {}}}
+                                errors.update(rerror)
+                                continue
+                            chunk = crefs[key]
+                            low = chunk.copy()
+                            low['sfun'] = chunk['fun']
+                            low['fun'] = 'mod_watch'
+                            low['__id__'] = 'listener_{0}'.format(low['__id__'])
+                            mod_watchers.append(low)
+        ret = self.call_chunks(mod_watchers)
+        running.update(ret)
+        for err in errors:
+            errors[err]['__run_num__'] = self.__run_num
+            self.__run_num += 1
+        running.update(errors)
+        return running
+
     def call_high(self, high):
         '''
         Process a high data call and ensure the defined states.
@@ -1756,6 +1932,7 @@ class State(object):
         if errors:
             return errors
         ret = self.call_chunks(chunks)
+        ret = self.call_listen(chunks, ret)
         return ret
 
     def render_template(self, high, template):
@@ -2101,6 +2278,7 @@ class BaseHighState(object):
         {'saltenv': ['state1', 'state2', ...]}
         '''
         matches = {}
+        # pylint: disable=cell-var-from-loop
         for saltenv, body in top.items():
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
@@ -2131,6 +2309,7 @@ class BaseHighState(object):
                     set(ext_matches[saltenv]).union(matches[saltenv]))
             else:
                 matches[saltenv] = ext_matches[saltenv]
+        # pylint: enable=cell-var-from-loop
         return matches
 
     def load_dynamic(self, matches):
@@ -2141,9 +2320,11 @@ class BaseHighState(object):
         if not self.opts['autoload_dynamic_modules']:
             return
         if self.opts.get('local', False):
-            syncd = self.state.functions['saltutil.sync_all'](list(matches), refresh=False)
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         else:
-            syncd = self.state.functions['saltutil.sync_all'](list(matches))
+            syncd = self.state.functions['saltutil.sync_all'](list(matches),
+                                                              refresh=False)
         if syncd['grains']:
             self.opts['grains'] = salt.loader.grains(self.opts)
             self.state.opts['pillar'] = self.state._gather_pillar()
@@ -2522,12 +2703,29 @@ class BaseHighState(object):
             return False
         return True
 
+    def matches_whitelist(self, matches, whitelist):
+        '''
+        Reads over the matches and returns a matches dict with just the ones
+        that are in the whitelist
+        '''
+        if not whitelist:
+            return matches
+        ret_matches = {}
+        if not isinstance(whitelist, list):
+            whitelist = whitelist.split(',')
+        for env in matches:
+            for sls in matches[env]:
+                if sls in whitelist:
+                    ret_matches[env] = ret_matches[env] if env in ret_matches else []
+                    ret_matches[env].append(sls)
+        return ret_matches
+
     def call_highstate(self, exclude=None, cache=None, cache_name='highstate',
-                       force=False):
+                       force=False, whitelist=None):
         '''
         Run the sequence to execute the salt highstate for this minion
         '''
-        #Check that top file exists
+        # Check that top file exists
         tag_name = 'no_|-states_|-states_|-None'
         ret = {tag_name: {
                 'result': False,
@@ -2546,7 +2744,7 @@ class BaseHighState(object):
                 with salt.utils.fopen(cfn, 'rb') as fp_:
                     high = self.serial.load(fp_)
                     return self.state.call_high(high)
-        #File exists so continue
+        # File exists so continue
         err = []
         try:
             top = self.get_top()
@@ -2563,6 +2761,7 @@ class BaseHighState(object):
             msg = ('No Top file or external nodes data matches found')
             ret[tag_name]['comment'] = msg
             return ret
+        matches = self.matches_whitelist(matches, whitelist)
         self.load_dynamic(matches)
         if not self._check_pillar(force):
             err += ['Pillar failed to render with the following messages:']

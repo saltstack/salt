@@ -1,6 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-The JSON output module converts the return data into JSON.
+Display return data in JSON format
+==================================
+
+Example output::
+
+    {
+        "myminion": {
+            "list": [
+                "Hello",
+                "World"
+            ],
+            "bar": "baz",
+            "dictionary": {
+                "abc": 123,
+                "def": 456
+            }
+        }
+    }
 '''
 
 # Import python libs

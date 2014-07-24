@@ -9,14 +9,18 @@ systems that cannot or should not host a minion agent.
 # Import salt libs
 import salt.loader
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class Roster(object):
     '''
     Used to manage a roster of minions allowing the master to become outwardly
     minion aware
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, backends=None):
         self.opts = opts
+        self.backends = backends
         self.rosters = salt.loader.roster(opts)
 
     def _gen_back(self):
@@ -24,10 +28,12 @@ class Roster(object):
         Return a list of loaded roster backends
         '''
         back = set()
-        if self.opts.get('roster'):
-            fun = '{0}.targets'.format(self.opts['roster'])
-            if fun in self.rosters:
-                return [self.opts['roster']]
+        if self.backends:
+            for backend in self.backends:
+                fun = '{0}.targets'.format(backend)
+                if fun in self.rosters:
+                    back.add(backend)
+            return back
         for roster in self.rosters:
             back.add(roster.split('.')[0])
         return sorted(back)
@@ -40,7 +46,13 @@ class Roster(object):
         targets = {}
         for back in self._gen_back():
             f_str = '{0}.targets'.format(back)
-            if not f_str in self.rosters:
+            if f_str not in self.rosters:
                 continue
-            targets.update(self.rosters[f_str](tgt, tgt_type))
+            try:
+                targets.update(self.rosters[f_str](tgt, tgt_type))
+            except salt.exceptions.SaltRenderError as exc:
+                log.debug('Unable to render roster file: {0}'.format(exc.error))
+
+        if not targets:
+            raise salt.exceptions.SaltRenderError('Unable to render any roster.')
         return targets

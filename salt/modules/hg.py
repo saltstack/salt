@@ -54,7 +54,7 @@ def revision(cwd, rev='tip', short=False, user=None):
 
 def describe(cwd, rev='tip', user=None):
     '''
-    Mimick git describe and return an identifier for the given revision
+    Mimic git describe and return an identifier for the given revision
 
     cwd
         The path to the Mercurial repository

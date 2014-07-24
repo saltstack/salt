@@ -40,7 +40,7 @@ def unpurge(*packages):
         ['dpkg', '--set-selections'],
         stdin=r'\n'.join(['{0} install'.format(x) for x in packages]),
         python_shell=False,
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs'](purge_desired=True)

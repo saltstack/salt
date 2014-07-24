@@ -19,14 +19,18 @@ Manage the information stored in the known_hosts files.
         - user: root
 '''
 
+# Import python libs
+import os
+
 
 def present(
         name,
-        user,
+        user=None,
         fingerprint=None,
+        key=None,
         port=None,
         enc=None,
-        config='.ssh/known_hosts',
+        config=None,
         hash_hostname=True):
     '''
     Verifies that the specified host is known by the specified user
@@ -56,7 +60,9 @@ def present(
 
     config
         The location of the authorized keys file relative to the user's home
-        directory, defaults to ".ssh/known_hosts"
+        directory, defaults to ".ssh/known_hosts". If no user is specified,
+        defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
+        absolute path when a user is not specified.
 
     hash_hostname : True
         Hash all hostnames and addresses in the output.
@@ -65,10 +71,38 @@ def present(
            'changes': {},
            'result': None if __opts__['test'] else True,
            'comment': ''}
+
+    if not user:
+        config = config or '/etc/ssh/ssh_known_hosts'
+    else:
+        config = config or '.ssh/known_hosts'
+
+    if not user and not os.path.isabs(config):
+        comment = 'If not specifying a "user", specify an absolute "config".'
+        ret['result'] = False
+        return dict(ret, comment=comment)
+
     if __opts__['test']:
-        result = __salt__['ssh.check_known_host'](user, name,
-                                                  fingerprint=fingerprint,
-                                                  config=config)
+        if key and fingerprint:
+            comment = 'Specify either "key" or "fingerprint", not both.'
+            ret['result'] = False
+            return dict(ret, comment=comment)
+        elif key:
+            if not enc:
+                comment = 'Required argument "enc" if using "key" argument.'
+                ret['result'] = False
+                return dict(ret, comment=comment)
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      key=key,
+                                                      config=config)
+        elif fingerprint:
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      fingerprint=fingerprint,
+                                                      config=config)
+        else:
+            comment = 'Arguments key or fingerprint required.'
+            ret['result'] = False
+            return dict(ret, comment=comment)
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
             ret['result'] = True
@@ -82,26 +116,34 @@ def present(
                                                                      config)
             return dict(ret, comment=comment)
 
-    result = __salt__['ssh.set_known_host'](user, name,
+    result = __salt__['ssh.set_known_host'](user=user, hostname=name,
                 fingerprint=fingerprint,
+                key=key,
                 port=port,
                 enc=enc,
                 config=config,
                 hash_hostname=hash_hostname)
     if result['status'] == 'exists':
         return dict(ret,
-                    comment='{0} already exists in {1}'.format(name, config))
+                    Gcomment='{0} already exists in {1}'.format(name, config))
     elif result['status'] == 'error':
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
-        fingerprint = result['new']['fingerprint']
-        return dict(ret,
-                changes={'old': result['old'], 'new': result['new']},
-                comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
-                         name, config, fingerprint))
+        if key:
+            new_key = result['new']['key']
+            return dict(ret,
+                    changes={'old': result['old'], 'new': result['new']},
+                    comment='{0}\'s key saved to {1} (key: {2})'.format(
+                             name, config, new_key))
+        else:
+            fingerprint = result['new']['fingerprint']
+            return dict(ret,
+                    changes={'old': result['old'], 'new': result['new']},
+                    comment='{0}\'s key saved to {1} (fingerprint: {2})'.format(
+                             name, config, fingerprint))
 
 
-def absent(name, user, config='.ssh/known_hosts'):
+def absent(name, user=None, config=None):
     '''
     Verifies that the specified host is not known by the given user
 
@@ -113,13 +155,26 @@ def absent(name, user, config='.ssh/known_hosts'):
 
     config
         The location of the authorized keys file relative to the user's home
-        directory, defaults to ".ssh/known_hosts"
+        directory, defaults to ".ssh/known_hosts". If no user is specified,
+        defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
+        absolute path when a user is not specified.
     '''
     ret = {'name': name,
            'changes': {},
            'result': None if __opts__['test'] else True,
            'comment': ''}
-    known_host = __salt__['ssh.get_known_host'](user, name, config=config)
+
+    if not user:
+        config = config or '/etc/ssh/ssh_known_hosts'
+    else:
+        config = config or '.ssh/known_hosts'
+
+    if not user and not os.path.isabs(config):
+        comment = 'If not specifying a "user", specify an absolute "config".'
+        ret['result'] = False
+        return dict(ret, comment=comment)
+
+    known_host = __salt__['ssh.get_known_host'](user=user, hostname=name, config=config)
     if not known_host:
         return dict(ret, comment='Host is already absent')
 
@@ -128,7 +183,7 @@ def absent(name, user, config='.ssh/known_hosts'):
                                                                      config)
         return dict(ret, comment=comment)
 
-    rm_result = __salt__['ssh.rm_known_host'](user, name, config=config)
+    rm_result = __salt__['ssh.rm_known_host'](user=user, hostname=name, config=config)
     if rm_result['status'] == 'error':
         return dict(ret, result=False, comment=rm_result['error'])
     else:

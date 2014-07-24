@@ -22,7 +22,7 @@ The service can also be set to be started at runtime via the enable option:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
-service is by default restarted. If the desired behaviour is to reload the
+service is by default restarted. If the desired behavior is to reload the
 service, then set the reload value to True:
 
 .. code-block:: yaml
@@ -52,6 +52,9 @@ def __virtual__():
 
 
 def _enabled_used_error(ret):
+    '''
+    Warn of potential typo.
+    '''
     ret['result'] = False
     ret['comment'] = (
         'Service {0} uses non-existent option "enabled".  ' +
@@ -74,7 +77,7 @@ def _enable(name, started, result=True, **kwargs):
         return ret
 
     # Check to see if this minion supports enable
-    if not 'service.enable' in __salt__ or not 'service.enabled' in __salt__:
+    if 'service.enable' not in __salt__ or 'service.enabled' not in __salt__:
         if started is True:
             ret['comment'] = ('Enable is not available on this minion,'
                               ' service {0} started').format(name)
@@ -164,7 +167,7 @@ def _disable(name, started, result=True, **kwargs):
         return ret
 
     # is enable/disable available?
-    if not 'service.disable' in __salt__ or not 'service.disabled' in __salt__:
+    if 'service.disable' not in __salt__ or 'service.disabled' not in __salt__:
         if started is True:
             ret['comment'] = ('Disable is not available on this minion,'
                               ' service {0} started').format(name)
@@ -241,7 +244,9 @@ def _disable(name, started, result=True, **kwargs):
 
 
 def _available(name, ret):
-    # Check if the service is available
+    '''
+    Check if the service is available
+    '''
     avail = False
     if 'service.available' in __salt__:
         avail = __salt__['service.available'](name)
@@ -420,8 +425,7 @@ def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
 
     sfun
         The original function which triggered the mod_watch call
-        (`service.running`, for example).  Currently not used, but must be
-        supported for the future.
+        (`service.running`, for example).
 
     sig
         The string to search for when looking for the service process with ps
@@ -430,31 +434,44 @@ def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    action = ''
 
-    if __salt__['service.status'](name, sig):
-        if 'service.reload' in __salt__ and reload:
-            restart_func = __salt__['service.reload']
-            action = 'reload'
-        elif 'service.full_restart' in __salt__ and full_restart:
-            restart_func = __salt__['service.full_restart']
-            action = 'fully restart'
+    if sfun == 'dead':
+        verb = 'stop'
+        past_participle = verb + 'ped'
+        if __salt__['service.status'](name, sig):
+            func = __salt__['service.stop']
         else:
-            restart_func = __salt__['service.restart']
-            action = 'restart'
-    else:
-        restart_func = __salt__['service.start']
-        action = 'start'
+            ret['result'] = True
+            ret['comment'] = 'Service is already {0}'.format(past_participle)
+            return ret
+    elif sfun == 'running':
+        if __salt__['service.status'](name, sig):
+            if 'service.reload' in __salt__ and reload:
+                func = __salt__['service.reload']
+                verb = 'reload'
+                past_participle = verb + 'ed'
+            elif 'service.full_restart' in __salt__ and full_restart:
+                func = __salt__['service.full_restart']
+                verb = 'fully restart'
+                past_participle = verb + 'ed'
+            else:
+                func = __salt__['service.restart']
+                verb = 'restart'
+                past_participle = verb + 'ed'
+        else:
+            func = __salt__['service.start']
+            verb = 'start'
+            past_participle = verb + 'ed'
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service is set to be {0}ed'.format(action)
+        ret['comment'] = 'Service is set to be {0}'.format(past_participle)
         return ret
 
-    result = restart_func(name)
+    result = func(name)
 
     ret['changes'] = {name: result}
     ret['result'] = result
-    ret['comment'] = 'Service {0}ed'.format(action) if result else \
-                     'Failed to {0} the service'.format(action)
+    ret['comment'] = 'Service {0}'.format(past_participle) if result else \
+                     'Failed to {0} the service'.format(verb)
     return ret

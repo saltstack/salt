@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Support for APT (Advanced Packaging Tool)
+
+.. note::
+
+    The ``python-apt`` package is required to be installed.
+
 '''
 
 # Import python libs
@@ -16,7 +21,6 @@ import yaml
 
 # Import salt libs
 import salt.utils
-import salt.utils.pkg
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -126,7 +130,7 @@ def _get_virtual():
         __context__['pkg._get_virtual'] = {}
         if __salt__['cmd.has_exec']('grep-available'):
             cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
             virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
             for realpkg, provides in virtpkg_re.findall(out):
                 __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
@@ -160,6 +164,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    show_installed = salt.utils.is_true(kwargs.pop('show_installed', False))
 
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
@@ -197,7 +202,7 @@ def latest_version(*names, **kwargs):
         if isinstance(repo, list):
             cmd = cmd + repo
         out = __salt__['cmd.run_all'](cmd, python_shell=False,
-                                      output_loglevel='debug')
+                                      output_loglevel='trace')
         candidate = ''
         for line in out['stdout'].splitlines():
             if 'Candidate' in line:
@@ -216,6 +221,8 @@ def latest_version(*names, **kwargs):
 
         installed = pkgs.get(name, [])
         if not installed:
+            ret[name] = candidate
+        elif installed and show_installed:
             ret[name] = candidate
         elif candidate:
             # If there are no installed versions that are greater than or equal
@@ -274,7 +281,7 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         cols = line.split()
         if not cols:
@@ -362,7 +369,7 @@ def install(name=None,
         architecture designation (``:i386``, etc.) to the end of the package
         name.
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
 
         CLI Example:
 
@@ -381,8 +388,30 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    refreshdb = False
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refreshdb = True
+        if 'version' in kwargs and kwargs['version']:
+            refreshdb = False
+            _latest_version = latest_version(name, refresh=False, show_installed=True)
+            _version = kwargs.get('version')
+            # If the versions don't match, refresh is True, otherwise no need to refresh
+            if not _latest_version == _version:
+                refreshdb = True
+
+        if pkgs:
+            refreshdb = False
+            for pkg in pkgs:
+                if isinstance(pkg, dict):
+                    _name = pkg.keys()[0]
+                    _latest_version = latest_version(_name, refresh=False, show_installed=True)
+                    _version = pkg[_name]
+                    # If the versions don't match, refresh is True, otherwise no need to refresh
+                    if not _latest_version == _version:
+                        refreshdb = True
+                else:
+                    # No version specified, so refresh should be True
+                    refreshdb = True
 
     if debconf:
         __salt__['debconf.set_file'](debconf)
@@ -443,8 +472,10 @@ def install(name=None,
         cmd.append('install')
         cmd.extend(targets)
 
-    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-                        output_loglevel='debug')
+    if refreshdb:
+        refresh_db()
+
+    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -473,7 +504,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         cmd,
         env=kwargs.get('env'),
         python_shell=False,
-        output_loglevel='debug'
+        output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -548,7 +579,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, **kwargs):
+def upgrade(refresh=True, dist_upgrade=True, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -556,6 +587,12 @@ def upgrade(refresh=True, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
+
+    dist_upgrade
+        Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
+        is to use dist-upgrade.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -567,16 +604,22 @@ def upgrade(refresh=True, **kwargs):
         refresh_db()
 
     old = list_pkgs()
-    cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
-           '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='debug')
+    if dist_upgrade:
+        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+               '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
+    else:
+        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+               '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
 
 
-def hold(name=None, pkgs=None, **kwargs):
+def hold(name=None, pkgs=None, sources=None, *kwargs):
     '''
+    .. versionadded:: 2014.7.0
+
     Set package in 'hold' state, meaning it will not be upgraded.
 
     name
@@ -596,46 +639,60 @@ def hold(name=None, pkgs=None, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.hold pkgs='["foo", "bar"]'
-
-    .. versionadded:: Helium
-
     '''
+    if not name and not pkgs and not sources:
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
 
-    if not name and not pkgs:
-        return 'Error: name or pkgs needs to be specified.'
-
-    if name and not pkgs:
-        pkgs = []
-        pkgs.append(name)
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
+        for source in sources:
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
 
     ret = {}
-    for pkg in pkgs:
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
 
-        if isinstance(pkg, dict):
-            pkg = pkg.keys()[0]
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
 
-        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
-        state = get_selections(pattern=pkg, state=hold)
+        state = get_selections(pattern=target, state='hold')
         if not state:
-            ret[pkg]['comment'] = 'Package {0} not currently held.'.format(pkg)
+            ret[target]['comment'] = ('Package {0} not currently held.'
+                                      .format(target))
         elif not salt.utils.is_true(state.get('hold', False)):
-            if 'test' in kwargs and kwargs['test']:
-                ret[pkg].update(result=None)
-                ret[pkg]['comment'] = 'Package {0} is set to be held.'.format(pkg)
+            if 'test' in __opts__ and __opts__['test']:
+                ret[target].update(result=None)
+                ret[target]['comment'] = ('Package {0} is set to be held.'
+                                          .format(target))
             else:
-                result = set_selections(
-                    selection={'hold': [pkg]}
-                )
-                ret[pkg].update(changes=result[pkg], result=True)
-                ret[pkg]['comment'] = 'Package {0} is now being held.'.format(pkg)
+                result = set_selections(selection={'hold': [target]})
+                ret[target].update(changes=result[target], result=True)
+                ret[target]['comment'] = ('Package {0} is now being held.'
+                                          .format(target))
         else:
-            ret[pkg].update(result=True)
-            ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set to be held.'
+                                      .format(target))
     return ret
 
 
-def unhold(name=None, pkgs=None, **kwargs):
+def unhold(name=None, pkgs=None, sources=None, **kwargs):
     '''
+    .. versionadded:: 2014.7.0
+
     Set package current in 'hold' state to install state,
     meaning it will be upgraded.
 
@@ -656,44 +713,53 @@ def unhold(name=None, pkgs=None, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.unhold pkgs='["foo", "bar"]'
-
-    .. versionadded:: Helium
-
     '''
+    if not name and not pkgs and not sources:
+        raise SaltInvocationError(
+            'One of name, pkgs, or sources must be specified.'
+        )
+    if pkgs and sources:
+        raise SaltInvocationError(
+            'Only one of pkgs or sources can be specified.'
+        )
 
-    log.debug('calling unhold {0}')
-    if not name and not pkgs:
-        return 'Error: name or pkgs needs to be specified.'
-
-    if name and not pkgs:
-        pkgs = []
-        pkgs.append(name)
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
+        for source in sources:
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
 
     ret = {}
-    for pkg in pkgs:
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
 
-        if isinstance(pkg, dict):
-            pkg = pkg.keys()[0]
+        ret[target] = {'name': target,
+                       'changes': {},
+                       'result': False,
+                       'comment': ''}
 
-        ret[pkg] = {'changes': {}, 'result': False, 'comment': ''}
-        state = get_selections(pattern=pkg)
+        state = get_selections(pattern=target)
         if not state:
-            ret[pkg]['comment'] = 'Package {0} does not have a state.'.format(pkg)
+            ret[target]['comment'] = ('Package {0} does not have a state.'
+                                      .format(target))
         elif salt.utils.is_true(state.get('hold', False)):
-            if 'test' in kwargs and kwargs['test']:
-                ret[pkg].update(result=None)
-                ret['comment'] = 'Package {0} is set not to be held.'.format(pkg)
+            if 'test' in __opts__ and __opts__['test']:
+                ret[target].update(result=None)
+                ret['comment'] = ('Package {0} is set not to be held.'
+                                  .format(target))
             else:
-                result = set_selections(
-                    selection={'install': [pkg]}
-                )
-                ret[pkg].update(changes=result[pkg], result=True)
-                ret[pkg]['comment'] = 'Package {0} is no longer being held.'.format(pkg)
+                result = set_selections(selection={'install': [target]})
+                ret[target].update(changes=result[target], result=True)
+                ret[target]['comment'] = ('Package {0} is no longer being '
+                                          'held.'.format(target))
         else:
-            ret[pkg].update(result=True)
-            ret[pkg]['comment'] = 'Package {0} is already set not to be held.'.format(pkg)
-
-    log.debug('in unhold {0}'.format(ret))
+            ret[target].update(result=True)
+            ret[target]['comment'] = ('Package {0} is already set not to be '
+                                      'held.'.format(target))
     return ret
 
 
@@ -767,7 +833,7 @@ def list_pkgs(versions_as_list=False,
     cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
           '${Version} ${Architecture}\n\' -W'
 
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
@@ -836,7 +902,7 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
@@ -902,7 +968,7 @@ def version_cmp(pkg1, pkg2):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
                   '{2!r}'.format(pkg1, oper, pkg2)
             retcode = __salt__['cmd.retcode'](
-                cmd, output_loglevel='debug', ignore_retcode=True
+                cmd, output_loglevel='trace', ignore_retcode=True
             )
             if retcode == 0:
                 return ret
@@ -1203,11 +1269,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:
                         cmd = 'apt-add-repository -y {0}'.format(repo)
-                    out = __salt__['cmd.run_stdout'](
-                        cmd, output_loglevel='debug', **kwargs
-                    )
+                    out = __salt__['cmd.run_stdout'](cmd, **kwargs)
                     # explicit refresh when a repo is modified.
-                    refresh_db()
+                    if kwargs.get('refresh_db', True):
+                        refresh_db()
                     return {repo: out}
             else:
                 if not ppa_format_support:
@@ -1315,17 +1380,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
         cmd = 'apt-key export {0}'.format(keyid)
-        output = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='debug', **kwargs
-        )
+        output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
         if ks:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](
-                    cmd.format(ks, keyid), output_loglevel='debug', **kwargs
-                )
+                ret = __salt__['cmd.run_all'](cmd.format(ks, keyid), **kwargs)
                 if ret['retcode'] != 0:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
@@ -1336,9 +1397,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
         cmd = 'apt-key add {0}'.format(fn_)
-        out = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='debug', **kwargs
-        )
+        out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
             raise CommandExecutionError(
                 'Error: key retrieval failed: {0}'.format(cmd.format(key_url))
@@ -1409,7 +1468,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
             setattr(mod_source, key, kwargs[key])
     sources.save()
     # on changes, explicitly refresh
-    refresh_db()
+    if kwargs.get('refresh_db', True):
+        refresh_db()
     return {
         repo: {
             'architectures': getattr(mod_source, 'architectures', []),
@@ -1571,7 +1631,7 @@ def get_selections(pattern=None, state=None):
         cmd += ' {0!r}'.format(pattern)
     else:
         cmd += ' "*"'
-    stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     ret = _parse_selections(stdout)
     if state:
         return {state: ret.get(state, [])}
@@ -1658,7 +1718,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
         if clear:
             cmd = 'dpkg --clear-selections'
             if not __opts__['test']:
-                result = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+                result = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
                 if result['retcode'] != 0:
                     err = ('Running dpkg --clear-selections failed: '
                            '{0}'.format(result['stderr']))
@@ -1678,9 +1738,8 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                     _state
                     )
                 if not __opts__['test']:
-                    result = __salt__['cmd.run_all'](
-                        cmd, output_loglevel='debug'
-                    )
+                    result = __salt__['cmd.run_all'](cmd,
+                                                     output_loglevel='trace')
                     if result['retcode'] != 0:
                         log.error(
                             'failed to set state {0} for package '
@@ -1697,7 +1756,7 @@ def _resolve_deps(name, pkgs, **kwargs):
     Installs missing dependencies and marks them as auto installed so they
     are removed when no more manually installed packages depend on them.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     :depends:   - python-apt module
     '''
@@ -1717,8 +1776,7 @@ def _resolve_deps(name, pkgs, **kwargs):
         ret = __salt__['cmd.retcode'](
             cmd,
             env=kwargs.get('env'),
-            python_shell=False,
-            output_loglevel='debug'
+            python_shell=False
         )
 
         if ret != 0:
@@ -1728,8 +1786,11 @@ def _resolve_deps(name, pkgs, **kwargs):
         else:
             try:
                 cmd = ['apt-mark', 'auto'] + missing_deps
-                __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False,
-                        output_loglevel='debug')
+                __salt__['cmd.run'](
+                    cmd,
+                    env=kwargs.get('env'),
+                    python_shell=False
+                )
             except MinionError as exc:
                 raise CommandExecutionError(exc)
     return
@@ -1737,16 +1798,30 @@ def _resolve_deps(name, pkgs, **kwargs):
 
 def owner(*paths):
     '''
-    Return the name of the package that owns the specified file. Files may be
-    passed as a string (``path``) or as a list of strings (``paths``). If
-    ``path`` contains a comma, it will be converted to ``paths``. If a file
-    name legitimately contains a comma, pass it in via ``paths``.
+    .. versionadded:: 2014.7.0
+
+    Return the name of the package that owns the file. Multiple file paths can
+    be passed. Like :mod:`pkg.version <salt.modules.aptpkg.version`, if a
+    single path is passed, a string will be returned, and if multiple paths are
+    passed, a dictionary of file/package name pairs will be returned.
+
+    If the file is not owned by a package, or is not present on the minion,
+    then an empty string will be returned for that path.
 
     CLI Example:
 
         salt '*' pkg.owner /usr/bin/apachectl
-        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+        salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     '''
-    cmd = "dpkg -S {0} | cut -d':' -f1"
-    return salt.utils.pkg.find_owner(
-        __salt__['cmd.run'], cmd, *paths)
+    if not paths:
+        return ''
+    ret = {}
+    cmd = 'dpkg -S {0!r} | cut -f1 -d:'
+    for path in paths:
+        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
+                                               output_loglevel='trace')
+        if 'no path found' in ret[path].lower():
+            ret[path] = ''
+    if len(ret) == 1:
+        return ret.values()[0]
+    return ret

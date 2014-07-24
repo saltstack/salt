@@ -5,7 +5,6 @@ Virtual machine image management tools
 
 # Import python libs
 import os
-import glob
 import shutil
 import yaml
 import logging
@@ -24,6 +23,13 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'apply_': 'apply'
 }
+
+
+def _file_or_content(file_):
+    if os.path.exists(file_):
+        with open(file_) as fic:
+            return fic.read()
+    return file_
 
 
 def _mount(path, ftype):
@@ -142,9 +148,16 @@ def _prep_bootstrap(mpt):
     shutil.copy(bs_, os.path.join(mpt, 'tmp'))
 
 
-def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
+def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
+            pub_key=None, priv_key=None):
     '''
     Generate keys and config and put them in a tmp directory.
+
+    pub_key
+        absolute path or file content of an optional preseeded salt key
+
+    priv_key
+        absolute path or file content of an optional preseeded salt key
 
     CLI Example:
 
@@ -157,7 +170,7 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
         tmp = tempfile.mkdtemp()
     if config is None:
         config = {}
-    if not 'master' in config and __opts__['master'] != 'salt':
+    if 'master' not in config and __opts__['master'] != 'salt':
         config['master'] = __opts__['master']
     if id_:
         config['id'] = id_
@@ -168,11 +181,19 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
         fp_.write(yaml.dump(config, default_flow_style=False))
 
     # Generate keys for the minion
-    salt.crypt.gen_keys(tmp, 'minion', 2048)
     pubkeyfn = os.path.join(tmp, 'minion.pub')
     privkeyfn = os.path.join(tmp, 'minion.pem')
-
-    if approve_key:
+    preseeded = pub_key and priv_key
+    if preseeded:
+        with open(pubkeyfn, 'w') as fic:
+            fic.write(_file_or_content(pub_key))
+        with open(privkeyfn, 'w') as fic:
+            fic.write(_file_or_content(priv_key))
+        os.chmod(pubkeyfn, 0600)
+        os.chmod(privkeyfn, 0600)
+    else:
+        salt.crypt.gen_keys(tmp, 'minion', 2048)
+    if approve_key and not preseeded:
         with salt.utils.fopen(pubkeyfn) as fp_:
             pubkey = fp_.read()
             __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
@@ -191,8 +212,8 @@ def _install(mpt):
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh /tmp/bootstrap.sh -c /tmp; fi'
-    return not _chroot_exec(mpt, cmd)
+    cmd += 'else sh /tmp/bootstrap-salt.sh -c /tmp; fi'
+    return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
 
 
 def _check_resolv(mpt):
@@ -210,7 +231,7 @@ def _check_resolv(mpt):
     if not replace:
         with salt.utils.fopen(resolv, 'rb') as fp_:
             conts = fp_.read()
-            if not 'nameserver' in conts:
+            if 'nameserver' not in conts:
                 replace = True
     if replace:
         shutil.copy('/etc/resolv.conf', resolv)
@@ -228,61 +249,3 @@ def _check_install(root):
         cmd)
 
     return not __salt__['cmd.retcode'](cmd, output_loglevel='quiet')
-
-
-def _chroot_exec(root, cmd):
-    '''
-    chroot into a directory and run a cmd
-    '''
-    __salt__['mount.mount'](
-        os.path.join(root, 'dev'),
-        'udev',
-        fstype='devtmpfs')
-    __salt__['mount.mount'](
-        os.path.join(root, 'proc'),
-        'proc',
-        fstype='proc')
-
-    # Execute chroot routine
-    sh_ = '/bin/sh'
-    if os.path.isfile(os.path.join(root, 'bin/bash')):
-        sh_ = '/bin/bash'
-
-    cmd = 'chroot {0} {1} -c {2!r}'.format(
-        root,
-        sh_,
-        cmd)
-    res = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
-
-    # Kill processes running in the chroot
-    for i in range(6):
-        pids = _chroot_pids(root)
-        if not pids:
-            break
-        for pid in pids:
-            # use sig 15 (TERM) for first 3 attempts, then 9 (KILL)
-            sig = 15 if i < 3 else 9
-            os.kill(pid, sig)
-
-    if _chroot_pids(root):
-        log.error('Processes running in chroot could not be killed, '
-                  'filesystem will remain mounted')
-
-    __salt__['mount.umount'](os.path.join(root, 'proc'))
-    __salt__['mount.umount'](os.path.join(root, 'dev'))
-    log.info(res)
-    return res['retcode']
-
-
-def _chroot_pids(chroot):
-    pids = []
-    for root in glob.glob('/proc/[0-9]*/root'):
-        try:
-            link = os.path.realpath(root)
-            if link.startswith(chroot):
-                pids.append(int(os.path.basename(
-                    os.path.dirname(root)
-                )))
-        except OSError:
-            pass
-    return pids

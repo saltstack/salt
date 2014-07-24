@@ -223,7 +223,7 @@ State Module
 A subset of the execution module is available through the ``cloud`` state
 module. Not all functions are currently included, because there is currently
 insufficient code for them to perform statefully. For example, a command to
-create an istance may be issued with a series of options, but those options
+create an instance may be issued with a series of options, but those options
 cannot currently be statefully managed. Additional states to manage these
 options will be released at a later time.
 
@@ -255,8 +255,8 @@ instance will be managed statefully.
 .. code-block:: yaml
 
     my-instance-name:
-      cloud.present:
-        - profile ec2-centos64-x64
+      cloud.profile:
+        - profile: ec2-centos64-x64
 
 cloud.absent
 ~~~~~~~~~~~~

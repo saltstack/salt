@@ -14,8 +14,8 @@ configuration file:
       etcd.port: 4001
 
 It is technically possible to configure etcd without using a profile, but this
-is not consided to be a best practice, especially when multiple etcd servers or
-clusters are available.
+is not considered to be a best practice, especially when multiple etcd servers
+or clusters are available.
 
 .. code-block:: yaml
 
@@ -49,7 +49,7 @@ import logging
 try:
     import salt.utils.etcd_util
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
 
 log = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ def get_jid(jid):
     return salt.utils.etcd_util.tree(client, jid_path)
 
 
-def get_fun(fun):
+def get_fun():
     '''
     Return a dict of the last function called for all minions
     '''

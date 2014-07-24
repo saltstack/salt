@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
+Outputter for displaying results of state runs
+==============================================
+
 The return data from the Highstate command is a standard data structure
 which is parsed by the highstate outputter to deliver a clean and readable
 set of information about the HighState run on minions.
@@ -25,6 +28,26 @@ state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
+
+Example output::
+
+    myminion:
+    ----------
+              ID: test.ping
+        Function: module.run
+          Result: True
+         Comment: Module function test.ping executed
+         Changes:
+                  ----------
+                  ret:
+                      True
+
+    Summary
+    ------------
+    Succeeded: 1
+    Failed:    0
+    ------------
+    Total:     0
 '''
 
 # Import python libs
@@ -32,6 +55,7 @@ import pprint
 
 # Import salt libs
 import salt.utils
+import salt.output
 
 
 def output(data):
@@ -50,12 +74,15 @@ def _format_host(host, data):
     hcolor = colors['GREEN']
     hstrs = []
     nchanges = 0
+    strip_colors = __opts__.get('strip_colors', True)
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors['RED_BOLD']
         hstrs.append(('    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
+            if strip_colors:
+                err = salt.output.strip_esc_sequence(err)
             hstrs.append(('{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
@@ -65,7 +92,7 @@ def _format_host(host, data):
             data = _strip_clean(data)
         # Verify that the needed data is present
         for tname, info in data.items():
-            if not '__run_num__' in info:
+            if '__run_num__' not in info:
                 err = ('The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
@@ -79,9 +106,16 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
+
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
+
+            # Skip this state if it was successfull & diff output was requested
+            if __opts__.get('state_output_diff', False) and \
+               ret['result'] and not schanged:
+                continue
+
             if schanged:
                 tcolor = colors['CYAN']
             if ret['result'] is False:
@@ -115,7 +149,9 @@ def _format_host(host, data):
                 '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
                 '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
                 '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
-                '    {tcolor} Comment: {comment}{colors[ENDC]}'
+                '    {tcolor} Comment: {comment}{colors[ENDC]}',
+                '    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                '    {tcolor} Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
@@ -125,10 +161,21 @@ def _format_host(host, data):
                 comment = ret['comment'].strip().replace(
                     '\n',
                     '\n' + ' ' * 14)
-            except AttributeError:
-                comment = ret['comment'].join(' ').replace(
-                    '\n',
-                    '\n' + ' ' * 13)
+            except AttributeError:  # Assume comment is a list
+                try:
+                    comment = ret['comment'].join(' ').replace(
+                        '\n',
+                        '\n' + ' ' * 13)
+                except AttributeError:
+                    # Comment isn't a list either, just convert to string
+                    comment = str(ret['comment'])
+                    comment = comment.strip().replace(
+                        '\n',
+                        '\n' + ' ' * 14)
+            for detail in ['start_time', 'duration']:
+                ret.setdefault(detail, '')
+            if ret['duration'] != '':
+                ret['duration'] = '{0} ms'.format(ret['duration'])
             svars = {
                 'tcolor': tcolor,
                 'comps': comps,
@@ -212,6 +259,8 @@ def _format_host(host, data):
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
+    if strip_colors:
+        host = salt.output.strip_esc_sequence(host)
     hstrs.insert(0, ('{0}{1}:{2[ENDC]}'.format(hcolor, host, colors)))
     return '\n'.join(hstrs), nchanges > 0
 

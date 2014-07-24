@@ -112,14 +112,14 @@ def returner(load):
     Return data to the local job cache
     '''
     serial = salt.payload.Serial(__opts__)
+
+    # if a minion is returning a standalone job, get a jobid
+    if load['jid'] == 'req':
+        load['jid'] = prep_jid(nocache=load.get('nocache', False))
+
     jid_dir = _jid_dir(load['jid'])
     if os.path.exists(os.path.join(jid_dir, 'nocache')):
         return
-
-    # do we need to rewrite the load?
-    if load['jid'] == 'req' and bool(load.get('nocache', True)):
-        with salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b') as fp_:
-            serial.dump(load, fp_)
 
     hn_dir = os.path.join(jid_dir, load['id'])
 
@@ -167,7 +167,7 @@ def save_load(jid, clear_load):
     '''
     Save the load to the specified jid
     '''
-    jid_dir = _jid_dir(clear_load['jid'])
+    jid_dir = _jid_dir(jid)
 
     serial = salt.payload.Serial(__opts__)
 
@@ -180,16 +180,22 @@ def save_load(jid, clear_load):
                 clear_load.get('tgt_type', 'glob')
                 )
         # save the minions to a cache so we can see in the UI
-        serial.dump(
-            minions,
-            salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
-            )
+        try:
+            serial.dump(
+                minions,
+                salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
+                )
+        except IOError:
+            log.warning('Could not write job cache file for minions: {0}'.format(minions))
 
     # Save the invocation information
-    serial.dump(
-        clear_load,
-        salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
-        )
+    try:
+        serial.dump(
+            clear_load,
+            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
+            )
+    except IOError as exc:
+        log.warning('Could not write job invocation cache file: {0}'.format(exc))
 
 
 def get_load(jid):
@@ -292,6 +298,6 @@ def clean_old_jobs():
                             # Invalid jid, scrub the dir
                             shutil.rmtree(f_path)
                         difference = cur - jidtime
-                        hours_difference = difference.seconds / 3600.0
+                        hours_difference = salt.utils.total_seconds(difference) / 3600.0
                         if hours_difference > __opts__['keep_jobs']:
                             shutil.rmtree(f_path)

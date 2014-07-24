@@ -19,6 +19,7 @@ import salt.key
 import salt.client
 import salt.output
 import salt.utils.minions
+import salt.wheel
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -110,7 +111,8 @@ def down(removekeys=False):
     ret = status(output=False).get('down', [])
     for minion in ret:
         if removekeys:
-            subprocess.call(["salt-key", "-qyd", minion])
+            wheel = salt.wheel.Wheel(__opts__)
+            wheel.call_func('key.delete', match=minion)
         else:
             salt.output.display_output(minion, '', __opts__)
     return ret
@@ -227,6 +229,7 @@ def versions():
         -1: 'Minion requires update',
         0: 'Up to date',
         1: 'Minion newer than master',
+        2: 'Master',
     }
 
     version_status = {}
@@ -247,26 +250,35 @@ def versions():
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
         version_status[ver_diff][minion] = minion_version
+    # Add version of Master to output
+    version_status[2] = salt.__version__
 
     ret = {}
     for key in version_status:
-        for minion in sorted(version_status[key]):
-            ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
-
+        if key == 2:
+            ret[labels[key]] = version_status[2]
+        else:
+            for minion in sorted(version_status[key]):
+                ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
     salt.output.display_output(ret, '', __opts__)
     return ret
 
 
 def bootstrap(version="develop",
-              script="http://bootstrap.saltstack.org",
-              hosts=""):
+              script=None,
+              hosts="",
+              root_user=True):
     '''
     Bootstrap minions with salt-bootstrap
 
-    Options:
-        version: git tag of version to install [default: develop]
-        script: Script to execute [default: http://bootstrap.saltstack.org]
-        hosts: Comma separated hosts [example: hosts="host1.local,host2.local"]
+    version : develop
+        Git tag of version to install
+    script : https://bootstrap.saltstack.com
+        Script to execute
+    hosts
+        Comma separated hosts [example: hosts="host1.local,host2.local"]
+    root_user : True
+        Prepend ``root@`` to each host.
 
     CLI Example:
 
@@ -274,14 +286,19 @@ def bootstrap(version="develop",
 
         salt-run manage.bootstrap hosts="host1,host2"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.github.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://bootstrap.saltstack.com/develop"
+        salt-run manage.bootstrap hosts="ec2-user@host1,ec2-user@host2" root_user=False
 
     '''
+    if script is None:
+        script = 'https://bootstrap.saltstack.com'
     for host in hosts.split(","):
         # Could potentially lean on salt-ssh utils to make
         # deployment easier on existing hosts (i.e. use sshpass,
         # or expect, pass better options to ssh etc)
-        subprocess.call(["ssh", "root@" + host, "python -c 'import urllib; "
+        subprocess.call(["ssh",
+                        "root@" if root_user else "" + host,
+                        "python -c 'import urllib; "
                         "print urllib.urlopen("
                         "\"" + script + "\""
                         ").read()' | sh -s -- git " + version])

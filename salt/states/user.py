@@ -34,7 +34,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def _group_changes(cur, wanted, remove=True):
+def _group_changes(cur, wanted, remove=False):
     '''
     Determine if the groups need to be changed
     '''
@@ -55,6 +55,7 @@ def _changes(name,
              createhome=True,
              password=None,
              enforce_password=True,
+             empty_password=False,
              shell=None,
              fullname='',
              roomnumber='',
@@ -70,7 +71,7 @@ def _changes(name,
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
 
-    Updated in Helium to include support for shadow attributes, all
+    Updated in 2014.7.0 to include support for shadow attributes, all
     attributes supported as integers only.
     '''
 
@@ -160,6 +161,7 @@ def present(name,
             createhome=True,
             password=None,
             enforce_password=True,
+            empty_password=False,
             shell=None,
             unique=True,
             system=False,
@@ -229,6 +231,9 @@ def present(name,
         "password" field. This option will be ignored if "password" is not
         specified.
 
+    empty_password
+        Set to True to enable no password-less login for user
+
     shell
         The login shell, defaults to the system default shell
 
@@ -259,7 +264,7 @@ def present(name,
         The user's home phone number (not supported in MacOS)
 
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
        Shadow attribute support added.
 
     Shadow attributes support (currently Linux only):
@@ -325,6 +330,9 @@ def present(name,
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
 
+    if empty_password:
+        __salt__['shadow.del_password'](name)
+
     changes = _changes(name,
                        uid,
                        gid,
@@ -335,6 +343,7 @@ def present(name,
                        createhome,
                        password,
                        enforce_password,
+                       empty_password,
                        shell,
                        fullname,
                        roomnumber,
@@ -360,7 +369,7 @@ def present(name,
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
-            if key == 'passwd':
+            if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
             if key == 'date':
@@ -419,6 +428,7 @@ def present(name,
                            createhome,
                            password,
                            enforce_password,
+                           empty_password,
                            shell,
                            fullname,
                            roomnumber,
@@ -464,7 +474,7 @@ def present(name,
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if 'shadow.info' in __salt__ and not salt.utils.is_windows():
-                if password:
+                if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
                     spost = __salt__['shadow.info'](name)
                     if spost['passwd'] != password:

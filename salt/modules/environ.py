@@ -101,7 +101,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
     false_unsets
         If a key's value is False and false_unsets is True, then the
         key will be removed from the salt processes environment dict
-        entirely. If a key's value is Flase and false_unsets is not
+        entirely. If a key's value is False and false_unsets is not
         True, then the key's value will be set to an empty string.
         Default: False
 
@@ -168,7 +168,7 @@ def get(key, default=''):
         String used as the key for environment lookup.
 
     default
-        If the key is not found in the enironment, return this value.
+        If the key is not found in the environment, return this value.
         Default: ''
 
 
@@ -235,7 +235,7 @@ def item(keys, default=''):
         keys for environment lookup.
 
     default
-        If the key is not found in the enironment, return this value.
+        If the key is not found in the environment, return this value.
         Default: ''
 
     CLI Example:

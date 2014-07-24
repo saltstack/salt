@@ -57,7 +57,7 @@ Excluding a minion based on its ID is also possible:
 Precedence Matching
 -------------------
 
-Matches can be grouped together with parentheses to explicitely declare precedence amongst groups.
+Matches can be grouped together with parentheses to explicitly declare precedence amongst groups.
 
 .. code-block:: bash
 
@@ -65,6 +65,6 @@ Matches can be grouped together with parentheses to explicitely declare preceden
 
 .. note::
     
-    Be certain to note that spaces are required between the parantheses and targets. Failing to obey this
+    Be certain to note that spaces are required between the parentheses and targets. Failing to obey this
     rule may result in incorrect targeting!
 

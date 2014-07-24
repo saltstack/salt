@@ -179,6 +179,32 @@ external template file.
     starting with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
+
+Calling Salt Functions
+======================
+
+The Jinja renderer provides a shorthand lookup syntax for the ``salt``
+dictionary of :term:`execution function <Execution Function>`.
+
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
+
+    # The following two function calls are equivalent.
+    {{ salt['cmd.run']('whoami') }}
+    {{ salt.cmd.run('whoami') }}
+
+Debugging
+=========
+
+The ``show_full_context`` function can be used to output all variables present
+in the current Jinja context.
+
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
+
+    Context is: {{ show_full_context() }}
 '''
 
 from __future__ import absolute_import
@@ -195,6 +221,23 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 
+def _split_module_dicts(__salt__):
+    '''
+    Create a dictionary from module.function as module[function]
+
+    Takes advantage of Jinja's syntactic sugar lookup:
+
+    .. code-block::
+
+        {{ salt.cmd.run('uptime') }}
+    '''
+    mod_dict = {}
+    for module_func_name in __salt__.keys():
+        mod, _, fun = module_func_name.partition('.')
+        mod_dict.setdefault(mod, {})[fun] = __salt__[module_func_name]
+    return mod_dict
+
+
 def render(template_file, saltenv='base', sls='', argline='',
                           context=None, tmplpath=None, **kws):
     '''
@@ -208,9 +251,14 @@ def render(template_file, saltenv='base', sls='', argline='',
         raise SaltRenderError(
                 'Unknown renderer option: {opt}'.format(opt=argline)
         )
+
+    salt_dict = {}
+    salt_dict.update(_split_module_dicts(__salt__))
+    salt_dict.update(__salt__)
+
     tmp_data = salt.utils.templates.JINJA(template_file,
                                           to_str=True,
-                                          salt=__salt__,
+                                          salt=salt_dict,
                                           grains=__grains__,
                                           opts=__opts__,
                                           pillar=__pillar__,

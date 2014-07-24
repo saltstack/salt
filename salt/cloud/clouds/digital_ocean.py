@@ -281,6 +281,12 @@ def create(vm_):
             )
         )
 
+    if key_filename is None:
+        raise SaltCloudConfigError(
+            'The Digital Ocean driver requires an ssh_key_file and an ssh_key_name '
+            'because it does not supply a root password upon building the server.'
+        )
+
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None,
     )
@@ -321,7 +327,7 @@ def create(vm_):
         return False
 
     def __query_node_data(vm_name):
-        data = _get_node(vm_name)
+        data = show_instance(vm_name, 'action')
         if not data:
             # Trigger an error in the wait_for_ip function
             return False
@@ -481,7 +487,15 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     '''
     Make a web call to Digital Ocean
     '''
-    path = 'https://api.digitalocean.com/{0}/'.format(method)
+    base_path = str(config.get_cloud_config_value(
+        'api_root',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='https://api.digitalocean.com/v1'
+    ))
+
+    path = '{0}/{1}/'.format(base_path, method)
 
     if droplet_id:
         path += '{0}/'.format(droplet_id)
@@ -546,8 +560,9 @@ def show_instance(name, call=None):
         raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-
-    return _get_node(name)
+    node = _get_node(name)
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def _get_node(name):
@@ -632,7 +647,9 @@ def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -664,5 +681,8 @@ def destroy(name, call=None):
         {'name': name},
         transport=__opts__['transport']
     )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return node

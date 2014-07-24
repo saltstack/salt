@@ -35,7 +35,7 @@ def _sd_booted():
     Return True if the system was booted with systemd, False otherwise.
     '''
     # We can cache this for as long as the minion runs.
-    if not "systemd.sd_booted" in __context__:
+    if "systemd.sd_booted" not in __context__:
         try:
             # This check does the same as sd_booted() from libsystemd-daemon:
             # http://www.freedesktop.org/software/systemd/man/sd_booted.html
@@ -82,7 +82,7 @@ def _get_all_units():
                       r')\s+loaded\s+(?P<active>[^\s]+)')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full --no-legend --no-pager list-units | col -b'
+        'systemctl --all --full --no-legend --no-pager list-units | col -b'
     )
 
     ret = {}
@@ -445,7 +445,7 @@ def execs():
     execs_ = {}
     for service in get_all():
         data = show(service)
-        if not 'ExecStart' in data:
+        if 'ExecStart' not in data:
             continue
         execs_[service] = data['ExecStart']['path']
 

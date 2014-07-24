@@ -31,3 +31,6 @@ fi
 # Only add directories to PYTHONPATH if we were able to determine the python
 # version.
 test -n "$pyver" && export PYTHONPATH=$PYTHONPATH:/opt/lib/python${pyver}/site-packages:/opt/lib64/python${pyver}/site-packages
+
+# Make MAN pages installed within /opt/share/man accessible
+export MANPATH=$MANPATH:/opt/share/man

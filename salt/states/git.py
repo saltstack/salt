@@ -18,10 +18,12 @@ authentication, it is also possible to pass private keys to use explicitly.
 # Import python libs
 import logging
 import os
+import os.path
 import shutil
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -147,7 +149,7 @@ def latest(name,
     run_check_cmd_kwargs = {'runas': user}
 
     # check if git.latest should be applied
-    cret = _run_check(
+    cret = mod_run_check(
         run_check_cmd_kwargs, onlyif, unless
     )
     if isinstance(cret, dict):
@@ -156,9 +158,8 @@ def latest(name,
 
     bare = bare or mirror
     check = 'refs' if bare else '.git'
-
-    if os.path.isdir(target) and os.path.isdir('{0}/{1}'.format(target,
-                                                                check)):
+    checkdir = os.path.join(target, check)
+    if os.path.isdir(target) and os.path.isdir(checkdir):
         # git pull is probably required
         log.debug(('target {0} is found, "git pull" '
                    'is probably required'.format(target)))
@@ -230,8 +231,24 @@ def latest(name,
                                              force=force_checkout,
                                              user=user)
 
+                    current_remote = __salt__['git.config_get'](target,
+                                                         'branch.{0}.remote'.format(rev),
+                                                         user=user)
+                    if current_remote != remote_name:
+                        if __opts__['test']:
+                            ret['changes'] = {'old': current_remote, 'new': remote_name}
+                            return _neutral_test(ret,
+                                                 ('Repository {0} update is probably required.'
+                                                  'Current remote is {1} should be {2}'.format(target, current_remote, remote_name)))
+                        log.debug('Setting branch {0} to upstream {1}'.format(rev, remote_name))
+                        __salt__['git.branch'](target,
+                                               rev,
+                                               opts='--set-upstream {0}/{1}'.format(remote_name, rev),
+                                               user=user)
+                        ret['changes']['remote/{0}/{1}'.format(remote_name, rev)] = '{0} => {1}'.format(current_remote, remote_name)
+
                 # check if we are on a branch to merge changes
-                cmd = "git symbolic-ref -q HEAD > /dev/null"
+                cmd = "git symbolic-ref -q HEAD"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=user)
                 if 0 == retcode:
                     __salt__['git.fetch' if bare else 'git.pull'](target,
@@ -374,9 +391,9 @@ def present(name, bare=True, runas=None, user=None, force=False):
 
     # If the named directory is a git repo return True
     if os.path.isdir(name):
-        if bare and os.path.isfile('{0}/HEAD'.format(name)):
+        if bare and os.path.isfile(os.path.join(name, 'HEAD')):
             return ret
-        elif not bare and os.path.isdir('{0}/.git'.format(name)):
+        elif not bare and os.path.isdir(os.path.join(name, '.git')):
             return ret
         # Directory exists and is not a git repo, if force is set destroy the
         # directory and recreate, otherwise throw an error
@@ -410,6 +427,91 @@ def present(name, bare=True, runas=None, user=None, force=False):
     return ret
 
 
+def config(name,
+           value,
+           repo=None,
+           user=None,
+           is_global=False):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Manage a git config setting for a user or repository
+
+    name
+        Name of the git config value to set
+
+    value
+        Value to set
+
+    repo : None
+        An optional location of a git repository for local operations
+
+    user : None
+        Optional name of a user as whom `git config` will be run
+
+    is_global : False
+        Whether or not to pass the `--global` option to `git config`
+
+    Local config example:
+
+    .. code-block:: yaml
+
+        mylocalrepo:
+          git.config:
+            - name: user.email
+            - value: fester@bestertester.net
+            - repo: file://my/path/to/repo
+
+    Global config example:
+
+    .. code-block:: yaml
+
+        mylocalrepo:
+          git.config:
+            - name: user.name
+            - value: Esther Bestertester
+            - user: ebestertester
+            - is_global: True
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    # get old value
+    try:
+        oval = __salt__['git.config_get'](setting_name=name,
+                                          cwd=repo,
+                                          user=user)
+    except CommandExecutionError:
+        oval = None
+
+    if value == oval:
+        ret['comment'] = 'No changes made'
+    else:
+        if __opts__['test']:
+            nval = value
+        else:
+            # set new value
+            __salt__['git.config_set'](setting_name=name,
+                                       setting_value=value,
+                                       cwd=repo,
+                                       user=user,
+                                       is_global=is_global)
+
+            # get new value
+            nval = __salt__['git.config_get'](setting_name=name,
+                                              cwd=repo,
+                                              user=user)
+
+        if oval is None:
+            oval = 'None'
+
+        ret['changes'][name] = '{0} => {1}'.format(oval, nval)
+
+    return ret
+
+
 def _fail(ret, comment):
     ret['result'] = False
     ret['comment'] = comment
@@ -422,7 +524,7 @@ def _neutral_test(ret, comment):
     return ret
 
 
-def _run_check(cmd_kwargs, onlyif, unless):
+def mod_run_check(cmd_kwargs, onlyif, unless):
     '''
     Execute the onlyif and unless logic.
     Return a result dict if:

@@ -17,6 +17,7 @@ Full list of builtin renderer modules
     py
     pydsl
     pyobjects
+    yamlex
     stateconf
     wempy
     yaml

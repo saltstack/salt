@@ -170,8 +170,8 @@ def ex_mod_init(low):
     .. versionadded:: 0.17.0
        Initial automatic enforcement added when pkg is used on a Gentoo system.
 
-    .. versionchanged:: 2014.1.0-Hydrogen
-       Configure option added to make this behaviour optional, defaulting to
+    .. versionchanged:: 2014.1.0
+       Configure option added to make this behavior optional, defaulting to
        off.
 
     .. seealso::
@@ -251,7 +251,7 @@ def _get_upgradable():
     '''
 
     cmd = 'emerge --pretend --update --newuse --deep --ask n world'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
 
     rexp = re.compile(r'(?m)^\[.+\] '
                       r'([^ ]+/[^ ]+)'    # Package string
@@ -585,7 +585,7 @@ def install(name=None,
     cmd = 'emerge --quiet --ask n {0} {1}'.format(emerge_opts, ' '.join(targets))
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
         return _process_emerge_err(call['stdout'], call['stderr'])
@@ -630,7 +630,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0}'.format(full_atom)
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
         return _process_emerge_err(call['stdout'], call['stderr'])
@@ -658,7 +658,7 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
     cmd = 'emerge --update --newuse --deep --ask n --quiet world'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
         return _process_emerge_err(call['stdout'], call['stderr'])
@@ -716,9 +716,9 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     if not targets:
         return {}
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n' \
+    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n ' \
           '{0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -807,7 +807,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
         targets = [x for x in pkg_params if x in old]
 
     cmd = 'emerge --depclean --ask n --quiet {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

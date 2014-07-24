@@ -106,8 +106,8 @@ Bootstrapping a new master in the map is as simple as:
 .. code-block:: yaml
 
     fedora_small:
-      - web1
-        make_master: True
+      - web1:
+          make_master: True
       - web2
       - web3
 
@@ -120,11 +120,11 @@ as opposed to the newly created salt-master, as an example:
 .. code-block:: yaml
 
     fedora_small:
-      - web1
-        make_master: True
-        minion:
-          master: <the local master ip address>
-          local_master: True
+      - web1:
+          make_master: True
+          minion:
+            master: <the local master ip address>
+            local_master: True
       - web2
       - web3
 
@@ -137,13 +137,13 @@ Another example:
 .. code-block:: yaml
 
     fedora_small:
-      - web1
-        make_master: True
+      - web1:
+          make_master: True
       - web2
-      - web3
-        minion:
-          master: <the local master ip address>
-          local_master: True
+      - web3:
+          minion:
+            master: <the local master ip address>
+            local_master: True
 
 The above example makes the ``web3`` minion answer to the local master, not the 
 newly created master.

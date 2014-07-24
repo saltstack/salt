@@ -45,7 +45,7 @@ def succeed_without_changes(name):
     '''
     Returns successful.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     name
         A unique string.
@@ -54,15 +54,11 @@ def succeed_without_changes(name):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Success!'
     }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['result'] = True
+        ret['comment'] = 'If we weren\'t testing, this would be a success!'
     return ret
 
 
@@ -70,7 +66,7 @@ def fail_without_changes(name):
     '''
     Returns failure.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     name:
         A unique string.
@@ -79,16 +75,12 @@ def fail_without_changes(name):
         'name': name,
         'changes': {},
         'result': False,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Failure!'
     }
 
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['result'] = False
+        ret['comment'] = 'If we weren\'t testing, this would be a failure!'
 
     return ret
 
@@ -97,7 +89,7 @@ def succeed_with_changes(name):
     '''
     Returns successful and changes is not empty
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     name:
         A unique string.
@@ -106,25 +98,22 @@ def succeed_with_changes(name):
         'name': name,
         'changes': {},
         'result': True,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Success!'
     }
 
     # Following the docs as written here
     # http://docs.saltstack.com/ref/states/writing.html#return-data
     ret['changes'] = {
         'testing': {
-            'old': 'Nothing has changed yet',
-            'new': 'Were pretending really hard that we changed something'
+            'old': 'Unchanged',
+            'new': 'Something pretended to change'
         }
     }
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['comment'] = ('If we weren\'t testing, this would be successful '
+                          'with changes')
 
     return ret
 
@@ -133,7 +122,7 @@ def fail_with_changes(name):
     '''
     Returns failure and changes is not empty.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     name:
         A unique string.
@@ -142,25 +131,22 @@ def fail_with_changes(name):
         'name': name,
         'changes': {},
         'result': False,
-        'comment': 'This is just a test, nothing actually happened'
+        'comment': 'Failure!'
     }
 
     # Following the docs as written here
     # http://docs.saltstack.com/ref/states/writing.html#return-data
     ret['changes'] = {
         'testing': {
-            'old': 'Nothing has changed yet',
-            'new': 'Were pretending really hard that we changed something'
+            'old': 'Unchanged',
+            'new': 'Something pretended to change'
         }
     }
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests,'
-            ' so I put tests in your tests,'
-            ' so you can test while you test.'
-        )
+        ret['comment'] = ('If we weren\'t testing, this would be failed with '
+                          'changes')
 
     return ret
 
@@ -169,7 +155,7 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     '''
     A configurable test state which determines its output based on the inputs.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     name:
         A unique string.
@@ -192,28 +178,27 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         'comment': comment
     }
 
-    # E8712 is disabled because this code is a LOT cleaner if we allow it.
-    if changes == "Random":
+    if changes == 'Random':
         if random.choice([True, False]):
             # Following the docs as written here
             # http://docs.saltstack.com/ref/states/writing.html#return-data
             ret['changes'] = {
-            'testing': {
-                'old': 'Nothing has changed yet',
-                'new': 'Were pretending really hard that we changed something'
+                'testing': {
+                    'old': 'Unchanged',
+                    'new': 'Something pretended to change'
                 }
             }
-    elif changes == True:  # pylint: disable=E8712
+    elif changes is True:
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
         # http://docs.saltstack.com/ref/states/writing.html#return-data
         ret['changes'] = {
-        'testing': {
-            'old': 'Nothing has changed yet',
-            'new': 'Were pretending really hard that we changed something'
+            'testing': {
+                'old': 'Unchanged',
+                'new': 'Something pretended to change'
             }
         }
-    elif changes == False:  # pylint: disable=E8712
+    elif changes is False:
         ret['changes'] = {}
     else:
         err = ('You have specified the state option \'Changes\' with'
@@ -224,18 +209,18 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     if result == 'Random':
         # since result is a boolean, if its random we just set it here,
         ret['result'] = random.choice([True, False])
-    elif result == True:  # pylint: disable=E8712
+    elif result is True:
         ret['result'] = True
-    elif result == False:  # pylint: disable=E8712
+    elif result is False:
         ret['result'] = False
     else:
-        raise SaltInvocationError('You have specified the state option \'Result\' with invalid arguments. '
-                                  'It must be either \'True\', \'False\', or \'Random\'')
+        raise SaltInvocationError('You have specified the state option '
+                                  '\'Result\' with invalid arguments. It must '
+                                  'be either \'True\', \'False\', or '
+                                  '\'Random\'')
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = (
-            'Yo dawg I heard you like tests, so I put tests in your tests, so you can test while you test.'
-        )
+        ret['comment'] = 'This is a test'
 
     return ret

@@ -114,3 +114,16 @@ Then pass the signal to the minion when it seems to be unresponsive:
 
 When filing an issue or sending questions to the mailing list for a problem
 with an unresponsive daemon, be sure to include this information if possible.
+
+Multiprocessing in Execution Modules
+====================================
+
+As is outlined in github issue #6300, Salt cannot use python's multiprocessing
+pipes and queues from execution modules. Multiprocessing from the execution
+modules is perfectly viable, it is just necessary to use Salt's event system
+to communicate back with the process.
+
+The reason for this difficulty is that python attempts to pickle all objects in
+memory when communicating, and it cannot pickle function objects. Since the
+Salt loader system creates and manages function objects this causes the pickle
+operation to fail.

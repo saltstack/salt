@@ -9,7 +9,7 @@ all interfaces are ignored unless specified.
 
 .. note::
 
-    Prior to version 2014.1.0 (Hydrogen), only RedHat-based systems (RHEL,
+    Prior to version 2014.1.0, only RedHat-based systems (RHEL,
     CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
     new in 2014.1.0 and should be considered experimental.
 
@@ -204,7 +204,7 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name),
     }
-    if not 'test' in kwargs:
+    if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface
@@ -324,7 +324,7 @@ def routes(name, **kwargs):
         'comment': 'Interface {0} routes are up to date.'.format(name),
     }
     apply_routes = False
-    if not 'test' in kwargs:
+    if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface routes

@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 virt.query outputter
+====================
+
+Used to display the output from the :mod:`virt.query <salt.runners.virt.query>`
+runner.
 '''
 
 

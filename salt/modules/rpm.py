@@ -54,7 +54,7 @@ def list_pkgs(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -64,15 +64,21 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def verify(*package):
+def verify(*package, **kwargs):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
+
+    Files with an attribute of config, doc, ghost, license or readme in the
+    package header can be ignored using the ``ignore_types`` keyword argument
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lowpkg.verify
+        salt '*' lowpkg.verify httpd
+        salt '*' lowpkg.verify 'httpd postfix'
+        salt '*' lowpkg.verify 'httpd postfix' ignore_types=['config','doc']
     '''
     ftypes = {'c': 'config',
               'd': 'doc',
@@ -80,12 +86,13 @@ def verify(*package):
               'l': 'license',
               'r': 'readme'}
     ret = {}
+    ignore_types = kwargs.get('ignore_types', [])
     if package:
         packages = ' '.join(package)
         cmd = 'rpm -V {0}'.format(packages)
     else:
         cmd = 'rpm -Va'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', ignore_retcode=True)
     for line in out.splitlines():
         fdict = {'mismatch': []}
         if 'missing' in line:
@@ -95,25 +102,26 @@ def verify(*package):
         fname = line[13:]
         if line[11:12] in ftypes:
             fdict['type'] = ftypes[line[11:12]]
-        if line[0:1] == 'S':
-            fdict['mismatch'].append('size')
-        if line[1:2] == 'M':
-            fdict['mismatch'].append('mode')
-        if line[2:3] == '5':
-            fdict['mismatch'].append('md5sum')
-        if line[3:4] == 'D':
-            fdict['mismatch'].append('device major/minor number')
-        if line[4:5] == 'L':
-            fdict['mismatch'].append('readlink path')
-        if line[5:6] == 'U':
-            fdict['mismatch'].append('user')
-        if line[6:7] == 'G':
-            fdict['mismatch'].append('group')
-        if line[7:8] == 'T':
-            fdict['mismatch'].append('mtime')
-        if line[8:9] == 'P':
-            fdict['mismatch'].append('capabilities')
-        ret[fname] = fdict
+        if 'type' not in fdict.keys() or fdict['type'] not in ignore_types:
+            if line[0:1] == 'S':
+                fdict['mismatch'].append('size')
+            if line[1:2] == 'M':
+                fdict['mismatch'].append('mode')
+            if line[2:3] == '5':
+                fdict['mismatch'].append('md5sum')
+            if line[3:4] == 'D':
+                fdict['mismatch'].append('device major/minor number')
+            if line[4:5] == 'L':
+                fdict['mismatch'].append('readlink path')
+            if line[5:6] == 'U':
+                fdict['mismatch'].append('user')
+            if line[6:7] == 'G':
+                fdict['mismatch'].append('group')
+            if line[7:8] == 'T':
+                fdict['mismatch'].append('mtime')
+            if line[8:9] == 'P':
+                fdict['mismatch'].append('capabilities')
+            ret[fname] = fdict
     return ret
 
 
@@ -135,7 +143,7 @@ def file_list(*packages):
         cmd = 'rpm -qla'
     else:
         cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    ret = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    ret = __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -162,7 +170,7 @@ def file_dict(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -172,7 +180,7 @@ def file_dict(*packages):
     for pkg in pkgs.keys():
         files = []
         cmd = 'rpm -ql {0}'.format(pkg)
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd, output_loglevel='trace')
         for line in out.splitlines():
             files.append(line)
         ret[pkg] = files

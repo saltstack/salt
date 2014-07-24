@@ -7,6 +7,7 @@ salting.py module of salt specific interfaces to raet
 # pylint: disable=W0611
 
 # Import Python libs
+import os
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -14,156 +15,165 @@ from ioflo.base.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from raet import raeting, nacling, keeping
+from raet import raeting, nacling
 from raet.road.keeping import RoadKeep
 
 from salt.key import RaetKey
 
-class SaltSafe(object):
+
+class SaltKeep(RoadKeep):
     '''
-    Interface between Salt Key management and RAET keep key management
+    RAET protocol estate on road data persistence for a given estate
+    road specific data
+
+    road/
+        keep/
+            stackname/
+                local/
+                    estate.ext
+                remote/
+                    estate.name.ext
+                    estate.name.ext
     '''
+    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto', 'role']
+    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'role']
+    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex', 'role']
+    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
+
     Auto = False #auto accept
-    LocalFields = ['sighex', 'prihex']
-    RemoteFields = ['eid', 'name', 'acceptance', 'verhex', 'pubhex']
 
-    def __init__(self, opts=None, **kwa):
+    def __init__(self, opts, basedirpath='', auto=None, **kwa):
         '''
-        Setup SaltSafe instance
+        Setup RoadKeep instance
         '''
-        if opts is None:
-            opts = {}
+        basedirpath = basedirpath or os.path.join(opts['cache_dir'], 'raet')
+        auto = auto if auto is not None else opts['auto_accept']
+        super(SaltKeep, self).__init__(basedirpath=basedirpath, auto=auto, **kwa)
         self.saltRaetKey = RaetKey(opts)
-
-    def verifyLocalData(self, data):
-        '''
-        Returns True if the fields in .LocalFields match the fields in data
-        '''
-        return (set(self.LocalFields) == set(data.keys()))
-
-    def dumpLocalData(self, data):
-        '''
-        Dump the key data from the local estate
-        '''
-        self.saltRaetKey.write_local(data['prihex'], data['sighex'])
 
     def loadLocalData(self):
         '''
         Load and Return the data from the local estate
         '''
-        data = self.saltRaetKey.read_local()
+
+        data = super(SaltKeep, self).loadLocalData()
         if not data:
             return None
-        return (odict(sighex=data['sign'], prihex=data['priv']))
+        srkdata = self.saltRaetKey.read_local()
+        if not srkdata:
+            srkdata = dict(sign=None, priv=None)
+        data.update(sighex=srkdata['sign'], prihex=srkdata['priv'], auto=self.auto)
+        return data
 
-    def clearLocalData(self):
+    def dumpLocal(self, local):
         '''
-        Load and Return the data from the local estate
+        Dump local estate
         '''
-        pass
+        data = odict([
+                        ('uid', local.uid),
+                        ('name', local.name),
+                        ('ha', local.ha),
+                        ('main', local.main),
+                        ('sid', local.sid),
+                        ('neid', local.neid),
+                        ('role', local.role),
+                    ])
+        if self.verifyLocalData(data, localFields = self.LocalDumpFields):
+            self.dumpLocalData(data)
 
-    def verifyRemoteData(self, data):
-        '''
-        Returns True if the fields in .RemoteFields match the fields in data
-        '''
-        return (set(self.RemoteFields) == set(data.keys()))
+        self.saltRaetKey.write_local(local.priver.keyhex, local.signer.keyhex)
 
-    def dumpRemoteData(self, data, uid):
+    def dumpRemote(self, remote):
         '''
-        Dump the data from the remote estate given by uid
+        Dump remote estate
         '''
-        self.saltRaetKey.status(data['name'],
-                                data['eid'],
-                                data['pubhex'],
-                                data['verhex'])
+        data = odict([
+                        ('uid', remote.uid),
+                        ('name', remote.name),
+                        ('ha', remote.ha),
+                        ('sid', remote.sid),
+                        ('joined', remote.joined),
+                        ('role', remote.role),
+                    ])
+        if self.verifyRemoteData(data, remoteFields=self.RemoteDumpFields):
+            self.dumpRemoteData(data, remote.name)
+
+        self.saltRaetKey.status(remote.role,
+                                remote.uid,
+                                remote.pubber.keyhex,
+                                remote.verfer.keyhex)
+
+    def loadRemote(self, remote):
+        '''
+        Load and Return the data from the remote estate file
+        Override this in sub class
+        '''
+        data = super(SaltKeep, self).loadRemote(remote)
+        if not data:
+            return None
+
+        mid = remote.role
+        statae = raeting.ACCEPTANCES.keys()
+        for status in statae:
+            keydata = self.saltRaetKey.read_remote(mid, status)
+            if keydata:
+                break
+
+        if not keydata:
+            return None
+
+        data.update(acceptance=raeting.ACCEPTANCES[status],
+                    verhex=keydata['verify'],
+                    pubhex=keydata['pub'])
+
+        return data
 
     def loadAllRemoteData(self):
         '''
         Load and Return the data from the all the remote estate files
         '''
-        data = odict()
+        keeps = super(SaltKeep, self).loadAllRemoteData()
 
         for status, mids in self.saltRaetKey.list_keys().items():
             for mid in mids:
                 keydata = self.saltRaetKey.read_remote(mid, status)
                 if keydata:
-                    rdata = odict()
-                    rdata['eid'] = keydata['device_id']
-                    rdata['name'] = keydata['minion_id']
-                    rdata['acceptance'] = raeting.ACCEPTANCES[status]
-                    rdata['verhex'] = keydata['verify']
-                    rdata['pubhex'] = keydata['pub']
-                    data[rdata['eid']] = rdata
-
-        return data
+                    for name, data in keeps.items():
+                        if data['role'] == mid:
+                            keeps[name].update(acceptance=raeting.ACCEPTANCES[status],
+                                         verhex=keydata['verify'],
+                                         pubhex=keydata['pub'])
+        return keeps
 
     def clearAllRemoteData(self):
         '''
         Remove all the remote estate files
         '''
+        super(SaltKeep, self).clearAllRemoteData()
         self.saltRaetKey.delete_all()
 
-    def dumpLocal(self, local):
+    def replaceRemoteRole(self, remote, old):
         '''
-        Dump the key data from the local estate
+        Replace the Salt RaetKey record at old role when remote.role has changed
         '''
-        data = odict([
-                        ('sighex', local.signer.keyhex),
-                        ('prihex', local.priver.keyhex),
-                    ])
-        if self.verifyLocalData(data):
-            self.dumpLocalData(data)
+        new = remote.role
+        if new != old:
+            #self.dumpRemote(remote)
+            # manually fix up acceptance if not pending
+            # will be pending by default unless autoaccept
+            if remote.acceptance == raeting.acceptances.accepted:
+                self.acceptRemote(remote)
+            elif remote.acceptance == raeting.acceptances.rejected:
+                self.rejectRemote(remote)
 
-    def dumpRemote(self, remote):
-        '''
-        Dump the data from the remote estate by calling status on it which
-        will persist the data
-        '''
-        data = odict([
-                        ('eid', remote.eid),
-                        ('name', remote.name),
-                        ('acceptance', remote.acceptance),
-                        ('verhex', remote.verfer.keyhex),
-                        ('pubhex', remote.pubber.keyhex),
-                    ])
-        if self.verifyRemoteData(data):
-            self.dumpRemoteData(data, remote.uid)
-
-    def loadRemote(self, remote):
-        '''
-        Load and Return the data from the remote estate file
-        Override this in sub class to change uid
-        '''
-        status='accepted'
-
-        mid = remote.name
-        keydata = self.saltRaetKey.read_remote(mid, status)
-        if not keydata:
-            return None
-
-        data = odict()
-        data['eid'] = keydata['device_id']
-        data['name'] = keydata['minion_id']
-        data['acceptance'] = raeting.ACCEPTANCES[status]
-        data['verhex'] = keydata['verify']
-        data['pubhex'] = keydata['pub']
-
-        return data
-
-    def clearRemote(self, remote):
-        '''
-        Clear the remote estate file
-        Override this in sub class to change uid
-        '''
-        mid = remote.eid
-        self.saltRaetKey.delete_key(mid)
+            self.saltRaetKey.delete_key(old) #now delete old key file
 
     def statusRemote(self, remote, verhex, pubhex, main=True):
         '''
         Evaluate acceptance status of remote estate per its keys
         persist key data differentially based on status
         '''
-        status = raeting.ACCEPTANCES[self.saltRaetKey.status(remote.name,
+        status = raeting.ACCEPTANCES[self.saltRaetKey.status(remote.role,
                                                              remote.eid,
                                                              pubhex,
                                                              verhex)]
@@ -173,7 +183,8 @@ class SaltSafe(object):
                 remote.verfer = nacling.Verifier(verhex)
             if (pubhex and pubhex != remote.pubber.keyhex):
                 remote.pubber = nacling.Publican(pubhex)
-        remote.acceptance = status
+            remote.acceptance = status
+
         return status
 
     def rejectRemote(self, remote):
@@ -181,7 +192,7 @@ class SaltSafe(object):
         Set acceptance status to rejected
         '''
         remote.acceptance = raeting.acceptances.rejected
-        mid = remote.name
+        mid = remote.role
         self.saltRaetKey.reject(match=mid, include_accepted=True)
 
     def pendRemote(self, remote):
@@ -195,17 +206,14 @@ class SaltSafe(object):
         Set acceptance status to accepted
         '''
         remote.acceptance = raeting.acceptances.accepted
-        mid = remote.name
+        mid = remote.role
         self.saltRaetKey.accept(match=mid, include_rejected=True)
 
-
-def clearAllRoadSafe(dirpath, opts):
+def clearAllKeep(dirpath):
     '''
-    Convenience function to clear all road and safe keep data in dirpath
+    Convenience function to clear all road keep data in dirpath
     '''
     road = RoadKeep(dirpath=dirpath)
     road.clearLocalData()
     road.clearAllRemoteData()
-    safe = SaltSafe(opts=opts)
-    safe.clearLocalData()
-    safe.clearAllRemoteData()
+

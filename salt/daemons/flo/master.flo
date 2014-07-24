@@ -2,42 +2,59 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1
+init .raet.udp.stack.local to eid 1 main true name "master"
+
+init .salt.uxd.stack.local to yid 0 name "master" lanename "master"
 
 framer masterudpstack be active first setup
     frame setup
         enter
-            do setup
+            do salt raet cleanup
+            do salt raet road stack setup per inode ".raet.udp.stack"
+            do salt manor lane setup per inode ".salt.uxd.stack"
         go spawnmaint
+
     frame spawnmaint
         enter
             do fork maint
         go spawnworkers
+
     frame spawnworkers
         enter
             do worker fork
         go start
+
     frame start
-        do salt raet road stack per inode ".raet.udp.stack"
+        bid start inbound
+        bid start uxdrouter
+        bid start events
+        bid start publish
+        bid start manager
+        bid start outbound
         exit
             do salt raet road stack closer per inode ".raet.udp.stack."
+            do salt raet lane stack closer per inode ".salt.uxd.stack."
 
-framer inbound be active first start
+framer inbound be inactive first start
     frame start
-        do rx
+        do salt raet road stack service rx
 
-framer uxdrouter be active first start
+framer uxdrouter be inactive first start
     frame start
         do router
 
-framer events be active first start
+framer events be inactive first start
     frame start
         do eventer
 
-framer publish be active first start
+framer publish be inactive first start
     frame start
-        do publisher
+        do salt publisher
 
-framer outbound be active first start
+framer manager be inactive first start at 10.0
     frame start
-        do tx
+         do salt raet road stack manager per inode ".raet.udp.stack"
+
+framer outbound be inactive first start
+    frame start
+        do salt raet road stack service tx

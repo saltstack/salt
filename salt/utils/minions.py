@@ -65,22 +65,27 @@ def nodegroup_comp(group, nodegroups, skip=None):
     '''
     Take the nodegroup and the nodegroups and fill in nodegroup refs
     '''
+    k = 1
     if skip is None:
         skip = set([group])
+        k = 0
     if group not in nodegroups:
         return ''
     gstr = nodegroups[group]
     ret = ''
-    for comp in gstr.split():
+    for comp in gstr.split(','):
         if not comp.startswith('N@'):
-            ret += '{0} '.format(comp)
+            ret += '{0} or '.format(comp)
             continue
         ngroup = comp[2:]
         if ngroup in skip:
             continue
         skip.add(ngroup)
         ret += nodegroup_comp(ngroup, nodegroups, skip)
-    return ret
+    if k == 1:
+        return ret
+    else:
+        return ret[:-3]
 
 
 class CkMinions(object):
@@ -90,7 +95,6 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        self.ip_addrs = salt.utils.network.ip_addrs()
         if self.opts['transport'] == 'zeromq':
             self.acc = 'minions'
         else:
@@ -101,7 +105,13 @@ class CkMinions(object):
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
+        pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
+
+        # If there is no directory return an empty list
+        if os.path.isdir(pki_dir) is False:
+            return []
+
+        os.chdir(pki_dir)
         ret = set(glob.glob(expr))
         try:
             os.chdir(cwd)
@@ -249,7 +259,7 @@ class CkMinions(object):
                         # Not a valid IPv4 address, no minions match
                         return []
                     else:
-                        if not expr in grains.get('ipv4', []):
+                        if expr not in grains.get('ipv4', []):
                             minions.remove(id_)
         return list(minions)
 
@@ -400,8 +410,6 @@ class CkMinions(object):
             if not os.path.isdir(cdir):
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
-            if '127.0.0.1' in addrs:
-                addrs.update(self.ip_addrs)
             if subset:
                 search = subset
             else:
@@ -410,9 +418,12 @@ class CkMinions(object):
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
+                try:
+                    grains = self.serial.load(
+                        salt.utils.fopen(datap, 'rb')
+                    ).get('grains', {})
+                except AttributeError:
+                    pass
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
@@ -462,7 +473,6 @@ class CkMinions(object):
         '''
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
@@ -471,7 +481,6 @@ class CkMinions(object):
         infinite = [
                 'node',
                 'ipcidr',
-                'exsel',
                 'pillar']
         if not self.opts.get('minion_data_cache', False):
             infinite.append('grain')
@@ -683,3 +692,30 @@ class CkMinions(object):
                             if self.match_check(regex, fun):
                                 return True
         return False
+
+
+def mine_get(tgt, fun, tgt_type='glob', opts=None):
+    '''
+    Gathers the data from the specified minions' mine, pass in the target,
+    function to look up and the target type
+    '''
+    ret = {}
+    serial = salt.payload.Serial(opts)
+    checker = salt.utils.minions.CkMinions(opts)
+    minions = checker.check_minions(
+            tgt,
+            tgt_type)
+    for minion in minions:
+        mine = os.path.join(
+                opts['cachedir'],
+                'minions',
+                minion,
+                'mine.p')
+        try:
+            with salt.utils.fopen(mine, 'rb') as fp_:
+                fdata = serial.load(fp_).get(fun)
+                if fdata:
+                    ret[minion] = fdata
+        except Exception:
+            continue
+    return ret

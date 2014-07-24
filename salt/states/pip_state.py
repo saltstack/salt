@@ -41,7 +41,9 @@ if HAS_PIP is True:
         HAS_PIP = False
         # Remove references to the loaded pip module above so reloading works
         import sys
-        del pip, sys.modules['pip']
+        del pip
+        if 'pip' in sys.modules:
+            del sys.modules['pip']
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +123,12 @@ def installed(name,
               no_chown=False,
               cwd=None,
               activate=False,
-              pre_releases=False):
+              pre_releases=False,
+              cert=None,
+              allow_all_external=False,
+              allow_external=None,
+              allow_unverified=None,
+              process_dependency_links=False):
     '''
     Make sure the package is installed
 
@@ -130,7 +137,9 @@ def installed(name,
         numbers here using the standard operators ``==, >=, <=``. If
         ``requirements`` is given, this parameter will be ignored.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -140,6 +149,10 @@ def installed(name,
 
     This will install the latest Django version greater than 1.6 but less
     than 1.7.
+
+    requirements
+        Path to a pip requirements file. If the path begins with salt://
+        the file will be transferred from the master file server.
 
     user
         The user under which to run pip
@@ -152,7 +165,9 @@ def installed(name,
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -163,7 +178,9 @@ def installed(name,
 
     Or
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -207,7 +224,7 @@ def installed(name,
         Extra global options to be supplied to the setup.py call before the
         install command.
 
-        .. versionadded:: 2014.1.2
+        .. versionadded:: 2014.1.3
 
     .. admonition:: Attention
 
@@ -216,7 +233,7 @@ def installed(name,
         Salt from an active `virtualenv`_.
 
         The reason for this requirement is because ``pip`` already does a
-        pretty good job parsing it's own requirements. It makes no sense for
+        pretty good job parsing its own requirements. It makes no sense for
         Salt to do ``pip`` requirements parsing and validation before passing
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
@@ -414,6 +431,11 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
+        cert=cert,
+        allow_all_external=allow_all_external,
+        allow_external=allow_external,
+        allow_unverified=allow_unverified,
+        process_dependency_links=process_dependency_links,
         saltenv=__env__
     )
 
@@ -423,9 +445,16 @@ def installed(name,
         if requirements or editable:
             comments = []
             if requirements:
+                for eachline in pip_install_call.get('stdout', '').split('\n'):
+                    if not eachline.startswith('Requirement already satisfied') and eachline != 'Cleaning up...':
+                        ret['changes']['requirements'] = True
+                if ret['changes'].get('requirements'):
+                    comments.append('Successfully processed requirements file '
+                                    '{0}.'.format(requirements))
+                else:
+                    comments.append('Requirements was successfully installed')
                 comments.append('Successfully processed requirements file '
                                 '{0}.'.format(requirements))
-                ret['changes']['requirements'] = True
             if editable:
                 comments.append('Package successfully installed from VCS '
                                 'checkout {0}.'.format(editable))

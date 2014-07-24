@@ -48,7 +48,7 @@ def auth(pem, **kwargs):
 
     Configure the CA cert in the master config file:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         external_auth:
           pki:

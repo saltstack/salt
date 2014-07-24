@@ -39,7 +39,7 @@ A :mod:`cmd.run <salt.states.cmd.run>` state will run the corresponding command
 *every time* (unless it is prevented from running by the ``unless`` or ``onlyif``
 arguments).
 
-More details can be found in the docmentation for the :mod:`cmd
+More details can be found in the documentation for the :mod:`cmd
 <salt.states.cmd>` states.
 
 When I run *test.ping*, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
@@ -187,3 +187,62 @@ allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
+
+What is the best way to restart a Salt daemon using Salt?
+---------------------------------------------------------
+
+Restarting Salt using Salt without having the restart interrupt the whole
+process is a tricky problem to solve. We're still working on it but in the
+meantime a good way is to use the system scheduler with a short interval. The
+following example is a state that will always execute at the very end of a
+state run.
+
+For Unix machines:
+
+.. code-block:: yaml
+
+    salt-minion-reload:
+      cmd:
+        - run
+        - name: echo service salt-minion restart | at now + 1 minute
+        - order: last
+
+For Windows machines:
+
+.. code-block:: yaml
+
+    schedule-start:
+      cmd:
+        - run
+        - name: at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net start salt-minion"
+        - shell: powershell
+        - order: last
+      service:
+        - dead
+        - name: salt-minion
+        - require:
+            - cmd: schedule-start
+
+Salting the Salt Master
+-----------------------
+
+In order to configure a master server via states, the Salt master can also be
+"salted" in order to enforce state on the Salt master as well as the Salt
+minions. Salting the Salt master requires a Salt minion to be installed on
+the same machine as the Salt master. Once the Salt minion is installed, the
+minion configuration file must be pointed to the local Salt master:
+
+.. code-block:: yaml
+
+    master: 127.0.0.1
+
+Once the Salt master has been "salted" with a Salt minion, it can be targeted
+just like any other minion. If the minion on the salted master is running, the
+minion can be targeted via any usual ``salt`` command. Additionally, the
+``salt-call`` command can execute operations to enforce state on the salted
+master without requiring the minion to be running.
+
+More information about salting the Salt master can be found in the salt-formula
+for salt itself:
+
+https://github.com/saltstack-formulas/salt-formula

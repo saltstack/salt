@@ -12,6 +12,8 @@ import logging
 import tempfile
 import time
 
+from collections import MutableMapping
+
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
@@ -26,7 +28,7 @@ __salt__ = {
 }
 log = logging.getLogger(__name__)
 
-SALT_BASE_PATH = os.path.dirname(salt.__file__)
+SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
 LOADED_BASE_NAME = 'salt.loaded'
 
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
@@ -119,7 +121,7 @@ def minion_mods(opts, context=None, whitelist=None):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
@@ -149,7 +151,7 @@ def raw_mod(opts, name, functions):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
@@ -174,7 +176,11 @@ def returners(opts, functions, whitelist=None):
     load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.gen_functions(pack, whitelist=whitelist)
+    return LazyLoader(load,
+                      functions,
+                      pack,
+                      whitelist=whitelist,
+                      )
 
 
 def pillars(opts, functions):
@@ -191,11 +197,12 @@ def tops(opts):
     '''
     Returns the tops modules
     '''
-    if not 'master_tops' in opts:
+    if 'master_tops' not in opts:
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
-    return load.filter_func('top', whitelist=whitelist)
+    topmodules = load.filter_func('top', whitelist=whitelist)
+    return topmodules
 
 
 def wheels(opts, whitelist=None):
@@ -231,8 +238,7 @@ def fileserver(opts, backends):
     Returns the file server modules
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
-    ret = load.gen_functions(whitelist=backends)
-    return ret
+    return load.gen_functions(whitelist=backends)
 
 
 def roster(opts, whitelist=None):
@@ -240,8 +246,7 @@ def roster(opts, whitelist=None):
     Returns the roster modules
     '''
     load = _create_loader(opts, 'roster', 'roster')
-    ret = load.gen_functions(whitelist=whitelist)
-    return ret
+    return load.gen_functions(whitelist=whitelist)
 
 
 def states(opts, functions, whitelist=None):
@@ -269,7 +274,7 @@ def search(opts, returners, whitelist=None):
     load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
-    return load.gen_functions(pack, whitelist=whitelist)
+    return LazyLoader(load, pack=pack, whitelist=whitelist)
 
 
 def log_handlers(opts):
@@ -313,7 +318,10 @@ def render(opts, functions, states=None):
         opts, 'renderers', 'render', ext_type_dirs='render_dirs'
     )
     pack = [{'name': '__salt__',
-            'value': functions}]
+             'value': functions},
+            {'name': '__pillar__',
+             'value': opts.get('pillar', {})}]
+
     if states:
         pack.append({'name': '__states__', 'value': states})
     rend = load.filter_func('render', pack)
@@ -325,7 +333,7 @@ def render(opts, functions, states=None):
     return rend
 
 
-def grains(opts):
+def grains(opts, force_refresh=False):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -363,9 +371,8 @@ def grains(opts):
             opts['grains'] = {}
     else:
         opts['grains'] = {}
-
-    load = _create_loader(opts, 'grains', 'grain')
-    grains_info = load.gen_grains()
+    load = _create_loader(opts, 'grains', 'grain', ext_type_dirs='grains_dirs')
+    grains_info = load.gen_grains(force_refresh)
     grains_info.update(opts['grains'])
     return grains_info
 
@@ -389,6 +396,30 @@ def runner(opts):
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
     return load.gen_functions()
+
+
+def queues(opts):
+    '''
+    Directly call a function inside a loader directory
+    '''
+    load = _create_loader(
+        opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
+    )
+    return load.gen_functions()
+
+
+def sdb(opts, functions=None, whitelist=None):
+    '''
+    Make a very small database call
+    '''
+    load = _create_loader(opts, 'sdb', 'sdb')
+    pack = {'name': '__sdb__',
+            'value': functions}
+    return LazyLoader(load,
+                      functions,
+                      pack,
+                      whitelist=whitelist,
+                      )
 
 
 def clouds(opts):
@@ -419,6 +450,14 @@ def clouds(opts):
         )
         functions.pop(funcname, None)
     return functions
+
+
+def netapi(opts):
+    '''
+    Return the network api functions
+    '''
+    load = salt.loader._create_loader(opts, 'netapi', 'netapi')
+    return load.gen_functions()
 
 
 def _generate_module(name):
@@ -546,11 +585,15 @@ class Loader(object):
             fn_ = os.path.join(mod_dir, name)
             if os.path.isdir(fn_):
                 full = fn_
+                break
             else:
                 for ext in ('.py', '.pyo', '.pyc', '.so'):
                     full_test = '{0}{1}'.format(fn_, ext)
                     if os.path.isfile(full_test):
                         full = full_test
+                        break
+                if full:
+                    break
         if not full:
             return None
 
@@ -655,7 +698,7 @@ class Loader(object):
             context = sys.modules[
                 functions[functions.keys()[0]].__module__
             ].__context__
-        except AttributeError:
+        except (AttributeError, IndexError):
             context = {}
         mod.__context__ = context
         return funcs
@@ -757,11 +800,13 @@ class Loader(object):
         for mod in self.modules:
             if not hasattr(mod, '__salt__') or (
                 not in_pack(pack, '__salt__') and
-                not str(mod.__name__).startswith('salt.loaded.int.grain')
+                (not str(mod.__name__).startswith('salt.loaded.int.grain') and
+                 not str(mod.__name__).startswith('salt.loaded.ext.grain'))
             ):
                 mod.__salt__ = funcs
             elif not in_pack(pack, '__salt__') and \
-                    str(mod.__name__).startswith('salt.loaded.int.grain'):
+                    (str(mod.__name__).startswith('salt.loaded.int.grain') or
+                     str(mod.__name__).startswith('salt.loaded.ext.grain')):
                 mod.__salt__.update(funcs)
         return funcs
 
@@ -856,6 +901,7 @@ class Loader(object):
                         getattr(mod, sname) for sname in dir(mod) if
                         isinstance(getattr(mod, sname), mod.__class__)
                     ]
+
                     # reload only custom "sub"modules i.e is a submodule in
                     # parent module that are still available on disk (i.e. not
                     # removed during sync_modules)
@@ -954,7 +1000,7 @@ class Loader(object):
 
     def process_virtual(self, mod, module_name):
         '''
-        Given a loaded module and it's default name determine its virtual name
+        Given a loaded module and its default name determine its virtual name
 
         This function returns a tuple. The first value will be either True or
         False and will indicate if the module should be loaded or not (ie. if
@@ -1029,7 +1075,7 @@ class Loader(object):
                 elif virtual is not True and module_name != virtual:
                     # The module is renaming itself. Updating the module name
                     # with the new name
-                    log.debug('Loaded {0} as virtual {1}'.format(
+                    log.trace('Loaded {0} as virtual {1}'.format(
                         module_name, virtual
                     ))
 
@@ -1106,11 +1152,9 @@ class Loader(object):
         the returners for the salt minion
         '''
         funcs = {}
-        if pack:
-            gen = self.gen_functions(pack, whitelist=whitelist)
-        else:
-            gen = self.gen_functions(whitelist=whitelist)
+        gen = self.gen_functions(pack=pack, whitelist=whitelist)
         for key, fun in gen.items():
+            # if the name (after '.') is "name", then rename to mod_name: fun
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
         return funcs
@@ -1125,7 +1169,7 @@ class Loader(object):
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
 
-    def gen_grains(self):
+    def gen_grains(self, force_refresh=False):
         '''
         Read the grains directory and execute all of the public callable
         members. Then verify that the returns are python dict's and return
@@ -1139,7 +1183,7 @@ class Loader(object):
             if os.path.isfile(cfn):
                 grains_cache_age = int(time.time() - os.path.getmtime(cfn))
                 if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
-                        self.opts.get('refresh_grains_cache', False):
+                        self.opts.get('refresh_grains_cache', False) and not force_refresh:
                     log.debug('Retrieving grains from cache')
                     try:
                         with salt.utils.fopen(cfn, 'rb') as fp_:
@@ -1148,12 +1192,15 @@ class Loader(object):
                     except (IOError, OSError):
                         pass
                 else:
-                    log.debug('Grains cache last modified {0} seconds ago and '
-                              'cache expiration is set to {1}. '
-                              'Grains cache expired. Refreshing.'.format(
-                                  grains_cache_age,
-                                  self.opts.get('grains_cache_expiration', 300)
-                              ))
+                    if force_refresh:
+                        log.debug('Grains refresh requested. Refreshing grains.')
+                    else:
+                        log.debug('Grains cache last modified {0} seconds ago and '
+                                  'cache expiration is set to {1}. '
+                                  'Grains cache expired. Refreshing.'.format(
+                                      grains_cache_age,
+                                      self.opts.get('grains_cache_expiration', 300)
+                                  ))
             else:
                 log.debug('Grains cache file does not exist.')
         grains_data = {}
@@ -1200,3 +1247,139 @@ class Loader(object):
                 log.error(msg.format(cfn))
             os.umask(cumask)
         return grains_data
+
+
+class LazyLoader(MutableMapping):
+    '''
+    Lazily load things modules. If anyone asks for len or attempts to iterate this
+    will load them all.
+
+    TODO: negative caching? If you ask for 'foo.bar' and it doesn't exist it will
+    look EVERY time unless someone calls load_all()
+    '''
+    def __init__(self,
+                 loader,
+                 functions=None,
+                 pack=None,
+                 whitelist=None):
+        # create a dict to store module functions in
+        self._dict = {}
+
+        self.loader = loader
+        if not functions:
+            self.functions = {}
+        else:
+            self.functions = functions
+        self.pack = pack
+        self.whitelist = whitelist
+
+        # have we already loded everything?
+        self.loaded = False
+
+    def _load(self, key):
+        '''
+        Load a single item if you have it
+        '''
+        # if the key doesn't have a '.' then it isn't valid for this mod dict
+        if '.' not in key:
+            raise KeyError
+        mod_key = key.split('.', 1)[0]
+        if self.whitelist:
+            # if the modulename isn't in the whitelist, don't bother
+            if mod_key not in self.whitelist:
+                raise KeyError
+        mod_funcs = self.loader.gen_module(mod_key,
+                                           self.functions,
+                                           pack=self.pack,
+                                           )
+        # if you loaded nothing, then we don't have it
+        if mod_funcs is None:
+            # if we couldn't find it, then it could be a virtual or we don't have it
+            # until we have a better way, we have to load them all to know
+            # TODO: maybe do a load until, with some glob match first?
+            self.load_all()
+            return self._dict[key]
+        self._dict.update(mod_funcs)
+
+    def load_all(self):
+        '''
+        Load all of them
+        '''
+        self._dict.update(self.loader.gen_functions(pack=self.pack,
+                                                    whitelist=self.whitelist))
+        self.loaded = True
+
+    def __setitem__(self, key, val):
+        self._dict[key] = val
+
+    def __delitem__(self, key):
+        del self._dict[key]
+
+    def __getitem__(self, key):
+        '''
+        Check if the key is ttld out, then do the get
+        '''
+        if key not in self._dict and not self.loaded:
+            # load the item
+            self._load(key)
+            log.debug('LazyLoaded {0}'.format(key))
+        return self._dict[key]
+
+    def __len__(self):
+        # if not loaded,
+        if not self.loaded:
+            self.load_all()
+        return len(self._dict)
+
+    def __iter__(self):
+        if not self.loaded:
+            self.load_all()
+        return iter(self._dict)
+
+
+class LazyFilterLoader(LazyLoader):
+    '''
+    Subclass of LazyLoader which filters the module names (for things such as ext_pillar)
+    which have all modules with a single function that we care about
+    '''
+    def __init__(self,
+                 loader,
+                 name,
+                 functions=None,
+                 pack=None,
+                 whitelist=None):
+        self.name = name
+        LazyLoader.__init__(self,
+                            loader,
+                            functions=functions,
+                            pack=pack,
+                            whitelist=whitelist)
+
+    def _load(self, key):
+        if self.whitelist:
+            # if the modulename isn't in the whitelist, don't bother
+            if key not in self.whitelist:
+                raise KeyError
+        mod_funcs = self.loader.gen_module(key,
+                                           self.functions,
+                                           pack=self.pack,
+                                           )
+        # if you loaded nothing, then we don't have it
+        if mod_funcs is None:
+            # if we couldn't find it, then it could be a virtual or we don't have it
+            # until we have a better way, we have to load them all to know
+            # TODO: maybe do a load until, with some glob match first?
+            self.load_all()
+            return self._dict[key]
+
+        # if we got one, now lets check if we have the function name we want
+        for mod_key, mod_fun in mod_funcs.iteritems():
+            # if the name (after '.') is "name", then rename to mod_name: fun
+            if mod_key[mod_key.index('.') + 1:] == self.name:
+                self._dict[mod_key[:mod_key.index('.')]] = mod_fun
+
+    def load_all(self):
+        filtered_funcs = self.loader.filter_func(self.name,
+                                                 pack=self.pack,
+                                                 whitelist=self.whitelist)
+        self._dict.update(filtered_funcs)
