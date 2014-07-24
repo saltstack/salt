@@ -457,6 +457,50 @@ then the state is run.
 This will ensure that the stop_volume and delete modules are only run if the
 gluster commands return back a 0 ret value.
 
+Listen/Listen_in
+~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+listen and its counterpart listen_in trigger mod_wait functions for states,
+when those states succeed and result in changes, similar to how watch its
+counterpart watch_in. Unlike watch and watch_in, listen and listen_in will
+not modify the order of states and can be used to ensure your states are
+executed in the order they are defined. All listen/listen_in actions will occur
+at the end of a state run, after all states have completed.
+
+.. code-block:: yaml
+
+ restart-apache2:
+ service.running:
+ - name: apache2
+ - listen:
+ - file: /etc/apache2/apache2.conf
+
+ configure-apache2:
+ file.managed:
+ - path: /etc/apache2/apache2.conf
+ - source: salt://apache2/apache2.conf
+
+This example will cause apache2 to be restarted when the apache2.conf file is
+changed, but the apache2 restart will happen at the end of the state run.
+
+.. code-block:: yaml
+
+ restart-apache2:
+ service.running:
+ - name: apache2
+
+ configure-apache2:
+ file.managed:
+ - path: /etc/apache2/apache2.conf
+ - source: salt://apache2/apache2.conf
+ - listen_in:
+ - service: apache2
+
+This example does the same as the above example, but puts the state argument
+on the file resource, rather than the service resource.
+
 Check_Cmd
 ~~~~~~~~~
 
