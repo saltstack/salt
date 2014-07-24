@@ -1,6 +1,94 @@
 # -*- coding: utf-8 -*-
 '''
 Read in an Ansible inventory file or script
+
+Flat inventory files should be in the regular ansible inventory format.
+
+.. code-block:: ini
+
+    [servers]
+    salt.gtmanfred.com ansible_ssh_user=gtmanfred ansible_ssh_host=127.0.0.1 ansible_ssh_port=22 ansible_ssh_pass='password'
+
+    [desktop]
+    home ansible_ssh_user=gtmanfred ansible_ssh_host=12.34.56.78 ansible_ssh_port=23 ansible_ssh_pass='password'
+
+    [computers:children]
+    desktop
+    servers
+
+    [names:vars]
+    http_port=80
+
+then salt-ssh can be used to hit any of them
+
+.. code-block:: bash
+
+    [~]# salt-ssh all test.ping
+    salt.gtmanfred.com:
+        True
+    home:
+        True
+    [~]# salt-ssh desktop test.ping
+    home:
+        True
+    [~]# salt-ssh computers test.ping
+    salt.gtmanfred.com:
+        True
+    home:
+        True
+    [~]# salt-ssh salt.gtmanfred.com test.ping
+    salt.gtmanfred.com:
+        True
+
+There is also the option of specifying a dynamic inventory, and generating it on the fly
+
+.. code-block:: bash
+
+    #!/bin/bash
+    echo '{
+      "servers": {
+        "hosts": [
+          "salt.gtmanfred.com"
+        ]
+      },
+      "desktop": {
+        "hosts": [
+          "home"
+        ]
+      },
+      "computers": {
+        "hosts":{},
+        "children": [
+          "desktop",
+          "servers"
+        ]
+      },
+      "_meta": {
+        "hostvars": {
+          "salt.gtmanfred.com": {
+            "ansible_ssh_user": "gtmanfred",
+            "ansible_ssh_host": "127.0.0.1",
+            "ansible_sudo_pass": "password",
+            "ansible_ssh_port": 22
+          },
+          "home": {
+            "ansible_ssh_user": "gtmanfred",
+            "ansible_ssh_host": "12.34.56.78",
+            "ansible_sudo_pass": "password",
+            "ansible_ssh_port": 23
+          }
+        }
+      }
+    }'
+
+This is the format that an inventory script needs to output to work with ansible, and thus here.
+
+.. code-block:: bash
+    [~]# salt-ssh --roster-file /etc/salt/hosts salt.gtmanfred.com test.ping
+    salt.gtmanfred.com:
+            True
+
+Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 '''
 import os
 import re
@@ -23,7 +111,7 @@ CONVERSION = {
 def targets(tgt, tgt_type='glob', **kwargs):
     '''
     Return the targets from the ansible inventory_file
-    Default: /etc/salt/hosts
+    Default: /etc/salt/roster
     '''
     if tgt == 'all':
         tgt = '*'
@@ -32,9 +120,9 @@ def targets(tgt, tgt_type='glob', **kwargs):
     elif os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
         hosts = os.path.join(
                 os.path.dirname(__opts__['conf_file']),
-                'hosts')
+                'roster')
     else:
-        hosts = os.path.join(__opts__['conf_file'], 'hosts')
+        hosts = os.path.join(__opts__['conf_file'], 'roster')
 
     if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
         imatcher = Script(tgt, tgt_type='glob', inventory_file=hosts)
@@ -47,7 +135,7 @@ class Inventory(object):
     '''
     Matcher for static inventory files
     '''
-    def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/hosts'):
+    def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/roster'):
         self.tgt = tgt
         self.tgt_type = tgt_type
         self.groups = dict()
@@ -145,12 +233,13 @@ class Inventory(object):
             elif nodegroup in self.groups:
                 ret.update(self.groups[nodegroup])
         return ret
-                
+
+
 class Script(Inventory):
     '''
     Matcher for Inventory scripts
     '''
-    def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/hosts'):
+    def __init__(self, tgt, tgt_type='glob', inventory_file='/etc/salt/roster'):
         self.tgt = tgt
         self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
