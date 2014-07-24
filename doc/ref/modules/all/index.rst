@@ -112,6 +112,7 @@ Full list of builtin execution modules
     linux_sysctl
     localemod
     locate
+    logadm
     logrotate
     lvs
     lxc
@@ -123,6 +124,7 @@ Full list of builtin execution modules
     mdadm
     memcached
     mine
+    mod_random
     modjk
     mongodb
     monit
@@ -143,6 +145,7 @@ Full list of builtin execution modules
     openbsdpkg
     openbsdservice
     openstack_config
+    oracle
     osxdesktop
     pacman
     pagerduty
@@ -165,14 +168,16 @@ Full list of builtin execution modules
     puppet
     pw_group
     pw_user
+    pyenv
     qemu_img
     qemu_nbd
     quota
     rabbitmq
+    raet_publish
     rbenv
     rdp
-    reg
     redismod
+    reg
     rest_package
     rest_sample
     rest_service
@@ -186,8 +191,10 @@ Full list of builtin execution modules
     s3
     saltcloudmod
     saltutil
+    schedule
     seed
     selinux
+    sensors
     serverdensity_device
     service
     shadow
@@ -209,7 +216,6 @@ Full list of builtin execution modules
     svn
     swift
     sysbench
-    syslog_ng
     sysmod
     system
     systemd
@@ -242,6 +248,7 @@ Full list of builtin execution modules
     win_status
     win_system
     win_timezone
+    win_update
     win_useradd
     xapi
     xmpp

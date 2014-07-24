@@ -37,7 +37,7 @@ _PKG_TARGETS_32 = {
 # Test packages with dot in pkg name
 # (https://github.com/saltstack/salt/issues/8614)
 _PKG_TARGETS_DOT = {
-    'CentOS': 'python-migrate0.5'
+    'CentOS': 'jboss-annotations-1.1-api-javadoc'
 }
 
 
