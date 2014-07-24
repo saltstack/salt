@@ -272,8 +272,8 @@ class Pillar(object):
         '''
         Cleanly merge the top files
         '''
-        top = collections.defaultdict(dict)
-        orders = collections.defaultdict(dict)
+        top = collections.defaultdict(OrderedDict)
+        orders = collections.defaultdict(OrderedDict)
         for ctops in tops.values():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():

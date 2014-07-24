@@ -865,7 +865,7 @@ class RaetKey(Key):
             ret['local'].append(fn_)
         return ret
 
-    def status(self, minion_id, device_id, pub, verify):
+    def status(self, minion_id, pub, verify):
         '''
         Accepts the minion id, device id, curve public and verify keys.
         If the key is not present, put it in pending and return "pending",
@@ -879,7 +879,6 @@ class RaetKey(Key):
         # open mode is turned on, force accept the key
         keydata = {
                 'minion_id': minion_id,
-                'device_id': device_id,
                 'pub': pub,
                 'verify': verify}
         if self.opts['open_mode']:  # always accept and overwrite
