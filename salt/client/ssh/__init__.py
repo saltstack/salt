@@ -603,12 +603,13 @@ class Single(object):
             if passed_time > self.opts.get('cache_life', 60):
                 refresh = True
 
-        conf_grains = {}
         if self.opts.get('refresh_cache'):
             refresh = True
-            #Save conf file grains before they get clobbered
-            if 'ssh_grains' in self.opts:
-                conf_grains = self.opts['ssh_grains']
+
+        conf_grains = {}
+        #Save conf file grains before they get clobbered
+        if 'ssh_grains' in self.opts:
+            conf_grains = self.opts['ssh_grains']
 
         if refresh:
             # Make the datap
