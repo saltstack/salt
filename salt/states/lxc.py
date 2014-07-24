@@ -170,7 +170,7 @@ def set_pass(name, password=None, user=None, users=None):
                 'changes': {}}
     if not isinstance(users, list):
         users = [users]
-    if user and (not user in users):
+    if user and (user not in users):
         users.append(user)
     cret = __salt__['lxc.set_pass'](name, users=users, password=password)
     cret['changes'] = {}

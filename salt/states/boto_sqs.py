@@ -3,28 +3,31 @@
 Manage SQS Queues
 =================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy SQS queues. Be aware that this interacts with Amazon's
 services, and so may incur charges.
 
-This module uses boto, which can be installed via package, or pip.
+This module uses ``boto``, which can be installed via package, or pip.
 
-This module accepts explicit sqs credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+This module accepts explicit SQS credentials but can also utilize
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
-configuration is necessary. More Information available at::
+configuration is necessary. More information available `here
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.
 
-   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar file or
+in the minion's config file:
 
-If IAM roles are not used you need to specify them either in a pillar or
-in the minion's config file::
+.. code-block:: yaml
 
     sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
     sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-It's also possible to specify key, keyid and region via a profile, either
-as a passed in dict, or as a string to pull from pillars or minion config:
+It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, either
+passed in as a dict, or as a string to pull from pillars or minion config:
+
+.. code-block:: yaml
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -36,8 +39,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
     myqueue:
         boto_sqs.present:
             - region: us-east-1
-            - key: GKTADJGHEIQSXMKKRBJ08H
-            - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             - attributes:
                 ReceiveMessageWaitTimeSeconds: 20
 
@@ -52,8 +55,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         boto_sqs.present:
             - region: us-east-1
             - profile:
-                key: GKTADJGHEIQSXMKKRBJ08H
-                keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                keyid: GKTADJGHEIQSXMKKRBJ08H
+                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
 
@@ -77,8 +80,11 @@ def present(
     name
         Name of the SQS queue.
 
+    attributes
+        A dict of key/value SQS attributes.
+
     region
-        Region to create the queue
+        Region to connect to.
 
     key
         Secret key to be used.
@@ -90,18 +96,19 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
     if not is_present:
-        ret['comment'] = 'AWS SQS queue {0} is set to be created.'.format(name)
         if __opts__['test']:
-            ret['result'] = None
+            msg = 'AWS SQS queue {0} is set to be created.'.format(name)
+            ret['comment'] = msg
             return ret
         created = __salt__['boto_sqs.create'](name, region, key, keyid,
                                               profile)
         if created:
+            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = {'queue': name}
         else:
@@ -158,7 +165,7 @@ def absent(
         Name of the SQS queue.
 
     region
-        Region to remove the queue from
+        Region to connect to.
 
     key
         Secret key to be used.
@@ -176,7 +183,6 @@ def absent(
 
     if is_present:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
                 name)
             return ret

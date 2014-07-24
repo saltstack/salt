@@ -152,6 +152,7 @@ def export(name,
            username=None,
            password=None,
            force=False,
+           overwrite=False,
            externals=True,
            trust=False):
     '''
@@ -183,6 +184,9 @@ def export(name,
     force : False
         Continue if conflicts are encountered
 
+    overwrite : False
+        Overwrite existing target
+
     externals : True
         Change to False to not checkout or update externals
 
@@ -197,7 +201,7 @@ def export(name,
     cwd, basename = os.path.split(target)
     opts = tuple()
 
-    if os.path.exists(target) and not os.path.isdir(target):
+    if not overwrite and os.path.exists(target) and not os.path.isdir(target):
         return _fail(ret,
                      'The path "{0}" exists and is not '
                      'a directory.'.format(target)

@@ -3,7 +3,7 @@
 Proxmox Cloud Module
 ======================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The Proxmox cloud module is used to control access to cloud providers using
 the Proxmox system (KVM / OpenVZ).
@@ -260,7 +260,9 @@ def _lookup_proxmox_task(upid):
 def get_resources_nodes(call=None, resFilter=None):
     '''
     Retrieve all hypervisors (nodes) available on this environment
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_resources_nodes my-proxmox-config
     '''
@@ -286,7 +288,9 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
     '''
     Retrieve all VMs available on this environment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_resources_vms my-proxmox-config
     '''
@@ -338,7 +342,9 @@ def avail_locations(call=None):
     '''
     Return a list of the hypervisors (nodes) which this Proxmox PVE machine manages
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --list-locations my-proxmox-config
     '''
@@ -359,11 +365,13 @@ def avail_locations(call=None):
     return ret
 
 
-def avail_images(call=None, location='local', img_type='vztpl'):
+def avail_images(call=None, location='local'):
     '''
     Return a list of the images that are on the provider
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --list-images my-proxmox-config
     '''
@@ -384,7 +392,9 @@ def list_nodes(call=None):
     '''
     Return a list of the VMs that are managed by the provider
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -Q my-proxmox-config
     '''
@@ -427,7 +437,9 @@ def list_nodes_full(call=None):
     '''
     Return a list of the VMs that are on the provider
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -F my-proxmox-config
     '''
@@ -443,7 +455,9 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -S my-proxmox-config
     '''
@@ -456,7 +470,9 @@ def create(vm_):
     '''
     Create a single VM from a data dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -p proxmox-ubuntu vmhostname
     '''
@@ -730,7 +746,7 @@ def create_node(vm_):
     return _parse_proxmox_upid(node, vm_)
 
 
-def show_instance(name, call=None, instance_type=None):
+def show_instance(name, call=None):
     '''
     Show the details from Proxmox concerning an instance
     '''
@@ -740,6 +756,7 @@ def show_instance(name, call=None, instance_type=None):
         )
 
     nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -762,7 +779,7 @@ def get_vmconfig(vmid, node=None, node_type='openvz'):
 
 def wait_for_created(upid, timeout=300):
     '''
-    Wait until a the vm has been created succesfully
+    Wait until a the vm has been created successfully
     '''
     start_time = time.time()
     info = _lookup_proxmox_task(upid)
@@ -787,7 +804,7 @@ def wait_for_state(vmid, node, nodeType, state, timeout=300):
     Wait until a specific state has been reached on  a node
     '''
     start_time = time.time()
-    node = get_vm_status(vmid=vmid, host=node, nodeType=nodeType)
+    node = get_vm_status(vmid=vmid)
     if not node:
         log.error('wait_for_state: No VM retrieved based on given criteria.')
         raise SaltCloudExecutionFailure
@@ -803,7 +820,7 @@ def wait_for_state(vmid, node, nodeType, state, timeout=300):
             log.debug('Timeout reached while waiting for {0} to '
                       'become {1}'.format(node['name'], state))
             return False
-        node = get_vm_status(vmid=vmid, host=node, nodeType=nodeType)
+        node = get_vm_status(vmid=vmid)
         log.debug('State for {0} is: "{1}" instead of "{2}"'.format(
                   node['name'], node['status'], state))
 
@@ -812,7 +829,9 @@ def destroy(name, call=None):
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -842,6 +861,8 @@ def destroy(name, call=None):
             {'name': name},
             transport=__opts__['transport']
         )
+        if __opts__.get('update_cachedir', False) is True:
+            salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
         return {'Destroyed': '{0} was destroyed.'.format(name)}
 
@@ -879,7 +900,7 @@ def set_vm_status(status, name=None, vmid=None):
     return False
 
 
-def get_vm_status(vmid=None, name=None, host=None, nodeType=None):
+def get_vm_status(vmid=None, name=None):
     '''
     Get the status for a VM, either via the ID or the hostname
     '''
@@ -910,7 +931,9 @@ def start(name, vmid=None, call=None):
     '''
     Start a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a start mymachine
     '''
@@ -933,7 +956,9 @@ def stop(name, vmid=None, call=None):
     '''
     Stop a node ("pulling the plug").
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a stop mymachine
     '''
@@ -955,7 +980,9 @@ def shutdown(name=None, vmid=None, call=None):
     '''
     Shutdown a node via ACPI.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a shutdown mymachine
     '''

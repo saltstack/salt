@@ -49,6 +49,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Print some system information.'
         )
+        self.add_option(
+            '--transport',
+            default='zeromq',
+            choices=('zeromq', 'raet'),
+            help='Set to raet to run integration tests with raet transport. Default: %default')
 
         self.test_selection_group.add_option(
             '-m',
@@ -67,6 +72,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run tests for states'
+        )
+        self.test_selection_group.add_option(
+            '-C',
+            '--cli',
+            '--cli-tests',
+            dest='cli',
+            default=False,
+            action='store_true',
+            help='Run tests for cli'
         )
         self.test_selection_group.add_option(
             '-c',
@@ -109,7 +123,44 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Run unit tests'
         )
-
+        self.test_selection_group.add_option(
+            '--fileserver-tests',
+            dest='fileserver',
+            default=False,
+            action='store_true',
+            help='Run Fileserver tests'
+        )
+        self.test_selection_group.add_option(
+            '-o',
+            '--outputter',
+            action='store_true',
+            default=False,
+            help='Run outputter tests'
+        )
+        self.test_selection_group.add_option(
+            '--cloud-provider-tests',
+            action='store_true',
+            default=False,
+            help=('Run cloud provider tests. These tests create and delete '
+                  'instances on cloud providers. Must provide valid credentials '
+                  'in salt/tests/integration/files/conf/cloud.*.d to run tests.')
+        )
+        self.test_selection_group.add_option(
+            '--ssh',
+            action='store_true',
+            default=False,
+            help='Run salt-ssh tests. These tests will spin up a temporary '
+                 'SSH server on your machine. In certain environments, this '
+                 'may be insecure! Default: False'
+        )
+        self.test_selection_group.add_option(
+            '-A',
+            '--api-tests',
+            dest='api',
+            action='store_true',
+            default=False,
+            help='Run salt-api tests'
+        )
         self.output_options_group.add_option(
             '--no-colors',
             '--no-colours',
@@ -119,10 +170,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
     def validate_options(self):
+        if self.options.cloud_provider_tests:
+            # Turn on expensive tests execution
+            os.environ['EXPENSIVE_TESTS'] = 'True'
+
         if self.options.coverage and any((
-                self.options.module, self.options.client, self.options.shell,
-                self.options.unit, self.options.state, self.options.runner,
-                self.options.loader, self.options.name, os.geteuid() != 0,
+                self.options.module, self.options.cli, self.options.client,
+                self.options.shell, self.options.unit, self.options.state,
+                self.options.runner, self.options.loader, self.options.name,
+                self.options.outputter, self.options.fileserver, os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
@@ -132,22 +188,35 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
 
         # Set test suite defaults if no specific suite options are provided
-        if not any((self.options.module, self.options.client,
+        if not any((self.options.module, self.options.client, self.options.cli,
                     self.options.shell, self.options.unit, self.options.state,
-                    self.options.runner, self.options.loader,
-                    self.options.name)):
+                    self.options.runner, self.options.loader, self.options.name,
+                    self.options.outputter, self.options.cloud_provider_tests,
+                    self.options.fileserver, self.options.api)):
             self.options.module = True
+            self.options.cli = True
             self.options.client = True
             self.options.shell = True
             self.options.unit = True
             self.options.runner = True
             self.options.state = True
             self.options.loader = True
+            self.options.outputter = True
+            self.options.fileserver = True
+            self.options.api = True
 
         self.start_coverage(
             branch=True,
             source=[os.path.join(SALT_ROOT, 'salt')],
         )
+
+        # Transplant configuration
+        TestDaemon.transplant_configs(transport=self.options.transport)
+
+    def post_execution_cleanup(self):
+        SaltCoverageTestingParser.post_execution_cleanup(self)
+        if self.options.clean:
+            TestDaemon.clean()
 
     def run_integration_suite(self, suite_folder, display_name):
         '''
@@ -174,8 +243,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 (self.options.runner or
                  self.options.state or
                  self.options.module or
+                 self.options.cli or
                  self.options.client or
                  self.options.loader or
+                 self.options.outputter or
+                 self.options.fileserver or
+                 self.options.cloud_provider_tests or
                  named_tests):
             # We're either not running any of runner, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
@@ -221,10 +294,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        if not any([self.options.client, self.options.module,
+        if not any([self.options.cli, self.options.client, self.options.module,
                     self.options.runner, self.options.shell,
                     self.options.state, self.options.loader,
-                    self.options.name]):
+                    self.options.outputter, self.options.name,
+                    self.options.cloud_provider_tests,
+                    self.options.api, self.options.fileserver]):
             return status
 
         with TestDaemon(self):
@@ -242,10 +317,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('modules', 'Module'))
             if self.options.state:
                 status.append(self.run_integration_suite('states', 'State'))
+            if self.options.cli:
+                status.append(self.run_integration_suite('cli', 'CLI'))
             if self.options.client:
                 status.append(self.run_integration_suite('client', 'Client'))
             if self.options.shell:
                 status.append(self.run_integration_suite('shell', 'Shell'))
+            if self.options.outputter:
+                status.append(self.run_integration_suite('output', 'Outputter'))
+            if self.options.fileserver:
+                status.append(self.run_integration_suite('fileserver', 'Fileserver'))
+            if self.options.cloud_provider_tests:
+                status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
+            if self.options.api:
+                status.append(self.run_integration_suite('netapi', 'NetAPI'))
         return status
 
     def run_unit_tests(self):
@@ -286,23 +371,27 @@ def main():
     '''
     Parse command line options for running specific tests
     '''
-    parser = SaltTestsuiteParser(
-        TEST_DIR,
-        xml_output_dir=XML_OUTPUT_DIR,
-        tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
-    )
-    parser.parse_args()
+    try:
+        parser = SaltTestsuiteParser(
+            TEST_DIR,
+            xml_output_dir=XML_OUTPUT_DIR,
+            tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+        )
+        parser.parse_args()
 
-    overall_status = []
-    status = parser.run_integration_tests()
-    overall_status.extend(status)
-    status = parser.run_unit_tests()
-    overall_status.extend(status)
-    false_count = overall_status.count(False)
+        overall_status = []
+        status = parser.run_integration_tests()
+        overall_status.extend(status)
+        status = parser.run_unit_tests()
+        overall_status.extend(status)
+        false_count = overall_status.count(False)
 
-    if false_count > 0:
-        parser.finalize(1)
-    parser.finalize(0)
+        if false_count > 0:
+            parser.finalize(1)
+        parser.finalize(0)
+    except KeyboardInterrupt:
+        print('\nCaught keyboard interrupt. Exiting.\n')
+        exit(0)
 
 
 if __name__ == '__main__':

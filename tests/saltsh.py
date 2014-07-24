@@ -67,11 +67,11 @@ def get_salt_vars():
             os.environ.get('SALT_MINION_CONFIG', '/etc/salt/minion'))
 
     # Populate grains if it hasn't been done already
-    if not 'grains' in __opts__ or not __opts__['grains']:
+    if 'grains' not in __opts__ or not __opts__['grains']:
         __opts__['grains'] = salt.loader.grains(__opts__)
 
     # file_roots and pillar_roots should be set in the minion config
-    if not 'file_client' in __opts__ or not __opts__['file_client']:
+    if 'file_client' not in __opts__ or not __opts__['file_client']:
         __opts__['file_client'] = 'local'
 
     # Populate template variables

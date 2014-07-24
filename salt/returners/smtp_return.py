@@ -2,7 +2,7 @@
 '''
 Return salt data via email
 
-The following fields can be set in the minion conf file:
+The following fields can be set in the minion conf file::
 
     smtp.from (required)
     smtp.to (required)
@@ -26,7 +26,7 @@ There are a few things to keep in mind:
   gpg public key matching the address the mail is sent to. If left unset, no
   encryption will be used.
 * smtp.fields lets you include the value(s) of various fields in the subject
-  line of the email. These are comma-delimited. For instance:
+  line of the email. These are comma-delimited. For instance::
 
     smtp.fields: id,fun
 
@@ -37,6 +37,8 @@ There are a few things to keep in mind:
   unencrypted.
 
   To use the SMTP returner, append '--return smtp' to the salt command. ex:
+
+  .. code-block:: bash
 
     salt '*' test.ping --return smtp
 
@@ -99,7 +101,8 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
     if HAS_GNUPG and gpgowner:
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~%s/.gnupg' % gpgowner), options=['--trust-model always'])
+        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                        options=['--trust-model always'])
         encrypted_data = gpg.encrypt(content, to_addrs)
         if encrypted_data.ok:
             log.debug('smtp_return: Encryption successful')

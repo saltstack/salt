@@ -30,7 +30,7 @@ def get_enabled():
     ret = set()
     lines = __salt__['cmd.run']('rc-update show').splitlines()
     for line in lines:
-        if not '|' in line:
+        if '|' not in line:
             continue
         if 'shutdown' in line:
             continue
@@ -51,7 +51,7 @@ def get_disabled():
     ret = set()
     lines = __salt__['cmd.run']('rc-update -v show').splitlines()
     for line in lines:
-        if not '|' in line:
+        if '|' not in line:
             continue
         elif 'shutdown' in line:
             continue
@@ -87,7 +87,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():

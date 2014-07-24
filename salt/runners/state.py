@@ -8,6 +8,7 @@ from __future__ import print_function
 import fnmatch
 import json
 import logging
+import sys
 
 # Import salt libs
 import salt.output
@@ -82,6 +83,10 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     .. versionchanged:: 2014.1.1
 
         Runner renamed from ``state.sls`` to ``state.orchestrate``
+
+    .. versionchanged:: 2014.7.0
+
+        Runner uses the pillar variable
     '''
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError(
@@ -129,7 +134,7 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
     '''
     Watch Salt's event bus and block until the given tag is matched
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This is useful for taking some simple action after an event is fired via
     the CLI without having to use Salt's Reactor.
@@ -177,6 +182,7 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
         if fnmatch.fnmatch(ret['tag'], tagmatch):
             if not quiet:
                 print('{0}\t{1}'.format(ret['tag'], json.dumps(ret['data'])))
+                sys.stdout.flush()
 
             count -= 1
             logger.debug('Remaining event matches: {0}'.format(count))

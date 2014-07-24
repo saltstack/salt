@@ -8,15 +8,15 @@ Support for RFC 2136 dynamic DNS updates.
     support this (the keyname is only needed if the keyring contains more
     than one key)::
 
-        ddns.keyring: keyring file (default=None)
-        ddns.keyname: key name in file (default=None)
+        keyring: keyring file (default=None)
+        keyname: key name in file (default=None)
 
     The keyring file needs to be in json format and the key name needs to end
     with an extra period in the file, similar to this:
 
-    .. code-block:: bash
+    .. code-block:: json
 
-        {'keyname.': 'keycontent'}
+        {"keyname.": "keycontent"}
 '''
 # Import python libs
 import logging

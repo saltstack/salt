@@ -334,7 +334,9 @@ def show_instance(vm_name, call=None):
             'The show_instance action must be called with -a or --action.'
         )
     conn = get_conn()
-    return _expand_node(conn.ex_get_node(vm_name))
+    node = _expand_node(conn.ex_get_node(vm_name))
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def avail_sizes(conn=None):
@@ -532,7 +534,9 @@ def create_network(kwargs=None, call=None):
     '''
     Create a GCE network.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24
     '''
@@ -586,7 +590,9 @@ def delete_network(kwargs=None, call=None):
     '''
     Permanently delete a network.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_network gce name=mynet
     '''
@@ -643,7 +649,9 @@ def show_network(kwargs=None, call=None):
     '''
     Show the details of an existing network.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_network gce name=mynet
     '''
@@ -665,7 +673,9 @@ def create_fwrule(kwargs=None, call=None):
     '''
     Create a GCE firewall rule. The 'default' network is used if not specified.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_fwrule gce name=allow-http allow=tcp:80
     '''
@@ -735,7 +745,9 @@ def delete_fwrule(kwargs=None, call=None):
     '''
     Permanently delete a firewall rule.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_fwrule gce name=allow-http
     '''
@@ -792,7 +804,9 @@ def show_fwrule(kwargs=None, call=None):
     '''
     Show the details of an existing firewall rule.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_fwrule gce name=allow-http
     '''
@@ -814,7 +828,9 @@ def create_hc(kwargs=None, call=None):
     '''
     Create an HTTP health check configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_hc gce name=hc path=/healthy port=80
     '''
@@ -886,7 +902,9 @@ def delete_hc(kwargs=None, call=None):
     '''
     Permanently delete a health check.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_hc gce name=hc
     '''
@@ -943,7 +961,9 @@ def show_hc(kwargs=None, call=None):
     '''
     Show the details of an existing health check.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_hc gce name=hc
     '''
@@ -965,7 +985,9 @@ def create_lb(kwargs=None, call=None):
     '''
     Create a load-balancer configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_lb gce name=lb region=us-central1 ports=80
     '''
@@ -1040,7 +1062,9 @@ def delete_lb(kwargs=None, call=None):
     '''
     Permanently delete a load-balancer.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_lb gce name=lb
     '''
@@ -1097,7 +1121,9 @@ def show_lb(kwargs=None, call=None):
     '''
     Show the details of an existing load-balancer.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_lb gce name=lb
     '''
@@ -1119,7 +1145,9 @@ def attach_lb(kwargs=None, call=None):
     '''
     Add an existing node/member to an existing load-balancer configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f attach_lb gce name=lb member=myinstance
     '''
@@ -1169,7 +1197,9 @@ def detach_lb(kwargs=None, call=None):
     '''
     Remove an existing node/member from an existing load-balancer configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f detach_lb gce name=lb member=myinstance
     '''
@@ -1232,7 +1262,9 @@ def delete_snapshot(kwargs=None, call=None):
     '''
     Permanently delete a disk snapshot.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_snapshot gce name=disk-snap-1
     '''
@@ -1289,7 +1321,9 @@ def delete_disk(kwargs=None, call=None):
     '''
     Permanently delete a persistent disk.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_disk gce disk_name=pd
     '''
@@ -1351,7 +1385,9 @@ def create_disk(kwargs=None, call=None):
     Can also specify an `image` or `snapshot` but if neither of those are
     specified, a `size` (in GB) is required.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_disk gce disk_name=pd size=300 location=us-central1-b
     '''
@@ -1424,7 +1460,9 @@ def create_snapshot(kwargs=None, call=None):
     '''
     Create a new disk snapshot. Must specify `name` and  `disk_name`.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_snapshot gce name=snap1 disk_name=pd
     '''
@@ -1491,7 +1529,9 @@ def show_disk(name=None, kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Show the details of an existing disk.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a show_disk myinstance disk_name=mydisk
         salt-cloud -f show_disk gce disk_name=mydisk
@@ -1510,7 +1550,9 @@ def show_snapshot(kwargs=None, call=None):
     '''
     Show the details of an existing snapshot.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_snapshot gce name=mysnapshot
     '''
@@ -1532,7 +1574,9 @@ def detach_disk(name=None, kwargs=None, call=None):
     '''
     Detach a disk from an instance.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a detach_disk myinstance disk_name=mydisk
     '''
@@ -1589,7 +1633,9 @@ def attach_disk(name=None, kwargs=None, call=None):
     '''
     Attach an existing disk to an existing instance.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a attach_disk myinstance disk_name=mydisk mode=READ_WRITE
     '''
@@ -1662,7 +1708,9 @@ def reboot(vm_name, call=None):
     '''
     Call GCE 'reset' on the instance.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot myinstance
     '''
@@ -1680,7 +1728,9 @@ def destroy(vm_name, call=None):
     '''
     Call 'destroy' on the instance.  Can be called with "-a destroy" or -d
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a destroy myinstance1 myinstance2 ...
         salt-cloud -d myinstance1 myinstance2 ...
@@ -1715,7 +1765,7 @@ def destroy(vm_name, call=None):
         transport=__opts__['transport']
     )
 
-    # Use the instance metadata to see if it's salt cloud profile was
+    # Use the instance metadata to see if its salt cloud profile was
     # preserved during instance create.  If so, use the profile value
     # to see if the 'delete_boot_pd' value is set to delete the disk
     # along with the instance.
@@ -1786,6 +1836,9 @@ def destroy(vm_name, call=None):
             transport=__opts__['transport']
         )
 
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return inst_deleted
 
 
@@ -1845,7 +1898,7 @@ def create(vm_=None, call=None):
         )
         return False
 
-    node_dict = _expand_node(node_data)
+    node_dict = show_instance(node_data['name'], 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)

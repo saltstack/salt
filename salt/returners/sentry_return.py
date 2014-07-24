@@ -81,16 +81,24 @@ def returner(ret):
                 project=pillar_data['raven']['project'],
             )
         except KeyError as missing_key:
-            logger.error("Sentry returner need config '%s' in pillar",
-                         missing_key)
+            logger.error(
+                'Sentry returner need config {0!r} in pillar'.format(
+                    missing_key
+                )
+            )
         else:
             try:
                 client.capture('raven.events.Message', message=message, data=data, extra=sentry_data, tags=tags)
             except Exception as err:
-                logger.error("Can't send message to sentry: %s", err,
-                             exc_info=True)
+                logger.error(
+                    'Can\'t send message to sentry: {0}'.format(err),
+                    exc_info=True
+                )
 
     try:
         connect_sentry(ret['fun'], ret)
     except Exception as err:
-        logger.error("Can't run connect_sentry: %s", err, exc_info=True)
+        logger.error(
+            'Can\'t run connect_sentry: {0}'.format(err),
+            exc_info=True
+        )

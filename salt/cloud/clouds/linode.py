@@ -54,6 +54,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
+get_node = namespaced_function(get_node, globals())
 
 
 # Only load in this module if the LINODE configurations are in place
@@ -171,6 +172,9 @@ def create(vm_):
         'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
         'ex_swap': get_swap(vm_)
     }
+
+    if 'libcloud_args' in vm_:
+        kwargs.update(vm_['libcloud_args'])
 
     salt.utils.cloud.fire_event(
         'event',

@@ -5,8 +5,8 @@ This state requires the manager webapp to be enabled
 
 The following grains/pillar should be set::
 
-    tomcat-manager.user: admin user name
-    tomcat-manager.passwd: password
+    tomcat-manager:user: admin user name
+    tomcat-manager:passwd: password
 
 and also configure a user in the conf/tomcat-users.xml file::
 
@@ -53,8 +53,10 @@ def __virtual__():
 # Functions
 def war_deployed(name,
                  war,
+                 force=False,
                  url='http://localhost:8080/manager',
-                 timeout=180):
+                 timeout=180,
+                 temp_war_location=None):
     '''
     Enforce that the WAR will be deployed and started in the context path
     it will make use of WAR versions
@@ -67,12 +69,19 @@ def war_deployed(name,
     war
         absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_url function
+    force
+        force deploy even if version strings are the same, False by default.
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     timeout : 180
         timeout for HTTP request to the tomcat manager
+    temp_war_location : None
+        use another location to temporarily copy to war file
+        by default the system's temp directory is used
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         jenkins:
           tomcat.war_deployed:
@@ -81,7 +90,6 @@ def war_deployed(name,
             - require:
               - service: application-service
     '''
-
     # Prepare
     ret = {'name': name,
        'result': True,
@@ -96,7 +104,7 @@ def war_deployed(name,
 
     # Determine what to do
     try:
-        if version != webapps[name]['version']:
+        if (version != webapps[name]['version']) or force:
             deploy = True
             undeploy = True
             ret['changes']['undeploy'] = ('undeployed {0} in version {1}'.
@@ -144,12 +152,13 @@ def war_deployed(name,
                                                'yes',
                                                url,
                                                __env__,
-                                               timeout)
+                                               timeout,
+                                               temp_war_location=temp_war_location)
 
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = __salt__['tomcat.ls'](url, timeout)[name]
+        ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
         ret['changes']['deploy'] = 'deployed {0} in version {1}'.format(name,
                 version)
     else:
@@ -173,7 +182,9 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     timeout : 180
         timeout for HTTP request to the tomcat manager
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         tomcat-service:
           service:
@@ -239,7 +250,9 @@ def undeployed(name,
     timeout : 180
         timeout for HTTP request to the tomcat manager
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         jenkins:
           tomcat.undeployed:

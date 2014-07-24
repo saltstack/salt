@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon IAM
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit iam credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic

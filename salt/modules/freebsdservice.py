@@ -65,7 +65,7 @@ def _get_rcvar(name):
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
     for line in __salt__['cmd.run_stdout'](cmd).splitlines():
-        if not '_enable="' in line:
+        if '_enable="' not in line:
             continue
         rcvar, _ = line.split('=', 1)
         return rcvar
@@ -160,6 +160,9 @@ def _switch(name,                   # pylint: disable=C0103
                 nlines.append('{0}="{1}"{2}'.format(rcvar, val, rest))
                 edited = True
     if not edited:
+        # Ensure that the file ends in a \n
+        if nlines[-1][-1] != '\n':
+            nlines[-1] = '{0}\n'.format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
     with salt.utils.fopen(config, 'w') as ofile:
@@ -226,7 +229,7 @@ def enabled(name):
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
     for line in __salt__['cmd.run_stdout'](cmd).splitlines():
-        if not '_enable="' in line:
+        if '_enable="' not in line:
             continue
         _, state, _ = line.split('"', 2)
         return state.lower() in ('yes', 'true', 'on', '1')
@@ -273,7 +276,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
