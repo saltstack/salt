@@ -16,12 +16,12 @@ import random
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-from salt.utils import vt, fopen
+from salt.utils import fopen, is_darwin, vt
 
 
 class VTTestCase(TestCase):
@@ -47,7 +47,6 @@ class VTTestCase(TestCase):
         terminal.wait()
         terminal.close()
 
-    @skipIf(os.uname()[0] == 'Darwin', 'Cannot run this test on OS X - Skipping for now.')
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
 
@@ -66,6 +65,12 @@ class VTTestCase(TestCase):
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
             except (ValueError, OSError, IOError):
+                if is_darwin():
+                    # We're unable to findout how many PTY's are open
+                    self.skipTest(
+                        'Unable to find out how many PTY\'s are open on Darwin - '
+                        'Skipping for now'
+                    )
                 self.fail('Unable to find out how many PTY\'s are open')
 
         nr_ptys = current_pty_count()

@@ -1,7 +1,27 @@
 {% if grains['os'] == 'CentOS' %}
 
 # START CentOS pkgrepo tests
-{% if grains['osrelease'].startswith('6.') %}
+{% if grains['osrelease'].startswith('7.') %}
+epel-salttest:
+  pkgrepo.managed:
+    - humanname: Extra Packages for Enterprise Linux 7 - $basearch (salttest)
+    - comments:
+      - '#baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch'
+    - mirrorlist: https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
+    - failovermethod: priority
+    - enabled: 1
+    - gpgcheck: 1
+    - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7-salttest
+    - require:
+      - file: /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7-salttest
+
+/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7-salttest:
+  file.managed:
+    - source: salt://pkgrepo/files/RPM-GPG-KEY-EPEL-7-salttest
+    - user: root
+    - group: root
+    - mode: 644
+{% elif grains['osrelease'].startswith('6.') %}
 epel-salttest:
   pkgrepo.managed:
     - humanname: Extra Packages for Enterprise Linux 6 - $basearch (salttest)

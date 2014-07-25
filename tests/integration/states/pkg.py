@@ -267,7 +267,7 @@ class PkgTest(integration.ModuleCase,
         This is a destructive test as it installs a package
         '''
         os_family = grains.get('os_family', '')
-	os_version = grains.get('osmajorrelease', [''])[0]
+        os_version = grains.get('osmajorrelease', [''])[0]
         if os_family in _PKG_TARGETS_DOT:
             target = _PKG_TARGETS_DOT.get(os_family, '').get(os_version, '')
         else:

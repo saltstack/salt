@@ -12,6 +12,7 @@ Full list of builtin pillar modules
 
     cmd_json
     cmd_yaml
+    cmd_yamlex
     cobbler
     django_orm
     etcd_pillar
@@ -25,4 +26,6 @@ Full list of builtin pillar modules
     puppet
     reclass_adapter
     redismod
+    s3
+    svn_pillar
     virtkey

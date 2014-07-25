@@ -16,12 +16,12 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 from raet import raeting, nacling
-from raet.road.keeping import RoadKeep
+from raet.keeping import Keep
 
 from salt.key import RaetKey
 
 
-class SaltKeep(RoadKeep):
+class SaltKeep(Keep):
     '''
     RAET protocol estate on road data persistence for a given estate
     road specific data
@@ -42,13 +42,13 @@ class SaltKeep(RoadKeep):
 
     Auto = False #auto accept
 
-    def __init__(self, opts, basedirpath='', auto=None, **kwa):
+    def __init__(self, opts, prefix='estate', basedirpath='',  auto=None, **kwa):
         '''
         Setup RoadKeep instance
         '''
         basedirpath = basedirpath or os.path.join(opts['cache_dir'], 'raet')
-        auto = auto if auto is not None else opts['auto_accept']
-        super(SaltKeep, self).__init__(basedirpath=basedirpath, auto=auto, **kwa)
+        super(SaltKeep, self).__init__(prefix=prefix, basedirpath=basedirpath, **kwa)
+        self.auto = auto if auto is not None else opts['auto_accept']
         self.saltRaetKey = RaetKey(opts)
 
     def loadLocalData(self):
@@ -150,30 +150,6 @@ class SaltKeep(RoadKeep):
                                 remote.pubber.keyhex,
                                 remote.verfer.keyhex)
 
-    def loadRemote(self, remote):
-        '''
-        Load and Return the data from the remote estate file
-        Override this in sub class
-        '''
-        data = super(SaltKeep, self).loadRemote(remote)
-        if not data:
-            return None
-
-        mid = remote.role
-        statae = raeting.ACCEPTANCES.keys()
-        for status in statae:
-            keydata = self.saltRaetKey.read_remote(mid, status)
-            if keydata:
-                break
-
-        if not keydata:
-            return None
-
-        data.update(acceptance=raeting.ACCEPTANCES[status],
-                    verhex=keydata['verify'],
-                    pubhex=keydata['pub'])
-
-        return data
 
     def replaceRemoteRole(self, remote, old):
         '''
