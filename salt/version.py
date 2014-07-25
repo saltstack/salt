@@ -19,7 +19,22 @@ except ImportError:
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
-# For version bumps, please update `__saltstack_version__` below
+# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, ie:
+#
+#    class SaltStackVersion(object):
+#
+#        NAMES = {
+#            'Hydrogen': (2014, 1),   # <- This is the tuple to bump versions
+#            ( ... )
+#        }
+#
+#
+# ONLY UPDATE CODENAMES AFTER BRANCHING
+#
+# As an example, The Helium codename must only be properly defined with "(2014, 7)" after Hydrogen, "(2014, 1)", has
+# been branched out into it's own branch.
+#
+# ALL OTHER VERSION INFORMATION IS EXTRACTED FROM THE GIT TAGS
 #
 # <---- ATTENTION ----------------------------------------------------------------------------------------------------
 
@@ -39,6 +54,7 @@ class SaltStackVersion(object):
         r'(?:\.(?P<bugfix>[\d]{0,2}))?(?:rc(?P<rc>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
     )
+    git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
 
     # Salt versions after 0.17.0 will be numbered like:
     #   <4-digit-year>.<month>.<bugfix>
@@ -229,6 +245,16 @@ class SaltStackVersion(object):
             )
         return cls(*cls.LNAMES[name.lower()])
 
+    @classmethod
+    def from_last_named_version(cls):
+        return cls.from_name(
+            cls.VNAMES[
+                max([version_info for version_info in
+                     cls.VNAMES.keys() if
+                     version_info[0] < (sys.maxint - 200)])
+            ]
+        )
+
     @property
     def sse(self):
         # Higher than 0.17, lower than first date based
@@ -350,23 +376,11 @@ class SaltStackVersion(object):
         return '<{0} {1}>'.format(self.__class__.__name__, ' '.join(parts))
 
 
-# ----- Hardcoded Salt Version Information -------------------------------------------------------------------------->
+# ----- Hardcoded Salt Codename Version Information ----------------------------------------------------------------->
 #
-# ALL version bumps should be done in the SaltStackVersion.NAMES dictionary, ie:
-#
-#    class SaltStackVersion(object):
-#
-#        NAMES = {
-#            'Hydrogen': (2014, 1, 0, 0),   # <- This is the tuple to bump versions
-#            ( ... )
-#        }
-#
+#   There's no need to do anything here. The last released codename will be picked up
 # --------------------------------------------------------------------------------------------------------------------
-# Only update __saltstack_version__ if bumping major versions and as such, codenames, of course, don't also
-# forget to update to the real major version on SaltStackVersion.NAMES.
-# Minor version bumps should be done on SaltStackVersion.NAMES, see above.
-# --------------------------------------------------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion.from_name('Helium')
+__saltstack_version__ = SaltStackVersion.from_last_named_version()
 # <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
@@ -386,7 +400,6 @@ def __get_version(saltstack_version):
     # This might be a 'python setup.py develop' installation type. Let's
     # discover the version information at runtime.
     import os
-    import warnings
     import subprocess
 
     if 'SETUP_DIRNAME' in globals():
@@ -413,7 +426,7 @@ def __get_version(saltstack_version):
             kwargs['close_fds'] = True
 
         process = subprocess.Popen(
-                ['git', 'describe', '--tags', '--match', 'v[0-9]*'], **kwargs)
+                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
         out, err = process.communicate()
         out = out.strip()
         err = err.strip()
@@ -421,36 +434,16 @@ def __get_version(saltstack_version):
         if not out or err:
             return saltstack_version
 
-        parsed_version = SaltStackVersion.parse(out)
+        try:
+            return SaltStackVersion.parse(out)
+        except ValueError:
+            if not SaltStackVersion.git_sha_regex.match(out):
+                raise
 
-        if parsed_version.info > saltstack_version.info:
-            warnings.warn(
-                'The parsed version info, `{0}`, is bigger than the one '
-                'defined in the file, `{1}`. Missing version bump?'.format(
-                    parsed_version.info,
-                    saltstack_version.info
-                ),
-                UserWarning,
-                stacklevel=2
-            )
-            return saltstack_version
-        elif parsed_version.info < saltstack_version.info:
-            warnings.warn(
-                'The parsed version info, `{0}`, is lower than the one '
-                'defined in the file, `{1}`.'
-                'In order to get the proper salt version with the git hash '
-                'you need to update salt\'s local git tags. Something like: '
-                '\'git fetch --tags\' or \'git fetch --tags upstream\' if '
-                'you followed salt\'s contribute documentation. The version '
-                'string WILL NOT include the git hash.'.format(
-                    parsed_version.info,
-                    saltstack_version.info
-                ),
-                UserWarning,
-                stacklevel=2
-            )
-            return saltstack_version
-        return parsed_version
+            # We only define the parsed SHA and set NOC as ??? (unknown)
+            saltstack_version.sha = out.strip()
+            saltstack_version.noc = '???'
+
     except OSError as os_err:
         if os_err.errno != 2:
             # If the errno is not 2(The system cannot find the file
