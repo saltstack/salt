@@ -21,7 +21,7 @@ if sys.stdout.isatty():
     from colorlog import ColoredFormatter
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('hostname', help = 'Hostname')
+    parser.add_argument('hostname', help='Hostname')
     parser.add_argument('-c', '--config', default='/etc/salt/master', help='Configuration file')
     parser.add_argument('-d', '--debug', action='store_true', help='Print debug info')
     parser.add_argument('-g', '--grains', help='Input Grains as YAML')
