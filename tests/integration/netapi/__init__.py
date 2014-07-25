@@ -24,7 +24,7 @@ class NetapiClientTest(TestCase):
         Set up a NetapiClient instance
         '''
         opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
-        self.netapi = salt.netapi.NetapiClient(mopts=opts)
+        self.netapi = salt.netapi.NetapiClient(opts)
 
     def test_local(self):
         low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
