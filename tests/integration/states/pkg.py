@@ -37,9 +37,9 @@ _PKG_TARGETS_32 = {
 # Test packages with dot in pkg name
 # (https://github.com/saltstack/salt/issues/8614)
 _PKG_TARGETS_DOT = {
-    'RedHat': { '5': 'python-migrate0.5',
-                '6': 'tomcat6-el-2.1-api',
-                '7': 'tomcat-el-2.2-api' }
+    'RedHat': {'5': 'python-migrate0.5',
+               '6': 'tomcat6-el-2.1-api',
+               '7': 'tomcat-el-2.2-api'}
 }
 
 
