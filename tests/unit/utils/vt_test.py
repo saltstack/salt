@@ -16,7 +16,7 @@ import random
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
