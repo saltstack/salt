@@ -1,10 +1,15 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 '''
 Configuration templating using Hierarchical substitution and Jinja.
 
 Documentation: https://github.com/mickep76/pepa
 '''
+
+__author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
+__copyright__ = 'Copyright (c) 2013 Michael Persson'
+__license__ = 'GPLv3'
+__version__ = '0.6.2'
 
 # Import python libs
 import logging
@@ -17,10 +22,10 @@ if sys.stdout.isatty():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('hostname', help = 'Hostname')
-    parser.add_argument('-c', '--config', default = '/etc/salt/master', help = 'Configuration file')
-    parser.add_argument('-d', '--debug', action = 'store_true', help = 'Print debug info')
-    parser.add_argument('-g', '--grains', help = 'Input Grains as YAML')
-    parser.add_argument('-p', '--pillar', help = 'Input Pillar as YAML')
+    parser.add_argument('-c', '--config', default='/etc/salt/master', help='Configuration file')
+    parser.add_argument('-d', '--debug', action='store_true', help='Print debug info')
+    parser.add_argument('-g', '--grains', help='Input Grains as YAML')
+    parser.add_argument('-p', '--pillar', help='Input Pillar as YAML')
     args = parser.parse_args()
 
     LOG_LEVEL = logging.WARNING
@@ -39,7 +44,6 @@ if sys.stdout.isatty():
     log.addHandler(stream)
 else:
     log = logging.getLogger(__name__)
-    from salt.exceptions import SaltInvocationError
 
 # Name
 __virtualname__ = 'pepa'
@@ -79,7 +83,11 @@ try:
 except ImportError:
     HAS_JINJA2 = False
 
+
 def __virtual__():
+    '''
+    Only return if all the modules are available
+    '''
     if not HAS_YAML:
         log.error('Failed to load "yaml" library')
         return False
@@ -96,10 +104,13 @@ def __virtual__():
         log.error('Failed to load "jinja2" library')
         return False
 
-    return(__virtualname__)
+    return __virtualname__
 
-# Convert key/value to tree
+
 def key_value_to_tree(data):
+    '''
+    Convert key/value to tree
+    '''
     tree = {}
     for flatkey, value in data.items():
         t = tree
@@ -109,9 +120,13 @@ def key_value_to_tree(data):
                 t[key] = value
             else:
                 t = t.setdefault(key, {})
-    return(tree)
+    return tree
+
 
 def ext_pillar(minion_id, pillar, resource, sequence):
+    '''
+    Convert key/value to tree
+    '''
     roots = __opts__['pepa_roots']
 
     # Default input
@@ -132,7 +147,7 @@ def ext_pillar(minion_id, pillar, resource, sequence):
 
     for name, info in [s.items()[0] for s in sequence]:
         if name not in input:
-            log.warn("Category is not defined: %s" % name)
+            log.warn("Category is not defined: {0}".format(name))
             continue
 
         alias = None
@@ -151,16 +166,16 @@ def ext_pillar(minion_id, pillar, resource, sequence):
         if type(input[name]) is list:
             entries = input[name]
         elif not input[name]:
-            log.warn("Category has no value set: %s" % name)
+            log.warn("Category has no value set: {0}".format(name))
             continue
         else:
-            entries = [ input[name] ]
+            entries = [input[name]]
 
         for entry in entries:
             results = None
-            fn = join(templdir, re.sub('\W', '_', entry.lower()) + '.yaml')
+            fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
             if isfile(fn):
-                log.info("Loading template: %s" % fn)
+                log.info("Loading template: {0}".format(fn))
                 template = jinja2.Template(open(fn).read())
                 output['pepa_templates'].append(fn)
                 data = key_value_to_tree(output)
@@ -168,12 +183,12 @@ def ext_pillar(minion_id, pillar, resource, sequence):
                 data['pillar'] = pillar.copy()
                 results = yaml.load(template.render(data))
             else:
-                log.info("Template doesn't exist: %s" % fn)
+                log.info("Template doesn't exist: {0}".format(fn))
                 continue
 
-            if results != None:
+            if results is not None:
                 for key in results:
-                    log.debug("Substituting key %s: %s" % (key, results[key]))
+                    log.debug("Substituting key {0}: {1}".format(key, results[key]))
                     output[key] = results[key]
 
     tree = key_value_to_tree(output)
@@ -190,7 +205,7 @@ def ext_pillar(minion_id, pillar, resource, sequence):
 if sys.stdout.isatty():
     # Load configuration file
     if not isfile(args.config):
-        log.critical("Configuration file doesn't exist: %s" % args.config)
+        log.critical("Configuration file doesn't exist: {0}".format(args.config))
         sys.exit(1)
 
     # Get configuration
