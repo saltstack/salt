@@ -3268,11 +3268,11 @@ def makedirs_(path,
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        return 'Directory {0!r} already exists'.format(path)
+        return 'Directory {0!r} already exists'.format(dirname)
 
     if os.path.exists(dirname):
         return 'The path {0!r} already exists and is not a directory'.format(
-            path
+            dirname
         )
 
     directories_to_create = []
