@@ -43,7 +43,7 @@ def node_state(id_):
     return states[id_]
 
 
-def check_libcloud_version(reqver='0.13.2', why=None):
+def check_libcloud_version(reqver=(0, 13, 2), why=None):
     '''
     Compare different libcloud versions
     '''
@@ -52,11 +52,7 @@ def check_libcloud_version(reqver='0.13.2', why=None):
     except ImportError:
         raise ImportError('salt-cloud requires >= libcloud {0}'.format(reqver))
 
-    reqver = reqver.replace('-', '.')
-    comps = reqver.split('.')
-    required_version = []
-    for number in comps[:3]:
-        required_version.append(int(number))
+    required_version = list(reqver)
     ver = libcloud.__version__
     ver = ver.replace('-', '.')
     comps = ver.split('.')
