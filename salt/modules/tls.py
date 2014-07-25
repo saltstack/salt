@@ -46,8 +46,15 @@ def __virtual__():
 def cert_base_path(cacert_path=None):
     '''
     Return the base path for certs from CLI or from options
+
     cacert_path
         absolute path to ca certificates root directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.cert_base_path
     '''
     if not cacert_path:
         cacert_path = __salt__['config.option']('ca.contextual_cert_base_path')
@@ -67,6 +74,12 @@ def set_ca_path(cacert_path):
     '''
     If wanted, store the aforementioned cacert_path in context
     to be used as the basepath for further operations
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.set_ca_path /etc/certs
     '''
     if cacert_path:
         __opts__['ca.contextual_cert_base_path'] = cacert_path
