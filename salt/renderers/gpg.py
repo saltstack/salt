@@ -17,7 +17,7 @@ This renderer requires the python-gnupg package. Be careful to install the
 To set things up, you will first need to generate a keypair. On your master,
 run:
 
-.. code-block: bash
+.. code-block:: bash
 
     # gpg --gen-key --homedir /etc/salt/gpgkeys
 
@@ -26,33 +26,33 @@ for your application. Be sure to back up your gpg directory someplace safe!
 
 To retrieve the public key:
 
-.. code-block: bash
+.. code-block:: bash
 
     # gpg --armor --homedir /etc/salt/gpgkeys --armor --export <KEY-NAME> \
           > exported_pubkey.gpg
 
 Now, to encrypt secrets, copy the public key to your local machine and run:
 
-.. code-block: bash
+.. code-block:: bash
 
     $ gpg --import exported_pubkey.gpg
 
 To generate a cipher from a secret:
 
-.. code-block: bash
+.. code-block:: bash
 
    $ echo -n"supersecret" | gpg --homedir --armor --encrypt -r <KEY-name>
 
 Set up the renderer on your master by adding something like this line to your
 config:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     renderer: jinja | yaml | gpg
 
 Now you can include your ciphers in your pillar data like so:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     a-secret: |
       -----BEGIN PGP MESSAGE-----
