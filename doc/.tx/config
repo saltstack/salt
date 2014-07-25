@@ -4598,18 +4598,6 @@ source_file = _build/locale/security/index.pot
 source_lang = en
 source_name = security/index.rst
 
-[salt.ref--modules--all--salt_modules_syslog_ng]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.syslog_ng.po
-source_file = _build/locale/ref/modules/all/salt.modules.syslog_ng.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.syslog_ng.rst
-
-[salt.ref--states--all--salt_states_syslog_ng]
-file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.syslog_ng.po
-source_file = _build/locale/ref/states/all/salt.states.syslog_ng.pot
-source_lang = en
-source_name = ref/states/all/salt.states.syslog_ng.rst
-
 [salt.ref--states--global_state_arguments]
 file_filter = locale/<lang>/LC_MESSAGES/ref/states/global_state_arguments.po
 source_file = _build/locale/ref/states/global_state_arguments.pot

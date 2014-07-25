@@ -35,6 +35,11 @@ external_auth:
       - '@wheel'
       - '@runner'
       - test.*
+  auto:
+    saltdev_auto:
+      - '@wheel'
+      - '@runner'
+      - test.*
 
 master_tops:
   master_tops_test: True
