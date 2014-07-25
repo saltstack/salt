@@ -3256,7 +3256,11 @@ def makedirs_(path,
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    dirname = os.path.abspath(path)
+    path = path.rstrip()
+    trailing_slash = path.endswith('/')
+    if not trailing_slash:
+        path = path + '/'
+    dirname = os.path.normpath(os.path.dirname(path)) 
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
