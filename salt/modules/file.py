@@ -3248,18 +3248,22 @@ def makedirs_(path,
     '''
     Ensure that the directory containing this path is available.
 
+    .. note::
+
+        The path must end with a trailing slash otherwise the directory/directories
+        will be created upto the parent directory. For example if path is
+        ``/opt/code``, then it would be treated as ``/opt/`` but if the path
+        ends with a trailing slash like ``/opt/code/``, then it would be
+        treated as ``/opt/code/``.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.makedirs /opt/code
+        salt '*' file.makedirs /opt/code/
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    path = path.rstrip()
-    trailing_slash = path.endswith('/')
-    if not trailing_slash:
-        path = path + '/'
     dirname = os.path.normpath(os.path.dirname(path)) 
 
     if os.path.isdir(dirname):
