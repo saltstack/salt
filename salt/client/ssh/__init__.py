@@ -137,6 +137,16 @@ SSH_SHIM = r'''/bin/sh << 'EOF'
             if [ $? -ne 0 ]; then
                 exit 1
             fi
+            if [ "$(stat -c %a /tmp/.salt)" != "700" ]
+            then
+                echo "Permissions for /tmp/.salt not correct. Exiting!"
+                exit 1
+            fi
+            if [ "$(stat -c %u /tmp/.salt)" != "0" ] 
+            then
+                echo "Ownership for /tmp/.salt not correct. Exiting!"
+                exit 1
+            fi
             echo "{1}"
             echo "deploy"
             exit 1
