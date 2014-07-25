@@ -37,7 +37,8 @@ _PKG_TARGETS_32 = {
 # Test packages with dot in pkg name
 # (https://github.com/saltstack/salt/issues/8614)
 _PKG_TARGETS_DOT = {
-    'CentOS': 'jboss-annotations-1.1-api-javadoc'
+    'RedHat': { '6': 'tomcat6-el-2.1-api',
+                '7': 'tomcat-el-2.2-api' }
 }
 
 
@@ -264,8 +265,9 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
-        os_name = grains.get('os', '')
-        target = _PKG_TARGETS_DOT.get(os_name, '')
+        os_family = grains.get('os_family', '')
+	os_version = grains.get('osmajorrelease', [''])[0]
+        target = _PKG_TARGETS_DOT.get(os_family, '').get(os_version, '')
         if target:
             ret = self.run_state('pkg.installed', name=target)
             self.assertSaltTrueReturn(ret)
