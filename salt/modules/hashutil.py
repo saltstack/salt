@@ -7,36 +7,6 @@ import hashlib
 import hmac
 
 
-def base64_encode(infile, outfile):
-    '''
-    Encode a file as base64 and write the result to a new file
-
-    .. versionadded:: Helium
-
-    CLI Example:
-
-    .. code-block::
-
-        salt '*' hashutil.base64_encode /path/to/file1 /path/to/encoded_file1
-    '''
-    return base64.encode(infile, outfile)
-
-
-def base64_decode(infile, outfile):
-    '''
-    Decode a base64-encoded file and write the result to a new file
-
-    .. versionadded:: Helium
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' hashutil.base64_decode /path/to/encoded_file1 /path/to/file1
-    '''
-    return base64.decode(infile, outfile)
-
-
 def base64_encodestring(instr):
     '''
     Encode a string as base64
