@@ -1268,7 +1268,7 @@ class LocalFuncs(object):
         # check if the cmd is blacklisted
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
-            if type(load['fun']) == str:
+            if isinstance(load['fun'], str):
                 funs_to_check = [load['fun']]
             # if this a compound function
             else:

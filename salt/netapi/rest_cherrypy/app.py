@@ -575,7 +575,7 @@ class LowDataAdapter(object):
             cherrypy.session.release_lock()
 
         # if the lowstate loaded isn't a list, lets notify the client
-        if type(lowstate) != list:
+        if not isinstance(lowstate, list):
             raise cherrypy.HTTPError(400, 'Lowstates must be a list')
 
         # Make any requested additions or modifications to each lowstate, then
