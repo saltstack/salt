@@ -1325,7 +1325,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
         event.fire_event(msg, tag)
     except ValueError:
         # We're using develop or a 0.17.x version of salt
-        if type(args) is dict:
+        if isinstance(args, dict):
             args[key] = msg
         else:
             args = {key: msg}

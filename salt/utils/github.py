@@ -35,13 +35,13 @@ def get_user_pubkeys(users):
             'user3',
         ]
     '''
-    if type(users) is not list:
+    if not isinstance(users, list):
         return {'Error': 'A list of users is expected'}
 
     ret = {}
     for user in users:
         key_ids = []
-        if type(user) is dict:
+        if isinstance(user, dict):
             tmp_user = user.keys()[0]
             key_ids = user[tmp_user]
             user = tmp_user
