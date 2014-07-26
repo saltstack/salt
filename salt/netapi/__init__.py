@@ -22,16 +22,12 @@ class NetapiClient(object):
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
 
-    >>> client = NetapiClient()
+    >>> client = NetapiClient(__opts__)
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
-
-    :param mopts: A copy of the client_config dictionary if already loaded into memory.
-    :param opts: Ignored; preserved for backward-compat
     '''
-    def __init__(self, opts=None, mopts=None):
-        self.opts = mopts or salt.config.client_config(os.path.join(
-            salt.syspaths.CONFIG_DIR, 'master'))
+    def __init__(self, opts):
+        self.opts = opts
 
     def run(self, low):
         '''
