@@ -15,6 +15,7 @@ __version__ = '0.6.2'
 import logging
 import sys
 
+
 log = None
 if sys.stdout.isatty():
     import argparse
@@ -45,8 +46,6 @@ if sys.stdout.isatty():
 else:
     log = logging.getLogger(__name__)
 
-# Name
-__virtualname__ = 'pepa'
 
 # Options
 __opts__ = {
@@ -104,7 +103,7 @@ def __virtual__():
         log.error('Failed to load "jinja2" library')
         return False
 
-    return __virtualname__
+    return True
 
 
 def key_value_to_tree(data):
