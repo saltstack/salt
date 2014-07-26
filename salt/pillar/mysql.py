@@ -275,11 +275,11 @@ class merger(object):
         # Filter out values that don't have queries.
         qbuffer = filter(
             lambda x: (
-                (type(x[1]) is str and len(x[1]))
+                (isinstance(x[1], str) and len(x[1]))
                 or
-                ((type(x[1]) in (list, tuple)) and (len(x[1]) > 0) and x[1][0])
+                (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or
-                (type(x[1]) is dict and 'query' in x[1] and len(x[1]['query']))
+                (isinstance(x[1], dict) and 'query' in x[1] and len(x[1]['query']))
             ),
             qbuffer)
 
@@ -290,9 +290,9 @@ class merger(object):
                         'as_list': False,
                         'with_lists': None
                         }
-            if type(qb[1]) is str:
+            if isinstance(qb[1], str):
                 defaults['query'] = qb[1]
-            elif type(qb[1]) in (list, tuple):
+            elif isinstance(qb[1], (list, tuple)):
                 defaults['query'] = qb[1][0]
                 if len(qb[1]) > 1:
                     defaults['depth'] = qb[1][1]
@@ -385,7 +385,7 @@ class merger(object):
                 if ((self.as_list and (ret[nk] in crd)) or
                         (nk+1 in self.with_lists)):
                     if ret[nk] in crd:
-                        if type(crd[ret[nk]]) is not list:
+                        if not isinstance(crd[ret[nk]], list):
                             crd[ret[nk]] = [crd[ret[nk]]]
                         # if it's already a list, do nothing
                     else:
@@ -421,7 +421,7 @@ class merger(object):
                     # Collision detection
                     if self.as_list and (nk in crd):
                         # Same as before...
-                        if type(crd[nk]) is list:
+                        if isinstance(crd[nk], list):
                             crd[nk].append(ret[i])
                         else:
                             crd[nk] = [crd[nk], ret[i]]
@@ -433,9 +433,9 @@ class merger(object):
         for i in ks:
             d = listify_dicts[i]
             for k in listify[i]:
-                if type(d[k]) is dict:
+                if isinstance(d[k], dict):
                     d[k] = d[k].values()
-                elif type(d[k]) is not list:
+                elif isinstance(d[k], list):
                     d[k] = [d[k]]
 
 
