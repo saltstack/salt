@@ -156,7 +156,7 @@ def avail_images():
                 name = item.Val
             elif item.Name == 'config.template':
                 is_template = item.Val
-        if type(is_template) is bool and is_template is True:
+        if is_template is True:
             ret[name] = {'Name': name}
     return ret
 
