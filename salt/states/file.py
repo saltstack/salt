@@ -3552,8 +3552,8 @@ def accumulated(name, filename, text, **kwargs):
 def _merge_dict(obj, k, v):
     changes = {}
     if k in obj:
-        if type(obj[k]) is list:
-            if type(v) is list:
+        if isinstance(obj[k], list):
+            if isinstance(v, list):
                 for a in v:
                     if a not in obj[k]:
                         changes[k] = a
@@ -3562,10 +3562,10 @@ def _merge_dict(obj, k, v):
                 if obj[k] != v:
                     changes[k] = v
                     obj[k] = v
-        elif type(obj[k]) is dict:
-            if type(v) is dict:
+        elif isinstance(obj[k], dict):
+            if isinstance(v, dict):
                 for a, b in v.iteritems():
-                    if (type(b) is dict) or (type(b) is list):
+                    if isinstance(b, dict) or isinstance(b, list):
                         updates = _merge_dict(obj[k], a, b)
                         for x, y in updates.iteritems():
                             changes[k + "." + x] = y
