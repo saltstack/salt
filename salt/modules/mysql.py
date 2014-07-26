@@ -1514,7 +1514,7 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
-    if isinstance(ssl_option, type([])) and len(ssl_option):
+    if isinstance(ssl_option, list) and len(ssl_option):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
