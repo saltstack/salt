@@ -10,7 +10,6 @@ import time
 # Import salt libs
 from salt import syspaths
 import salt.config
-import salt.exceptions
 import salt.loader
 import salt.payload
 import salt.utils
