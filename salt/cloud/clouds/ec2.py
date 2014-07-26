@@ -1458,7 +1458,7 @@ def request_instance(vm_=None, call=None):
         if rd_data[0]['blockDeviceMapping'] is None:
             # Some ami instances do not have a root volume. Ignore such cases
             rd_name = None
-        elif type(rd_data[0]['blockDeviceMapping']['item']) is list:
+        elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
             rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
         else:
             rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
@@ -2628,7 +2628,7 @@ def _vm_provider_driver(vm_):
 def _extract_name_tag(item):
     if 'tagSet' in item:
         tagset = item['tagSet']
-        if type(tagset['item']) is list:
+        if isinstance(tagset['item'], list):
             for tag in tagset['item']:
                 if tag['key'] == 'Name':
                     return tag['value']
