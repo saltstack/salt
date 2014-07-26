@@ -9,6 +9,10 @@ import os
 import sys
 import traceback
 import logging
+import multiprocessing
+import threading
+import time
+from random import randint
 
 # Import salt libs
 import salt
@@ -58,8 +62,84 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
 
-    minion = salt.Minion()
-    minion.start()
+    if '--disable-keepalive' in sys.argv:
+        sys.argv.remove('--disable-keepalive')
+        minion = salt.Minion()
+        minion.start()
+        return
+
+    if '-d' in sys.argv or '--daemon' in sys.argv:
+        # disable daemonize on sub processes
+        if '-d' in sys.argv:
+            sys.argv.remove('-d')
+        if '--daemon' in sys.argv:
+            sys.argv.remove('--daemon')
+        # daemonize current process
+        salt.utils.daemonize()
+
+    # run minion in a new process so its simple to cleanup resource
+    def minion_process(q):
+        # have the minion suicide if the parent process is gone
+        # there is a small race issue where the parent PID could be replace
+        # with another proccess with the same PID
+        def suicide_when_without_parent(parent_pid):
+            while True:
+                time.sleep(5)
+                try:
+                    # check pid alive (Unix only trick!)
+                    os.kill(parent_pid, 0)
+                except OSError:
+                    sys.exit(999)
+        if not salt.utils.is_windows():
+            t = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+            t.start()
+
+        minion = None
+        try:
+            minion = salt.Minion()
+            minion.start()
+            q.put(0)
+        except Exception, err:
+            log.error(err)
+            log.warn('** Restarting minion **')
+            delay = 60
+            if minion is None:
+                if hasattr(minion, 'config'):
+                    delay = minion.config.get('random_reauth_delay', 60)
+            random_delay = randint(1, delay)
+            log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+            # preform delay after minion resources have been cleaned
+            q.put(random_delay)
+
+    # keep one minion subprocess running
+    while True:
+        q = multiprocessing.Queue()
+        p = multiprocessing.Process(target=minion_process, args=(q,))
+        p.start()
+
+        try:
+            p.join()
+            try:
+                restart_delay = q.get(block=False)
+            except Exception:
+                if p.exitcode == 0:
+                    # Minion process ended naturally
+                    break
+                restart_delay = 60
+            if restart_delay == 0:
+                # minion closed on normal behaviour like Ctrl+C
+                break
+            # delay restart to reduce flooding and allow network resources to close
+            time.sleep(restart_delay)
+        except KeyboardInterrupt, err:
+            break
+
+        # need to reset logging because new minion objects
+        # cause extra log handlers to accumulate
+        rlogger = logging.getLogger()
+        for h in rlogger.handlers:
+            rlogger.removeHandler(h)
+        logging.basicConfig()
 
 
 def salt_syndic():
