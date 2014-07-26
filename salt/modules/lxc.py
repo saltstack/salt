@@ -2299,19 +2299,19 @@ def write_conf(conf_file, conf):
         salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \\
             out_format=commented
     '''
-    if type(conf) is not list:
+    if not isinstance(conf, list):
         return {'Error': 'conf must be passed in as a list'}
 
     with salt.utils.fopen(conf_file, 'w') as fp_:
         for line in conf:
-            if type(line) is str:
+            if isinstance(line, str):
                 fp_.write(line)
-            elif type(line) is dict:
+            elif isinstance(line, dict):
                 key = line.keys()[0]
                 out_line = None
-                if type(line[key]) is str:
+                if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
-                elif type(line[key]) is dict:
+                elif isinstance(line[key], dict):
                     out_line = ' = '.join((key, line[key]['value']))
                     if 'comment' in line[key]:
                         out_line = ' # '.join((out_line, line[key]['comment']))
@@ -2349,7 +2349,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
         conf = []
 
     for line in conf:
-        if type(line) is not dict:
+        if not isinstance(line, dict):
             data.append(line)
             continue
         else:
