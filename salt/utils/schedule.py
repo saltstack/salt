@@ -223,7 +223,7 @@ class Schedule(object):
 
         # we dont do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
-        if not type(data) is dict:
+        if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')
         if not len(data.keys()) == 1:
             raise ValueError('You can only schedule one new job at a time.')
