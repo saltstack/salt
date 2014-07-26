@@ -221,6 +221,12 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 
+class SaltDotLookup(dict):
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.__dict__ = self
+
+
 def _split_module_dicts(__salt__):
     '''
     Create a dictionary from module.function as module[function]
@@ -231,10 +237,11 @@ def _split_module_dicts(__salt__):
 
         {{ salt.cmd.run('uptime') }}
     '''
-    mod_dict = {}
+    mod_dict = SaltDotLookup()
     for module_func_name in __salt__.keys():
         mod, _, fun = module_func_name.partition('.')
-        mod_dict.setdefault(mod, {})[fun] = __salt__[module_func_name]
+        mod_dict.setdefault(mod,
+                SaltDotLookup())[fun] = __salt__[module_func_name]
     return mod_dict
 
 
@@ -252,9 +259,8 @@ def render(template_file, saltenv='base', sls='', argline='',
                 'Unknown renderer option: {opt}'.format(opt=argline)
         )
 
-    salt_dict = {}
-    salt_dict.update(_split_module_dicts(__salt__))
-    salt_dict.update(__salt__)
+    salt_dict = SaltDotLookup(**__salt__)
+    salt_dict.__dict__.update(_split_module_dicts(__salt__))
 
     tmp_data = salt.utils.templates.JINJA(template_file,
                                           to_str=True,
