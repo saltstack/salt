@@ -150,7 +150,7 @@ def ext_pillar(minion_id, pillar, resource, sequence):
             continue
 
         alias = None
-        if type(info) is dict and 'name' in info:
+        if isinstance(info, dict) and 'name' in info:
             alias = info['name']
         else:
             alias = name
@@ -162,7 +162,7 @@ def ext_pillar(minion_id, pillar, resource, sequence):
             templdir = join(roots[input['environment']], resource, alias)
 
         entries = []
-        if type(input[name]) is list:
+        if isinstance(input[name], list):
             entries = input[name]
         elif not input[name]:
             log.warn("Category has no value set: {0}".format(name))
