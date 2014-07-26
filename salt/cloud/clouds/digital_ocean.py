@@ -503,7 +503,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     if command:
         path += command
 
-    if type(args) is not dict:
+    if not isinstance(args, dict):
         args = {}
 
     args['client_id'] = config.get_cloud_config_value(
