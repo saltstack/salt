@@ -17,7 +17,7 @@ import sys
 
 
 log = None
-if sys.stdout.isatty():
+if __name__ == '__main__' and sys.stdout.isatty():
     import argparse
     from colorlog import ColoredFormatter
 
