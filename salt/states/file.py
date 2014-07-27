@@ -3306,6 +3306,7 @@ def copy(name, source, force=False, makedirs=False):
         'comment': '',
         'result': True}
 
+    changed = True
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -3314,7 +3315,13 @@ def copy(name, source, force=False, makedirs=False):
         return _error(ret, 'Source file "{0}" is not present'.format(source))
 
     if os.path.lexists(source) and os.path.lexists(name):
-        if not force:
+        # if this is a file which did not changed, do not update
+        if os.path.isfile(name):
+            hash1 = salt.utils.get_hash(name)
+            hash2 = salt.utils.get_hash(source)
+            if hash2 != hash1:
+                changed = False
+        elif not force:
             ret['comment'] = ('The target file "{0}" exists and will not be '
                               'overwritten'.format(name))
             ret['result'] = True
@@ -3354,13 +3361,17 @@ def copy(name, source, force=False, makedirs=False):
                 'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
-        shutil.copy(source, name)
+        if changed:
+            shutil.copy(source, name)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
 
-    ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
-    ret['changes'] = {name: source}
+    if changed:
+        ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
+        ret['changes'] = {name: source}
+    else:
+        ret['comment'] = '"{1}" was in the correct state'.format(source, name)
     return ret
 
 
