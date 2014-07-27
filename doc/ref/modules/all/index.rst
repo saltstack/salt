@@ -89,6 +89,7 @@ Full list of builtin execution modules
     guestfs
     hadoop
     haproxyconn
+    hashutil
     hg
     hosts
     htpasswd
