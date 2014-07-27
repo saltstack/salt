@@ -3316,7 +3316,7 @@ def copy(name, source, force=False, makedirs=False):
 
     if os.path.lexists(source) and os.path.lexists(name):
         # if this is a file which did not changed, do not update
-        if os.path.isfile(name):
+        if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
             if hash2 != hash1:
