@@ -3321,11 +3321,8 @@ def copy(name, source, force=False, makedirs=False):
             hash2 = salt.utils.get_hash(source)
             if hash2 != hash1:
                 changed = False
-        elif not force:
-            ret['comment'] = ('The target file "{0}" exists and will not be '
-                              'overwritten'.format(name))
-            ret['result'] = True
-            return ret
+        if not force:
+            changed = False
         elif not __opts__['test']:
             # Remove the destination to prevent problems later
             try:
@@ -3350,6 +3347,12 @@ def copy(name, source, force=False, makedirs=False):
         ret['result'] = None
         return ret
 
+    if not changed:
+        ret['comment'] = ('The target file "{0}" exists and will not be '
+                          'overwritten'.format(name))
+        ret['result'] = True
+        return ret
+
     # Run makedirs
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
@@ -3361,17 +3364,14 @@ def copy(name, source, force=False, makedirs=False):
                 'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
-        if changed:
-            shutil.copy(source, name)
+        shutil.copy(source, name)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
 
-    if changed:
-        ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
-        ret['changes'] = {name: source}
-    else:
-        ret['comment'] = '"{1}" was in the correct state'.format(source, name)
+    ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
+    ret['changes'] = {name: source}
+
     return ret
 
 
