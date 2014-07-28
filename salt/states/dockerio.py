@@ -730,7 +730,7 @@ def running(name, container=None, port_bindings=None, binds=None,
             else:
                 return _invalid(
                     comment=(
-                        'Container {0!r} cannot be started\n{0!s}'
+                        'Container {0!r} cannot be started\n{1!s}'
                         .format(
                             container,
                             started['out'],
