@@ -32,7 +32,8 @@ def installed(name,          # pylint: disable=C0103
               user=None,
               version=None,
               rdoc=False,
-              ri=False):     # pylint: disable=C0103
+              ri=False,
+              pre_releases=False):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -61,6 +62,9 @@ def installed(name,          # pylint: disable=C0103
 
     ri : False
         Generate RI documentation for the gem(s).
+
+    pre_releases : False
+        Install pre-release version of gem(s) if available.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -106,7 +110,8 @@ def installed(name,          # pylint: disable=C0103
                                runas=user,
                                version=version,
                                rdoc=rdoc,
-                               ri=ri):
+                               ri=ri,
+                               pre_releases=pre_releases):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'

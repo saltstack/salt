@@ -116,6 +116,17 @@ class SaltRenderError(SaltException):
         SaltException.__init__(self, exc_str)
 
 
+class SaltClientTimeout(SaltException):
+    '''
+    Thrown when a job sent through one of the *Client interfaces times out
+
+    Takes the ``jid`` as a parameter
+    '''
+    def __init__(self, msg, jid=None, *args, **kwargs):
+        super(SaltClientTimeout, self).__init__(msg, *args, **kwargs)
+        self.jid = jid
+
+
 class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout

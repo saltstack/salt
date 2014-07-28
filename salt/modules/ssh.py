@@ -621,7 +621,7 @@ def get_known_host(user, hostname, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
@@ -718,7 +718,7 @@ def rm_known_host(user=None, hostname=None, config=None):
 
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if not os.path.isfile(full):
@@ -793,7 +793,7 @@ def set_known_host(user=None,
 
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if key:
@@ -935,7 +935,7 @@ def hash_known_hosts(user=None, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if not os.path.isfile(full):

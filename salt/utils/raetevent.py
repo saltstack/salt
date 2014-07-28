@@ -24,7 +24,7 @@ from raet.lane.yarding import RemoteYard
 log = logging.getLogger(__name__)
 
 
-class SaltEvent(object):
+class SaltEvent(salt.utils.event.PendingEventsBase):
     '''
     The base class used to manage salt events
     '''
@@ -32,6 +32,7 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
+        super(SaltEvent, self).__init__()
         self.node = node
         self.sock_dir = sock_dir
         self.listen = listen
@@ -102,40 +103,42 @@ class SaltEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
+
+        use_pending
+            Defines whether to keep all unconsumed events in a pending_events
+            list, or to discard events that don't match the requested tag.  If
+            set to True, MAY CAUSE MEMORY LEAKS.
+
+        pending_tags
+            Add any events matching the listed tags to the pending queue.
+            Still MAY CAUSE MEMORY LEAKS but less likely than use_pending
+            assuming you later get_event for the tags you've listed here
         '''
         self.connect_pub()
-        start = time.time()
-        while True:
-            self.stack.serviceAll()
-            if self.stack.rxMsgs:
-                msg, sender = self.stack.rxMsgs.popleft()
-                event = msg.get('event', {})
-                if 'tag' not in event and 'data' not in event:
-                    # Invalid event, how did this get here?
-                    continue
-                if not event['tag'].startswith(tag):
-                    # Not what we are looking for, throw it away
-                    continue
-                if full:
-                    return event
-                else:
-                    return event['data']
-            if start + wait < time.time():
-                return None
+        return super(SaltEvent, self).get_event(wait, tag, full, use_pending, pending_tags)
+
+    def _get_event_inner(self, wait):
+        event = self._get_event_noblock_inner()
+        if event is None:
+            # Not returning anything sleep for a bit instead? (does serviceAll not block at all?)
             time.sleep(0.01)
+        return event
 
     def get_event_noblock(self):
         '''
         Get the raw event without blocking or any other niceties
         '''
         self.connect_pub()
+        return self._get_event_noblock_inner()
+
+    def _get_event_noblock_inner(self):
         self.stack.serviceAll()
         if self.stack.rxMsgs:
             event, sender = self.stack.rxMsgs.popleft()

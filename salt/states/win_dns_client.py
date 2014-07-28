@@ -31,7 +31,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
            'comment': ''}
 
     # Validate syntax
-    if type(servers) != list:
+    if not isinstance(servers, list):
         ret['result'] = False
         ret['comment'] = 'servers entry is not a list !'
         return ret

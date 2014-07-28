@@ -31,7 +31,7 @@ hammer out the update. This is a BETA release of Salt RAET.
 For information about how to use Salt with RAET please see the tutorial:
 <put tutorial here>
 
-New Imperitive State Keyword "Listen"
+New Imperative State Keyword "Listen"
 -------------------------------------
 
 The new listen keyword allows for completely imperative states by calling the
@@ -69,7 +69,7 @@ LXC Runner Enhancements
 -----------------------
 
 BETA
-The Salt LXC management system has recived a number of enhancements which make
+The Salt LXC management system has received a number of enhancements which make
 running an LXC cloud entirely from Salt an easy proposition.
 
 Next Gen Docker Management
@@ -115,7 +115,7 @@ Chef Execution Module
 
 Managing Chef with Salt just got even easier!
 
-Fileserver Backend Enhacements
+Fileserver Backend Enhancements
 ------------------------------
 
 All of the fileserver backends have been overhauled to be faster, lighter and more reliable

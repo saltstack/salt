@@ -48,7 +48,7 @@ def _detect_os():
 
 def version():
     '''
-    Return server version from apachectl -v
+    Return server version (``apachectl -v``)
 
     CLI Example:
 
@@ -64,7 +64,7 @@ def version():
 
 def fullversion():
     '''
-    Return server version from apachectl -V
+    Return server version (``apachectl -V``)
 
     CLI Example:
 
@@ -93,7 +93,7 @@ def fullversion():
 
 def modules():
     '''
-    Return list of static and shared modules from apachectl -M
+    Return list of static and shared modules (``apachectl -M``)
 
     CLI Example:
 
@@ -119,7 +119,7 @@ def modules():
 
 def servermods():
     '''
-    Return list of modules compiled into the server (apachectl -l)
+    Return list of modules compiled into the server (``apachectl -l``)
 
     CLI Example:
 
@@ -165,9 +165,10 @@ def directives():
 def vhosts():
     '''
     Show the settings as parsed from the config file (currently
-    only shows the virtualhost settings). (``apachectl -S``)
+    only shows the virtualhost settings) (``apachectl -S``).
     Because each additional virtual host adds to the execution
-    time, this command may require a long timeout be specified.
+    time, this command may require a long timeout be specified
+    by using ``-t 10``.
 
     CLI Example:
 
@@ -246,8 +247,10 @@ def signal(signal=None):
 
 def useradd(pwfile, user, password, opts=''):
     '''
-    Add an HTTP user using the htpasswd command. If the htpasswd file does not
+    Add HTTP user using the ``htpasswd`` command. If the ``htpasswd`` file does not
     exist, it will be created. Valid options that can be passed are:
+
+    .. code-block:: text
 
         n  Don't update file; display results on stdout.
         m  Force MD5 encryption of the password (default).
@@ -267,7 +270,7 @@ def useradd(pwfile, user, password, opts=''):
 
 def userdel(pwfile, user):
     '''
-    Delete an HTTP user from the specified htpasswd file.
+    Delete HTTP user from the specified ``htpasswd`` file.
 
     CLI Examples:
 
@@ -282,22 +285,25 @@ def server_status(profile='default'):
     '''
     Get Information from the Apache server-status handler
 
-    NOTE:
-    the server-status handler is disabled by default.
-    in order for this function to work it needs to be enabled.
-    http://httpd.apache.org/docs/2.2/mod/mod_status.html
+    .. note::
 
-    The following configuration needs to exists in pillar/grains
-    each entry nested in apache.server-status is a profile of a vhost/server
-    this would give support for multiple apache servers/vhosts
+        The server-status handler is disabled by default.
+        In order for this function to work it needs to be enabled.
+        See http://httpd.apache.org/docs/2.2/mod/mod_status.html
 
-    apache.server-status:
-      'default':
-        'url': http://localhost/server-status
-        'user': someuser
-        'pass': password
-        'realm': 'authentication realm for digest passwords'
-        'timeout': 5
+    The following configuration needs to exists in pillar/grains.
+    Each entry nested in ``apache.server-status`` is a profile of a vhost/server.
+    This would give support for multiple apache servers/vhosts.
+
+    .. code-block:: yaml
+
+        apache.server-status:
+          default:
+            url: http://localhost/server-status
+            user: someuser
+            pass: password
+            realm: 'authentication realm for digest passwords'
+            timeout: 5
 
     CLI Examples:
 
@@ -416,15 +422,16 @@ def config(name, config, edit=True):
     config
         VirtualHost configurations
 
-    Note: This function is not meant to be used from the command line.
-    Config is meant to be an ordered dict of all of the apache configs.
+    .. note::
+
+        This function is not meant to be used from the command line.
+        Config is meant to be an ordered dict of all of the apache configs.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' apache.config /etc/httpd/conf.d/ports.conf \
-                config="[{'Listen': '22'}]"
+        salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '22'}]"
     '''
 
     for entry in config:

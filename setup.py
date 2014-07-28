@@ -645,7 +645,7 @@ elif sys.platform.startswith('sunos'):
         from bbfreeze.modulegraph.modulegraph import ModuleGraph
         mf = ModuleGraph(sys.path[:])
         for arg in glob.glob('salt/modules/*.py'):
-                mf.run_script(arg)
+            mf.run_script(arg)
         for mod in mf.flatten():
             if type(mod).__name__ != 'Script' and mod.filename:
                 FREEZER_INCLUDES.append(str(os.path.basename(mod.identifier)))

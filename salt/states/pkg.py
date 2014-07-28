@@ -137,9 +137,9 @@ def _find_install_targets(name=None,
     # dict for packages that fail pkg.verify and their altered files
     altered_files = {}
     # Get the ignore_types list if any from the pkg_verify argument
-    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+    if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is OrderedDict
+                                        if isinstance(x, OrderedDict)
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -667,9 +667,9 @@ def installed(
         salt.utils.is_true(refresh)
         or (os.path.isfile(rtag) and refresh is not False)
     )
-    if type(pkg_verify) is not list:
+    if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
-    if (pkg_verify or type(pkg_verify) is list) and 'pkg.verify' not in __salt__:
+    if (pkg_verify or isinstance(pkg_verify, list)) and 'pkg.verify' not in __salt__:
         return {'name': name,
                 'changes': {},
                 'result': False,
@@ -946,9 +946,9 @@ def installed(
         result = False
 
     # Get the ignore_types list if any from the pkg_verify argument
-    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+    if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is OrderedDict
+                                        if isinstance(x, OrderedDict)
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify

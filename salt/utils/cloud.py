@@ -475,7 +475,7 @@ def wait_for_fun(fun, timeout=900, **kwargs):
         trycount += 1
         try:
             response = fun(**kwargs)
-            if type(response) is not bool:
+            if not isinstance(response, bool):
                 return response
         except Exception as exc:
             log.debug('Caught exception in wait_for_fun: {0}'.format(exc))
@@ -1325,7 +1325,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
         event.fire_event(msg, tag)
     except ValueError:
         # We're using develop or a 0.17.x version of salt
-        if type(args) is dict:
+        if isinstance(args, dict):
             args[key] = msg
         else:
             args = {key: msg}

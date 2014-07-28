@@ -12,6 +12,7 @@ import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
 
@@ -704,3 +705,29 @@ def connect(host, port=None, **kwargs):
     ret['result'] = True
     ret['comment'] = 'Successfully connected to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
     return ret
+
+
+def is_private(ip_addr):
+    '''
+    Check if the given IP address is a private address
+
+    .. versionadded:: Helium
+
+    CLI Example::
+
+        salt '*' network.is_private 10.0.0.3
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).is_private
+
+
+def is_loopback(ip_addr):
+    '''
+    Check if the given IP address is a loopback address
+
+    .. versionadded:: Helium
+
+    CLI Example::
+
+        salt '*' network.is_loopback 127.0.0.1
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).is_loopback
