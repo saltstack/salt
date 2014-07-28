@@ -250,7 +250,7 @@ def list_sets(family='ipv4'):
         salt '*' ipset.list_sets
 
     '''
-    cmd = '{0} list -t'.format(_ipset_cmd(), set)
+    cmd = '{0} list -t'.format(_ipset_cmd())
     out = __salt__['cmd.run'](cmd)
 
     _tmp = out.split('\n')
