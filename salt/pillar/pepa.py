@@ -77,7 +77,6 @@ except ImportError:
     HAS_OS_PATH = False
 
 
-
 def __virtual__():
     '''
     Only return if all the modules are available
@@ -220,7 +219,8 @@ if __name__ == '__main__' and sys.stdout.isatty():
             import pygments.lexers
             import pygments.formatters
             print pygments.highlight(yaml.safe_dump(result), pygments.lexers.YamlLexer(), pygments.formatters.TerminalFormatter())
-        except ImportError:            
-            print yaml.safe_dump(result, indent = 4, default_flow_style = False)
+        except ImportError:
+            print yaml.safe_dump(result, indent=4, default_flow_style=False)
     else:
-        print yaml.safe_dump(result, indent = 4, default_flow_style = False)
+        print yaml.safe_dump(result, indent=4, default_flow_style=False)
+
