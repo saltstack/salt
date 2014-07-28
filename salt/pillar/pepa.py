@@ -58,11 +58,9 @@ __opts__ = {
 }
 
 # Import libraries
-try:
-    import yaml
-    HAS_YAML = True
-except ImportError:
-    HAS_YAML = False
+import yaml
+import jinja2
+import re
 
 try:
     from os.path import isfile, join
@@ -70,37 +68,13 @@ try:
 except ImportError:
     HAS_OS_PATH = False
 
-try:
-    import re
-    HAS_RE = True
-except ImportError:
-    HAS_RE = False
-
-try:
-    import jinja2
-    HAS_JINJA2 = True
-except ImportError:
-    HAS_JINJA2 = False
 
 
 def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not HAS_YAML:
-        log.error('Failed to load "yaml" library')
-        return False
-
     if not HAS_OS_PATH:
-        log.error('Failed to load "os.path" library')
-        return False
-
-    if not HAS_RE:
-        log.error('Failed to load "re" library')
-        return False
-
-    if not HAS_JINJA2:
-        log.error('Failed to load "jinja2" library')
         return False
 
     return True
