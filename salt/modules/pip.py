@@ -703,7 +703,7 @@ def uninstall(pkgs=None,
         if isinstance(pkgs, string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
-            with salt.utils.fopen(requirement) as rq_:
+            with salt.utils.fopen(requirements) as rq_:
                 for req in rq_:
                     try:
                         req_pkg, _ = req.split('==')
