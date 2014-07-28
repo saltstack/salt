@@ -148,7 +148,7 @@ def _get_virtual():
                         if realpkg not in __context__['pkg._get_virtual']:
                             __context__['pkg._get_virtual'][realpkg] = []
                         __context__['pkg._get_virtual'][realpkg].append(pkg.name)
-        return __context__['pkg._get_virtual']
+    return __context__['pkg._get_virtual']
 
 
 def _warn_software_properties(repo):
