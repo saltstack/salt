@@ -235,8 +235,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         gw = iopts.get('gateway', None)
         if gw:
             ethx['gateway'] = gw
-            gateway = None
-            vm_['gateway'] = gw
+            vm_['gateway'] = gateway = None
         ethx['link'] = iopts.get('link', 'br0')
         ethx['ipv4'] = iopts['ip']
         nm = iopts.get('netmask', '')
