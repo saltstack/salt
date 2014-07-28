@@ -9,17 +9,17 @@ Documentation: https://github.com/mickep76/pepa
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
 __license__ = 'Apache License, Version 2.0'
-__version__ = '0.6.2'
+__version__ = '0.6.3'
 
 # Import python libs
 import logging
 import sys
 
 
+# Only used when called from a TTY (terminal)
 log = None
 if __name__ == '__main__' and sys.stdout.isatty():
     import argparse
-    from colorlog import ColoredFormatter
 
     parser = argparse.ArgumentParser()
     parser.add_argument('hostname', help='Hostname')
@@ -27,14 +27,22 @@ if __name__ == '__main__' and sys.stdout.isatty():
     parser.add_argument('-d', '--debug', action='store_true', help='Print debug info')
     parser.add_argument('-g', '--grains', help='Input Grains as YAML')
     parser.add_argument('-p', '--pillar', help='Input Pillar as YAML')
+    parser.add_argument('-n', '--no-color', action='store_true', help='No color output')
     args = parser.parse_args()
 
     LOG_LEVEL = logging.WARNING
     if args.debug:
         LOG_LEVEL = logging.DEBUG
 
-    LOG_FORMAT = "[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s"
-    formatter = ColoredFormatter(LOG_FORMAT)
+    formatter = None
+    if not args.no_color:
+        try:
+            import colorlog
+            formatter = colorlog.ColoredFormatter("[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s")
+        except ImportError:
+            formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
+    else:
+        formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
 
     stream = logging.StreamHandler()
     stream.setLevel(LOG_LEVEL)
@@ -175,7 +183,8 @@ def ext_pillar(minion_id, pillar, resource, sequence):
         pillar_data = tree
     return pillar_data
 
-if sys.stdout.isatty():
+# Only used when called from a TTY (terminal)
+if __name__ == '__main__' and sys.stdout.isatty():
     # Load configuration file
     if not isfile(args.config):
         log.critical("Configuration file doesn't exist: {0}".format(args.config))
@@ -204,10 +213,14 @@ if sys.stdout.isatty():
 
     result = ext_pillar(args.hostname, __pillar__, __opts__['ext_pillar'][loc]['pepa']['resource'], __opts__['ext_pillar'][loc]['pepa']['sequence'])
 
-    from pygments import highlight
-    from pygments.lexers import YamlLexer
-    from pygments.formatters import TerminalFormatter
-
     yaml.dumper.SafeDumper.ignore_aliases = lambda self, data: True
-#    print yaml.safe_dump(result, indent = 4, default_flow_style = False)
-    print highlight(yaml.safe_dump(result), YamlLexer(), TerminalFormatter())
+    if not args.no_color:
+        try:
+            import pygments
+            import pygments.lexers
+            import pygments.formatters
+            print pygments.highlight(yaml.safe_dump(result), pygments.lexers.YamlLexer(), pygments.formatters.TerminalFormatter())
+        except ImportError:            
+            print yaml.safe_dump(result, indent = 4, default_flow_style = False)
+    else:
+        print yaml.safe_dump(result, indent = 4, default_flow_style = False)
