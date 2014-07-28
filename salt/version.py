@@ -442,7 +442,7 @@ def __get_version(saltstack_version):
 
             # We only define the parsed SHA and set NOC as ??? (unknown)
             saltstack_version.sha = out.strip()
-            saltstack_version.noc = '???'
+            saltstack_version.noc = 'n/a'
 
     except OSError as os_err:
         if os_err.errno != 2:
