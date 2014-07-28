@@ -129,7 +129,7 @@ def set_computer_name(name):
     '''
     cmd = ('wmic computersystem where name="%COMPUTERNAME%"'
            ' call rename name="{0}"')
-    log.debug('Attempting to change computer name. Cmd is: '.format(cmd))
+    log.debug('Attempting to change computer name. Cmd is: {0}'.format(cmd))
     ret = __salt__['cmd.run'](cmd.format(name))
     if 'ReturnValue = 0;' in ret:
         ret = {'Computer Name': {'Current': get_computer_name()}}
