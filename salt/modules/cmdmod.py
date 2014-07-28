@@ -250,8 +250,8 @@ def _run(cmd,
             py_code = 'import os, json;' \
                       'print(json.dumps(os.environ.__dict__))'
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {1} -- "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('sudo -i -u {0} -- "{1}"'
+                           ).format(runas, sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
                 env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
                            ).format(shell, runas, sys.executable)
