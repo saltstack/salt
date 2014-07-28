@@ -135,15 +135,20 @@ def _get_virtual():
     if 'pkg._get_virtual' not in __context__:
         __context__['pkg._get_virtual'] = {}
         apt_cache = apt.cache.Cache()
-        pkgs = apt_cache._cache.packages
-        for pkg in pkgs:
-            if pkg.provides_list:
-                for item in pkg.provides_list:
-                    realpkg = item[2].parent_pkg.name
-                    if realpkg not in __context__['pkg._get_virtual']:
-                        __context__['pkg._get_virtual'][realpkg] = []
-                    __context__['pkg._get_virtual'][realpkg].append(pkg.name)
-    return __context__['pkg._get_virtual']
+        try:
+            pkgs = apt_cache._cache.packages
+            HAS_CACHE = True
+        except AttributeError:
+            HAS_CACHE = False
+        if HAS_CACHE:
+            for pkg in pkgs:
+                if pkg.provides_list:
+                    for item in pkg.provides_list:
+                        realpkg = item[2].parent_pkg.name
+                        if realpkg not in __context__['pkg._get_virtual']:
+                            __context__['pkg._get_virtual'][realpkg] = []
+                        __context__['pkg._get_virtual'][realpkg].append(pkg.name)
+        return __context__['pkg._get_virtual']
 
 
 def _warn_software_properties(repo):
