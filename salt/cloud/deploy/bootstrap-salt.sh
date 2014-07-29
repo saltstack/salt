@@ -2434,7 +2434,9 @@ __install_epel_repository() {
         EPEL_ARCH=$CPU_ARCH_L
     fi
     if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
-        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/5/${EPEL_ARCH}/epel-release-5-4.noarch.rpm" || return 1
+        # Use dl.fedoraproject.org to avoid redirect breakage: 
+        # https://lists.fedoraproject.org/pipermail/users/2012-February/414558.html
+        rpm -Uvh --force "http://dl.fedoraproject.org/fedora-epel/5/${EPEL_ARCH}/epel-release-5-4.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
         rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
