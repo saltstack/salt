@@ -284,6 +284,7 @@ class SSH(object):
         '''
         The ssh-copy-id routine
         '''
+        ret = {}
         arg_str = 'ssh.set_auth_key {0} {1}'.format(
                 target.get('user', 'root'),
                 self.get_pubkey())
