@@ -486,8 +486,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
     if HAS_CHECK is False:
         cmd = '{0}-save' . format(_iptables_cmd(family))
-        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
-            table,
+        out = __salt__['cmd.run'](cmd).find('-A {0} {1}'.format(
             chain,
             rule,
         ))
@@ -524,7 +523,7 @@ def check_chain(table='filter', chain=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     cmd = '{0}-save -t {1}'.format(_iptables_cmd(family), table)
-    out = __salt__['cmd.run'](cmd).find(':{1} '.format(table, chain))
+    out = __salt__['cmd.run'](cmd).find(':{0} '.format(chain))
 
     if out != -1:
         out = True
