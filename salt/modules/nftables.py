@@ -601,7 +601,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
             cmd = r'{0} \{{ type {1} hook {2} priority {3}\; \}}'.\
                     format(cmd, table_type, hook, priority)
         else:
-            # Specifiy one, rqeuire all
+            # Specify one, require all
             return 'Error: table_type hook and priority required'.\
                     format(table, family)
 
