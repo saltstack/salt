@@ -1,4 +1,28 @@
 -------------------------------------------------------------------
+Thu Jul 24 13:11:03 UTC 2014 - tserong@suse.com
+
+- Allow salt to correctly detect services provided by init scripts
+  + Added allow-systemd-units-no-unit-files.patch
+  + Added allow-systemd-parameterized-services.patch
+  + Added pass-all-systemd-list-units.patch
+- Move systemd service file fix to patch, add PIDFile parameter (this
+  fix is applicable for all SUSE versions, not just 12.3)
+  + Added use-forking-daemon.patch
+
+-------------------------------------------------------------------
+Wed Jul 23 06:24:00 UTC 2014 - aboe76@gmail.com
+
+- Improve systemd service file fix for 12.3
+  Use forking instead of Simple and daemonize salt-master process
+
+-------------------------------------------------------------------
+Sat Jul 19 07:58:18 UTC 2014 - aboe76@gmail.com
+
+- Fixed bug in opensuse 12.3 systemd file
+  systemd 198 doesn't have python-systemd binding.
+- Disabled testing on SLES
+
+-------------------------------------------------------------------
 Thu Jul 10 18:25:05 UTC 2014 - aboe76@gmail.com
 
 - Update to 2014.7
