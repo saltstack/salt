@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.06.30"
+__ScriptVersion="2014.07.29"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -43,6 +43,9 @@ __ScriptName="bootstrap-salt.sh"
 # Bootstrap script truth values
 BS_TRUE=1
 BS_FALSE=0
+
+# Default sleep time used when waiting for daemons to start, restart and checking for these running
+__DEFAULT_SLEEP=3
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __detect_color_support
@@ -202,6 +205,8 @@ usage() {
   -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
   -k  Temporary directory holding the minion keys which will pre-seed
       the master.
+  -s  Sleep time used when waiting for daemons to start, restart and when checking
+      for the services running. Default: ${__DEFAULT_SLEEP}
   -M  Also install salt-master
   -S  Also install salt-syndic
   -N  Do not install salt-minion
@@ -639,7 +644,7 @@ __sort_release_files() {
     done
 
     # Now let's sort by know files importance, max important goes last in the max_prio list
-    max_prio="redhat-release centos-release"
+    max_prio="redhat-release centos-release oracle-release"
     for entry in $max_prio; do
         if [ "$(echo "${primary_release_files}" | grep "$entry")" != "" ]; then
             primary_release_files=$(echo "${primary_release_files}" | sed -e "s:\(.*\)\($entry\)\(.*\):\2 \1 \3:g")
@@ -654,7 +659,7 @@ __sort_release_files() {
     done
 
     # Echo the results collapsing multiple white-space into a single white-space
-    echo "${primary_release_files} ${secondary_release_files}" | sed -r 's:[[:space:]]:\n:g'
+    echo "${primary_release_files} ${secondary_release_files}" | sed -r 's:[[:space:]]+:\n:g'
 }
 
 
@@ -679,8 +684,13 @@ __gather_linux_system_info() {
             # lsb_release -si returns "openSUSE project" on openSUSE 12.3
             DISTRO_NAME="opensuse"
         elif [ "${DISTRO_NAME}" = "SUSE LINUX" ]; then
-            # lsb_release -si returns "SUSE LINUX" on SLES 11 SP3
-            DISTRO_NAME="suse"
+            if [ "$(lsb_release -sd | grep -i opensuse)" != "" ]; then
+                # openSUSE 12.2 reports SUSE LINUX on lsb_release -si
+                DISTRO_NAME="opensuse"
+            else
+                # lsb_release -si returns "SUSE LINUX" on SLES 11 SP3
+                DISTRO_NAME="suse"
+            fi
         elif [ "${DISTRO_NAME}" = "EnterpriseEnterpriseServer" ]; then
             # This the Oracle Linux Enterprise ID before ORACLE LINUX 5 UPDATE 3
             DISTRO_NAME="Oracle Linux"
@@ -1101,19 +1111,26 @@ __git_clone_and_checkout() {
     [ -d /tmp/git ] || mkdir /tmp/git
     cd /tmp/git
     if [ -d $SALT_GIT_CHECKOUT_DIR ]; then
+        echodebug "Found a checked out Salt repository"
         cd $SALT_GIT_CHECKOUT_DIR
+        echodebug "Fetching git changes"
         git fetch || return 1
         # Tags are needed because of salt's versioning, also fetch that
+        echodebug "Fetching git tags"
         git fetch --tags || return 1
 
         # If we have the SaltStack remote set as upstream, we also need to fetch the tags from there
         if [ "$(git remote -v | grep $_SALTSTACK_REPO_URL)" != "" ]; then
+            echodebug "Fetching upstream(SaltStack's Salt repository) git tags"
             git fetch --tags upstream
         else
+            echoinfo "Adding SaltStack's Salt repository as a remote"
             git remote add upstream "$_SALTSTACK_REPO_URL"
+            echodebug "Fetching upstream(SaltStack's Salt repository) git tags"
             git fetch --tags upstream
         fi
 
+        echodebug "Hard reseting the cloned repository to ${GIT_REV}"
         git reset --hard "$GIT_REV" || return 1
 
         # Just calling `git reset --hard $GIT_REV` on a branch name that has
@@ -1123,21 +1140,37 @@ __git_clone_and_checkout() {
         # changes.
         git branch -a | grep -q "${GIT_REV}"
         if [ $? -eq 0 ]; then
+            echodebug "Rebasing the cloned repository branch"
             git pull --rebase || return 1
         fi
     else
+        # Let's try shallow cloning to speed up
+        echoinfo "Attempting to shallow clone Salt's repository from ${_SALT_REPO_URL}"
+        git clone --depth 1 --branch "$GIT_REV" "$_SALT_REPO_URL"
+        if [ $? -eq 0 ]; then
+            cd "$SALT_GIT_CHECKOUT_DIR"
+            return 0
+        fi
+
+        # Shallow clone above failed(missing upstream tags???), let's resume the old behaviour.
+        echowarn "Failed to shallow clone."
+        echoinfo "Resuming regular git clone and remote SaltStack repository addition procedure"
         git clone "$_SALT_REPO_URL" || return 1
         cd "$SALT_GIT_CHECKOUT_DIR"
 
         if [ "$_SALT_REPO_URL" != "$_SALTSTACK_REPO_URL" ]; then
             # We need to add the saltstack repository as a remote and fetch tags for proper versioning
+            echoinfo "Adding SaltStack's Salt repository as a remote"
             git remote add upstream "$_SALTSTACK_REPO_URL"
+            echodebug "Fetching upstream(SaltStack's Salt repository) git tags"
             git fetch --tags upstream
         fi
 
+        echodebug "Checking out $GIT_REV"
         git checkout "$GIT_REV" || return 1
 
     fi
+    echoinfo "Cloning Salt's git repository succeeded"
     return 0
 }
 
@@ -1587,7 +1620,7 @@ __enable_universe_repository() {
 
 install_ubuntu_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
 
     apt-get update
@@ -1658,7 +1691,7 @@ install_ubuntu_deps() {
 
 install_ubuntu_daily_deps() {
     install_ubuntu_deps
-    if [ "$DISTRO_MAJOR_VERSION" -eq 12 ] || [ "$DISTRO_MAJOR_VERSION" -gt 12 ]; then
+    if [ "$DISTRO_MAJOR_VERSION" -ge 12 ]; then
         # Above Ubuntu 11.10 add-apt-repository is in a different package
         __apt_get_install_noinput software-properties-common || return 1
     else
@@ -1701,18 +1734,18 @@ install_ubuntu_git_deps() {
 }
 
 install_ubuntu_stable() {
-    packages=""
+    __PACKAGES=""
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        packages="${packages} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ]; then
-        packages="${packages} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"
     fi
     if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
-        packages="${packages} salt-syndic"
+        __PACKAGES="${__PACKAGES} salt-syndic"
     fi
     # shellcheck disable=SC2086
-    __apt_get_install_noinput ${packages} || return 1
+    __apt_get_install_noinput ${__PACKAGES} || return 1
     return 0
 }
 
@@ -1731,11 +1764,12 @@ install_ubuntu_git() {
 }
 
 install_ubuntu_git_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /sbin/initctl ]; then
@@ -1766,11 +1800,12 @@ install_ubuntu_restart_daemons() {
 
     # Ensure upstart configs are loaded
     [ -f /sbin/initctl ] && /sbin/initctl reload-configuration
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /sbin/initctl ]; then
@@ -1799,10 +1834,11 @@ install_ubuntu_restart_daemons() {
 }
 
 install_ubuntu_check_services() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
             __check_services_upstart salt-$fname || return 1
@@ -1823,7 +1859,7 @@ install_ubuntu_check_services() {
 #
 install_debian_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -1833,13 +1869,23 @@ install_debian_deps() {
     # Install Keys
     __apt_get_install_noinput debian-archive-keyring && apt-get update
 
-    # Both python-requests which is a hard dependency and apache-libcloud which is a soft dependency, under debian < 7
-    # need to be installed using pip
-    check_pip_allowed "You need to allow pip based installations (-P) in order to install the python 'requests' package"
-    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
-    __apt_get_install_noinput python-pip procps pciutils
+    # Install procps and pciutils which allows for Docker bootstraps. See #366#issuecomment-39666813
+    __PACKAGES="procps pciutils"
+    __PIP_PACKAGES=""
 
-    __PIP_PACKAGES="requests"
+    if [ "$DISTRO_MAJOR_VERSION" -lt 7 ]; then
+        # Both python-requests which is a hard dependency and apache-libcloud which is a soft dependency, under debian < 7
+        # need to be installed using pip
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install the python 'requests' package"
+        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+        __PACKAGES="${__PACKAGES} python-pip"
+        __PIP_PACKAGES="${__PIP_PACKAGES} requests"
+    else
+        __PACKAGES="${__PACKAGES} python-requests"
+    fi
+
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES}
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         # shellcheck disable=SC2089
@@ -1863,7 +1909,7 @@ install_debian_deps() {
 
 install_debian_6_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -1880,8 +1926,8 @@ install_debian_6_deps() {
         echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
         echowarn "This is required for long term stable minion connections to the master."
         echowarn "YOU WILL END UP WITH QUITE A FEW PACKAGES FROM DEBIAN UNSTABLE"
-        echowarn "Sleeping for 3 seconds so you can cancel..."
-        sleep 3
+        echowarn "Sleeping for 5 seconds so you can cancel..."
+        sleep 5
 
         if [ ! -f /etc/apt/sources.list.d/debian-unstable.list ]; then
            cat <<_eof > /etc/apt/sources.list.d/debian-unstable.list
@@ -1958,7 +2004,7 @@ _eof
 
 install_debian_7_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -1980,8 +2026,8 @@ install_debian_7_deps() {
         echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
         echowarn "This is required for long term stable minion connections to the master."
         echowarn "YOU WILL END UP WITH QUITE A FEW PACKAGES FROM DEBIAN UNSTABLE"
-        echowarn "Sleeping for 3 seconds so you can cancel..."
-        sleep 3
+        echowarn "Sleeping for 5 seconds so you can cancel..."
+        sleep 5
 
         if [ ! -f /etc/apt/sources.list.d/debian-unstable.list ]; then
            cat <<_eof > /etc/apt/sources.list.d/debian-unstable.list
@@ -2042,7 +2088,7 @@ install_debian_8_deps__DISABLED() {
 
 install_debian_git_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behavior."
+        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
@@ -2119,18 +2165,18 @@ install_debian_8_git_deps() {
 }
 
 __install_debian_stable() {
-    packages=""
+    __PACKAGES=""
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        packages="${packages} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ]; then
-        packages="${packages} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"
     fi
     if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
-        packages="${packages} salt-syndic"
+        __PACKAGES="${__PACKAGES} salt-syndic"
     fi
     # shellcheck disable=SC2086
-    __apt_get_install_noinput ${packages} || return 1
+    __apt_get_install_noinput ${__PACKAGES} || return 1
 
     if [ "$_PIP_ALLOWED" -eq $BS_TRUE ]; then
         # Building pyzmq from source to build it against libzmq3.
@@ -2191,11 +2237,12 @@ install_debian_8_git() {
 }
 
 install_debian_git_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f "${SALT_GIT_CHECKOUT_DIR}/debian/salt-$fname.init" ]; then
@@ -2209,11 +2256,12 @@ install_debian_git_post() {
 install_debian_restart_daemons() {
     [ "$_START_DAEMONS" -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         /etc/init.d/salt-$fname stop > /dev/null 2>&1
@@ -2222,10 +2270,11 @@ install_debian_restart_daemons() {
 }
 
 install_debian_check_services() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         __check_services_debian salt-$fname || return 1
     done
@@ -2241,14 +2290,14 @@ install_debian_check_services() {
 #   Fedora Install Functions
 #
 install_fedora_deps() {
-    packages="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
+    __PACKAGES="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        packages="${packages} python-libcloud"
+        __PACKAGES="${__PACKAGES} python-libcloud"
     fi
 
     # shellcheck disable=SC2086
-    yum install -y ${packages} || return 1
+    yum install -y ${__PACKAGES} || return 1
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         yum -y update || return 1
@@ -2264,23 +2313,24 @@ install_fedora_deps() {
 }
 
 install_fedora_stable() {
-    packages=""
+    __PACKAGES=""
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        packages="${packages} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
-        packages="${packages} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"
     fi
     # shellcheck disable=SC2086
-    yum install -y ${packages} || return 1
+    yum install -y ${__PACKAGES} || return 1
     return 0
 }
 
 install_fedora_stable_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         systemctl is-enabled salt-$fname.service || (systemctl preset salt-$fname.service && systemctl enable salt-$fname.service)
@@ -2315,11 +2365,12 @@ install_fedora_git() {
 }
 
 install_fedora_git_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         copyfile ${SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-$fname.service /lib/systemd/system/salt-$fname.service
@@ -2333,11 +2384,11 @@ install_fedora_git_post() {
 install_fedora_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
-
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         systemctl stop salt-$fname > /dev/null 2>&1
@@ -2346,10 +2397,11 @@ install_fedora_restart_daemons() {
 }
 
 install_fedora_check_services() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         __check_services_systemd salt-$fname || return 1
     done
@@ -2368,17 +2420,25 @@ __install_epel_repository() {
     if [ ${__EPEL_REPOS_INSTALLED} -eq $BS_TRUE ]; then
         return 0
     fi
+
+    # Check if epel-release is already installed and flag it accordingly
+    rpm --nodigest --nosignature -q epel-release > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        __EPEL_REPOS_INSTALLED=${BS_TRUE}
+        return 0
+    fi
+
     if [ "$CPU_ARCH_L" = "i686" ]; then
         EPEL_ARCH="i386"
     else
         EPEL_ARCH=$CPU_ARCH_L
     fi
     if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
-        rpm -Uvh --force "http://mirrors.kernel.org/fedora-epel/5/${EPEL_ARCH}/epel-release-5-4.noarch.rpm" || return 1
+        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/5/${EPEL_ARCH}/epel-release-5-4.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
-        rpm -Uvh --force "http://mirrors.kernel.org/fedora-epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm" || return 1
+        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
-        rpm -Uvh --force "http://mirrors.kernel.org/fedora-epel/beta/7/${EPEL_ARCH}/epel-release-7-0.2.noarch.rpm" || return 1
+        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/beta/7/${EPEL_ARCH}/epel-release-7-0.2.noarch.rpm" || return 1
     else
         echoerror "Failed add EPEL repository support."
         return 1
@@ -2388,38 +2448,38 @@ __install_epel_repository() {
 }
 
 install_centos_stable_deps() {
-    __install_epel_repository
+    __install_epel_repository || return 1
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         yum -y update || return 1
     fi
 
-    packages="yum-utils chkconfig"
+    __PACKAGES="yum-utils chkconfig"
 
     if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
-        packages="${packages} python26-PyYAML python26-m2crypto m2crypto python26 python26-requests"
-        packages="${packages} python26-crypto python26-msgpack python26-zmq python26-jinja2"
+        __PACKAGES="${__PACKAGES} python26-PyYAML python26-m2crypto m2crypto python26 python26-requests"
+        __PACKAGES="${__PACKAGES} python26-crypto python26-msgpack python26-zmq python26-jinja2"
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
-            packages="${packages} python26-setuptools"
+            __PACKAGES="${__PACKAGES} python26-setuptools"
         fi
     else
-        packages="${packages} PyYAML m2crypto python-crypto python-msgpack python-zmq python-jinja2 python-requests"
+        __PACKAGES="${__PACKAGES} PyYAML m2crypto python-crypto python-msgpack python-zmq python-jinja2 python-requests"
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
-            packages="${packages} python-pip"
+            __PACKAGES="${__PACKAGES} python-pip"
         fi
     fi
 
     if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
         # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
-        for package in ${packages}; do
+        for package in ${__PACKAGES}; do
             # shellcheck disable=SC2086
             yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
         done
     else
         # shellcheck disable=SC2086
-        yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+        yum -y install ${__PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
     fi
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
@@ -2449,36 +2509,45 @@ install_centos_stable_deps() {
 }
 
 install_centos_stable() {
-    packages=""
+    __PACKAGES=""
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        packages="${packages} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
-        packages="${packages} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"
     fi
     if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
         # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
-        for package in ${packages}; do
+        for package in ${__PACKAGES}; do
             # shellcheck disable=SC2086
             yum -y install ${package} || yum -y install ${package} --enablerepo=${_EPEL_REPO} || return 1
         done
     else
         # shellcheck disable=SC2086
-        yum -y install ${packages} --enablerepo=${_EPEL_REPO} || return 1
+        yum -y install ${__PACKAGES} --enablerepo=${_EPEL_REPO} || return 1
     fi
     return 0
 }
 
 install_centos_stable_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /etc/init.d/salt-$fname ]; then
             # Still in SysV init!?
             /sbin/chkconfig salt-$fname on
+        elif [ -f /usr/bin/systemctl ]; then
+            # Using systemd
+            /usr/bin/systemctl is-enabled salt-$fname.service > /dev/null 2>&1 || (
+                /usr/bin/systemctl preset salt-$fname.service > /dev/null 2>&1 &&
+                /usr/bin/systemctl enable salt-$fname.service > /dev/null 2>&1
+            )
+            sleep 0.1
+            /usr/bin/systemctl daemon-reload
         fi
     done
 }
@@ -2551,10 +2620,11 @@ install_centos_git_post() {
 install_centos_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
@@ -2578,6 +2648,10 @@ install_centos_restart_daemons() {
             # Still in SysV init!?
             /etc/init.d/salt-$fname stop > /dev/null 2>&1
             /etc/init.d/salt-$fname start
+        elif [ -f /usr/bin/systemctl ]; then
+            # CentOS 7 uses systemd
+            /usr/bin/systemctl stop salt-$fname > /dev/null 2>&1
+            /usr/bin/systemctl start salt-$fname.service
         fi
     done
 }
@@ -2598,15 +2672,18 @@ install_centos_testing_post() {
 }
 
 install_centos_check_services() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         if [ -f /sbin/initctl ] && [ -f /etc/init/salt-${fname}.conf ]; then
             __check_services_upstart salt-$fname || return 1
         elif [ -f /etc/init.d/salt-$fname ]; then
             __check_services_sysvinit salt-$fname || return 1
+        elif [ -f /usr/bin/systemctl ]; then
+            __check_services_systemd salt-$fname || return 1
         fi
     done
     return 0
@@ -2622,52 +2699,85 @@ install_centos_check_services() {
 #   RedHat Install Functions
 #
 __test_rhel_optionals_packages() {
-    __install_epel_repository
+    __install_epel_repository || return 1
 
-    if [ "$DISTRO_MAJOR_VERSION" -eq 6 ] || [ "$DISTRO_MAJOR_VERSION" -gt 6 ]; then
+    if [ "$DISTRO_MAJOR_VERSION" -ge 6 ]; then
         # Let's enable package installation testing, kind of, --dry-run
-        echoinfo "Installing 'yum-tsflags' to test for package installation success"
-
-        if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
-            # try both ways --enablerepo=X disables ALL OTHER REPOS!!!!
-            yum -y install yum-tsflags || \
-                yum -y install yum-tsflags --enablerepo=${_EPEL_REPO} || \
-                yum -y install yum-plugin-tsflags || \
-                yum -y install yum-plugin-tsflags --enablerepo=${_EPEL_REPO} || \
-                return 1
-        else
-            yum -y install yum-tsflags --enablerepo=${_EPEL_REPO} || \
-                yum -y install yum-plugin-tsflags --enablerepo=${_EPEL_REPO} || \
-                return 1
-        fi
+        echoinfo "Testing if packages usually on the optionals repository are available:"
+        __YUM_CONF_DIR="$(mktemp -d)"
+        __YUM_CONF_FILE="${__YUM_CONF_DIR}/yum.conf"
+        cp /etc/yum.conf "${__YUM_CONF_FILE}"
+        echo 'tsflags=test' >> "${__YUM_CONF_FILE}"
 
         # Let's try installing the packages that usually require the optional repository
         # shellcheck disable=SC2043
         for package in python-jinja2; do
+            echoinfo "  - ${package}"
             if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
-                yum install -y --tsflags='test' ${package} >/dev/null 2>&1 || \
-                    yum install -y --tsflags='test' ${package} --enablerepo=${_EPEL_REPO} >/dev/null 2>&1
+                yum --config "${__YUM_CONF_FILE}" install -y ${package} >/dev/null 2>&1 || \
+                    yum --config "${__YUM_CONF_FILE}" install -y ${package} --enablerepo=${_EPEL_REPO} >/dev/null 2>&1
             else
-                yum install -y --tsflags='test' ${package} --enablerepo=${_EPEL_REPO} >/dev/null 2>&1
+                yum --config "${__YUM_CONF_FILE}" install -y ${package} --enablerepo=${_EPEL_REPO} >/dev/null 2>&1
             fi
             if [ $? -ne 0 ]; then
-                echoerror "Failed to install '${package}'. The optional repository or it's subscription might be missing."
+                echoerror "Failed to find an installable '${package}' package. The optional repository or it's subscription might be missing."
+                rm -rf "${__YUM_CONF_DIR}"
                 return 1
             fi
         done
+        rm -rf "${__YUM_CONF_DIR}"
     fi
     return 0
 }
 
 
 install_red_hat_linux_stable_deps() {
-    __test_rhel_optionals_packages || return 1
+    if [ "${DISTRO_MAJOR_VERSION}" -ge 6 ]; then
+        # Wait at most 60 seconds for the repository subscriptions to register
+        __ATTEMPTS=6
+        while [ "${__ATTEMPTS}" -gt 0 ]; do
+            __test_rhel_optionals_packages
+            if [ $? -eq 1 ]; then
+                __ATTEMPTS=$(( __ATTEMPTS -1 ))
+                if [ ${__ATTEMPTS} -lt 1 ]; then
+                    return 1
+                fi
+                echoinfo "Sleeping 10 seconds while waiting for the optional repository subscription to be externally configured"
+                sleep 10
+                continue
+            else
+                break
+            fi
+        done
+    else
+         __test_rhel_optionals_packages || return 1
+    fi
+
     install_centos_stable_deps || return 1
     return 0
 }
 
 install_red_hat_linux_git_deps() {
-    __test_rhel_optionals_packages || return 1
+    if [ "${DISTRO_MAJOR_VERSION}" -ge 6 ]; then
+        # Wait at most 60 seconds for the repository subscriptions to register
+        __ATTEMPTS=6
+        while [ "${__ATTEMPTS}" -gt 0 ]; do
+            __test_rhel_optionals_packages
+            if [ $? -eq 1 ]; then
+                __ATTEMPTS=$(( __ATTEMPTS -1 ))
+                if [ ${__ATTEMPTS} -lt 1 ]; then
+                    return 1
+                fi
+                echoinfo "Sleeping 10 seconds while waiting for the optional repository subscription to be externally configured"
+                sleep 10
+                continue
+            else
+                break
+            fi
+        done
+    else
+         __test_rhel_optionals_packages || return 1
+    fi
     install_centos_git_deps || return 1
     return 0
 }
@@ -2995,6 +3105,21 @@ install_scientific_linux_check_services() {
 #
 #   Amazon Linux AMI Install Functions
 #
+
+install_amazon_linux_ami_2010_deps() {
+    # Linux Amazon AMI 2010.xx seems to use EPEL5 but the system is based on CentOS6.
+    # Supporting this would be quite troublesome and we need to workaround some serious package conflicts
+    echoerror "Amazon Linux AMI 2010 is not supported. Please use a more recent image (Amazon Linux AMI >= 2011.xx)"
+    exit 1
+}
+
+install_amazon_linux_ami_2010_git_deps() {
+    # Linux Amazon AMI 2010.xx seems to use EPEL5 but the system is based on CentOS6.
+    # Supporting this would be quite troublesome and we need to workaround some serious package conflicts
+    echoerror "Amazon Linux AMI 2010 is not supported. Please use a more recent image (Amazon Linux AMI >= 2011.xx)"
+    exit 1
+}
+
 install_amazon_linux_ami_deps() {
     # According to http://aws.amazon.com/amazon-linux-ami/faqs/#epel we should
     # enable the EPEL 6 repo
@@ -3009,15 +3134,15 @@ install_amazon_linux_ami_deps() {
         yum -y update || return 1
     fi
 
-    packages="PyYAML m2crypto python-crypto python-msgpack python-zmq python-ordereddict python-jinja2 python-requests"
+    __PACKAGES="PyYAML m2crypto python-crypto python-msgpack python-zmq python-ordereddict python-jinja2 python-requests"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
-        packages="${packages} python-pip"
+        __PACKAGES="${__PACKAGES} python-pip"
     fi
 
     # shellcheck disable=SC2086
-    yum -y install ${packages} --enablerepo=${_EPEL_REPO}"" || return 1
+    yum -y install ${__PACKAGES} --enablerepo=${_EPEL_REPO}"" || return 1
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
@@ -3153,11 +3278,12 @@ install_arch_linux_git() {
 
 install_arch_linux_post() {
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         # Since Arch's pacman renames configuration files
@@ -3184,11 +3310,12 @@ install_arch_linux_post() {
 }
 
 install_arch_linux_git_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /usr/bin/systemctl ]; then
@@ -3212,11 +3339,12 @@ install_arch_linux_git_post() {
 install_arch_linux_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /usr/bin/systemctl ]; then
@@ -3235,10 +3363,11 @@ install_arch_check_services() {
         return 0
     fi
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         __check_services_systemd salt-$fname || return 1
     done
@@ -3441,11 +3570,12 @@ install_freebsd_git() {
 }
 
 install_freebsd_9_stable_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         enable_string="salt_${fname}_enable=\"YES\""
@@ -3474,11 +3604,12 @@ install_freebsd_git_post() {
 install_freebsd_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         service salt_$fname stop > /dev/null 2>&1
@@ -3495,8 +3626,7 @@ install_freebsd_restart_daemons() {
 #   SmartOS Install Functions
 #
 install_smartos_deps() {
-    pkgin -y install \
-        zeromq py27-m2crypto py27-crypto py27-msgpack py27-yaml py27-jinja2 py27-zmq py27-requests || return 1
+    pkgin -y install zeromq py27-m2crypto py27-crypto py27-msgpack py27-yaml py27-jinja2 py27-zmq py27-requests || return 1
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
@@ -3555,11 +3685,12 @@ install_smartos_git() {
 install_smartos_post() {
     smf_dir="/opt/custom/smf"
     # Install manifest files if needed.
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         svcs network/salt-$fname > /dev/null 2>&1
@@ -3585,11 +3716,12 @@ install_smartos_post() {
 install_smartos_git_post() {
     smf_dir="/opt/custom/smf"
     # Install manifest files if needed.
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         svcs "network/salt-$fname" > /dev/null 2>&1
@@ -3610,11 +3742,12 @@ install_smartos_git_post() {
 install_smartos_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         # Stop if running && Start service
@@ -3658,15 +3791,17 @@ install_opensuse_stable_deps() {
         zypper --gpg-auto-import-keys --non-interactive update || return 1
     fi
 
-    packages="libzmq3 python python-Jinja2 python-M2Crypto python-PyYAML python-requests"
-    packages="${packages} python-msgpack-python python-pycrypto python-pyzmq python-xml"
+    # Salt needs python-zypp installed in order to use the zypper module
+    __PACKAGES="python-zypp"
+    __PACKAGES="${__PACKAGES} libzmq3 python python-Jinja2 python-M2Crypto python-PyYAML python-requests"
+    __PACKAGES="${__PACKAGES} python-msgpack-python python-pycrypto python-pyzmq python-xml"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        packages="${packages} python-apache-libcloud"
+        __PACKAGES="${__PACKAGES} python-apache-libcloud"
     fi
 
     # shellcheck disable=SC2086
-    zypper --non-interactive install --auto-agree-with-licenses ${packages} || return 1
+    zypper --non-interactive install --auto-agree-with-licenses ${__PACKAGES} || return 1
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
@@ -3693,18 +3828,18 @@ install_opensuse_git_deps() {
 }
 
 install_opensuse_stable() {
-    packages=""
+    __PACKAGES=""
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        packages="${packages} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ]; then
-        packages="${packages} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"
     fi
     if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
-        packages="${packages} salt-syndic"
+        __PACKAGES="${__PACKAGES} salt-syndic"
     fi
     # shellcheck disable=SC2086
-    zypper --non-interactive install --auto-agree-with-licenses $packages || return 1
+    zypper --non-interactive install --auto-agree-with-licenses $__PACKAGES || return 1
     return 0
 }
 
@@ -3714,11 +3849,12 @@ install_opensuse_git() {
 }
 
 install_opensuse_stable_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /bin/systemctl ]; then
@@ -3735,11 +3871,12 @@ install_opensuse_stable_post() {
 }
 
 install_opensuse_git_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /bin/systemctl ]; then
@@ -3758,11 +3895,12 @@ install_opensuse_git_post() {
 install_opensuse_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /bin/systemctl ]; then
@@ -3783,12 +3921,13 @@ install_opensuse_check_services() {
         return 0
     fi
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
-        __check_services_systemd salt-$fname || return 1
+        __check_services_systemd salt-$fname > /dev/null 2>&1 || __check_services_systemd salt-$fname.service > /dev/null 2>&1 || return 1
     done
     return 0
 }
@@ -3823,23 +3962,30 @@ install_suse_11_stable_deps() {
         zypper --gpg-auto-import-keys --non-interactive update || return 1
     fi
 
+    # Salt needs python-zypp installed in order to use the zypper module
+    __PACKAGES="python-zypp"
     # shellcheck disable=SC2089
-    packages="libzmq3 python python-Jinja2 'python-M2Crypto>=0.21' python-msgpack-python"
-    packages="${packages} python-pycrypto python-pyzmq python-pip python-xml python-requests"
+    __PACKAGES="${__PACKAGES} libzmq3 python python-Jinja2 python-msgpack-python"
+    __PACKAGES="${__PACKAGES} python-pycrypto python-pyzmq python-pip python-xml python-requests"
 
     if [ "$SUSE_PATCHLEVEL" -eq 1 ]; then
         check_pip_allowed
         echowarn "PyYaml will be installed using pip"
     else
-        packages="${packages} python-PyYAML"
+        __PACKAGES="${__PACKAGES} python-PyYAML"
     fi
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        packages="${packages} python-apache-libcloud"
+        __PACKAGES="${__PACKAGES} python-apache-libcloud"
     fi
 
+    # SLES 11 SP3 ships with both python-M2Crypto-0.22.* and python-m2crypto-0.21 and we will be asked which
+    # we want to install, even with --non-interactive.
+    # Let's try to install the higher version first and then the lower one in case of failure
+    zypper --non-interactive install --auto-agree-with-licenses 'python-M2Crypto>=0.22' || \
+        zypper --non-interactive install --auto-agree-with-licenses 'python-M2Crypto>=0.21' || return 1
     # shellcheck disable=SC2086,SC2090
-    zypper --non-interactive install --auto-agree-with-licenses ${packages} || return 1
+    zypper --non-interactive install --auto-agree-with-licenses ${__PACKAGES} || return 1
 
     if [ "$SUSE_PATCHLEVEL" -eq 1 ]; then
         # There's no python-PyYaml in SP1, let's install it using pip
@@ -3854,11 +4000,12 @@ install_suse_11_stable_deps() {
             _TEMP_CONFIG_DIR="/tmp"
             CONFIG_SALT_FUNC="config_salt"
 
-            for fname in minion master syndic; do
+            for fname in minion master syndic api; do
 
                 # Skip if not meant to be installed
                 [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
                 [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+                [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
                 [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
                 # Syndic uses the same configuration file as the master
@@ -3918,11 +4065,12 @@ install_suse_11_stable_post() {
     if [ "$SUSE_PATCHLEVEL" -gt 1 ]; then
         install_opensuse_stable_post || return 1
     else
-        for fname in minion master syndic; do
+        for fname in minion master syndic api; do
 
             # Skip if not meant to be installed
             [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
             [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+            [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
             [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
             if [ -f /bin/systemctl ]; then
@@ -3958,10 +4106,11 @@ install_suse_check_services() {
         return 0
     fi
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         __check_services_systemd salt-$fname || return 1
     done
@@ -4054,11 +4203,12 @@ install_gentoo_git() {
 }
 
 install_gentoo_post() {
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -d "/run/systemd/system" ]; then
@@ -4074,11 +4224,12 @@ install_gentoo_post() {
 install_gentoo_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -d "/run/systemd/system" ]; then
@@ -4097,10 +4248,11 @@ install_gentoo_check_services() {
         return 0
     fi
 
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
         __check_services_systemd salt-$fname || return 1
     done
@@ -4237,11 +4389,12 @@ daemons_running() {
     [ "$_START_DAEMONS" -eq $BS_FALSE ] && return
 
     FAILED_DAEMONS=0
-    for fname in minion master syndic; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         # shellcheck disable=SC2009
@@ -4514,8 +4667,8 @@ fi
 # Run any start daemons function
 if [ "$STARTDAEMONS_INSTALL_FUNC" != "null" ]; then
     echoinfo "Running ${STARTDAEMONS_INSTALL_FUNC}()"
-    echodebug "Waiting 3 seconds for processes to settle before checking for them"
-    sleep 3
+    echodebug "Waiting ${__DEFAULT_SLEEP} seconds for processes to settle before checking for them"
+    sleep ${__DEFAULT_SLEEP}
     $STARTDAEMONS_INSTALL_FUNC
     if [ $? -ne 0 ]; then
         echoerror "Failed to run ${STARTDAEMONS_INSTALL_FUNC}()!!!"
@@ -4526,16 +4679,17 @@ fi
 # Check if the installed daemons are running or not
 if [ "$DAEMONS_RUNNING_FUNC" != "null" ] && [ $_START_DAEMONS -eq $BS_TRUE ]; then
     echoinfo "Running ${DAEMONS_RUNNING_FUNC}()"
-    echodebug "Waiting 3 seconds for processes to settle before checking for them"
-    sleep 3  # Sleep a little bit to let daemons start
+    echodebug "Waiting ${__DEFAULT_SLEEP} seconds for processes to settle before checking for them"
+    sleep ${__DEFAULT_SLEEP}  # Sleep a little bit to let daemons start
     $DAEMONS_RUNNING_FUNC
     if [ $? -ne 0 ]; then
         echoerror "Failed to run ${DAEMONS_RUNNING_FUNC}()!!!"
 
-        for fname in minion master syndic; do
+        for fname in minion master syndic api; do
             # Skip if not meant to be installed
             [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
             [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+            [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
             [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
             if [ "$_ECHO_DEBUG" -eq $BS_FALSE ]; then
