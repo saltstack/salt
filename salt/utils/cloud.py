@@ -555,6 +555,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
     Copy a deploy script to a remote server, execute it, and remove it
     '''
     tmp_dir = '{0}-{1}'.format(tmp_dir, uuid.uuid4())
+    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(
