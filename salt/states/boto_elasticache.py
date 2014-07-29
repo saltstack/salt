@@ -197,7 +197,7 @@ def present(
     config = __salt__['boto_elasticache.get_config'](name, region, key, keyid,
                                                      profile)
     if config is None:
-        msg = 'Failed to retrieve cache cluster info from AWS.'.format(name)
+        msg = 'Failed to retrieve cache cluster info from AWS.'
         ret['comment'] = msg
         return ret
     elif not config:
