@@ -47,12 +47,15 @@ class SaltStackVersion(object):
     and also supports version comparison.
     '''
 
-    __slots__ = ('name', 'major', 'minor', 'bugfix', 'rc', 'noc', 'sha')
+    __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'rc', 'noc', 'sha')
 
     git_describe_regex = re.compile(
-        r'(?:[^\d]+)?(?P<major>[\d]{1,4})\.(?P<minor>[\d]{1,2})'
-        r'(?:\.(?P<bugfix>[\d]{0,2}))?(?:rc(?P<rc>[\d]{1}))?'
-        r'(?:(?:.*)-(?P<noc>[\d]+)-(?P<sha>[a-z0-9]{8}))?'
+        r'(?:[^\d]+)?(?P<major>[\d]{1,4})'
+        r'\.(?P<minor>[\d]{1,2})'
+        r'(?:\.(?P<bugfix>[\d]{0,2}))?'
+        r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
+        r'(?:rc(?P<rc>[\d]{1}))?'
+        r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
     )
     git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
 
@@ -193,6 +196,7 @@ class SaltStackVersion(object):
                  major,
                  minor,
                  bugfix=0,
+                 mbugfix=0,
                  rc=0,              # pylint: disable=C0103
                  noc=0,
                  sha=None):
@@ -208,6 +212,11 @@ class SaltStackVersion(object):
         elif isinstance(bugfix, string_types):
             bugfix = int(bugfix)
 
+        if mbugfix is None:
+            mbugfix = 0
+        elif isinstance(mbugfix, string_types):
+            mbugfix = int(mbugfix)
+
         if rc is None:
             rc = 0
         elif isinstance(rc, string_types):
@@ -215,14 +224,17 @@ class SaltStackVersion(object):
 
         if noc is None:
             noc = 0
+        elif isinstance(noc, string_types) and noc == 'n/a':
+            noc = -1
         elif isinstance(noc, string_types):
             noc = int(noc)
 
         self.major = major
         self.minor = minor
         self.bugfix = bugfix
+        self.mbugfix = mbugfix
         self.rc = rc  # pylint: disable=C0103
-        self.name = self.VNAMES.get((major, minor, bugfix, rc), None)
+        self.name = self.VNAMES.get((major, minor), None)
         self.noc = noc
         self.sha = sha
 
@@ -265,7 +277,8 @@ class SaltStackVersion(object):
         return (
             self.major,
             self.minor,
-            self.bugfix
+            self.bugfix,
+            self.mbugfix
         )
 
     @property
@@ -274,6 +287,7 @@ class SaltStackVersion(object):
             self.major,
             self.minor,
             self.bugfix,
+            self.mbugfix,
             self.rc
         )
 
@@ -283,6 +297,7 @@ class SaltStackVersion(object):
             self.major,
             self.minor,
             self.bugfix,
+            self.mbugfix,
             self.rc,
             self.noc
         )
@@ -293,6 +308,7 @@ class SaltStackVersion(object):
             self.major,
             self.minor,
             self.bugfix,
+            self.mbugfix,
             self.rc,
             self.noc,
             self.sha
@@ -305,10 +321,15 @@ class SaltStackVersion(object):
             self.minor,
             self.bugfix
         )
+        if self.mbugfix:
+            version_string += '.{0}'.format(self.mbugfix)
         if self.rc:
             version_string += 'rc{0}'.format(self.rc)
         if self.noc and self.sha:
-            version_string += '-{0}-{1}'.format(self.noc, self.sha)
+            noc = self.noc
+            if noc < 0:
+                noc = 'n/a'
+            version_string += '-{0}-{1}'.format(noc, self.sha)
         return version_string
 
     @property
@@ -366,11 +387,16 @@ class SaltStackVersion(object):
             'minor={0}'.format(self.minor),
             'bugfix={0}'.format(self.bugfix)
         ])
+        if self.mbugfix:
+            parts.append('minor-bugfix={0}'.format(self.mbugfix))
         if self.rc:
             parts.append('rc={0}'.format(self.rc))
-        if self.noc and self.sha:
+        noc = self.noc
+        if noc == -1:
+            noc = 'n/a'
+        if noc and self.sha:
             parts.extend([
-                'noc={0}'.format(self.noc),
+                'noc={0}'.format(noc),
                 'sha={0}'.format(self.sha)
             ])
         return '<{0} {1}>'.format(self.__class__.__name__, ' '.join(parts))
@@ -442,7 +468,7 @@ def __get_version(saltstack_version):
 
             # We only define the parsed SHA and set NOC as ??? (unknown)
             saltstack_version.sha = out.strip()
-            saltstack_version.noc = 'n/a'
+            saltstack_version.noc = -1
 
     except OSError as os_err:
         if os_err.errno != 2:
