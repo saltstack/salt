@@ -427,7 +427,7 @@ def installed(name, categories=None, includes=None, retries=10):
            'comment': ''}
     if not categories:
         categories = [name]
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
     win_updater.SetIncludes(includes)
@@ -499,7 +499,7 @@ def downloaded(name, categories=None, includes=None, retries=10):
            'comment': ''}
     if not categories:
         categories = [name]
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
     win_updater.SetIncludes(includes)

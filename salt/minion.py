@@ -633,7 +633,7 @@ class Minion(MinionBase):
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
 
         if 'proxy' in self.opts['pillar']:
-            log.debug('I am {0} and I need to start some proxies for {0}'.format(self.opts['id'],
+            log.debug('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
                                                                                  self.opts['pillar']['proxy']))
             for p in self.opts['pillar']['proxy']:
                 log.debug('Starting {0} proxy.'.format(p))
