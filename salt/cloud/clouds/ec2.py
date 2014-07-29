@@ -1998,12 +1998,14 @@ def create(vm_=None, call=None):
     # bootstrapped, once the necessary port is available.
     log.info('Created node {0}'.format(vm_['name']))
 
+    instance = data[0]['instancesSet']['item']
+
     # Wait for the necessary port to become available to bootstrap
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = data[0]['instancesSet']['item']['privateIpAddress']
+        ip_address = instance['privateIpAddress']
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
-        ip_address = data[0]['instancesSet']['item']['ipAddress']
+        ip_address = instance['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
 
@@ -2015,17 +2017,8 @@ def create(vm_=None, call=None):
         vm_, data, ip_address, display_ssh_output
     )
 
-    # The instance is booted and accessable, let's Salt it!
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data[0]['instancesSet']['item'])
-        )
-    )
-
-    ret.update(data[0]['instancesSet']['item'])
+    # The instance is booted and accessible, let's Salt it!
+    ret = instance.copy()
 
     # Get ANY defined volumes settings, merging data, in the following order
     # 1. VM config
@@ -2056,16 +2049,30 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+        ret.setdefault(key, value)
+
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(instance)
+        )
+    )
+
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['provider'],
+        'instance_id': vm_['instance_id'],
+    }
+    if volumes:
+        event_data['volumes'] = volumes
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-            'instance_id': vm_['instance_id'],
-        },
+        event_data,
         transport=__opts__['transport']
     )
 
