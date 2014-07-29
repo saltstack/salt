@@ -900,7 +900,7 @@ def init(name,
     # set the default user/password, only the first time
     if password:
         changes['250_password'] = 'Passwords in place\n'
-        gid = '/.lxc.initial_pass'.format(name)
+        gid = '/.lxc.initial_pass'
         gids = [gid,
                 '/lxc.initial_pass',
                 '/.lxc.{0}.initial_pass'.format(name)]
