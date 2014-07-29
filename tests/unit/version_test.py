@@ -59,7 +59,8 @@ class VersionTestCase(TestCase):
             ('v0.17.0', 'v0.17.0rc1'),
             ('Hydrogen', '0.17.0'),
             ('Helium', 'Hydrogen'),
-            ('v2014.1.4.1-n/a-abcdefgh', 'v2014.1.4.1rc3-n/a-abcdefgh')
+            ('v2014.1.4.1-n/a-abcdefgh', 'v2014.1.4.1rc3-n/a-abcdefgh'),
+            ('v2014.1.4.1-1-abcdefgh', 'v2014.1.4.1-n/a-abcdefgh')
         )
         for higher_version, lower_version in examples:
             self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
