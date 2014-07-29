@@ -115,7 +115,7 @@ def present(name,
         return ret
     cret = None
     if toinstall or toupgrade:
-        cret = __salt__['postgres.create_extension'.format(mode)](
+        cret = __salt__['postgres.create_extension'](
             name=name,
             if_not_exists=if_not_exists,
             schema=schema,
