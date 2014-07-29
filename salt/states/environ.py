@@ -128,7 +128,7 @@ def setenv(name,
     if __opts__['test']:
         ret['result'] = None
         if ret['changes']:
-            ret['comment'] = 'Environ values will be changed'.format(name)
+            ret['comment'] = 'Environ values will be changed'
         else:
             ret['comment'] = 'Environ values are already set with the correct values'
         return ret

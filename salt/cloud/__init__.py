@@ -1265,7 +1265,7 @@ class Cloud(object):
                 else:
                     name_exists = True
             if name_exists:
-                msg = '{0} already exists under {0}:{1}'.format(
+                msg = '{0} already exists under {1}:{2}'.format(
                     name, alias, driver
                 )
                 log.error(msg)

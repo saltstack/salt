@@ -1745,7 +1745,7 @@ def owner(*paths):
     if not paths:
         return ''
     ret = {}
-    cmd = 'rpm -qf --queryformat "%{NAME}" {0!r}'
+    cmd = 'rpm -qf --queryformat "%{{NAME}}" {0!r}'
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
                                                output_loglevel='trace')

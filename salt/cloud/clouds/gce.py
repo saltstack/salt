@@ -882,7 +882,7 @@ def create_hc(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'created health_check',
-        'salt/cloud/healthcheck/created'.format(name),
+        'salt/cloud/healthcheck/created',
         {
             'name': name,
             'host': host,
