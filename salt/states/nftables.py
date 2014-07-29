@@ -413,7 +413,7 @@ def delete(name, family='ipv4', **kwargs):
             if kwargs['save']:
                 __salt__['nftables.save'](filename=None, family=family)
                 ret['comment'] = ('Deleted and Saved nftables rule for {0} for {1}'
-                                  '{2}'.format(name, command.strip()), family)
+                                  '{2}'.format(name, command.strip(), family))
         return ret
     else:
         ret['result'] = False
@@ -460,6 +460,7 @@ def flush(name, family='ipv4', **kwargs):
         if not __salt__['nftables.check_chain'](kwargs['table'], kwargs['chain'], family=family):
             ret['result'] = False
             ret['comment'] = 'Failed to flush chain {0} in table {1} in family {2}, chain does not exist.'.format(
+                kwargs['chain'],
                 kwargs['table'],
                 family
             )
