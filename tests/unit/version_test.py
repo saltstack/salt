@@ -37,7 +37,8 @@ class VersionTestCase(TestCase):
             ('0.17.0rc1', (0, 17, 0, 0, 1, 0, None), None),
             ('v0.17.0rc1-1-g52ebdfd', (0, 17, 0, 0, 1, 1, 'g52ebdfd'), None),
             ('v2014.1.4.1', (2014, 1, 4, 1, 0, 0, None), None),
-            ('v2014.1.4.1rc3-n/a-abcdefgh', (2014, 1, 4, 1, 3, -1, 'abcdefgh'), None)
+            ('v2014.1.4.1rc3-n/a-abcdefgh', (2014, 1, 4, 1, 3, -1, 'abcdefgh'), None),
+            ('v3.4.1.1', (3, 4, 1, 1, 0, 0, None), None)
 
         )
 
