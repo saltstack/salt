@@ -1193,7 +1193,7 @@ def managed(name,
             'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor \'contents_grains\' '
             'was defined, yet \'replace\' was set to \'True\'. As there is '
             'no source to replace the file with, \'replace\' has been set '
-            'to \'False\' to avoid reading the file unnecessarily'.format(name)
+            'to \'False\' to avoid reading the file unnecessarily'
         )
 
     user = _test_owner(kwargs, user=user)
@@ -1639,7 +1639,7 @@ def directory(name,
                     if isinstance(gid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group, user)
+                                         'for group {0}'.format(group)
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \

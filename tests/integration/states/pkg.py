@@ -37,7 +37,9 @@ _PKG_TARGETS_32 = {
 # Test packages with dot in pkg name
 # (https://github.com/saltstack/salt/issues/8614)
 _PKG_TARGETS_DOT = {
-    'CentOS': 'python-migrate0.5'
+    'RedHat': {'5': 'python-migrate0.5',
+               '6': 'tomcat6-el-2.1-api',
+               '7': 'tomcat-el-2.2-api'}
 }
 
 
@@ -264,8 +266,12 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
-        os_name = grains.get('os', '')
-        target = _PKG_TARGETS_DOT.get(os_name, '')
+        os_family = grains.get('os_family', '')
+        os_version = grains.get('osmajorrelease', [''])[0]
+        if os_family in _PKG_TARGETS_DOT:
+            target = _PKG_TARGETS_DOT.get(os_family, '').get(os_version, '')
+        else:
+            target = None
         if target:
             ret = self.run_state('pkg.installed', name=target)
             self.assertSaltTrueReturn(ret)

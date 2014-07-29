@@ -341,7 +341,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     elif isinstance(creates, list) and all([
         os.path.exists(path) for path in creates
     ]):
-        return {'comment': 'All files in creates exist'.format(creates),
+        return {'comment': 'All files in creates exist',
                 'result': True}
 
     # No reason to stop, return True

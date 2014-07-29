@@ -236,7 +236,7 @@ def _instance_profile_associated(
             ret['comment'] = 'Instance profile {0} associated.'.format(name)
         else:
             ret['result'] = False
-            msg = 'Failed to associate {0} instance profile with {1} role.'
+            msg = 'Failed to associate {0} instance profile with {0} role.'
             ret['comment'] = msg.format(name)
     return ret
 
@@ -499,6 +499,6 @@ def _instance_profile_disassociated(
             ret['comment'] = msg
         else:
             ret['result'] = False
-            msg = 'Failed to disassociate {0} instance profile from {1} role.'
+            msg = 'Failed to disassociate {0} instance profile from {0} role.'
             ret['comment'] = msg.format(name)
     return ret

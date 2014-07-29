@@ -116,7 +116,7 @@ def war_deployed(name,
             ret['comment'] = ('{0} in version {1} is already deployed'.
                     format(name, version))
             if webapps[name]['mode'] != 'running':
-                ret['changes']['start'] = 'starting {0}'.format(name, version)
+                ret['changes']['start'] = 'starting {0}'.format(name)
                 status = False
             else:
                 return ret

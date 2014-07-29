@@ -2121,4 +2121,4 @@ def api_config(path):
     # Let's override them with salt-api's required defaults
     defaults.update(DEFAULT_API_OPTS)
 
-    return master_config(path, defaults=defaults)
+    return client_config(path, defaults=defaults)
