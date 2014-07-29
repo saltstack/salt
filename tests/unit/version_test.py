@@ -59,10 +59,11 @@ class VersionTestCase(TestCase):
             ('v0.17.0', 'v0.17.0rc1'),
             ('Hydrogen', '0.17.0'),
             ('Helium', 'Hydrogen'),
+            ('v2014.1.4.1-n/a-abcdefgh', 'v2014.1.4.1rc3-n/a-abcdefgh')
         )
-        for v1, v2 in examples:
-            self.assertTrue(SaltStackVersion.parse(v1) > v2)
-            self.assertTrue(SaltStackVersion.parse(v2) < v1)
+        for higher_version, lower_version in examples:
+            self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
+            self.assertTrue(SaltStackVersion.parse(lower_version) < higher_version)
 
     def test_unparsable_version(self):
         with self.assertRaises(ValueError):
