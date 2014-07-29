@@ -32,6 +32,7 @@ Connection module for Amazon VPC
             region: us-east-1
 
 :depends: boto
+
 '''
 
 # Import Python libs
@@ -66,17 +67,20 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
     Given a subnet (aka: a vpc zone identifier) or list of subnets, returns
     vpc association.
 
-    CLI example::
+    Returns a VPC ID if the given subnets are associated with the same VPC ID.
+    Returns False on an error or if the given subnets are associated with
+    different VPC IDs.
 
-        a single subnet:
-        salt myminion boto_vpc.get_subnet_association subnet-61b47516 region=us-east-1
+    CLI Examples::
 
-        multiple subnets:
-        salt myminion boto_vpc.get_subnet_association ['subnet-61b47516','subnet-2cb9785b'] region=us-east-1
+    .. code-block:: bash
 
-        return values are:
-        False - if an error occurs or if given subnets are associated with multiple vpcs
-        VPC ID - if all given subnets are associated with one vpc
+        salt myminion boto_vpc.get_subnet_association subnet-61b47516
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_subnet_association ['subnet-61b47516','subnet-2cb9785b']
+
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -108,11 +112,17 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
 
 def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a vpc id, check to see if the given vpc exists.
+    Given a VPC ID, check to see if the given VPC ID exists.
+
+    Returns True if the given VPC ID exists and returns False if the given
+    VPC ID does not exist.
 
     CLI example::
 
-        salt myminion boto_vpc.exists myvpc region=us-east-1
+    .. code-block:: bash
+
+        salt myminion boto_vpc.exists myvpc
+
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
