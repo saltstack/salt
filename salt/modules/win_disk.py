@@ -63,9 +63,9 @@ def usage():
             capacity = int(used / float(totalsize) * 100)
             ret['{0}:\\'.format(drive)] = {
                 'filesystem': '{0}:\\'.format(drive),
-                '1K-blocks': totalsize,
-                'used': used,
-                'available': available_space,
+                '1K-blocks': totalsize / 1024,
+                'used': used / 1024,
+                'available': available_space / 1024,
                 'capacity': '{0}%'.format(capacity),
             }
         except Exception:
