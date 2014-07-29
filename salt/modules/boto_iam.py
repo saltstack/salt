@@ -255,12 +255,12 @@ def associate_profile_to_role(profile_name, role_name, region=None, key=None,
     else:
         try:
             conn.add_role_to_instance_profile(profile_name, role_name)
-            msg = 'Added {0} instance profile to {0} role.'
+            msg = 'Added {0} instance profile to {1} role.'
             log.info(msg.format(profile_name, role_name))
             return True
         except boto.exception.BotoServerError as e:
             log.debug(e)
-            msg = 'Failed to add {0} instance profile to {0} role.'
+            msg = 'Failed to add {0} instance profile to {1} role.'
             log.error(msg.format(profile_name, role_name))
             return False
 
@@ -293,12 +293,12 @@ def disassociate_profile_from_role(profile_name, role_name, region=None,
     else:
         try:
             conn.remove_role_from_instance_profile(profile_name, role_name)
-            msg = 'Removed {0} instance profile from {0} role.'
+            msg = 'Removed {0} instance profile from {1} role.'
             log.info(msg.format(profile_name, role_name))
             return True
         except boto.exception.BotoServerError as e:
             log.debug(e)
-            msg = 'Failed to remove {0} instance profile from {0} role.'
+            msg = 'Failed to remove {0} instance profile from {1} role.'
             log.error(msg.format(profile_name, role_name))
             return False
 
