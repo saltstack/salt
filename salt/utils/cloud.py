@@ -939,6 +939,7 @@ def deploy_script(host,
         opts = {}
 
     tmp_dir = '{0}-{1}'.format(tmp_dir, uuid.uuid4())
+    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(
