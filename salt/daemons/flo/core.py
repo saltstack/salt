@@ -346,6 +346,8 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
                   'ival': odict()},
         aliveds={'ipath': '.salt.var.presence.aliveds',
                  'ival': odict()},
+        reapeds={'ipath': '.salt.var.presence.reapeds',
+                         'ival': odict()},
         availables={'ipath': '.salt.var.presence.availables',
                     'ival': set()},
         changeds={'ipath': '.salt.var.presence.changeds',
@@ -361,6 +363,7 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
             minus is set of names of newly unavailable remotes
         alloweds is dict of allowed remotes keyed by name
         aliveds is dict of alived remotes keyed by name
+        reapeds is dict of reaped remotes keyed by name
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
@@ -371,21 +374,17 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
             self.changeds.update(minus=set(self.stack.value.changeds['minus']))
             self.alloweds.value = odict(self.stack.value.alloweds)
             self.aliveds.value = odict(self.stack.value.aliveds)
+            self.reapeds.value = odict(self.stack.value.reapeds)
 
             console.concise(" Manage {0}.\nAvailables: {1}\nChangeds:\nPlus: {2}\n"
-                            "Minus: {3}\nAlloweds: {4}\nAliveds{5}\n".format(
+                            "Minus: {3}\nAlloweds: {4}\nAliveds: {5}\nReapeds: {6}\n".format(
                     stack.name,
                     self.availables.value,
                     self.changeds.data.plus,
                     self.changeds.data.minus,
                     self.alloweds.value,
-                    self.aliveds.value))
-
-            # share .salt.var.presence.alloweds value is dict keyed by name of allowed remotes
-            # share .salt.var.presence.changeds has two fields,
-            #      plus is set of newly allowed remotes
-            #      minus is set of newly unallowed remotes
-
+                    self.aliveds.value,
+                    self.reapeds.value))
             # need to queue presence event message if either plus or minus is not empty
 
 
