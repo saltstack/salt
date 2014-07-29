@@ -602,8 +602,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
                     format(cmd, table_type, hook, priority)
         else:
             # Specifiy one, rqeuire all
-            return 'Error: table_type hook and priority required'.\
-                    format(table, family)
+            return 'Error: table_type hook and priority required'
 
     out = __salt__['cmd.run'](cmd)
 

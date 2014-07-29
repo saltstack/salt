@@ -114,8 +114,7 @@ def extracted(name,
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(
-                    source, name)
+                'Archive {0} would have been downloaded in cache'.format(source)
             return ret
 
         log.debug('Archive file {0} is not in cache, download it'.format(source))
