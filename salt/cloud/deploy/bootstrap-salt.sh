@@ -1649,6 +1649,9 @@ install_ubuntu_deps() {
     # Minimal systems might not have upstart installed, install it
     __apt_get_install_noinput upstart
 
+    # Need python-apt for managing packages via Salt
+    __apt_get_install_noinput python-apt
+
     if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
         __apt_get_install_noinput python-requests
         __PIP_PACKAGES=""
@@ -1981,6 +1984,9 @@ _eof
     # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
     __apt_get_install_noinput python-requests python-pip procps pciutils
 
+    # Need python-apt for managing packages via Salt
+    __apt_get_install_noinput python-apt
+
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
         __apt_get_install_noinput python-pip
@@ -2048,14 +2054,14 @@ _eof
 
         apt-get update
         __apt_get_install_noinput -t unstable libzmq3 libzmq3-dev || return 1
-        __PACKAGES="build-essential python-dev python-pip python-requests"
+        __PACKAGES="build-essential python-dev python-pip python-requests python-apt"
         # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
         __PACKAGES="${__PACKAGES} procps pciutils"
         # shellcheck disable=SC2086
         __apt_get_install_noinput ${__PACKAGES} || return 1
     else
         apt-get update || return 1
-        __PACKAGES="python-zmq python-requests"
+        __PACKAGES="python-zmq python-requests python-apt"
         # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
         __PACKAGES="${__PACKAGES} procps pciutils"
         # shellcheck disable=SC2086
