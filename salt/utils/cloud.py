@@ -20,6 +20,7 @@ import msgpack
 import traceback
 import copy
 import re
+import uuid
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -937,6 +938,8 @@ def deploy_script(host,
     if not isinstance(opts, dict):
         opts = {}
 
+    tmp_dir = '{0}-{1}'.format(tmp_dir, uuid.uuid4())
+    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(

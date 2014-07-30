@@ -14,6 +14,7 @@ import tempfile
 import salt.crypt
 import salt.utils
 import salt.config
+import salt.syspaths
 
 
 # Set up logging
@@ -140,14 +141,6 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     return res
 
 
-def _prep_bootstrap(mpt):
-    # Verify that the boostrap script is downloaded
-    bs_ = __salt__['config.gather_bootstrap_script']()
-
-    # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
-
-
 def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
             pub_key=None, priv_key=None):
     '''
@@ -208,11 +201,10 @@ def _install(mpt):
     Return True if install is successful or already installed.
     '''
 
-    _prep_bootstrap(mpt)
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh /tmp/bootstrap-salt.sh -c /tmp; fi'
+    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
     return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
 
 

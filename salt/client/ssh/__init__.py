@@ -901,7 +901,7 @@ class Single(object):
             trans_tar,
             os.path.join(DEFAULT_THIN_DIR, 'salt_state.tgz'),
         )
-        self.argv = ['state.pkg', '/tmp/salt_state.tgz', 'test={0}'.format(test)]
+        self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
 
 
 class SSHState(salt.state.State):
