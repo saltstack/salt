@@ -139,7 +139,7 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = {}
-    for name, data in get_repo_data().items():
+    for name, data in get_repo_data().get('repo', {}).items():
         if version(name):
             latest = latest_version(name)
             if latest:
