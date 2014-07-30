@@ -58,3 +58,6 @@ except ImportError:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
     LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
+    INSTALL_DIR = os.path.dirname(os.path.realpath(__file__))
+    CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
+    BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
