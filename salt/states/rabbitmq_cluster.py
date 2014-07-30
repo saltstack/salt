@@ -29,7 +29,7 @@ def __virtual__():
     return salt.utils.which('rabbitmqctl') is not None
 
 
-def join(name, host, user='rabbit', runas=None):
+def joined(name, host, user='rabbit', runas=None):
     '''
     Ensure the current node joined to a cluster with node user@host
 
