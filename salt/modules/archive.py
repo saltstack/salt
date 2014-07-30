@@ -70,7 +70,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
 
     .. code-block:: bash
 
-        salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja 
+        salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
 
 
     To unpack a tarfile, for example:
