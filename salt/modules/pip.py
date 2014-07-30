@@ -703,14 +703,15 @@ def uninstall(pkgs=None,
         if isinstance(pkgs, string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
-            with salt.utils.fopen(requirement) as rq_:
-                for req in rq_:
-                    try:
-                        req_pkg, _ = req.split('==')
-                        if req_pkg in pkgs:
-                            pkgs.remove(req_pkg)
-                    except ValueError:
-                        pass
+            for requirement in requirements:
+                with salt.utils.fopen(requirement) as rq_:
+                    for req in rq_:
+                        try:
+                            req_pkg, _ = req.split('==')
+                            if req_pkg in pkgs:
+                                pkgs.remove(req_pkg)
+                        except ValueError:
+                            pass
         cmd.extend(pkgs)
 
     cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)
