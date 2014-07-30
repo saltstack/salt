@@ -4,7 +4,6 @@ Read in the roster from a flat file using the renderer system
 '''
 
 # Import python libs
-import os
 import fnmatch
 import re
 
