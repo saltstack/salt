@@ -190,7 +190,7 @@ def present(name,
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user.
+        the same name as the user, Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -208,15 +208,15 @@ def present(name,
 
     remove_groups
         Remove groups that the user is a member of that weren't specified in
-        the state, True by default
+        the state, Default is ``False``.
 
     home
         The location of the home directory to manage
 
     createhome
-        If True, the home directory will be created if it doesn't exist.
+        If False, the home directory will not be created if it doesn't exist.
         Please note that directories leading up to the home directory
-        will NOT be created.
+        will NOT be created, Default is ``True``.
 
     password
         A password hash to set for the user. This field is only supported on
@@ -229,19 +229,20 @@ def present(name,
         Set to False to keep the password from being changed if it has already
         been set and the password hash differs from what is specified in the
         "password" field. This option will be ignored if "password" is not
-        specified.
+        specified, Default is ``True``.
 
     empty_password
-        Set to True to enable no password-less login for user
+        Set to True to enable password-less login for user, Default is ``False``.
 
     shell
         The login shell, defaults to the system default shell
 
     unique
-        Require a unique UID, True by default
+        Require a unique UID, Default is ``True``.
 
     system
-        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID, Default is
+        ``False``.
 
 
     User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS
@@ -552,12 +553,13 @@ def absent(name, purge=False, force=False):
         The name of the user to remove
 
     purge
-        Set purge to delete all of the user's files as well as the user
+        Set purge to True to delete all of the user's files as well as the user,
+        Default is ``False``.
 
     force
-        If the user is logged in the absent state will fail, set the force
+        If the user is logged in, the absent state will fail. Set the force
         option to True to remove the user even if they are logged in. Not
-        supported in FreeBSD and Solaris.
+        supported in FreeBSD and Solaris, Default is ``False``.
     '''
     ret = {'name': name,
            'changes': {},
