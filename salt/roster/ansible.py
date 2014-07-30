@@ -194,8 +194,10 @@ class Inventory(Target):
                     else:
                         proc = '_parse_group_line'
                         varname = line.strip('[]')
-                    continue
-                getattr(self, proc)(line, varname)
+
+                    getattr(self, proc)(line, varname)
+
+                continue
 
     def _parse_group_line(self, line, varname):
         '''
