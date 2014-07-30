@@ -232,7 +232,7 @@ def present(name,
         specified, Default is ``True``.
 
     empty_password
-        Set to True to enable no password-less login for user, Default is ``False``.
+        Set to True to enable password-less login for user, Default is ``False``.
 
     shell
         The login shell, defaults to the system default shell
