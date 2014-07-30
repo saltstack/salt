@@ -31,16 +31,16 @@ def __virtual__():
 
 def join(name, host, user='rabbit', runas=None):
     '''
-    Ensure the RabbitMQ plugin is enabled.
+    Ensure the current node joined to a cluster with node user@host
 
     name
         Irrelevant, not used (recommended: user@host)
     user
-        The user to join the cluster as (default: rabbit)
+        The user of node to join to (default: rabbit)
     host
-        The cluster host to join to
+        The host of node to join to
     runas
-        The user to run the rabbitmq-plugin command as
+        The user to run the rabbitmq command as
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -53,7 +53,7 @@ def join(name, host, user='rabbit', runas=None):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Host is set to join cluster {0}@{1}'.format(
+        ret['comment'] = 'Node is set to join cluster {0}@{1}'.format(
             user, host)
         return ret
 
