@@ -157,7 +157,8 @@ def _check_cron(user,
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
+                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                     (cron['cmd'], cmd), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
