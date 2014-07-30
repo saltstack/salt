@@ -125,12 +125,14 @@ def targets(tgt, tgt_type='glob', **kwargs):
     else:
         hosts = os.path.join(__opts__['conf_file'], 'roster')
 
-    if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
-        imatcher = Script(tgt, tgt_type='glob', inventory_file=hosts)
-    else:
-        imatcher = Inventory(tgt, tgt_type='glob', inventory_file=hosts)
-    return imatcher.targets()
-
+    try:
+        if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
+            imatcher = Script(tgt, tgt_type='glob', inventory_file=hosts)
+        else:
+            imatcher = Inventory(tgt, tgt_type='glob', inventory_file=hosts)
+            return imatcher.targets()
+    except IOError:
+        return []
 
 class Target(object):
     def targets(self):
