@@ -21,7 +21,7 @@ no disk space:
 
     > /var/log/messages:
       cmd.run:
-        - unless: echo 'foo' > /tmp/.test
+        - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
 Only run if the file specified by ``creates`` does not exist, in this case
 touch /tmp/foo if it does not exist.
