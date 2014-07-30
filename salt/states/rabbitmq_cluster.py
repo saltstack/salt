@@ -29,7 +29,7 @@ def __virtual__():
     return salt.utils.which('rabbitmqctl') is not None
 
 
-def joined(name, host, user='rabbit', runas=None):
+def joined(name, host, user='rabbit', ram_node=None, runas=None):
     '''
     Ensure the current node joined to a cluster with node user@host
 
@@ -39,6 +39,8 @@ def joined(name, host, user='rabbit', runas=None):
         The user of node to join to (default: rabbit)
     host
         The host of node to join to
+    ram_node
+        Join node as a RAM node
     runas
         The user to run the rabbitmq command as
     '''
@@ -57,7 +59,8 @@ def joined(name, host, user='rabbit', runas=None):
             user, host)
         return ret
 
-    result = __salt__['rabbitmq.join_cluster'](host, user, runas=runas)
+    result = __salt__['rabbitmq.join_cluster'](host, user,
+                                               ram_node, runas=runas)
 
     if 'Error' in result:
         ret['result'] = False

@@ -349,7 +349,7 @@ def cluster_status(user=None):
     return res
 
 
-def join_cluster(host, user='rabbit', runas=None):
+def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     '''
     Join a rabbit cluster
 
@@ -359,11 +359,13 @@ def join_cluster(host, user='rabbit', runas=None):
 
         salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
     '''
+    if ram_node:
+        cmd = 'rabbitmqctl join_cluster --ram {0}@{1}'.format(user, host)
+    else:
+        cmd = 'rabbitmqctl join_cluster {0}@{1}'.format(user, host)
 
     stop_app(runas)
-    res = __salt__['cmd.run'](
-        'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
-        runas=runas)
+    res = __salt__['cmd.run'](cmd, runas=runas)
     start_app(runas)
 
     return _format_response(res, 'Join')
