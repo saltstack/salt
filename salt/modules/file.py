@@ -1571,7 +1571,7 @@ def contains_glob(path, glob_expr):
         return False
 
 
-def append(path, *args):
+def append(path, *args, **kwargs):
     '''
     .. versionadded:: 0.9.5
 
@@ -1590,8 +1590,27 @@ def append(path, *args):
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.append /etc/motd args='cheese=spam'
+
+            salt '*' file.append /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
     # Largely inspired by Fabric's contrib.files.append()
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
 
     with salt.utils.fopen(path, "r+") as ofile:
         # Make sure we have a newline at the end of the file
@@ -1616,7 +1635,7 @@ def append(path, *args):
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
 
-def prepend(path, *args):
+def prepend(path, *args, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1635,7 +1654,27 @@ def prepend(path, *args):
         salt '*' file.prepend /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.prepend /etc/motd args='cheese=spam'
+
+            salt '*' file.prepend /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     try:
         contents = salt.utils.fopen(path).readlines()
     except IOError:
@@ -1651,7 +1690,7 @@ def prepend(path, *args):
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
-def write(path, *args):
+def write(path, *args, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1669,7 +1708,27 @@ def write(path, *args):
 
         salt '*' file.write /etc/motd \\
                 "With all thine offerings thou shalt offer salt."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.write /etc/motd args='cheese=spam'
+
+            salt '*' file.write /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     contents = []
     for line in args:
         contents.append('{0}\n'.format(line))
