@@ -553,12 +553,13 @@ def absent(name, purge=False, force=False):
         The name of the user to remove
 
     purge
-        Set purge to delete all of the user's files as well as the user
+        Set purge to True to delete all of the user's files as well as the user,
+        Default is ``False``.
 
     force
-        If the user is logged in the absent state will fail, set the force
+        If the user is logged in, the absent state will fail. Set the force
         option to True to remove the user even if they are logged in. Not
-        supported in FreeBSD and Solaris.
+        supported in FreeBSD and Solaris, Default is ``False``. 
     '''
     ret = {'name': name,
            'changes': {},
