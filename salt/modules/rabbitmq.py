@@ -358,7 +358,7 @@ def join_cluster(host, user='rabbit', ram_node=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
+        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
     '''
     if ram_node:
         cmd = 'rabbitmqctl join_cluster --ram {0}@{1}'.format(user, host)
