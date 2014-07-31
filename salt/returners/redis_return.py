@@ -6,6 +6,8 @@ To enable this returner the minion will need the python client for redis
 installed and the following values configured in the minion or master
 config, these are the defaults:
 
+.. code-block:: yaml
+
     redis.db: '0'
     redis.host: 'salt'
     redis.port: 6379
