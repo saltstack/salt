@@ -619,6 +619,12 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
 
         salt '*' pkg.upgrade
     '''
+
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     if salt.utils.is_true(refresh):
         refresh_db()
 
@@ -629,10 +635,15 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace')
+    if result['retcode'] != 0:
+        ret['result'] = False
+        ret['comment'] = result['stderr']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def hold(name=None, pkgs=None, sources=None, *kwargs):
