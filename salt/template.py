@@ -133,8 +133,8 @@ def template_shebang(template, renderers, default):
     with salt.utils.fopen(template, 'r') as ifile:
         line = ifile.readline()
 
-        # Check if it starts with a shebang
-        if line.startswith('#!'):
+        # Check if it starts with a shebang and not a path
+        if line.startswith('#!') and not line.startswith('#!/'):
 
             # pull out the shebang data
             render_pipe = check_render_pipe_str(line.strip()[2:], renderers)
