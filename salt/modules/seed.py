@@ -129,9 +129,10 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                  '{0}'.format(mpt))
         res = _install(mpt)
     elif prep_install:
-        _prep_bootstrap(mpt)
-        log.info('{0} is ready for salt-minion installation'.format(mpt))
-        res = True
+        log.error('The prep_install option is no longer supported. Please use '
+                  'the bootstrap script installed with Salt, located at {0}.'
+                  .format(salt.syspaths.BOOTSTRAP))
+        res = False
     else:
         log.warn('No useful action performed on '
                  '{0}'.format(mpt))
