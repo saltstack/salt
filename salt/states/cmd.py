@@ -895,8 +895,8 @@ def script(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Command {0!r} would have been executed'
-            ret['comment'] = ret['comment'].format(name)
+            ret['comment'] = 'Command {0!r} would have been ' \
+                             'executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
 
         # Wow, we passed the test, run this sucker!
