@@ -67,3 +67,7 @@ def joined(name, host, user='rabbit', runas=None):
         ret['changes'] = {'old': '', 'new': '{0}@{1}'.format(user, host)}
 
     return ret
+
+
+# Alias join to preserve backward compat
+join = joined
