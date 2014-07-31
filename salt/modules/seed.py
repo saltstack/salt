@@ -129,7 +129,6 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                  '{0}'.format(mpt))
         res = _install(mpt)
     elif prep_install:
-        _prep_bootstrap(mpt)
         log.info('{0} is ready for salt-minion installation'.format(mpt))
         res = True
     else:
