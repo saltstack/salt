@@ -8,6 +8,8 @@ intended for use primarily from the state runner from the master.
 
 The salt.state declaration can call out a highstate or a list of sls:
 
+.. code-block:: yaml
+
     webservers:
       salt.state:
         - tgt: 'web*'
