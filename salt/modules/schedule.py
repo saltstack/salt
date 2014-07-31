@@ -16,9 +16,6 @@ import salt.utils.odict
 
 __proxyenabled__ = ['*']
 
-import logging
-log = logging.getLogger(__name__)
-
 __func_alias__ = {
     'list_': 'list',
     'reload_': 'reload'
