@@ -120,6 +120,12 @@ Fileserver Backend Enhancements
 
 All of the fileserver backends have been overhauled to be faster, lighter and more reliable
 
+Pyobjects Renderer
+------------------
+
+Salt now ships with with the :mod:`Pyobjects Renderer <salt.renderers.pyobjects>` that
+allows for construction of States using pure Python with an idiomatic object interface.
+
 New Modules
 ===========
 
