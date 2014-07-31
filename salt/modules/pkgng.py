@@ -517,7 +517,7 @@ def restore(file_name, jail=None, chroot=None):
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name),
+        '{0} backup -r {1!r}'.format(_pkg(jail, chroot), file_name),
         output_loglevel='trace'
     )
 
