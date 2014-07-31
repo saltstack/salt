@@ -194,12 +194,12 @@ def gen_locale(locale):
             'locale-gen {0}'.format(locale)
         )
     elif __grains__.get('os') == 'Ubuntu':
-          __salt__['file.append'](
-              '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0]),
-              '{0} {1}'.format(locale, locale.split('.')[1])
-          )
-          __salt__['cmd.run'](
-              'locale-gen'
-          )
+        __salt__['file.append'](
+            '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0]),
+            '{0} {1}'.format(locale, locale.split('.')[1])
+        )
+        __salt__['cmd.run'](
+            'locale-gen'
+        )
 
     return True
