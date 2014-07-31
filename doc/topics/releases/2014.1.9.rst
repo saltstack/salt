@@ -1,16 +1,16 @@
 ===========================
-Salt 2014.1.8 Release Notes
+Salt 2014.1.9 Release Notes
 ===========================
 
-:release: 2014-07-30
+:release: 2014-07-31
 
 .. note::
 
-    This release contained a regression which caused inaccurate Salt version
-    detection, and thus was never packaged for general release.  Please use
-    version 2014.1.9 instead.
+    Verion 2014.1.8 contained a regression which caused inaccurate Salt version
+    detection, and thus was never packaged for general release.  This version
+    contains the version detection fix, but is otherwise identical to 2014.1.8.
 
-Version 2014.1.8 is another bugfix release for :doc:`2014.1.0
+Version 2014.1.9 is another bugfix release for :doc:`2014.1.0
 </topics/releases/2014.1.0>`.  Changes include:
 
 - Ensure salt-ssh will not continue if permissions on a temporary directory are
