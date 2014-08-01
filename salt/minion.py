@@ -2028,6 +2028,7 @@ class Syndic(Minion):
         if hasattr(self, 'local'):
             del self.local
 
+
 class MultiSyndic(Syndic):
     '''
     Make a Syndic minion, this minion will handle relaying jobs and returns from
