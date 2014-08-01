@@ -2082,6 +2082,7 @@ class MultiSyndic(MinionBase):
     '''
     # time to connect to upstream master
     SYNDIC_CONNECT_TIMEOUT = 5
+
     def __init__(self, opts):
         opts['loop_interval'] = 1
         super(MultiSyndic, self).__init__(opts)
@@ -2114,21 +2115,16 @@ class MultiSyndic(MinionBase):
             return False
 
         if time.time() - minion['auth_wait'] > minion.get('last', 0):
-            minion['last'] = time.time()
-            if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                minion['auth_wait'] += auth_wait
             try:
                 t_minion = Syndic(minion['opts'],
                                   timeout=self.SYNDIC_CONNECT_TIMEOUT,
                                   safe=False,
                                   )
 
-
                 self.master_syndics[master]['syndic'] = t_minion
                 self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
                 self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
                 self.master_syndics[master]['dead_until'] = 0
-
 
                 return True
             except SaltClientError:
@@ -2136,13 +2132,15 @@ class MultiSyndic(MinionBase):
                 # re-use auth-wait as backoff for syndic
                 minion['dead_until'] = time.time() + minion['auth_wait']
                 if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                    minion['auth_wait'] += minion['auth_wait']
+                    minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
-    def _call_syndic(self, func, args=(), kwargs={}, master_id=None):
+    def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
         '''
+        if kwargs is None:
+            kwargs = {}
         for master, syndic_dict in self.iter_master_options(master_id):
             if 'syndic' not in syndic_dict:
                 continue
@@ -2156,11 +2154,10 @@ class MultiSyndic(MinionBase):
                 log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
                 # re-use auth-wait as backoff for syndic
                 syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
-                if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                    minion['auth_wait'] += minion['auth_wait']
+                if syndic_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
+                    syndic_dict['auth_wait'] += self.opts['acceptance_wait_time']
                 continue
         log.critical('Unable to call {0} on any masters!'.format(func))
-
 
     def iter_master_options(self, master_id=None):
         '''
