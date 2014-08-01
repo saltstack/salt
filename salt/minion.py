@@ -1853,25 +1853,7 @@ class Syndic(Minion):
                        data['to'],
                        **kwargs)
 
-    # Syndic Tune In
-    def tune_in(self):
-        '''
-        Lock onto the publisher. This is the main event loop for the syndic
-        '''
-        # Instantiate the local client
-        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
-        self.local.event.subscribe('')
-        self.local.opts['interface'] = self._syndic_interface
-
-        signal.signal(signal.SIGTERM, self.clean_die)
-        log.debug('Syndic {0!r} trying to tune in'.format(self.opts['id']))
-
-        self.context = zmq.Context()
-
-        # Start with the publish socket
-        # Share the poller with the event object
-        self.poller = self.local.event.poller
-        self.socket = self.context.socket(zmq.SUB)
+    def _setsockopts(self):
         # no filters for syndication masters, unless we want to maintain a
         # list of all connected minions and update the filter
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
@@ -1880,8 +1862,7 @@ class Syndic(Minion):
         self._set_reconnect_ivl_max()
         self._set_tcp_keepalive()
 
-        self.socket.connect(self.master_pub)
-        self.poller.register(self.socket, zmq.POLLIN)
+    def _fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         self._fire_master(
             'Syndic {0} started at {1}'.format(
@@ -1897,6 +1878,69 @@ class Syndic(Minion):
             ),
             tagify([self.opts['id'], 'start'], 'syndic'),
         )
+
+    def tune_in_no_block(self):
+        '''
+        Executes the tune_in sequence but omits extra logging and the
+        management of the event bus assuming that these are handled outside
+        the tune_in sequence
+        '''
+        # Instantiate the local client
+        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
+        self.local.event.subscribe('')
+
+        self._init_context_and_poller()
+
+        self.socket = self.context.socket(zmq.SUB)
+
+        self._setsockopts()
+
+        self.socket.connect(self.master_pub)
+        self.poller.register(self.socket, zmq.POLLIN)
+
+        loop_interval = int(self.opts['loop_interval'])
+
+        self._fire_master_syndic_start()
+
+        while True:
+            try:
+                socks = dict(self.poller.poll(loop_interval * 1000))
+                if socks.get(self.socket) == zmq.POLLIN:
+                    self._process_cmd_socket()
+            except zmq.ZMQError:
+                yield True
+            except Exception:
+                log.critical(
+                    'An exception occurred while polling the minion',
+                    exc_info=True
+                )
+            yield True
+
+    # Syndic Tune In
+    def tune_in(self):
+        '''
+        Lock onto the publisher. This is the main event loop for the syndic
+        '''
+        # Instantiate the local client
+        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
+        self.local.event.subscribe('')
+        self.local.opts['interface'] = self._syndic_interface
+
+        signal.signal(signal.SIGTERM, self.clean_die)
+        log.debug('Syndic {0!r} trying to tune in'.format(self.opts['id']))
+
+        self._init_context_and_poller()
+
+        # Start with the publish socket
+        # Share the poller with the event object
+        self.socket = self.context.socket(zmq.SUB)
+
+        self._setsockopts()
+
+        self.socket.connect(self.master_pub)
+        self.poller.register(self.socket, zmq.POLLIN)
+        # Send an event to the master that the minion is live
+        self._fire_master_syndic_start()
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -2021,9 +2065,9 @@ class Syndic(Minion):
             del self.local
 
 
-class MultiSyndic(Syndic):
+class MultiSyndic(MinionBase):
     '''
-    Make a Syndic minion, this minion will handle relaying jobs and returns from
+    Make a MultiSyndic minion, this minion will handle relaying jobs and returns from
     all minions connected to it to the list of masters it is connected to.
 
     Note: jobs will be returned best-effort to the requesting master. This also means
@@ -2036,76 +2080,61 @@ class MultiSyndic(Syndic):
     it will (under most circumstances) stall the daemon for ~60s attempting to re-auth
     with the down master
     '''
-    # timeout for one of the connections to an upstream master
-    MASTER_MINION_CONNECT_TIMEOUT = 5
     def __init__(self, opts):
         opts['loop_interval'] = 1
-        # keep a copy, since we'll be messing with it a bit
-        self.raw_opts = copy.copy(opts)
         super(MultiSyndic, self).__init__(opts)
+        self.mminion = salt.minion.MasterMinion(opts)
 
-        self.context = zmq.Context()
-
-        self.master_minions = {}
-        for master in set(self.raw_opts['master']):
-            s_opts = copy.copy(self.raw_opts)
+        # create all of the syndics you need
+        self.master_syndics = {}
+        for master in set(self.opts['master']):
+            s_opts = copy.copy(self.opts)
             s_opts['master'] = master
-            self.master_minions[master] = {'opts': s_opts,
+            self.master_syndics[master] = {'opts': s_opts,
                                            'auth_wait': s_opts['acceptance_wait_time']}
             self._connect_to_master(master)
 
+    # TODO: do we need all of this?
     def _connect_to_master(self, master):
         '''
         Attempt to connect to master, including back-off for each one
 
         return boolean of wether you connected or not
         '''
-        if master not in self.master_minions:
+        if master not in self.master_syndics:
             log.error('Unable to connect to {0}, not in the list of masters'.format(master))
             return False
 
-        minion = self.master_minions[master]
+        minion = self.master_syndics[master]
         if time.time() - minion['auth_wait'] > minion.get('last', 0):
             minion['last'] = time.time()
             if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
                 minion['auth_wait'] += auth_wait
             try:
-                t_minion = Minion(minion['opts'], self.MASTER_MINION_CONNECT_TIMEOUT, False)
+                t_minion = Syndic(minion['opts'])
 
-                # TODO: make less terrible...
-                # connect the minion to the master, since the minion class doesn't do it already
-                t_minion.socket = self.context.socket(zmq.SUB)
-                t_minion._set_reconnect_ivl()
-                t_minion._setsockopts()
-                t_minion.socket.connect(t_minion.master_pub)
 
-                self.master_minions[master]['minion'] = t_minion
-                self.master_minions[master]['auth_wait'] = self.opts['acceptance_wait_time']
+                self.master_syndics[master]['syndic'] = t_minion
+                self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
+                self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
+
 
                 return True
             except SaltClientError:
                 log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
         return False
 
-    def _pick_master(self, master_id=None):
-        '''
-        Pick a master (based on the master_id if you have it) and change the opts
-        to match that master (MAJOR HACK)
-        '''
-        self.opts = self.master_minions[master_id]['minion'].opts
-
     def iter_master_options(self, master_id=None):
         '''
         Iterate (in order) over your options for master
         '''
-        masters = set(self.master_minions.keys())
-        if master_id not in self.master_minions:
+        masters = set(self.master_syndics.keys())
+        if master_id not in self.master_syndics:
             master_id = masters.pop()
         else:
             masters.remove(master_id)
 
         while True:
-            self._pick_master(master_id)
             yield master_id
             if len(masters) == 0:
                 break
@@ -2117,7 +2146,7 @@ class MultiSyndic(Syndic):
         # if you don't care, or the master you want we dont have, pick one at random
         for master in self.iter_master_options():
             try:
-                self.master_minions[master]['minion']._fire_master(data=data,
+                self.master_syndics[master]['syndic']._fire_master(data=data,
                                                                    tag=tag,
                                                                    events=events,
                                                                    pretag=pretag,
@@ -2129,6 +2158,10 @@ class MultiSyndic(Syndic):
 
         log.critical('Unable to fire event on ANY master')
 
+    def _reset_event_aggregation(self):
+        self.jids = {}
+        self.raw_events = []
+        self.event_forward_timeout = None
 
     # Syndic Tune In
     def tune_in(self):
@@ -2138,36 +2171,11 @@ class MultiSyndic(Syndic):
         # Instantiate the local client
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
-        self.local.opts['interface'] = self._syndic_interface
 
-        signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic {0!r} trying to tune in'.format(self.opts['id']))
 
         # Share the poller with the event object
         self.poller = self.local.event.poller
-
-        # register the master_minions on this poller
-        for master_id, minion_map in self.master_minions.iteritems():
-            if 'minion' not in minion_map:
-                continue
-            self.poller.register(minion_map['minion'].socket, zmq.POLLIN)
-
-
-        # Send an event to the master that the minion is live
-        self._fire_master(
-            'Syndic {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            'syndic_start'
-        )
-        self._fire_master(
-            'Syndic {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
-            ),
-            tagify([self.opts['id'], 'start'], 'syndic'),
-        )
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -2189,16 +2197,19 @@ class MultiSyndic(Syndic):
                     # But there's no harm being defensive
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
-                # check all of your master_minions
-                for master_id, minion_map in self.master_minions.iteritems():
-                    if 'minion' not in minion_map:
+                print ('foo')
+                # check all of your master_syndics, have them do their thing
+                for master_id, minion_map in self.master_syndics.iteritems():
+                    # if not connected, lets try
+                    if 'generator' not in minion_map:
+                        # if we couldn't connect, lets try later
                         if not self._connect_to_master(master_id):
+                            print ('not connected to', master_id)
                             continue
-                        self.poller.register(minion_map['minion'].socket, zmq.POLLIN)
-                    # check if you had events
-                    if socks.get(minion_map['minion'].socket) == zmq.POLLIN:
-                        self._process_cmd_socket(master_id, minion_map['minion'])
+                    print ('some stuff?')
+                    minion_map['generator'].next()
 
+                # events
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
 
@@ -2215,33 +2226,6 @@ class MultiSyndic(Syndic):
                     'An exception occurred while polling the syndic',
                     exc_info=True
                 )
-
-    def _process_cmd_socket(self, master_id, minion):
-        '''
-        process a pub job that a minion recieved
-        '''
-        try:
-            messages = minion.socket.recv_multipart(zmq.NOBLOCK)
-            messages_len = len(messages)
-            idx = None
-            if messages_len == 1:
-                idx = 0
-            elif messages_len == 2:
-                idx = 1
-            else:
-                raise SaltSyndicMasterError('Syndication master recieved message of invalid len ({0}/2)'.format(messages_len))
-
-            payload = minion.serial.loads(messages[idx])
-        except zmq.ZMQError as e:
-            # Swallow errors for bad wakeups or signals needing processing
-            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
-                raise
-        log.trace('Handling payload')
-        # TODO: remove this Terrible hack...
-        self.crypticle = minion.crypticle
-        # Terrible hack: We have to set the opts so all the class funcs work
-        self._pick_master(master_id)
-        self._handle_payload(payload)
 
     def _process_event_socket(self):
         tout = time.time() + self.opts['syndic_max_event_process_time']
@@ -2288,10 +2272,11 @@ class MultiSyndic(Syndic):
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
                               )
+        print (self.jids)
         for jid, jid_ret in self.jids.iteritems():
             for master in self.iter_master_options(jid_ret.get('__master_id__')):
                 try:
-                    self._return_pub(jid_ret, '_syndic_return')
+                    self.master_syndics[master]['syndic']._return_pub(jid_ret, '_syndic_return')
                     break
                 except SaltClientError:
                     log.error('Unable to return to {0}, trying another...'.format(master))
