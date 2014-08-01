@@ -16,14 +16,20 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has three output modes, `full`, `terse`, `mixed`,
-    and `changes`. The default is set to full, which will display many lines of
-    detailed information for each executed chunk. If the `state_output` option
-    is set to `terse` then the output is greatly simplified and shown in only
-    one line.  If `mixed` is used, then terse output will be used unless a
+    The highstate outputter has five output modes, `full`, `terse`, `mixed`,
+    `changes` and `filter`. The default is set to full, which will display many
+    lines of detailed information for each executed chunk. If the `state_output`
+    option is set to `terse` then the output is greatly simplified and shown in
+    only one line.  If `mixed` is used, then terse output will be used unless a
     state failed, in which case full output will be used.  If `changes` is used,
     then terse output will be used if there was no error and no changes,
-    otherwise full output will be used.
+    otherwise full output will be used. If `filter` is used, then either or both
+    of two different filters can be used: `exclude` or `terse`. These can be set
+    as such from the command line, or in the Salt config as
+    `state_output_exclude` or `state_output_terse`, respectively. The values to
+    exclude must be a comma-separated list of `True`, `False` and/or `None`.
+    Because of parsing nuances, if only one of these is used, it must still
+    contain a comma. For instance: `exclude=True,`.
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
@@ -56,6 +62,7 @@ import pprint
 # Import salt libs
 import salt.utils
 import salt.output
+from salt._compat import string_types
 
 
 def output(data):
@@ -125,7 +132,40 @@ def _format_host(host, data):
                 hcolor = colors['YELLOW']
                 tcolor = colors['YELLOW']
             comps = tname.split('_|-')
-            if __opts__.get('state_output', 'full').lower() == 'terse':
+            if __opts__.get('state_output', 'full').lower() == 'filter':
+                # By default, full data is shown for all types. However, return
+                # data may be excluded by setting state_output_exclude to a
+                # comma-separated list of True, False or None, or including the
+                # same list with the exclude option on the command line. For
+                # now, this option must include a comma. For example:
+                #     exclude=True,
+                # The same functionality is also available for making return
+                # data terse, instead of excluding it.
+                cliargs = __opts__.get('arg', [])
+                clikwargs = {}
+                for item in cliargs:
+                    if isinstance(item, dict) and '__kwarg__' in item:
+                        clikwargs = item.copy()
+
+                exclude = clikwargs.get(
+                    'exclude', __opts__.get('state_output_exclude', [])
+                )
+                if isinstance(exclude, string_types):
+                    exclude = str(exclude).split(',')
+
+                terse = clikwargs.get(
+                    'terse', __opts__.get('state_output_terse', [])
+                )
+                if isinstance(terse, string_types):
+                    terse = str(terse).split(',')
+
+                if str(ret['result']) in terse:
+                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
+                    hstrs.append(msg)
+                    continue
+                if str(ret['result']) in exclude:
+                    continue
+            elif __opts__.get('state_output', 'full').lower() == 'terse':
                 # Print this chunk in a terse way and continue in the
                 # loop
                 msg = _format_terse(tcolor, comps, ret, colors, tabular)
