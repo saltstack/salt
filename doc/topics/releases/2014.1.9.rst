@@ -6,6 +6,12 @@ Salt 2014.1.9 Release Notes
 
 .. note::
 
+    This release contained a regression which caused inaccurate Salt version
+    detection, and thus was never packaged for general release.  Please use
+    version 2014.1.10 instead.
+
+.. note::
+
     Verion 2014.1.8 contained a regression which caused inaccurate Salt version
     detection, and thus was never packaged for general release.  This version
     contains the version detection fix, but is otherwise identical to 2014.1.8.
