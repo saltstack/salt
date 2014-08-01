@@ -43,6 +43,12 @@ try:
 except ImportError:
     resolve_dep_support = False
 
+try:
+    import apt.cache  # pylint: disable=E0611
+    apt_cache_support = True
+except ImportError:
+    apt_cache_support = False
+
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
 LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
@@ -123,12 +129,20 @@ def _get_virtual():
     '''
     if 'pkg._get_virtual' not in __context__:
         __context__['pkg._get_virtual'] = {}
-        if __salt__['cmd.has_exec']('grep-available'):
-            cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
-            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
-            virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
-            for realpkg, provides in virtpkg_re.findall(out):
-                __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+        apt_cache = apt.cache.Cache()
+        try:
+            pkgs = apt_cache._cache.packages
+            HAS_CACHE = True
+        except AttributeError:
+            HAS_CACHE = False
+        if HAS_CACHE:
+            for pkg in pkgs:
+                if pkg.provides_list:
+                    for item in pkg.provides_list:
+                        realpkg = item[2].parent_pkg.name
+                        if realpkg not in __context__['pkg._get_virtual']:
+                            __context__['pkg._get_virtual'][realpkg] = []
+                        __context__['pkg._get_virtual'][realpkg].append(pkg.name)
     return __context__['pkg._get_virtual']
 
 
@@ -185,6 +199,11 @@ def latest_version(*names, **kwargs):
     # Refresh before looking for the latest version available
     if refresh:
         refresh_db()
+
+    if not apt_cache_support:
+        msg = 'Error: apt.cache python module not found'
+        log.error(msg)
+        return msg
 
     virtpkgs = _get_virtual()
     all_virt = set()
@@ -674,8 +693,13 @@ def list_pkgs(versions_as_list=False,
                                                  name,
                                                  version_num)
 
+    if not apt_cache_support:
+        msg = 'Error: apt.cache python module not found'
+        log.error(msg)
+        return msg
+
     # Check for virtual packages. We need dctrl-tools for this.
-    if not removed and __salt__['cmd.has_exec']('grep-available'):
+    if not removed:
         virtpkgs_all = _get_virtual()
         virtpkgs = set()
         for realpkg, provides in virtpkgs_all.iteritems():
