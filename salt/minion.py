@@ -2091,7 +2091,8 @@ class MultiSyndic(MinionBase):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
             self.master_syndics[master] = {'opts': s_opts,
-                                           'auth_wait': s_opts['acceptance_wait_time']}
+                                           'auth_wait': s_opts['acceptance_wait_time'],
+                                           'dead_until': 0}
             self._connect_to_master(master)
 
     # TODO: do we need all of this?
@@ -2135,7 +2136,7 @@ class MultiSyndic(MinionBase):
             masters.remove(master_id)
 
         while True:
-            yield master_id
+            yield master_id, self.master_syndics[master_id]
             if len(masters) == 0:
                 break
             master_id = masters.pop()
@@ -2144,17 +2145,22 @@ class MultiSyndic(MinionBase):
     def _fire_master(self, data=None, tag=None, events=None, pretag=None):
 
         # if you don't care, or the master you want we dont have, pick one at random
-        for master in self.iter_master_options():
+        for master, syndic_dict in self.iter_master_options():
+            if syndic_dict['dead_until'] > time.time():
+                log.error('Unable to fire event to {0}, that syndic is dead for now'.format(master))
+                continue
             try:
-                self.master_syndics[master]['syndic']._fire_master(data=data,
-                                                                   tag=tag,
-                                                                   events=events,
-                                                                   pretag=pretag,
-                                                                   )
+                syndic_dict['syndic']._fire_master(data=data,
+                                                   tag=tag,
+                                                   events=events,
+                                                   pretag=pretag,
+                                                   )
                 return
             # unable to return, ususally because the master is down
             except SaltClientError:
                 log.error('Unable to fire event to {0}, trying another...'.format(master))
+                # TODO: configurable timeout???
+                syndic_dict['dead_until'] = time.time() + 60
 
         log.critical('Unable to fire event on ANY master')
 
@@ -2197,7 +2203,6 @@ class MultiSyndic(MinionBase):
                     # But there's no harm being defensive
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
-                print ('foo')
                 # check all of your master_syndics, have them do their thing
                 for master_id, minion_map in self.master_syndics.iteritems():
                     # if not connected, lets try
@@ -2206,7 +2211,6 @@ class MultiSyndic(MinionBase):
                         if not self._connect_to_master(master_id):
                             print ('not connected to', master_id)
                             continue
-                    print ('some stuff?')
                     minion_map['generator'].next()
 
                 # events
@@ -2272,14 +2276,18 @@ class MultiSyndic(MinionBase):
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
                               )
-        print (self.jids)
         for jid, jid_ret in self.jids.iteritems():
-            for master in self.iter_master_options(jid_ret.get('__master_id__')):
+            for master, syndic_dict in self.iter_master_options(jid_ret.get('__master_id__')):
+                if syndic_dict['dead_until'] > time.time():
+                    log.error('Unable to return to {0}, that syndic is dead for now'.format(master))
+                    continue
                 try:
-                    self.master_syndics[master]['syndic']._return_pub(jid_ret, '_syndic_return')
+                    syndic_dict['syndic']._return_pub(jid_ret, '_syndic_return')
                     break
                 except SaltClientError:
                     log.error('Unable to return to {0}, trying another...'.format(master))
+                    # TODO: configurable timeout???
+                    syndic_dict['dead_until'] = time.time() + 60
                     continue
         self._reset_event_aggregation()
 
