@@ -95,6 +95,10 @@ SALT_VERSION = os.path.join(
     os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 )
 
+SALT_VERSION_HARDCODED = os.path.join(
+    os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py'
+)
+
 SALT_REQS = os.path.join(
     os.path.abspath(SETUP_DIRNAME), 'requirements.txt'
 )
@@ -109,7 +113,46 @@ exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 # pylint: enable=W0122
 
 
-class CloudSdist(sdist):
+class WriteSaltVersion(Command):
+
+    description = 'Write salt\'s hardcoded version file'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if not os.path.exists(SALT_VERSION_HARDCODED):
+            # Write the version file
+            if getattr(self.distribution, 'salt_version_hardcoded_path', None) is None:
+                print 'This command is not meant to be called on it\'s own'
+                exit(1)
+
+            # pylint: disable=E0602
+            open(self.distribution.salt_version_hardcoded_path, 'w').write(
+                INSTALL_VERSION_TEMPLATE.format(
+                    date=datetime.utcnow(),
+                    full_version_info=__saltstack_version__.full_info
+                )
+            )
+            # pylint: enable=E0602
+
+
+class Sdist(sdist):
+    def make_release_tree(self, base_dir, files):
+        sdist.make_release_tree(self, base_dir, files)
+
+        # Let's generate salt/_version.py to include in the sdist tarball
+        self.distribution.running_salt_sdist = True
+        self.distribution.salt_version_hardcoded_path = os.path.join(
+            base_dir, 'salt', '_version.py'
+        )
+        self.run_command('write-salt-version')
+
+
+class CloudSdist(Sdist):
     user_options = sdist.user_options + [
         ('skip-bootstrap-download', None,
          '[DEPRECATED] Skip downloading the bootstrap-salt.sh script. This '
@@ -127,12 +170,12 @@ class CloudSdist(sdist):
     ]
 
     def initialize_options(self):
-        sdist.initialize_options(self)
+        Sdist.initialize_options(self)
         self.skip_bootstrap_download = True
         self.download_bootstrap_script = False
 
     def finalize_options(self):
-        sdist.finalize_options(self)
+        Sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
             log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
                 '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
@@ -186,7 +229,7 @@ class CloudSdist(sdist):
                 )
 
         # Let's the rest of the build command
-        sdist.run(self)
+        Sdist.run(self)
 
     def write_manifest(self):
         if IS_WINDOWS_PLATFORM:
@@ -202,7 +245,7 @@ class CloudSdist(sdist):
                     self.filelist.files.pop(
                         self.filelist.files.index(filename)
                     )
-        return sdist.write_manifest(self)
+        return Sdist.write_manifest(self)
 
 
 class TestCommand(Command):
@@ -240,12 +283,10 @@ class Clean(clean):
     def run(self):
         clean.run(self)
         # Let's clean compiled *.py[c,o]
-        remove_extensions = ('.pyc', '.pyo')
         for subdir in ('salt', 'tests', 'doc'):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, dirnames, filenames in os.walk(root):
-                for to_remove_filename in glob.glob(
-                        '{0}/*.py[oc]'.format(dirname)):
+                for to_remove_filename in glob.glob('{0}/*.py[oc]'.format(dirname)):
                     os.remove(to_remove_filename)
 
 
@@ -284,18 +325,8 @@ class Build(build):
             # If our install attribute is present and set to True, we'll go
             # ahead and write our install time python modules.
 
-            # Write the version file
-            version_file_path = os.path.join(
-                self.build_lib, 'salt', '_version.py'
-            )
-            # pylint: disable=E0602
-            open(version_file_path, 'w').write(
-                INSTALL_VERSION_TEMPLATE.format(
-                    date=datetime.utcnow(),
-                    full_version_info=__saltstack_version__.full_info
-                )
-            )
-            # pylint: enable=E0602
+            # Write the hardcoded salt version module salt/_version.py
+            self.run_command('write-salt-version')
 
             # Write the system paths file
             system_paths_file_path = os.path.join(
@@ -376,6 +407,9 @@ class Install(install):
         # Let's set the running_salt_install attribute so we can add
         # _version.py in the build command
         self.distribution.running_salt_install = True
+        self.distribution.salt_version_hardcoded_path = os.path.join(
+            self.build_lib, 'salt', '_version.py'
+        )
         # Run install.run
         install.run(self)
 
@@ -404,7 +438,9 @@ SETUP_KWARGS = {'name': NAME,
                     'test': TestCommand,
                     'clean': Clean,
                     'build': Build,
-                    'install': Install
+                    'sdist': Sdist,
+                    'install': Install,
+                    'write-salt-version': WriteSaltVersion
                 },
                 'classifiers': ['Programming Language :: Python',
                                 'Programming Language :: Cython',
