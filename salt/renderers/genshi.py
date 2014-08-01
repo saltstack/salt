@@ -9,6 +9,7 @@ from __future__ import absolute_import
 try:
     from genshi.template import MarkupTemplate
     from genshi.template import NewTextTemplate
+    from genshi.template import OldTextTemplate
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -48,13 +49,10 @@ def render(genshi_data, saltenv='base', sls='', method='xml', **kws):
         return {}
 
     if method == 'text' or method == 'newtext':
-        from genshi.template import NewTextTemplate
-        tmpl = NewTextTemplate(tmplstr)
+        tmpl = NewTextTemplate(genshi_data)
     elif method == 'oldtext':
-        from genshi.template import OldTextTemplate
-        tmpl = OldTextTemplate(tmplstr)
+        tmpl = OldTextTemplate(genshi_data)
     else:
-        from genshi.template import MarkupTemplate
-        tmpl = MarkupTemplate(tmplstr)
+        tmpl = MarkupTemplate(genshi_data)
 
-    return tmpl.generate(**context).render(method)
+    return tmpl.generate(**kws).render(method)
