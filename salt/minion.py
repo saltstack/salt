@@ -2109,6 +2109,10 @@ class MultiSyndic(MinionBase):
             return False
 
         minion = self.master_syndics[master]
+        # if we need to be dead for a while, stay that way
+        if minion['dead_until'] > time.time():
+            return False
+
         if time.time() - minion['auth_wait'] > minion.get('last', 0):
             minion['last'] = time.time()
             if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
@@ -2123,11 +2127,16 @@ class MultiSyndic(MinionBase):
                 self.master_syndics[master]['syndic'] = t_minion
                 self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
                 self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
+                self.master_syndics[master]['dead_until'] = 0
 
 
                 return True
             except SaltClientError:
                 log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
+                # re-use auth-wait as backoff for syndic
+                minion['dead_until'] = time.time() + minion['auth_wait']
+                if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
+                    minion['auth_wait'] += minion['auth_wait']
         return False
 
     def _call_syndic(self, func, args=(), kwargs={}, master_id=None):
@@ -2144,10 +2153,12 @@ class MultiSyndic(MinionBase):
                 getattr(syndic_dict['syndic'], func)(*args, **kwargs)
                 return
             except SaltClientError:
-                    log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
-                    # TODO: configurable timeout???
-                    syndic_dict['dead_until'] = time.time() + 60
-                    continue
+                log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
+                # re-use auth-wait as backoff for syndic
+                syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
+                if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
+                    minion['auth_wait'] += minion['auth_wait']
+                continue
         log.critical('Unable to call {0} on any masters!'.format(func))
 
 
@@ -2208,13 +2219,13 @@ class MultiSyndic(MinionBase):
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
                 # check all of your master_syndics, have them do their thing
-                for master_id, minion_map in self.master_syndics.iteritems():
+                for master_id, syndic_dict in self.master_syndics.iteritems():
                     # if not connected, lets try
-                    if 'generator' not in minion_map:
+                    if 'generator' not in syndic_dict:
                         # if we couldn't connect, lets try later
                         if not self._connect_to_master(master_id):
                             continue
-                    minion_map['generator'].next()
+                    syndic_dict['generator'].next()
 
                 # events
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
