@@ -352,6 +352,37 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
+def render_genshi_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Genshi template. A method should be passed in as part of the
+    context. If no method is passed in, xml is assumed. Valid methods are:
+
+    .. code-block:
+
+        - xml
+        - xhtml
+        - html
+        - text
+        - newtext
+        - oldtext
+
+    Note that the ``text`` method will call ``NewTextTemplate``. If ``oldtext``
+    is desired, it must be called explicitly
+    '''
+    method = context.get('method', 'xml')
+    if method == 'text' or method == 'newtext':
+        from genshi.template import NewTextTemplate
+        tmpl = NewTextTemplate(tmplstr)
+    elif method == 'oldtext':
+        from genshi.template import OldTextTemplate
+        tmpl = OldTextTemplate(tmplstr)
+    else:
+        from genshi.template import MarkupTemplate
+        tmpl = MarkupTemplate(tmplstr)
+
+    return tmpl.generate(**context).render(method)
+
+
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     '''
     Render a template from a python source file
@@ -398,10 +429,12 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)
 WEMPY = wrap_tmpl_func(render_wempy_tmpl)
+GENSHI = wrap_tmpl_func(render_genshi_tmpl)
 
 TEMPLATE_REGISTRY = {
     'jinja': JINJA,
     'mako': MAKO,
     'py': py,
     'wempy': WEMPY,
+    'genshi': GENSHI,
 }
