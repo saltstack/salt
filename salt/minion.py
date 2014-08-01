@@ -2028,7 +2028,12 @@ class MultiSyndic(Syndic):
     Note: jobs will be returned best-effort to the requesting master. This also means
     (since we are using zmq) that if a job was fired and the master disconnects
     between the publish and return, that the return will end up in a zmq buffer
-    in this Syndic headed to that original master
+    in this Syndic headed to that original master.
+
+    In addition, since these classes all seem to use a mix of blocking and non-blocking
+    calls (with varying timeouts along the way) this daemon does not handle failure well,
+    it will (under most circumstances) stall the daemon for ~60s attempting to re-auth
+    with the down master
     '''
     # timeout for one of the connections to an upstream master
     MASTER_MINION_CONNECT_TIMEOUT = 5
