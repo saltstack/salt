@@ -684,7 +684,7 @@ class Schedule(object):
                                 continue
                         else:
                             log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {-1}.'.format(job))
+                                     Ignoring job {0}.'.format(job))
                             continue
 
             if not run:
