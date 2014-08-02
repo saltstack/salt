@@ -281,32 +281,29 @@ def info(name):
     '''
     ret = {}
     items = {}
-    for line in __salt__['cmd.run']('net user {0}'.format(name)).splitlines():
-        if 'name could not be found' in line:
-            return {}
-        if 'successfully' not in line:
-            comps = line.split('    ', 1)
-            if not len(comps) > 1:
-                continue
-            items[comps[0].strip()] = comps[1].strip()
-    grouplist = []
-    groups = items['Local Group Memberships'].split('  ')
-    for group in groups:
-        if not group:
-            continue
-        grouplist.append(group.strip(' *'))
+    try:
+        items = win32net.NetUserGetInfo(None, name, 4)
+    except win32net.error:
+        pass
 
-    ret['fullname'] = items['Full Name']
-    ret['name'] = items['User name']
-    ret['comment'] = items['Comment']
-    ret['active'] = items['Account active']
-    ret['logonscript'] = items['Logon script']
-    ret['profile'] = items['User profile']
-    if not ret['profile']:
-        ret['profile'] = _get_userprofile_from_registry(name)
-    ret['home'] = items['Home directory']
-    ret['groups'] = grouplist
-    ret['gid'] = ''
+    if items:
+        groups = []
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except win32net.error:
+            pass
+
+        ret['fullname'] = items['full_name']
+        ret['name'] = items['name']
+        ret['comment'] = items['comment']
+        ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
+        ret['logonscript'] = items['script_path']
+        ret['profile'] = items['profile']
+        if not ret['profile']:
+            ret['profile'] = _get_userprofile_from_registry(name)
+        ret['home'] = items['home_dir']
+        ret['groups'] = groups
+        ret['gid'] = ''
 
     return ret
 
