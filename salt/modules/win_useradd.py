@@ -407,15 +407,14 @@ def list_users():
         while res or dowhile:
             dowhile = False
             (users, _, res) = win32net.NetUserEnum(
-                'localhost',
-                3,
+                None,
+                0,
                 win32netcon.FILTER_NORMAL_ACCOUNT,
                 res,
                 win32netcon.MAX_PREFERRED_LENGTH
             )
             for user in users:
                 user_list.append(user['name'])
-                log.debug('User: {0}'.format(str(user)))
         return user_list
     except win32net.error:
         pass
