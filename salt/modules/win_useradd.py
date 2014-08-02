@@ -385,8 +385,8 @@ def list_users():
     try:
         while res:
             (users, _, res) = win32net.NetUserEnum(
-                'localhost',
-                3,
+                None,
+                0,
                 win32netcon.FILTER_NORMAL_ACCOUNT,
                 res,
                 win32netcon.MAX_PREFERRED_LENGTH
