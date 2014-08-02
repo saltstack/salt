@@ -1168,7 +1168,6 @@ def _file_lists(load, form):
     '''
     Return a dict containing the file lists for files and dirs
     '''
-    load = copy.deepcopy(load)
     if 'env' in load:
         salt.utils.warn_until(
             'Boron',
