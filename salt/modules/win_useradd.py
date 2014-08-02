@@ -12,6 +12,7 @@ from salt._compat import string_types
 try:
     import win32net
     import win32netcon
+    import win32security
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
@@ -292,16 +293,33 @@ def info(name):
 
         ret['fullname'] = items['full_name']
         ret['name'] = items['name']
+        ret['uid'] = win32security.ConvertSidToStringSid(items['user_sid'])
+        ret['passwd'] = items['password']
         ret['comment'] = items['comment']
         ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
         ret['logonscript'] = items['script_path']
         ret['profile'] = items['profile']
         if not ret['profile']:
-            ret['profile'] = _get_userprofile_from_registry(name)
+            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
         ret['home'] = items['home_dir']
+        if not ret['home']:
+            ret['home'] = ret['profile']
         ret['groups'] = groups
         ret['gid'] = ''
     return ret
+
+
+def _get_userprofile_from_registry(user, sid):
+    '''
+    In case net user doesn't return the userprofile
+    we can get it from the registry
+    '''
+    profile_dir = __salt__['reg.read_key'](
+        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'ProfileImagePath'
+    )
+    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    return profile_dir
 
 
 def list_groups(name):
