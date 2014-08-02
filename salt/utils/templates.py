@@ -383,6 +383,14 @@ def render_genshi_tmpl(tmplstr, context, tmplpath=None):
     return tmpl.generate(**context).render(method)
 
 
+def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Cheetah template.
+    '''
+    from Cheetah.Template import Template
+    return str(Template(tmplstr, searchList=[context]))
+
+
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     '''
     Render a template from a python source file
@@ -430,6 +438,7 @@ JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)
 WEMPY = wrap_tmpl_func(render_wempy_tmpl)
 GENSHI = wrap_tmpl_func(render_genshi_tmpl)
+CHEETAH = wrap_tmpl_func(render_cheetah_tmpl)
 
 TEMPLATE_REGISTRY = {
     'jinja': JINJA,
@@ -437,4 +446,5 @@ TEMPLATE_REGISTRY = {
     'py': py,
     'wempy': WEMPY,
     'genshi': GENSHI,
+    'cheetah': CHEETAH,
 }
