@@ -361,33 +361,17 @@ def getent(refresh=False):
         return __context__['user.getent']
 
     ret = []
-    users = []
-    startusers = False
-    lines = __salt__['cmd.run']('net user').splitlines()
-    for line in lines:
-        if '----------' in line:
-            startusers = True
-            continue
-        if startusers:
-            if 'successfully' not in line:
-                comps = line.split()
-                users += comps
-                ##if not len(comps) > 1:
-                #   continue
-                #items[comps[0].strip()] = comps[1].strip()
-    #return users
-    for user in users:
+    for user in __salt__['user.list_users']():
         stuff = {}
         user_info = __salt__['user.info'](user)
-        uid = __salt__['file.user_to_uid'](user_info['name'])
 
         stuff['gid'] = ''
         stuff['groups'] = user_info['groups']
         stuff['home'] = user_info['home']
         stuff['name'] = user_info['name']
-        stuff['passwd'] = ''
+        stuff['passwd'] = user_info['passwd']
         stuff['shell'] = ''
-        stuff['uid'] = uid
+        stuff['uid'] = user_info['uid']
 
         ret.append(stuff)
 
