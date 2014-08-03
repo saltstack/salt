@@ -250,7 +250,10 @@ def add_volume_bricks(name, bricks):
     ret['comment'] = add_bricks
 
     if 'bricks successfully added' in add_bricks:
+        old_bricks = current_bricks
+        new_bricks = __salt__['glusterfs.status'](name)
         ret['result'] = True
+        ret['changes'] = {'new': new_bricks['bricks'].keys(), 'old': old_bricks['bricks'].keys()}
         return ret
 
     if 'Bricks already in volume' in add_bricks:
