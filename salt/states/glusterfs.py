@@ -203,3 +203,58 @@ def started(name):
         ret['result'] = False
 
     return ret
+
+def add_volume_bricks(name, bricks):
+    '''
+    Add brick(s) to an existing volume
+
+    name
+        Volume name
+
+    bricks
+        List of bricks to add to the volume
+
+    .. code-block:: yaml
+
+    myvolume:
+      glusterfs.add_volume_bricks:
+        - bricks:
+            - host1:/srv/gluster/drive1
+            - host2:/srv/gluster/drive2
+
+    Replicated Volume:
+      glusterfs.add_volume_bricks:
+        - name: volume2
+        - bricks:
+          - host1:/srv/gluster/drive2
+          - host2:/srv/gluster/drive3
+    '''
+    ret = {'name': name,
+       'changes': {},
+       'comment': '',
+       'result': False}
+
+    current_bricks = __salt__['glusterfs.status'](name)
+
+    if 'does not exist' in current_bricks:
+        ret['result'] = False
+        ret['comment'] = current_bricks
+        return ret
+
+    if 'is not started' in current_bricks:
+        ret['result'] = False
+        ret['comment'] = current_bricks
+        return ret
+
+    add_bricks = __salt__['glusterfs.add_volume_bricks'](name,bricks)
+    ret['comment'] = add_bricks
+
+    if 'bricks successfully added' in add_bricks:
+        ret['result'] = True
+        return ret
+
+    if 'Bricks already in volume' in add_bricks:
+        ret['result'] = True
+        return ret
+
+    return ret
