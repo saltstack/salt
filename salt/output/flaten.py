@@ -51,4 +51,3 @@ def output(data):
     '''
     # return one_level_values(data)
     return '\n'.join(string_list(get_values(data)))
-
