@@ -463,6 +463,13 @@ class ReqServer(object):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        try:
+            self.clients.setsockopt(zmq.HWM, self.opts['rep_hwm'])
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
+            self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
+
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
