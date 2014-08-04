@@ -4,7 +4,7 @@ Return data to an elasticsearch server for indexing.
 
 :maintainer:    Jurnell Cockhren <jurnell.cockhren@sophicware.com>
 :maturity:      New
-:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
+:depends:       'elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>',  'jsonpickle <https://pypi.python.org/pypi/jsonpickle>'
 :platform:      all
 
 To enable this returner the elasticsearch python client must be installed
@@ -17,6 +17,17 @@ The required configuration is as follows:
         index: 'salt'
         number_of_shards: 1 (optional)
         number_of_replicas: 0 (optional)
+
+or to specify multiple elasticsearch hosts for resiliency:
+
+    elasticsearch:
+      host:
+        - 'somehost.example.com:9200'
+        - 'anotherhost.example.com:9200'
+        - 'yetanotherhost.example.com:9200'
+      index: 'salt'
+      number_of_shards: 1 (optional)
+      number_of_replicas: 0 (optional)
 
 The above configuration can be placed in a targeted pillar, minion or
 master configurations.
@@ -96,7 +107,11 @@ def _get_pickler():
 
 
 def _get_instance():
-    return elasticsearch.Elasticsearch([__salt__['config.get']('elasticsearch:host')])
+    # Check whether we have a single elasticsearch host string, or a list of host strings.
+    if isinstance(__salt__['config.get']('elasticsearch:host'), list):
+        return elasticsearch.Elasticsearch(__salt__['config.get']('elasticsearch:host'))
+    else:
+        return elasticsearch.Elasticsearch([__salt__['config.get']('elasticsearch:host')])
 
 
 def returner(ret):
