@@ -101,7 +101,12 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - force: True
 '''
 
+# Import Python libs
 import hashlib
+import logging
+import re
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -221,6 +226,14 @@ def present(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    if vpc_zone_identifier:
+        vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
+        log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
+                  .format(name, vpc_id))
+    else:
+        vpc_id = None
+        log.debug('Auto Scaling Group {0} has no VPC Association'
+                  .format(name))
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
@@ -233,6 +246,21 @@ def present(
             'keyid': keyid,
             'profile': profile
         }
+
+        if vpc_id:
+            log.debug('Auto Scaling Group {0} is a associated with a vpc')
+            # locate the security groups attribute of a launch config
+            sg_index = None
+            for index, item in enumerate(launch_config):
+                if 'security_groups' in item:
+                    sg_index = index
+                    break
+            # if security groups exist within launch_config then convert
+            # to group ids
+            if sg_index:
+                log.debug('security group associations found in launch config')
+                launch_config[sg_index]['security_groups'] = _convert_to_group_ids(launch_config[sg_index]['security_groups'], vpc_id, region, key, keyid, profile)
+
         for d in launch_config:
             args.update(d)
         lc_ret = __salt__["state.single"]('boto_lc.present', **args)
@@ -300,14 +328,16 @@ def present(
         # ensure that we delete scaling_policies if none are specified
         if scaling_policies is None:
             config["scaling_policies"] = []
-        for key, value in config.iteritems():
+        # note: do not loop using "key, value" - this can modify the value of
+        # the aws access key
+        for asg_property, value in config.iteritems():
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
             if value is None:
                 continue
-            if key in asg:
-                _value = asg[key]
+            if asg_property in asg:
+                _value = asg[asg_property]
                 if not _recursive_compare(value, _value):
                     need_update = True
                     break
@@ -349,6 +379,28 @@ def present(
         else:
             ret['comment'] = 'Autoscale group present.'
     return ret
+
+
+def _convert_to_group_ids(groups, vpc_id, region, key, keyid, profile):
+    '''
+    given a list of security groups _convert_to_group_ids will convert all
+    list items in the given list to security group ids
+    '''
+    log.debug('security group contents {0} pre-conversion'.format(groups))
+    group_ids = []
+    for group in groups:
+        if re.match('sg-.*', group):
+            log.debug('group {0} is a group id. get_group_id not called.'
+                      .format(group))
+            group_ids.append(group)
+        else:
+            log.debug('calling boto_secgroup.get_group_id for'
+                      ' group name {0}'.format(group))
+            group_id = __salt__['boto_secgroup.get_group_id'](group, vpc_id, region, key, keyid, profile)
+            log.debug('group name {0} has group id {1}'.format(group, group_id))
+            group_ids.append(str(group_id))
+    log.debug('security group contents {0} post-conversion'.format(group_ids))
+    return group_ids
 
 
 def _recursive_compare(v1, v2):
