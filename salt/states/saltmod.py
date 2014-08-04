@@ -27,10 +27,14 @@ The salt.state declaration can call out a highstate or a list of sls:
 '''
 
 # Import python libs
+import fnmatch
 import logging
+import time
 
 # Import salt libs
+import salt.syspaths
 import salt.utils
+import salt.utils.event
 import salt._compat
 
 log = logging.getLogger(__name__)
@@ -402,3 +406,107 @@ def function(
                     )
             ret['comment'] += '\n'
     return ret
+
+
+def wait_for_event(
+        name,
+        id_list,
+        event_id='id',
+        timeout=300):
+    '''
+    Watch Salt's event bus and block until a condition is met
+
+    .. versionadded:: 2014.7
+
+    name
+        An event tag to watch for; supports Reactor-style globbing.
+    id_list
+        A list of event identifiers to watch for -- usually the minion ID. Each
+        time an event tag is matched the event data is inspected for
+        ``event_id``, if found it is removed from ``id_list``. When ``id_list``
+        is empty this function returns success.
+    event_id : id
+        The name of a key in the event data. Default is ``id`` for the minion
+        ID, another common value is ``name`` for use with orchestrating
+        salt-cloud events.
+    timeout : 300
+        The maximum time in seconds to wait before failing.
+
+    The following example blocks until all the listed minions complete a
+    restart and reconnect to the Salt master:
+
+    .. code-block:: yaml
+
+        reboot_all_minions:
+          salt.function:
+            - name: system.reboot
+            - tgt: '*'
+
+        wait_for_reboots:
+          salt.wait_for_event:
+            - name: salt/minion/*/start
+            - mid_list:
+              - jerry
+              - stuart
+              - dave
+              - phil
+              - kevin
+              - mike
+            - require:
+              - salt: reboot_all_minions
+    '''
+    ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
+
+    sevent = salt.utils.event.get_event(
+            'master',
+            __opts__['sock_dir'],
+            __opts__['transport'])
+
+    del_counter = 0
+    starttime = time.time()
+    timelimit = starttime + timeout
+    while True:
+        event = sevent.get_event(full=True)
+        is_timedout = time.time() > timelimit
+
+        if event is None and not is_timedout:
+            log.trace("wait_for_event: No event data; waiting.")
+            continue
+        elif event is None and is_timedout:
+            ret['comment'] = 'Timeout value reached.'
+            return ret
+
+        if fnmatch.fnmatch(event['tag'], name):
+            val = event['data'].get(event_id)
+
+            if val is not None:
+                try:
+                    val_idx = id_list.index(val)
+                except ValueError:
+                    log.trace("wait_for_event: Event identifier '{0}' not in "
+                            "id_list; skipping.".format(event_id))
+                else:
+                    del id_list[val_idx]
+                    del_counter += 1
+                    minions_seen = ret['changes'].setdefault('minions_seen', [])
+                    minions_seen.append(val)
+
+                    log.debug("wait_for_event: Event identifier '{0}' removed "
+                            "from id_list; {1} items remaining."
+                            .format(val, len(id_list)))
+            else:
+                log.trace("wait_for_event: Event identifier '{0}' not in event "
+                        "'{1}'; skipping.".format(event_id, event['tag']))
+        else:
+            log.debug("wait_for_event: Skipping unmatched event '{0}'"
+                    .format(event['tag']))
+
+        if len(id_list) == 0:
+            ret['result'] = True
+            ret['comment'] = 'All events seen in {0} seconds.'.format(
+                    time.time() - starttime)
+            return ret
+
+        if is_timedout:
+            ret['comment'] = 'Timeout value reached.'
+            return ret
