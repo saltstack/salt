@@ -9,7 +9,8 @@ Example output::
     {'myminion': {'foo': {'list': ['Hello', 'World'], 'bar': 'baz', 'dictionary': {'abc': 123, 'def': 456}}}}
 '''
 
-from highstate import output as _output
+# Import salt libs
+import salt.output.highstate
 
 
 def output(data):
@@ -17,18 +18,17 @@ def output(data):
     Rather basic....
     '''
     tmp = {}
-    for min in data.keys():
-        for process in data[min].keys():
+    for min_ in data.keys():
+        for process in data[min_].keys():
             add = False
-            if data[min][process]['result'] == False:
+            if data[min_][process]['result'] is False:
                 add = True
-            elif data[min][process]['changes'] != {}  :
+            elif data[min_][process]['changes']:
                 add = True
-            if add == True:
-                if not tmp.has_key(min):
-                    tmp[min] = {process:data[min][process]}
+            if add is True:
+                if min_ not in tmp:
+                    tmp[min_] = {process: data[min_][process]}
                 else:
-                    tmp[min][process]={process:data[min][process]}
+                    tmp[min_][process]={process: data[min_][process]}
 
-    return _output(tmp)
-
+    return salt.output.highstate._output(tmp)
