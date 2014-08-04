@@ -1243,6 +1243,9 @@ def managed(name,
     elif not isinstance(context, dict):
         return _error(
             ret, 'Context must be formed as a dict')
+    if defaults and not isinstance(defaults, dict):
+        return _error(
+            ret, 'Defaults must be formed as a dict')
 
     if len(filter(None, [contents, contents_pillar, contents_grains])) > 1:
         return _error(
