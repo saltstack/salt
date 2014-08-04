@@ -357,3 +357,50 @@ def delete(target, stop=True):
             return 'Volume {0} deleted'.format(target)
     else:
         return result
+
+
+def add_volume_bricks(name, bricks):
+    '''
+    Add brick(s) to an existing volume
+
+    name
+        Volume name
+
+    bricks
+        List of bricks to add to the volume
+    '''
+
+    new_bricks = []
+
+    cmd = 'echo yes | gluster volume add-brick {0}'.format(name)
+
+    if isinstance(bricks, str):
+        bricks = [bricks]
+
+    volume_bricks = status(name)
+
+    if 'does not exist' in volume_bricks:
+        return volume_bricks
+
+    if 'is not started' in volume_bricks:
+        return volume_bricks
+
+    for brick in bricks:
+        if brick in volume_bricks['bricks']:
+            log.debug('Brick {0} already in volume {1}...excluding from command'.format(brick, name))
+        else:
+            new_bricks.append(brick)
+
+    if len(new_bricks) > 0:
+        for brick in new_bricks:
+            cmd += ' '+str(brick)
+
+        result = __salt__['cmd.run'](cmd)
+
+        if result.endswith('success'):
+            return '{0} bricks successfully added to the volume {1}'.format(len(new_bricks), name)
+        else:
+            return result
+
+    else:
+        return 'Bricks already in volume {0}'.format(name)
