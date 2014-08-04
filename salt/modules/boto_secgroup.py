@@ -105,6 +105,43 @@ def _split_rules(rules):
     return split
 
 
+def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a Group ID given a Group Name or Group Name and VPC ID
+
+    CLI example::
+
+        salt myminion boto_secgroup.get_group_id mysecgroup
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if vpc_id is None:
+        logging.debug('getting group_id for {0}'.format(name))
+        group_filter = {'group-name': name}
+        filtered_groups = conn.get_all_security_groups(filters=group_filter)
+        # security groups can have the same name if groups exist in both
+        # EC2-Classic and EC2-VPC
+        # iterate through groups to ensure we return the EC2-Classic
+        # security group
+        for group in filtered_groups:
+            # a group in EC2-Classic will have vpc_id set to None
+            if group.vpc_id is None:
+                return group.id
+        return False
+    elif vpc_id:
+        logging.debug('getting group_id for {0} in vpc_id {1}'.format(name, vpc_id))
+        group_filter = {'group-name': name, 'vpc_id': vpc_id}
+        filtered_groups = conn.get_all_security_groups(filters=group_filter)
+        if len(filtered_groups) == 1:
+            return filtered_groups[0].id
+        else:
+            return False
+    else:
+        return False
+
+
 def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                profile=None):
     '''
