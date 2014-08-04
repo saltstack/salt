@@ -152,7 +152,7 @@ def _check_cron(user,
     if dayweek is not None:
         dayweek = str(dayweek).lower()
     if identifier is not None:
-        identifier = str(identifier).lower()
+        identifier = str(identifier)
     if cmd is not None:
         cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
