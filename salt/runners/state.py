@@ -130,7 +130,7 @@ def show_stages(saltenv='base', os_fn=None):
     return overstate.over
 
 
-def event(tagmatch='*', count=-1, quiet=False, sock_dir=None):
+def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
@@ -147,6 +147,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None):
         ``tagmatch`` parameter; pass ``-1`` to listen forever.
     :param quiet: do not print to stdout; just block
     :param sock_dir: path to the Salt master's event socket file.
+    :param pretty: Output the JSON all on a single line if ``False`` (useful
+        for shell tools); pretty-print the JSON output if ``True``.
 
     CLI Examples:
 
@@ -248,7 +250,12 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None):
 
         if fnmatch.fnmatch(ret['tag'], tagmatch):
             if not quiet:
-                print('{0}\t{1}'.format(ret['tag'], json.dumps(ret['data'])))
+                print('{0}\t{1}'.format(
+                    ret['tag'],
+                    json.dumps(
+                        ret['data'],
+                        sort_keys=pretty,
+                        indent=None if not pretty else 4)))
                 sys.stdout.flush()
 
             count -= 1
