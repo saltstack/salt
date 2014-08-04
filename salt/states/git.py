@@ -42,6 +42,7 @@ def latest(name,
            user=None,
            force=None,
            force_checkout=False,
+           force_reset=False,
            submodules=False,
            mirror=False,
            bare=False,
@@ -225,6 +226,11 @@ def latest(name,
                                               opts=fetch_opts,
                                               user=user,
                                               identity=identity)
+
+                    if force_reset:
+                        __salt__['git.reset'](target,
+                                              opts="--hard",
+                                              user=user)
 
                     __salt__['git.checkout'](target,
                                              rev,
