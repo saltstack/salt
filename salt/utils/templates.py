@@ -58,6 +58,14 @@ def wrap_tmpl_func(render_str):
         assert 'opts' in context
         assert 'saltenv' in context
 
+        if 'sls' in context:
+            slspath = context['sls'].replace('.', '/')
+            if tmplpath is not None:
+                context['tplpath'] = tmplpath
+                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
+                    slspath = os.path.dirname(slspath)
+            context['slspath'] = slspath
+
         if isinstance(tmplsrc, string_types):
             if from_str:
                 tmplstr = tmplsrc
