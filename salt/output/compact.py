@@ -29,6 +29,6 @@ def output(data):
                 if min_ not in tmp:
                     tmp[min_] = {process: data[min_][process]}
                 else:
-                    tmp[min_][process]={process: data[min_][process]}
+                    tmp[min_][process] = {process: data[min_][process]}
 
     return salt.output.highstate._output(tmp)
