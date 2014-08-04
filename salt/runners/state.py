@@ -130,7 +130,7 @@ def show_stages(saltenv='base', os_fn=None):
     return overstate.over
 
 
-def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
+def event(tagmatch='*', count=-1, quiet=False, sock_dir=None):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
@@ -154,7 +154,7 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
 
         # Reboot a minion and run highstate when it comes back online
         salt 'jerry' system.reboot && \\
-            salt-run state.event 'salt/minion/jerry/start' quiet=True && \\
+            salt-run state.event 'salt/minion/jerry/start' count=1 quiet=True && \\
             salt 'jerry' state.highstate
 
         # Reboot multiple minions and run highstate when all are back online
@@ -163,7 +163,7 @@ def event(tagmatch='*', count=1, quiet=False, sock_dir=None):
             salt -L 'kevin,stewart,dave' state.highstate
 
         # Watch the event bus forever in a shell while-loop.
-        salt-run state.event count=-1 | while read -r tag data; do
+        salt-run state.event | while read -r tag data; do
             echo $tag
             echo $data | jq -colour-output .
         done
