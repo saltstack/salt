@@ -202,6 +202,7 @@ For the minion to be able to detect if its still connected to its current
 master enable the check for it
 
 .. code-block:: yaml
+
     master_alive_interval: <seconds>
 
 If the loss of the connection is detected, the minion will temporarily
@@ -311,6 +312,7 @@ That signature can be created with
 This will create a default signature file in the master pki-directory
 
 .. code-block:: bash
+
     /etc/salt/pki/master/master_pubkey_signature
 
 It is a simple text-file with the binary-signature converted to base64.
