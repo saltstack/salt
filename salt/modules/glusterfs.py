@@ -358,6 +358,7 @@ def delete(target, stop=True):
     else:
         return result
 
+
 def add_volume_bricks(name, bricks):
     '''
     Add brick(s) to an existing volume
@@ -386,7 +387,7 @@ def add_volume_bricks(name, bricks):
 
     for brick in bricks:
         if brick in volume_bricks['bricks']:
-            log.debug('Brick {0} already in volume {1}...excluding from command'.format(brick,name))
+            log.debug('Brick {0} already in volume {1}...excluding from command'.format(brick, name))
         else:
             new_bricks.append(brick)
 
@@ -397,7 +398,7 @@ def add_volume_bricks(name, bricks):
         result = __salt__['cmd.run'](cmd)
 
         if result.endswith('success'):
-            return '{0} bricks successfully added to the volume {1}'.format(len(new_bricks),name)
+            return '{0} bricks successfully added to the volume {1}'.format(len(new_bricks), name)
         else:
             return result
 
