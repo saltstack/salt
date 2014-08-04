@@ -589,7 +589,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=True):
+def upgrade(refresh=True, dist_upgrade=True, **kwargs):  # pylint: disable=W0613
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -626,7 +626,7 @@ def upgrade(refresh=True, dist_upgrade=True):
     return salt.utils.compare_dicts(old, new)
 
 
-def hold(name=None, pkgs=None, sources=None):
+def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
     .. versionadded:: 2014.7.0
 
@@ -699,7 +699,7 @@ def hold(name=None, pkgs=None, sources=None):
     return ret
 
 
-def unhold(name=None, pkgs=None, sources=None):
+def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
     .. versionadded:: 2014.7.0
 
@@ -790,7 +790,8 @@ def _clean_pkglist(pkgs):
 
 def list_pkgs(versions_as_list=False,
               removed=False,
-              purge_desired=False):
+              purge_desired=False,
+              **kwargs):  # pylint: disable=W0613
     '''
     List the packages currently installed in a dict::
 
