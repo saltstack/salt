@@ -59,4 +59,3 @@ def output(data):
     Rather basic....
     '''
     return one_level_values(data)
-
