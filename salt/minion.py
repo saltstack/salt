@@ -995,7 +995,7 @@ class Minion(MinionBase):
                     ind = 0
                     iret = {}
                     for single in return_data:
-                        if isinstance(single, dict) and isinstance(iret, list):
+                        if isinstance(single, dict) and isinstance(iret, dict):
                             iret.update(single)
                         else:
                             if not iret:
