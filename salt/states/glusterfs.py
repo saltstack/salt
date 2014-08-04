@@ -204,6 +204,7 @@ def started(name):
 
     return ret
 
+
 def add_volume_bricks(name, bricks):
     '''
     Add brick(s) to an existing volume
@@ -246,7 +247,7 @@ def add_volume_bricks(name, bricks):
         ret['comment'] = current_bricks
         return ret
 
-    add_bricks = __salt__['glusterfs.add_volume_bricks'](name,bricks)
+    add_bricks = __salt__['glusterfs.add_volume_bricks'](name, bricks)
     ret['comment'] = add_bricks
 
     if 'bricks successfully added' in add_bricks:
