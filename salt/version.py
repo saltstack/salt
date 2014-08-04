@@ -496,6 +496,7 @@ def versions_information(include_salt_cloud=False):
     '''
     Report on all of the versions for dependent software
     '''
+
     libs = [
         ('Salt', None, __version__),
         ('Python', None, sys.version.rsplit('\n')[0].strip()),
@@ -509,7 +510,8 @@ def versions_information(include_salt_cloud=False):
         ('ioflo', 'ioflo', '__version__'),
         ('PyZMQ', 'zmq', '__version__'),
         ('RAET', 'raet', '__version__'),
-        ('ZMQ', 'zmq', 'zmq_version')
+        ('ZMQ', 'zmq', 'zmq_version'),
+        ('Mako', 'mako', '__version__'),
     ]
 
     if include_salt_cloud:
