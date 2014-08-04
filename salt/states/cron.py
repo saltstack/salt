@@ -151,6 +151,10 @@ def _check_cron(user,
         month = str(month).lower()
     if dayweek is not None:
         dayweek = str(dayweek).lower()
+    if identifier is not None:
+        identifier = str(identifier).lower()
+    if cmd is not None:
+        cmd = str(cmd).lower()
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if _cron_matched(cron, cmd, identifier):
