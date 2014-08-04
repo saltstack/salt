@@ -1372,7 +1372,11 @@ def uptodate(name, refresh=False):
         return ret
 
     if isinstance(refresh, bool):
-        packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+        try:
+            packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+        except Exception, e:
+            ret['comment'] = str(e)
+            return ret
     else:
         ret['comment'] = 'refresh must be a boolean.'
         return ret
@@ -1388,7 +1392,9 @@ def uptodate(name, refresh=False):
 
     updated = __salt__['pkg.upgrade'](refresh=refresh)
 
-    if updated:
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
         ret['changes'] = updated
         ret['comment'] = 'Upgrade successful.'
         ret['result'] = True
