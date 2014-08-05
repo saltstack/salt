@@ -8,6 +8,7 @@ import datetime
 import hashlib
 import logging
 import re
+import os
 import socket
 
 # Import salt libs
@@ -746,7 +747,7 @@ def _get_bufsize_linux(iface):
 
     cmd = '/sbin/ethtool -g {0}'.format(iface)
     out = __salt__['cmd.run'](cmd)
-    pat = re.compile(u'^(.+):\s+(\d+)$')
+    pat = re.compile(r'^(.+):\s+(\d+)$')
     suffix = 'max-'
     for line in out.splitlines():
         res = pat.match(line)
@@ -771,8 +772,7 @@ def get_bufsize(iface):
     Return network buffer sizes as a dict
     '''
     if __grains__['kernel'] == 'Linux':
-        import os
-        if (os.path.exists('/sbin/ethtool')):
+        if os.path.exists('/sbin/ethtool'):
             return _get_bufsize_linux(iface)
 
     return False
@@ -792,7 +792,7 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     cmd = '/sbin/ethtool -G ' + iface
     if not kwargs:
         return ret
-    if (args):
+    if args:
         ret['comment'] = 'Unknown arguments: ' + ' '.join([str(item) for item in args])
         return ret
     eargs = ''
@@ -818,8 +818,7 @@ def mod_bufsize(iface, *args, **kwargs):
     Modify network interface buffers (currently linux only)
     '''
     if __grains__['kernel'] == 'Linux':
-        import os
-        if (os.path.exists('/sbin/ethtool')):
+        if os.path.exists('/sbin/ethtool'):
             return _mod_bufsize_linux(iface, *args, **kwargs)
 
     return False
