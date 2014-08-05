@@ -217,69 +217,6 @@ on GitHub.
     manage which repositories they are subscribed to on GitHub's watching page:
     https://github.com/watching.
 
-Repository structure
---------------------
-
-A basic Formula repository should have the following layout:
-
-.. code-block:: text
-
-    foo-formula
-    |-- foo/
-    |   |-- map.jinja
-    |   |-- init.sls
-    |   `-- bar.sls
-    |-- CHANGELOG.rst
-    |-- LICENSE
-    |-- pillar.example
-    |-- README.rst
-    `-- VERSION
-
-.. seealso:: :formula:`template-formula`
-
-    The :formula:`template-formula` repository has a pre-built layout that
-    serves as the basic structure for a new formula repository. Just copy the
-    files from there and edit them.
-
-``README.rst``
---------------
-
-The README should detail each available ``.sls`` file by explaining what it
-does, whether it has any dependencies on other formulas, whether it has a
-target platform, and any other installation or usage instructions or tips.
-
-A sample skeleton for the ``README.rst`` file:
-
-.. code-block:: rest
-
-    ===
-    foo
-    ===
-
-    Install and configure the FOO service.
-
-    .. note::
-
-        See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/topics/conventions/formulas.html>`_.
-
-    Available states
-    ================
-
-    .. contents::
-        :local:
-
-    ``foo``
-    -------
-
-    Install the ``foo`` package and enable the service.
-
-    ``foo.bar``
-    -----------
-
-    Install the ``bar`` package.
-
-
 Abstracting platform-specific data
 ----------------------------------
 
@@ -472,6 +409,66 @@ Jinja macros are generally discouraged in favor of adding functions to existing
 Salt modules or adding new modules. An example of this is the
 :py:func:`~salt.modules.grains.filter_by` function.
 
+Repository structure
+====================
+
+A basic Formula repository should have the following layout::
+
+    foo-formula
+    |-- foo/
+    |   |-- map.jinja
+    |   |-- init.sls
+    |   `-- bar.sls
+    |-- CHANGELOG.rst
+    |-- LICENSE
+    |-- pillar.example
+    |-- README.rst
+    `-- VERSION
+
+.. seealso:: :formula:`template-formula`
+
+    The :formula:`template-formula` repository has a pre-built layout that
+    serves as the basic structure for a new formula repository. Just copy the
+    files from there and edit them.
+
+``README.rst``
+--------------
+
+The README should detail each available ``.sls`` file by explaining what it
+does, whether it has any dependencies on other formulas, whether it has a
+target platform, and any other installation or usage instructions or tips.
+
+A sample skeleton for the ``README.rst`` file:
+
+.. code-block:: rest
+
+    ===
+    foo
+    ===
+
+    Install and configure the FOO service.
+
+    .. note::
+
+        See the full `Salt Formulas installation and usage instructions
+        <http://docs.saltstack.com/topics/conventions/formulas.html>`_.
+
+    Available states
+    ================
+
+    .. contents::
+        :local:
+
+    ``foo``
+    -------
+
+    Install the ``foo`` package and enable the service.
+
+    ``foo.bar``
+    -----------
+
+    Install the ``bar`` package.
+
 ``CHANGELOG.rst``
 -----------------
 
@@ -513,11 +510,20 @@ in the formula repository. The ``VERSION`` file should contain the currently
 released version of the particular formula.
 
 Testing Formulas
-----------------
+================
 
-Salt Formulas are tested by running each ``.sls`` file via :py:func:`state.sls
-<salt.modules.state.sls>` and checking the output for success or failure. This
-is done for each supported platform.
+A smoke-test for invalid Jinja, invalid YAML, or an invalid Salt state
+structure can be performed by with the :py:func:`state.show_sls
+<salt.modules.state.show_sls>` function:
+
+.. code-block:: bash
+
+    salt '*' state.show_sls apache
+
+Salt Formulas can then be tested by running each ``.sls`` file via
+:py:func:`state.sls <salt.modules.state.sls>` and checking the output for the
+success or failure of each state in the Formula. This should be done for each
+supported platform.
 
 .. ............................................................................
 
