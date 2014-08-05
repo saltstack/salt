@@ -1208,7 +1208,7 @@ def is_linux():
         if 'salt-proxy-minion' in main.__file__:
             is_proxy = True
     except AttributeError:
-            pass
+        pass
     if is_proxy:
         return False
     else:
