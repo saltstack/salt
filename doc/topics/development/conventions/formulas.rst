@@ -218,28 +218,6 @@ A sample skeleton for the ``README.rst`` file:
     ``foo.bar``
         Install the ``bar`` package.
 
-``CHANGELOG.rst``
------------------
-
-The ``CHANGELOG.rst`` file should detail the individual versions, their
-release date and a set of bullet points for each version highlighting the
-overall changes in a given version of the formula.
-
-A sample skeleton for the `CHANGELOG.rst` file:
-
-:file:`CHANGELOG.rst`:
-
-.. code-block:: rest
-
-    foo formula
-    ===========
-
-    0.0.2 (2013-01-01)
-
-    - Re-organized formula file layout
-    - Fixed filename used for upstart logger template
-    - Allow for pillar message to have default if none specified
-
 ``map.jinja``
 -------------
 
@@ -467,6 +445,28 @@ grains as well.
 Jinja macros are generally discouraged in favor of adding functions to existing
 Salt modules or adding new modules. An example of this is the
 :py:func:`~salt.modules.grains.filter_by` function.
+
+``CHANGELOG.rst``
+-----------------
+
+The ``CHANGELOG.rst`` file should detail the individual versions, their
+release date and a set of bullet points for each version highlighting the
+overall changes in a given version of the formula.
+
+A sample skeleton for the `CHANGELOG.rst` file:
+
+:file:`CHANGELOG.rst`:
+
+.. code-block:: rest
+
+    foo formula
+    ===========
+
+    0.0.2 (2013-01-01)
+
+    - Re-organized formula file layout
+    - Fixed filename used for upstart logger template
+    - Allow for pillar message to have default if none specified
 
 Versioning
 ----------
