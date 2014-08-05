@@ -472,15 +472,15 @@ at the end of a state run, after all states have completed.
 .. code-block:: yaml
 
  restart-apache2:
- service.running:
- - name: apache2
- - listen:
- - file: /etc/apache2/apache2.conf
+   service.running:
+     - name: apache2
+     - listen:
+     - file: /etc/apache2/apache2.conf
 
  configure-apache2:
- file.managed:
- - path: /etc/apache2/apache2.conf
- - source: salt://apache2/apache2.conf
+   file.managed:
+     - path: /etc/apache2/apache2.conf
+     - source: salt://apache2/apache2.conf
 
 This example will cause apache2 to be restarted when the apache2.conf file is
 changed, but the apache2 restart will happen at the end of the state run.
@@ -488,15 +488,15 @@ changed, but the apache2 restart will happen at the end of the state run.
 .. code-block:: yaml
 
  restart-apache2:
- service.running:
- - name: apache2
+   service.running:
+     - name: apache2
 
  configure-apache2:
- file.managed:
- - path: /etc/apache2/apache2.conf
- - source: salt://apache2/apache2.conf
- - listen_in:
- - service: apache2
+   file.managed:
+     - path: /etc/apache2/apache2.conf
+     - source: salt://apache2/apache2.conf
+     - listen_in:
+     - service: apache2
 
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
