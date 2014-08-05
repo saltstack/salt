@@ -407,7 +407,7 @@ def create(vm_):
                 'win_username', vm_, __opts__, default='Administrator'
             )
             deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
+                'win_password', vm_, __opts__, default=data.extra['password']
             )
 
         # Store what was used to the deploy the VM
