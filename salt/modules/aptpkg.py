@@ -31,28 +31,18 @@ log = logging.getLogger(__name__)
 
 
 try:
+    import apt.cache    # pylint: disable=E0611
+    import apt.debfile  # pylint: disable=E0611
     from aptsources import sourceslist
-    apt_support = True
+    HAS_APT = True
 except ImportError:
-    apt_support = False
+    HAS_APT = False
 
 try:
     import softwareproperties.ppa
-    ppa_format_support = True
+    HAS_SOFTWAREPROPERTIES = True
 except ImportError:
-    ppa_format_support = False
-
-try:
-    import apt.debfile  # pylint: disable=E0611
-    resolve_dep_support = True
-except ImportError:
-    resolve_dep_support = False
-
-try:
-    import apt.cache  # pylint: disable=E0611
-    apt_cache_support = True
-except ImportError:
-    apt_cache_support = False
+    HAS_SOFTWAREPROPERTIES = False
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -75,7 +65,7 @@ def __virtual__():
     return __virtualname__
 
 
-def __init__(opts):
+def __init__():
     '''
     For Debian and derivative systems, set up
     a few env variables to keep apt happy and
@@ -112,6 +102,9 @@ def _get_ppa_info_from_launchpad(owner_name, ppa_name):
 
 
 def _reconstruct_ppa_name(owner_name, ppa_name):
+    '''
+    Stringify PPA name from args.
+    '''
     return 'ppa:{0}/{1}'.format(owner_name, ppa_name)
 
 
@@ -135,23 +128,20 @@ def _get_virtual():
     if 'pkg._get_virtual' not in __context__:
         __context__['pkg._get_virtual'] = {}
         apt_cache = apt.cache.Cache()
-        try:
-            pkgs = apt_cache._cache.packages
-            HAS_CACHE = True
-        except AttributeError:
-            HAS_CACHE = False
-        if HAS_CACHE:
-            for pkg in pkgs:
-                if pkg.provides_list:
-                    for item in pkg.provides_list:
-                        realpkg = item[2].parent_pkg.name
-                        if realpkg not in __context__['pkg._get_virtual']:
-                            __context__['pkg._get_virtual'][realpkg] = []
-                        __context__['pkg._get_virtual'][realpkg].append(pkg.name)
+        pkgs = getattr(apt_cache._cache, 'packages', [])
+        for pkg in pkgs:
+            for item in getattr(pkg, 'provides_list', []):
+                realpkg = item[2].parent_pkg.name
+                if realpkg not in __context__['pkg._get_virtual']:
+                    __context__['pkg._get_virtual'][realpkg] = []
+                __context__['pkg._get_virtual'][realpkg].append(pkg.name)
     return __context__['pkg._get_virtual']
 
 
 def _warn_software_properties(repo):
+    '''
+    Warn of missing python-software-properties package.
+    '''
     log.warning('The \'python-software-properties\' package is not installed. '
                 'For more accurate support of PPA repositories, you should '
                 'install this package.')
@@ -206,10 +196,10 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
-    if not apt_cache_support:
-        msg = 'Error: apt.cache python module not found'
-        log.error(msg)
-        return msg
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
 
     virtpkgs = _get_virtual()
     all_virt = set()
@@ -456,7 +446,7 @@ def install(name=None,
         cmd = ['dpkg', '-i', '--force-confold']
         if skip_verify:
             cmd.append('--force-bad-verify')
-        if resolve_dep_support:
+        if HAS_APT:
             _resolve_deps(name, pkg_params, **kwargs)
         cmd.extend(pkg_params)
     elif pkg_type == 'repository':
@@ -598,7 +588,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=True, **kwargs):
+def upgrade(refresh=True, dist_upgrade=True, **kwargs):  # pylint: disable=W0613
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -635,7 +625,7 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 
-def hold(name=None, pkgs=None, sources=None, *kwargs):
+def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
     .. versionadded:: 2014.7.0
 
@@ -708,7 +698,7 @@ def hold(name=None, pkgs=None, sources=None, *kwargs):
     return ret
 
 
-def unhold(name=None, pkgs=None, sources=None, **kwargs):
+def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
     .. versionadded:: 2014.7.0
 
@@ -790,7 +780,7 @@ def _clean_pkglist(pkgs):
     markers, remove the virtual package markers.
     '''
     for name, versions in pkgs.iteritems():
-        stripped = filter(lambda x: x != '1', versions)
+        stripped = [v for v in versions if v != '1']
         if not stripped:
             pkgs[name] = ['1']
         elif versions != stripped:
@@ -800,7 +790,7 @@ def _clean_pkglist(pkgs):
 def list_pkgs(versions_as_list=False,
               removed=False,
               purge_desired=False,
-              **kwargs):
+              **kwargs):  # pylint: disable=W0613
     '''
     List the packages currently installed in a dict::
 
@@ -882,10 +872,10 @@ def list_pkgs(versions_as_list=False,
                                                  name,
                                                  version_num)
 
-    if not apt_cache_support:
-        msg = 'Error: apt.cache python module not found'
-        log.error(msg)
-        return msg
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
 
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed:
@@ -1002,11 +992,17 @@ def version_cmp(pkg1, pkg2):
 
 
 def _split_repo_str(repo):
+    '''
+    Return APT source entry as a tuple.
+    '''
     split = sourceslist.SourceEntry(repo)
     return split.type, split.uri, split.dist, split.comps
 
 
 def _consolidate_repo_sources(sources):
+    '''
+    Consolidate APT sources.
+    '''
     if not isinstance(sources, sourceslist.SourcesList):
         raise TypeError('{0!r} not a {1!r}'.format(type(sources),
                                                    sourceslist.SourcesList))
@@ -1015,26 +1011,26 @@ def _consolidate_repo_sources(sources):
     delete_files = set()
     base_file = sourceslist.SourceEntry('').file
 
-    repos = filter(lambda s: not s.invalid, sources.list)
+    repos = [s for s in sources.list if not s.invalid]
 
-    for r in repos:
-        key = str((getattr(r, 'architectures', []),
-                   r.disabled, r.type, r.uri))
+    for repo in repos:
+        key = str((getattr(repo, 'architectures', []),
+                   repo.disabled, repo.type, repo.uri))
         if key in consolidated:
             combined = consolidated[key]
-            combined_comps = set(r.comps).union(set(combined.comps))
+            combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(r.line)
+            consolidated[key] = sourceslist.SourceEntry(repo.line)
 
-        if r.file != base_file:
-            delete_files.add(r.file)
+        if repo.file != base_file:
+            delete_files.add(repo.file)
 
     sources.list = consolidated.values()
     sources.save()
-    for f in delete_files:
+    for file_ in delete_files:
         try:
-            os.remove(f)
+            os.remove(file_)
         except Exception:
             pass
     return sources
@@ -1051,10 +1047,10 @@ def list_repos():
        salt '*' pkg.list_repos
        salt '*' pkg.list_repos disabled=True
     '''
-    if not apt_support:
-        msg = 'Error: aptsources.sourceslist python module not found'
-        log.error(msg)
-        return msg
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
 
     repos = {}
     sources = sourceslist.SourcesList()
@@ -1086,9 +1082,9 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo "myrepo definition"
     '''
-    if not apt_support:
+    if not HAS_APT:
         raise CommandExecutionError(
-            'Error: aptsources.sourceslist python module not found'
+            'Error: \'python-apt\' package not installed'
         )
 
     ppa_auth = kwargs.get('ppa_auth', None)
@@ -1104,7 +1100,7 @@ def get_repo(repo, **kwargs):
             repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name,
                                             ppa_name, dist)
         else:
-            if ppa_format_support:
+            if HAS_SOFTWAREPROPERTIES:
                 repo = softwareproperties.ppa.expand_ppa_line(
                     repo,
                     __grains__['lsb_distrib_codename'])[0]
@@ -1162,8 +1158,10 @@ def del_repo(repo, **kwargs):
 
         salt '*' pkg.del_repo "myrepo definition"
     '''
-    if not apt_support:
-        return 'Error: aptsources.sourceslist python module not found'
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
 
     is_ppa = False
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
@@ -1171,7 +1169,7 @@ def del_repo(repo, **kwargs):
         # to derive the name.
         is_ppa = True
         dist = __grains__['lsb_distrib_codename']
-        if not ppa_format_support:
+        if not HAS_SOFTWAREPROPERTIES:
             _warn_software_properties(repo)
             owner_name, ppa_name = repo[4:].split('/')
             if 'ppa_auth' in kwargs:
@@ -1184,7 +1182,7 @@ def del_repo(repo, **kwargs):
             repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
     sources = sourceslist.SourcesList()
-    repos = filter(lambda s: not s.invalid, sources.list)
+    repos = [s for s in sources.list if not s.invalid]
     if repos:
         deleted_from = dict()
         try:
@@ -1228,9 +1226,9 @@ def del_repo(repo, **kwargs):
             for source in sources:
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
-            for repo_file, c in deleted_from.iteritems():
+            for repo_file, count in deleted_from.iteritems():
                 msg = 'Repo {0!r} has been removed from {1}.\n'
-                if c == 0 and 'sources.list.d/' in repo_file:
+                if count == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
                         msg = ('File {1} containing repo {0!r} has been '
                                'removed.\n')
@@ -1274,8 +1272,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
-    if not apt_support:
-        raise ImportError('Error: aptsources.sourceslist module not found')
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
 
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
@@ -1284,7 +1284,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if ppa_format_support and 'ppa_auth' not in kwargs:
+            if HAS_SOFTWAREPROPERTIES and 'ppa_auth' not in kwargs:
                 try:
                     get_repo(repo)
                     return {repo: ''}
@@ -1299,7 +1299,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         refresh_db()
                     return {repo: out}
             else:
-                if not ppa_format_support:
+                if not HAS_SOFTWAREPROPERTIES:
                     _warn_software_properties(repo)
                 else:
                     log.info('Falling back to urllib method for private PPA')
@@ -1386,7 +1386,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         # that are not the main sources.list file
         sources = _consolidate_repo_sources(sources)
 
-    repos = filter(lambda s: not s.invalid, sources)
+    repos = [s for s in sources if not s.invalid]
     mod_source = None
     try:
         repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
@@ -1399,18 +1399,18 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'keyid' in kwargs:
         keyid = kwargs.pop('keyid', None)
-        ks = kwargs.pop('keyserver', None)
-        if not keyid or not ks:
+        keyserver = kwargs.pop('keyserver', None)
+        if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
         cmd = 'apt-key export {0}'.format(keyid)
         output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
-        if ks:
+        if keyserver:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](cmd.format(ks, keyid), **kwargs)
+                ret = __salt__['cmd.run_all'](cmd.format(keyserver, keyid), **kwargs)
                 if ret['retcode'] != 0:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
@@ -1563,9 +1563,9 @@ def expand_repo_def(repokwargs):
     '''
     sanitized = {}
 
-    if not apt_support:
+    if not HAS_APT:
         raise CommandExecutionError(
-            'Error: aptsources.sourceslist python module not found'
+            'Error: \'python-apt\' package not installed'
         )
 
     repo = _strip_uri(repokwargs['repo'])
@@ -1578,7 +1578,7 @@ def expand_repo_def(repokwargs):
             repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name,
                                             dist)
         else:
-            if ppa_format_support:
+            if HAS_SOFTWAREPROPERTIES:
                 repo = softwareproperties.ppa.expand_ppa_line(
                     repo, dist)[0]
             else:
