@@ -130,12 +130,11 @@ def _get_virtual():
         apt_cache = apt.cache.Cache()
         pkgs = getattr(apt_cache._cache, 'packages', [])
         for pkg in pkgs:
-            if pkg.provides_list:
-                for item in pkg.provides_list:
-                    realpkg = item[2].parent_pkg.name
-                    if realpkg not in __context__['pkg._get_virtual']:
-                        __context__['pkg._get_virtual'][realpkg] = []
-                    __context__['pkg._get_virtual'][realpkg].append(pkg.name)
+            for item in getattr(pkg, 'provides_list', []):
+                realpkg = item[2].parent_pkg.name
+                if realpkg not in __context__['pkg._get_virtual']:
+                    __context__['pkg._get_virtual'][realpkg] = []
+                __context__['pkg._get_virtual'][realpkg].append(pkg.name)
     return __context__['pkg._get_virtual']
 
 
