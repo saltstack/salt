@@ -35,34 +35,61 @@ Adding a Formula as a GitFS remote
 ----------------------------------
 
 One design goal of Salt's GitFS fileserver backend was to facilitate reusable
-States so this is a quick and natural way to use Formulas.
+States. GitFS is a quick and natural way to use Formulas.
 
-.. seealso:: :ref:`Setting up GitFS <tutorial-gitfs>`
+1.  :ref:`Install and configure GitFS <tutorial-gitfs>`.
 
-1.  Fork one or more Formula repositories to your own Github account.
-2.  Add the forked repository URLs as remotes in the
-    :conf_master:`gitfs_remotes` list in the Salt Master configuration file.
+2.  Add one or more Formula repository URLs as remotes in the
+    :conf_master:`gitfs_remotes` list in the Salt Master configuration file:
+
+    .. code-block:: yaml
+
+        gitfs_remotes:
+          - https://github.com/saltstack-formulas/apache-formula
+          - https://github.com/saltstack-formulas/memcached-formula
+
+    **We strongly recommend forking a formula repository** into your own GitHub
+    account to avoid unexpected changes to your infrastructure.
+
+    Many Salt Formulas are highly active repositories so pull new changes with
+    care. Plus any additions you make to your fork can be easily sent back
+    upstream with a quick pull request!
+
 3.  Restart the Salt master.
-
-.. note::
-
-    Although it is possible to add the formula URLs to Gitfs without forking
-    first, this is not recommended.  Relying on a repository that one does not
-    directly control could result in problems if there is upstream breakage in
-    the repo.
 
 Adding a Formula directory manually
 -----------------------------------
 
-Since Formulas are simply directories they can be copied onto the local file
-system by using Git to clone the repository or by downloading and expanding a
-tarball or zip file of the directory.
+Formulas are simply directories that can be copied onto the local file system
+by using Git to clone the repository or by downloading and expanding a tarball
+or zip file of the repository. The directory structure is designed to work with
+:conf_master:`file_roots` in the Salt master configuration.
 
-* Clone the repository manually and add a new entry to
-  :conf_master:`file_roots` pointing to the clone's directory.
+1.  Clone or download the repository into a directory:
 
-* Clone the repository manually and then copy or link the Formula directory
-  into ``file_roots``.
+    .. code-block:: bash
+
+        mkdir -p /srv/formulas
+        cd /srv/formulas
+        git clone https://github.com/saltstack-formulas/apache-formula.git
+
+        # or
+
+        mkdir -p /srv/formulas
+        cd /srv/formulas
+        wget https://github.com/saltstack-formulas/apache-formula/archive/master.tar.gz
+        tar xf apache-formula-master.tar.gz
+
+2.  Add the new directory to :conf_master:`file_roots`:
+
+    .. code-block:: yaml
+
+        file_roots:
+          - /srv/salt
+          - /srv/formulas/apache-formula
+
+3.  Restart the Salt Master.
+
 
 Usage
 =====
