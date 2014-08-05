@@ -31,4 +31,4 @@ def output(data):
                 else:
                     tmp[min_][process] = {process: data[min_][process]}
 
-    return salt.output.highstate._output(tmp)
+    return salt.output.highstate.output(tmp)
