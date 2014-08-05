@@ -6,7 +6,7 @@ This release is the largest Salt release ever, with more features and commits
 then any previous release of Salt. Everything from the new RAET transport to
 major updates in Salt Cloud and the merging of Salt API into the main project.
 
-Major Features
+New Transport!
 ==============
 
 RAET Transport Option
@@ -31,11 +31,32 @@ hammer out the update. This is a BETA release of Salt RAET.
 For information about how to use Salt with RAET please see the tutorial:
 <put tutorial here>
 
-New Imperative State Keyword "Listen"
+State System Enhancements
+=========================
+
+New Imperitive State Keyword "Listen"
 -------------------------------------
 
 The new listen keyword allows for completely imperative states by calling the
 mod_watch routine after all states have run instead of re-ordering the states.
+
+Mod Aggregate Runtime Manipulator
+---------------------------------
+
+The new mod_aggragate system allows for the state system to rewrite the state
+data durring execution. This allows for state deffinitions to be aggregated
+dynamically at runtime.
+
+The best example is found in the pkg state. If mod_aggregate is turned on,
+then when the first pkg state is reached the state system will scan all of the
+other running states for pkg states and take all other packages set for install
+and install them all at once in the first pkg state.
+
+These runtime modifications make it easy groups of states together, in future
+versions we hope to fill out the mod_aggregate system to build in more and
+more optomizations.
+
+For more documentation on mod_aggregate please see ref/states/aggregate
 
 New Requisites: onchanges and onfail
 ------------------------------------
@@ -46,6 +67,9 @@ Global onlyif and unless
 ------------------------
 
 The ``onlyif`` and ``unless`` options can now be used for any state declaration.
+
+Major Features
+==============
 
 Scheduler Additions
 -------------------
