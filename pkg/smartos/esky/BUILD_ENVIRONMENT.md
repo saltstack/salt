@@ -17,7 +17,7 @@ curl http://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2013Q4-x86_64
 hash -r
 
 pkgin -y up
-pkgin -y in build-essential salt swig py27-pip unzip 
+pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb
 pkgin -y rm salt
 
 cd /opt/local/bin
