@@ -16,7 +16,7 @@ from random import randint
 
 # Import salt libs
 import salt
-import salt.exceptions
+from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.cli
 try:
     import salt.cloud.cli
@@ -55,6 +55,49 @@ def salt_master():
     master.start()
 
 
+def minion_process(q):
+    # salt_minion spawns this function in a new proccess
+
+    def suicide_when_without_parent(parent_pid):
+        # have the minion suicide if the parent process is gone
+        # there is a small race issue where the parent PID could be replace
+        # with another proccess with the same PID
+        while True:
+            time.sleep(5)
+            try:
+                # check pid alive (Unix only trick!)
+                os.kill(parent_pid, 0)
+            except OSError:
+                sys.exit(999)
+    if not salt.utils.is_windows():
+        t = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+        t.start()
+
+    restart = False
+    minion = None
+    try:
+        minion = salt.Minion()
+        minion.start()
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.error(exc)
+        restart = True
+    except SystemExit as exc:
+        restart = False
+
+    if restart is True:
+        log.warn('** Restarting minion **')
+        delay = 60
+        if minion is not None:
+            if hasattr(minion, 'config'):
+                delay = minion.config.get('random_reauth_delay', 60)
+        random_delay = randint(1, delay)
+        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+        # preform delay after minion resources have been cleaned
+        q.put(random_delay)
+    else:
+        q.put(0)
+
+
 def salt_minion():
     '''
     Start the salt minion.
@@ -77,63 +120,27 @@ def salt_minion():
         # daemonize current process
         salt.utils.daemonize()
 
-    # run minion in a new process so its simple to cleanup resource
-    def minion_process(q):
-        # have the minion suicide if the parent process is gone
-        # there is a small race issue where the parent PID could be replace
-        # with another proccess with the same PID
-        def suicide_when_without_parent(parent_pid):
-            while True:
-                time.sleep(5)
-                try:
-                    # check pid alive (Unix only trick!)
-                    os.kill(parent_pid, 0)
-                except OSError:
-                    sys.exit(999)
-        if not salt.utils.is_windows():
-            t = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
-            t.start()
-
-        minion = None
-        try:
-            minion = salt.Minion()
-            minion.start()
-            q.put(0)
-        except Exception, err:
-            log.error(err)
-            log.warn('** Restarting minion **')
-            delay = 60
-            if minion is None:
-                if hasattr(minion, 'config'):
-                    delay = minion.config.get('random_reauth_delay', 60)
-            random_delay = randint(1, delay)
-            log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
-            # preform delay after minion resources have been cleaned
-            q.put(random_delay)
-
     # keep one minion subprocess running
     while True:
         q = multiprocessing.Queue()
         p = multiprocessing.Process(target=minion_process, args=(q,))
         p.start()
-
         try:
             p.join()
             try:
                 restart_delay = q.get(block=False)
             except Exception:
                 if p.exitcode == 0:
-                    # Minion process ended naturally
+                    # Minion process ended naturally, Ctrl+C or --version
                     break
                 restart_delay = 60
             if restart_delay == 0:
-                # minion closed on normal behaviour like Ctrl+C
+                # Minion process ended naturally, Ctrl+C, --version, etc.
                 break
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
         except KeyboardInterrupt, err:
             break
-
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
         rlogger = logging.getLogger()
@@ -260,7 +267,7 @@ def salt_ssh():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
-    except salt.exceptions.SaltClientError as err:
+    except SaltClientError as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash

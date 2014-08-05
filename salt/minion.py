@@ -246,7 +246,6 @@ class SMinion(object):
                 masters = self.opts['master']
                 if self.opts['random_master'] is True:
                     shuffle(masters)
-                self.opts['_safe_auth'] = False
                 for master in masters:
                     self.opts['master'] = master
                     self.opts.update(resolve_dns(opts))
@@ -1346,10 +1345,8 @@ class Minion(MinionBase):
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
 
-        tries = self.opts.get('auth_tries', 1)
-        safe = self.opts.get('auth_safemode', safe)
         while True:
-            creds = auth.sign_in(timeout, safe, tries)
+            creds = auth.sign_in(timeout, safe)
             if creds == 'full':
                 return creds
             elif creds != 'retry':
@@ -1785,6 +1782,8 @@ class Syndic(Minion):
     def __init__(self, opts):
         self._syndic_interface = opts.get('interface')
         self._syndic = True
+        # force auth_safemode True because Syndic dont support autorestart
+        opts['auth_safemode'] = True
         opts['loop_interval'] = 1
         super(Syndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
