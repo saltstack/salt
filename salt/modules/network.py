@@ -737,11 +737,6 @@ def is_loopback(ip_addr):
 def _get_bufsize_linux(iface):
     '''
     Return network interface buffer information using ethtool
-
-    CLI Example::
-
-        salt '*' network.getbufsize
-
     '''
     ret = {'result': False}
 
@@ -770,22 +765,21 @@ def _get_bufsize_linux(iface):
 def get_bufsize(iface):
     '''
     Return network buffer sizes as a dict
+
+    CLI Example::
+
+        salt '*' network.getbufsize
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
             return _get_bufsize_linux(iface)
 
-    return False
+    return {}
 
 
 def _mod_bufsize_linux(iface, *args, **kwargs):
     '''
     Modify network interface buffer sizes using ethtool
-
-    CLI Example::
-
-        salt '*' network.getBuffers
-
     '''
     ret = {'result': False,
            'comment': 'Requires rx=<val> tx==<val> rx-mini=<val> and/or rx-jumbo=<val>'}
@@ -816,6 +810,10 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
 def mod_bufsize(iface, *args, **kwargs):
     '''
     Modify network interface buffers (currently linux only)
+
+    CLI Example::
+
+        salt '*' network.getBuffers
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
