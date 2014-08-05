@@ -14,9 +14,15 @@ All official Salt Formulas are found as separate Git repositories in the
 
 https://github.com/saltstack-formulas
 
-As an example, quickly install and configure the popular memcached server using
-sane defaults simply by including the :formula:`memcached-formula` repository
-into an existing Salt States tree.
+As a simple example, to install the popular Apache web server (using the normal
+defaults for the underlying distro) simply include the
+:formula:`apache-formula` from a top file:
+
+.. code-block:: yaml
+
+    base:
+      'web*':
+        - apache
 
 Installation
 ============
