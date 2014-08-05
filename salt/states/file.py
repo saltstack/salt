@@ -1037,11 +1037,14 @@ def managed(name,
 
         Examples:
 
-        .. code-block:: text
+        .. code-block:: yaml
 
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
+            tomdroid-src-0.7.3.tar.gz:
+              file.managed:
+                - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
 
         Known issues:
             If the remote server URL has the hash file as an apparent
