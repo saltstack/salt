@@ -731,3 +731,45 @@ def is_loopback(ip_addr):
         salt '*' network.is_loopback 127.0.0.1
     '''
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
+
+def get_route(iface=None,dest=None):
+    '''
+    Get entries from the current routing table.
+    You may specify a destination or an interface.
+
+    For now just specific to Linux's ``ip``.
+
+    CLU Example:
+
+        salt '*' network.get_route iface=eth0 dest=default
+    '''
+    routes = []
+    if iface is not None and dest is None:
+        output = __salt__['cmd.run']('ip route show dev {0}'.format(iface)).splitlines()
+    # 
+    else
+        output = __salt__['cmd.run']('ip route show').splitlines()
+    for line in output:
+        route = {}
+        dest_re = re.match('^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}',line)
+        if line.startswith('default'):
+            # Should this be 0.0.0.0 or 0.0.0.0/0??
+            route['dest'] = '0.0.0.0'
+        elif dest_re is not None:
+            route['dest'] = dest_re.group()
+        iface_re = re.match('.*dev ([a-z0-9-]*) ', line)
+        if iface_re is not None:
+            route['iface'] = iface_re.group(1)
+        # I have no idea if Linux knows more than "kernel"...
+        proto_re = re.match('.*proto ([a-z-]*) ', line)
+        if proto_re is not None:
+            route['proto'] = proto_re.group(1)
+        scope_re = re.match('.*scope ([a-z-]*) ', line)
+        if scope_re is not None:
+            route['scope'] = scope_re.group(1)
+        src_re = re.match('.*src (([0-9]{1,3}\.){3}[0-9]{1,3})', line)
+        if src_re is not None:
+            route['src'] = src_re.group(1)
+        routes += [route]
+
+    return routes
