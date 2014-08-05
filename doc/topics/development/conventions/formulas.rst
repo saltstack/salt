@@ -218,55 +218,28 @@ A sample skeleton for the ``README.rst`` file:
     ``foo.bar``
         Install the ``bar`` package.
 
-``map.jinja``
--------------
-
-It is useful to have a single source for platform-specific or other
-parameterized information that can be reused throughout a Formula. See
-":ref:`conventions-formula-parameterization`" below for more information. Such
-a file should be named :file:`map.jinja` and live alongside the state
-files.
-
-The following is an example from the MySQL Formula that has been slightly
-modified to be more readable and less terse.
-
-In essence, it is a simple dictionary that serves as a lookup table. The
-:py:func:`grains.filter_by <salt.modules.grains.filter_by>` function then does
 a lookup on that table using the ``os_family`` grain (by default) and sets the
 result to a variable that can be used throughout the formula.
 
-.. seealso:: :py:func:`grains.filter_by <salt.modules.grains.filter_by>`
+Abstracting platform-specific data
+----------------------------------
+
+It is useful to have a single source for platform-specific or other static
+information that can be reused throughout a Formula. Such a file should be
+named :file:`map.jinja` and live alongside the state files.
+
+The following is an example from the MySQL Formula. It is a simple dictionary
+that serves as a lookup table (sometimes called a hash map or a dictionary).
+The :py:func:`grains.filter_by <salt.modules.grains.filter_by>` function
+performs a lookup on that table using the ``os_family`` grain (by default).
+
+The result is that the ``mysql`` variable is assigned to one of *subsets* of
+the lookup table for the current platform. This allows states to reference, for
+example, the name of a package without worrying about the underlying OS. The
+syntax for referencing a value is a normal dictionary lookup in Jinja, such as
+``{{ mysql['service'] }}`` or the shorthand ``{{ mysql.service }}``.
 
 :file:`map.jinja`:
-
-.. code-block:: jinja
-
-    {% set mysql_lookup_table = {
-        'Debian': {
-            'server': 'mysql-server',
-            'client': 'mysql-client',
-            'service': 'mysql',
-            'config': '/etc/mysql/my.cnf',
-        },
-        'RedHat': {
-            'server': 'mysql-server',
-            'client': 'mysql',
-            'service': 'mysqld',
-            'config': '/etc/my.cnf',
-        },
-        'Gentoo': {
-            'server': 'dev-db/mysql',
-            'mysql-client': 'dev-db/mysql',
-            'service': 'mysql',
-            'config': '/etc/mysql/my.cnf',
-        },
-    } %}
-
-    {% set mysql = salt['grains.filter_by'](mysql_lookup_table,
-        merge=salt['pillar.get']('mysql:lookup')) %}
-
-The above example is used to help explain how the mapping works. In most
-map files you will see the following structure: 
 
 .. code-block:: jinja
 
@@ -294,20 +267,7 @@ map files you will see the following structure:
         },
     }, merge=salt['pillar.get']('mysql:lookup')) %}
 
-The ``merge`` keyword specifies the location of a dictionary in Pillar that can
-be used to override values returned from the lookup table. If the value exists
-in Pillar it will take precedence, otherwise ``merge`` will be ignored. This is
-useful when software or configuration files is installed to non-standard
-locations. For example, the following Pillar would replace the ``config`` value
-from the call above.
-
-.. code-block:: yaml
-
-    mysql:
-      lookup:
-        config: /usr/local/etc/mysql/my.cnf
-
-Any of the values defined above can be fetched for the current platform in any
+Values defined in the map file can be fetched for the current platform in any
 state file using the following syntax:
 
 .. code-block:: yaml
@@ -321,19 +281,26 @@ state file using the following syntax:
       service:
         - running
         - name: {{ mysql.service }}
-        - require:
-          - pkg: mysql-server
 
-    mysql-config:
-      file:
-        - managed
-        - name: {{ mysql.config }}
-        - source: salt://mysql/conf/my.cnf
-        - watch:
-          - service: mysql-server
+Overriding values in the lookup table
+`````````````````````````````````````
 
-SLS files
----------
+Any value in the lookup table may be overridden using Pillar.
+
+The ``merge`` keyword specifies the location of a dictionary in Pillar that can
+be used to override values returned from the lookup table. If the value exists
+in Pillar it will take precedence.
+
+This is useful when software or configuration files is installed to
+non-standard locations or on unsupported platforms. For example, the following
+Pillar would replace the ``config`` value from the call above.
+
+.. code-block:: yaml
+
+    mysql:
+      lookup:
+        config: /usr/local/etc/mysql/my.cnf
+
 
 Each state in a Formula should use sane defaults (as much as is possible) and
 use Pillar to allow for customization.
