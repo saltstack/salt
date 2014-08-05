@@ -9,19 +9,6 @@ themselves and can be used for tasks such as installing a package, configuring
 and starting a service, setting up users or permissions, and many other common
 tasks.
 
-.. note:: Formulas require Salt 0.17 or later.
-
-    More accurately, Formulas are not tested on earlier versions of Salt so
-    your mileage may vary.
-
-    All Formulas require the grains execution module that shipped with Salt
-    0.16.4. Earlier Salt versions may copy :blob:`salt/modules/grains.py`
-    into the :file:`/srv/salt/_modules` directory and it will be automatically
-    distributed to all minions.
-
-    Some Formula utilize features added in Salt 0.17 and will not work on
-    earlier Salt versions.
-
 All official Salt Formulas are found as separate Git repositories in the
 "saltstack-formulas" organization on GitHub:
 
