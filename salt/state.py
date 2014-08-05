@@ -1857,7 +1857,7 @@ class State(object):
 
     def call_listen(self, chunks, running):
         '''
-        Find all of the lesten routines and call the associated mod_match runs
+        Find all of the listen routines and call the associated mod_match runs
         '''
         listeners = []
         crefs = {}
