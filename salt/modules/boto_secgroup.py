@@ -61,7 +61,8 @@ def __virtual__():
     return True
 
 
-def exists(name, region=None, key=None, keyid=None, profile=None):
+def exists(name=None, region=None, key=None, keyid=None, profile=None,
+           vpc_id=None, group_id=None):
     '''
     Check to see if an security group exists.
 
@@ -72,11 +73,10 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    try:
-        conn.get_all_security_groups([name])
+    group = _get_group(conn, name, vpc_id, group_id)
+    if group:
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    else:
         return False
 
 
@@ -105,6 +105,50 @@ def _split_rules(rules):
     return split
 
 
+def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
+    '''
+    Get a group object given a name, name and vpc_id or group_id. Return a
+    boto.ec2.securitygroup.SecurityGroup object if the group is found, else
+    return None.
+    '''
+    if name:
+        if vpc_id is None:
+            logging.debug('getting group for {0}'.format(name))
+            group_filter = {'group-name': name}
+            filtered_groups = conn.get_all_security_groups(filters=group_filter)
+            # security groups can have the same name if groups exist in both
+            # EC2-Classic and EC2-VPC
+            # iterate through groups to ensure we return the EC2-Classic
+            # security group
+            for group in filtered_groups:
+                # a group in EC2-Classic will have vpc_id set to None
+                if group.vpc_id is None:
+                    return group
+            return None
+        elif vpc_id:
+            logging.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
+            group_filter = {'group-name': name, 'vpc_id': vpc_id}
+            filtered_groups = conn.get_all_security_groups(filters=group_filter)
+            if len(filtered_groups) == 1:
+                return filtered_groups[0]
+            else:
+                return None
+        else:
+            return None
+    elif group_id:
+        try:
+            groups = conn.get_all_security_groups(group_ids=[group_id])
+        except boto.exception.BotoServerError as e:
+            log.debug(e)
+            return None
+        if len(groups) == 1:
+            return groups[0]
+        else:
+            return None
+    else:
+        return None
+
+
 def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get a Group ID given a Group Name or Group Name and VPC ID
@@ -112,38 +156,19 @@ def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=N
     CLI example::
 
         salt myminion boto_secgroup.get_group_id mysecgroup
-
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if vpc_id is None:
-        logging.debug('getting group_id for {0}'.format(name))
-        group_filter = {'group-name': name}
-        filtered_groups = conn.get_all_security_groups(filters=group_filter)
-        # security groups can have the same name if groups exist in both
-        # EC2-Classic and EC2-VPC
-        # iterate through groups to ensure we return the EC2-Classic
-        # security group
-        for group in filtered_groups:
-            # a group in EC2-Classic will have vpc_id set to None
-            if group.vpc_id is None:
-                return group.id
-        return False
-    elif vpc_id:
-        logging.debug('getting group_id for {0} in vpc_id {1}'.format(name, vpc_id))
-        group_filter = {'group-name': name, 'vpc_id': vpc_id}
-        filtered_groups = conn.get_all_security_groups(filters=group_filter)
-        if len(filtered_groups) == 1:
-            return filtered_groups[0].id
-        else:
-            return False
+    group = _get_group(conn, name, vpc_id)
+    if group:
+        return group.id
     else:
         return False
 
 
 def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
-               profile=None):
+               profile=None, vpc_id=None):
     '''
     Get the configuration for a security group.
 
@@ -154,57 +179,50 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return None
-    if not (name or group_id):
+    sg = _get_group(conn, name, vpc_id, group_id)
+    if sg:
+        ret = odict.OrderedDict()
+        ret['name'] = sg.name
+        # TODO: add support for vpc_id in return
+        # ret['vpc_id'] = sg.vpc_id
+        ret['group_id'] = sg.id
+        ret['owner_id'] = sg.owner_id
+        ret['description'] = sg.description
+        # TODO: add support for tags
+        _rules = []
+        for rule in sg.rules:
+            attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
+            _rule = odict.OrderedDict()
+            for attr in attrs:
+                val = getattr(rule, attr)
+                if not val:
+                    continue
+                if attr == 'grants':
+                    _grants = []
+                    for grant in val:
+                        g_attrs = {'name': 'source_group_name',
+                                   'owner_id': 'source_group_owner_id',
+                                   'group_id': 'source_group_group_id',
+                                   'cidr_ip': 'cidr_ip'}
+                        _grant = odict.OrderedDict()
+                        for g_attr, g_attr_map in g_attrs.iteritems():
+                            g_val = getattr(grant, g_attr)
+                            if not g_val:
+                                continue
+                            _grant[g_attr_map] = g_val
+                        _grants.append(_grant)
+                    _rule['grants'] = _grants
+                elif attr == 'from_port':
+                    _rule[attr] = int(val)
+                elif attr == 'to_port':
+                    _rule[attr] = int(val)
+                else:
+                    _rule[attr] = val
+            _rules.append(_rule)
+        ret['rules'] = _split_rules(_rules)
+        return ret
+    else:
         return None
-    try:
-        if name:
-            sg = conn.get_all_security_groups([name])
-        else:
-            sg = conn.get_all_security_groups(group_ids=[group_id])
-    except boto.exception.BotoServerError as e:
-        msg = 'Failed to get config for security group {0}.'.format(name)
-        log.error(msg)
-        log.debug(e)
-        return {}
-    sg = sg[0]
-    ret = odict.OrderedDict()
-    ret['name'] = name
-    ret['group_id'] = sg.id
-    ret['owner_id'] = sg.owner_id
-    ret['description'] = sg.description
-    # TODO: add support for tags
-    _rules = []
-    for rule in sg.rules:
-        attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
-        _rule = odict.OrderedDict()
-        for attr in attrs:
-            val = getattr(rule, attr)
-            if not val:
-                continue
-            if attr == 'grants':
-                _grants = []
-                for grant in val:
-                    g_attrs = {'name': 'source_group_name',
-                               'owner_id': 'source_group_owner_id',
-                               'group_id': 'source_group_group_id',
-                               'cidr_ip': 'cidr_ip'}
-                    _grant = odict.OrderedDict()
-                    for g_attr, g_attr_map in g_attrs.iteritems():
-                        g_val = getattr(grant, g_attr)
-                        if not g_val:
-                            continue
-                        _grant[g_attr_map] = g_val
-                    _grants.append(_grant)
-                _rule['grants'] = _grants
-            elif attr == 'from_port':
-                _rule[attr] = int(val)
-            elif attr == 'to_port':
-                _rule[attr] = int(val)
-            else:
-                _rule[attr] = val
-        _rules.append(_rule)
-    ret['rules'] = _split_rules(_rules)
-    return ret
 
 
 def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
@@ -229,8 +247,8 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
         return False
 
 
-def delete(name, group_id=None, region=None, key=None, keyid=None,
-           profile=None):
+def delete(name=None, group_id=None, region=None, key=None, keyid=None,
+           profile=None, vpc_id=None):
     '''
     Delete an autoscale group.
 
@@ -241,85 +259,107 @@ def delete(name, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    deleted = conn.delete_security_group(name, group_id)
-    if deleted:
-        log.info('Deleted security group {0}.'.format(name))
-        return True
+    group = _get_group(conn, name, vpc_id, group_id)
+    if group:
+        deleted = conn.delete_security_group(group_id=group.id)
+        if deleted:
+            log.info('Deleted security group {0} with id {1}.'.format(group.name,
+                                                                      group.id))
+            return True
+        else:
+            msg = 'Failed to delete security group {0}.'.format(name)
+            log.error(msg)
+            return False
     else:
-        msg = 'Failed to delete security group {0}.'.format(name)
-        log.error(msg)
+        log.debug('Security group not found.')
         return False
 
 
-def authorize(name, source_group_name=None,
+def authorize(name=None, source_group_name=None,
               source_group_owner_id=None, ip_protocol=None,
               from_port=None, to_port=None, cidr_ip=None, group_id=None,
               source_group_group_id=None, region=None, key=None,
-              keyid=None, profile=None):
+              keyid=None, profile=None, vpc_id=None):
     '''
     Add a new rule to an existing security group.
 
     CLI example::
 
-        salt myminion boto_secgroup.authorize mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='["10.0.0.0/0", "192.168.0.0/0"]'
+        salt myminion boto_secgroup.authorize mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    try:
-        added = conn.authorize_security_group(
-            group_name=name, src_security_group_name=source_group_name,
-            src_security_group_owner_id=source_group_owner_id,
-            ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
-            cidr_ip=cidr_ip, group_id=group_id,
-            src_security_group_group_id=source_group_group_id)
-        if added:
-            log.info('Added rule to security group {0}.'.format(name))
-            return True
-        else:
-            msg = 'Failed to add rule to security group {0}.'.format(name)
+    group = _get_group(conn, name, vpc_id, group_id)
+    if group:
+        try:
+            added = conn.authorize_security_group(
+                src_security_group_name=source_group_name,
+                src_security_group_owner_id=source_group_owner_id,
+                ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+                cidr_ip=cidr_ip, group_id=group.id,
+                src_security_group_group_id=source_group_group_id)
+            if added:
+                log.info('Added rule to security group {0} with id {1}'
+                         .format(group.name, group.id))
+                return True
+            else:
+                msg = ('Failed to add rule to security group {0} with id {1}.'
+                       .format(group.name))
+                log.error(msg)
+                return False
+        except boto.exception.EC2ResponseError as e:
+            log.debug(e)
+            msg = ('Failed to add rule to security group {0} with id {1}.'
+                   .format(group.name, group.id))
             log.error(msg)
             return False
-    except boto.exception.EC2ResponseError as e:
-        log.debug(e)
-        msg = 'Failed to add rule to security group {0}.'.format(name)
-        log.error(msg)
+    else:
+        log.debug('Failed to add rule to security group.')
         return False
 
 
-def revoke(name, source_group_name=None,
+def revoke(name=None, source_group_name=None,
            source_group_owner_id=None, ip_protocol=None,
            from_port=None, to_port=None, cidr_ip=None, group_id=None,
            source_group_group_id=None, region=None, key=None,
-           keyid=None, profile=None):
+           keyid=None, profile=None, vpc_id=None):
     '''
     Remove a rule from an existing security group.
 
     CLI example::
 
-        salt myminion boto_secgroup.revoke mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='["10.0.0.0/0", "192.168.0.0/0"]'
+        salt myminion boto_secgroup.revoke mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='10.0.0.0/8'
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    try:
-        revoked = conn.revoke_security_group(
-            group_name=name, src_security_group_name=source_group_name,
-            src_security_group_owner_id=source_group_owner_id,
-            ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
-            cidr_ip=cidr_ip, group_id=group_id,
-            src_security_group_group_id=source_group_group_id)
-        if revoked:
-            log.info('Removed rule from security group {0}.'.format(name))
-            return True
-        else:
-            msg = 'Failed to remove rule from security group {0}.'.format(name)
+    group = _get_group(conn, name, vpc_id, group_id)
+    if group:
+        try:
+            revoked = conn.revoke_security_group(
+                src_security_group_name=source_group_name,
+                src_security_group_owner_id=source_group_owner_id,
+                ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+                cidr_ip=cidr_ip, group_id=group.id,
+                src_security_group_group_id=source_group_group_id)
+            if revoked:
+                log.info('Removed rule from security group {0} with id {1}.'
+                         .format(group.name, group.id))
+                return True
+            else:
+                msg = ('Failed to remove rule from security group {0} with id {1}.'
+                       .format(group.name, group.id))
+                log.error(msg)
+                return False
+        except boto.exception.EC2ResponseError as e:
+            log.debug(e)
+            msg = ('Failed to remove rule from security group {0} with id {1}.'
+                   .format(group.name, group.id))
             log.error(msg)
             return False
-    except boto.exception.EC2ResponseError as e:
-        log.debug(e)
-        msg = 'Failed to remove rule from security group {0}.'.format(name)
-        log.error(msg)
+    else:
+        log.debug('Failed to remove rule from security group.')
         return False
 
 
