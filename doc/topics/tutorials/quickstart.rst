@@ -82,7 +82,7 @@ ensures that the server has the Apache webserver installed.
 
 .. code-block:: yaml
 
-    apache:               # ID declaration
+    apache2               # ID declaration
       pkg:                # state declaration
         - installed       # function declaration
 
