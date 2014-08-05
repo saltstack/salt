@@ -305,7 +305,7 @@ def authorize(name=None, source_group_name=None,
                 return True
             else:
                 msg = ('Failed to add rule to security group {0} with id {1}.'
-                       .format(group.name))
+                       .format(group.name, group.id))
                 log.error(msg)
                 return False
         except boto.exception.EC2ResponseError as e:
