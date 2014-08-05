@@ -110,6 +110,7 @@ Requires(postun): systemd-units
 %endif
 
 BuildRequires: systemd-units
+Requires:      systemd-python
 
 %endif
 
@@ -326,6 +327,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Mon Aug 4 2014 Erik Johnson <erik@saltstack.com> - 2014.1.10-1
+- Update to bugfix release 2014.1.10
+
 * Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-3
 - Add logrotate script
 
