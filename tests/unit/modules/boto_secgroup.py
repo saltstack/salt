@@ -195,7 +195,6 @@ class Boto_SecgroupTestCase(TestCase):
     def test_exists_false_name_classic(self):
         pass
 
-
     @skipIf(missing_requirements, missing_requirements_msg)
     @mock_ec2
     def test_exists_true_name_vpc(self):
