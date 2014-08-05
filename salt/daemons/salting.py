@@ -35,9 +35,12 @@ class SaltKeep(Keep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex', 'prihex', 'auto', 'role']
-    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'role']
-    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance', 'verhex', 'pubhex', 'role']
+    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'sighex',
+                   'prihex', 'auto', 'role', 'mutable']
+    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'neid', 'role',
+                       'mutable']
+    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance',
+                    'verhex', 'pubhex', 'role']
     RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
 
     Auto = False #auto accept
@@ -48,7 +51,10 @@ class SaltKeep(Keep):
         '''
         basedirpath = basedirpath or os.path.join(opts['cache_dir'], 'raet')
         super(SaltKeep, self).__init__(prefix=prefix, basedirpath=basedirpath, **kwa)
-        self.auto = auto if auto is not None else opts['auto_accept']
+        self.auto = (auto if auto is not None else
+                            (raeting.autoModes.always if opts['open_mode'] else
+                                (raeting.autoModes.once if opts['auto_accept'] else
+                                 raeting.autoModes.never)))
         self.saltRaetKey = RaetKey(opts)
 
     def loadLocalData(self):
@@ -81,9 +87,11 @@ class SaltKeep(Keep):
                 break
 
         if not keydata:
-            return None
-
-        data.update(acceptance=raeting.ACCEPTANCES[status],
+            data.update(acceptance=None,
+                        verhex=None,
+                        pubhex=None)
+        else:
+            data.update(acceptance=raeting.ACCEPTANCES[status],
                     verhex=keydata['verify'],
                     pubhex=keydata['pub'])
 
@@ -94,6 +102,10 @@ class SaltKeep(Keep):
         Load and Return the data from the all the remote estate files
         '''
         keeps = super(SaltKeep, self).loadAllRemoteData()
+        for name, data in keeps.items():
+            keeps[name].update(acceptance=None,
+                               verhex=None,
+                               pubhex=None)
 
         for status, mids in self.saltRaetKey.list_keys().items():
             for mid in mids:
@@ -122,6 +134,7 @@ class SaltKeep(Keep):
                         ('name', local.name),
                         ('ha', local.ha),
                         ('main', local.main),
+                        ('mutable', local.mutable),
                         ('sid', local.sid),
                         ('neid', local.neid),
                         ('role', local.role),
@@ -146,7 +159,9 @@ class SaltKeep(Keep):
         if self.verifyRemoteData(data, remoteFields=self.RemoteDumpFields):
             self.dumpRemoteData(data, remote.name)
 
-        self.saltRaetKey.status(remote.role,
+        if remote.pubber.keyhex  and remote.verfer.keyhex:
+            # kludge to persist the keys since no way to write
+            self.saltRaetKey.status(remote.role,
                                 remote.pubber.keyhex,
                                 remote.verfer.keyhex)
 

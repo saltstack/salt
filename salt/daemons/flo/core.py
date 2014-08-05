@@ -110,7 +110,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             'local': {'ipath': 'local',
                       'ival': {'name': 'master',
                                'main': False,
-                               'auto': None,
+                               'mutable': False,
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}},
@@ -134,8 +134,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         name = self.opts.value.get('id', self.local.data.name)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        auto = self.local.data.auto
         main = self.local.data.main
+        mutable = self.opts.value.get('open_mode', self.local.data.mutable)
         eid = self.local.data.eid
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
@@ -146,6 +146,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                 eid=eid,
                 name=name,
                 main=main,
+                mutable=mutable,
                 ha=ha,
                 sigkey=sigkey,
                 prikey=prikey)
@@ -154,14 +155,14 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         keep = salting.SaltKeep(opts=self.opts.value,
                                 basedirpath=basedirpath,
-                                stackname=name,
-                                auto=auto)
+                                stackname=name)
 
         self.stack.value = RoadStack(
                 local=local,
                 store=self.store,
                 name=name,
                 main=main,
+                mutable=mutable,
                 keep=keep,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs,

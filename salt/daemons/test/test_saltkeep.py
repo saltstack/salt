@@ -115,11 +115,12 @@ class BasicTestCase(unittest.TestCase):
 
         return data
 
-    def createRoadStack(self, data, keep,  eid=0, main=None, ha=None):
+    def createRoadStack(self, data, keep,  eid=0, main=None, ha=None, mutable=None):
         '''
         Creates stack and local estate from data with
         local estate.eid = eid
         stack.main = main
+        stack.mutable = mutable
         stack.auto = auto
         stack.name = data['name']
         local estate.name = data['name']
@@ -138,6 +139,7 @@ class BasicTestCase(unittest.TestCase):
         stack = stacking.RoadStack(name=data['name'],
                                    local=local,
                                    main=main,
+                                   mutable=mutable,
                                    store=self.store,
                                    keep=keep)
 
@@ -211,16 +213,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertFalse(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': False,
+                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -309,7 +312,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertFalse(other.keep.auto)
+        self.assertIs(other.keep.auto, raeting.autoModes.never)
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -317,11 +320,12 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': False,
+                                'auto': raeting.autoModes.never,
                                 'role': otherData['role'],
                             })
 
@@ -405,16 +409,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.always,
                                                          'role': mainData['role'],
                                                          })
 
@@ -501,7 +506,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertTrue(other.keep.auto)
+        self.assertIs(other.keep.auto,raeting.autoModes.always)
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -509,11 +514,12 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': True,
+                                'auto': raeting.autoModes.always,
                                 'role': otherData['role'],
                             })
 
@@ -597,16 +603,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto,  raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -693,7 +700,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertTrue(other.keep.auto)
+        self.assertIs(other.keep.auto, raeting.autoModes.once)
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -701,11 +708,12 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': True,
+                                'auto': raeting.autoModes.once,
                                 'role': otherData['role'],
                             })
 
@@ -791,16 +799,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertFalse(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': False,
+                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -872,7 +881,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.local.uid, 1)
         self.assertEqual(main.local.main, True)
         self.assertEqual(main.local.role, mainData['role'])
-        self.assertFalse(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -917,16 +926,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.always,
                                                          'role': mainData['role'],
                                                          })
 
@@ -996,7 +1006,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.local.uid, 1)
         self.assertEqual(main.local.main, True)
         self.assertEqual(main.local.role, mainData['role'])
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -1042,16 +1052,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1124,7 +1135,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.local.uid, 1)
         self.assertEqual(main.local.main, True)
         self.assertEqual(main.local.role, mainData['role'])
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -1169,16 +1180,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertFalse(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': False,
+                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1204,18 +1216,19 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertFalse(other.keep.auto)
+        self.assertIs(other.keep.auto,  raeting.autoModes.never)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable':  None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': False,
+                                'auto': raeting.autoModes.never,
                                 'role': otherData['role'],
                             })
 
@@ -1283,16 +1296,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.always,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1318,18 +1332,19 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertTrue(other.keep.auto)
+        self.assertIs(other.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': True,
+                                'auto': raeting.autoModes.always,
                                 'role': otherData['role'],
                             })
 
@@ -1392,17 +1407,18 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertEqual(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1434,11 +1450,12 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': True,
+                                'auto': raeting.autoModes.once,
                                 'role': otherData['role'],
                             })
 
@@ -1502,16 +1519,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertFalse(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': False,
+                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1539,18 +1557,19 @@ class BasicTestCase(unittest.TestCase):
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith('other1/raet/other1'))
         self.assertEqual(other1.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertFalse(other1.keep.auto)
+        self.assertIs(other1.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': other1Data['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'auto': False,
+                                'auto': raeting.autoModes.never,
                                 'role': other1Data['role'],
                             })
 
@@ -1604,18 +1623,19 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
         self.assertEqual(other2.local.ha, ("0.0.0.0", 7532))
-        self.assertFalse(other2.keep.auto)
+        self.assertIs(other2.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
-                                'auto': False,
+                                'auto': raeting.autoModes.never,
                                 'role': other2Data['role'],
                             })
 
@@ -1623,8 +1643,8 @@ class BasicTestCase(unittest.TestCase):
         self.join(other2, main)
         self.assertEqual(len(main.transactions), 0) # rejected since not same keys
         self.assertEqual(other2.remotes.values()[0].joined, False)
-        self.assertEqual(len(main.remotes), 2)
-        main.removeRemote(main.nameRemotes[other2.local.name], clear=True)
+        self.assertEqual(len(main.remotes), 1)
+        #main.removeRemote(main.nameRemotes[other2.local.name], clear=True)
         other2.server.close()
         other2.keep.clearAllDir()
         path = os.path.join(main.keep.remotedirpath,
@@ -1661,18 +1681,19 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
         self.assertEqual(other2.local.ha, ("0.0.0.0", 7532))
-        self.assertFalse(other2.keep.auto)
+        self.assertIs(other2.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'auto': False,
+                                'auto': raeting.autoModes.never,
                                 'role': other2Data['role'],
                             })
 
@@ -1743,16 +1764,17 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertTrue(main.keep.auto)
+        self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'main': True,
+                                                         'mutable': None,
                                                          'sid': 0,
                                                          'neid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': True,
+                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1780,18 +1802,19 @@ class BasicTestCase(unittest.TestCase):
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith('other1/raet/other1'))
         self.assertEqual(other1.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertTrue(other1.keep.auto)
+        self.assertIs(other1.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': other1Data['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'auto': True,
+                                'auto': raeting.autoModes.once,
                                 'role': other1Data['role'],
                             })
 
@@ -1844,18 +1867,19 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
         self.assertEqual(other2.local.ha, ("0.0.0.0", 7532))
-        self.assertFalse(other2.keep.auto)
+        self.assertIs(other2.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
                                 'uid': 0,
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
                                 'main': None,
+                                'mutable': None,
                                 'sid': 0,
                                 'neid': 1,
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
-                                'auto': False,
+                                'auto': raeting.autoModes.never,
                                 'role': other2Data['role'],
                             })
 
