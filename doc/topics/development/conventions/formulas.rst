@@ -200,6 +200,7 @@ A sample skeleton for the ``README.rst`` file:
 
 .. code-block:: rest
 
+    ===
     foo
     ===
 
@@ -211,15 +212,21 @@ A sample skeleton for the ``README.rst`` file:
         <http://docs.saltstack.com/topics/conventions/formulas.html>`_.
 
     Available states
-    ----------------
+    ================
+
+    .. contents::
+        :local:
 
     ``foo``
-        Install the ``foo`` package and enable the service.
-    ``foo.bar``
-        Install the ``bar`` package.
+    -------
 
-a lookup on that table using the ``os_family`` grain (by default) and sets the
-result to a variable that can be used throughout the formula.
+    Install the ``foo`` package and enable the service.
+
+    ``foo.bar``
+    -----------
+
+    Install the ``bar`` package.
+
 
 Abstracting platform-specific data
 ----------------------------------
