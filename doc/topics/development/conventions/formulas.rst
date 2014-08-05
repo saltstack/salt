@@ -364,36 +364,6 @@ unneeded default vhost.
 :ref:`Formulas should be reusable <extending-formulas>`. Avoid coupling
 unrelated actions together.
 
-Platform agnostic
-`````````````````
-
-Each Salt Formula must be able to be run without error on any platform. If the
-formula is not applicable to a platform it should do nothing. See the
-:formula:`epel-formula` for an example.
-
-Any platform-specific states must be wrapped in conditional statements:
-
-.. code-block:: jinja
-
-    {% if grains['os_family'] == 'Debian' %}
-    ...
-    {% endif %}
-
-A handy method for using platform-specific values is to create a lookup table
-using the :py:func:`~salt.modules.grains.filter_by` function:
-
-.. code-block:: jinja
-
-    {% set apache = salt['grains.filter_by']({
-        'Debian': {'conf': '/etc/apache2/conf.d'},
-        'RedHat': {'conf': '/etc/httpd/conf.d'},
-    }) %}
-
-    myconf:
-      file:
-        - managed
-        - name: {{ apache.conf }}/myconf.conf
-
 .. _conventions-formula-parameterization:
 
 Configuration and parameterization
