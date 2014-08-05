@@ -8,6 +8,7 @@ import datetime
 import hashlib
 import logging
 import re
+import os
 import socket
 
 # Import salt libs
@@ -731,3 +732,91 @@ def is_loopback(ip_addr):
         salt '*' network.is_loopback 127.0.0.1
     '''
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
+
+
+def _get_bufsize_linux(iface):
+    '''
+    Return network interface buffer information using ethtool
+    '''
+    ret = {'result': False}
+
+    cmd = '/sbin/ethtool -g {0}'.format(iface)
+    out = __salt__['cmd.run'](cmd)
+    pat = re.compile(r'^(.+):\s+(\d+)$')
+    suffix = 'max-'
+    for line in out.splitlines():
+        res = pat.match(line)
+        if res:
+            ret[res.group(1).lower().replace(' ', '-') + suffix] = int(res.group(2))
+            ret['result'] = True
+        elif line.endswith('maximums:'):
+            suffix = '-max'
+        elif line.endswith('settings:'):
+            suffix = ''
+    if not ret['result']:
+        parts = out.split()
+        # remove shell cmd prefix from msg
+        if parts[0].endswith('sh:'):
+            out = ' '.join(parts[1:])
+        ret['comment'] = out
+    return ret
+
+
+def get_bufsize(iface):
+    '''
+    Return network buffer sizes as a dict
+
+    CLI Example::
+
+        salt '*' network.getbufsize
+    '''
+    if __grains__['kernel'] == 'Linux':
+        if os.path.exists('/sbin/ethtool'):
+            return _get_bufsize_linux(iface)
+
+    return {}
+
+
+def _mod_bufsize_linux(iface, *args, **kwargs):
+    '''
+    Modify network interface buffer sizes using ethtool
+    '''
+    ret = {'result': False,
+           'comment': 'Requires rx=<val> tx==<val> rx-mini=<val> and/or rx-jumbo=<val>'}
+    cmd = '/sbin/ethtool -G ' + iface
+    if not kwargs:
+        return ret
+    if args:
+        ret['comment'] = 'Unknown arguments: ' + ' '.join([str(item) for item in args])
+        return ret
+    eargs = ''
+    for kw in ['rx', 'tx', 'rx-mini', 'rx-jumbo']:
+        value = kwargs.get(kw)
+        if value is not None:
+            eargs += ' ' + kw + ' ' + str(value)
+    if not eargs:
+        return ret
+    cmd += eargs
+    print cmd
+    out = __salt__['cmd.run'](cmd)
+    if out:
+        ret['comment'] = out
+    else:
+        ret['comment'] = eargs.strip()
+        ret['result'] = True
+    return ret
+
+
+def mod_bufsize(iface, *args, **kwargs):
+    '''
+    Modify network interface buffers (currently linux only)
+
+    CLI Example::
+
+        salt '*' network.getBuffers
+    '''
+    if __grains__['kernel'] == 'Linux':
+        if os.path.exists('/sbin/ethtool'):
+            return _mod_bufsize_linux(iface, *args, **kwargs)
+
+    return False
