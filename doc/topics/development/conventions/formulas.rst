@@ -162,15 +162,34 @@ customization through :ref:`Pillar <pillar>`. Examples of available options can
 be found in a file named :file:`pillar.example` in the root directory of each
 Formula repository.
 
-Modifying default Formula behavior
+Using Formula with your own states
 ----------------------------------
 
 Remember that Formula are regular Salt States and can be used with all Salt's
-normal mechanisms for determining execution order. Formula can be required from
-other States with ``require`` declarations, they can be modified using
-``extend``, they can made to watch other states with ``watch_in``, they can be
-used as templates for other States with ``use``. Don't be shy to read through
-the source for each Formula!
+normal state mechanisms. Formula can be required from other States with
+:ref:`requisites-require` declarations, they can be modified using ``extend``,
+they can made to watch other states with :ref:`requisites-watch-in`.
+
+The following example uses the stock :formula:`apache-formula` alongside a
+custom state to create a vhost on a Debian/Ubuntu system and to reload the
+Apache service whenever the vhost is changed.
+
+.. code-block:: yaml
+
+    # Include the stock, upstream apache formula.
+    include:
+      - apache
+
+    # Use the watch_in requisite to cause the apache service state to reload
+    # apache whenever the my-example-com-vhost state changes.
+    my-example-com-vhost:
+      file:
+        - managed
+        - name: /etc/apache2/sites-available/my-example-com
+        - watch_in:
+          - service: apache
+
+Don't be shy to read through the source for each Formula!
 
 Reporting problems & making additions
 -------------------------------------
