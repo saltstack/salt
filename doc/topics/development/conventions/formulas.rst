@@ -162,6 +162,8 @@ customization through :ref:`Pillar <pillar>`. Examples of available options can
 be found in a file named :file:`pillar.example` in the root directory of each
 Formula repository.
 
+.. _extending-formulas:
+
 Using Formula with your own states
 ----------------------------------
 
@@ -301,22 +303,36 @@ Pillar would replace the ``config`` value from the call above.
 Each state in a Formula should use sane defaults (as much as is possible) and
 use Pillar to allow for customization.
 
-The root state, in particular, and most states in general, should strive to do
-no more than the basic expected thing and advanced configuration should be put
-in child states build on top of the basic states.
+Single-purpose SLS files
+------------------------
 
-For example, the root Apache should only install the Apache httpd server and
-make sure the httpd service is running. It can then be used by more advanced
-states:
+Each sls file in a Formula should strive to do a single thing. This increases
+the reusability of this file by keeping unrelated tasks from getting coupled
+together.
+
+As an  example, the base Apache formula should only install the Apache httpd
+server and start the httpd service. This is the basic, expected behavior when
+installing Apache. It should not perform additional changes such as set the
+Apache configuration file or create vhosts.
+
+If a formula is single-purpose as in the example above, other formulas, and
+also other states can ``include`` and use that formula with :ref:`requisites`
+without also including undesirable or unintended side-effects.
+
+The following is a best-practice example for a reusable Apache formula. (This
+skips platform-specific options for brevity. See the full
+:formula:`apache-formula` for more.)
 
 .. code-block:: yaml
 
     # apache/init.sls
-    httpd:
+    apache:
       pkg:
         - installed
+        [...]
       service:
         - running
+        [...]
 
     # apache/mod_wsgi.sls
     include:
@@ -325,17 +341,28 @@ states:
     mod_wsgi:
       pkg:
         - installed
+        [...]
         - require:
           - pkg: apache
 
-    # apache/debian/vhost_setup.sls
-    {% if grains['os_family'] == 'Debian' %}
-    a2dissite 000-default:
-      cmd.run:
-        - onlyif: test -L /etc/apache2/sites-enabled/000-default
-        - require:
-          - pkg: apache
-    {% endif %}
+    # apache/conf.sls
+    include:
+      - apache
+
+    apache_conf:
+      file:
+        - managed
+        [...]
+        - watch_in:
+          - service: apache
+
+To illustrate a bad example, say the above Apache formula installed Apache and
+also created a default vhost. The mod_wsgi state would not be able to include
+the Apache formula to create that dependency tree without also installing the
+unneeded default vhost.
+
+:ref:`Formulas should be reusable <extending-formulas>`. Avoid coupling
+unrelated actions together.
 
 Platform agnostic
 `````````````````
