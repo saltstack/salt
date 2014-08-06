@@ -20,7 +20,7 @@ configuration at:
       provider: vsphere
       user: myuser
       password: verybadpass
-      url: 'https://10.1.1.1:443'
+      url: 'https://10.1.1.1:443/sdk'
 
 folder: Name of the folder that will contain the new VM. If not set, the VM will
         be added to the folder the original VM belongs to.
