@@ -137,6 +137,8 @@ def set_mindays(name, mindays):
 
 def gen_password(password, crypt_salt=None, algorithm='sha512'):
     '''
+    .. versionadded:: 2014.7.0
+
     Generate hashed password
 
     password
@@ -171,6 +173,8 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
 
 def del_password(name):
     '''
+    .. versionadded:: 2014.7.0
+
     Delete the password from name user
 
     CLI Example:
