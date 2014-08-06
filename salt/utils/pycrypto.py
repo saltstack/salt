@@ -18,7 +18,7 @@ import string
 import random
 
 # Import salt libs
-from salt.exceptions import SaltSystem
+from salt.exceptions import SaltInvocationError
 import salt.utils
 
 
