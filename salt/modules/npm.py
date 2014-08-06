@@ -190,7 +190,7 @@ def list_(pkg=None, dir=None):
     '''
     _check_valid_version()
 
-    cmd = 'npm list --json'
+    cmd = 'npm list --silent --json'
 
     if dir is None:
         cmd += ' --global'
