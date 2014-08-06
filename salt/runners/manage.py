@@ -246,7 +246,7 @@ def versions():
         version_status[ver_diff][minion] = str(minion_version)
 
     # Add version of Master to output
-    version_status[2] = salt.__version__
+    version_status[2] = str(master_version)
 
     ret = {}
     for key in version_status:
