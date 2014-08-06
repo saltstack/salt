@@ -747,7 +747,7 @@ def get_route(iface=None,dest=None):
     if iface is not None and dest is None:
         output = __salt__['cmd.run']('ip route show dev {0}'.format(iface)).splitlines()
     # 
-    else
+    else:
         output = __salt__['cmd.run']('ip route show').splitlines()
     for line in output:
         route = {}
@@ -757,6 +757,9 @@ def get_route(iface=None,dest=None):
             route['dest'] = '0.0.0.0'
         elif dest_re is not None:
             route['dest'] = dest_re.group()
+        gw_re = re.match('.*via ([a-z0-9\.-]*) ', line)
+        if gw_re is not None:
+            route['gateway'] = gw_re.group(1)
         iface_re = re.match('.*dev ([a-z0-9-]*) ', line)
         if iface_re is not None:
             route['iface'] = iface_re.group(1)
