@@ -746,7 +746,6 @@ def get_route(iface=None,dest=None):
     routes = []
     if iface is not None and dest is None:
         output = __salt__['cmd.run']('ip route show dev {0}'.format(iface)).splitlines()
-    # 
     else:
         output = __salt__['cmd.run']('ip route show').splitlines()
     for line in output:
@@ -775,4 +774,14 @@ def get_route(iface=None,dest=None):
             route['src'] = src_re.group(1)
         routes += [route]
 
-    return routes
+    if dest is not None:
+        if dest == 'default':
+            dest = '0.0.0.0'
+        for route in routes:
+            if dest == route['dest'] \
+            or salt.utils.network.in_subnet(route['dest'], addrs=[dest]):
+                return [route]
+        else:
+            return []
+    else:
+        return routes
