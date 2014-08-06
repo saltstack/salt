@@ -243,7 +243,7 @@ def versions():
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
-        version_status[ver_diff][minion] = minion_version
+        version_status[ver_diff][minion] = str(minion_version)
 
     # Add version of Master to output
     version_status[2] = salt.__version__
