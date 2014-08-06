@@ -47,7 +47,7 @@ def __virtual__():
     if __grains__['kernel'] != 'Linux':
         return False
     # Suse >=12.0 uses systemd
-    if __grains__.get('os', '') == 'openSUSE':
+    if __grains__.get('os_family', '') == 'Suse':
         try:
             if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
                 return False
