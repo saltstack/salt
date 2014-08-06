@@ -299,10 +299,6 @@ Pillar would replace the ``config`` value from the call above.
       lookup:
         config: /usr/local/etc/mysql/my.cnf
 
-
-Each state in a Formula should use sane defaults (as much as is possible) and
-use Pillar to allow for customization.
-
 Single-purpose SLS files
 ------------------------
 
@@ -366,19 +362,87 @@ unrelated actions together.
 
 .. _conventions-formula-parameterization:
 
-Configuration and parameterization
-----------------------------------
+Parameterization
+----------------
 
-Each Formula should strive for sane defaults that can then be customized using
-Pillar. Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
-and must provide a default value:
+*Parameterization is a key feature of Salt Formulas* and also for Salt
+States. Parameterization allows a single Formula to be reused across many
+operating systems; to be reused across production, development, or staging
+environments; and to be reused by many people all with varying goals.
+
+Writing states, specifying ordering and dependencies is the part that takes the
+longest to write and to test. Filling those states out with data such as users
+or package names or file locations is the easy part. How many users, what those
+users are named, or where the files live are all implementation details that
+**should be parameterized**. This separation between a state and the data that
+populates a state creates a reusable formula.
+
+In the example below the data that populates the state can come from anywhere
+-- it can be hard-coded at the top of the state, it can come from an external
+file, it can come from Pillar, it can come from an execution function call, or
+it can come from a database query. The state itself doesn't change regardless
+of where the data comes from. Production data will vary from development data
+will vary from data from one company to another, however the state itself stays
+the same.
+
+.. code-block:: yaml
+
+    {% set user_list = [
+        {'name': 'larry', 'shell': 'bash'},
+        {'name': 'curly', 'shell': 'bash'},
+        {'name': 'moe', 'shell': 'zsh'},
+    ] %}
+
+    {# or #}
+
+    {% set user_list = salt['pillar.get']('user_list') %}
+
+    {# or #}
+
+    {% load_json "default_users.json" as user_list %}
+
+    {# or #}
+
+    {% set user_list = salt['acme_utils.get_user_list']() %}
+
+    {% for user in list_list %}
+    {{ user.name }}:
+      user.present:
+        - name: {{ user.name }}
+        - shell: {{ user.shell }}
+    {% endfor %}
+
+Configuration
+-------------
+
+Formulas should strive to use the defaults of the underlying platform, followed
+by defaults from the upstream project, followed by sane defaults for the
+formula itself.
+
+As an example, a formula to install Apache **should not** change the default
+Apache configuration file installed by the OS package. However, the Apache
+formula **should** include a state to change or override the default
+configuration file.
+
+Pillar overrides
+----------------
+
+Pillar lookups must use the safe :py:func:`~salt.modules.pillar.get`
+and must provide a default value. Create local variables using the Jinja
+``set`` construct to increase redability and to avoid potentially hundreds or
+thousands of function calls across a large state tree.
 
 .. code-block:: jinja
 
-    {% if salt['pillar.get']('horizon:use_ssl', False) %}
-    ssl_crt: {{ salt['pillar.get']('horizon:ssl_crt', '/etc/ssl/certs/horizon.crt') }}
-    ssl_key: {{ salt['pillar.get']('horizon:ssl_key', '/etc/ssl/certs/horizon.key') }}
-    {% endif %}
+    {% from "apache/map.jinja" import apache with context %}
+    {% set settings = salt['pillar.get']('apache', {}) %}
+
+    mod_status:
+      file:
+        - managed
+        - name: {{ apache.conf_dir }}
+        - source: {{ settings.get('mod_status_conf', 'salt://apache/mod_status.conf') }}
+        - template: {{ settings.get('template_engine', 'jinja') }}
 
 Any default values used in the Formula must also be documented in the
 :file:`pillar.example` file in the root of the repository. Comments should be
@@ -402,9 +466,8 @@ grains as well.
         - target: /storage/myfile.conf
     {% endif %}
 
-Jinja macros are generally discouraged in favor of adding functions to existing
-Salt modules or adding new modules. An example of this is the
-:py:func:`~salt.modules.grains.filter_by` function.
+Jinja macros to encapsulate logic or conditionals are discouraged in favor of
+:ref:`writing custom execution modules  <writing-execution-modules>` in Python.
 
 Repository structure
 ====================
