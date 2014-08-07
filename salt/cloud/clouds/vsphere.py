@@ -22,6 +22,15 @@ configuration at:
       password: verybadpass
       url: 'https://10.1.1.1:443'
 
+Note: Your URL may or may not look like any of the following, depending on how
+your VMWare installation is configured:
+
+    10.1.1.1
+    10.1.1.1:443
+    https://10.1.1.1:443
+    https://10.1.1.1:443/sdk
+    10.1.1.1:443/sdk
+
 folder: Name of the folder that will contain the new VM. If not set, the VM will
         be added to the folder the original VM belongs to.
 
