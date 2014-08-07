@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon CloudWatch
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
