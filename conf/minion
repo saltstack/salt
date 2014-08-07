@@ -134,7 +134,7 @@
 #auth_timeout: 60
 
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to authenticate.
-#auth_tries: 1
+#auth_tries: 7
 
 # If authentication failes due to SaltReqTimeoutError during a ping_interval,
 # cause sub minion proccess to restart.
