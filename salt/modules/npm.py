@@ -47,6 +47,7 @@ def _check_valid_version():
 
 
 def install(pkg=None,
+            pkgs=None,
             dir=None,
             runas=None,
             registry=None):
@@ -60,6 +61,11 @@ def install(pkg=None,
     pkg
         A package name in any format accepted by NPM, including a version
         identifier
+
+    pkgs
+        A list of package names in the same format as the ``name`` parameter
+
+        .. versionaddedd:: 2014.7
 
     dir
         The target directory in which to install the package, or None for
@@ -94,6 +100,8 @@ def install(pkg=None,
 
     if pkg:
         cmd += ' "{0}"'.format(pkg)
+    elif pkgs:
+        cmd += ' "{0}"'.format('" "'.join(pkgs))
 
     result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
 
