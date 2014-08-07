@@ -797,4 +797,12 @@ def netmask_to_prefixlen(netmask):
 
         salt '*' network.netmask_to_prefixlen 255.224.0.0
     '''
-    return salt.utils.network.netmask_to_prefixlen(netmask)
+    if 'netmask_to_prefixlen' in dir(salt.utils.network):
+        return salt.utils.network.netmask_to_prefixlen(netmask)
+    else:
+        netmask = netmask.split('.')
+        sum = 0
+        for idx in range(3,-1,-1):
+            sum += int(netmask[idx]) << (idx * 8)
+        prefixlen = format(sum,'0b').count('1')
+        return prefixlen
