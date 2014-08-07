@@ -1737,7 +1737,9 @@ def owner(*paths):
     If the file is not owned by a package, or is not present on the minion,
     then an empty string will be returned for that path.
 
-    CLI Example:
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
