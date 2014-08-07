@@ -435,7 +435,7 @@ def stack():
     return ''.join(traceback.format_stack())
 
 
-def tty(*args, **kwargs):
+def tty(*args, **kwargs):  #pylint: disable=W0613
     '''
     Deprecated. Moved to cmdmod.
     '''
