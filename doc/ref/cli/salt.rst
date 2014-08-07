@@ -60,10 +60,10 @@ Options
     Turn on verbosity for the salt call, this will cause the salt command to
     print out extra data like the job id.
 
-.. option:: --show-timeout
+.. option:: --hide-timeout
 
-    Instead of only showing the return data from the online minions this option
-    also prints the names of the minions which could not be reached.
+    Instead of showing the return data for all minions. This option
+    prints only the online minions which could be reached.
 
 .. option:: -b BATCH, --batch-size=BATCH
 

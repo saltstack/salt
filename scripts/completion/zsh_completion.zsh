@@ -49,7 +49,7 @@ _master_options=(
     '(--state-output --state_output)'{--state-output,--state_output}'[Override the configured state_output value for minion output. Default: full]:Outputs:(full terse mixed changes)'
     '--subset[Execute the routine on a random subset of the targeted minions]:Subset:'
     '(-v --verbose)'{-v,--verbose}'[Turn on command verbosity, display jid and active job queries]'
-    '--show-timeout[Display minions that timeout]'
+    '--hide-timeout[Hide minions that timeout]'
     '(-b --batch --batch-size)'{-b,--batch,--batch-size}'[Execute the salt job in batch mode, pass number or percentage to batch.]:Batch Size:'
     '(-a --auth --eauth --extrenal-auth)'{-a,--auth,--eauth,--external-auth}'[Specify an external authentication system to use.]:eauth:'
     '(-T --make-token)'{-T,--make-token}'[Generate and save an authentication token for re-use.]'
