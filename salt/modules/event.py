@@ -3,6 +3,8 @@
 Use the :doc:`Salt Event System </topics/event/index>` to fire events from the
 master to the minion and vice-versa.
 '''
+# Import Python libs
+import os
 
 # Import salt libs
 import salt.crypt
@@ -82,3 +84,36 @@ def fire(data, tag):
         return event.fire_event(data, tag)
     except Exception:
         return False
+
+
+def fire_master_env(tag, data=None, preload=None):
+    '''
+    Wraps :py:func:`fire_master` but the default event data is taken from the
+    shell environment
+
+    The ``data`` argument is optional. Environment variables can be overridden
+    on an individual basis.
+
+    This is a shorthand for firing an event using ``salt-call`` via an
+    application that uses environment variables to expose data.
+
+    For example, the popular Jenkins CI tool can send notifications to Salt of
+    successful or failed builds or tests for additional action, such as
+    deploying the new build. Add an "Execute shell" action to a Jenkins job
+    with the example below. This avoids having to manually specify each and
+    every environment variable as event data arguments.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call event.fire_master_env myco/jenkins/build/success
+
+    '''
+    env_dict = {}
+    env_dict.update(os.environ)
+
+    if data:
+        env_dict.update(data)
+
+    return fire_master(env_dict, tag, preload=preload)
