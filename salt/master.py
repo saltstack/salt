@@ -2202,6 +2202,11 @@ class ClearFuncs(object):
             'jid': clear_load['jid'],
             'ret': clear_load['ret'],
         }
+        # if you specified a master id, lets put that in the load
+        if 'master_id' in self.opts:
+            load['master_id'] = self.opts['master_id']
+        elif 'master_id' in extra:
+            load['master_id'] = extra['master_id']
 
         if 'id' in extra:
             load['id'] = extra['id']
