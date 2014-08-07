@@ -433,3 +433,10 @@ def stack():
         salt '*' test.stack
     '''
     return ''.join(traceback.format_stack())
+
+
+def tty(*args, **kwargs):
+    '''
+    Deprecated. Moved to cmdmod.
+    '''
+    return 'ERROR: This function has been moved to cmd.tty'
