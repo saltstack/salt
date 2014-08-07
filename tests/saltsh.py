@@ -74,15 +74,23 @@ def get_salt_vars():
     if 'file_client' not in __opts__ or not __opts__['file_client']:
         __opts__['file_client'] = 'local'
 
+    # ensure we have a minion id
+    if 'id' not in __opts__ or not __opts__['id']:
+        __opts__['id'] = 'saltsh_mid'
+
     # Populate template variables
     __salt__ = salt.loader.minion_mods(__opts__)
     __grains__ = __opts__['grains']
-    __pillar__ = salt.pillar.get_pillar(
-        __opts__,
-        __grains__,
-        __opts__.get('id'),
-        __opts__.get('environment'),
-    ).compile_pillar()
+
+    if __opts__['file_client'] == 'local':
+        __pillar__ = salt.pillar.get_pillar(
+            __opts__,
+            __grains__,
+            __opts__.get('id'),
+            __opts__.get('environment'),
+        ).compile_pillar()
+    else:
+        __pillar__ = {}
 
     JINJA = lambda x, **y: jinja2.Template(x).render(  # pylint: disable=C0103,W0612
             grains=__grains__,
