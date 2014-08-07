@@ -105,7 +105,7 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
-    cmd = 'repoquery --queryformat="{0}" {1}'.format(
+    cmd = 'repoquery --plugins --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
@@ -295,7 +295,7 @@ def latest_version(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     updates = _repoquery_pkginfo(
-        '{0} {1} --pkgnarrow=available --plugins {2}'
+        '{0} {1} --pkgnarrow=available {2}'
         .format(repo_arg, exclude_arg, ' '.join(names))
     )
 
@@ -428,7 +428,7 @@ def list_repo_pkgs(*args, **kwargs):
 
     ret = {}
     for repo in repos:
-        repoquery_cmd = '--all --repoid="{0}" --plugins'.format(repo)
+        repoquery_cmd = '--all --repoid="{0}"'.format(repo)
         for arg in args:
             repoquery_cmd += ' "{0}"'.format(arg)
         all_pkgs = _repoquery_pkginfo(repoquery_cmd)
@@ -463,7 +463,7 @@ def list_upgrades(refresh=True, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     updates = _repoquery_pkginfo(
-        '{0} {1} --all --pkgnarrow=updates --plugins'.format(repo_arg, exclude_arg)
+        '{0} {1} --all --pkgnarrow=updates'.format(repo_arg, exclude_arg)
     )
     return dict([(x.name, x.version) for x in updates])
 
@@ -498,7 +498,7 @@ def check_db(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     repoquery_base = \
-        '{0} {1} --all --quiet --whatprovides --plugins'.format(repo_arg, exclude_arg)
+        '{0} {1} --all --quiet --whatprovides'.format(repo_arg, exclude_arg)
 
     if 'pkg._avail' in __context__:
         avail = __context__['pkg._avail']
@@ -506,7 +506,7 @@ def check_db(*names, **kwargs):
         # get list of available packages
         avail = []
         lines = _repoquery(
-            '{0} --pkgnarrow=all --all --plugins'.format(repo_arg),
+            '{0} --pkgnarrow=all --all'.format(repo_arg),
             query_format='%{NAME}_|-%{ARCH}'
         )
         for line in lines:
