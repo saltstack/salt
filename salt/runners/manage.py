@@ -235,7 +235,7 @@ def versions():
 
     version_status = {}
 
-    master_version = salt.version.SaltStackVersion.parse(salt.__version__)
+    master_version = salt.version.__saltstack_version__
 
     for minion in minions:
         minion_version = salt.version.SaltStackVersion.parse(minions[minion])
@@ -243,10 +243,10 @@ def versions():
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
-        version_status[ver_diff][minion] = str(minion_version)
+        version_status[ver_diff][minion] = minion_version.string
 
     # Add version of Master to output
-    version_status[2] = str(master_version)
+    version_status[2] = master_version.string
 
     ret = {}
     for key in version_status:
