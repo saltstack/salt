@@ -158,9 +158,7 @@ def fstab(jail):
     elif 'mount.fstab' in config:
         c_fstab = config['mount.fstab']
     if 'fstab' in config or 'mount.fstab' in config:
-        print config['mount.fstab']
         if os.access(c_fstab, os.R_OK):
-            print '158'
             with salt.utils.fopen(c_fstab, 'r') as _fp:
                 for line in _fp:
                     line = line.strip()
