@@ -1005,7 +1005,6 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
     return ret
 
 
-
 def clean(jail=None, chroot=None):
     '''
     Cleans the local cache of fetched remote packages

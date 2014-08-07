@@ -212,17 +212,11 @@ def refresh_db():
     cmd = 'brew update'
     user = __salt__['file.get_user'](_homebrew_bin())
 
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', runas=user)
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
+    if __salt__['cmd.retcode'](cmd, runas=user):
+        log.error('Failed to update')
+        return False
 
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        return True
+    return True
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
