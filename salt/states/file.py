@@ -1028,20 +1028,50 @@ def managed(name,
             sha1        40
             md5         32
 
+        Using a Source Hash File
+        ------------------------
+
         The file can contain several checksums for several files. Each line
         must contain both the file name and the hash.  If no file name is
         matched, the first hash encountered will be used, otherwise the most
         secure hash with the correct source file name will be used.
 
-        Debian file type ``*.dsc`` is supported.
+        When using a source hash file the source_hash argument needs to be a
+        url, the standard download urls are supported, ftp, http, salt etc:
 
-        Examples:
+        Example:
 
-        .. code-block:: text
+        .. code-block:: yaml
+
+            tomdroid-src-0.7.3.tar.gz:
+              file.managed:
+                - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
+
+        The following is an example of the supported source_hash format:
+
+        ..code-block:: text
 
             /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
             sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
             ead48423703509d37c4a90e6a0d53e143b6fc268
+
+        Debian file type ``*.dsc`` files are also supported.
+
+        Inserting the Source Hash in the sls Data
+        -----------------------------------------
+
+        Examples:
+
+        .. code-block:: yaml
+
+            tomdroid-src-0.7.3.tar.gz:
+              file.managed:
+                - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
 
         Known issues:
             If the remote server URL has the hash file as an apparent
