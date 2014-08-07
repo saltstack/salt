@@ -57,5 +57,5 @@ people get new code and fixes into SaltStack projects. Log into GitHub and get
 started with one of the largest developer communities in the world. The following
 links should get you started:
 
-https://github.com/saltstack
-http://docs.saltstack.com/en/latest/topics/development/index.html
+* https://github.com/saltstack
+* http://docs.saltstack.com/en/latest/topics/development/index.html
