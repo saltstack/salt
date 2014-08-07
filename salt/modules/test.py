@@ -435,8 +435,16 @@ def stack():
     return ''.join(traceback.format_stack())
 
 
-def tty(*args, **kwargs):  #pylint: disable=W0613
+def tty(*args, **kwargs):  # pylint: disable=W0613
     '''
-    Deprecated. Moved to cmdmod.
+    Deprecated! Moved to cmdmod.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.tty tty0 'This is a test'
+        salt '*' test.tty pts3 'This is a test'
+    '''
     '''
     return 'ERROR: This function has been moved to cmd.tty'
