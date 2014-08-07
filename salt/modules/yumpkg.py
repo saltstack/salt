@@ -1343,7 +1343,7 @@ def group_info(name):
         'default packages': [],
         'description': ''
     }
-    cmd_template = 'repoquery --group --grouppkgs={0} --list {1!r}'
+    cmd_template = 'repoquery --plugins --group --grouppkgs={0} --list {1!r}'
 
     cmd = cmd_template.format('all', name)
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
@@ -1367,7 +1367,7 @@ def group_info(name):
     # considered to be conditional packages.
     ret['conditional packages'] = sorted(all_pkgs)
 
-    cmd = 'repoquery --group --info {0!r}'.format(name)
+    cmd = 'repoquery --plugins --group --info {0!r}'.format(name)
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     if out:
         ret['description'] = '\n'.join(out.splitlines()[1:]).strip()
