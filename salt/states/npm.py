@@ -32,6 +32,7 @@ def __virtual__():
 
 
 def installed(name,
+              pkgs=None,
               dir=None,
               runas=None,
               user=None,
@@ -51,6 +52,15 @@ def installed(name,
         coffee-script@1.0.1:
           npm:
             - installed
+
+    name
+        The package to install
+
+    pkgs
+        A list of packages to install with a single npm invocation; specifying
+        this argument will ignore the ``name`` argument
+
+        .. versionadded:: 2014.7
 
     dir
         The target directory in which to install the package, or None for
@@ -100,50 +110,80 @@ def installed(name,
         user = runas
         runas = None
 
-    prefix = name.split('@')[0].strip()
+    if pkgs is not None:
+        pkg_list = pkgs
+    else:
+        pkg_list = [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](pkg=name, dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error installing {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
         return ret
+    else:
+        installed_pkgs = dict((p.lower(), info)
+                for p, info in installed_pkgs.items())
 
-    installed_pkgs = dict((p.lower(), info) for p, info in installed_pkgs.items())
+    pkgs_satisfied = []
+    pkgs_to_install = []
+    for pkg_name in pkg_list:
+        prefix = pkg_name.split('@')[0].strip()
 
-    if prefix.lower() in installed_pkgs:
-        if force_reinstall is False:
-            ret['result'] = True
-            ret['comment'] = 'Package {0!r} satisfied by {1}@{2}'.format(
-                    name, prefix, installed_pkgs[prefix.lower()]['version'])
-            return ret
+        if prefix.lower() in installed_pkgs:
+            if force_reinstall is False:
+                pkgs_satisfied.append('{1}@{2}'.format(
+                        pkg_name,
+                        prefix,
+                        installed_pkgs[prefix.lower()]['version']))
+        else:
+            pkgs_to_install.append(pkg_name)
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'NPM package {0!r} is set to be installed'.format(name)
+
+        comment_msg = []
+        if pkgs_to_install:
+            comment_msg.append('NPM package(s) {0!r} are set to be installed'
+                .format(', '.join(pkgs_to_install)))
+
+            ret['changes'] = {'old': [], 'new': pkgs_to_install}
+
+        if pkgs_satisfied:
+            comment_msg.append('Package(s) {0!r} satisfied by {1}@{2}'
+                .format(', '.join(pkgs_satisfied)))
+
+        ret['comment'] = '. '.join(comment_msg)
         return ret
 
     try:
-        call = __salt__['npm.install'](
-            pkg=name,
-            dir=dir,
-            runas=user,
-            registry=registry
-        )
+        cmd_args = {
+            'dir': dir,
+            'runas': user,
+            'registry': registry,
+        }
+
+        if pkgs is not None:
+            cmd_args['pkgs'] = pkgs
+        else:
+            cmd_args['pkg'] = pkg_name
+
+        call = __salt__['npm.install'](**cmd_args)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error installing {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error installing {0!r}: {1}'.format(
+                ', '.join(pkg_list), err)
         return ret
 
     if call and (isinstance(call, list) or isinstance(call, dict)):
         ret['result'] = True
-        version = call[0]['version']
-        pkg_name = call[0]['name']
-        ret['changes']['{0}@{1}'.format(pkg_name, version)] = 'Installed'
-        ret['comment'] = 'Package {0!r} was successfully installed'.format(name)
+        ret['changes'] = {'old': [], 'new': pkgs_to_install}
+        ret['comment'] = 'Package(s) {0!r} were successfully installed'.format(
+                ', '.join(pkgs_to_install))
     else:
         ret['result'] = False
-        ret['comment'] = 'Could not install package {0!r}'.format(name)
+        ret['comment'] = 'Could not install package(s) {0!r}'.format(
+                ', '.join(pkg_list))
 
     return ret
 
