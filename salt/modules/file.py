@@ -474,6 +474,8 @@ def get_sum(path, form='md5'):
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
+    if not os.path.isfile(path):
+        return 'File not found'
     return salt.utils.get_hash(path, form, 4096)
 
 
