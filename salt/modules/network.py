@@ -732,7 +732,7 @@ def is_loopback(ip_addr):
     '''
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
 
-def get_route(iface=None,dest=None):
+def get_route(iface=None, dest=None):
     '''
     Get entries from the current routing table.
     You may specify a destination or an interface.
@@ -750,7 +750,7 @@ def get_route(iface=None,dest=None):
         output = __salt__['cmd.run']('ip route show').splitlines()
     for line in output:
         route = {}
-        dest_re = re.match('^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}',line)
+        dest_re = re.match('^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}', line)
         if line.startswith('default'):
             # Should this be 0.0.0.0 or 0.0.0.0/0??
             route['dest'] = '0.0.0.0'
@@ -801,8 +801,8 @@ def netmask_to_prefixlen(netmask):
         return salt.utils.network.netmask_to_prefixlen(netmask)
     else:
         netmask = netmask.split('.')
-        sum = 0
-        for idx in range(3,-1,-1):
-            sum += int(netmask[idx]) << (idx * 8)
-        prefixlen = format(sum,'0b').count('1')
+        bitmask = 0
+        for idx in range(3, -1, -1):
+            bitmask += int(netmask[idx]) << (idx * 8)
+        prefixlen = format(bitmask, '0b').count('1')
         return prefixlen
