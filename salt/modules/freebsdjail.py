@@ -122,6 +122,21 @@ def show_config(jail):
                         continue
                     key, value = line.split('=')
                     ret[key.split('_', 2)[2]] = value.split('"')[1]
+    for jconf in ('/etc/jail.conf', '/usr/local/etc/jail.conf'):
+        if os.access(jconf, os.R_OK):
+            with salt.utils.fopen(jconf, 'r') as _fp:
+                for line in _fp:
+                    if line.split()[0:2] == [jail, '{']:
+                        break
+                for line in _fp:
+                    if line.split()[-1] == '}':
+                        break
+                    if '=' not in line:
+                        ret[line.strip().rstrip(";")] = 'true'
+                    else:
+                        key = line.split('=')[0].strip()
+                        value = line.split('=')[-1].strip().strip(";'\"")
+                        ret[key] = value
     return ret
 
 
@@ -140,6 +155,9 @@ def fstab(jail):
     config = show_config(jail)
     if 'fstab' in config:
         c_fstab = config['fstab']
+    elif 'mount.fstab' in config:
+        c_fstab = config['mount.fstab']
+    if 'fstab' in config or 'mount.fstab' in config:
         if os.access(c_fstab, os.R_OK):
             with salt.utils.fopen(c_fstab, 'r') as _fp:
                 for line in _fp:
@@ -196,3 +214,5 @@ def sysctl():
         key, value = line.split(':', 1)
         ret[key.strip()] = value.strip()
     return ret
+
+
