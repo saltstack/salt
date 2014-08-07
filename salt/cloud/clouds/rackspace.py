@@ -402,9 +402,11 @@ def create(vm_):
             deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
+            win_pass = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
+            if win_pass:
+                deploy_kwargs['password'] = win_pass
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)
