@@ -1679,6 +1679,8 @@ There are additional details at :ref:`salt-pillars`
 ``pillar_source_merging_strategy``
 ----------------------------------
 
+.. versionadded:: 2014.7.0
+
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows to configure merging strategy
