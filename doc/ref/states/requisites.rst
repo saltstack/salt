@@ -76,6 +76,8 @@ Each direct requisite also has a corresponding requisite_in: ``require_in``,
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
+.. _requisites-require:
+
 require
 ~~~~~~~
 
@@ -102,6 +104,8 @@ including the sls file and then setting a state to ``require`` the included sls 
       pkg.installed:
         - require:
           - sls: foo
+
+.. _requisites-watch:
 
 watch
 ~~~~~
@@ -185,6 +189,8 @@ to Salt ensuring that the service is running.
       file.managed:
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
+
+.. _requisites-prereq:
 
 prereq
 ~~~~~~
