@@ -785,3 +785,16 @@ def get_route(iface=None,dest=None):
             return []
     else:
         return routes
+
+def netmask_to_prefixlen(netmask):
+    '''
+    Returns the prefix length of a given quad-dotted netmask 
+    (like 255.255.255.0 -> 24 or 255.224.0.0 -> 11).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.netmask_to_prefixlen 255.224.0.0
+    '''
+    return salt.utils.network.netmask_to_prefixlen(netmask)

@@ -358,6 +358,17 @@ def cidr_to_ipv4_netmask(cidr_bits):
             cidr_bits = 0
     return netmask
 
+def netmask_to_prefixlen(netmask):
+    '''
+    Takes a netmask like '255.255.255.0'
+    and returns a prefix length like '24'.
+    '''
+    netmask = netmask.split('.')
+    sum = 0
+    for idx in range(3,-1,-1):
+        sum += int(netmask[idx]) << (idx * 8)
+    prefixlen = format(sum,'0b').count('1')
+    return prefixlen
 
 def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     '''
