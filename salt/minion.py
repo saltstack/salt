@@ -895,8 +895,8 @@ class Minion(MinionBase):
             if match_func is None:
                 return
             if data['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
-                delim = data.get('delim', DEFAULT_TARGET_DELIM)
-                if not match_func(data['tgt'], delim=delim):
+                delimiter = data.get('delimiter', DEFAULT_TARGET_DELIM)
+                if not match_func(data['tgt'], delimiter=delimiter):
                     return
             elif not match_func(data['tgt']):
                 return
@@ -1973,8 +1973,8 @@ class Syndic(Minion):
                     self._process_cmd_socket()
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
-                if (self.event_forward_timeout is not None and
-                    self.event_forward_timeout < time.time()):
+                if self.event_forward_timeout is not None and \
+                        self.event_forward_timeout < time.time():
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
             # I've put explicit handling around the receive calls
@@ -2235,8 +2235,8 @@ class MultiSyndic(MinionBase):
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
 
-                if (self.event_forward_timeout is not None and
-                    self.event_forward_timeout < time.time()):
+                if self.event_forward_timeout is not None and \
+                        self.event_forward_timeout < time.time():
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
             # I've put explicit handling around the receive calls
@@ -2359,28 +2359,30 @@ class Matcher(object):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
-    def grain_match(self, tgt, delim=DEFAULT_TARGET_DELIM):
+    def grain_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
         '''
         Reads in the grains glob match
         '''
         log.debug('grains target: {0}'.format(tgt))
-        if delim not in tgt:
+        if delimiter not in tgt:
             log.error('Got insufficient arguments for grains match '
                       'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts['grains'], tgt, delim=delim)
+        return salt.utils.subdict_match(
+            self.opts['grains'], tgt, delimiter=delimiter
+        )
 
-    def grain_pcre_match(self, tgt, delim=DEFAULT_TARGET_DELIM):
+    def grain_pcre_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
         '''
         Matches a grain based on regex
         '''
         log.debug('grains pcre target: {0}'.format(tgt))
-        if delim not in tgt:
+        if delimiter not in tgt:
             log.error('Got insufficient arguments for grains pcre match '
                       'statement from master')
             return False
         return salt.utils.subdict_match(self.opts['grains'], tgt,
-                                        delim=delim, regex_match=True)
+                                        delimiter=delimiter, regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -2408,16 +2410,18 @@ class Matcher(object):
             comps[1],
         ))
 
-    def pillar_match(self, tgt, delim=DEFAULT_TARGET_DELIM):
+    def pillar_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
         '''
         Reads in the pillar glob match
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        if delim not in tgt:
+        if delimiter not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=delim)
+        return salt.utils.subdict_match(
+            self.opts['pillar'], tgt, delimiter=delimiter
+        )
 
     def ipcidr_match(self, tgt):
         '''
