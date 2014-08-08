@@ -97,6 +97,6 @@ def _string_list(a_list):
 
 def output(data):
     '''
-    Rather basic....
+    Display modified ret data
     '''
     return _one_level_values(data)
