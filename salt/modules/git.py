@@ -804,17 +804,17 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
     Set a key in the git configuration file (.git/config) of the repository or
     globally.
 
-    setting_name
-        The name of the configuration key to set
-
-    setting_value
-        The (new) value to set
-
     cwd : None
         Options path to the Git repository
 
         .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
+
+    setting_name : None
+        The name of the configuration key to set. Required.
+
+    setting_value : None
+        The (new) value to set. Required.
 
     user : None
         Run git as a user other than what the minion runs as
