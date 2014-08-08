@@ -838,7 +838,7 @@ class TargetOptionsMixIn(object):
                   'expression:\n"os:Arch*"')
         )
         group.add_option(
-            '--delim',
+            '--delimiter',
             default=config.DEFAULT_TARGET_DELIM,
             help=('Change the default delimiter for matching in multi-level '
                   'data structures. default=\'%default\'')
