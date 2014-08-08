@@ -848,14 +848,14 @@ def config_get(cwd=None, setting_name=None, user=None):
     '''
     Get a key or keys from the git configuration file (.git/config).
 
-    setting_name
-        The name of the configuration key to get
-
     cwd : None
         Optional path to a Git repository
 
         .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
+
+    setting_name : None
+        The name of the configuration key to get. Required.
 
     user : None
         Run git as a user other than what the minion runs as
@@ -864,8 +864,8 @@ def config_get(cwd=None, setting_name=None, user=None):
 
     .. code-block:: bash
 
-        salt '*' git.config_get user.email
-        salt '*' git.config_get user.name cwd=/path/to/repo user=arthur
+        salt '*' git.config_get setting_name=user.email
+        salt '*' git.config_get /path/to/repo user.name arthur
     '''
     if setting_name is None:
         raise TypeError
