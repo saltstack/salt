@@ -1856,6 +1856,7 @@ class Syndic(Minion):
 
         self._set_reconnect_ivl_max()
         self._set_tcp_keepalive()
+        self._set_ipv4only()
 
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
