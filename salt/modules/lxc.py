@@ -116,9 +116,24 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         netmask for the primary nic (24)
         = ``vm_.get('netmask', '24')``
     bridge
-        bridge^for the primary nic (lxcbr0)
+        bridge for the primary nic (lxcbr0)
     gateway
         network gateway for the container
+    additional_ips
+        additionnal ips which will be wired on the main bridge (br0)
+        which is connected to internet.
+        Be aware that you may use manual virtual mac addresses
+        providen by you provider (online, ovh, etc).
+        This is a list of mappings {ip: '', mac: '',netmask:''}
+        Set gateway to None and an interface with a gateway
+        to escape from another interface that eth0.
+        eg::
+
+              - {'mac': '00:16:3e:01:29:40',
+                 'gateway': None, (default)
+                 'link': 'br0', (default)
+                 'netmask': '', (default)
+                 'ip': '22.1.4.25'}
     unconditional_install
         given to lxc.bootstrap (see relative doc)
     force_install
@@ -214,6 +229,23 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             eth0['hwaddr'] = mac
         if bridge:
             eth0['link'] = bridge
+    for ix, iopts in enumerate(vm_.get("additional_ips", [])):
+        ifh = "eth{0}".format(ix+1)
+        ethx = nic_opts.setdefault(ifh, {})
+        gw = iopts.get('gateway', None)
+        if gw:
+            ethx['gateway'] = gw
+            vm_['gateway'] = gateway = None
+        ethx['link'] = iopts.get('link', 'br0')
+        ethx['ipv4'] = iopts['ip']
+        nm = iopts.get('netmask', '')
+        if nm:
+            ethx['ipv4'] += '/{0}'.format(nm)
+        for i in ['mac', 'hwaddr']:
+            if i in iopts:
+                ethx['hwaddr'] = iopts[i]
+        if 'hwaddr' not in ethx:
+            raise ValueError('No mac for {0}'.format(ifh))
     gateway = vm_.get('gateway', 'auto')
     #
     lxc_init_interface = {}
@@ -351,10 +383,16 @@ def _get_network_conf(conf_tuples=None, **kwargs):
 
     if nic:
         nicp = __salt__['config.get']('lxc.nic', {}).get(
-            nic, DEFAULT_NIC_PROFILE
-        )
+            nic, DEFAULT_NIC_PROFILE)
         nic_opts = kwargs.pop('nic_opts', None)
-        for dev, args in nicp.items():
+        for dev, args in nic_opts.items():
+            ethx = nicp.setdefault(dev, {})
+            ethx = salt.utils.dictupdate.update(ethx, args)
+        ifs = [a for a in nicp]
+        ifs.sort()
+        gateway_set = False
+        for dev in ifs:
+            args = nicp[dev]
             ret.append({'lxc.network.type': args.pop('type', '')})
             ret.append({'lxc.network.name': dev})
             ret.append({'lxc.network.flags': args.pop('flags', 'up')})
@@ -377,32 +415,47 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 if k == 'link' and bridge:
                     v = bridge
                 v = opts.get(k, v)
+                if k in ['gateway']:
+                    continue
                 ret.append({'lxc.network.{0}'.format(k): v})
-        # gateway (in automode) must be appended following network conf !
-        if gateway is not None:
+            # gateway (in automode) must be appended following network conf !
+            if not gateway:
+                gateway = args.get('gateway', None)
+            if gateway is not None and not gateway_set:
+                ret.append({'lxc.network.ipv4.gateway': gateway})
+                # only one network gateway ;)
+                gateway_set = True
+        # normally, this wont happen
+        # set the gateway if specified even if we did
+        # not managed the network underlying
+        if gateway is not None and not gateway_set:
             ret.append({'lxc.network.ipv4.gateway': gateway})
+            # only one network gateway ;)
+            gateway_set = True
 
     old = _get_veths(conf_tuples)
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
     for iface in [a for a in new]:
+        ndata = new[iface]
+        nmac = ndata.get('lxc.network.hwaddr', '')
+        ntype = ndata.get('lxc.network.type', '')
+        omac, otype = '', ''
         if iface in old:
-            ndata = new[iface]
             odata = old[iface]
             omac = odata.get('lxc.network.hwaddr', '')
-            nmac = ndata.get('lxc.network.hwaddr', '')
             otype = odata.get('lxc.network.type', '')
-            ntype = ndata.get('lxc.network.type', '')
-            # default for network type is setted here
-            # attention not to change the network type
-            # without a good and explicit reason to.
-            if otype and not ntype:
-                ntype = otype
-            if not ntype:
-                ntype = 'veth'
-            new[iface]['lxc.network.type'] = ntype
-            if omac and not nmac:
-                new[iface]['lxc.network.hwaddr'] = omac
+        # default for network type is setted here
+        # attention not to change the network type
+        # without a good and explicit reason to.
+        if otype and not ntype:
+            ntype = otype
+        if not ntype:
+            ntype = 'veth'
+        new[iface]['lxc.network.type'] = ntype
+        if omac and not nmac:
+            new[iface]['lxc.network.hwaddr'] = omac
+
     ret = []
     for v in new.values():
         for row in v:
