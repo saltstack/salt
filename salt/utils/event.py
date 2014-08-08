@@ -138,102 +138,11 @@ def tagify(suffix='', prefix='', base=SALT):
     return TAGPARTER.join([part for part in parts if part])
 
 
-class PendingEventsBase(object):
-
-    def __init__(self):
-        super(PendingEventsBase, self).__init__()
-        self.pending_events = []
-
-    def _get_event_inner(self, wait):
-        """Wait for event. Don't do any filtering or retrying
-
-        :param wait: Max seconds to wait for event
-        :return:
-        """
-        raise NotImplementedError()
-
-    def _check_pending(self, tag, pending_tags):
-        """Check the pending_events list for events that match the tag
-
-        :param tag: The tag to search for
-        :type tag: str
-        :param pending_tags: List of tags to preserve
-        :type pending_tags: list[str]
-        :return:
-        """
-        old_events = self.pending_events
-        self.pending_events = []
-        ret = None
-        for evt in old_events:
-            if evt['tag'].startswith(tag):
-                if ret is None:
-                    ret = evt
-                else:
-                    self.pending_events.append(evt)
-            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
-                self.pending_events.append(evt)
-        return ret
-
-    def _get_event(self, wait, tag, pending_tags):
-        start = time.time()
-        timeout_at = start + wait
-        while not wait or time.time() <= timeout_at:
-            ret = self._get_event_inner(wait)
-
-            log.trace('get_event() received = {0}'.format(ret))
-            if ret is not None:
-                if ret['tag'].startswith(tag):
-                    return ret
-                elif any(ret['tag'].startswith(ptag) for ptag in pending_tags):
-                    self.pending_events.append(ret)
-
-            wait = timeout_at - time.time()
-
-        return None
-
-    def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
-        '''
-        Get a single publication.
-        IF no publication available THEN block for upto wait seconds
-        AND either return publication OR None IF no publication available.
-
-        IF wait is 0 then block forever.
-
-        New in Boron always checks the list of pending events
-
-        use_pending
-            Defines whether to keep all unconsumed events in a pending_events
-            list, or to discard events that don't match the requested tag.  If
-            set to True, MAY CAUSE MEMORY LEAKS.
-
-        pending_tags
-            Add any events matching the listed tags to the pending queue.
-            Still MAY CAUSE MEMORY LEAKS but less likely than use_pending
-            assuming you later get_event for the tags you've listed here
-
-            New in Boron
-        '''
-        if pending_tags is None:
-            pending_tags = []
-        if use_pending:
-            pending_tags = ['']
-
-        ret = self._check_pending(tag, pending_tags)
-        if ret is None:
-            ret = self._get_event(wait, tag, pending_tags)
-
-        if ret is None or full:
-            return ret
-        else:
-            return ret['data']
-
-
-class SaltEvent(PendingEventsBase):
+class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
     def __init__(self, node, sock_dir=None, opts=None):
-        super(SaltEvent, self).__init__()
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -245,6 +154,7 @@ class SaltEvent(PendingEventsBase):
         if sock_dir is None:
             sock_dir = opts.get('sock_dir', None)
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
+        self.pending_events = []
 
     def __load_uri(self, sock_dir, node):
         '''
@@ -348,19 +258,55 @@ class SaltEvent(PendingEventsBase):
         data = serial.loads(mdata)
         return mtag, data
 
-    def _get_event_inner(self, wait):
-        # convert to milliseconds
-        socks = dict(self.poller.poll(wait * 1000))
-        if socks.get(self.sub) != zmq.POLLIN:
-            return None
+    def _check_pending(self, tag, pending_tags):
+        """Check the pending_events list for events that match the tag
 
-        try:
-            return self.get_event_noblock()
-        except zmq.ZMQError as ex:
-            if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                return None
-            else:
-                raise
+        :param tag: The tag to search for
+        :type tag: str
+        :param pending_tags: List of tags to preserve
+        :type pending_tags: list[str]
+        :return:
+        """
+        old_events = self.pending_events
+        self.pending_events = []
+        ret = None
+        for evt in old_events:
+            if evt['tag'].startswith(tag):
+                if ret is None:
+                    ret = evt
+                else:
+                    self.pending_events.append(evt)
+            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
+                self.pending_events.append(evt)
+        return ret
+
+    def _get_event(self, wait, tag, pending_tags):
+        start = time.time()
+        timeout_at = start + wait
+        while not wait or time.time() <= timeout_at:
+            # convert to milliseconds
+            socks = dict(self.poller.poll(wait * 1000))
+            if socks.get(self.sub) != zmq.POLLIN:
+                continue
+
+            try:
+                ret = self.get_event_noblock()
+            except zmq.ZMQError as ex:
+                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                    continue
+                else:
+                    raise
+
+            if not ret['tag'].startswith(tag):  # tag not match
+                if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
+                    self.pending_events.append(ret)
+                wait = timeout_at - time.time()
+                continue
+
+            log.trace('get_event() received = {0}'.format(ret))
+            return ret
+
+        return None
 
     def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
         '''
@@ -386,7 +332,19 @@ class SaltEvent(PendingEventsBase):
         '''
         self.subscribe()
 
-        return super(SaltEvent, self).get_event(wait, tag, full, use_pending, pending_tags)
+        if pending_tags is None:
+            pending_tags = []
+        if use_pending:
+            pending_tags = ['']
+
+        ret = self._check_pending(tag, pending_tags)
+        if ret is None:
+            ret = self._get_event(wait, tag, pending_tags)
+
+        if ret is None or full:
+            return ret
+        else:
+            return ret['data']
 
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
