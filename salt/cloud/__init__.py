@@ -544,7 +544,7 @@ class Cloud(object):
                         'running nodes: {1}'.format(fun, err),
                         # Show the traceback if the debug logging level is
                         # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+                        exc_info=self.opts.get('log_level', False) == 'debug'
                     )
                     # Failed to communicate with the provider, don't list any
                     # nodes
@@ -741,7 +741,7 @@ class Cloud(object):
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info=self.opts.get('log_level', False) == 'debug'
                 )
         return data
 
@@ -784,7 +784,7 @@ class Cloud(object):
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info=self.opts.get('log_level', False) == 'debug'
                 )
         return data
 
@@ -827,7 +827,7 @@ class Cloud(object):
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info=self.opts.get('log_level', False) == 'debug'
                 )
         return data
 
@@ -1576,7 +1576,7 @@ class Map(Cloud):
                 'Rendering map {0} failed, render error:\n{1}'.format(
                     self.opts['map'], exc
                 ),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info=self.opts.get('log_level', False) == 'debug'
             )
             return {}
 
@@ -2017,7 +2017,7 @@ class Map(Cloud):
                         name, exc
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info=self.opts.get('log_level', False) == 'debug'
                 )
                 output[name] = {'Error': str(exc)}
 
@@ -2172,7 +2172,7 @@ def run_parallel_map_providers_query(data, queue=None):
             'nodes: {1}'.format(data['fun'], err),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info=self.opts.get('log_level', False) == 'debug'
         )
         # Failed to communicate with the provider, don't list any nodes
         return (data['alias'], data['driver'], ())

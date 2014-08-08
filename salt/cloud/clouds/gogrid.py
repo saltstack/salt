@@ -145,7 +145,7 @@ def create(vm_):
                 vm_['name']
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info=__opts__.get('log_level', False) == 'debug'
         )
         return False
 
