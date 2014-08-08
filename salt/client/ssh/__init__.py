@@ -671,7 +671,7 @@ class Single(object):
 
         ssh_py_shim_args = [
             '--config', self.minion_config,
-            '--delimeter', RSTR,
+            '--delimiter', RSTR,
             '--saltdir', DEFAULT_THIN_DIR,
             '--checksum', thin_sum,
             '--hashfunc', 'sha1',
