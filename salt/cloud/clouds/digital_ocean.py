@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Digital Ocean Cloud Module
+DigitalOcean Cloud Module
 ==========================
 
-The Digital Ocean cloud module is used to control access to the Digital Ocean
+The DigitalOcean cloud module is used to control access to the DigitalOcean
 VPS system.
 
 Use of this module only requires the ``api_key`` parameter to be set. Set up the
@@ -13,7 +13,7 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-digital-ocean-config:
-      # Digital Ocean account keys
+      # DigitalOcean account keys
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       provider: digital_ocean
@@ -48,7 +48,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the DIGITAL_OCEAN configurations are in place
 def __virtual__():
     '''
-    Check for Digital Ocean configurations
+    Check for DigitalOcean configurations
     '''
     if get_configured_provider() is False:
         return False
@@ -283,7 +283,7 @@ def create(vm_):
 
     if key_filename is None:
         raise SaltCloudConfigError(
-            'The Digital Ocean driver requires an ssh_key_file and an ssh_key_name '
+            'The DigitalOcean driver requires an ssh_key_file and an ssh_key_name '
             'because it does not supply a root password upon building the server.'
         )
 
@@ -485,7 +485,7 @@ def create(vm_):
 
 def query(method='droplets', droplet_id=None, command=None, args=None):
     '''
-    Make a web call to Digital Ocean
+    Make a web call to DigitalOcean
     '''
     base_path = str(config.get_cloud_config_value(
         'api_root',
@@ -516,7 +516,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     request = requests.get(path, params=args)
     if request.status_code != 200:
         raise SaltCloudSystemExit(
-            'An error occurred while querying Digital Ocean. HTTP Code: {0}  '
+            'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.getcode(),
                 #request.read()
@@ -554,7 +554,7 @@ def script(vm_):
 
 def show_instance(name, call=None):
     '''
-    Show the details from Digital Ocean concerning a droplet
+    Show the details from DigitalOcean concerning a droplet
     '''
     if call != 'action':
         raise SaltCloudSystemExit(

@@ -172,7 +172,7 @@ required by the developer. When this is the case, some or all of the functions
 in ``libcloudfuncs`` may be replaced. If they are all replaced, the libcloud
 imports should be absent from the Salt Cloud module.
 
-A good example of a non-libcloud provider is the Digital Ocean module:
+A good example of a non-libcloud provider is the DigitalOcean module:
 
 https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digital_ocean.py
 
