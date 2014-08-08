@@ -233,5 +233,3 @@ def sysctl():
         key, value = line.split(':', 1)
         ret[key.strip()] = value.strip()
     return ret
-
-
