@@ -1018,6 +1018,8 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
+    elif grains.get('os') == 'Fedora':
+        osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
     else:
         osarch = grains['cpuarch']
     grains['osarch'] = osarch
