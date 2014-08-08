@@ -150,10 +150,16 @@ def installed(name,
             ret['changes'] = {'old': [], 'new': pkgs_to_install}
 
         if pkgs_satisfied:
-            comment_msg.append('Package(s) {0!r} satisfied by {1}@{2}'
-                .format(', '.join(pkgs_satisfied)))
+            comment_msg.append('Package(s) {0!r} satisfied by {1}'
+                .format(', '.join(pkg_list), ', '.join(pkgs_satisfied)))
 
         ret['comment'] = '. '.join(comment_msg)
+        return ret
+
+    if not pkgs_to_install:
+        ret['result'] = True
+        ret['comment'] = ('Package(s) {0!r} satisfied by {1}'
+                .format(', '.join(pkg_list), ', '.join(pkgs_satisfied)))
         return ret
 
     try:
