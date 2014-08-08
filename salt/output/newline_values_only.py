@@ -1,35 +1,76 @@
 # -*- coding: utf-8 -*-
 '''
-Display values only with simple data.
-=================================
+Display values only, separated by newlines
+==========================================
 
-Example input 1::
+.. versionadded:: Lithium
+
+This outputter is designed for Salt CLI return data. It will do the following
+to the return dict:
+
+1. Get just the values (ignoring the minion IDs).
+2. Each value, if it is iterable, is split a separate line.
+3. Each minion's values are separated by newlines.
+
+This results in a single string of return data containing all the values from
+the various minions.
+
+.. warning::
+
+    As noted above, this outputter will discard the minion ID. If the minion ID
+    is important, then an outputter that returns the full return dictionary in
+    a parsable format (such as :mod:`json <salt.output.json>`, :mod:`pprint,
+    <salt.output.pprint>`, or :mod:`yaml <salt.output.yaml>`) may be more
+    suitable.
+
+
+Example 1
+~~~~~~~~~
+
+Input
+-----
+
+.. code-block:: python
 
     {
-    'myminion': ["127.0.0.1", "10.0.0.1"],
-    'second-minion': ["127.0.0.1", "10.0.0.2"]
+        'myminion': ['127.0.0.1', '10.0.0.1'],
+        'second-minion': ['127.0.0.1', '10.0.0.2']
     }
 
-Example output 1::
+Output
+------
+
+.. code-block:: python
+
     127.0.0.1
     10.0.0.1
     127.0.0.1
     10.0.0.2
 
-Example input 2::
+Example 2
+~~~~~~~~~
+
+Input
+-----
+
+.. code-block:: python
 
     {
-    'myminion': 8,
-    'second-minion': 10
+        'myminion': 8,
+        'second-minion': 10
     }
 
-Example output 2::
+Output
+------
+
+.. code-block:: python
+
     8
     10
 '''
 
 
-def get_values(data):
+def _get_values(data):
     # This should be able to be improved
     # by parsing kargs from command line
     # instantiation.
@@ -46,16 +87,16 @@ def get_values(data):
     return values
 
 
-def one_level_values(data):
-    return '\n'.join(string_list(get_values(data)))
+def _one_level_values(data):
+    return '\n'.join(_string_list(_get_values(data)))
 
 
-def string_list(a_list):
+def _string_list(a_list):
     return [str(item) for item in a_list]
 
 
 def output(data):
     '''
-    Rather basic....
+    Display modified ret data
     '''
-    return one_level_values(data)
+    return _one_level_values(data)
