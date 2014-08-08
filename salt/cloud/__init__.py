@@ -2172,7 +2172,7 @@ def run_parallel_map_providers_query(data, queue=None):
             'nodes: {1}'.format(data['fun'], err),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=self.opts.get('log_level', False) == 'debug'
+            exc_info=data['opts'].get('log_level', False) == 'debug'
         )
         # Failed to communicate with the provider, don't list any nodes
         return (data['alias'], data['driver'], ())
