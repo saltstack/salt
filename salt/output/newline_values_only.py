@@ -70,7 +70,7 @@ Output
 '''
 
 
-def get_values(data):
+def _get_values(data):
     # This should be able to be improved
     # by parsing kargs from command line
     # instantiation.
@@ -87,11 +87,11 @@ def get_values(data):
     return values
 
 
-def one_level_values(data):
-    return '\n'.join(string_list(get_values(data)))
+def _one_level_values(data):
+    return '\n'.join(_string_list(_get_values(data)))
 
 
-def string_list(a_list):
+def _string_list(a_list):
     return [str(item) for item in a_list]
 
 
@@ -99,4 +99,4 @@ def output(data):
     '''
     Rather basic....
     '''
-    return one_level_values(data)
+    return _one_level_values(data)
