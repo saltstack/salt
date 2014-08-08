@@ -2115,11 +2115,11 @@ class ClearFuncs(object):
                 )
                 return ''
         # Retrieve the minions list
-        delim = clear_load.get('kwargs', {}).get('delim', DEFAULT_TARGET_DELIM)
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob'),
-            delim
+            delimiter
         )
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
@@ -2211,8 +2211,8 @@ class ClearFuncs(object):
             load['master_id'] = extra['master_id']
 
         # Only add the delimiter to the pub data if it is non-default
-        if delim != DEFAULT_TARGET_DELIM:
-            load['delim'] = delim
+        if delimiter != DEFAULT_TARGET_DELIM:
+            load['delimiter'] = delimiter
 
         if 'id' in extra:
             load['id'] = extra['id']
