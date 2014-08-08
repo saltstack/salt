@@ -826,7 +826,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
 
     .. code-block:: bash
 
-        salt '*' git.config_set user.email me@example.com /path/to/repo
+        salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
     if setting_name is None or setting_value is None:
         raise TypeError
