@@ -804,17 +804,17 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
     Set a key in the git configuration file (.git/config) of the repository or
     globally.
 
-    setting_name
-        The name of the configuration key to set
-
-    setting_value
-        The (new) value to set
-
     cwd : None
         Options path to the Git repository
 
         .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
+
+    setting_name : None
+        The name of the configuration key to set. Required.
+
+    setting_value : None
+        The (new) value to set. Required.
 
     user : None
         Run git as a user other than what the minion runs as
@@ -826,7 +826,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
 
     .. code-block:: bash
 
-        salt '*' git.config_set user.email me@example.com /path/to/repo
+        salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
     if setting_name is None or setting_value is None:
         raise TypeError
@@ -848,14 +848,14 @@ def config_get(cwd=None, setting_name=None, user=None):
     '''
     Get a key or keys from the git configuration file (.git/config).
 
-    setting_name
-        The name of the configuration key to get
-
     cwd : None
         Optional path to a Git repository
 
         .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
+
+    setting_name : None
+        The name of the configuration key to get. Required.
 
     user : None
         Run git as a user other than what the minion runs as
@@ -864,8 +864,8 @@ def config_get(cwd=None, setting_name=None, user=None):
 
     .. code-block:: bash
 
-        salt '*' git.config_get user.email
-        salt '*' git.config_get user.name cwd=/path/to/repo user=arthur
+        salt '*' git.config_get setting_name=user.email
+        salt '*' git.config_get /path/to/repo user.name arthur
     '''
     if setting_name is None:
         raise TypeError

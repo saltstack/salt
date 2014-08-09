@@ -4808,3 +4808,9 @@ source_file = _build/locale/topics/tutorials/multimaster_pki.pot
 source_lang = en
 source_name = topics/tutorials/multimaster_pki.rst
 
+[salt.ref--output--all--salt_output_newline_values_only]
+file_filter = locale/<lang>/LC_MESSAGES/ref/output/all/salt.output.newline_values_only.po
+source_file = _build/locale/ref/output/all/salt.output.newline_values_only.pot
+source_lang = en
+source_name = ref/output/all/salt.output.newline_values_only.rst
+

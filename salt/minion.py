@@ -1860,6 +1860,7 @@ class Syndic(Minion):
 
         self._set_reconnect_ivl_max()
         self._set_tcp_keepalive()
+        self._set_ipv4only()
 
     def _fire_master_syndic_start(self):
         # Send an event to the master that the minion is live

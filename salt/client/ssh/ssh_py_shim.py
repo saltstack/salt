@@ -39,7 +39,7 @@ def parse_argv(argv):
         help="YAML configuration for salt thin",
     )
     oparser.add_option(
-        "-d", "--delimeter",
+        "-d", "--delimiter",
         help="Delimeter string (viz. magic string) to indicate beginning of salt output",
     )
     oparser.add_option(
@@ -67,7 +67,7 @@ def parse_argv(argv):
     (OPTIONS, ARGS) = oparser.parse_args(argv[argv.index('--')+1:])
 
     for option in (
-            'delimeter',
+            'delimiter',
             'saltdir',
             'checksum',
             'version',
@@ -91,7 +91,7 @@ def need_deployment():
         os.chmod(OPTIONS.saltdir, st.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
 
     # Delimeter emitted on stdout *only* to indicate shim message to master.
-    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimeter))
+    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
 
@@ -174,9 +174,9 @@ def main(argv):
 
     # Only emit the delimiter on *both* stdout and stderr when completely successful.
     # Yes, the flush() is necessary.
-    sys.stdout.write(OPTIONS.delimeter + '\n')
+    sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
-    sys.stderr.write(OPTIONS.delimeter + '\n')
+    sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
     os.execv(sys.executable, salt_argv)
 
