@@ -98,7 +98,7 @@ class ExcInfoOnLogLevelFormatMixIn(object):
 
         if record.exc_info_on_loglevel_formatted is None:
             # Let's cache the formatted exception to avoid recurring conversions and formatting calls
-            if self.formatter is None:
+            if self.formatter is None:  # pylint: disable=access-member-before-definition
                 self.formatter = logging._defaultFormatter
             record.exc_info_on_loglevel_formatted = self.formatter.formatException(
                 record.exc_info_on_loglevel_instance

@@ -74,7 +74,7 @@ class TestLog(TestCase):
 
     def test_exc_info_on_loglevel(self):
         def raise_exception_on_purpose():
-            1/0
+            1/0  # pylint: disable=pointless-statement
 
         log = saltlog.SaltLoggingClass(__name__)
 
