@@ -1517,7 +1517,7 @@ def _is_installed(name, pkgs, sources, version, allow_updates):
         if comparison in ['=', '']:
             comparison = '=='
         if allow_updates:
-           comparison = '>='
+            comparison = '>='
         if not _fulfills_version_spec([installed[pkgname]], comparison, verstr):
             return False
         if not __salt__['pkg_resource.check_extra_requirements'](pkgname, pkgver):
