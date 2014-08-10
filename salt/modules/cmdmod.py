@@ -1247,7 +1247,7 @@ def tty(device, echo=None):
         return {'Error': 'The specified device is not a valid TTY'}
 
     ret = subprocess.call(['echo', echo, '>', teletype], shell=False, stdout=open(os.devnull, 'wb'))
-    if ret == 0: 
+    if ret == 0:
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
