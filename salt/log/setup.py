@@ -161,7 +161,8 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             pass
         return instance
 
-    def _log(self, level, msg, args, exc_info=None, extra=None, exc_info_on_loglevel=None):
+    def _log(self, level, msg, args, exc_info=None, extra=None,  # pylint: disable=arguments-differ
+             exc_info_on_loglevel=None):
         # If both exc_info and exc_info_on_loglevel are both passed, let's fail.
         if exc_info and exc_info_on_loglevel:
             raise RuntimeError(
