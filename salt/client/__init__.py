@@ -937,7 +937,7 @@ class LocalClient(object):
         while True:
             time_left = timeout_at - int(time.time())
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid, pending_tags=pending_tags)
+            raw = self.event.get_event(wait, jid)
             if raw is not None and 'return' in raw:
                 found.add(raw['id'])
                 ret[raw['id']] = raw['return']
