@@ -12,7 +12,7 @@ import yaml
 # Import salt libs
 import salt.pillar
 import salt.utils
-from salt.config import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt._compat import string_types
 
 __proxyenabled__ = ['*']
