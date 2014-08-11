@@ -588,7 +588,7 @@ public key. Please see the tutorial how to use these settings in the
 .. conf_master:: master_sign_key_name
 
 ``master_sign_key_name``
------------------------
+------------------------
 
 Default: ``master_sign``
 

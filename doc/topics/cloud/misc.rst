@@ -34,6 +34,7 @@ Some distributions do not have scp distributed with the ssh package.  The
 solution is to use sftp with the `use_sftp` flag
 
 .. code-block:: yaml
+
     use_sftp: True
 
 

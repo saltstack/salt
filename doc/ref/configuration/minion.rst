@@ -755,7 +755,7 @@ to ``True`` in the master configuration file.
 
 Default: ``master_sign``
 
-The filename without the *.pub-suffix of the public that should be used for
+The filename without the \*.pub-suffix of the public that should be used for
 verifying the signature from the master. The file must be located in the minions
 pki-directory.
 

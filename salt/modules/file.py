@@ -1582,7 +1582,7 @@ def append(path, *args, **kwargs):
     path
         path to file
 
-    *args
+    `*args`
         strings to append to file
 
     CLI Example:
@@ -1646,7 +1646,7 @@ def prepend(path, *args, **kwargs):
     path
         path to file
 
-    *args
+    `*args`
         strings to prepend to the file
 
     CLI Example:
@@ -1701,7 +1701,7 @@ def write(path, *args, **kwargs):
     path
         path to file
 
-    *args
+    `*args`
         strings to write to the file
 
     CLI Example:

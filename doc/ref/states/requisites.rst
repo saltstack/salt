@@ -415,7 +415,7 @@ even more stateful.  The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
@@ -434,7 +434,7 @@ This state will not run if the vim-enhanced package is already installed, or if
 run.
 
 Onlyif
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
@@ -464,7 +464,7 @@ This will ensure that the stop_volume and delete modules are only run if the
 gluster commands return back a 0 ret value.
 
 Listen/Listen_in
-~~~~~~~~~~~~~~~~
+----------------
 
 .. versionadded:: 2014.7.0
 
@@ -508,7 +508,7 @@ This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
 
 Check_Cmd
-~~~~~~~~~
+---------
 
 .. versionadded:: 2014.7.0
 
@@ -538,9 +538,9 @@ Overriding Checks
 
 There are two commands used for the above checks.
 
-`mod_run_check` is used to check for onlyif and unless.  If the goal is to
-override the global check for these to variables, include a mod_run_check in the
+``mod_run_check`` is used to check for ``onlyif`` and ``unless``.  If the goal is to
+override the global check for these to variables, include a ``mod_run_check`` in the
 salt/states/ file.
 
-`mod_run_check_cmd` is used to check for the check_cmd options.  To override
-this one, include a mod_run_check_cmd in the states file for the state.
+``mod_run_check_cmd`` is used to check for the check_cmd options.  To override
+this one, include a ``mod_run_check_cmd`` in the states file for the state.

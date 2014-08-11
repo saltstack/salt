@@ -140,7 +140,7 @@ Chef Execution Module
 Managing Chef with Salt just got even easier!
 
 Fileserver Backend Enhancements
-------------------------------
+-------------------------------
 
 All of the fileserver backends have been overhauled to be faster, lighter and more reliable
 
