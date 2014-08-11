@@ -829,7 +829,7 @@ def update():
             log.error(
                 'Exception {0} caught while fetching gitfs remote {1}'
                 .format(exc, repo['uri']),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
         try:
             os.remove(lk_fn)
