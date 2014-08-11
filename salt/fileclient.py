@@ -1158,7 +1158,7 @@ class RemoteClient(Client):
                 ret = {}
                 hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(
-                    path, form=hash_type, chunk_size=4096)
+                    path, form=hash_type)
                 ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,
