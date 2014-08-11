@@ -3,12 +3,15 @@
 # import Python Third Party Libs
 try:
     import boto
-    from moto import mock_ec2
-    missing_requirements = False
-    missing_requirements_msg = ''
+    HAS_BOTO = True
 except ImportError:
-    missing_requirements = True
-    missing_requirements_msg = 'boto and moto modules required for test.'
+    HAS_BOTO = False
+
+try:
+    from moto import mock_ec2
+    HAS_MOTO = True
+except ImportError:
+    HAS_MOTO = False
 
     def mock_ec2(self):
         '''
@@ -26,6 +29,10 @@ from salt.modules import boto_vpc
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
 
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -33,12 +40,14 @@ secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@mock_ec2
 class Boto_VpcTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_vpc module
     '''
-    @skipIf(missing_requirements, missing_requirements_msg)
-    @mock_ec2
     def test_get_subnet_association_single_subnet(self):
         '''
         tests that given multiple subnet ids in the same VPC that the VPC ID is
@@ -52,8 +61,6 @@ class Boto_VpcTestCase(TestCase):
                                                             **conn_parameters)
         self.assertEqual(vpc.id, subnet_assocation)
 
-    @skipIf(missing_requirements, missing_requirements_msg)
-    @mock_ec2
     def test_get_subnet_association_multiple_subnets_same_vpc(self):
         '''
         tests that given multiple subnet ids in the same VPC that the VPC ID is
@@ -67,8 +74,6 @@ class Boto_VpcTestCase(TestCase):
                                                             **conn_parameters)
         self.assertEqual(vpc.id, subnet_assocation)
 
-    @skipIf(missing_requirements, missing_requirements_msg)
-    @mock_ec2
     def test_get_subnet_association_multiple_subnets_different_vpc(self):
         '''
         tests that given multiple subnet ids in different VPCs that False is
@@ -83,8 +88,6 @@ class Boto_VpcTestCase(TestCase):
                                                             **conn_parameters)
         self.assertFalse(subnet_assocation)
 
-    @skipIf(missing_requirements, missing_requirements_msg)
-    @mock_ec2
     def test_exists_true(self):
         '''
         tests True existence of a VPC.
