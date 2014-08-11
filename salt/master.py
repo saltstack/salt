@@ -42,7 +42,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
-from salt.config import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
