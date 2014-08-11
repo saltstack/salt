@@ -525,7 +525,7 @@ def _config_list(conf_tuples=None, **kwargs):
 
 def _get_veths(net_data):
     '''Parse the nic setup inside lxc conf tuples back
-    to a dictionnary indexed by network interface'''
+    to a dictionary indexed by network interface'''
     if isinstance(net_data, dict):
         net_data = net_data.items()
     nics = salt.utils.odict.OrderedDict()
