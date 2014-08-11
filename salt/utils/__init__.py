@@ -97,7 +97,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 # Import salt libs
-from salt.config import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM
 import salt._compat
 import salt.log
 import salt.minion
