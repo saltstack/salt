@@ -28,7 +28,7 @@ def parse():
             '--sock-dir',
             dest='sock_dir',
             default='/var/run/salt',
-            help=('Staticly define the directory holding the salt unix '
+            help=('Statically define the directory holding the salt unix '
                   'sockets for communication'))
     parser.add_option('-n',
             '--node',
@@ -40,7 +40,7 @@ def parse():
     parser.add_option('-f',
             '--func_count',
             default='',
-            help=('Retun a count of the number of minons which have '
+            help=('Return a count of the number of minions which have '
                  'replied to a job with a given func.'))
 
     options, args = parser.parse_args()
