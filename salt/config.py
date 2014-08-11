@@ -32,7 +32,6 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 from salt._compat import string_types
-from salt.defaults import DEFAULT_TARGET_DELIM
 
 import sys
 # can't use salt.utils.is_windows, because config.py is included from salt.utils
