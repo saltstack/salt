@@ -87,26 +87,26 @@ class TemporaryLoggingHandler(logging.NullHandler):
                 handler.handle(record)
 
 
-class StreamHandler(ExcInfoOnLogLevelFormatMixIn, logging.StreamHandler):
+class StreamHandler(ExcInfoOnLogLevelFormatMixIn, logging.StreamHandler, NewStyleClassMixIn):
     '''
     Stream handler which properly handles exc_info on a per handler basis
     '''
 
 
-class FileHandler(ExcInfoOnLogLevelFormatMixIn, logging.FileHandler):
+class FileHandler(ExcInfoOnLogLevelFormatMixIn, logging.FileHandler, NewStyleClassMixIn):
     '''
     File handler which properly handles exc_info on a per handler basis
     '''
 
 
-class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler):
+class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler, NewStyleClassMixIn):
     '''
     Syslog handler which properly handles exc_info on a per handler basis
     '''
 
 
 if sys.version_info > (2, 6):
-    class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler):
+    class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler, NewStyleClassMixIn):
         '''
         Watched file handler which properly handles exc_info on a per handler basis
         '''
