@@ -81,7 +81,7 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     if len(alarms) == 0:
         return None
     if len(alarms) > 1:
-        log.error("multiple alarms matched name '%s'" % name)
+        log.error("multiple alarms matched name '{0}'".format(name))
     return _metric_alarm_to_dict(alarms[0])
 
 
@@ -210,7 +210,7 @@ def create_or_update_alarm(
     if isinstance(dimensions, string_types):
         dimensions = json.decodestring(dimensions)
         if not isinstance(dimensions, dict):
-            log.error("could not parse dimensions argument: must be json encoding of a dict: '%s'" % dimensions)
+            log.error("could not parse dimensions argument: must be json encoding of a dict: '{0}'".format(dimensions))
             return False
     if isinstance(alarm_actions, string_types):
         alarm_actions = alarm_actions.split(",")
@@ -266,7 +266,7 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
             if policy_arn:
                 results.append(policy_arn)
             else:
-                log.error('Could not convert: %s' % arn)
+                log.error('Could not convert: {0}'.format(arn))
         else:
             results.append(arn)
     return results

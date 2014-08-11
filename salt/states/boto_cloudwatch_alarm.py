@@ -111,7 +111,7 @@ def present(
     if alarm_details:
         for k, v in attributes.items():
             if k not in alarm_details:
-                difference.append("%s=%s (new)" % (k, v))
+                difference.append("{0}={1} (new)".format(k, v))
                 continue
             v2 = alarm_details[k]
             if v == v2:
@@ -122,7 +122,7 @@ def present(
                 continue
             if isinstance(v, int) and v == int(v2):
                 continue
-            difference.append("%s='%s' was: '%s'" % (k, v, v2))
+            difference.append("{0}='{1}' was: '{2}'".format(k, v, v2))
     else:
         difference.append("new alarm")
     create_or_update_alarm_args = {
