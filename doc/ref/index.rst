@@ -22,7 +22,6 @@ Reference
     pillar/all/index
     renderers/index
     returners/index
-    roster/index
     runners/index
     states/index
     states/all/index
