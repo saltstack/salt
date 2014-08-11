@@ -13,7 +13,7 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
-from salt.config import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
 HAS_RANGE = False
