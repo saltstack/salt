@@ -832,8 +832,8 @@ class LocalClient(Client):
             else:
                 opts_hash_type = self.opts.get('hash_type', 'md5')
                 hash_type = getattr(hashlib, opts_hash_type)
-                with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hash_type(ifile.read()).hexdigest()
+                ret['hsum'] = salt.utils.get_hash(
+                    path, form=hash_type)
                 ret['hash_type'] = opts_hash_type
                 return ret
         path = self._find_file(path, saltenv)['path']
