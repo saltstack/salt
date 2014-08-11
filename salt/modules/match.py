@@ -103,7 +103,7 @@ def pillar(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
 
     matcher = salt.minion.Matcher({'pillar': __pillar__}, __salt__)
     try:
-        return matcher.pillar_match(tgt, delim=delimiter)
+        return matcher.pillar_match(tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -161,7 +161,7 @@ def grain_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
 
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
     try:
-        return matcher.grain_pcre_match(tgt, delim=delimiter)
+        return matcher.grain_pcre_match(tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -201,7 +201,7 @@ def grain(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
 
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
     try:
-        return matcher.grain_match(tgt, delim=delimiter)
+        return matcher.grain_match(tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
         return False
