@@ -237,8 +237,8 @@ class MergeConfigMixIn(object):
                     self.config[option.dest] = value
             elif value is not None and value != default:
                 # Only set the value in the config file IF it's not the default
-                # value, this allows to tweak settings on the configuration
-                # files bypassing the shell option flags
+                # value, this makes it possible to tweak settings on the
+                # configuration files bypassing the shell option flags
                 self.config[option.dest] = value
             elif option.dest in self.config:
                 # Let's update the option value with the one from the
@@ -261,8 +261,9 @@ class MergeConfigMixIn(object):
                         self.config[option.dest] = value
                 elif value is not None and value != default:
                     # Only set the value in the config file IF it's not the
-                    # default value, this allows to tweak settings on the
-                    # configuration files bypassing the shell option flags
+                    # default value, this makes it possible to tweak settings
+                    # on the configuration files bypassing the shell option
+                    # flags
                     self.config[option.dest] = value
                 elif option.dest in self.config:
                     # Let's update the option value with the one from the

@@ -367,13 +367,13 @@ class PostgresExtensionTestCase(TestCase):
         ret = postgres_extension.present('foo')
         self.assertEqual(
             ret,
-            {'comment': 'Extention foo is already present',
+            {'comment': 'Extension foo is already present',
              'changes': {}, 'name': 'foo', 'result': True}
         )
         ret = postgres_extension.present('foo')
         self.assertEqual(
             ret,
-            {'comment': 'The extension foo has been upgradeed',
+            {'comment': 'The extension foo has been upgraded',
              'changes': {}, 'name': 'foo', 'result': True}
         )
 

@@ -5,7 +5,7 @@ then invoking thin.
 
 This is not intended to be instantiated as a module, rather it is a
 helper script used by salt.client.ssh.Single.  It is here, in a
-seperate file, for convenience of development.
+separate file, for convenience of development.
 '''
 
 import optparse

@@ -3,12 +3,12 @@
     salt.utils.aggregation
     ~~~~~~~~~~~~~~~~~~~~~~
 
-    This library allows to introspect dataset and aggregate nodes when it is
-    instructed.
+    This library makes it possible to introspect dataset and aggregate nodes
+    when it is instructed.
 
     .. note::
 
-        The following examples with be expressed in YAML for convenience sake:
+        The following examples with be expressed in YAML for convenience's sake:
 
         - !aggr-scalar will refer to Scalar python function
         - !aggr-map will refer to Map python object
@@ -18,7 +18,7 @@
     How to instructs merging
     ------------------------
 
-    This yaml document have duplicate keys:
+    This yaml document has duplicate keys:
 
     .. code-block:: yaml
 
@@ -28,7 +28,7 @@
         bar: !aggr-map {second: bar}
         baz: !aggr-scalar 42
 
-    but tagged values instruct salt that overlapping values they can be merged
+    but tagged values instruct Salt that overlapping values they can be merged
     together:
 
     .. code-block:: yaml
@@ -41,7 +41,7 @@
     Default merge strategy is keep untouched
     ----------------------------------------
 
-    For example, this yaml document have still duplicate keys, but does not
+    For example, this yaml document still has duplicate keys, but does not
     instruct aggregation:
 
     .. code-block:: yaml

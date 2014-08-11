@@ -221,7 +221,7 @@ class Schedule(object):
         python data-structures to make sure, you pass correct dictionaries.
         '''
 
-        # we dont do any checking here besides making sure its a dict.
+        # we don't do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
         if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')

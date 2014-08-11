@@ -3,7 +3,8 @@
     salt.utils.serializers.yamlex
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    YAMLEX is a format that allows to make things like sls file more intuitive.
+    YAMLEX is a format that allows for things like sls files to be
+    more intuitive.
 
     It's an extension of YAML that implements all the salt magic:
     - it implies omap for any dict like.
@@ -82,7 +83,7 @@
 
     !reset
 
-         this tag allows to flush the computing value.
+         this tag flushes the computing value.
 
         .. code-block:: yaml
 

@@ -77,7 +77,7 @@ Using RAET in Salt
 Using RAET in Salt is easy, the main difference is that the core dependencies
 change, instead of needing pycrypto, M2Crypto, ZeroMQ and PYZMQ, the packages
 libsodium, pynacl and ioflo are required. Encryption is handled very cleanly
-by libsodium and pynacl, while the queueing and flow control is handled by
+by libsodium and pynacl, while the queuing and flow control is handled by
 ioflo. Distribution packages are forthcoming, but libsodium can be easily
 installed from source, or many distributions do ship packages for it.
 The pynacl and ioflo packages can be easily installed from pypi, distribution
@@ -100,7 +100,7 @@ be installed a git clone:
 
 Once installed, modify the configuration files for the minion and master to
 set the transport to raet (the file_buffer_size and id need to be set to
-adress known bugs in the unreleased code as of this writing):
+address known bugs in the unreleased code as of this writing):
 
 ``/etc/salt/master``:
 

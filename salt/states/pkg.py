@@ -905,7 +905,7 @@ def installed(
                 changes[change_name]['old'] += '\n'
             changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
-    # Any requested packages that were not targetted for install or reinstall
+    # Any requested packages that were not targeted for install or reinstall
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)

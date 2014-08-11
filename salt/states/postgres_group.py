@@ -103,8 +103,8 @@ def present(name,
         If refresh_password is None or False, the password will be automatically
         updated without extra password change check.
 
-        This behaviour allows to execute in environments without superuser access
-        available, e.g. Amazon RDS for PostgreSQL
+        This behaviour makes it possible to execute in environments without
+        superuser access available, e.g. Amazon RDS for PostgreSQL
 
     groups
         A string of comma separated groups the group should be in
