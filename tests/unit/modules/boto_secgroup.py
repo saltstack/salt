@@ -111,7 +111,7 @@ class Boto_SecgroupTestCase(TestCase):
     def test_get_group_id_ec2_classic(self):
         '''
         tests that given a name of a group in EC2-Classic that the correct
-        group id will be retreived
+        group id will be retrieved
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_classic'
@@ -134,7 +134,7 @@ class Boto_SecgroupTestCase(TestCase):
     def test_get_group_id_ec2_vpc(self):
         '''
         tests that given a name of a group in EC2-VPC that the correct
-        group id will be retreived
+        group id will be retrieved
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_vpc'

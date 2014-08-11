@@ -285,7 +285,7 @@ def _listeners_present(
     ret = {'result': None, 'comment': '', 'changes': {}}
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
-        msg = '{0} ELB configuration could not be retreived.'.format(name)
+        msg = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['comment'] = msg
         ret['result'] = False
         return ret

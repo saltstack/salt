@@ -269,7 +269,7 @@ def _get_client(version=None, timeout=None):
 
     client = docker.Client(**kwargs)
     if not version:
-        # set version that match docker deamon
+        # set version that match docker daemon
         client._version = client.version()['ApiVersion']
 
     # try to authenticate the client using credentials

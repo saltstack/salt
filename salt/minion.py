@@ -520,8 +520,8 @@ class MultiMinion(MinionBase):
             for master in masters:
                 minion = minions[master]
                 # if we haven't connected yet, lets attempt some more.
-                # make sure to keep seperate auth_wait times, since these
-                # are seperate masters
+                # make sure to keep separate auth_wait times, since these
+                # are separate masters
                 if 'generator' not in minion:
                     if time.time() - minion['auth_wait'] > minion['last']:
                         minion['last'] = time.time()
@@ -1784,7 +1784,7 @@ class Syndic(Minion):
     def __init__(self, opts, **kwargs):
         self._syndic_interface = opts.get('interface')
         self._syndic = True
-        # force auth_safemode True because Syndic dont support autorestart
+        # force auth_safemode True because Syndic don't support autorestart
         opts['auth_safemode'] = True
         opts['loop_interval'] = 1
         super(Syndic, self).__init__(opts, **kwargs)
@@ -2232,7 +2232,7 @@ class MultiSyndic(MinionBase):
                     self.event_forward_timeout < time.time()):
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
-            # I've put explicit handling around the recieve calls
+            # I've put explicit handling around the receive calls
             # in the process_*_socket methods. If we see any other
             # errors they may need some kind of handling so log them
             # for now.

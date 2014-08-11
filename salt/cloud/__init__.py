@@ -81,7 +81,7 @@ def enter_mainloop(target,
                    queue=None):
     '''Manage a multiprocessing pool
 
-    - If the queue does not output anything, the pool runs indefinitvly
+    - If the queue does not output anything, the pool runs indefinitely
 
     - If the queue returns KEYBOARDINT or ERROR, this will kill the pool
       totally calling terminate & join and ands with a SaltCloudSystemExit
@@ -99,14 +99,14 @@ def enter_mainloop(target,
         pool size if you did not provide yourself a pool
     callback
         a boolean taking a string in argument which returns True to
-        signal that 'target' is finnished and we need to join
+        signal that 'target' is finished and we need to join
         the pool
     queue
         A custom multiproccessing queue in case you want to do
         extra stuff and need it later in your program
     args
-        positionnal arguments to call the function with
-        if you dont want to use pool.map
+        positional arguments to call the function with
+        if you don't want to use pool.map
 
     mapped_args
         a list of one or more arguments combinations to call the function with
@@ -217,7 +217,7 @@ class CloudClient(object):
             for _profile in [a for a in opts.get('profiles', {})]:
                 if not _profile == profile:
                     opts['profiles'].pop(_profile)
-            # if profile is specified and we have enougth info about providers
+            # if profile is specified and we have enough info about providers
             # also filter them to speedup methods like
             # __filter_non_working_providers
             providers = [a.get('provider', '').split(':')[0]
@@ -573,7 +573,7 @@ class Cloud(object):
             for driver, details in drivers.iteritems():
                 # If driver has function list_nodes_min, just replace it
                 # with query param to check existing vms on this driver
-                # for minimum information, Othwise still use query param.
+                # for minimum information, Otherwise still use query param.
                 if 'selected_query_option' not in opts:
                     if '{0}.list_nodes_min'.format(driver) in self.clouds:
                         this_query = 'list_nodes_min'
@@ -630,10 +630,10 @@ class Cloud(object):
                 # that matches the provider specified in the profile.
                 # This solves the issues when many providers return the
                 # same instance. For example there may be one provider for
-                # each avaliablity zone in amazon in the same region, but
+                # each availability zone in amazon in the same region, but
                 # the search returns the same instance for each provider
                 # because amazon returns all instances in a region, not
-                # avaliabilty zone.
+                # availability zone.
                 if profile:
                     if alias not in \
                         self.opts['profiles'][profile]['provider'].split(

@@ -136,15 +136,15 @@
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to authenticate.
 #auth_tries: 7
 
-# If authentication failes due to SaltReqTimeoutError during a ping_interval,
-# cause sub minion proccess to restart.
+# If authentication fails due to SaltReqTimeoutError during a ping_interval,
+# cause sub minion process to restart.
 #auth_safemode: False
 
 # Ping Master to ensure connection is alive (minutes).
 # TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
 #ping_interval: 90
 
-# If you don't have any problems with syn-floods, dont bother with the
+# If you don't have any problems with syn-floods, don't bother with the
 # three recon_* settings described below, just leave the defaults!
 #
 # The ZeroMQ pull-socket that binds to the masters publishing interface tries
@@ -438,7 +438,7 @@
 #state_output: full
 #
 # The state_output_diff setting changes whether or not the output from
-# sucessful states is returned. Useful when even the terse output of these
+# successful states is returned. Useful when even the terse output of these
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 #

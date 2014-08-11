@@ -498,7 +498,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    # Ignore pkg_type from parse_targets, Windows does not suport the "sources"
+    # Ignore pkg_type from parse_targets, Windows does not support the "sources"
     # argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name,
                                                         pkgs,
