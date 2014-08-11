@@ -32,6 +32,7 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 from salt._compat import string_types
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 import sys
 # can't use salt.utils.is_windows, because config.py is included from salt.utils
@@ -543,9 +544,6 @@ DEFAULT_MASTER_OPTS = {
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
 }
-
-# Default delimiter for multi-level traversal in targeting
-DEFAULT_TARGET_DELIM = ':'
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 CLOUD_CONFIG_DEFAULTS = {
