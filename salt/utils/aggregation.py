@@ -3,8 +3,8 @@
     salt.utils.aggregation
     ~~~~~~~~~~~~~~~~~~~~~~
 
-    This library allows to introspect dataset and aggregate nodes when it is
-    instructed.
+    This library makes it possible to introspect dataset and aggregate nodes
+    when it is instructed.
 
     .. note::
 
