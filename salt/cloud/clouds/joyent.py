@@ -217,7 +217,7 @@ def create(vm_):
                 vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -577,7 +577,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
             log.error(
                 'Failed to invoke {0} node {1}: {2}'.format(caller, name, exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             ret = [100, {}]
 
