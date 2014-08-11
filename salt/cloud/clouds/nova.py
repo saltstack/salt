@@ -590,7 +590,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info=__opts__.get('log_level', False) == 'debug'
             )
             # Trigger a failure in the wait for IP function
             return False
