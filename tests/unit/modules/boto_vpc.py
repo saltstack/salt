@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
-HAS_BOTO = True
-HAS_MOTO = True
-
 # import Python Third Party Libs
 try:
     import boto
+    HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
 try:
     from moto import mock_ec2
+    HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
 
