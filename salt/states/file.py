@@ -1469,7 +1469,8 @@ def directory(name,
         Enforce user/group ownership and mode of directory recursively. Accepts
         a list of strings representing what you would like to recurse.  If
         'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
-        they are defined.
+        they are defined.  If ignore_files or ignore_dirs is included, files or
+        directories will be left unchanged respectively.
         Example:
 
         .. code-block:: yaml
@@ -1484,6 +1485,34 @@ def directory(name,
                     - user
                     - group
                     - mode
+
+        .. Leave files or directories unchanged respectively.
+        .. versionadded:: Lithium
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_files
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_dirs
+
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -1642,11 +1671,17 @@ def directory(name,
         if not isinstance(recurse, list):
             ret['result'] = False
             ret['comment'] = '"recurse" must be formed as a list of strings'
-        elif not set(['user', 'group', 'mode']) >= set(recurse):
+        elif not set(['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
-                             '"group" and "mode"'
+                             '"group", "mode", "ignore_files, and "ignore_dirs"'
         else:
+            if 'ignore_files' in recurse and 'ignore_dirs' in recurse:
+                ret['result'] = False
+                ret['comment'] = 'Can not specify "recurse" options "ignore_files" ' \
+                                 'and "ignore_dirs" at the same time.'
+                return ret
+
             if 'user' in recurse:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
@@ -1685,25 +1720,37 @@ def directory(name,
                 file_mode = None
                 dir_mode = None
 
+            if 'ignore_files' in recurse:
+                ignore_files = True
+            else:
+                ignore_files = False
+
+            if 'ignore_dirs' in recurse:
+                ignore_dirs = True
+            else:
+                ignore_dirs = False
+
             for root, dirs, files in os.walk(name):
-                for fn_ in files:
-                    full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode,
-                        follow_symlinks)
-                for dir_ in dirs:
-                    full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode,
-                        follow_symlinks)
+                if not ignore_files:
+                    for fn_ in files:
+                        full = os.path.join(root, fn_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode,
+                            follow_symlinks)
+                if not ignore_dirs:
+                    for dir_ in dirs:
+                        full = os.path.join(root, dir_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode,
+                            follow_symlinks)
 
     if clean:
         keep = _gen_keep_files(name, require)
