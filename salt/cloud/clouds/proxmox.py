@@ -191,7 +191,7 @@ def _getVmById(vmid, allDetails=False):
 
 def _get_next_vmid():
     '''
-    Proxmox allows to use alternative ids instead of autoincrementing.
+    Proxmox allows the use of alternative ids instead of autoincrementing.
     Because of that its required to query what the first available ID is.
     '''
     return int(query('get', 'cluster/nextid'))
@@ -714,7 +714,7 @@ def create_node(vm_):
     newnode['vmid'] = _get_next_vmid()
 
     for prop in ('cpuunits', 'description', 'memory', 'onboot'):
-        if prop in vm_:  # if the propery is set, use it for the VM request
+        if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
     if vm_['technology'] == 'openvz':
@@ -724,12 +724,12 @@ def create_node(vm_):
 
         # optional VZ settings
         for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid'):
-            if prop in vm_:  # if the propery is set, use it for the VM request
+            if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
         for prop in ('acpi', 'cores', 'cpu', 'pool'):
-            if prop in vm_:  # if the propery is set, use it for the VM request
+            if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
     # The node is ready. Lets request it to be added
