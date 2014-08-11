@@ -348,6 +348,6 @@ class SaltCloud(parsers.SaltCloudParser):
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         self.exit(salt.exitcodes.EX_GENERIC)

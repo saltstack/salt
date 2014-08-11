@@ -2364,7 +2364,7 @@ class BaseHighState(object):
             log.critical(
                 msg,
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
         mods.add('{0}:{1}'.format(saltenv, sls))

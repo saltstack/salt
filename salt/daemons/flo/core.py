@@ -1071,7 +1071,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         function_name,
                         exc
                     ),
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
@@ -1080,7 +1080,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         function_name,
                         exc
                     ),
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
@@ -1094,11 +1094,11 @@ class NixExecutor(ioflo.base.deeding.Deed):
                        'arguments issue:  {2}').format(function_name,
                                                        exc,
                                                        aspec)
-                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
             except Exception:
                 msg = 'The minion function caused an exception'
-                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
         else:
             ret['return'] = '{0!r} is not available.'.format(function_name)
