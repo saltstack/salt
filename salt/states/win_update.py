@@ -8,53 +8,55 @@ Management of the windows update agent.
 Set windows updates to run by category. Default behavior is to install
 all updates that do not require user interaction to complete.
 
-Optionally set ``category`` to a category of your choosing to only
-install certain updates. default is all available updates.
+Optionally set ``category`` to a category of your choice to only
+install certain updates. Default is to set to install all available updates.
 
-In the example below, will install all Security and Critical Updates,
+The following example will install all Security and Critical Updates,
 and download but not install standard updates.
 
-Example:
-
 .. code-block:: yaml
+
     updates:
-        win_update.installed:
-            - categories:
-                - 'Critical Updates'
-                - 'Security Updates'
-        win_update.downloaded:
-            - categories:
-                - 'Updates'
+      win_update.installed:
+        - categories:
+          - 'Critical Updates'
+          - 'Security Updates'
+      win_update.downloaded:
+        - categories:
+          - 'Updates'
 
 You can also specify a number of features about the update to have a
 fine grain approach to specific types of updates. These are the following
 features/states of updates available for configuring:
+
+.. code-block:: text
+
     'UI' - User interaction required, skipped by default
     'downloaded' - Already downloaded, skipped by default (downloading)
     'present' - Present on computer, included by default (installing)
     'installed' - Already installed, skipped by default
     'reboot' - Reboot required, included by default
     'hidden' - skip those updates that have been hidden.
-
     'software' - Software updates, included by default
     'driver' - driver updates, skipped by default
 
-This example installs all driver updates that don't require a reboot:
-Example:
+The following example installs all driver updates that don't require a reboot:
 
 .. code-block:: yaml
+
     gryffindor:
-        win_update.install:
-            - includes:
-                - driver: True
-                - software: False
-                - reboot: False
+      win_update.install:
+        - includes:
+          - driver: True
+          - software: False
+          - reboot: False
 
+To just update your windows machine, add this your sls:
 
-tl;dr: want to just have your computers update? add this your sls:
-updates:
-    win_update.installed
+.. code-block:: yaml
 
+    updates:
+      win_update.installed
 '''
 
 # Import Python libs
@@ -399,7 +401,10 @@ def installed(name, categories=None, includes=None, retries=10):
 
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
-        information, so there is no enumeration of the categories available. some known categories:
+        information, so there is no enumeration of the categories available. Some known categories:
+
+        .. code-block:: text
+
             Updates
             Windows 7
             Critical Updates
@@ -407,14 +412,16 @@ def installed(name, categories=None, includes=None, retries=10):
             Update Rollups
 
     includes:
-        a list of features of the updates to cull by. availble features:
+        list of features of the updates to cull by. Available features:
+
+        .. code-block:: text
+
             'UI' - User interaction required, skipped by default
             'downloaded' - Already downloaded, skipped by default (downloading)
             'present' - Present on computer, included by default (installing)
             'installed' - Already installed, skipped by default
             'reboot' - Reboot required, included by default
             'hidden' - skip those updates that have been hidden.
-
             'software' - Software updates, included by default
             'driver' - driver updates, skipped by default
 
@@ -471,7 +478,10 @@ def downloaded(name, categories=None, includes=None, retries=10):
 
     categories:
         the list of categories to be downloaded. These are simply strings in the update's
-        information, so there is no enumeration of the categories available. some known categories:
+        information, so there is no enumeration of the categories available. Some known categories:
+
+        .. code-block:: text
+
             Updates
             Windows 7
             Critical Updates
@@ -479,14 +489,16 @@ def downloaded(name, categories=None, includes=None, retries=10):
             Update Rollups
 
     includes:
-        a list of features of the updates to cull by. availble features:
+        list of features of the updates to cull by. Available features:
+
+        .. code-block:: text
+
             'UI' - User interaction required, skipped by default
             'downloaded' - Already downloaded, skipped by default (downloading)
             'present' - Present on computer, included by default (installing)
             'installed' - Already installed, skipped by default
             'reboot' - Reboot required, included by default
             'hidden' - skip those updates that have been hidden.
-
             'software' - Software updates, included by default
             'driver' - driver updates, skipped by default
 
