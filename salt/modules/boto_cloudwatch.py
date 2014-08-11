@@ -39,7 +39,7 @@ import logging
 import json
 import yaml
 
-from salt.utils.odict import OrderedDict
+import salt.utils.odict as odict
 
 log = logging.getLogger(__name__)
 
@@ -85,30 +85,32 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     return _metric_alarm_to_dict(alarms[0])
 
 
-###########################################
-# this presenter magic makes yaml.safe_dump
-# work with the objects returned from
-# boto.describe_alarms()
-###########################################
-def ordered_dict_presenter(dumper, data):
-    return dumper.represent_dict(data.items())
+def _safe_dump(data):
+    ###########################################
+    # this presenter magic makes yaml.safe_dump
+    # work with the objects returned from
+    # boto.describe_alarms()
+    ###########################################
+    def ordered_dict_presenter(dumper, data):
+        return dumper.represent_dict(data.items())
 
-yaml.add_representer(OrderedDict, ordered_dict_presenter,
-                     Dumper=yaml.dumper.SafeDumper)
+    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
+                         Dumper=yaml.dumper.SafeDumper)
 
+    def boto_listelement_presenter(dumper, data):
+        return dumper.represent_list(list(data))
 
-def boto_listelement_presenter(dumper, data):
-    return dumper.represent_list(list(data))
+    yaml.add_representer(boto.ec2.cloudwatch.listelement.ListElement,
+                         boto_listelement_presenter,
+                         Dumper=yaml.dumper.SafeDumper)
 
-yaml.add_representer(boto.ec2.cloudwatch.listelement.ListElement,
-                     boto_listelement_presenter, Dumper=yaml.dumper.SafeDumper)
+    def dimension_presenter(dumper, data):
+        return dumper.represent_dict(dict(data))
 
+    yaml.add_representer(boto.ec2.cloudwatch.dimension.Dimension,
+                         dimension_presenter, Dumper=yaml.dumper.SafeDumper)
 
-def dimension_presenter(dumper, data):
-    return dumper.represent_dict(dict(data))
-
-yaml.add_representer(boto.ec2.cloudwatch.dimension.Dimension,
-                     dimension_presenter, Dumper=yaml.dumper.SafeDumper)
+    return yaml.safe_dump(data)
 
 
 def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
@@ -148,7 +150,7 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
     if not conn:
         return None
     alarms = conn.describe_alarms()
-    results = OrderedDict()
+    results = odict.OrderedDict()
     for alarm in alarms:
         alarm = _metric_alarm_to_dict(alarm)
         name = alarm["name"]
@@ -162,7 +164,7 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
         alarm_sls.append({"attributes": alarm})
         results["manage alarm " + name] = {"boto_cloudwatch_alarm.present":
                                            alarm_sls}
-    return yaml.safe_dump(results)
+    return _safe_dump(results)
 
 
 def create_or_update_alarm(
@@ -181,7 +183,7 @@ def create_or_update_alarm(
     Dimensions must be a dict. If the value of Dimensions is a string, it will
     be json decoded to produce a dict. alarm_actions, insufficient_data_actions,
     and ok_actions must be lists of string.  If the passed-in value is a string,
-    it will be split on "," to product a list. The strings themselve for
+    it will be split on "," to produce a list. The strings themselves for
     alarm_actions, insufficient_data_actions, and ok_actions must be Amazon
     resource names (ARN's); however, this method also supports an arn lookup
     notation, as follows:
@@ -291,7 +293,7 @@ def _metric_alarm_to_dict(alarm):
     Convert a boto.ec2.cloudwatch.alarm.MetricAlarm into a dict. Convenience
     for pretty printing.
     '''
-    d = OrderedDict()
+    d = odict.OrderedDict()
     fields = ['name', 'metric', 'namespace', 'statistic', 'comparison',
               'threshold', 'period', 'evaluation_periods', 'unit',
               'description', 'dimensions', 'alarm_actions',
