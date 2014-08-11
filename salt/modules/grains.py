@@ -16,7 +16,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
-from salt.config import DEFAULT_TARGET_DELIM
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
 __proxyenabled__ = ['*']
