@@ -1206,7 +1206,7 @@ class Loader(object):
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if key[key.index('.') + 1:] == 'core':
+            if key.startswith('core.'):
                 continue
             try:
                 ret = fun()
@@ -1223,7 +1223,7 @@ class Loader(object):
                 continue
             grains_data.update(ret)
         for key, fun in funcs.items():
-            if key[key.index('.') + 1:] != 'core':
+            if not key.startswith('core.'):
                 continue
             ret = fun()
             if not isinstance(ret, dict):
