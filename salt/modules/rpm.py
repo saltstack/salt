@@ -49,9 +49,9 @@ def list_pkgs(*packages):
     errors = []
     pkgs = {}
     if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
+        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}-%{RELEASE}\\n\''
     else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
+        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}-%{{RELEASE}}\\n\' {0}'.format(
             ' '.join(packages)
         )
     out = __salt__['cmd.run'](cmd, output_loglevel='trace')

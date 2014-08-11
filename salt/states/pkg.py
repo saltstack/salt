@@ -678,6 +678,26 @@ def installed(
     if not isinstance(version, string_types) and version is not None:
         version = str(version)
 
+    if not pkg_verify and _is_installed(name, pkgs, sources, version, allow_updates):
+        if version:
+            msg = ('Version {0} of package {1!r} is already '
+                   'installed'.format(version, name))
+        elif sources:
+            msg = 'All specified packages are already installed.'
+        elif pkgs:
+
+            version_spec = [p for p in pkgs if isinstance(p, dict)]
+
+            msg = ('All specified packages are already installed{0}.'
+            .format(' and are at the desired version' if version_spec else ''))
+        else:
+            msg = 'Package {0} is already installed'.format(name)
+
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,
@@ -1467,3 +1487,43 @@ def mod_aggregate(low, chunks, running):
         else:
             low['pkgs'] = pkgs
     return low
+
+
+def _is_installed(name, pkgs, sources, version, allow_updates):
+    '''
+    Determine if packages are already installed.
+    '''
+
+    if sources:
+        desired = __salt__['pkg_resource.pack_sources'](sources)
+    elif pkgs:
+        desired = _repack_pkgs(pkgs)
+    else:
+        desired = {name: version}
+
+    versioncheck = [] if sources else [(p, v) for p, v in desired.items() if v]
+
+    names = desired.keys()
+
+    installed = __salt__['lowpkg.list_pkgs'](*names)
+
+    if names != installed.keys():
+        return False
+
+    for pkgname, pkgver in versioncheck:
+        match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
+        gt_lt, eq, verstr = match.groups()
+        comparison = gt_lt or ''
+        comparison += eq or ''
+        # A comparison operator of "=" is redundant, but possible.
+        # Change it to "==" so that the version comparison works.
+        if comparison in ['=', '']:
+            comparison = '=='
+        if allow_updates:
+            comparison = '>='
+        if not _fulfills_version_spec([installed[pkgname]], comparison, verstr):
+            return False
+        if not __salt__['pkg_resource.check_extra_requirements'](pkgname, pkgver):
+            return False
+
+    return True
