@@ -3149,7 +3149,8 @@ def manage_file(name,
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -3280,7 +3281,8 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' not updated'
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File ' + name + ' is in the correct state'
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
 
 
