@@ -86,7 +86,7 @@ def wrap_tmpl_func(render_str):
                         'Exception occurred while reading file '
                         '{0}: {1}'.format(tmplsrc, exc),
                         # Show full traceback if debug logging is enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
         else:  # assume tmplsrc is file-like.

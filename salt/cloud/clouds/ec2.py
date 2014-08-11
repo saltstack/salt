@@ -1443,7 +1443,7 @@ def request_instance(vm_=None, call=None):
                 'Error getting root device name for image id {0} for '
                 'VM {1}: \n{2}'.format(image_id, vm_['name'], exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             raise
 
@@ -1518,7 +1518,7 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise
 

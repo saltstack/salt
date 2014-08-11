@@ -629,7 +629,7 @@ def delete_network(kwargs=None, call=None):
             'Nework {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -784,7 +784,7 @@ def delete_fwrule(kwargs=None, call=None):
             'Rule {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -941,7 +941,7 @@ def delete_hc(kwargs=None, call=None):
             'Health check {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1101,7 +1101,7 @@ def delete_lb(kwargs=None, call=None):
             'Load balancer {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1301,7 +1301,7 @@ def delete_snapshot(kwargs=None, call=None):
             'Snapshot {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1361,7 +1361,7 @@ def delete_disk(kwargs=None, call=None):
             'Disk {0} is in use and must be detached before deleting.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 disk.name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1495,7 +1495,7 @@ def create_snapshot(kwargs=None, call=None):
             'Disk {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 disk_name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1751,7 +1751,7 @@ def destroy(vm_name, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not find instance {0}.'.format(vm_name)
@@ -1789,7 +1789,7 @@ def destroy(vm_name, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not destroy instance {0}.'.format(vm_name)
@@ -1826,7 +1826,7 @@ def destroy(vm_name, call=None):
                 'to run the initial deployment: \n{1}'.format(
                     vm_name, exc
                 ),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
         salt.utils.cloud.fire_event(
             'event',
@@ -1894,7 +1894,7 @@ def create(vm_=None, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
