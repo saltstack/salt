@@ -45,7 +45,7 @@ Join the conversation!
 
 https://groups.google.com/forum/#!forum/salt-users
 
-You may subscribe the the list without a Google account by emailing
+You may subscribe to the list without a Google account by emailing
 salt-users+subscribe@googlegroups.com and you may post to the list by emailing
 salt-users@googlegroups.com
 
