@@ -124,7 +124,7 @@ def run_query(db, query):
 
 def show_dbs(*dbs):
     '''
-    Show databases configuration from pillar. Filter by \*args
+    Show databases configuration from pillar. Filter by `*args`
 
     CLI Example:
 
