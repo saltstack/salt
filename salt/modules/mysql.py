@@ -142,7 +142,7 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
 # when using a LIKE query (example in db_exists), as this escape is there to
 # avoid having _ or % characters interpreted in LIKE queries. The string parted
-# of the first query could become (still used with args dictionnary for myval):
+# of the first query could become (still used with args dictionary for myval):
 # 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
 #
 # Check integration tests if you find a hole in theses strings and escapes rules
@@ -315,7 +315,7 @@ def _grant_to_tokens(grant):
 
     :param grant: An un-parsed MySQL GRANT statement str, like
         "GRANT SELECT, ALTER, LOCK TABLES ON `mydb`.* TO 'testuser'@'localhost'"
-        or a dictionnary with 'qry' and 'args' keys for 'user' and 'host'.
+        or a dictionary with 'qry' and 'args' keys for 'user' and 'host'.
     :return:
         A Python dict with the following keys/values:
             - user: MySQL User
@@ -327,7 +327,7 @@ def _grant_to_tokens(grant):
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
-        # Everything coming in dictionnary form was made for a MySQLdb execute
+        # Everything coming in dictionary form was made for a MySQLdb execute
         # call and contain a '%%' escaping of '%' characters for MySQLdb
         # that we should remove here.
         grant_sql = grant.get('qry', 'undefined').replace('%%', '%')
@@ -484,7 +484,7 @@ def _execute(cur, qry, args=None):
     query. For example '%' characters on the query must be encoded as '%%' and
     will be restored as '%' when arguments are applied. But when there're no
     arguments the '%%' is not managed. We cannot apply Identifier quoting in a
-    predictible way if the query are not always applying the same filters. So
+    predictable way if the query are not always applying the same filters. So
     this wrapper ensure this escape is not made if no arguments are used.
     '''
     if args is None or args == {}:
@@ -1019,7 +1019,7 @@ def user_exists(user,
     '''
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
-    # Its password might have previousely change with the same command/state
+    # Its password might have previously change with the same command/state
     if dbc is None \
             and __context__['mysql.error'] \
                 .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \

@@ -1126,7 +1126,7 @@ def create_metadata(name,
                     password=None,
                     runas=None):
     '''
-    Get lifecycle informations about an extension
+    Get lifecycle information about an extension
 
     CLI Example:
 
