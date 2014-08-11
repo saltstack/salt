@@ -111,7 +111,7 @@ class Boto_SecgroupTestCase(TestCase):
     def test_get_group_id_ec2_classic(self):
         '''
         tests that given a name of a group in EC2-Classic that the correct
-        group id will be retreived
+        group id will be retrieved
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_classic'
@@ -123,9 +123,9 @@ class Boto_SecgroupTestCase(TestCase):
         group_vpc = conn.create_security_group(name=group_name,
                                                description=group_description,
                                                vpc_id=vpc_id)
-        retreived_group_id = boto_secgroup.get_group_id(group_name,
+        retrieved_group_id = boto_secgroup.get_group_id(group_name,
                                                         **conn_parameters)
-        self.assertEqual(group_classic.id, retreived_group_id)
+        self.assertEqual(group_classic.id, retrieved_group_id)
 
     @skipIf(missing_requirements, missing_requirements_msg)
     @skipIf(True, 'test skipped because moto does not yet support group'
@@ -134,7 +134,7 @@ class Boto_SecgroupTestCase(TestCase):
     def test_get_group_id_ec2_vpc(self):
         '''
         tests that given a name of a group in EC2-VPC that the correct
-        group id will be retreived
+        group id will be retrieved
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_vpc'
@@ -146,9 +146,9 @@ class Boto_SecgroupTestCase(TestCase):
         group_vpc = conn.create_security_group(name=group_name,
                                                description=group_description,
                                                vpc_id=vpc_id)
-        retreived_group_id = boto_secgroup.get_group_id(group_name, group_vpc,
+        retrieved_group_id = boto_secgroup.get_group_id(group_name, group_vpc,
                                                         **conn_parameters)
-        self.assertEqual(group_vpc.id, retreived_group_id)
+        self.assertEqual(group_vpc.id, retrieved_group_id)
 
     @skipIf(missing_requirements, missing_requirements_msg)
     @mock_ec2
