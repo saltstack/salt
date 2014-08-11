@@ -410,7 +410,7 @@ Sat Sep 28 19:11:10 UTC 2013 - aboe76@gmail.com
 -------------------------------------------------------------------
 Thu Sep 19 17:18:06 UTC 2013 - aboe76@gmail.com
 
-- Updated 0.17.0 Feauture Release
+- Updated 0.17.0 Feature Release
   Major features:
   - halite (web Gui)
   - salt ssh (remote execution/states over ssh) with its own package
@@ -541,7 +541,7 @@ Tue Jul  2 04:55:21 UTC 2013 - aboe76@gmail.com
 Sat Jun 22 05:31:10 UTC 2013 - aboe76@gmail.com
 
 - Updated to salt 0.16.0RC
-- New Feautures in 0.16.0:
+- New Features in 0.16.0:
   - Multi-Master capability
   - Prereq, the new requisite
   - Peer system improvement
