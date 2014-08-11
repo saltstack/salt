@@ -1507,7 +1507,7 @@ def _is_installed(name, pkgs, sources, version, allow_updates):
 
     installed = __salt__['lowpkg.list_pkgs'](*names)
 
-    if len(names) != len(installed):
+    if names != installed.keys():
         return False
 
     for pkgname, pkgver in versioncheck:
