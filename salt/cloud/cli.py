@@ -40,7 +40,6 @@ class SaltCloud(parsers.SaltCloudParser):
         '''
         # Parse shell arguments
         self.parse_args()
-
         salt_master_user = self.config.get('user', salt.utils.get_user())
         if salt_master_user is not None and not check_user(salt_master_user):
             self.error(
@@ -348,6 +347,6 @@ class SaltCloud(parsers.SaltCloudParser):
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info=self.options('log_level', False) == 'debug'
         )
         self.exit(salt.exitcodes.EX_GENERIC)
