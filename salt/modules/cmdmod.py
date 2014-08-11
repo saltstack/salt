@@ -1245,17 +1245,15 @@ def tty(device, echo=None):
         teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
     else:
         return {'Error': 'The specified device is not a valid TTY'}
-
-    ret = subprocess.call(['echo', echo, '>', teletype], shell=False, stdout=open(os.devnull, 'wb'))
-    if ret == 0:
+    try:
+        with salt.utils.fopen(teletype, 'wb') as tty_device:
+            tty_device.write(echo)
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
-    else:
+    except IOError:
         return {
-            'Error': 'Echoing to {0} returned error code {1}'.format(
-                teletype,
-                ret['retcode'])
+            'Error': 'Echoing to {0} returned error'.format(teletype)
         }
 
 
