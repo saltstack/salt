@@ -483,7 +483,6 @@ class MultiMinion(MinionBase):
                 ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
-                raise
 
         return ret
 
