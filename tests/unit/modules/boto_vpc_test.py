@@ -43,11 +43,12 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'pr
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-@mock_ec2
-class Boto_VpcTestCase(TestCase):
+class BotoVpcTest(TestCase):
     '''
     TestCase for salt.modules.boto_vpc module
     '''
+
+    @mock_ec2
     def test_get_subnet_association_single_subnet(self):
         '''
         tests that given multiple subnet ids in the same VPC that the VPC ID is
@@ -61,6 +62,7 @@ class Boto_VpcTestCase(TestCase):
                                                             **conn_parameters)
         self.assertEqual(vpc.id, subnet_assocation)
 
+    @mock_ec2
     def test_get_subnet_association_multiple_subnets_same_vpc(self):
         '''
         tests that given multiple subnet ids in the same VPC that the VPC ID is
@@ -74,6 +76,7 @@ class Boto_VpcTestCase(TestCase):
                                                             **conn_parameters)
         self.assertEqual(vpc.id, subnet_assocation)
 
+    @mock_ec2
     def test_get_subnet_association_multiple_subnets_different_vpc(self):
         '''
         tests that given multiple subnet ids in different VPCs that False is
@@ -88,6 +91,7 @@ class Boto_VpcTestCase(TestCase):
                                                             **conn_parameters)
         self.assertFalse(subnet_assocation)
 
+    @mock_ec2
     def test_exists_true(self):
         '''
         tests True existence of a VPC.
@@ -100,4 +104,4 @@ class Boto_VpcTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(Boto_VpcTestCase)
+    run_tests(BotoVpcTest)
