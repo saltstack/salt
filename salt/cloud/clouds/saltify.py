@@ -95,6 +95,7 @@ def create(vm_):
     deploy_kwargs = {
         'opts': __opts__,
         'host': vm_['ssh_host'],
+        'salt_host': vm_['salt_host'],
         'username': ssh_username,
         'script': deploy_script,
         'name': vm_['name'],
