@@ -85,8 +85,9 @@ or zip file of the repository. The directory structure is designed to work with
     .. code-block:: yaml
 
         file_roots:
-          - /srv/salt
-          - /srv/formulas/apache-formula
+          base:
+            - /srv/salt
+            - /srv/formulas/apache-formula
 
 3.  Restart the Salt Master.
 
