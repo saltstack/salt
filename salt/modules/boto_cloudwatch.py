@@ -255,6 +255,10 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
     '''
     Convert a list of strings into actual arns. Converts convenience names such
     as 'scaling_policy:...'
+
+    CLI Example::
+
+        salt '*' scaling_policy:
     '''
     results = []
     for arn in arns:
