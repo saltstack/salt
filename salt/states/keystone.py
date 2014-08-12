@@ -245,16 +245,18 @@ def tenant_present(name, description=None, enabled=True, profile=None,
 
     if 'Error' not in tenant:
         if tenant[name]['description'] != description:
-            __salt__['keystone.tenant_update'](name, description,
-                                               enabled,
+            __salt__['keystone.tenant_update'](name=name,
+                                               description=description,
+                                               enabled=enabled,
                                                profile=profile,
                                                **connection_args)
             comment = 'Tenant "{0}" has been updated'.format(name)
             ret['comment'] = comment
             ret['changes']['Description'] = 'Updated'
         if tenant[name]['enabled'] != enabled:
-            __salt__['keystone.tenant_update'](name, description,
-                                               enabled,
+            __salt__['keystone.tenant_update'](name=name,
+                                               description=description,
+                                               enabled=enabled,
                                                profile=profile,
                                                **connection_args)
             comment = 'Tenant "{0}" has been updated'.format(name)
