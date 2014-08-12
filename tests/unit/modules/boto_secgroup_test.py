@@ -60,7 +60,7 @@ def _random_group_name():
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-class BotoSecgroupTest(TestCase):
+class BotoSecgroupTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_secgroup module
     '''
@@ -287,4 +287,4 @@ class BotoSecgroupTest(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(BotoSecgroupTest)
+    run_tests(BotoSecgroupTestCase, needs_daemon=False)

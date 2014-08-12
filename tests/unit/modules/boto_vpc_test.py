@@ -43,7 +43,7 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'pr
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-class BotoVpcTest(TestCase):
+class BotoVpcTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_vpc module
     '''
@@ -104,4 +104,4 @@ class BotoVpcTest(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(BotoVpcTest)
+    run_tests(BotoVpcTestCase, needs_daemon=False)
