@@ -35,7 +35,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', pkgs=['pm2', 'grunt'])
+        ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
 

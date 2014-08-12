@@ -132,8 +132,7 @@ def installed(name,
 
         if prefix.lower() in installed_pkgs:
             if force_reinstall is False:
-                pkgs_satisfied.append('{1}@{2}'.format(
-                        pkg_name,
+                pkgs_satisfied.append('{0}@{1}'.format(
                         prefix,
                         installed_pkgs[prefix.lower()]['version']))
         else:

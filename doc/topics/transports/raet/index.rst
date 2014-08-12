@@ -32,18 +32,20 @@ Customer and User Request
 Why make an alternative transport for Salt? There are many reasons, but the
 primary motivation came from customer requests, many large companies came with
 requests to run Salt over an alternative transport, the reasoning was varied,
-from performance and scaling concerns to licensing concerns. These customers
-have partnered with SaltStack to make RAET a reality.
+from performance and scaling improvements to licensing concerns. These
+customers have partnered with SaltStack to make RAET a reality.
 
-Networking Flexibility
-----------------------
+RAET Reliability
+================
 
-forthcoming
+RAET is reliable, hence the name (Reliable Asynchronous Event Transport).
 
-Performance
------------
+The concern posed by some over RAET reliability is based on the fact that
+RAET used UDP instead of TCP and UDP does not have built in reliability.
 
-forthcoming
+RAET itself implements the needed reliability layers that are not natively
+present in UDP, this allows RAET to dynamically optimize packet delivery
+in a way that keeps it both reliable and asynchronous.
 
 RAET and ZeroMQ
 ===============
@@ -62,53 +64,33 @@ Salt is not dropping ZeroMQ support and has no immediate plans to do so.
 Encryption
 ==========
 
-The RAET system in Salt defaults to using CurveCP encryption, the
-specifications for which can be found here:
-http://curvecp.org
-
-RAET does maintain a few minor differences, primarily in the formatting of the
-header and the inline distribution of long term keys. A more complete
-explanation of differences can be found here:
-<forthcoming>
+RAET uses Dan Bernstein's NACL encryption libraries and CurveCP handshake.
+The libnacl python binding binds to both libsodium and tweetnacl to execute
+the underlying cryptography.
 
 Using RAET in Salt
 ==================
 
 Using RAET in Salt is easy, the main difference is that the core dependencies
 change, instead of needing pycrypto, M2Crypto, ZeroMQ and PYZMQ, the packages
-libsodium, pynacl and ioflo are required. Encryption is handled very cleanly
-by libsodium and pynacl, while the queuing and flow control is handled by
+libsodium, libnacl and ioflo are required. Encryption is handled very cleanly
+by libnacl, while the queueing and flow control is handled by
 ioflo. Distribution packages are forthcoming, but libsodium can be easily
 installed from source, or many distributions do ship packages for it.
-The pynacl and ioflo packages can be easily installed from pypi, distribution
+The libnacl and ioflo packages can be easily installed from pypi, distribution
 packages are in the works.
 
-Once the new deps are installed the latest Salt git code needs to be installed.
-As of this writing RAET is not available in a stable release of Salt, it must
-be installed a git clone:
-
-.. code-block:: bash
-
-    git clone https://github.com/saltstack/salt.git
-    cd salt
-    python2 setup.py install
-
-.. note::
-
-    This will install Salt directly from git HEAD, there is no promise that
-    git HEAD is in a functional state.
+Once the new deps are installed the 2014.7 release or higher of Salt needs to
+be installed.
 
 Once installed, modify the configuration files for the minion and master to
-set the transport to raet (the file_buffer_size and id need to be set to
-address known bugs in the unreleased code as of this writing):
+set the transport to raet:
 
 ``/etc/salt/master``:
 
 .. code-block:: yaml
 
     transport: raet
-    id: master
-    file_buffer_size: 54000
 
 
 ``/etc/salt/minion``:

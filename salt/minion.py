@@ -482,7 +482,8 @@ class MultiMinion(MinionBase):
                 ret[master]['minion'] = minion
                 ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
-                log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
+                log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
+                raise
 
         return ret
 
@@ -1352,7 +1353,7 @@ class Minion(MinionBase):
             if creds == 'full':
                 return creds
             elif creds != 'retry':
-                log.info('Authentication with master successful!')
+                log.info('Authentication with master at {0} successful!'.format(self.opts['master_ip']))
                 break
             log.info('Waiting for minion key to be accepted by the master.')
             if acceptance_wait_time:
