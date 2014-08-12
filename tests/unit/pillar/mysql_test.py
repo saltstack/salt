@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath
 
+ensure_in_syspath('../../')
+
+# Import Salt Libs
 from salt.pillar import mysql
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 
