@@ -46,7 +46,7 @@ class NestDisplay(object):
         '''
         strip_colors = __opts__.get('strip_colors', True)
         if ret is None or ret is True or ret is False:
-            out += '{0}{1}{2}{3}{4}\n'.format(
+            out += u'{0}{1}{2}{3}{4}\n'.format(
                     ' ' * indent,
                     self.colors['YELLOW'],
                     prefix,
@@ -54,7 +54,7 @@ class NestDisplay(object):
                     self.colors['ENDC'])
         # Number includes all python numbers types (float, int, long, complex, ...)
         elif isinstance(ret, Number):
-            out += '{0}{1}{2}{3}{4}\n'.format(
+            out += u'{0}{1}{2}{3}{4}\n'.format(
                     ' ' * indent,
                     self.colors['YELLOW'],
                     prefix,
@@ -65,7 +65,7 @@ class NestDisplay(object):
             for line in lines:
                 if strip_colors:
                     line = salt.output.strip_esc_sequence(line)
-                out += '{0}{1}{2}{3}{4}\n'.format(
+                out += u'{0}{1}{2}{3}{4}\n'.format(
                         ' ' * indent,
                         self.colors['GREEN'],
                         prefix,
@@ -74,7 +74,7 @@ class NestDisplay(object):
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
                 if isinstance(ind, (list, tuple, dict)):
-                    out += '{0}{1}|_{2}\n'.format(
+                    out += u'{0}{1}|_{2}\n'.format(
                             ' ' * indent,
                             self.colors['GREEN'],
                             self.colors['ENDC'])
@@ -84,14 +84,14 @@ class NestDisplay(object):
                     out = self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
             if indent:
-                out += '{0}{1}{2}{3}\n'.format(
+                out += u'{0}{1}{2}{3}\n'.format(
                         ' ' * indent,
                         self.colors['CYAN'],
                         '-' * 10,
                         self.colors['ENDC'])
             for key in sorted(ret):
                 val = ret[key]
-                out += '{0}{1}{2}{3}{4}:\n'.format(
+                out += u'{0}{1}{2}{3}{4}:\n'.format(
                         ' ' * indent,
                         self.colors['CYAN'],
                         prefix,
