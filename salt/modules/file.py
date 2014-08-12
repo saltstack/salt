@@ -479,7 +479,7 @@ def get_sum(path, form='md5'):
     return salt.utils.get_hash(path, form, 4096)
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='md5', chunk_size=65536):
     '''
     Get the hash sum of a file
 
