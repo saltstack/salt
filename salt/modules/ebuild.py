@@ -610,7 +610,8 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     '''
     Updates the passed package (emerge --update package)
 
-
+    slot
+        Restrict the update to a particular slot. It will update to the
         latest version within the slot.
 
     fromrepo
