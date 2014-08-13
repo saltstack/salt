@@ -509,6 +509,16 @@ def mod_repo(repo, **kwargs):
             repo_manager.modifyRepository(repo, r.zypp)
     return r.options
 
+def expand_repo_def(repokwargs):
+    '''
+    Take a repository definition and expand it to the full pkg repository dict
+    that can be used for comparison. This is a helper function to make
+    certain repo managers sane for comparison in the pkgrepo states.
+
+    There is no use to calling this function via the CLI.
+    '''
+    # Zypp doesn't need the data massaged.
+    return repokwargs
 
 def refresh_db():
     '''
