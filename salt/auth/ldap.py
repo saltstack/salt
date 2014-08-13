@@ -143,7 +143,7 @@ def _bind(username, password):
 
     if paramvalues['filter']:
         escaped_username = ldap.filter.escape_filter_chars(username)
-        paramvalues['filter'] = _render_template(paramvalues['filter'], escaped_username) 
+        paramvalues['filter'] = _render_template(paramvalues['filter'], escaped_username)
 
     # Only add binddn/bindpw to the connargs when they're set, as they're not
     # mandatory for initializing the LDAP object, but if they're provided
