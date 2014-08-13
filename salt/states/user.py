@@ -26,6 +26,7 @@ as either absent or present
 
 # Import python libs
 import logging
+import os
 
 # Import salt libs
 import salt.utils
@@ -33,7 +34,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def _group_changes(cur, wanted, remove=True):
+def _group_changes(cur, wanted, remove=False):
     '''
     Determine if the groups need to be changed
     '''
@@ -51,16 +52,27 @@ def _changes(name,
              optional_groups=None,
              remove_groups=True,
              home=None,
+             createhome=True,
              password=None,
              enforce_password=True,
+             empty_password=False,
              shell=None,
              fullname='',
              roomnumber='',
              workphone='',
-             homephone=''):
+             homephone='',
+             date=0,
+             mindays=0,
+             maxdays=999999,
+             inactdays=0,
+             warndays=7,
+             expire=-1):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
+
+    Updated in 2014.7.0 to include support for shadow attributes, all
+    attributes supported as integers only.
     '''
 
     if 'shadow.info' in __salt__:
@@ -95,6 +107,9 @@ def _changes(name,
     if home:
         if lusr['home'] != home:
             change['home'] = home
+        if createhome and not os.path.isdir(home):
+            change['homeDoesNotExist'] = home
+
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -105,6 +120,18 @@ def _changes(name,
                     or lshad['passwd'] != default_hash and enforce_password:
                 if lshad['passwd'] != password:
                     change['passwd'] = password
+        if date and date is not 0 and lshad['lstchg'] != date:
+            change['date'] = date
+        if mindays and mindays is not 0 and lshad['min'] != mindays:
+            change['mindays'] = mindays
+        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+            change['maxdays'] = maxdays
+        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+            change['inactdays'] = inactdays
+        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+            change['warndays'] = warndays
+        if expire and expire is not -1 and lshad['expire'] != expire:
+            change['expire'] = expire
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
@@ -134,13 +161,20 @@ def present(name,
             createhome=True,
             password=None,
             enforce_password=True,
+            empty_password=False,
             shell=None,
             unique=True,
             system=False,
             fullname=None,
             roomnumber=None,
             workphone=None,
-            homephone=None):
+            homephone=None,
+            date=None,
+            mindays=None,
+            maxdays=None,
+            inactdays=None,
+            warndays=None,
+            expire=None):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -197,6 +231,9 @@ def present(name,
         "password" field. This option will be ignored if "password" is not
         specified.
 
+    empty_password
+        Set to True to enable no password-less login for user
+
     shell
         The login shell, defaults to the system default shell
 
@@ -225,6 +262,35 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
+
+
+    .. versionchanged:: 2014.7.0
+       Shadow attribute support added.
+
+    Shadow attributes support (currently Linux only):
+
+    The below values should be specified as integers.
+
+    date
+        Date of last change of password, represented in days since epoch
+        (January 1, 1970).
+
+    mindays
+        The minimum number of days between password changes.
+
+    maxdays
+        The maximum number of days between password changes.
+
+    inactdays
+        The number of days after a password expires before an account is
+        locked.
+
+    warndays
+        Number of days prior to maxdays to warn users.
+
+    expire
+        Date that account expires, represented in days since epoch (January 1,
+        1970).
     '''
     fullname = str(fullname) if fullname is not None else fullname
     roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
@@ -264,6 +330,9 @@ def present(name,
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
 
+    if empty_password:
+        __salt__['shadow.del_password'](name)
+
     changes = _changes(name,
                        uid,
                        gid,
@@ -271,13 +340,21 @@ def present(name,
                        present_optgroups,
                        remove_groups,
                        home,
+                       createhome,
                        password,
                        enforce_password,
+                       empty_password,
                        shell,
                        fullname,
                        roomnumber,
                        workphone,
-                       homephone)
+                       homephone,
+                       date,
+                       mindays,
+                       maxdays,
+                       inactdays,
+                       warndays,
+                       expire)
 
     if changes:
         if __opts__['test']:
@@ -292,8 +369,32 @@ def present(name,
             lshad = __salt__['shadow.info'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
-            if key == 'passwd':
+            if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
+                continue
+            if key == 'date':
+                __salt__['shadow.set_date'](name, date)
+                continue
+            if key == 'home' or key == 'homeDoesNotExist':
+                if createhome:
+                    __salt__['user.chhome'](name, val, True)
+                else:
+                    __salt__['user.chhome'](name, val, False)
+                continue
+            if key == 'mindays':
+                __salt__['shadow.set_mindays'](name, mindays)
+                continue
+            if key == 'maxdays':
+                __salt__['shadow.set_maxdays'](name, maxdays)
+                continue
+            if key == 'inactdays':
+                __salt__['shadow.set_inactdays'](name, inactdays)
+                continue
+            if key == 'warndays':
+                __salt__['shadow.set_warndays'](name, warndays)
+                continue
+            if key == 'expire':
+                __salt__['shadow.set_expire'](name, expire)
                 continue
             if key == 'groups':
                 __salt__['user.ch{0}'.format(key)](
@@ -324,13 +425,21 @@ def present(name,
                            present_optgroups,
                            remove_groups,
                            home,
+                           createhome,
                            password,
                            enforce_password,
+                           empty_password,
                            shell,
                            fullname,
                            roomnumber,
                            workphone,
-                           homephone)
+                           homephone,
+                           date,
+                           mindays,
+                           maxdays,
+                           inactdays,
+                           warndays,
+                           expire)
 
         if changes:
             ret['comment'] = 'These values could not be changed: {0}'.format(
@@ -364,14 +473,70 @@ def present(name,
                                 createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
-            if all((password, 'shadow.info' in __salt__)):
-                __salt__['shadow.set_password'](name, password)
-                spost = __salt__['shadow.info'](name)
-                if spost['passwd'] != password and not salt.utils.is_windows():
-                    ret['comment'] = 'User {0} created but failed to set' \
-                                     ' password to {1}'.format(name, password)
-                    ret['result'] = False
-                ret['changes']['password'] = password
+            if 'shadow.info' in __salt__ and not salt.utils.is_windows():
+                if password and not empty_password:
+                    __salt__['shadow.set_password'](name, password)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['passwd'] != password:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' password to' \
+                                         ' {1}'.format(name, password)
+                        ret['result'] = False
+                    ret['changes']['password'] = password
+                if date:
+                    __salt__['shadow.set_date'](name, date)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['lstchg'] != date:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' last change date to' \
+                                         ' {1}'.format(name, date)
+                        ret['result'] = False
+                    ret['changes']['date'] = date
+                if mindays:
+                    __salt__['shadow.set_mindays'](name, mindays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['min'] != mindays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' minimum days to' \
+                                         ' {1}'.format(name, mindays)
+                        ret['result'] = False
+                    ret['changes']['mindays'] = mindays
+                if maxdays:
+                    __salt__['shadow.set_maxdays'](name, mindays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['max'] != maxdays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' maximum days to' \
+                                         ' {1}'.format(name, maxdays)
+                        ret['result'] = False
+                    ret['changes']['maxdays'] = maxdays
+                if inactdays:
+                    __salt__['shadow.set_inactdays'](name, inactdays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['inact'] != inactdays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' inactive days to' \
+                                         ' {1}'.format(name, inactdays)
+                        ret['result'] = False
+                    ret['changes']['inactdays'] = inactdays
+                if warndays:
+                    __salt__['shadow.set_warndays'](name, warndays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['warn'] != warndays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' warn days to' \
+                                         ' {1}'.format(name, mindays)
+                        ret['result'] = False
+                    ret['changes']['warndays'] = warndays
+                if expire:
+                    __salt__['shadow.set_expire'](name, expire)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['expire'] != expire:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' expire days to' \
+                                         ' {1}'.format(name, expire)
+                        ret['result'] = False
+                    ret['changes']['expire'] = expire
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False
