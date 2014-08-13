@@ -95,9 +95,7 @@ restrictions.
 # The import section is mostly libcloud boilerplate
 
 # Import python libs
-import os
 import copy
-import logging
 import socket
 import pprint
 
