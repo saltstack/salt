@@ -183,7 +183,7 @@ preferred:
 .. code-block:: yaml
 
     {% set name = 'httpd' %}
-    {% set tmpl = 'salt://' + slspath + '/files/httpd.conf' %}
+    {% set tmpl = 'salt://apache/files/httpd.conf' %}
 
     include:
       - apache
@@ -217,7 +217,7 @@ locations within a single state:
 
 .. code-block:: yaml
     
-    {% from slspath + "/map.jinja" import apache with context %}
+    {% from "apache/map.jinja" import apache with context %}
 
     include:
       - apache
@@ -258,7 +258,7 @@ is not very modular to one that is:
     /etc/httpd/httpd.conf:
       file:
         - managed
-        - source: salt://{{ slspath }}/files/httpd.conf
+        - source: salt://apache/files/httpd.conf
         - template: jinja
         - watch_in:
           - service: httpd
@@ -297,7 +297,7 @@ opposed to direct ID references:
       file: 
         - managed
         - name: /etc/httpd/httpd.conf
-        - source: salt://{{ slspath }}/files/httpd.conf
+        - source: salt://apache/files/httpd.conf
         - template: jinja
         - watch_in:
           - service: apache
@@ -347,7 +347,7 @@ modification of static values:
 
 .. code-block:: yaml
 
-    {% from slspath + "/map.jinja" import apache with context %}
+    {% from "apache/map.jinja" import apache with context %}
 
     apache:
       pkg:
@@ -407,7 +407,7 @@ to be broken into two states.
 
 .. code-block:: yaml
 
-    {% from slspath + "/map.jinja" import apache with context %}
+    {% from "apache/map.jinja" import apache with context %}
 
     apache:
       pkg:
@@ -422,7 +422,7 @@ to be broken into two states.
 
 .. code-block:: yaml
 
-    {% from slspath + "/map.jinja" import apache with context %}
+    {% from "apache/map.jinja" import apache with context %}
 
     include:
       - apache
