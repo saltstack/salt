@@ -309,6 +309,7 @@ def info(name):
             ret['home'] = ret['profile']
         ret['groups'] = groups
         ret['gid'] = ''
+
     return ret
 
 
@@ -382,11 +383,13 @@ def list_users():
     '''
     Return a list of users on Windows
     '''
-    res = 1
+    res = 0
     users = []
     user_list = []
+    dowhile = True
     try:
-        while res:
+        while res or dowhile:
+            dowhile = False
             (users, _, res) = win32net.NetUserEnum(
                 None,
                 0,
