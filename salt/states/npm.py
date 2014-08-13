@@ -124,7 +124,7 @@ def installed(name,
         pkg_list = [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=runas, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
