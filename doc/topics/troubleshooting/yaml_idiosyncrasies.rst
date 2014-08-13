@@ -314,7 +314,7 @@ strings to force YAML to serialize them as strings:
 
 Additionally, numbers formatted like ``XXXX-XX-XX`` will also be converted (or
 YAML will attempt to convert them, and error out if it doesn't think the date
-is a real one).  Thus, for example, if you were to have a minion ID of
+is a real one).  Thus, for example, if a minion were to have an ID of
 ``4017-16-20`` the minion would not start because YAML would complain that the
 date was out of range.  The workaround is the same, surround the offending
 string with quotes:
