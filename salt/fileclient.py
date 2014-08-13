@@ -10,11 +10,7 @@ import hashlib
 import os
 import shutil
 import time
-import subprocess
 import requests
-
-# Import third party libs
-import yaml
 
 # Import salt libs
 from salt.exceptions import (
@@ -882,6 +878,7 @@ class LocalClient(Client):
         empty dict.
         '''
         return {}
+
 
 class RemoteClient(Client):
     '''
