@@ -50,7 +50,8 @@ def install(pkg=None,
             pkgs=None,
             dir=None,
             runas=None,
-            registry=None):
+            registry=None,
+            env=None):
     '''
     Install an NPM package.
 
@@ -65,7 +66,7 @@ def install(pkg=None,
     pkgs
         A list of package names in the same format as the ``name`` parameter
 
-        .. versionaddedd:: 2014.7
+        .. versionaddedd:: 2014.7.0
 
     dir
         The target directory in which to install the package, or None for
@@ -76,6 +77,13 @@ def install(pkg=None,
 
     registry
         The NPM registry to install the package from.
+
+        .. versionadded:: 2014.7.0
+
+    env
+        Environment variables to set when invoking npm. Uses the same ``env``
+        format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
+        function.
 
         .. versionadded:: 2014.7.0
 
@@ -103,7 +111,7 @@ def install(pkg=None,
     elif pkgs:
         cmd += ' "{0}"'.format('" "'.join(pkgs))
 
-    result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
+    result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas, env=env)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
