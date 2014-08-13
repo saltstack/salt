@@ -509,6 +509,7 @@ def mod_repo(repo, **kwargs):
             repo_manager.modifyRepository(repo, r.zypp)
     return r.options
 
+
 def expand_repo_def(repokwargs):
     '''
     Take a repository definition and expand it to the full pkg repository dict
@@ -519,6 +520,7 @@ def expand_repo_def(repokwargs):
     '''
     # Zypp doesn't need the data massaged.
     return repokwargs
+
 
 def refresh_db():
     '''
