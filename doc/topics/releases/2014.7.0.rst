@@ -68,6 +68,25 @@ Global onlyif and unless
 
 The ``onlyif`` and ``unless`` options can now be used for any state declaration.
 
+Use ``names`` to expand and override values
+-------------------------------------------
+
+The :ref:`names declaration <names-declaration>` in Salt's state system can now
+override or add values to the expanded data structure. For example:
+
+.. code-block:: yaml
+
+    my_users:
+      user.present:
+        - names:
+          - larry
+          - curly
+          - moe:
+            - shell: /bin/zsh
+            - groups:
+              - wheel
+        - shell: /bin/bash
+
 Major Features
 ==============
 
