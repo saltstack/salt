@@ -37,7 +37,8 @@ def installed(name,
               runas=None,
               user=None,
               force_reinstall=False,
-              registry=None):
+              registry=None,
+              env=None):
     '''
     Verify that the given package is installed and is at the correct version
     (if specified).
@@ -60,7 +61,7 @@ def installed(name,
         A list of packages to install with a single npm invocation; specifying
         this argument will ignore the ``name`` argument
 
-        .. versionadded:: 2014.7
+        .. versionadded:: 2014.7.0
 
     dir
         The target directory in which to install the package, or None for
@@ -78,6 +79,13 @@ def installed(name,
 
     registry
         The NPM registry from which to install the package
+
+        .. versionadded:: 2014.7.0
+
+    env
+        A list of environment variables to be set prior to execution. The
+        format is the same as the :py:func:`cmd.run <salt.states.cmd.run>`.
+        state function.
 
         .. versionadded:: 2014.7.0
 
@@ -166,6 +174,7 @@ def installed(name,
             'dir': dir,
             'runas': user,
             'registry': registry,
+            'env': env,
         }
 
         if pkgs is not None:
