@@ -109,6 +109,21 @@ def fire_master_env(tag, data=None, preload=None):
 
         salt-call event.fire_master_env myco/jenkins/build/success
 
+    A convenient way to allow Jenkins to execute ``salt-call`` is via sudo. The
+    following rule in sudoers will allow the ``jenkins`` user to run only the
+    following command.
+
+    ``/etc/sudoers`` (allow preserving the environment):
+
+    .. code-block:: text
+
+        jenkins ALL=(ALL) NOPASSWD:SETENV: /usr/bin/salt-call event.fire_master_env*
+
+    Call Jenkins via sudo (preserve the environment):
+
+    .. code-block:: bash
+
+        sudo -E salt-call event.fire_master_env myco/jenkins/build/success
     '''
     env_dict = {}
     env_dict.update(os.environ)
