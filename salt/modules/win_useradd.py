@@ -8,6 +8,9 @@ NOTE: This currently only works with local user accounts, not domain accounts
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     import win32net
