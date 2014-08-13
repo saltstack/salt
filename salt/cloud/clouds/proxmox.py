@@ -851,8 +851,15 @@ def destroy(name, call=None):
 
     vmobj = _getVmByName(name)
     if vmobj is not None:
-        query('delete', 'nodes/{0}/{1}/{2}'.format(
-            vmobj['host'], vmobj['type'], vmobj['id']
+        # stop the vm
+        stop(name, vmobj['vmid'], 'action')
+
+        # wait until stopped
+        if not wait_for_state(vmobj['vmid'], vmobj['node'], vmobj['type'], 'stopped'):
+            return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
+
+        query('delete', 'nodes/{0}/{1}'.format(
+            vmobj['node'], vmobj['id']
         ))
         salt.utils.cloud.fire_event(
             'event',
