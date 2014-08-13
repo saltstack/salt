@@ -870,6 +870,21 @@ class LocalClient(Client):
 
     def ext_nodes(self):
         '''
+        Originally returned information via the external_nodes subsystem.
+        External_nodes was deprecated and removed in
+        2014.1.6 in favor of master_tops (which had been around since pre-0.17).
+             salt-call --local state.show_top
+        ends up here, but master_tops has not been extended to support
+        show_top in a completely local environment yet.  It's worth noting
+        that originally this fn started with
+            if 'external_nodes' not in opts: return {}
+        So since external_nodes is gone now, we are just returning the
+        empty dict.
+        '''
+        return {}
+
+    def ext_nodes(self):
+        '''
         Return the metadata derived from the external nodes system on the local
         system
         '''
