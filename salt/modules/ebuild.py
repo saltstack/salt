@@ -506,7 +506,7 @@ def install(name=None,
             'pkgs': pkgs,
             'sources': sources,
             'kwargs': kwargs,
-            'binhost' : binhost
+            'binhost': binhost,
         }
     ))
     if salt.utils.is_true(refresh):
@@ -594,7 +594,7 @@ def install(name=None,
                 targets.append(target)
     else:
         targets = pkg_params
-    cmd = 'emerge --quiet {0} --ask n {1} {2}'.format(bin_opts,emerge_opts, ' '.join(targets))
+    cmd = 'emerge --quiet {0} --ask n {1} {2}'.format(bin_opts, emerge_opts, ' '.join(targets))
 
     old = list_pkgs()
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
@@ -652,7 +652,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
         bin_opts = ''
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0} {1}'.format(bin_opts,full_atom)
+    cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0} {1}'.format(bin_opts, full_atom)
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     if call['retcode'] != 0:
@@ -661,7 +661,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade(refresh=True,binhost=None):
+def upgrade(refresh=True, binhost=None):
     '''
     Run a full system upgrade (emerge --update world)
 
