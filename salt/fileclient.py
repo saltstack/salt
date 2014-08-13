@@ -883,40 +883,6 @@ class LocalClient(Client):
         '''
         return {}
 
-    def ext_nodes(self):
-        '''
-        Return the metadata derived from the external nodes system on the local
-        system
-        '''
-        if not self.opts['external_nodes']:
-            return {}
-        if not salt.utils.which(self.opts['external_nodes']):
-            log.error(('Specified external nodes controller {0} is not'
-                       ' available, please verify that it is installed'
-                       '').format(self.opts['external_nodes']))
-            return {}
-        cmd = '{0} {1}'.format(self.opts['external_nodes'], self.opts['id'])
-        ndata = yaml.safe_load(subprocess.Popen(
-                               cmd,
-                               shell=True,
-                               stdout=subprocess.PIPE
-                               ).communicate()[0])
-        ret = {}
-        if 'environment' in ndata:
-            saltenv = ndata['environment']
-        else:
-            saltenv = 'base'
-
-        if 'classes' in ndata:
-            if isinstance(ndata['classes'], dict):
-                ret[saltenv] = list(ndata['classes'])
-            elif isinstance(ndata['classes'], list):
-                ret[saltenv] = ndata['classes']
-            else:
-                return ret
-        return ret
-
-
 class RemoteClient(Client):
     '''
     Interact with the salt master file server.
