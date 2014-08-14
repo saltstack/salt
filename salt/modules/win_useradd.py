@@ -8,10 +8,14 @@ NOTE: This currently only works with local user accounts, not domain accounts
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+import logging
+
+log = logging.getLogger(__name__)
 
 try:
     import win32net
     import win32netcon
+    import win32security
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
@@ -278,32 +282,48 @@ def info(name):
     '''
     ret = {}
     items = {}
-    for line in __salt__['cmd.run']('net user {0}'.format(name)).splitlines():
-        if 'name could not be found' in line:
-            return {}
-        if 'successfully' not in line:
-            comps = line.split('    ', 1)
-            if not len(comps) > 1:
-                continue
-            items[comps[0].strip()] = comps[1].strip()
-    grouplist = []
-    groups = items['Local Group Memberships'].split('  ')
-    for group in groups:
-        if not group:
-            continue
-        grouplist.append(group.strip(' *'))
+    try:
+        items = win32net.NetUserGetInfo(None, name, 4)
+    except win32net.error:
+        pass
 
-    ret['fullname'] = items['Full Name']
-    ret['name'] = items['User name']
-    ret['comment'] = items['Comment']
-    ret['active'] = items['Account active']
-    ret['logonscript'] = items['Logon script']
-    ret['profile'] = items['User profile']
-    ret['home'] = items['Home directory']
-    ret['groups'] = grouplist
-    ret['gid'] = ''
+    if items:
+        groups = []
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except win32net.error:
+            pass
+
+        ret['fullname'] = items['full_name']
+        ret['name'] = items['name']
+        ret['uid'] = win32security.ConvertSidToStringSid(items['user_sid'])
+        ret['passwd'] = items['password']
+        ret['comment'] = items['comment']
+        ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
+        ret['logonscript'] = items['script_path']
+        ret['profile'] = items['profile']
+        if not ret['profile']:
+            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
+        ret['home'] = items['home_dir']
+        if not ret['home']:
+            ret['home'] = ret['profile']
+        ret['groups'] = groups
+        ret['gid'] = ''
 
     return ret
+
+
+def _get_userprofile_from_registry(user, sid):
+    '''
+    In case net user doesn't return the userprofile
+    we can get it from the registry
+    '''
+    profile_dir = __salt__['reg.read_key'](
+        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'ProfileImagePath'
+    )
+    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    return profile_dir
 
 
 def list_groups(name):
@@ -341,33 +361,17 @@ def getent(refresh=False):
         return __context__['user.getent']
 
     ret = []
-    users = []
-    startusers = False
-    lines = __salt__['cmd.run']('net user').splitlines()
-    for line in lines:
-        if '----------' in line:
-            startusers = True
-            continue
-        if startusers:
-            if 'successfully' not in line:
-                comps = line.split()
-                users += comps
-                ##if not len(comps) > 1:
-                #   continue
-                #items[comps[0].strip()] = comps[1].strip()
-    #return users
-    for user in users:
+    for user in __salt__['user.list_users']():
         stuff = {}
         user_info = __salt__['user.info'](user)
-        uid = __salt__['file.user_to_uid'](user_info['name'])
 
         stuff['gid'] = ''
         stuff['groups'] = user_info['groups']
         stuff['home'] = user_info['home']
         stuff['name'] = user_info['name']
-        stuff['passwd'] = ''
+        stuff['passwd'] = user_info['passwd']
         stuff['shell'] = ''
-        stuff['uid'] = uid
+        stuff['uid'] = user_info['uid']
 
         ret.append(stuff)
 
@@ -379,14 +383,16 @@ def list_users():
     '''
     Return a list of users on Windows
     '''
-    res = 1
+    res = 0
     users = []
     user_list = []
+    dowhile = True
     try:
-        while res:
+        while res or dowhile:
+            dowhile = False
             (users, _, res) = win32net.NetUserEnum(
-                'localhost',
-                3,
+                None,
+                0,
                 win32netcon.FILTER_NORMAL_ACCOUNT,
                 res,
                 win32netcon.MAX_PREFERRED_LENGTH
