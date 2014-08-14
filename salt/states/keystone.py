@@ -184,7 +184,7 @@ def user_present(name,
                 for role in roles[0][tenant_role]:
                     __salt__['keystone.user_role_add'](user=name,
                                                        role=role,
-                                                       tenant_role=tenant_role,
+                                                       tenant=tenant_role,
                                                        profile=profile,
                                                        **connection_args)
         ret['comment'] = 'Keystone user {0} has been added'.format(name)
