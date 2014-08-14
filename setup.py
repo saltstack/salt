@@ -683,12 +683,21 @@ elif sys.platform.startswith('sunos'):
         from bbfreeze.modulegraph.modulegraph import ModuleGraph
         mf = ModuleGraph(sys.path[:])
         for arg in glob.glob('salt/modules/*.py'):
-                mf.run_script(arg)
+            mf.run_script(arg)
         for mod in mf.flatten():
             if type(mod).__name__ != 'Script' and mod.filename:
                 FREEZER_INCLUDES.append(str(os.path.basename(mod.identifier)))
     except ImportError:
         pass
+    # Include C extension that convinces esky to package up the libsodium C library
+    # This is needed for ctypes to find it in libnacl which is in turn needed for raet
+    # see pkg/smartos/esky/sodium_grabber{.c,_installer.py}
+    FREEZER_INCLUDES.extend([
+        'sodium_grabber',
+        'ioflo',
+        'raet',
+        'libnacl',
+    ])
 
 if HAS_ESKY:
     # if the user has the esky / bbfreeze libraries installed, add the
