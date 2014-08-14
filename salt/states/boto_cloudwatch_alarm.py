@@ -168,7 +168,6 @@ def present(
 
 def absent(
         name,
-        attributes=None,
         region=None,
         key=None,
         keyid=None,
