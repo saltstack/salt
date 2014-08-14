@@ -23,7 +23,7 @@ def query(url, output=True, **kwargs):
         salt-run http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
     '''
-    if not 'node' in kwargs:
+    if 'node' not in kwargs:
         kwargs['node'] = 'master'
 
     ret = salt.utils.http.query(url=url, opts=__opts__, **kwargs)

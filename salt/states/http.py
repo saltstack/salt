@@ -5,8 +5,9 @@ HTTP monitoring states
 Perform an HTTP query and statefully return the result
 '''
 
-# Import salt libs
-from salt._compat import string_types
+# Import python libs
+
+import re
 
 __monitor__ = [
         'query',
@@ -31,7 +32,7 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
         )
         return ret
 
-    if not 'decode' in kwargs:
+    if 'decode' not in kwargs:
         kwargs['decode'] = False
     kwargs['text'] = True
     kwargs['status'] = True
