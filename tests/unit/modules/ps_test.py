@@ -56,6 +56,10 @@ try:
 except ImportError:
     HAS_UTMP = False
 
+HAS_PSUTIL_VERSION = False
+if psutil.version_info >= (0, 6, 0):
+    HAS_PSUTIL_VERSION = True
+
 
 def _get_proc_name(proc):
     return proc.name() if PSUTIL2 else proc.name
@@ -104,11 +108,13 @@ class PsTestCase(TestCase):
     def test_cpu_times(self):
         self.assertDictEqual({'idle': 4, 'nice': 2, 'system': 3, 'user': 1}, ps.cpu_times())
 
+    @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     @patch('psutil.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
     def test_virtual_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500},
                              ps.virtual_memory())
 
+    @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     @patch('psutil.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
     def test_swap_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},
