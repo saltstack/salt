@@ -277,7 +277,7 @@ formula/woot.sls:
 ''', sls='formula.woot', argline='yaml . jinja')
 
         r = result['formula/woot.sls']['cmd.run'][0]['name']
-        self.assertEqual(r, 'echo formula/woot')
+        self.assertEqual(r, 'echo formula/woot/')
 
 
 if __name__ == '__main__':
