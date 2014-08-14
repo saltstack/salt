@@ -29,8 +29,8 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(True, ret['result'])
                 gem_install_succeeds.assert_called_once_with(
-                    'quux', ruby=None, runas=None, version=None, rdoc=False,
-                    ri=False
+                    'quux', ruby=None, runas=None,
+                    version=None, proxy=None, rdoc=False, ri=False
                 )
 
             with patch.dict(gem.__salt__,
@@ -38,8 +38,8 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(False, ret['result'])
                 gem_install_fails.assert_called_once_with(
-                    'quux', ruby=None, runas=None, version=None, rdoc=False,
-                    ri=False
+                    'quux', ruby=None, runas=None,
+                    version=None, proxy=None, rdoc=False, ri=False
                 )
 
     def test_removed(self):
