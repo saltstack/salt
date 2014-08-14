@@ -36,7 +36,8 @@ def install(gems,           # pylint: disable=C0103
             version=None,
             rdoc=False,
             ri=False,
-            pre_releases=False):      # pylint: disable=C0103
+            pre_releases=False,
+            proxy=None):      # pylint: disable=C0103
     '''
     Installs one or several gems.
 
@@ -55,6 +56,9 @@ def install(gems,           # pylint: disable=C0103
         Generate RI documentation for the gem(s).
     pre_releases
         Include pre-releases in the available versions
+    proxy : None
+        Use the specified HTTP proxy server for all outgoing traffic.
+        Format: http://hostname[:port]
 
     CLI Example:
 
@@ -71,6 +75,8 @@ def install(gems,           # pylint: disable=C0103
         options.append('--no-ri')
     if pre_releases:
         options.append('--pre')
+    if proxy:
+        options.append('-p {0}'.format(proxy))
 
     cmdline_args = ' '.join(options)
     return _gem('install {gems} {options}'.format(gems=gems,
