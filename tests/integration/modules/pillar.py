@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-import pkg_resources
+from distutils.version import LooseVersion
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -14,8 +14,15 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
-GIT_PYTHON = '0.3.2.RC1'
-GIT_PYTHON_VERSION = pkg_resources.get_distribution("GitPython").version
+GIT_PYTHON = '0.3.2'
+HAS_GIT_PYTHON = False
+
+try:
+    import git
+    if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
+        HAS_GIT_PYTHON = True
+except ImportError:
+    pass
 
 
 class PillarModuleTest(integration.ModuleCase):
@@ -36,7 +43,7 @@ class PillarModuleTest(integration.ModuleCase):
             self.assertEqual(pillar['class'], 'other')
 
     @requires_network()
-    @skipIf(GIT_PYTHON_VERSION < GIT_PYTHON,
+    @skipIf(HAS_GIT_PYTHON is False,
             'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
     def test_two_ext_pillar_sources_override(self):
         '''
@@ -49,7 +56,7 @@ class PillarModuleTest(integration.ModuleCase):
         )
 
     @requires_network()
-    @skipIf(GIT_PYTHON_VERSION < GIT_PYTHON,
+    @skipIf(HAS_GIT_PYTHON is False,
             'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
     def test_two_ext_pillar_sources(self):
         '''
