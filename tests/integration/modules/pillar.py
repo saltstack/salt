@@ -14,7 +14,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
-GIT_PYTHON = '0.3.2.RC1'
+GIT_PYTHON = '0.3.2'
 HAS_GIT_PYTHON = False
 
 try:
