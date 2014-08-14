@@ -350,7 +350,7 @@ def get_resource_path(venv, package_or_requirement, resource_name):
     return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
 
 
-def get_resource_string(venv, package_or_requirement, resource_name):
+def get_resource_content(venv, package_or_requirement, resource_name):
     '''
     Returns the content of a resource of a package or a distribution inside a virtualenv
 
@@ -358,7 +358,7 @@ def get_resource_string(venv, package_or_requirement, resource_name):
 
     .. code-block:: bash
 
-        salt '*' virtualenv.get_resource_string /path/to/my/venv my_package my/resource.xml
+        salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
     '''
     bin_path = os.path.join(venv, 'bin/python')
 
