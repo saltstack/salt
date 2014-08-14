@@ -266,7 +266,7 @@ Test Mode
 This function may be run in test mode. This mode will perform all work up until
 the actual HTTP request. By default, instead of performing the request, an empty
 dict will be returned. Using this function with ``TRACE`` logging turned on will
-reveal the contents of the headers and PSOT data to be sent.
+reveal the contents of the headers and POST data to be sent.
 
 Rather than returning an empty dict, an alternate ``test_url`` may be passed in.
 If this is detected, then test mode will replace the ``url`` with the
