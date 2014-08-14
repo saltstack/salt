@@ -151,7 +151,11 @@ EOF'''.format(
 )
 
 if not is_windows():
-    with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
+    shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
+    if not os.path.exists(shim_file):
+        # On esky builds we only have the .pyc file
+        shim_file += "c"
+    with open(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
 
 log = logging.getLogger(__name__)
