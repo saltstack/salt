@@ -202,6 +202,9 @@ def _elb_present(
     if not (availability_zones or subnets):
         raise SaltInvocationError('Either availability_zones or subnets must'
                                   ' be provided as arguments.')
+    if availability_zones and subnets:
+        raise SaltInvocationError('availability_zones and subnets are mutually'
+                                  ' exclusive arguments.')
     if not listeners:
         listeners = []
     _listeners = []
