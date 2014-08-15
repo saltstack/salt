@@ -186,12 +186,12 @@ def _format_host(host, data):
                     continue
             state_lines = [
                 u'{tcolor}----------{colors[ENDC]}',
-                '    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
-                '    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
-                '    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
-                '    {tcolor} Comment: {comment}{colors[ENDC]}',
-                '    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                '    {tcolor} Duration: {ret[duration]!s}{colors[ENDC]}'
+                u'    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
+                u'    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
+                u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
+                u'    {tcolor} Comment: {comment}{colors[ENDC]}',
+                u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                u'    {tcolor} Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
