@@ -200,13 +200,23 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                 if attr == 'grants':
                     _grants = []
                     for grant in val:
+                        # a grant is a boto.ec2.securitygroup.GroupOrCIDR
+                        # type object
                         g_attrs = {'name': 'source_group_name',
                                    'owner_id': 'source_group_owner_id',
-                                   'group_id': 'source_group_group_id',
+                                   'groupId': 'source_group_group_id',
                                    'cidr_ip': 'cidr_ip'}
                         _grant = odict.OrderedDict()
                         for g_attr, g_attr_map in g_attrs.iteritems():
-                            g_val = getattr(grant, g_attr)
+                            if hasattr(grant, g_attr):
+                                # hasattr called because a GroupOrCIDR object
+                                # will have different attributes based on the
+                                # GroupOrCIDR's Source. Example:
+                                # a GroupOrCIDR object with a Source Security Group
+                                # will contain a groupId attribute
+                                # a GroupOrCIDR object with a Source CIDR will not
+                                # contain a groupId attribute
+                                g_val = getattr(grant, g_attr)
                             if not g_val:
                                 continue
                             _grant[g_attr_map] = g_val
