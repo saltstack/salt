@@ -171,7 +171,7 @@ class SREQ(object):
                     zmq.RECONNECT_IVL_MAX, 5000
                 )
 
-            if self.master.startswith('tcp://[') and hasattr(zmq, 'IPV4ONLY'):
+            if self.master.startswith('tcp://') and hasattr(zmq, 'IPV4ONLY'):
                 # IPv6 sockets work for both IPv6 and IPv4 addresses
                 self._socket.setsockopt(zmq.IPV4ONLY, 0)
             self._socket.linger = self.linger
