@@ -94,13 +94,18 @@ def returner(ret):
     '''
 
     if 'config.option' in __salt__:
-        from_jid = __salt__['config.option']('xmpp.jid')
-        to_jid = __salt__['config.option']('xmpp.to')
-        password = __salt__['config.option']('xmpp.password')
+        cfg = __salt__['config.option']
+        c_cfg = cfg('xmpp', {})
+        from_jid = c_cfg.get('from_jid', cfg('xmpp.jid', None))
+        to_jid = c_cfg.get('to_jid', cfg('xmpp.to', None))
+        password = c_cfg.get('password', cfg('xmpp.password', None))
     else:
-        from_jid = __opts__['xmpp.jid']
-        to_jid = __opts__['xmpp.to']
-        password = __opts__['xmpp.password']
+        cfg = __opts__
+        from_jid = cfg.get('xmpp.jid', None)
+        to_jid = cfg.get('xmpp.to', None)
+        password = cfg.get('xmpp.password', None)
+
+    log.debug('cfg {0}'.format(cfg))
 
     message = ('id: {0}\r\n'
                'function: {1}\r\n'
