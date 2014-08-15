@@ -4814,3 +4814,9 @@ source_file = _build/locale/ref/output/all/salt.output.newline_values_only.pot
 source_lang = en
 source_name = ref/output/all/salt.output.newline_values_only.rst
 
+[salt.topics--releases--releasecandidate]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/releasecandidate.po
+source_file = _build/locale/topics/releases/releasecandidate.pot
+source_lang = en
+source_name = topics/releases/releasecandidate.rst
+
