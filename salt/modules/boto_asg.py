@@ -120,6 +120,11 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     _tag['propagate_at_launch'] = tag.propagate_at_launch
                     _tags.append(_tag)
                 ret['tags'] = _tags
+            # Boto accepts a string or list as input for vpc_zone_identifier,
+            # but always returns a comma separated list. We require lists in
+            # states.
+            elif attr == 'vpc_zone_identifier':
+                ret[attr] = getattr(asg, attr).split(',')
             # convert SuspendedProcess objects to names
             elif attr == 'suspended_processes':
                 suspended_processes = getattr(asg, attr)
