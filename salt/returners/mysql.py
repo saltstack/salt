@@ -96,7 +96,11 @@ def _get_options():
                 'port': 3306}
     _options = {}
     for attr in defaults:
-        _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+        if 'config.option' in __salt__:
+            _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+        else:
+            cfg = __opts__
+            _attr = cfg.get('mysql.{0}'.format(attr), None)
         if not _attr:
             log.debug('Using default for MySQL {0}'.format(attr))
             _options[attr] = defaults[attr]

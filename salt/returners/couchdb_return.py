@@ -30,12 +30,18 @@ def _get_options():
     Get the couchdb options from salt. Apply defaults
     if required.
     '''
-    server_url = __salt__['config.option']('couchdb.url')
+    if 'config.option' in __salt__:
+        server_url = __salt__['config.option']('couchdb.url')
+        db_name = __salt__['config.option']('couchdb.db')
+    else:
+        cfg = __opts__
+        server_url = cfg.get('couchdb.url', None)
+        db_name = cfg.get('couchdb.db', None)
+
     if not server_url:
         log.debug("Using default url.")
         server_url = "http://salt:5984/"
 
-    db_name = __salt__['config.option']('couchdb.db')
     if not db_name:
         log.debug("Using default database.")
         db_name = "salt"

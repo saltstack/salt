@@ -85,12 +85,21 @@ def _get_conn():
     '''
     Return a postgres connection.
     '''
-    return psycopg2.connect(
-            host=__salt__['config.option']('returner.postgres.host'),
-            user=__salt__['config.option']('returner.postgres.user'),
-            password=__salt__['config.option']('returner.postgres.passwd'),
-            database=__salt__['config.option']('returner.postgres.db'),
-            port=__salt__['config.option']('returner.postgres.port'))
+    if 'config.option' in __salt__:
+        return psycopg2.connect(
+                host=__salt__['config.option']('returner.postgres.host'),
+                user=__salt__['config.option']('returner.postgres.user'),
+                password=__salt__['config.option']('returner.postgres.passwd'),
+                database=__salt__['config.option']('returner.postgres.db'),
+                port=__salt__['config.option']('returner.postgres.port'))
+    else:
+        cfg = __opts__
+        return psycopg2.connect(
+                host=cfg.get('returner.postgres.host', None),
+                user=cfg.get('returner.postgres.user', None),
+                password=cfg.get('returner.postgres.passwd', None),
+                database=cfg.get('returner.postgres.db', None),
+                port=cfg.get('returner.postgres.port', None))
 
 
 def _close_conn(conn):

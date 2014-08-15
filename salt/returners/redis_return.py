@@ -39,10 +39,17 @@ def _get_serv():
     '''
     Return a redis server object
     '''
-    return redis.Redis(
-            host=__salt__['config.option']('redis.host'),
-            port=__salt__['config.option']('redis.port'),
-            db=__salt__['config.option']('redis.db'))
+    if 'config.option' in __salt__:
+        return redis.Redis(
+                host=__salt__['config.option']('redis.host'),
+                port=__salt__['config.option']('redis.port'),
+                db=__salt__['config.option']('redis.db'))
+    else:
+        cfg = __opts__
+        return redis.Redis(
+                host=cfg.get('redis.host', None),
+                port=cfg.get('redis.port', None),
+                db=cfg.get('redis.db', None))
 
 
 def returner(ret):
