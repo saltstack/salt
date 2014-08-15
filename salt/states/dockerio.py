@@ -303,6 +303,7 @@ def pushed(name):
         changes = {}
     return _ret_status(returned, name, changes=changes)
 
+
 def loaded(name, source=None, source_hash='', force=False):
     '''
     Load an image into the local docker registry (`docker load`)
@@ -312,7 +313,7 @@ def loaded(name, source=None, source_hash='', force=False):
 
     source
         The source .tar file to download to the minion, created by docker save
-	this source file can be hosted on either the salt master server, 
+	this source file can be hosted on either the salt master server,
 	or on an HTTP or FTP server.
         
         If the file is hosted on a HTTP or FTP server then the source_hash
@@ -347,8 +348,8 @@ def loaded(name, source=None, source_hash='', force=False):
 	    comment='Image already loaded: {0}'.format(name))
     
     tmp_filename = salt.utils.mkstemp()
-    __salt__['state.single']('file.managed', name=tmp_filename, source=source, source_hash=source_hash);
-    changes={}
+    __salt__['state.single']('file.managed', name=tmp_filename, source=source, source_hash=source_hash)
+    changes = {}
 
     if image_infos['status']:
         changes['old'] = image_infos['out']['Id']
@@ -369,6 +370,7 @@ def loaded(name, source=None, source_hash='', force=False):
 	                comment='Image {0} was not loaded into docker'.format(name))
 
     return _ret_status(returned, name, changes=changes)
+
 
 def built(name,
           path=None,
