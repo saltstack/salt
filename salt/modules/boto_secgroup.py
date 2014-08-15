@@ -191,6 +191,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         # TODO: add support for tags
         _rules = []
         for rule in sg.rules:
+            logging.debug('examining rule {0} for group {1}'.format(rule, sg.id))
             attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
             _rule = odict.OrderedDict()
             for attr in attrs:
@@ -200,13 +201,24 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                 if attr == 'grants':
                     _grants = []
                     for grant in val:
+                        logging.debug('examining grant {0} for'.format(grant))
+                        # reason for using both groupId and group_id
+                        # the GroupOrCIDR object in versions of
+                        # Boto < 2.4.0 has a groupId attribute but no group_id
+                        # attribute
                         g_attrs = {'name': 'source_group_name',
                                    'owner_id': 'source_group_owner_id',
+                                   'groupId': 'source_group_group_id',
                                    'group_id': 'source_group_group_id',
                                    'cidr_ip': 'cidr_ip'}
                         _grant = odict.OrderedDict()
                         for g_attr, g_attr_map in g_attrs.iteritems():
-                            g_val = getattr(grant, g_attr)
+                            # hasattr used to check for availability of
+                            # attribute prior to getattr()
+                            # the GroupOrCIDR object in versions of
+                            # Boto < 2.4.0 do not have a group_id attribute
+                            if hasattr(grant, g_attr):
+                                g_val = getattr(grant, g_attr)
                             if not g_val:
                                 continue
                             _grant[g_attr_map] = g_val
