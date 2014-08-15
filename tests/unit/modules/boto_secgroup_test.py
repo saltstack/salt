@@ -5,7 +5,7 @@ import random
 import string
 from collections import OrderedDict
 from copy import deepcopy
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 # import Python Third Party Libs
 try:
@@ -67,8 +67,7 @@ def _has_required_boto():
     '''
     if not HAS_BOTO:
         return False
-    elif (StrictVersion(boto.__version__) <
-          StrictVersion(required_boto_version)):
+    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
         return False
     else:
         return True

@@ -25,7 +25,7 @@ except ImportError:
         return stub_function
 
 # Import Python libs
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 # Import Salt Libs
 from salt.modules import boto_vpc
@@ -54,8 +54,7 @@ def _has_required_boto():
     '''
     if not HAS_BOTO:
         return False
-    elif (StrictVersion(boto.__version__) <
-          StrictVersion(required_boto_version)):
+    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
         return False
     else:
         return True
