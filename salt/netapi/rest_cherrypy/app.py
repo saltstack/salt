@@ -1092,7 +1092,7 @@ class Logout(LowDataAdapter):
         'tools.salt_auth.on': True,
     })
 
-    def POST(self):
+    def GET(self):
         '''
         Destroy the currently active session and expire the session cookie
         '''
