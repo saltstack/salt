@@ -45,7 +45,7 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
         return False
     return True
 
-def _install_upgrade_cygwin(cyg_arch='x86_64', packages=None):
+def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     '''
     Retrieves the correct setup.exe and runs it with the correct
     arguments to get the bare minumum cygwin installation up and running.
@@ -70,10 +70,8 @@ def _install_upgrade_cygwin(cyg_arch='x86_64', packages=None):
     options.append('--site ftp://mirrors.kernel.org/sourceware/cygwin/')
     options.append('--no-desktop')
     options.append('--quiet-mode')
-    options.append('--upgrade-also')
     options.append('--disable-buggy-antivirus')
-    if packages is not None:
-        options.append('--packages {pkgs}'.format(pkgs=packages))
+    options.append(args)
 
     cmdline_args = ' '.join(options)
     setup_command = ' '.join([cyg_setup_path, cmdline_args])
@@ -107,18 +105,13 @@ def _cygcheck(args, cyg_arch='x86_64'):
 
 
 def install(packages=None,           # pylint: disable=C0103
-            version=None,
-            cyg_arch='x86_64',
-            binary=True,
-            source=False):      # pylint: disable=C0103
+            cyg_arch='x86_64'):      # pylint: disable=C0103
     '''
     Installs one or several packages.
 
     packages : None
         The packages to install
-    version : None
-        Specify the version to install for the package.
-        Doesn't play nice with multiple packages at once
+
     cyg_arch : x86_64
         Specify the architecture to install the package under
         Current options are x86 and x86_64
@@ -129,83 +122,85 @@ def install(packages=None,           # pylint: disable=C0103
 
         salt '*' cyg.install dos2unix
     '''
+    args = []
     # If we want to install packages
     if packages is not None:
+        args.append('--packages {pkgs}'.format(pkgs=packages))
         # but we don't have cygwin installed yet
         if not _check_cygwin_installed(cyg_arch):
             # install just the base system
-            _install_upgrade_cygwin(cyg_arch=cyg_arch)
+            _run_silent_cygwin(cyg_arch=cyg_arch)
 
-    return _install_upgrade_cygwin(cyg_arch=cyg_arch, packages=packages)
-
-
-# def uninstall(gems, ruby=None, runas=None):
-#     '''
-#     Uninstall one or several gems.
-
-#     gems
-#         The gems to uninstall.
-#     ruby : None
-#         If RVM or rbenv are installed, the ruby version and gemset to use.
-#     runas : None
-#         The user to run gem as.
-
-#     CLI Example:
-
-#     .. code-block:: bash
-
-#         salt '*' gem.uninstall vagrant
-#     '''
-#     return _gem('uninstall {gems}'.format(gems=gems), ruby, runas=runas)
+    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
 
-# def update(gems, ruby=None, runas=None):
-#     '''
-#     Update one or several gems.
+def uninstall(packages,                # pylint: disable=C0103
+              cyg_arch='x86_64'):      # pylint: disable=C0103
+    '''
+    Uninstall one or several packages.
 
-#     gems
-#         The gems to update.
-#     ruby : None
-#         If RVM or rbenv are installed, the ruby version and gemset to use.
-#     runas : None
-#         The user to run gem as.
+    packages
+        The packages to uninstall.
 
-#     CLI Example:
+    cyg_arch : x86_64
+        Specify the architecture to remove the package from
+        Current options are x86 and x86_64
 
-#     .. code-block:: bash
+    CLI Example:
 
-#         salt '*' gem.update vagrant
-#     '''
-#     return _gem('update {gems}'.format(gems=gems), ruby, runas=runas)
+    .. code-block:: bash
+
+        salt '*' cyg.uninstall dos2unix
+    '''
+    args = []
+    # If we want to install packages
+    if packages is not None:
+        args.append('--remove-packages {pkgs}'.format(pkgs=packages))
+        # but we don't have cygwin installed yet
+        if not _check_cygwin_installed(cyg_arch):
+            # install just the base system
+            _run_silent_cygwin(cyg_arch=cyg_arch)
+
+    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
 
-# def update_system(version='', ruby=None, runas=None):
-#     '''
-#     Update rubygems.
+def update(packages=None,           # pylint: disable=C0103
+           cyg_arch='x86_64'):      # pylint: disable=C0103
+    '''
+    Update one or several gems.
 
-#     version : (newest)
-#         The version of rubygems to install.
-#     ruby : None
-#         If RVM or rbenv are installed, the ruby version and gemset to use.
-#     runas : None
-#         The user to run gem as.
+    packages : None
+        The packages to update. If None all packages.
 
-#     CLI Example:
+    cyg_arch : x86_64
+        Specify the architecture to remove the package from
+        Current options are x86 and x86_64
 
-#     .. code-block:: bash
+    CLI Example:
 
-#         salt '*' gem.update_system
-#     '''
-#     return _gem('update --system {version}'.
-#                 format(version=version), ruby, runas=runas)
+    .. code-block:: bash
 
+        salt '*' cyg.update dos2unix
+    '''
+    args = []
+    args.append('--upgrade-also')
+    # If we want to upgrade packages
+    if packages is not None:
+        args.append('--packages {pkgs}'.format(pkgs=packages))
+        # but we don't have cygwin installed yet
+        if not _check_cygwin_installed(cyg_arch):
+            # install just the base system
+            _run_silent_cygwin(cyg_arch=cyg_arch)
+
+    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
 def list_(package='', cyg_arch='x86_64'):
     '''
     List locally installed packaes.
 
-    prefix :
-        Only list packages when the name matches this prefix.
+    package : ''
+        package name to check. else all
+
     cyg_arch :
         Cygwin architecture to use
         Options are x86 and x86_64
