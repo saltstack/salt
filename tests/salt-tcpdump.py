@@ -361,7 +361,7 @@ if __name__ == "__main__":
             stats['4505/est'], stats['4506/est'] = SaltNetstat().run().next()
 
             # print only in intervals
-            if s_time % args['ival']) == 0:
+            if (s_time % args['ival']) == 0:
                 # prevent printing within the same second
                 if r_time != s_time:
                     if args['only_ip']:
@@ -382,10 +382,5 @@ if __name__ == "__main__":
                         stats[item] = 0
                     r_time = s_time
 
-
     except KeyboardInterrupt:
         sys.exit(1)    
-
-
-
-
