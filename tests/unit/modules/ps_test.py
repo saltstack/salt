@@ -35,6 +35,10 @@ if HAS_PSUTIL:
         1000, 2000, 500, 600, 2000, 3000)
     STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost',
                                                                                    0.0)
+    HAS_PSUTIL_VERSION = False
+    if psutil.version_info >= (0, 6, 0):
+        HAS_PSUTIL_VERSION = True
+
 else:
     (STUB_CPU_TIMES,
      STUB_VIRT_MEM,
@@ -55,10 +59,6 @@ try:
     HAS_UTMP = True
 except ImportError:
     HAS_UTMP = False
-
-HAS_PSUTIL_VERSION = False
-if psutil.version_info >= (0, 6, 0):
-    HAS_PSUTIL_VERSION = True
 
 
 def _get_proc_name(proc):
