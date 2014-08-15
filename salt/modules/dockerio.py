@@ -1730,15 +1730,16 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                  comment=comment, out=traceback.format_exc())
     return status
 
+
 def load(imagepath):
     '''
     Load the specified file at imagepath into docker that was generated from a docker save command
     e.g. `docker load < imagepath`
-    
+
     imagepath
         imagepath to docker tar file
     '''
-    
+
     status = base_status.copy()
     if os.path.isfile(imagepath):
         try:
@@ -1746,9 +1747,9 @@ def load(imagepath):
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
-                    return _invalid(status, id_=None, 
-                                    out=ret, 
-                                    comment='Command to load image {0} failed.'.format(imagepath))
+                return _invalid(status, id_=None, 
+                                out=ret, 
+                                comment='Command to load image {0} failed.'.format(imagepath))
                 
             _valid(status, id_=None, out=ret, comment='Image load success')
         except Exception:
@@ -1761,7 +1762,8 @@ def load(imagepath):
                 out=traceback.format_exc())
         
     return status
-    
+
+
 def save(image, filename):
     '''
     Save the specified image to filename from docker
@@ -1789,16 +1791,17 @@ def save(image, filename):
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
-                    return _invalid(status, 
-                                    id_=image, 
-                                    out=ret, 
-                                    comment='Command to save image {0} to {1} failed.'.format(image, filename))
+                return _invalid(status, 
+                                id_=image, 
+                                out=ret, 
+                                comment='Command to save image {0} to {1} failed.'.format(image, filename))
                 
             _valid(status, id_=image, out=ret, comment='Image save success')
         except Exception:
             _invalid(status, id_=image, comment="Image not saved.", out=traceback.format_exc())
             
     return status
+
 
 def run(container, cmd):
     '''
