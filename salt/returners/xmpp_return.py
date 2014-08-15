@@ -4,42 +4,22 @@ Return salt data via xmpp
 
 The following fields can be set in the minion conf file::
 
-    xmpp.host (required)
-    xmpp.jid (optional)
-    xmpp.password (optional)
+    xmpp.jid (required)
+    xmpp.password (required)
+    xmpp.recipient (required)
 
-There are a few things to keep in mind:
-
-* If a username is used, a password is also required. It is recommended (but
-  not required) to use the TLS setting when authenticating.
-* You should at least declare a subject, but you don't have to.
-* The use of encryption, i.e. setting gpgowner in your settings, requires
-  python-gnupg to be installed.
-* The field gpgowner specifies a user's ~/.gpg directory. This must contain a
-  gpg public key matching the address the mail is sent to. If left unset, no
-  encryption will be used.
-* smtp.fields lets you include the value(s) of various fields in the subject
-  line of the email. These are comma-delimited. For instance::
-
-    smtp.fields: id,fun
-
-  ...will display the id of the minion and the name of the function in the
-  subject line. You may also use 'jid' (the job id), but it is generally
-  recommended not to use 'return', which contains the entire return data
-  structure (which can be very large). Also note that the subject is always
-  unencrypted.
-
-  To use the SMTP returner, append '--return smtp' to the salt command. ex:
+  To use the XMPP returner, append '--return xmpp' to the salt command. ex:
 
   .. code-block:: bash
 
-    salt '*' test.ping --return smtp
+    salt '*' test.ping --return xmpp
 
 '''
 
 # Import python libs
-import pprint
+import distutils.version
 import logging
+import pprint
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +39,15 @@ __virtualname__ = 'xmpp'
 
 def __virtual__():
     '''
-    Only load this module if sleekxmpp is installed on this minion.
+    Only load this module if right version of sleekxmpp is installed on this minion.
     '''
     if HAS_LIBS:
-        return __virtualname__
+        import sleekxmpp
+        # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
+        sleekxmpp_version = distutils.version.LooseVersion(sleekxmpp.__version__)
+        valid_version = distutils.version.LooseVersion('1.3.1')
+        if sleekxmpp_version >= valid_version:
+            return __virtualname__
     return False
 
 
@@ -96,16 +81,38 @@ def returner(ret):
     if 'config.option' in __salt__:
         cfg = __salt__['config.option']
         c_cfg = cfg('xmpp', {})
-        from_jid = c_cfg.get('from_jid', cfg('xmpp.jid', None))
-        to_jid = c_cfg.get('to_jid', cfg('xmpp.to', None))
-        password = c_cfg.get('password', cfg('xmpp.password', None))
+        xmpp_profile = c_cfg.get('xmpp_profile', cfg('xmpp.profile', None))
+        if xmpp_profile:
+            creds = __salt__['config.option'](xmpp_profile)
+            from_jid = creds.get('xmpp.jid')
+            password = creds.get('xmpp.password')
+        else:
+            from_jid = c_cfg.get('from_jid', cfg('xmpp.jid', None))
+            password = c_cfg.get('password', cfg('xmpp.password', None))
+        recipient_jid = c_cfg.get('recipient_jid', cfg('xmpp.recipient', None))
     else:
         cfg = __opts__
-        from_jid = cfg.get('xmpp.jid', None)
-        to_jid = cfg.get('xmpp.to', None)
-        password = cfg.get('xmpp.password', None)
+        xmpp_profile = cfg.get('xmpp.profile', None)
+        if xmpp_profile:
+            creds = cfg.get(xmpp_profile)
+            from_jid = creds.get('xmpp.jid', None)
+            password = creds.get('xmpp.password', None)
+        else:
+            from_jid = cfg.get('xmpp.jid', None)
+            password = cfg.get('xmpp.password', None)
+        recipient_jid = cfg.get('xmpp.recipient', None)
 
-    log.debug('cfg {0}'.format(cfg))
+    if not from_jid:
+        log.error('xmpp.jid not defined in salt config')
+        return
+
+    if not password:
+        log.error('xmpp.password not defined in salt config')
+        return
+
+    if not recipient_jid:
+        log.error('xmpp.recipient not defined in salt config')
+        return
 
     message = ('id: {0}\r\n'
                'function: {1}\r\n'
@@ -118,7 +125,7 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
 
-    xmpp = SendMsgBot(from_jid, str(password), to_jid, message)
+    xmpp = SendMsgBot(from_jid, password, recipient_jid, message)
     xmpp.register_plugin('xep_0030')  # Service Discovery
     xmpp.register_plugin('xep_0199')  # XMPP Ping
 
