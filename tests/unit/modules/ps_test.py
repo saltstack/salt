@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 from salt.modules import ps
 
 HAS_PSUTIL = ps.__virtual__()
+HAS_PSUTIL_VERSION = False
 
 if HAS_PSUTIL:
     import psutil
@@ -35,7 +36,6 @@ if HAS_PSUTIL:
         1000, 2000, 500, 600, 2000, 3000)
     STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost',
                                                                                    0.0)
-    HAS_PSUTIL_VERSION = False
     if psutil.version_info >= (0, 6, 0):
         HAS_PSUTIL_VERSION = True
 
