@@ -1731,7 +1731,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
 def load(imagepath):
     '''
     Load the specified file at imagepath into docker that was generated from a docker save command
-    e.g. `docker load -i imagepath`
+    e.g. `docker load < imagepath`
     
     imagepath
         imagepath to docker tar file
@@ -1756,7 +1756,7 @@ def load(imagepath):
 def save(image, filename):
     '''
     Save the specified image to filename from docker
-    e.g. `docker save image -o filename`
+    e.g. `docker save image > filename`
     
     image
         name of image
