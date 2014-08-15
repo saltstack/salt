@@ -107,6 +107,8 @@ _______
     - :py:func:`import_image<salt.modules.dockerio.import_image>`
     - :py:func:`build<salt.modules.dockerio.build>`
     - :py:func:`tag<salt.modules.dockerio.tag>`
+    - :py:func:`save<salt.modules.dockerio.save>`
+    - :py:func:`load<salt.modules.dockerio.load>`
 - Container Management
     - :py:func:`start<salt.modules.dockerio.start>`
     - :py:func:`stop<salt.modules.dockerio.stop>`
