@@ -1746,9 +1746,9 @@ def load(imagepath):
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
-                return _invalid(status, id_=None, 
-                                out=ret, 
-                                comment='Command to load image {0} failed.'.format(imagepath))
+                    return _invalid(status, id_=None, 
+                                    out=ret, 
+                                    comment='Command to load image {0} failed.'.format(imagepath))
                 
             _valid(status, id_=None, out=ret, comment='Image load success')
         except Exception:
