@@ -1728,6 +1728,64 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                  comment=comment, out=traceback.format_exc())
     return status
 
+def load(imagepath):
+    '''
+    Load the specified file at imagepath into docker that was generated from a docker save command
+    e.g. `docker load -i imagepath`
+    
+    imagepath
+        imagepath to docker tar file
+    '''
+    
+    status = base_status.copy()
+    if os.path.isfile(imagepath):
+        try:
+            ret = __salt__['cmd.run']('docker load < ' + imagepath)
+            if ((isinstance(ret, dict) and
+                ('retcode' in ret) and
+                (ret['retcode'] != 0))
+                or (func == 'cmd.retcode' and ret != 0)):
+            return _invalid(status, id_=None, out=ret, comment=comment)
+        _valid(status, id_=None, out=ret, comment=comment,)
+        except Exception:
+            _invalid(status, id_=None, comment="Image not loaded.", out=traceback.format_exc())
+    else:
+        _invalid(status, id_=None, comment='image file {0} could not be found.'.format(imagepath), out=traceback.format_exc())
+    return status
+    
+def save(image, filename):
+    '''
+    Save the specified image to filename from docker
+    e.g. `docker save image -o filename`
+    
+    image
+        name of image
+    
+    filename
+        The filename of the saved docker image
+    '''
+    status = base_status.copy()
+    ok = False
+    try:
+        _info = _get_image_infos(image)
+        ok = True
+    except Exception:
+        _invalid(status, id_=image, comment="docker image {0} could not be found.".format(image), out=traceback.format_exc())
+
+    if ok:
+        try:
+            ret = __salt__['cmd.run']('docker ' + image + ' save > ' + filename)
+            if ((isinstance(ret, dict) and
+                ('retcode' in ret) and
+                (ret['retcode'] != 0))
+                or (func == 'cmd.retcode' and ret != 0)):
+            return _invalid(status, id_=image, out=ret, comment=comment)
+        _valid(status, id_=image, out=ret, comment=comment,)
+        except Exception:
+            _invalid(status, id_=image, comment="Image not saved.", out=traceback.format_exc())
+            
+    return status
+    
 
 def run(container, cmd):
     '''
