@@ -34,34 +34,43 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ac
 '''
  
 import socket
-from struct import *
-import datetime
+from struct import unpack
 import pcapy
 import sys
 import argparse
 import time
 
 class ArgParser(object):
-
+    '''
+    Simple Argument-Parser class
+    '''
     def __init__(self):
+        '''
+        Init the Parser
+        '''
         self.main_parser = argparse.ArgumentParser()
-        self.addArgs()
+        self.add_args()
 
-    def addArgs(self):
+    def add_args(self):
+        '''
+        Add new arguments
+        '''
 
         self.main_parser.add_argument('-i',
                                       type=str,
                                       default='eth0',
                                       dest='iface',
                                       required=False,
-                                      help='the interface to dump (default:eth0)')
-
+                                      help=('the interface to dump the' 
+                                            'master runs on(default:eth0)'))
+ 
         self.main_parser.add_argument('-n',
                                       type=int,
                                       default=5,
                                       dest='ival',
                                       required=False,
-                                      help='the interval for printing stats (default:5)')
+                                      help=('interval for printing stats '
+                                            '(default:5)'))
 
         self.main_parser.add_argument('-I',
                                       type=bool,
@@ -70,9 +79,13 @@ class ArgParser(object):
                                       nargs='?',
                                       dest='only_ip',
                                       required=False,
-                                      help='print unique IPs making new connections with SYN set')
+                                      help=('print unique IPs making new '
+                                            'connections with SYN set'))
 
-    def parseArgs(self):
+    def parse_args(self):
+        '''
+        parses and returns the given arguments in a namespace object
+        '''
         return self.main_parser.parse_args()
 
 class PCAPParser(object):
@@ -85,14 +98,16 @@ class PCAPParser(object):
         self.iface = iface
 
     def run(self):
-       # open device
+        '''
+        main loop for the packet-parser
+        '''
+        # open device
         # Arguments here are:
         #   device
         #   snaplen (maximum number of bytes to capture _per_packet_)
         #   promiscious mode (1 for true)
         #   timeout (in milliseconds)
         cap = pcapy.open_live(self.iface, 65536 , 1 , 0)
-
 
         count = 0
         l_time = None
@@ -156,18 +171,25 @@ class PCAPParser(object):
  
         ttl = iph[5]
         protocol = iph[6]
-        s_addr = socket.inet_ntoa(iph[8]);
-        d_addr = socket.inet_ntoa(iph[9]);
+        s_addr = socket.inet_ntoa(iph[8])
+        d_addr = socket.inet_ntoa(iph[9])
 
-        return [version_ihl, version, ihl, iph_length, ttl, protocol, s_addr, d_addr]
+        return [version_ihl, 
+                version, 
+                ihl, 
+                iph_length, 
+                ttl, 
+                protocol, 
+                s_addr, 
+                d_addr]
 
     def parse_tcp(self, packet, iph_length, eth_length):
         '''
         parse tcp_data and return source_port,  
         dest_port and actual packet data
         '''
-        t = iph_length + eth_length
-        tcp_header = packet[t:t+20]
+        p_len = iph_length + eth_length
+        tcp_header = packet[p_len:p_len+20]
 
         #now unpack them :)
         tcph = unpack('!H HLLBBHHH' , tcp_header)
@@ -192,31 +214,52 @@ class PCAPParser(object):
         return source_port, dest_port, tcp_flags, data
 
 class SaltNetstat(object):
+    '''
+    Reads /proc/net/tcp and returns all connections
+    '''
 
     def proc_tcp(self):
         ''' 
         Read the table of tcp connections & remove header
         '''
-        with open('/proc/net/tcp', 'r') as f:
-            content = f.readlines()
+        with open('/proc/net/tcp', 'r') as tcp_f:
+            content = tcp_f.readlines()
             content.pop(0)
         return content        
 
-    def hex2dec(self, s):
-        return str(int(s, 16))
+    def hex2dec(self, hex_s):
+        '''
+        convert hex to dezimal
+        '''
+        return str(int(hex_s, 16))
 
-    def ip(self, s):
-        ip = [(self.hex2dec(s[6:8])),(self.hex2dec(s[4:6])),(self.hex2dec(s[2:4])),(self.hex2dec(s[0:2]))]
+    def ip(self, hex_s):
+        '''
+        convert into readable ip
+        '''
+        ip = [(self.hex2dec(hex_s[6:8])),
+              (self.hex2dec(hex_s[4:6])),
+              (self.hex2dec(hex_s[2:4])),
+              (self.hex2dec(hex_s[0:2]))]
         return '.'.join(ip)
 
     def remove_empty(self, array):
+        '''
+        create new list without empty entries
+        '''
         return [x for x in array if x != '']
 
     def convert_ip_port(self, array):
+        '''
+        hex_ip:hex_port to str_ip:str_port
+        '''
         host, port = array.split(':')
         return self.ip(host), self.hex2dec(port)
 
     def run(self):
+        '''
+        main loop for netstat
+        '''
         while(1):
             ips = {
                     'ips/4505' : {},
@@ -246,7 +289,7 @@ def filter_new_cons(packet):
     filter packets by there tcp-state and
     returns codes for specific states
     '''
-    FLAGS = []
+    flags = []
     TCP_FIN = 0x01
     TCP_SYN = 0x02
     TCP_RST = 0x04
@@ -257,47 +300,49 @@ def filter_new_cons(packet):
     TCP_CWK = 0x80
 
     if packet['tcp']['flags'] & TCP_FIN:
-        FLAGS.append('FIN')
+        flags.append('FIN')
     elif packet['tcp']['flags'] & TCP_SYN:
-        FLAGS.append('SYN')
+        flags.append('SYN')
     elif packet['tcp']['flags'] & TCP_RST:
-       FLAGS.append('RST')
+        flags.append('RST')
     elif packet['tcp']['flags'] & TCP_PSH:
-       FLAGS.append('PSH')
+        flags.append('PSH')
     elif packet['tcp']['flags'] & TCP_ACK:
-       FLAGS.append('ACK')
+        flags.append('ACK')
     elif packet['tcp']['flags'] & TCP_URG:
-       FLAGS.append('URG')
+        flags.append('URG')
     elif packet['tcp']['flags'] & TCP_ECE:
-       FLAGS.append('ECE')
+        flags.append('ECE')
     elif packet['tcp']['flags'] & TCP_CWK:
-       FLAGS.append('CWK')
+        flags.append('CWK')
     else:
         print "UNKNOWN PACKET"
 
     if packet['tcp']['d_port'] == 4505:
         # track new connections
-        if 'SYN' in FLAGS and len(FLAGS) == 1:
+        if 'SYN' in flags and len(flags) == 1:
             return 10
         # track closing connections
-        elif 'FIN' in FLAGS:
+        elif 'FIN' in flags:
             return 12
  
     elif packet['tcp']['d_port'] == 4506:
         # track new connections
-        if 'SYN' in FLAGS and len(FLAGS) == 1:
+        if 'SYN' in flags and len(flags) == 1:
             return 100
         # track closing connections
-        elif 'FIN' in FLAGS:
+        elif 'FIN' in flags:
             return 120
     # packet does not match requirements
     else:
         return None
 
-if __name__ == "__main__":
-
+def main():
+    '''
+    main loop for whole script
+    '''
     # passed parameters
-    args = vars(ArgParser().parseArgs())
+    args = vars(ArgParser().parse_args())
 
     # reference timer for printing in intervals
     r_time = 0
@@ -307,8 +352,7 @@ if __name__ == "__main__":
 
     print "Sniffing device {0}".format(args['iface'])
 
-    stats = {
-              'ips/4506' : [],
+    stat = {
               '4506/new' : 0,
               '4506/est' : 0,
               '4506/fin' : 0,
@@ -322,11 +366,17 @@ if __name__ == "__main__":
 
 
     if args['only_ip']:
-        print "IPs making new connections (ports:{0}, interval:{1})".format(ports,
-                                                                            args['ival'])
+        print (
+               'IPs making new connections '
+               '(ports:{0}, interval:{1})'.format(ports,
+                                                  args['ival'])
+              )
     else: 
-        print "Salt-Master Network Status (ports:{0}, interval:{1})".format(ports,
-                                                                            args['ival'])
+        print (
+               'Salt-Master Network Status '
+               '(ports:{0}, interval:{1})'.format(ports,
+                                                  args['ival'])
+              )
     try:
         while(1):
             s_time = int(time.time())
@@ -340,25 +390,26 @@ if __name__ == "__main__":
 
             # new connection to 4505
             if p_state == 10:
-                stats['4505/new'] += 1
+                stat['4505/new'] += 1
                 if packet['ip']['s_addr'] not in ips_auth:
                     ips_auth.append(packet['ip']['s_addr'])
             # closing connection to 4505
             elif p_state == 12:
-                stats['4505/fin'] += 1
+                stat['4505/fin'] += 1
 
             # new connection to 4506
             elif p_state == 100:
-                stats['4506/new'] += 1
+                stat['4506/new'] += 1
                 if packet['ip']['s_addr'] not in ips_push:
                     ips_push.append(packet['ip']['s_addr'])
             # closing connection to 4506
             elif p_state == 120:
-                stats['4506/fin'] += 1
+                stat['4506/fin'] += 1
 
             # get the established connections to 4505 and 4506
             # these would only show up in tcpdump if data is transferred
-            stats['4505/est'], stats['4506/est'] = SaltNetstat().run().next()
+            # but then with different flags (PSH, etc.)
+            stat['4505/est'], stat['4506/est'] = SaltNetstat().run().next()
 
             # print only in intervals
             if (s_time % args['ival']) == 0:
@@ -368,19 +419,24 @@ if __name__ == "__main__":
                         msg = 'IPs/4505: {0}, IPs/4506: {1}'.format(len(ips_auth),
                                                                     len(ips_push))
                     else:
-                        msg = "4505=>[ est: {0}, ".format(stats['4505/est'])
-                        msg += "new: {0}/s, ".format(stats['4505/new'] / args['ival'])
-                        msg += "fin: {0}/s ] ".format(stats['4505/fin'] / args['ival'])
+                        msg = "4505=>[ est: {0}, ".format(stat['4505/est'])
+                        msg += "new: {0}/s, ".format(stat['4505/new'] / args['ival'])
+                        msg += "fin: {0}/s ] ".format(stat['4505/fin'] / args['ival'])
 
-                        msg += " 4506=>[ est: {0}, ".format(stats['4506/est'])
-                        msg += "new: {0}/s, ".format(stats['4506/new'] / args['ival'])
-                        msg += "fin: {0}/s ]".format(stats['4506/fin'] / args['ival'])
+                        msg += " 4506=>[ est: {0}, ".format(stat['4506/est'])
+                        msg += "new: {0}/s, ".format(stat['4506/new'] / args['ival'])
+                        msg += "fin: {0}/s ]".format(stat['4506/fin'] / args['ival'])
 
                     print msg
 
-                    for item in stats:
-                        stats[item] = 0
+                    # reset the so far collected stats
+                    for item in stat:
+                        stat[item] = 0
                     r_time = s_time
+
 
     except KeyboardInterrupt:
         sys.exit(1)    
+
+if __name__ == "__main__":
+    main()
