@@ -45,6 +45,7 @@ region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key': secret_key}
 
 
 def _random_group_id():
@@ -85,7 +86,7 @@ class BotoSecgroupTestCase(TestCase):
         group_name = _random_group_name()
         group_description = 'test_create_ec2_classic'
         boto_secgroup.create(group_name, group_description, **conn_parameters)
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_filter = {'group-name': group_name, 'vpc_id': None}
         secgroup_created_group = conn.get_all_security_groups(filters=group_filter)
         # when https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f
@@ -107,7 +108,7 @@ class BotoSecgroupTestCase(TestCase):
         # create a group using boto_secgroup
         boto_secgroup.create(group_name, group_description, vpc_id=vpc_id, **conn_parameters)
         # confirm that the group actually exists
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_filter = {'group-name': group_name, 'vpc-id': vpc_id}
         secgroup_created_group = conn.get_all_security_groups(filters=group_filter)
         expected_create_result = [group_name, group_description, vpc_id]
@@ -124,7 +125,7 @@ class BotoSecgroupTestCase(TestCase):
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_classic'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(name=group_name,
                                                    description=group_description)
         # note that the vpc_id does not need to be created in order to create
@@ -146,7 +147,7 @@ class BotoSecgroupTestCase(TestCase):
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_vpc'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(name=group_name,
                                                    description=group_description)
         # note that the vpc_id does not need to be created in order to create
@@ -168,7 +169,7 @@ class BotoSecgroupTestCase(TestCase):
         from_port = 22
         to_port = 22
         cidr_ip = '0.0.0.0/0'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(name=group_name, description=group_name)
         group.authorize(ip_protocol=ip_protocol, from_port=from_port, to_port=to_port, cidr_ip=cidr_ip)
         # setup the expected get_config result
@@ -179,8 +180,8 @@ class BotoSecgroupTestCase(TestCase):
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
-    @skipIf(False, 'test skipped due to error in moto return - fixed in '
-                   'https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
+    @skipIf(True, 'test skipped due to error in moto return - fixed in '
+                  'https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
     @mock_ec2
     def test_exists_true_name_classic(self):
         '''
@@ -188,7 +189,7 @@ class BotoSecgroupTestCase(TestCase):
         '''
         group_name = _random_group_name()
         group_description = 'test_exists_true_ec2_classic'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(group_name, group_description)
         group_vpc = conn.create_security_group(group_name, group_description, vpc_id=vpc_id)
         salt_exists_result = boto_secgroup.exists(name=group_name, **conn_parameters)
@@ -200,13 +201,14 @@ class BotoSecgroupTestCase(TestCase):
     def test_exists_false_name_classic(self):
         pass
 
+    @mock_ec2
     def test_exists_true_name_vpc(self):
         '''
         tests 'true' existence of a group in EC2-VPC when given name and vpc_id
         '''
         group_name = _random_group_name()
         group_description = 'test_exists_true_ec2_vpc'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         conn.create_security_group(group_name, group_description, vpc_id=vpc_id)
         salt_exists_result = boto_secgroup.exists(name=group_name, vpc_id=vpc_id, **conn_parameters)
         self.assertTrue(salt_exists_result)
@@ -227,7 +229,7 @@ class BotoSecgroupTestCase(TestCase):
         '''
         group_name = _random_group_name()
         group_description = 'test_exists_true_group_id'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(group_name, group_description)
         salt_exists_result = boto_secgroup.exists(group_id=group.id, **conn_parameters)
         self.assertTrue(salt_exists_result)
@@ -257,7 +259,7 @@ class BotoSecgroupTestCase(TestCase):
         group_name = _random_group_name()
         group_description = 'test_delete_group_ec2_classic'
         # create two groups using boto, one in EC2-Classic and one in EC2-VPC
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(name=group_name, description=group_description)
         group_vpc = conn.create_security_group(name=group_name, description=group_description, vpc_id=vpc_id)
         # creates a list of all the existing all_group_ids in an AWS account
@@ -280,7 +282,7 @@ class BotoSecgroupTestCase(TestCase):
         '''
         tests ensures that _get_conn returns an boto.ec2.connection.EC2Connection object.
         '''
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         salt_conn = boto_secgroup._get_conn(**conn_parameters)
         self.assertEqual(conn.__class__, salt_conn.__class__)
 
