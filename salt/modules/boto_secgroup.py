@@ -60,8 +60,8 @@ def __virtual__():
     '''
     required_boto_version = '2.4.0'
     # Boto < 2.4.0 GroupOrCIDR objects have different attributes than
-    # GroupOrCIDR objects created by Boto >= 2.4.0
-    # attribute differences include no group_id attribute as well as returning
+    # Boto >= 2.4.0 GroupOrCIDR objects
+    # Differences include no group_id attribute in Boto < 2.4.0 and returning
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
