@@ -26,8 +26,7 @@ def send(name,
         # ...snip bunch of states above
 
         mycompany/mystaterun/status/update:
-          event:
-            - fire_master
+          event.send:
             - data:
                 status: "Half-way through the state run!"
 
