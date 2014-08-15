@@ -24,6 +24,9 @@ except ImportError:
             pass
         return stub_function
 
+# Import Python libs
+from distutils.version import StrictVersion
+
 # Import Salt Libs
 from salt.modules import boto_vpc
 
@@ -34,15 +37,35 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+# the boto_vpc module relies on the connect_to_region() method
+# which was added in boto 2.8.0
+# https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
+required_boto_version = '2.8.0'
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+def _has_required_boto():
+    '''
+    Returns True/False boolean depending on if Boto is installed and correct
+    version.
+    '''
+    if not HAS_BOTO:
+        return False
+    elif (StrictVersion(boto.__version__) <
+          StrictVersion(required_boto_version)):
+        return False
+    else:
+        return True
+
+
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+                                       .format(required_boto_version))
 class BotoVpcTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_vpc module

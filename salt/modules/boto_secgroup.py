@@ -36,6 +36,7 @@ Connection module for Amazon Security Groups
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -54,11 +55,21 @@ import salt.utils.odict as odict
 
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto libraries exist and if boto libraries are greater than
+    a given version.
     '''
+    required_boto_version = '2.4.0'
+    # Boto < 2.4.0 GroupOrCIDR objects have different attributes than
+    # GroupOrCIDR objects created by Boto >= 2.4.0
+    # attribute differences include no group_id attribute as well as returning
+    # a groupId attribute when a GroupOrCIDR object authorizes an IP range
+    # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
         return False
-    return True
+    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
 
 
 def exists(name=None, region=None, key=None, keyid=None, profile=None,
@@ -202,23 +213,13 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                     _grants = []
                     for grant in val:
                         logging.debug('examining grant {0} for'.format(grant))
-                        # reason for using both groupId and group_id
-                        # the GroupOrCIDR object in versions of
-                        # Boto < 2.4.0 has a groupId attribute but no group_id
-                        # attribute
                         g_attrs = {'name': 'source_group_name',
                                    'owner_id': 'source_group_owner_id',
-                                   'groupId': 'source_group_group_id',
                                    'group_id': 'source_group_group_id',
                                    'cidr_ip': 'cidr_ip'}
                         _grant = odict.OrderedDict()
                         for g_attr, g_attr_map in g_attrs.iteritems():
-                            # hasattr used to check for availability of
-                            # attribute prior to getattr()
-                            # the GroupOrCIDR object in versions of
-                            # Boto < 2.4.0 do not have a group_id attribute
-                            if hasattr(grant, g_attr):
-                                g_val = getattr(grant, g_attr)
+                            g_val = getattr(grant, g_attr)
                             if not g_val:
                                 continue
                             _grant[g_attr_map] = g_val

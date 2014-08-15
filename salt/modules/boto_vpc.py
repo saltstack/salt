@@ -37,6 +37,7 @@ Connection module for Amazon VPC
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -54,11 +55,19 @@ from salt._compat import string_types
 
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto libraries exist and if boto libraries are greater than
+    a given version.
     '''
+    required_boto_version = '2.8.0'
+    # the boto_vpc execution module relies on the connect_to_region() method
+    # which was added in boto 2.8.0
+    # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
         return False
-    return True
+    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
 
 
 def get_subnet_association(subnets, region=None, key=None, keyid=None,

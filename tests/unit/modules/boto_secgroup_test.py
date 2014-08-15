@@ -41,6 +41,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+required_boto_version = '2.4.0'
 vpc_id = 'vpc-mjm05d27'
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -59,16 +60,26 @@ def _random_group_name():
     return group_name
 
 
-def _get_boto_version():
+def _has_required_boto():
     '''
-    Determines the version of boto in use.
+    Returns True/False boolean depending on if Boto is installed and correct
+    version.
     '''
-    return boto.__version__
+    if not HAS_BOTO:
+        return False
+    elif (StrictVersion(boto.__version__) <
+          StrictVersion(required_boto_version)):
+        return False
+    else:
+        return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+                                       .format(required_boto_version))
 class BotoSecgroupTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_secgroup module
@@ -184,11 +195,6 @@ class BotoSecgroupTestCase(TestCase):
                                                  ('description', group.description),
                                                  ('rules', [{'to_port': to_port, 'from_port': from_port,
                                                   'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}])])
-        # if Boto version < 2.4.0 is installed, the value returned by
-        # boto_secgroup.get_config includes a source_group_group_id for
-        # cidr_id grants
-        if StrictVersion(_get_boto_version()) < StrictVersion('2.4.0'):
-            expected_get_config_result['rules'][0]['source_group_group_id'] = u'0.0.0.0/0'
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
