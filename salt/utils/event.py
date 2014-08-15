@@ -290,7 +290,8 @@ class SaltEvent(object):
                 continue
 
             try:
-                ret = self.get_event_noblock()
+                ret = self.get_event_block()  # Please do not use non-blocking mode here.
+                                              # Reliability is more important than pure speed on the event bus.
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
@@ -350,6 +351,14 @@ class SaltEvent(object):
         '''Get the raw event without blocking or any other niceties
         '''
         raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
+
+    def get_event_block(self):
+        '''Get the raw event in a blocking fashion
+           Slower, but decreases the possibility of dropped events
+        '''
+        raw = self.sub.recv()
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 

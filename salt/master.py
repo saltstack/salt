@@ -1324,10 +1324,9 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
-        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
+            minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
