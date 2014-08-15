@@ -453,9 +453,10 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
+            outputter = ret.get('out', self.opts.get('output', 'nested'))
             salt.output.display_output(
-                    ret,
-                    self.opts.get('output', 'nested'),
+                    ret.get('return', {}),
+                    outputter,
                     self.opts)
             if self.event:
                 self.event.fire_event(
