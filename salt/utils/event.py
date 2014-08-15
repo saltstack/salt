@@ -631,7 +631,7 @@ class ReactWrap(object):
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.low(fun, kwargs)
+        return runner.async(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
