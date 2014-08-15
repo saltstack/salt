@@ -1757,7 +1757,7 @@ def load(imagepath):
                     out=traceback.format_exc())
     else:
         _invalid(status, id_=None, 
-                comment='image file {0} could not be found.'.format(imagepath), 
+                comment='Image file {0} could not be found.'.format(imagepath), 
                 out=traceback.format_exc())
         
     return status
