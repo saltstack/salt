@@ -24,17 +24,12 @@ def __virtual__():
 
 
 def installed(name,          # pylint: disable=C0103
-              version=None,
               cyg_arch='x86_64'):     # pylint: disable=C0103
     '''
     Make sure that a package is installed.
 
     name
         The name of the package to install
-
-    version : None
-        Requested version of the package.
-        Currently not used will instal the latest
 
     cyg_arch : x86_64
         The cygwin architecture to install the package into.
