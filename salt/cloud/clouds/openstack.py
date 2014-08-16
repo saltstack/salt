@@ -358,6 +358,7 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+
 def rackconnect(vm_):
     '''
     Determine if we should wait for rackconnect automation before running.

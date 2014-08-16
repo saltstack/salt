@@ -794,6 +794,7 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+
 def get_ssh_gateway_config(vm_):
     '''
     Return the ssh_gateway configuration.
