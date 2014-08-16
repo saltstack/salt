@@ -84,7 +84,11 @@ accept them
       provider: nova
       networks:
         - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
+        - net-id: 00000000-0000-0000-0000-000000000000
+        - net-id: 11111111-1111-1111-1111-111111111111
 
+Note: You must include the default net-ids when setting networks or the server
+will be created without the rest of the interfaces
 '''
 # pylint: disable=E0102
 
