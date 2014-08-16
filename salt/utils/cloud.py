@@ -316,6 +316,7 @@ def bootstrap(vm_, opts):
     deploy_kwargs = {
         'opts': opts,
         'host': vm_['ssh_host'],
+        'salt_host': vm_['salt_host'],
         'username': ssh_username,
         'script': deploy_script_code,
         'name': vm_['name'],

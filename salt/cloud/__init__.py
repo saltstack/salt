@@ -1947,7 +1947,7 @@ class Map(Cloud):
                 out.pop('deploy_kwargs', {})
             )
 
-            master_host = deploy_kwargs.get('host', None)
+            master_host = deploy_kwargs.get('salt_host', deploy_kwargs.get('host', None))
             if master_host is None:
                 raise SaltCloudSystemExit(
                     'Host for new master {0} was not found, '

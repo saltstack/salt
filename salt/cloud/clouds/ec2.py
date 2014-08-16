@@ -789,6 +789,16 @@ def ssh_interface(vm_):
         search_global=False
     )
 
+def salt_interface(vm_):
+    '''
+    Return the salt_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    return config.get_cloud_config_value(
+        'salt_interface', vm_, __opts__, default='public_ips',
+        search_global=False
+    )
+
 
 def get_ssh_gateway_config(vm_):
     '''
@@ -2008,6 +2018,14 @@ def create(vm_=None, call=None):
         ip_address = instance['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
+
+    if salt_interface(vm_) == 'private_ips':
+        salt_ip_address = instance['privateIpAddress']
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = instance['ipAddress']
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    vm_['salt_host'] = salt_ip_address
 
     display_ssh_output = config.get_cloud_config_value(
         'display_ssh_output', vm_, __opts__, default=True
