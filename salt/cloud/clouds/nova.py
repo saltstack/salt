@@ -82,6 +82,8 @@ accept them
       os_auth_plugin: rackspace
       tenant: <userid>
       provider: nova
+      networks:
+        - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
 
 '''
 # pylint: disable=E0102
