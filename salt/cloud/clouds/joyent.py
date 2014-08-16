@@ -66,6 +66,9 @@ from salt.cloud.exceptions import (
 # Get logging started
 log = logging.getLogger(__name__)
 
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
+
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
 JOYENT_API_VERSION = '~6.5'
 
@@ -275,13 +278,17 @@ def create(vm_):
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         host = data['public_ips'][0]
+        salt_host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
             host = data['private_ips'][0]
+        if get_salt_interface(vm_) == 'private_ips':
+            salt_host = data['private_ips'][0]
 
         deploy_script = script(vm_)
         deploy_kwargs = {
             'opts': __opts__,
             'host': host,
+            'salt_host': salt_host,
             'username': ssh_username,
             'key_filename': key_filename,
             'script': deploy_script.script,

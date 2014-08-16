@@ -84,6 +84,8 @@ import requests
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
+from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
 
 # Import salt.cloud libs
@@ -100,6 +102,9 @@ from salt.cloud.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 SIZE_MAP = {
     'Micro Instance': 't1.micro',
@@ -2008,6 +2013,14 @@ def create(vm_=None, call=None):
         ip_address = instance['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = instance['privateIpAddress']
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = instance['ipAddress']
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    vm_['salt_host'] = salt_ip_address
 
     display_ssh_output = config.get_cloud_config_value(
         'display_ssh_output', vm_, __opts__, default=True
