@@ -420,10 +420,10 @@ def create(vm_):
         ip_address = data.public_ips[0]
 
     if get_salt_interface(vm_) == 'private_ips':
-        salt_ip_address = instance['privateIpAddress']
+        salt_ip_address = data.private_ips[0]
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
-        salt_ip_address = instance['ipAddress']
+        salt_ip_address = data.public_ips[0]
         log.debug('Salt interface set to: {0}'.format(salt_ip_address))
 
     username = 'ec2-user'

@@ -278,6 +278,7 @@ def create(vm_):
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         host = data['public_ips'][0]
+        salt_host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
             host = data['private_ips'][0]
         if get_salt_interface(vm_) == 'private_ips':

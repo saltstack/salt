@@ -331,12 +331,11 @@ def create(vm_):
     log.debug('Using IP address {0}'.format(ip_address))
 
     if get_salt_interface(vm_) == 'private_ips':
-        salt_ip_address = instance['privateIpAddress']
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
-        salt_ip_address = instance['ipAddress']
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
         log.debug('Salt interface set to: {0}'.format(salt_ip_address))
-    vm_['salt_host'] = salt_ip_address
 
     if not ip_address:
         raise SaltCloudSystemExit(
@@ -353,6 +352,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'salt_host': salt_ip_address,
             'username': ssh_username,
             'password': data.extra['password'],
             'script': deploy_script.script,
