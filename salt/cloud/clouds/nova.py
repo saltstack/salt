@@ -464,8 +464,8 @@ def request_instance(vm_=None, call=None):
     if avz is not None:
         kwargs['availability_zone'] = avz
 
-    networks = config.get_cloud_config_value(
-        'networks', vm_, __opts__, search_global=False
+    kwargs['nics'] = config.get_cloud_config_value(
+        'networks', vm_, __opts__, search_global=False, default=None
     )
 
     files = config.get_cloud_config_value(
