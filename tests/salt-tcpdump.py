@@ -33,7 +33,7 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4505 and "tcp[tcpflags] & tcp-ac
 For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 '''
- 
+
 import socket
 from struct import unpack
 import pcapy
@@ -63,9 +63,9 @@ class ArgParser(object):
                                       default='eth0',
                                       dest='iface',
                                       required=False,
-                                      help=('the interface to dump the' 
+                                      help=('the interface to dump the'
                                             'master runs on(default:eth0)'))
- 
+
         self.main_parser.add_argument('-n',
                                       type=int,
                                       default=5,
@@ -115,7 +115,7 @@ class PCAPParser(object):
         count = 0
         l_time = None
 
-        while(1):
+        while 1:
 
             packet_data = {
                            'ip': {},
@@ -123,9 +123,9 @@ class PCAPParser(object):
                           }
 
             (header, packet) = cap.next()
-        
+
             eth_length, eth_protocol = self.parse_ether(packet)
-            
+
             # Parse IP packets, IP Protocol number = 8
             if eth_protocol == 8:
                 #Parse IP header
@@ -149,12 +149,12 @@ class PCAPParser(object):
         parse ethernet_header and return size and protocol
         '''
         eth_length = 14
-         
+
         eth_header = packet[:eth_length]
         eth = unpack('!6s6sH', eth_header)
         eth_protocol = socket.ntohs(eth[2])
         return eth_length, eth_protocol
- 
+
     def parse_ip(self, packet, eth_length):
         '''
         parse ip_header and return all ip data fields
@@ -162,33 +162,33 @@ class PCAPParser(object):
         #Parse IP header
         #take first 20 characters for the ip header
         ip_header = packet[eth_length:20+eth_length]
-         
+
         #now unpack them:)
         iph = unpack('!BBHHHBBH4s4s', ip_header)
- 
+
         version_ihl = iph[0]
         version = version_ihl >> 4
         ihl = version_ihl & 0xF
- 
+
         iph_length = ihl * 4
- 
+
         ttl = iph[5]
         protocol = iph[6]
         s_addr = socket.inet_ntoa(iph[8])
         d_addr = socket.inet_ntoa(iph[9])
 
-        return [version_ihl, 
-                version, 
-                ihl, 
-                iph_length, 
-                ttl, 
-                protocol, 
-                s_addr, 
+        return [version_ihl,
+                version,
+                ihl,
+                iph_length,
+                ttl,
+                protocol,
+                s_addr,
                 d_addr]
 
     def parse_tcp(self, packet, iph_length, eth_length):
         '''
-        parse tcp_data and return source_port,  
+        parse tcp_data and return source_port,
         dest_port and actual packet data
         '''
         p_len = iph_length + eth_length
@@ -223,13 +223,13 @@ class SaltNetstat(object):
     '''
 
     def proc_tcp(self):
-        ''' 
+        '''
         Read the table of tcp connections & remove header
         '''
         with open('/proc/net/tcp', 'r') as tcp_f:
             content = tcp_f.readlines()
             content.pop(0)
-        return content        
+        return content
 
     def hex2dec(self, hex_s):
         '''
@@ -264,7 +264,7 @@ class SaltNetstat(object):
         '''
         main loop for netstat
         '''
-        while(1):
+        while 1:
             ips = {
                     'ips/4505': {},
                     'ips/4506': {}
@@ -287,7 +287,7 @@ class SaltNetstat(object):
             yield (len(ips['ips/4505']), len(ips['ips/4506']))
             time.sleep(0.5)
 
-         
+
 def filter_new_cons(packet):
     '''
     filter packets by there tcp-state and
@@ -329,7 +329,7 @@ def filter_new_cons(packet):
         # track closing connections
         elif 'FIN' in flags:
             return 12
- 
+
     elif packet['tcp']['d_port'] == 4506:
         # track new connections
         if 'SYN' in flags and len(flags) == 1:
@@ -374,14 +374,14 @@ def main():
                '(ports:{0}, interval:{1})'.format(ports,
                                                   args['ival'])
               )
-    else: 
+    else:
         print (
                'Salt-Master Network Status '
                '(ports:{0}, interval:{1})'.format(ports,
                                                   args['ival'])
               )
     try:
-        while(1):
+        while 1:
             s_time = int(time.time())
 
             packet = PCAPParser(args['iface']).run().next()
@@ -438,7 +438,7 @@ def main():
                     r_time = s_time
 
     except KeyboardInterrupt:
-        sys.exit(1)    
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
