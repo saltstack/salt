@@ -42,7 +42,7 @@ def installed(name,          # pylint: disable=C0103
             'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
         )
 
-    pkgs = __salt__['cyg.list'](name, version, cyg_arch)
+    pkgs = __salt__['cyg.list'](name, cyg_arch)
     if name in pkgs:
         ret['result'] = True
         ret['comment'] = 'Package is already installed.'
@@ -53,7 +53,6 @@ def installed(name,          # pylint: disable=C0103
         return ret
 
     if __salt__['cyg.install'](name,
-                               version=version,
                                cyg_arch=cyg_arch):
         ret['result'] = True
         ret['changes'][name] = 'Installed'

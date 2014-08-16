@@ -5,6 +5,9 @@ Manage cygwin packages.
 
 # Import python libs
 import re
+import os
+import urllib2
+import salt.utils
 from salt.exceptions import SaltInvocationError
 
 # Define the module's virtual name
@@ -41,7 +44,8 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
     # Use the cygcheck executable to check install.
     # It is installed as part of the base package,
     # and we use it to check packages
-    if __salt__['file.missing']('c:\\{cyg_dir}\\bin\\cygcheck.exe'.format(_get_cyg_dir(cyg_arch))):
+    if os.path.exists(
+            os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'cygcheck.exe'])):
         return False
     return True
 
@@ -50,18 +54,22 @@ def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     Retrieves the correct setup.exe and runs it with the correct
     arguments to get the bare minumum cygwin installation up and running.
     '''
-    cyg_cache_dir = 'c:\\cygcache'
+    cyg_cache_dir = os.sep.join(['c:', 'cygcache'])
     cyg_setup = 'setup-{0}.exe'.format(cyg_arch)
-    cyg_setup_path = '{0}\\{1}'.format(cyg_cache_dir, cyg_setup)
+    cyg_setup_path = os.sep.join([cyg_cache_dir, cyg_setup])
     cyg_setup_source = 'http://cygwin.com/{0}'.format(cyg_setup)
-    cyg_setup_source_hash = 'http://cygwin.com/{0}.sig'.format(cyg_setup)
-    __salt__['file.managed'](
-        cyg_setup_path,
-        source=cyg_setup_source,
-        source_hash=cyg_setup_source_hash,
-        makedirs=True,
-        showdiff=False,
-        )
+    # cyg_setup_source_hash = 'http://cygwin.com/{0}.sig'.format(cyg_setup)
+
+    # until a hash gets published that we can verify the newest setup against
+    # just go ahead and download a new one.
+    if not os.path.exists(cyg_cache_dir):
+        os.mkdir(cyg_cache_dir)
+    elif os.path.exists(cyg_setup_path):
+        os.remove(cyg_setup_path)
+
+    file_data = urllib2.urlopen(cyg_setup_source)
+    open(cyg_setup_path, "wb").write(file_data.read())
+
     setup_command = cyg_setup_path
     options = []
     options.append('--local-package-dir {0}'.format(cyg_cache_dir))
@@ -71,7 +79,9 @@ def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     options.append('--no-desktop')
     options.append('--quiet-mode')
     options.append('--disable-buggy-antivirus')
-    options.append(args)
+    if args is not None:
+        for arg in args:
+            options.append(arg)
 
     cmdline_args = ' '.join(options)
     setup_command = ' '.join([cyg_setup_path, cmdline_args])
@@ -90,8 +100,10 @@ def _cygcheck(args, cyg_arch='x86_64'):
     '''
     Runs the cygcheck executable
     '''
-    bashcmd = 'c:\\{0}\\bin\\bash --login -c'.format(_get_cyg_dir(cyg_arch))
-    cygcheck = 'cygcheck {0}'.format(args)
+    bashcmd = ' '.join([
+        os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'bash']),
+        '--login', '-c'])
+    cygcheck = '\'cygcheck {0}\''.format(args)
     cmdline = ' '.join([bashcmd, cygcheck])
 
     ret = __salt__['cmd.run_all'](
