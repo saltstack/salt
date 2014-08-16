@@ -361,7 +361,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             log.error(
-                ('The --use-wheel option is only supported in pip {0} and '
+                ('The --no-use-wheel option is only supported in pip {0} and '
                  'newer. The version of pip detected is {1}. This option '
                  'will be ignored.'.format(min_version, cur_version))
             )
