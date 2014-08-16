@@ -354,7 +354,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             )
         else:
             cmd.append('--use-wheel')
-            
+
     if no_use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
