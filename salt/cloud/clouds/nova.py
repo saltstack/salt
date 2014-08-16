@@ -132,6 +132,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
 
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
+
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -307,16 +310,6 @@ def ssh_interface(vm_):
     '''
     return config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
-        search_global=False
-    )
-
-def salt_interface(vm_):
-    '''
-    Return the salt_interface type to connect to. Either 'public_ips' (default)
-    or 'private_ips'.
-    '''
-    return config.get_cloud_config_value(
-        'salt_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
 
@@ -706,7 +699,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if salt_interface(vm_) == 'private_ips':
+    if get_salt_interface(vm_) == 'private_ips':
         salt_ip_address = instance['privateIpAddress']
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:

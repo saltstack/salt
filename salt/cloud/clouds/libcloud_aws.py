@@ -76,6 +76,9 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
+
 # Define the module's virtual name
 __virtualname__ = 'aws'
 
@@ -264,16 +267,6 @@ def ssh_interface(vm_):
         search_global=False
     )
 
-def salt_interface(vm_):
-    '''
-    Return the salt_interface type to connect to. Either 'public_ips' (default)
-    or 'private_ips'.
-    '''
-    return config.get_cloud_config_value(
-        'salt_interface', vm_, __opts__, default='public_ips',
-        search_global=False
-    )
-
 
 def get_location(vm_=None):
     '''
@@ -426,7 +419,7 @@ def create(vm_):
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
 
-    if salt_interface(vm_) == 'private_ips':
+    if get_salt_interface(vm_) == 'private_ips':
         salt_ip_address = instance['privateIpAddress']
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
