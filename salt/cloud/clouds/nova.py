@@ -700,8 +700,8 @@ def create(vm_):
     log.debug('Using IP address {0}'.format(ip_address))
 
     if get_salt_interface(vm_) == 'private_ips':
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
         salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
     elif rackconnect(vm_) is True and get_salt_interface(vm_) != 'private_ips':
         salt_ip_address = data.public_ips
     else:
