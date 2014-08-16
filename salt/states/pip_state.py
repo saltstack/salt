@@ -160,7 +160,7 @@ def installed(name,
 
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
-        
+
     no_use_wheel : False
         Force to not use wheel archives (requires pip>=1.4)
 
