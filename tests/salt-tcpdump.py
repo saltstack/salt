@@ -1,6 +1,7 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 '''
-Author: Volker Schwicking, volker.schwicking@heg.com
+Author: Volker Schwicking, vs@heg.com
 
 Salt tcpdumper to visualize whats happening network-wise on
 the salt-master. It uses pcapy and inspects all incoming networks
@@ -32,13 +33,14 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4505 and "tcp[tcpflags] & tcp-ac
 For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 '''
-
+ 
 import socket
 from struct import unpack
 import pcapy
 import sys
 import argparse
 import time
+
 
 class ArgParser(object):
     '''
@@ -61,9 +63,9 @@ class ArgParser(object):
                                       default='eth0',
                                       dest='iface',
                                       required=False,
-                                      help=('the interface to dump the'
+                                      help=('the interface to dump the' 
                                             'master runs on(default:eth0)'))
-
+ 
         self.main_parser.add_argument('-n',
                                       type=int,
                                       default=5,
@@ -88,6 +90,7 @@ class ArgParser(object):
         '''
         return self.main_parser.parse_args()
 
+
 class PCAPParser(object):
     '''
     parses a network packet on given device and
@@ -107,24 +110,24 @@ class PCAPParser(object):
         #   snaplen (maximum number of bytes to capture _per_packet_)
         #   promiscious mode (1 for true)
         #   timeout (in milliseconds)
-        cap = pcapy.open_live(self.iface, 65536 , 1 , 0)
+        cap = pcapy.open_live(self.iface, 65536, 1, 0)
 
         count = 0
         l_time = None
 
-        while(1) :
+        while(1):
 
             packet_data = {
-                           'ip' : {},
-                           'tcp' : {}
+                           'ip': {},
+                           'tcp': {}
                           }
 
             (header, packet) = cap.next()
-
+        
             eth_length, eth_protocol = self.parse_ether(packet)
-
+            
             # Parse IP packets, IP Protocol number = 8
-            if eth_protocol == 8 :
+            if eth_protocol == 8:
                 #Parse IP header
                 #take first 20 characters for the ip header
                 version_ihl, version, ihl, iph_length, ttl, protocol, s_addr, d_addr = self.parse_ip(packet, eth_length)
@@ -132,7 +135,7 @@ class PCAPParser(object):
                 packet_data['ip']['d_addr'] = d_addr
 
                 #TCP protocol
-                if protocol == 6 :
+                if protocol == 6:
 
                     source_port, dest_port, flags, data = self.parse_tcp(packet, iph_length, eth_length)
                     packet_data['tcp']['d_port'] = dest_port
@@ -146,12 +149,12 @@ class PCAPParser(object):
         parse ethernet_header and return size and protocol
         '''
         eth_length = 14
-
+         
         eth_header = packet[:eth_length]
-        eth = unpack('!6s6sH' , eth_header)
+        eth = unpack('!6s6sH', eth_header)
         eth_protocol = socket.ntohs(eth[2])
         return eth_length, eth_protocol
-
+ 
     def parse_ip(self, packet, eth_length):
         '''
         parse ip_header and return all ip data fields
@@ -159,40 +162,40 @@ class PCAPParser(object):
         #Parse IP header
         #take first 20 characters for the ip header
         ip_header = packet[eth_length:20+eth_length]
-
-        #now unpack them :)
-        iph = unpack('!BBHHHBBH4s4s' , ip_header)
-
+         
+        #now unpack them:)
+        iph = unpack('!BBHHHBBH4s4s', ip_header)
+ 
         version_ihl = iph[0]
         version = version_ihl >> 4
         ihl = version_ihl & 0xF
-
+ 
         iph_length = ihl * 4
-
+ 
         ttl = iph[5]
         protocol = iph[6]
         s_addr = socket.inet_ntoa(iph[8])
         d_addr = socket.inet_ntoa(iph[9])
 
-        return [version_ihl,
-                version,
-                ihl,
-                iph_length,
-                ttl,
-                protocol,
-                s_addr,
+        return [version_ihl, 
+                version, 
+                ihl, 
+                iph_length, 
+                ttl, 
+                protocol, 
+                s_addr, 
                 d_addr]
 
     def parse_tcp(self, packet, iph_length, eth_length):
         '''
-        parse tcp_data and return source_port,
+        parse tcp_data and return source_port,  
         dest_port and actual packet data
         '''
         p_len = iph_length + eth_length
         tcp_header = packet[p_len:p_len+20]
 
-        #now unpack them :)
-        tcph = unpack('!H HLLBBHHH' , tcp_header)
+        #now unpack them:)
+        tcph = unpack('!H HLLBBHHH', tcp_header)
         #  H     H     L   L   B   B      H   H   H
         #  2b    2b    4b  4b  1b  1b     2b  2b  2b
         #  sport dport seq ack res flags  win chk up
@@ -213,19 +216,20 @@ class PCAPParser(object):
 
         return source_port, dest_port, tcp_flags, data
 
+
 class SaltNetstat(object):
     '''
     Reads /proc/net/tcp and returns all connections
     '''
 
     def proc_tcp(self):
-        '''
+        ''' 
         Read the table of tcp connections & remove header
         '''
         with open('/proc/net/tcp', 'r') as tcp_f:
             content = tcp_f.readlines()
             content.pop(0)
-        return content
+        return content        
 
     def hex2dec(self, hex_s):
         '''
@@ -262,8 +266,8 @@ class SaltNetstat(object):
         '''
         while(1):
             ips = {
-                    'ips/4505' : {},
-                    'ips/4506' : {}
+                    'ips/4505': {},
+                    'ips/4506': {}
                   }
             content = self.proc_tcp()
 
@@ -283,7 +287,7 @@ class SaltNetstat(object):
             yield (len(ips['ips/4505']), len(ips['ips/4506']))
             time.sleep(0.5)
 
-
+         
 def filter_new_cons(packet):
     '''
     filter packets by there tcp-state and
@@ -325,7 +329,7 @@ def filter_new_cons(packet):
         # track closing connections
         elif 'FIN' in flags:
             return 12
-
+ 
     elif packet['tcp']['d_port'] == 4506:
         # track new connections
         if 'SYN' in flags and len(flags) == 1:
@@ -336,6 +340,7 @@ def filter_new_cons(packet):
     # packet does not match requirements
     else:
         return None
+
 
 def main():
     '''
@@ -353,17 +358,15 @@ def main():
     print "Sniffing device {0}".format(args['iface'])
 
     stat = {
-              '4506/new' : 0,
-              '4506/est' : 0,
-              '4506/fin' : 0,
-              '4505/new' : 0,
-              '4505/est' : 0,
-              '4505/fin' : 0,
-              'ips/4505' : 0,
-              'ips/4506' : 0
+              '4506/new': 0,
+              '4506/est': 0,
+              '4506/fin': 0,
+              '4505/new': 0,
+              '4505/est': 0,
+              '4505/fin': 0,
+              'ips/4505': 0,
+              'ips/4506': 0
             }
-
-
 
     if args['only_ip']:
         print (
@@ -371,7 +374,7 @@ def main():
                '(ports:{0}, interval:{1})'.format(ports,
                                                   args['ival'])
               )
-    else:
+    else: 
         print (
                'Salt-Master Network Status '
                '(ports:{0}, interval:{1})'.format(ports,
@@ -434,9 +437,8 @@ def main():
                         stat[item] = 0
                     r_time = s_time
 
-
     except KeyboardInterrupt:
-        sys.exit(1)
+        sys.exit(1)    
 
 if __name__ == "__main__":
     main()
