@@ -23,8 +23,8 @@ def __virtual__():
     return 'cyg.list' in __salt__
 
 
-def installed(name,          # pylint: disable=C0103
-              cyg_arch='x86_64'):     # pylint: disable=C0103
+def installed(name,
+              cyg_arch='x86_64'):
     '''
     Make sure that a package is installed.
 
@@ -39,7 +39,8 @@ def installed(name,          # pylint: disable=C0103
 
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
-                     'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
+                     'The \'cyg_arch\' argument must\
+ be one of \'x86\' or \'x86_64\''
                      )
 
     if not __salt__['cyg.check_valid_package'](name, cyg_arch=cyg_arch):
@@ -54,8 +55,8 @@ def installed(name,          # pylint: disable=C0103
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The package {0} would have been installed'.format(
-            name)
+        ret['comment'] = 'The package {0} would\
+ have been installed'.format(name)
         return ret
 
     if __salt__['cyg.install'](name,
@@ -85,7 +86,8 @@ def removed(name, cyg_arch='x86_64'):
 
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
-                     'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
+                     'The \'cyg_arch\' argument must\
+ be one of \'x86\' or \'x86_64\''
                      )
 
     if not __salt__['cyg.check_valid_package'](name, cyg_arch=cyg_arch):
@@ -123,7 +125,8 @@ def updated(cyg_arch='x86_64'):
 
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
-                     'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
+                     'The \'cyg_arch\' argument must\
+ be one of \'x86\' or \'x86_64\''
                      )
 
     if __opts__['test']:
@@ -132,7 +135,7 @@ def updated(cyg_arch='x86_64'):
     before = __salt__['cyg.list'](cyg_arch=cyg_arch)
     if __salt__['cyg.update'](cyg_arch):
         after = __salt__['cyg.list'](cyg_arch=cyg_arch)
-        differ = DictDiffer(before, after)
+        differ = DictDiffer(after, before)
         ret['result'] = True
         if differ.same():
             ret['comment'] = 'Nothing to update.'
@@ -174,18 +177,33 @@ class DictDiffer(object):
         self.intersect = self.current_keys.intersection(self.past_keys)
 
     def same(self):
+        '''
+        True if the two dicts are the same
+        '''
         return self.current_dict == self.past_dict
 
     def added(self):
+        '''
+        Returns a set of additions to past_dict
+        '''
         return self.current_keys - self.intersect
 
     def removed(self):
+        '''
+        Returns a set of things removed from past_dict
+        '''
         return self.past_keys - self.intersect
 
     def changed(self):
+        '''
+        Returns a set of the keys with changed values
+        '''
         return set(o for o in self.intersect
                    if self.past_dict[o] != self.current_dict[o])
 
     def unchanged(self):
+        '''
+        Returns a set of the keys with unchanged values
+        '''
         return set(o for o in self.intersect
                    if self.past_dict[o] == self.current_dict[o])
