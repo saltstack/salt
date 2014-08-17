@@ -6,7 +6,8 @@ Manage cygwin packages.
 # Import python libs
 import re
 import os
-import urllib2
+import bz2
+from urllib import urlopen
 import salt.utils
 from salt.exceptions import SaltInvocationError
 
@@ -49,6 +50,37 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
         return False
     return True
 
+def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
+                      cyg_arch='x86_64'):
+    '''
+    Returns the list of packages based on the mirror
+    provided.
+    '''
+    pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
+
+    file_data = urlopen(pkg_source).read()
+    file_lines = bz2.decompress(file_data).decode('utf_8',
+                                                  errors='replace').splitlines()
+
+    packages = [re.search('^@ ([^ ]+)', line).group(1) for
+                line in file_lines if re.match('^@ [^ ]+', line)]
+
+    return packages
+
+def check_valid_package(package,
+                        mirrors=None,
+                        cyg_arch='x86_64'):
+    '''
+    Checks if the package is valid on the given mirrors
+    '''
+    if mirrors is None:
+        mirrors = ['ftp://mirrors.kernel.org/sourceware/cygwin/']
+
+    for mirror in mirrors:
+        if package in _get_all_packages(mirror, cyg_arch):
+            return True
+    return False
+
 def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     '''
     Retrieves the correct setup.exe and runs it with the correct
@@ -67,13 +99,13 @@ def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     elif os.path.exists(cyg_setup_path):
         os.remove(cyg_setup_path)
 
-    file_data = urllib2.urlopen(cyg_setup_source)
+    file_data = urlopen(cyg_setup_source)
     open(cyg_setup_path, "wb").write(file_data.read())
 
     setup_command = cyg_setup_path
     options = []
     options.append('--local-package-dir {0}'.format(cyg_cache_dir))
-    # options.append('--site ftp://ftp.cygwinports.org/pub/cygwinports')
+    # options.append('--site ftp://ftp.cygwinports.org/pub/cygwinports/')
     # options.append('--pubkey http://cygwinports.org/ports.gpg')
     options.append('--site ftp://mirrors.kernel.org/sourceware/cygwin/')
     options.append('--no-desktop')
@@ -116,8 +148,8 @@ def _cygcheck(args, cyg_arch='x86_64'):
         return False
 
 
-def install(packages=None,           # pylint: disable=C0103
-            cyg_arch='x86_64'):      # pylint: disable=C0103
+def install(packages=None,
+            cyg_arch='x86_64'):
     '''
     Installs one or several packages.
 
@@ -146,8 +178,8 @@ def install(packages=None,           # pylint: disable=C0103
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
 
-def uninstall(packages,                # pylint: disable=C0103
-              cyg_arch='x86_64'):      # pylint: disable=C0103
+def uninstall(packages,
+              cyg_arch='x86_64'):
     '''
     Uninstall one or several packages.
 
@@ -176,8 +208,8 @@ def uninstall(packages,                # pylint: disable=C0103
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
 
-def update(packages=None,           # pylint: disable=C0103
-           cyg_arch='x86_64'):      # pylint: disable=C0103
+def update(packages=None,
+           cyg_arch='x86_64'):
     '''
     Update one or several gems.
 
@@ -208,7 +240,7 @@ def update(packages=None,           # pylint: disable=C0103
 
 def list_(package='', cyg_arch='x86_64'):
     '''
-    List locally installed packaes.
+    List locally installed packages.
 
     package : ''
         package name to check. else all
