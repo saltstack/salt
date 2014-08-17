@@ -56,16 +56,24 @@ def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
     Returns the list of packages based on the mirror
     provided.
     '''
-    pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
+    if 'cyg.all_packages' not in __context__:
+        __context__['cyg.all_packages'] = {}
+    if mirror not in __context__['cyg.all_packages']:
+        __context__['cyg.all_packages'][mirror] = []
+    if not len(__context__['cyg.all_packages'][mirror]):
+        pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
 
-    file_data = urlopen(pkg_source).read()
-    file_lines = bz2.decompress(file_data).decode('utf_8',
-                                                  errors='replace').splitlines()
+        file_data = urlopen(pkg_source).read()
+        file_lines = bz2.decompress(file_data
+                                   ).decode('utf_8',
+                                            errors='replace').splitlines()
 
-    packages = [re.search('^@ ([^ ]+)', line).group(1) for
-                line in file_lines if re.match('^@ [^ ]+', line)]
+        packages = [re.search('^@ ([^ ]+)', line).group(1) for
+                    line in file_lines if re.match('^@ [^ ]+', line)]
 
-    return packages
+        __context__['cyg.all_packages'][mirror] = packages
+
+    return __context__['cyg.all_packages'][mirror]
 
 def check_valid_package(package,
                         mirrors=None,
