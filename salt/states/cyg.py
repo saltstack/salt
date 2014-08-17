@@ -40,7 +40,7 @@ def installed(name,          # pylint: disable=C0103
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
                      'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
-                    )
+                     )
 
     if not __salt__['cyg.check_valid_package'](name, cyg_arch=cyg_arch):
         ret['result'] = False
@@ -54,7 +54,8 @@ def installed(name,          # pylint: disable=C0103
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The package {0} would have been installed'.format(name)
+        ret['comment'] = 'The package {0} would have been installed'.format(
+            name)
         return ret
 
     if __salt__['cyg.install'](name,
@@ -85,7 +86,7 @@ def removed(name, cyg_arch='x86_64'):
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
                      'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
-                    )
+                     )
 
     if not __salt__['cyg.check_valid_package'](name, cyg_arch=cyg_arch):
         ret['result'] = False
@@ -109,6 +110,7 @@ def removed(name, cyg_arch='x86_64'):
         ret['comment'] = 'Could not remove package.'
     return ret
 
+
 def updated(cyg_arch='x86_64'):
     '''
     Make sure all packages are up to date.
@@ -122,7 +124,7 @@ def updated(cyg_arch='x86_64'):
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
                      'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
-                    )
+                     )
 
     if __opts__['test']:
         ret['comment'] = 'All packages would have been updated'
@@ -152,7 +154,10 @@ A dictionary difference calculator
 Originally posted as:
 http://stackoverflow.com/questions/1165352/fast-comparison-between-two-python-dictionary/1165552#1165552
 """
+
+
 class DictDiffer(object):
+
     """
     Calculate the difference between two dictionaries as:
     (1) items added
@@ -160,6 +165,7 @@ class DictDiffer(object):
     (3) keys same in both but changed values
     (4) keys same in both and unchanged values
     """
+
     def __init__(self, current_dict, past_dict):
         self.current_dict, self.past_dict = current_dict, past_dict
         self.current_keys, self.past_keys = [
