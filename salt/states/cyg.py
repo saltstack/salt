@@ -84,8 +84,13 @@ def removed(name, cyg_arch='x86_64'):
 
     if cyg_arch not in ['x86', 'x86_64']:
         return _fail(ret,
-            'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
-        )
+                     'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
+                    )
+
+    if not __salt__['cyg.check_valid_package'](name, cyg_arch=cyg_arch):
+        ret['result'] = False
+        ret['comment'] = 'Invalid package name.'
+        return ret
 
     if name not in __salt__['cyg.list'](name, cyg_arch):
         ret['result'] = True
