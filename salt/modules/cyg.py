@@ -48,7 +48,9 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
     # Use the cygcheck executable to check install.
     # It is installed as part of the base package,
     # and we use it to check packages
-    path_to_cygcheck = os.sep.join(['C:', _get_cyg_dir(cyg_arch), 'bin', 'cygcheck.exe'])
+    path_to_cygcheck = os.sep.join(['C:',
+                                    _get_cyg_dir(cyg_arch),
+                                    'bin', 'cygcheck.exe'])
     LOG.debug('Path to cygcheck.exe: {}'.format(path_to_cygcheck))
     if not os.path.exists(path_to_cygcheck):
         LOG.debug('Could not find cygcheck.exe')
@@ -222,33 +224,28 @@ def uninstall(packages,
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
 
-def update(packages=None,
-           cyg_arch='x86_64'):
+def update(cyg_arch='x86_64'):
     '''
-    Update one or several gems.
-
-    packages : None
-        The packages to update. If None all packages.
+    Update all packages.
 
     cyg_arch : x86_64
-        Specify the architecture to remove the package from
+        Specify the cygwin architecture update
         Current options are x86 and x86_64
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' cyg.update dos2unix
+        salt '*' cyg.update
     '''
     args = []
     args.append('--upgrade-also')
-    # If we want to upgrade packages
-    if packages is not None:
-        args.append('--packages {pkgs}'.format(pkgs=packages))
-        # but we don't have cygwin installed yet
-        if not _check_cygwin_installed(cyg_arch):
-            # install just the base system
-            _run_silent_cygwin(cyg_arch=cyg_arch)
+
+    # Can't update something that isn't installed
+    if not _check_cygwin_installed(cyg_arch):
+        LOG.debug('Cygwin ({}) not installed,\
+                  could not update'.format(cyg_arch))
+        return False
 
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
