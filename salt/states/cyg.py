@@ -108,3 +108,78 @@ def removed(name, cyg_arch='x86_64'):
         ret['result'] = False
         ret['comment'] = 'Could not remove package.'
     return ret
+
+def updated(cyg_arch='x86_64'):
+    '''
+    Make sure all packages are up to date.
+
+    cyg_arch : x86_64
+        The cygwin architecture to update.
+        Current options are x86 and x86_64
+    '''
+    ret = {'name': 'cyg.updated', 'result': None, 'comment': '', 'changes': {}}
+
+    if cyg_arch not in ['x86', 'x86_64']:
+        return _fail(ret,
+                     'The \'cyg_arch\' argument must be one of \'x86\' or \'x86_64\''
+                    )
+
+    if __opts__['test']:
+        ret['comment'] = 'All packages would have been updated'
+        return ret
+    before = __salt__['cyg.list'](cyg_arch=cyg_arch)
+    if __salt__['cyg.update'](cyg_arch):
+        after = __salt__['cyg.list'](cyg_arch=cyg_arch)
+        differ = DictDiffer(before, after)
+        ret['result'] = True
+        if differ.same():
+            ret['comment'] = 'Nothing to update.'
+        else:
+            ret['changes']['added'] = list(differ.added())
+            ret['changes']['removed'] = list(differ.removed())
+            ret['changes']['changed'] = list(differ.changed())
+            ret['comment'] = 'All packages successfully updated.'
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Could not update packages.'
+    return ret
+
+
+"""
+https://github.com/hughdbrown/dictdiffer
+DictDiffer is licensed as MIT code
+A dictionary difference calculator
+Originally posted as:
+http://stackoverflow.com/questions/1165352/fast-comparison-between-two-python-dictionary/1165552#1165552
+"""
+class DictDiffer(object):
+    """
+    Calculate the difference between two dictionaries as:
+    (1) items added
+    (2) items removed
+    (3) keys same in both but changed values
+    (4) keys same in both and unchanged values
+    """
+    def __init__(self, current_dict, past_dict):
+        self.current_dict, self.past_dict = current_dict, past_dict
+        self.current_keys, self.past_keys = [
+            set(d.keys()) for d in (current_dict, past_dict)
+        ]
+        self.intersect = self.current_keys.intersection(self.past_keys)
+
+    def same(self):
+        return self.current_dict == self.past_dict
+
+    def added(self):
+        return self.current_keys - self.intersect
+
+    def removed(self):
+        return self.past_keys - self.intersect
+
+    def changed(self):
+        return set(o for o in self.intersect
+                   if self.past_dict[o] != self.current_dict[o])
+
+    def unchanged(self):
+        return set(o for o in self.intersect
+                   if self.past_dict[o] == self.current_dict[o])
