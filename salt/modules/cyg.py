@@ -4,12 +4,15 @@ Manage cygwin packages.
 '''
 
 # Import python libs
+import logging
 import re
 import os
 import bz2
 from urllib import urlopen
 import salt.utils
 from salt.exceptions import SaltInvocationError
+
+LOG = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'cyg'
@@ -45,8 +48,10 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
     # Use the cygcheck executable to check install.
     # It is installed as part of the base package,
     # and we use it to check packages
-    if os.path.exists(
-            os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'cygcheck.exe'])):
+    path_to_cygcheck = os.sep.join(['C:', _get_cyg_dir(cyg_arch), 'bin', 'cygcheck.exe'])
+    LOG.debug('Path to cygcheck.exe: {}'.format(path_to_cygcheck))
+    if not os.path.exists(path_to_cygcheck):
+        LOG.debug('Could not find cygcheck.exe')
         return False
     return True
 
@@ -204,14 +209,15 @@ def uninstall(packages,
 
         salt '*' cyg.uninstall dos2unix
     '''
+    LOG.debug('Entered cyg.uninstall')
     args = []
-    # If we want to install packages
     if packages is not None:
+        LOG.debug('We have packages: {0}'.format(packages))
         args.append('--remove-packages {pkgs}'.format(pkgs=packages))
-        # but we don't have cygwin installed yet
+        LOG.debug('args: {0}'.format(args))
         if not _check_cygwin_installed(cyg_arch):
-            # install just the base system
-            _run_silent_cygwin(cyg_arch=cyg_arch)
+            LOG.debug('We\'re convinced cygwin isn\'t installed')
+            return True
 
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
 
