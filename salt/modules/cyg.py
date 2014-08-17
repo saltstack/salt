@@ -17,6 +17,7 @@ LOG = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'cyg'
 
+
 def __virtual__():
     '''
     Only works on Windows systems
@@ -29,6 +30,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 def _get_cyg_dir(cyg_arch='x86_64'):
     '''
     Returns the cygwin install directory based on the architecture
@@ -40,6 +42,7 @@ def _get_cyg_dir(cyg_arch='x86_64'):
 
     raise SaltInvocationError(
         'Invalid architecture {arch}'.format(arch=cyg_arch))
+
 
 def _check_cygwin_installed(cyg_arch='x86_64'):
     '''
@@ -57,6 +60,7 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
         return False
     return True
 
+
 def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
                       cyg_arch='x86_64'):
     '''
@@ -72,8 +76,8 @@ def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
 
         file_data = urlopen(pkg_source).read()
         file_lines = bz2.decompress(file_data
-                                   ).decode('utf_8',
-                                            errors='replace').splitlines()
+                                    ).decode('utf_8',
+                                             errors='replace').splitlines()
 
         packages = [re.search('^@ ([^ ]+)', line).group(1) for
                     line in file_lines if re.match('^@ [^ ]+', line)]
@@ -81,6 +85,7 @@ def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
         __context__['cyg.all_packages'][mirror] = packages
 
     return __context__['cyg.all_packages'][mirror]
+
 
 def check_valid_package(package,
                         mirrors=None,
@@ -95,6 +100,7 @@ def check_valid_package(package,
         if package in _get_all_packages(mirror, cyg_arch):
             return True
     return False
+
 
 def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     '''
@@ -135,7 +141,7 @@ def _run_silent_cygwin(cyg_arch='x86_64', args=None):
 
     ret = __salt__['cmd.run_all'](
         setup_command
-        )
+    )
 
     if ret['retcode'] == 0:
         return ret['stdout']
@@ -155,7 +161,7 @@ def _cygcheck(args, cyg_arch='x86_64'):
 
     ret = __salt__['cmd.run_all'](
         cmdline
-        )
+    )
 
     if ret['retcode'] == 0:
         return ret['stdout']
@@ -248,6 +254,7 @@ def update(cyg_arch='x86_64'):
         return False
 
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
+
 
 def list_(package='', cyg_arch='x86_64'):
     '''
