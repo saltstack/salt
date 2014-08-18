@@ -2988,6 +2988,7 @@ def append(name,
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['result'] = True
         return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
