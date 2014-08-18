@@ -9,7 +9,7 @@ configuration file:
 
 .. code-block:: yaml
 
-    my_etd_config:
+    my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
 
