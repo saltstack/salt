@@ -630,7 +630,7 @@ class Loader(object):
             )
             return mod
         except Exception:
-            log.warning(
+            log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
                 'syntax error:\n'.format(
                     self.tag, name
@@ -930,7 +930,7 @@ class Loader(object):
                 )
                 continue
             except Exception:
-                log.warning(
+                log.error(
                     'Failed to import {0} {1}, this is due most likely to a '
                     'syntax error. Traceback raised:\n'.format(
                         self.tag, name

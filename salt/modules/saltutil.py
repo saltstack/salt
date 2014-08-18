@@ -419,7 +419,7 @@ def refresh_pillar():
     '''
     try:
         ret = __salt__['event.fire']({}, 'pillar_refresh')
-    except Exception as exc:
+    except:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
@@ -437,7 +437,7 @@ def refresh_modules():
     '''
     try:
         ret = __salt__['event.fire']({}, 'module_refresh')
-    except Exception as exc:
+    except:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
