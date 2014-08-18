@@ -1090,6 +1090,8 @@ class Logout(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
+
+        'tools.lowdata_fmt.on': False,
     })
 
     def POST(self):

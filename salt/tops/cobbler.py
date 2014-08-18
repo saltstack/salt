@@ -49,7 +49,7 @@ def top(**kwargs):
     try:
         server = xmlrpclib.Server(url, allow_none=True)
         if user:
-            server = xmlrpclib.Server(server, server.login(user, password))
+            server.login(user, password)
         data = server.get_blended_data(None, minion_id)
     except Exception:
         log.exception(
