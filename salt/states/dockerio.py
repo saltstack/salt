@@ -313,17 +313,17 @@ def loaded(name, source=None, source_hash='', force=False):
 
     source
         The source .tar file to download to the minion, created by docker save
-	this source file can be hosted on either the salt master server,
-	or on an HTTP or FTP server.
-        
+        this source file can be hosted on either the salt master server,
+        or on an HTTP or FTP server.
+
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
-	.. note::
+        .. note::
 
-	    See first the documentation for salt file.managed
-	    <http://docs.saltstack.com/en/latest/ref/states/all/_
-	    salt.states.file.html#salt.states.file.managed>
+            See first the documentation for salt file.managed
+            <http://docs.saltstack.com/en/latest/ref/states/all/_
+            salt.states.file.html#salt.states.file.managed>
 
     source_hash
         This can be one of the following:
@@ -332,9 +332,9 @@ def loaded(name, source=None, source_hash='', force=False):
 
             .. note::
 
-	    See first the documentation for salt file.managed
-	    <http://docs.saltstack.com/en/latest/ref/states/all/_
-	    salt.states.file.html#salt.states.file.managed>
+            See first the documentation for salt file.managed
+            <http://docs.saltstack.com/en/latest/ref/states/all/_
+            salt.states.file.html#salt.states.file.managed>
 
     force
         Load even if the image exists
@@ -343,10 +343,10 @@ def loaded(name, source=None, source_hash='', force=False):
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image(name)
     if image_infos['status'] and not force:
-	return _valid(
+        return _valid(
             name=name,
-	    comment='Image already loaded: {0}'.format(name))
-    
+            comment='Image already loaded: {0}'.format(name))
+
     tmp_filename = salt.utils.mkstemp()
     __salt__['state.single']('file.managed', name=tmp_filename, source=source, source_hash=source_hash)
     changes = {}
@@ -354,10 +354,10 @@ def loaded(name, source=None, source_hash='', force=False):
     if image_infos['status']:
         changes['old'] = image_infos['out']['Id']
         remove_image = __salt__['docker.remove_image']
-	remove_info = remove_image(name)
-	if not remove_info['status']:
-		return _invalid(name=name,
-				comment='Image could not be removed: {0}'.format(name))
+        remove_info = remove_image(name)
+        if not remove_info['status']:
+                return _invalid(name=name,
+                                comment='Image could not be removed: {0}'.format(name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
@@ -366,8 +366,8 @@ def loaded(name, source=None, source_hash='', force=False):
     if image_infos['status']:
         changes['new'] = image_infos['out']['Id']
     else:
-	return _invalid(name=name,
-	                comment='Image {0} was not loaded into docker'.format(name))
+        return _invalid(name=name,
+                        comment='Image {0} was not loaded into docker'.format(name))
 
     return _ret_status(returned, name, changes=changes)
 
