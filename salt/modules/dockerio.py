@@ -1747,20 +1747,20 @@ def load(imagepath):
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
-                return _invalid(status, id_=None, 
-                                out=ret, 
+                return _invalid(status, id_=None,
+                                out=ret,
                                 comment='Command to load image {0} failed.'.format(imagepath))
-                
+
             _valid(status, id_=None, out=ret, comment='Image load success')
         except Exception:
-            _invalid(status, id_=None, 
-                    comment="Image not loaded.", 
+            _invalid(status, id_=None,
+                    comment="Image not loaded.",
                     out=traceback.format_exc())
     else:
-        _invalid(status, id_=None, 
-                comment='Image file {0} could not be found.'.format(imagepath), 
+        _invalid(status, id_=None,
+                comment='Image file {0} could not be found.'.format(imagepath),
                 out=traceback.format_exc())
-        
+
     return status
 
 
@@ -1768,10 +1768,10 @@ def save(image, filename):
     '''
     Save the specified image to filename from docker
     e.g. `docker save image > filename`
-    
+
     image
         name of image
-    
+
     filename
         The filename of the saved docker image
     '''
@@ -1781,8 +1781,8 @@ def save(image, filename):
         _info = _get_image_infos(image)
         ok = True
     except Exception:
-        _invalid(status, id_=image, 
-                comment="docker image {0} could not be found.".format(image), 
+        _invalid(status, id_=image,
+                comment="docker image {0} could not be found.".format(image),
                 out=traceback.format_exc())
 
     if ok:
@@ -1791,15 +1791,15 @@ def save(image, filename):
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
-                return _invalid(status, 
-                                id_=image, 
-                                out=ret, 
+                return _invalid(status,
+                                id_=image,
+                                out=ret,
                                 comment='Command to save image {0} to {1} failed.'.format(image, filename))
-                
+
             _valid(status, id_=image, out=ret, comment='Image save success')
         except Exception:
             _invalid(status, id_=image, comment="Image not saved.", out=traceback.format_exc())
-            
+
     return status
 
 
