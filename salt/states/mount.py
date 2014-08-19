@@ -172,7 +172,12 @@ def mounted(name,
                 return ret
 
             if not os.path.exists(name):
-                __salt__['file.mkdir'](name)
+                if mkmnt:
+                    __salt__['file.mkdir'](name)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Mount directory is not present'
+                    return ret
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
             active = __salt__['mount.active']()
