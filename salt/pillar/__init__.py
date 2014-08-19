@@ -18,7 +18,6 @@ import salt.transport
 from salt._compat import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
-from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
@@ -29,10 +28,6 @@ log = logging.getLogger(__name__)
 def merge_recurse(obj_a, obj_b):
     copied = copy(obj_a)
     return update(copied, obj_b)
-
-
-def merge_aggregate(obj_a, obj_b):
-    return merge_recursive(obj_a, obj_b, level=1)
 
 
 def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
@@ -541,9 +536,6 @@ class Pillar(object):
 
         if strategy == 'recurse':
             merged = merge_recurse(obj_a, obj_b)
-        elif strategy == 'aggregate':
-            #: level = 1 merge at least root data
-            merged = merge_aggregate(obj_a, obj_b)
         else:
             log.warning('unknown merging strategy {0}, '
                         'fallback to recurse'.format(strategy))
