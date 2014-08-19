@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
+'''
 Recursively iterate over directories and add all files as Pillar data.
 
 Example configuration:
@@ -12,18 +12,18 @@ Example configuration:
           root_dir: /path/to/root/directory
           follow_dir_links: False
 
-``root_dir`` parameter is required and points to directory where files for each
-host are stored. ``follow_dir_links`` is optional and defaults to False. If you
-will set ``follow_dir_links`` to True, file_tree will follow symbolic links to
-other directories. Be careful with ``follow_dir_links``, current implementation
-is dumb and will run into infinite recursion if, for example, someone will
-create symbolic link to one of the parent directories.
+The ``root_dir`` parameter is required and points to the directory where files
+for each host are stored. The ``follow_dir_links`` paramater is optional
+and defaults to False. If ``follow_dir_links`` is set to True, file_tree will
+follow symbolic links to other directories. Be careful when using
+``follow_dir_links``, the current implementation is dumb and will run into
+infinite recursion if a recursive symlink chain exists in the root_dir!
 
 To fill pillar data for each host, file_tree recursively iterates over
-``root_dir``/hosts/``id`` (where ``id`` is an ID of minion), and constructs
-the same directory tree with contents of all files inside pillar tree.
+``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and constructs
+the same directory tree with contents of all the files inside the pillar tree.
 
-For example, following ``root_dir`` tree::
+For example, the following ``root_dir`` tree::
 
     ./hosts/
     ./hosts/test-host/
@@ -34,7 +34,7 @@ For example, following ``root_dir`` tree::
     ./hosts/test-host/files/another-testdir/
     ./hosts/test-host/files/another-testdir/symlink-to-file1.txt
 
-will result in following pillar tree for minion with ID "test-host"::
+will result in the following pillar tree for minion with ID "test-host"::
 
     test-host:
         ----------
@@ -52,8 +52,7 @@ will result in following pillar tree for minion with ID "test-host"::
 
                 file2.txt:
                     Contents of file #2.
-"""
-
+'''
 # TODO: Add git support.
 
 # Import python libs
@@ -66,18 +65,16 @@ log = logging.getLogger(__name__)
 
 
 def _on_walk_error(err):
-    """
+    '''
     Log os.walk() error.
-    """
-
+    '''
     log.error('"%s": %s', err.filename, err.strerror)
 
 
 def _construct_pillar(top_dir, follow_dir_links):
-    """
+    '''
     Construct pillar from file tree.
-    """
-
+    '''
     pillar = {}
 
     norm_top_dir = os.path.normpath(top_dir)
@@ -119,10 +116,9 @@ def _construct_pillar(top_dir, follow_dir_links):
 
 
 def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False):
-    """
+    '''
     Find pillar data for specified ID.
-    """
-
+    '''
     # Not used.
     del pillar
 
