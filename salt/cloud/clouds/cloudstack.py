@@ -35,7 +35,6 @@ from salt.cloud.exceptions import SaltCloudSystemExit
 # CloudStackNetwork will be needed during creation of a new node
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    from libcloud.common.cloudstack import CloudStackConnection
     HASLIBS = True
 except ImportError:
     HASLIBS = False
@@ -464,9 +463,9 @@ def destroy(name, conn=None, call=None):
         log.error('Unable to find volumes of the VM {0}'.format(name))
     # TODO add an option like 'delete_sshkeys' below
     for volume in volumes:
-        if  volume.extra['volume_type'] != 'DATADISK':
+        if volume.extra['volume_type'] != 'DATADISK':
             log.info('Ignoring volume type {0}: {1}'.format(
-                volume.extra['volume_type'],volume.name)
+                volume.extra['volume_type'], volume.name)
             )
             continue
         log.info('Detaching volume: {0}'.format(volume.name))
