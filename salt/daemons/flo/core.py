@@ -142,14 +142,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
-        local = LocalEstate(
-                uid=eid,
-                name=name,
-                main=main,
-                mutable=mutable,
-                ha=ha,
-                sigkey=sigkey,
-                prikey=prikey)
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
 
@@ -158,12 +150,16 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                 stackname=name)
 
         self.stack.value = RoadStack(
-                local=local,
                 store=self.store,
                 name=name,
+                keep=keep,
+                localname=name,
+                uid=eid,
+                ha=ha,
+                sigkey=sigkey,
+                prikey=prikey,
                 main=main,
                 mutable=mutable,
-                keep=keep,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs,
                 period=3.0,

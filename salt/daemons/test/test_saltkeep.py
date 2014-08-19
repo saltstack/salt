@@ -129,19 +129,18 @@ class BasicTestCase(unittest.TestCase):
         returns stack
 
         '''
-        local = estating.LocalEstate(uid=uid,
-                                     name=data['name'],
-                                     ha=ha,
-                                     sigkey=data['sighex'],
-                                     prikey=data['prihex'],
-                                     role=data['role'])
 
-        stack = stacking.RoadStack(name=data['name'],
-                                   local=local,
+        stack = stacking.RoadStack(store=self.store,
+                                   name=data['name'],
+                                   keep=keep,
+                                   localname=data['name'],
+                                   uid=uid,
+                                   ha=ha,
                                    main=main,
                                    mutable=mutable,
-                                   store=self.store,
-                                   keep=keep)
+                                   role=data['role'],
+                                   sigkey=data['sighex'],
+                                   prikey=data['prihex'],)
 
         return stack
 
@@ -221,6 +220,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.never,
@@ -233,9 +233,7 @@ class BasicTestCase(unittest.TestCase):
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
-                                             pubkey=data1['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset, ))
+                                             pubkey=data1['pubhex'],))
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
@@ -243,9 +241,7 @@ class BasicTestCase(unittest.TestCase):
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
-                                             pubkey=data2['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,))
+                                             pubkey=data2['pubhex'],))
 
         main.dumpRemotes()
 
@@ -323,6 +319,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': otherData['name'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': raeting.autoModes.never,
@@ -335,9 +332,7 @@ class BasicTestCase(unittest.TestCase):
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
-                                              pubkey=data3['pubhex'],
-                                              period=main.period,
-                                              offset=main.offset,))
+                                              pubkey=data3['pubhex'],))
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
@@ -345,9 +340,7 @@ class BasicTestCase(unittest.TestCase):
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
-                                              pubkey=data4['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,))
+                                              pubkey=data4['pubhex'],))
 
         other.dumpRemotes()
         self.assertDictEqual(other.keep.loadAllRemoteData(),
@@ -417,6 +410,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.always,
@@ -429,9 +423,7 @@ class BasicTestCase(unittest.TestCase):
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
-                                             pubkey=data1['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset, ))
+                                             pubkey=data1['pubhex'],))
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
@@ -439,9 +431,7 @@ class BasicTestCase(unittest.TestCase):
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
-                                             pubkey=data2['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,))
+                                             pubkey=data2['pubhex'],))
 
         main.dumpRemotes()
 
@@ -517,6 +507,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': otherData['name'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': raeting.autoModes.always,
@@ -529,9 +520,7 @@ class BasicTestCase(unittest.TestCase):
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
-                                              pubkey=data3['pubhex'],
-                                              period=main.period,
-                                              offset=main.offset,))
+                                              pubkey=data3['pubhex'],))
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
@@ -539,9 +528,7 @@ class BasicTestCase(unittest.TestCase):
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
-                                              pubkey=data4['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,))
+                                              pubkey=data4['pubhex'],))
 
         other.dumpRemotes()
         self.assertDictEqual(other.keep.loadAllRemoteData(),
@@ -611,6 +598,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.once,
@@ -623,9 +611,7 @@ class BasicTestCase(unittest.TestCase):
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
-                                             pubkey=data1['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset, ))
+                                             pubkey=data1['pubhex'],))
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
@@ -633,9 +619,7 @@ class BasicTestCase(unittest.TestCase):
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
-                                             pubkey=data2['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,))
+                                             pubkey=data2['pubhex'],))
 
         main.dumpRemotes()
 
@@ -711,6 +695,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': otherData['name'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': raeting.autoModes.once,
@@ -723,9 +708,7 @@ class BasicTestCase(unittest.TestCase):
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
-                                              pubkey=data3['pubhex'],
-                                              period=main.period,
-                                              offset=main.offset,))
+                                              pubkey=data3['pubhex'],))
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
@@ -733,9 +716,7 @@ class BasicTestCase(unittest.TestCase):
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
-                                              pubkey=data4['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,))
+                                              pubkey=data4['pubhex'],))
 
         other.dumpRemotes()
         self.assertDictEqual(other.keep.loadAllRemoteData(),
@@ -807,6 +788,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.never,
@@ -823,8 +805,6 @@ class BasicTestCase(unittest.TestCase):
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
                                              pubkey=data1['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,
                                              role=data1['role']) )
 
         data2 = self.createRoadData(name='remote2',
@@ -836,8 +816,6 @@ class BasicTestCase(unittest.TestCase):
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
                                              pubkey=data2['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,
                                              role=data2['role']) )
 
         main.dumpRemotes()
@@ -934,6 +912,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.always,
@@ -950,8 +929,6 @@ class BasicTestCase(unittest.TestCase):
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
                                              pubkey=data1['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,
                                              role=data1['role']) )
 
         data2 = self.createRoadData(name='remote2',
@@ -963,8 +940,6 @@ class BasicTestCase(unittest.TestCase):
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
                                              pubkey=data2['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,
                                              role=data2['role']) )
 
         main.dumpRemotes()
@@ -1060,6 +1035,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.once,
@@ -1076,8 +1052,6 @@ class BasicTestCase(unittest.TestCase):
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
                                              pubkey=data1['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,
                                              role=data1['role']) )
 
         data2 = self.createRoadData(name='remote2',
@@ -1089,8 +1063,6 @@ class BasicTestCase(unittest.TestCase):
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
                                              pubkey=data2['pubhex'],
-                                             period=main.period,
-                                             offset=main.offset,
                                              role=data2['role']) )
 
         main.dumpRemotes()
@@ -1188,6 +1160,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.never,
@@ -1226,6 +1199,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable':  None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': otherData['name'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': raeting.autoModes.never,
@@ -1304,6 +1278,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.always,
@@ -1342,6 +1317,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': otherData['name'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': raeting.autoModes.always,
@@ -1416,6 +1392,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.once,
@@ -1453,6 +1430,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': otherData['name'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'auto': raeting.autoModes.once,
@@ -1527,6 +1505,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.never,
@@ -1567,6 +1546,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': other1Data['name'],
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
                                 'auto': raeting.autoModes.never,
@@ -1633,6 +1613,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': other2Data['name'],
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
                                 'auto': raeting.autoModes.never,
@@ -1691,6 +1672,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': other2Data['name'],
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
                                 'auto': raeting.autoModes.never,
@@ -1772,6 +1754,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
+                                                         'stackname': mainData['name'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'auto': raeting.autoModes.once,
@@ -1812,6 +1795,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': other1Data['name'],
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
                                 'auto': raeting.autoModes.once,
@@ -1877,6 +1861,7 @@ class BasicTestCase(unittest.TestCase):
                                 'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
+                                'stackname': other2Data['name'],
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
                                 'auto': raeting.autoModes.never,
