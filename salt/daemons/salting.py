@@ -35,10 +35,10 @@ class SaltKeep(Keep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'main', 'sid', 'nuid', 'sighex',
-                   'prihex', 'auto', 'role', 'mutable', 'stackname']
-    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'nuid', 'role',
-                       'mutable', 'stackname']
+    LocalFields = ['uid', 'name', 'ha', 'main', 'sid',  'mutable',
+                   'nuid', 'stackname', 'auto', 'role', 'sighex', 'prihex']
+    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'mutable',
+                       'nuid', 'stackname', 'role']
     RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance',
                     'verhex', 'pubhex', 'role']
     RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
@@ -136,7 +136,7 @@ class SaltKeep(Keep):
                         ('main', local.main),
                         ('mutable', local.mutable),
                         ('sid', local.sid),
-                        ('nuid', local.nuid),
+                        ('nuid', local.stack.nuid),
                         ('stackname', local.stack.name),
                         ('role', local.role),
                     ])
