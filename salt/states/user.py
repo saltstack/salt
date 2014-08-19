@@ -208,7 +208,7 @@ def present(name,
 
     remove_groups
         Remove groups that the user is a member of that weren't specified in
-        the state, Default is ``False``.
+        the state, Default is ``True``.
 
     home
         The location of the home directory to manage
