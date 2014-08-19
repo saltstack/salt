@@ -36,7 +36,7 @@ Connection module for Amazon Security Groups
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def __virtual__():
     # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
         return True
