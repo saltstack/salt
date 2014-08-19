@@ -660,6 +660,20 @@ def installed(
               - bar: http://somesite.org/bar.rpm
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
+
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.installed:
+            - install_recommends: False
+
+
     '''
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
@@ -1040,6 +1054,19 @@ def latest(
               - foo
               - bar
               - baz
+
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.latest:
+            - install_recommends: False
+
     '''
     rtag = __gen_rtag()
     refresh = bool(
