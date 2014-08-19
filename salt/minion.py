@@ -461,16 +461,16 @@ class MultiMinion(object):
 
         while True:
             for minion in minions.values():
-                if isinstance(minion, dict):
-                    continue
-                if not hasattr(minion, 'schedule'):
+                # See the minions function above for the contents of a minions value
+                minionObj = minion.get('minion')
+                if not hasattr(minionObj, 'schedule'):
                     continue
                 try:
-                    minion.schedule.eval()
+                    minionObj.schedule.eval()
                     # Check if scheduler requires lower loop interval than
                     # the loop_interval setting
-                    if minion.schedule.loop_interval < loop_interval:
-                        loop_interval = minion.schedule.loop_interval
+                    if minionObj.schedule.loop_interval < loop_interval:
+                        loop_interval = minionObj.schedule.loop_interval
                         log.debug(
                             'Overriding loop_interval because of scheduled jobs.'
                         )
