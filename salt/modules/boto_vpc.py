@@ -37,7 +37,7 @@ Connection module for Amazon VPC
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def __virtual__():
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
         return True
