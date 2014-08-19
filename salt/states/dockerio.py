@@ -57,6 +57,16 @@ Available Functions
           - name: mysuperdocker
           - hostname: superdocker
           - image: corp/mysuperdocker_img
+
+- loaded
+
+  .. code-block:: yaml
+
+      mysuperdocker-file:
+        docker.loaded:
+          - name: mysuperdocker
+          - source: salt://_files/tmp/docker_image.tar
+
 - running
 
   .. code-block:: yaml
