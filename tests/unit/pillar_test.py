@@ -124,11 +124,11 @@ class PillarTestCase(TestCase):
         # glob match takes precedence
         self._setup_test_topfile_mocks(Matcher, get_file_client, 1, 2)
         pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
-        self.assertEqual(pillar.compile_pillar()['ssh'], 'bar')
+        self.assertEqual(pillar.compile_pillar({})['ssh'], 'bar')
         # nodegroup match takes precedence
         self._setup_test_topfile_mocks(Matcher, get_file_client, 2, 1)
         pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
-        self.assertEqual(pillar.compile_pillar()['ssh'], 'foo')
+        self.assertEqual(pillar.compile_pillar({})['ssh'], 'foo')
 
     def _setup_test_topfile_mocks(self, Matcher, get_file_client,
             nodegroup_order, glob_order):
