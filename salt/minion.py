@@ -368,9 +368,8 @@ class MultiMinion(object):
             s_opts['master'] = master
             try:
                 minions.append(Minion(s_opts, 5, False))
-            except SaltClientError as exc:
-                log.error('Error while bring up minion for multi-master. Is master responding?')
-                raise exc
+            except SaltClientError:
+                minions.append(s_opts)
         return minions
 
     def minions(self):
