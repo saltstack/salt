@@ -5,6 +5,7 @@ import random
 import string
 from collections import OrderedDict
 from copy import deepcopy
+from distutils.version import LooseVersion
 
 # import Python Third Party Libs
 try:
@@ -40,11 +41,13 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+required_boto_version = '2.4.0'
 vpc_id = 'vpc-mjm05d27'
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key': secret_key}
 
 
 def _random_group_id():
@@ -57,14 +60,30 @@ def _random_group_name():
     return group_name
 
 
+def _has_required_boto():
+    '''
+    Returns True/False boolean depending on if Boto is installed and correct
+    version.
+    '''
+    if not HAS_BOTO:
+        return False
+    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-@mock_ec2
-class Boto_SecgroupTestCase(TestCase):
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+                                       .format(required_boto_version))
+class BotoSecgroupTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_secgroup module
     '''
+
     def test__split_rules(self):
         '''
         tests the splitting of a list of rules into individual rules
@@ -75,6 +94,7 @@ class Boto_SecgroupTestCase(TestCase):
                        {'to_port': 80, 'from_port': 80, 'ip_protocol': u'tcp', 'cidr_ip': u'0.0.0.0/0'}]
         self.assertEqual(boto_secgroup._split_rules(rules), split_rules)
 
+    @mock_ec2
     def test_create_ec2_classic(self):
         '''
         test of creation of an EC2-Classic security group. The test ensures
@@ -83,7 +103,7 @@ class Boto_SecgroupTestCase(TestCase):
         group_name = _random_group_name()
         group_description = 'test_create_ec2_classic'
         boto_secgroup.create(group_name, group_description, **conn_parameters)
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_filter = {'group-name': group_name, 'vpc_id': None}
         secgroup_created_group = conn.get_all_security_groups(filters=group_filter)
         # when https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f
@@ -94,6 +114,7 @@ class Boto_SecgroupTestCase(TestCase):
         secgroup_create_result = [secgroup_created_group[0].name, secgroup_created_group[0].description]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
+    @mock_ec2
     def test_create_ec2_vpc(self):
         '''
         test of creation of an EC2-VPC security group. The test ensures that a
@@ -104,7 +125,7 @@ class Boto_SecgroupTestCase(TestCase):
         # create a group using boto_secgroup
         boto_secgroup.create(group_name, group_description, vpc_id=vpc_id, **conn_parameters)
         # confirm that the group actually exists
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_filter = {'group-name': group_name, 'vpc-id': vpc_id}
         secgroup_created_group = conn.get_all_security_groups(filters=group_filter)
         expected_create_result = [group_name, group_description, vpc_id]
@@ -113,6 +134,7 @@ class Boto_SecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped due to error in moto return - fixed in'
                   ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
+    @mock_ec2
     def test_get_group_id_ec2_classic(self):
         '''
         tests that given a name of a group in EC2-Classic that the correct
@@ -120,7 +142,7 @@ class Boto_SecgroupTestCase(TestCase):
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_classic'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(name=group_name,
                                                    description=group_description)
         # note that the vpc_id does not need to be created in order to create
@@ -134,6 +156,7 @@ class Boto_SecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
+    @mock_ec2
     def test_get_group_id_ec2_vpc(self):
         '''
         tests that given a name of a group in EC2-VPC that the correct
@@ -141,7 +164,7 @@ class Boto_SecgroupTestCase(TestCase):
         '''
         group_name = _random_group_name()
         group_description = 'test_get_group_id_ec2_vpc'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(name=group_name,
                                                    description=group_description)
         # note that the vpc_id does not need to be created in order to create
@@ -153,6 +176,7 @@ class Boto_SecgroupTestCase(TestCase):
                                                         **conn_parameters)
         self.assertEqual(group_vpc.id, retrieved_group_id)
 
+    @mock_ec2
     def test_get_config_single_rule_group_name(self):
         '''
         tests return of 'config' when given group name. get_config returns an OrderedDict.
@@ -162,7 +186,7 @@ class Boto_SecgroupTestCase(TestCase):
         from_port = 22
         to_port = 22
         cidr_ip = '0.0.0.0/0'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(name=group_name, description=group_name)
         group.authorize(ip_protocol=ip_protocol, from_port=from_port, to_port=to_port, cidr_ip=cidr_ip)
         # setup the expected get_config result
@@ -173,15 +197,16 @@ class Boto_SecgroupTestCase(TestCase):
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
-    @skipIf(False, 'test skipped due to error in moto return - fixed in'
-                  ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
+    @skipIf(True, 'test skipped due to error in moto return - fixed in '
+                  'https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
+    @mock_ec2
     def test_exists_true_name_classic(self):
         '''
         tests 'true' existence of a group in EC2-Classic when given name
         '''
         group_name = _random_group_name()
         group_description = 'test_exists_true_ec2_classic'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(group_name, group_description)
         group_vpc = conn.create_security_group(group_name, group_description, vpc_id=vpc_id)
         salt_exists_result = boto_secgroup.exists(name=group_name, **conn_parameters)
@@ -189,20 +214,23 @@ class Boto_SecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
+    @mock_ec2
     def test_exists_false_name_classic(self):
         pass
 
+    @mock_ec2
     def test_exists_true_name_vpc(self):
         '''
         tests 'true' existence of a group in EC2-VPC when given name and vpc_id
         '''
         group_name = _random_group_name()
         group_description = 'test_exists_true_ec2_vpc'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         conn.create_security_group(group_name, group_description, vpc_id=vpc_id)
         salt_exists_result = boto_secgroup.exists(name=group_name, vpc_id=vpc_id, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
+    @mock_ec2
     def test_exists_false_name_vpc(self):
         '''
         tests 'false' existence of a group in vpc when given name and vpc_id
@@ -211,17 +239,19 @@ class Boto_SecgroupTestCase(TestCase):
         salt_exists_result = boto_secgroup.exists(group_name, vpc_id=vpc_id, **conn_parameters)
         self.assertFalse(salt_exists_result)
 
+    @mock_ec2
     def test_exists_true_group_id(self):
         '''
         tests 'true' existence of a group when given group_id
         '''
         group_name = _random_group_name()
         group_description = 'test_exists_true_group_id'
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(group_name, group_description)
         salt_exists_result = boto_secgroup.exists(group_id=group.id, **conn_parameters)
         self.assertTrue(salt_exists_result)
 
+    @mock_ec2
     def test_exists_false_group_id(self):
         '''
         tests 'false' existence of a group when given group_id
@@ -232,6 +262,7 @@ class Boto_SecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped due to error in moto return - fixed in'
                   ' https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f')
+    @mock_ec2
     def test_delete_group_ec2_classic(self):
         '''
         test deletion of a group in EC2-Classic. Test does the following:
@@ -245,7 +276,7 @@ class Boto_SecgroupTestCase(TestCase):
         group_name = _random_group_name()
         group_description = 'test_delete_group_ec2_classic'
         # create two groups using boto, one in EC2-Classic and one in EC2-VPC
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group_classic = conn.create_security_group(name=group_name, description=group_description)
         group_vpc = conn.create_security_group(name=group_name, description=group_description, vpc_id=vpc_id)
         # creates a list of all the existing all_group_ids in an AWS account
@@ -259,18 +290,20 @@ class Boto_SecgroupTestCase(TestCase):
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
+    @mock_ec2
     def test_delete_group_name_ec2_vpc(self):
         pass
 
+    @mock_ec2
     def test__get_conn_true(self):
         '''
         tests ensures that _get_conn returns an boto.ec2.connection.EC2Connection object.
         '''
-        conn = boto.ec2.connect_to_region(region)
+        conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         salt_conn = boto_secgroup._get_conn(**conn_parameters)
         self.assertEqual(conn.__class__, salt_conn.__class__)
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(Boto_SecgroupTestCase)
+    run_tests(BotoSecgroupTestCase, needs_daemon=False)

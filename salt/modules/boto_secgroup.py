@@ -36,6 +36,7 @@ Connection module for Amazon Security Groups
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -54,11 +55,21 @@ import salt.utils.odict as odict
 
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto libraries exist and if boto libraries are greater than
+    a given version.
     '''
+    required_boto_version = '2.4.0'
+    # Boto < 2.4.0 GroupOrCIDR objects have different attributes than
+    # Boto >= 2.4.0 GroupOrCIDR objects
+    # Differences include no group_id attribute in Boto < 2.4.0 and returning
+    # a groupId attribute when a GroupOrCIDR object authorizes an IP range
+    # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
         return False
-    return True
+    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
 
 
 def exists(name=None, region=None, key=None, keyid=None, profile=None,
@@ -191,6 +202,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         # TODO: add support for tags
         _rules = []
         for rule in sg.rules:
+            logging.debug('examining rule {0} for group {1}'.format(rule, sg.id))
             attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
             _rule = odict.OrderedDict()
             for attr in attrs:
@@ -200,6 +212,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                 if attr == 'grants':
                     _grants = []
                     for grant in val:
+                        logging.debug('examining grant {0} for'.format(grant))
                         g_attrs = {'name': 'source_group_name',
                                    'owner_id': 'source_group_owner_id',
                                    'group_id': 'source_group_group_id',
