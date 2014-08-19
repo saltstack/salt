@@ -462,7 +462,7 @@ class MultiMinion(object):
         while True:
             for minion in minions.values():
                 if isinstance(minion, dict):
-                    minion = minion['minion']
+                    continue
                 if not hasattr(minion, 'schedule'):
                     continue
                 try:
