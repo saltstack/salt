@@ -57,3 +57,6 @@ Vagrantfile
 
 # Allow a user to set their own _version.py for testing
 _version.py
+
+# Ignore grains file written out during tests
+tests/integration/files/conf/grains

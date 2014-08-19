@@ -20,6 +20,7 @@ import salt.client
 import salt.output
 import salt.utils.minions
 import salt.wheel
+import salt.version
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -229,31 +230,31 @@ def versions():
         -1: 'Minion requires update',
         0: 'Up to date',
         1: 'Minion newer than master',
+        2: 'Master',
     }
 
     version_status = {}
 
-    comps = salt.__version__.split('-')
-    if len(comps) == 3:
-        master_version = '-'.join(comps[0:2])
-    else:
-        master_version = salt.__version__
+    master_version = salt.version.__saltstack_version__
+
     for minion in minions:
-        comps = minions[minion].split('-')
-        if len(comps) == 3:
-            minion_version = '-'.join(comps[0:2])
-        else:
-            minion_version = minions[minion]
+        minion_version = salt.version.SaltStackVersion.parse(minions[minion])
         ver_diff = cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
-        version_status[ver_diff][minion] = minion_version
+        version_status[ver_diff][minion] = minion_version.string
+
+    # Add version of Master to output
+    version_status[2] = master_version.string
 
     ret = {}
     for key in version_status:
-        for minion in sorted(version_status[key]):
-            ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
+        if key == 2:
+            ret[labels[key]] = version_status[2]
+        else:
+            for minion in sorted(version_status[key]):
+                ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
 
     salt.output.display_output(ret, '', __opts__)
     return ret

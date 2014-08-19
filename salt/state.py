@@ -1560,7 +1560,9 @@ class State(object):
         self.check_refresh(low, ret)
         finish_time = datetime.datetime.now()
         ret['start_time'] = start_time.time().isoformat()
-        ret['duration'] = (finish_time - start_time).microseconds / 1000
+        delta = (finish_time - start_time)
+        #duration in milliseconds.microseconds
+        ret['duration'] = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         log.info('Completed state [{0}] at time {1}'.format(low['name'], finish_time.time().isoformat()))
         return ret
 
@@ -2362,7 +2364,7 @@ class BaseHighState(object):
             log.critical(
                 msg,
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
         mods.add('{0}:{1}'.format(saltenv, sls))

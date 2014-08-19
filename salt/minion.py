@@ -467,8 +467,7 @@ class MultiMinion(MinionBase):
             try:
                 minions.append(Minion(s_opts, 5, False))
             except SaltClientError as exc:
-                log.error('Error while bring up minion for multi-master. Is master responding?')
-                raise
+                log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
         return minions
 
     def minions(self):
@@ -1022,7 +1021,7 @@ class Minion(MinionBase):
                         function_name,
                         exc
                     ),
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
                 ret['out'] = 'nested'
@@ -1032,7 +1031,7 @@ class Minion(MinionBase):
                         function_name,
                         exc
                     ),
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
@@ -1048,12 +1047,12 @@ class Minion(MinionBase):
                        'arguments issue:  {2}').format(function_name,
                                                        exc,
                                                        aspec)
-                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
             except Exception:
                 msg = 'The minion function caused an exception'
-                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
@@ -1198,10 +1197,7 @@ class Minion(MinionBase):
                    'the worker_threads value.').format(jid)
             log.warn(msg)
             return ''
-        if isinstance(ret_val, string_types) and not ret_val:
-            # The master AES key has changed, reauth
-            self.authenticate()
-            ret_val = channel.send(load)
+
         log.trace('ret_val = {0}'.format(ret_val))
         return ret_val
 
@@ -1352,7 +1348,7 @@ class Minion(MinionBase):
             if creds == 'full':
                 return creds
             elif creds != 'retry':
-                log.info('Authentication with master successful!')
+                log.info('Authentication with master at {0} successful!'.format(self.opts['master_ip']))
                 break
             log.info('Waiting for minion key to be accepted by the master.')
             if acceptance_wait_time:
@@ -1513,10 +1509,6 @@ class Minion(MinionBase):
 
         # On first startup execute a state run if configured to do so
         self._state_run()
-        if self.opts['startup_states']:
-            startup_sleep_length = 0.5
-            log.debug('Sleeping for {0}s before running startup states'.format(startup_sleep_length))
-            time.sleep(startup_sleep_length)
 
         loop_interval = int(self.opts['loop_interval'])
 
@@ -1863,6 +1855,7 @@ class Syndic(Minion):
 
         self._set_reconnect_ivl_max()
         self._set_tcp_keepalive()
+        self._set_ipv4only()
 
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)

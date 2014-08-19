@@ -474,6 +474,8 @@ def get_sum(path, form='md5'):
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
+    if not os.path.isfile(path):
+        return 'File not found'
     return salt.utils.get_hash(path, form, 4096)
 
 
@@ -1451,7 +1453,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             dry_run_opt = ' --dry-run'
     else:
         dry_run_opt = ''
-    cmd = 'patch {0}{1} {2} {3}'.format(
+    cmd = 'patch {0}{1} "{2}" "{3}"'.format(
         options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd)
 
@@ -1571,7 +1573,7 @@ def contains_glob(path, glob_expr):
         return False
 
 
-def append(path, *args):
+def append(path, *args, **kwargs):
     '''
     .. versionadded:: 0.9.5
 
@@ -1590,8 +1592,27 @@ def append(path, *args):
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.append /etc/motd args='cheese=spam'
+
+            salt '*' file.append /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
     # Largely inspired by Fabric's contrib.files.append()
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
 
     with salt.utils.fopen(path, "r+") as ofile:
         # Make sure we have a newline at the end of the file
@@ -1616,7 +1637,7 @@ def append(path, *args):
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
 
-def prepend(path, *args):
+def prepend(path, *args, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1635,7 +1656,27 @@ def prepend(path, *args):
         salt '*' file.prepend /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.prepend /etc/motd args='cheese=spam'
+
+            salt '*' file.prepend /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     try:
         contents = salt.utils.fopen(path).readlines()
     except IOError:
@@ -1651,7 +1692,7 @@ def prepend(path, *args):
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
-def write(path, *args):
+def write(path, *args, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1669,7 +1710,27 @@ def write(path, *args):
 
         salt '*' file.write /etc/motd \\
                 "With all thine offerings thou shalt offer salt."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.write /etc/motd args='cheese=spam'
+
+            salt '*' file.write /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     contents = []
     for line in args:
         contents.append('{0}\n'.format(line))
@@ -3252,23 +3313,31 @@ def makedirs_(path,
     '''
     Ensure that the directory containing this path is available.
 
+    .. note::
+
+        The path must end with a trailing slash otherwise the directory/directories
+        will be created upto the parent directory. For example if path is
+        ``/opt/code``, then it would be treated as ``/opt/`` but if the path
+        ends with a trailing slash like ``/opt/code/``, then it would be
+        treated as ``/opt/code/``.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.makedirs /opt/code
+        salt '*' file.makedirs /opt/code/
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    dirname = os.path.normpath(os.path.join(os.path.dirname(path), ''))
+    dirname = os.path.normpath(os.path.dirname(path))
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        return 'Directory {0!r} already exists'.format(path)
+        return 'Directory {0!r} already exists'.format(dirname)
 
     if os.path.exists(dirname):
         return 'The path {0!r} already exists and is not a directory'.format(
-            path
+            dirname
         )
 
     directories_to_create = []

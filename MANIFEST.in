@@ -16,4 +16,6 @@ recursive-include scripts *
 include conf/*
 recursive-include pkg *
 recursive-include salt *.jinja
-include salt/templates/git/ssh-id-wrapper
+recursive-include salt *.flo
+include salt/templates/git/*
+include salt/templates/lxc/*

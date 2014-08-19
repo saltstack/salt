@@ -146,7 +146,6 @@ def destroy(device):
 def create(name,
            level,
            devices,
-           raid_devices=None,
            test_mode=False,
            **kwargs):
     '''
@@ -162,7 +161,7 @@ def create(name,
 
     .. code-block:: bash
 
-        salt '*' raid.create /dev/md0 level=1 chunk=256 raid_devices=2 ['/dev/xvdd', '/dev/xvde'] test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 ['/dev/xvdd', '/dev/xvde'] test_mode=True
 
     .. note::
 
@@ -177,9 +176,6 @@ def create(name,
 
     devices
         A list of devices used to build the array.
-
-    raid_devices
-        The number of devices in the array.  If not specified, the number of devices will be counted.
 
     kwargs
         Optional arguments to be passed to mdadm.
@@ -202,15 +198,6 @@ def create(name,
 
     For more info, read the ``mdadm(8)`` manpage
     '''
-    cmd_args = {}
-
-    cmd_args['name'] = name
-    cmd_args['level'] = level
-    cmd_args['devices'] = ' '.join(devices)
-
-    if raid_devices is None:
-        cmd_args['raid-devices'] = len(devices)
-
     opts = ''
     for key in kwargs:
         if not key.startswith('__'):
@@ -219,13 +206,11 @@ def create(name,
             else:
                 opts += '--{0}={1} '.format(key, kwargs[key])
 
-    cmd_args['raw_args'] = opts
-
-    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(cmd_args['name'],
-            cmd_args['raw_args'],
-            cmd_args['level'],
-            cmd_args['raid-devices'],
-            cmd_args['devices'])
+    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(name,
+            opts,
+            level,
+            len(devices),
+            ' '.join(devices))
 
     if test_mode is True:
         return cmd

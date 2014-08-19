@@ -72,19 +72,33 @@ def returner(ret):
     Send an email with the data
     '''
 
-    from_addr = __salt__['config.option']('smtp.from')
-    to_addrs = __salt__['config.option']('smtp.to')
-    host = __salt__['config.option']('smtp.host')
-    port = __salt__['config.option']('smtp.port')
+    if 'config.option' in __salt__:
+        from_addr = __salt__['config.option']('smtp.from')
+        to_addrs = __salt__['config.option']('smtp.to')
+        host = __salt__['config.option']('smtp.host')
+        port = __salt__['config.option']('smtp.port')
+        user = __salt__['config.option']('smtp.username')
+        passwd = __salt__['config.option']('smtp.password')
+        subject = __salt__['config.option']('smtp.subject')
+        gpgowner = __salt__['config.option']('smtp.gpgowner')
+        fields = __salt__['config.option']('smtp.fields').split(',')
+        smtp_tls = __salt__['config.option']('smtp.tls')
+    else:
+        cfg = __opts__
+        from_addr = cfg.get('smtp.from', None)
+        to_addrs = cfg.get('smtp.to', None)
+        host = cfg.get('smtp.host', None)
+        port = cfg.get('smtp.port', None)
+        user = cfg.get('smtp.username', None)
+        passwd = cfg.get('smtp.password', None)
+        subject = cfg.get('smtp.subject', None)
+        gpgowner = cfg.get('smtp.gpgowner', None)
+        fields = cfg.get('smtp.fields', '').split(',')
+        smtp_tls = cfg('smtp.tls', False)
+
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
-    user = __salt__['config.option']('smtp.username')
-    passwd = __salt__['config.option']('smtp.password')
-    subject = __salt__['config.option']('smtp.subject')
-    gpgowner = __salt__['config.option']('smtp.gpgowner')
-
-    fields = __salt__['config.option']('smtp.fields').split(',')
     for field in fields:
         if field in ret.keys():
             subject += ' {0}'.format(ret[field])
@@ -124,7 +138,7 @@ def returner(ret):
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
-    if __salt__['config.option']('smtp.tls') is True:
+    if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
     if user and passwd:

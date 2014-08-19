@@ -10,11 +10,7 @@ import hashlib
 import os
 import shutil
 import time
-import subprocess
 import requests
-
-# Import third party libs
-import yaml
 
 # Import salt libs
 from salt.exceptions import (
@@ -870,36 +866,18 @@ class LocalClient(Client):
 
     def ext_nodes(self):
         '''
-        Return the metadata derived from the external nodes system on the local
-        system
+        Originally returned information via the external_nodes subsystem.
+        External_nodes was deprecated and removed in
+        2014.1.6 in favor of master_tops (which had been around since pre-0.17).
+             salt-call --local state.show_top
+        ends up here, but master_tops has not been extended to support
+        show_top in a completely local environment yet.  It's worth noting
+        that originally this fn started with
+            if 'external_nodes' not in opts: return {}
+        So since external_nodes is gone now, we are just returning the
+        empty dict.
         '''
-        if not self.opts['external_nodes']:
-            return {}
-        if not salt.utils.which(self.opts['external_nodes']):
-            log.error(('Specified external nodes controller {0} is not'
-                       ' available, please verify that it is installed'
-                       '').format(self.opts['external_nodes']))
-            return {}
-        cmd = '{0} {1}'.format(self.opts['external_nodes'], self.opts['id'])
-        ndata = yaml.safe_load(subprocess.Popen(
-                               cmd,
-                               shell=True,
-                               stdout=subprocess.PIPE
-                               ).communicate()[0])
-        ret = {}
-        if 'environment' in ndata:
-            saltenv = ndata['environment']
-        else:
-            saltenv = 'base'
-
-        if 'classes' in ndata:
-            if isinstance(ndata['classes'], dict):
-                ret[saltenv] = list(ndata['classes'])
-            elif isinstance(ndata['classes'], list):
-                ret[saltenv] = ndata['classes']
-            else:
-                return ret
-        return ret
+        return {}
 
 
 class RemoteClient(Client):

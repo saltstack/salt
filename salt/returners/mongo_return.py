@@ -53,13 +53,22 @@ def _get_conn():
     '''
     Return a mongodb connection object
     '''
-    conn = pymongo.Connection(
-            __salt__['config.option']('mongo.host'),
-            __salt__['config.option']('mongo.port'))
-    mdb = conn[__salt__['config.option']('mongo.db')]
+    if 'config.option' in __salt__:
+        host = __salt__['config.option']('mongo.host')
+        port = __salt__['config.option']('mongo.port')
+        db = __salt__['config.option']('mongo.db')
+        user = __salt__['config.option']('mongo.user')
+        password = __salt__['config.option']('mongo.password')
+    else:
+        cfg = __opts__
+        host = cfg.get('mongo.host', None)
+        port = cfg.get('mongo.port', None)
+        db = cfg.get('mongo.db', None)
+        user = cfg.get('mongo.user', None)
+        password = cfg.get('mongo.password', None)
 
-    user = __salt__['config.option']('mongo.user')
-    password = __salt__['config.option']('mongo.password')
+    conn = pymongo.Connection(host, port)
+    mdb = conn[db]
 
     if user and password:
         mdb.authenticate(user, password)

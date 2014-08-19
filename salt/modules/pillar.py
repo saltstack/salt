@@ -17,7 +17,7 @@ from salt._compat import string_types
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False, delim=':'):
+def get(key, default='', merge=False, delimiter=':'):
     '''
     .. versionadded:: 0.14
 
@@ -43,7 +43,7 @@ def get(key, default='', merge=False, delim=':'):
 
         .. versionadded:: 2014.7.0
 
-    delim
+    delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
         .. versionadded:: 2014.7.0
@@ -55,12 +55,15 @@ def get(key, default='', merge=False, delim=':'):
         salt '*' pillar.get pkg:apache
     '''
     if merge:
-        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delim)
+        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.traverse_dict_and_list(__pillar__, key, default, delim)
+    return salt.utils.traverse_dict_and_list(__pillar__,
+                                             key,
+                                             default,
+                                             delimiter)
 
 
 def items(*args):

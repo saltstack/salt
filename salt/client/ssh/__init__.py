@@ -151,7 +151,11 @@ EOF'''.format(
 )
 
 if not is_windows():
-    with open(os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')) as ssh_py_shim:
+    shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
+    if not os.path.exists(shim_file):
+        # On esky builds we only have the .pyc file
+        shim_file += "c"
+    with open(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
 
 log = logging.getLogger(__name__)
@@ -671,7 +675,7 @@ class Single(object):
 
         ssh_py_shim_args = [
             '--config', self.minion_config,
-            '--delimeter', RSTR,
+            '--delimiter', RSTR,
             '--saltdir', DEFAULT_THIN_DIR,
             '--checksum', thin_sum,
             '--hashfunc', 'sha1',
@@ -885,7 +889,7 @@ class Single(object):
             trans_tar,
             os.path.join(DEFAULT_THIN_DIR, 'salt_state.tgz'),
         )
-        self.argv = ['state.pkg', '/tmp/salt_state.tgz', 'test={0}'.format(test)]
+        self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
 
 
 class SSHState(salt.state.State):

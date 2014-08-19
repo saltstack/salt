@@ -829,7 +829,7 @@ def update():
             log.error(
                 'Exception {0} caught while fetching gitfs remote {1}'
                 .format(exc, repo['uri']),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
         try:
             os.remove(lk_fn)
@@ -1168,7 +1168,6 @@ def _file_lists(load, form):
     '''
     Return a dict containing the file lists for files and dirs
     '''
-    load = copy.deepcopy(load)
     if 'env' in load:
         salt.utils.warn_until(
             'Boron',

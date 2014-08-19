@@ -4,16 +4,20 @@ Send events through Salt's event system during state runs
 '''
 
 
-def fire_master(name, data):
+def send(name,
+        data=None,
+        preload=None,
+        with_env=False,
+        with_grains=False,
+        with_pillar=False,
+        **kwargs):
     '''
-    Fire an event on the Salt master event bus
+    Send an event to the Salt Master
 
     .. versionadded:: 2014.7.0
 
-    name
-        The tag for the event
-    data
-        The data sent through the event
+    Accepts the same arguments as the :py:func:`event.send
+    <salt.modules.event.send>` execution module of the same name.
 
     Example:
 
@@ -22,8 +26,7 @@ def fire_master(name, data):
         # ...snip bunch of states above
 
         mycompany/mystaterun/status/update:
-          event:
-            - fire_master
+          event.send:
             - data:
                 status: "Half-way through the state run!"
 
@@ -37,7 +40,13 @@ def fire_master(name, data):
         ret['comment'] = 'Event would have been fired'
         return ret
 
-    ret['result'] = __salt__['event.fire_master'](data, name)
+    ret['result'] = __salt__['event.send'](name,
+            data=data,
+            preload=preload,
+            with_env=with_env,
+            with_grains=with_grains,
+            with_pillar=with_pillar,
+            **kwargs)
     ret['comment'] = 'Event fired'
 
     return ret
@@ -76,4 +85,6 @@ def wait(name, sfun=None):
     # Noop. The state system will call the mod_watch function instead.
     return {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-mod_watch = fire_master
+
+mod_watch = send
+fire_master = send

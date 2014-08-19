@@ -269,7 +269,7 @@ class _RepoInfo(object):
 
     @autorefresh.setter
     def autorefresh(self, value):
-        self.zypp.setAlias(value)
+        self.zypp.setAutorefresh(value)
 
     @property
     def enabled(self):
@@ -378,7 +378,7 @@ class _RepoInfo(object):
 
     @property
     def url(self):
-        return [url.asCompleteString() for url in self.zypp.baseUrls()]
+        return self.zypp.url().asCompleteString()
 
     @url.setter
     def url(self, value):
