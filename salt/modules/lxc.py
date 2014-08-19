@@ -391,10 +391,11 @@ def _get_network_conf(conf_tuples=None, **kwargs):
     if nic:
         nicp = __salt__['config.get']('lxc.nic', {}).get(
             nic, DEFAULT_NIC_PROFILE)
-        nic_opts = kwargs.pop('nic_opts', None)
-        for dev, args in nic_opts.items():
-            ethx = nicp.setdefault(dev, {})
-            ethx = salt.utils.dictupdate.update(ethx, args)
+        nic_opts = kwargs.pop('nic_opts', {})
+        if nic_opts:
+            for dev, args in nic_opts.items():
+                ethx = nicp.setdefault(dev, {})
+                ethx = salt.utils.dictupdate.update(ethx, args)
         ifs = [a for a in nicp]
         ifs.sort()
         gateway_set = False
