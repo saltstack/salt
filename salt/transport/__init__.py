@@ -73,8 +73,8 @@ class RAETChannel(Channel):
         '''
         import wingdbstub
         mid = self.opts['id']
-        yid = nacling.uuid(size=18)
-        name = 'channel' + yid
+        uid = nacling.uuid(size=18)
+        name = 'channel' + uid
         stack = LaneStack(name=name,
                           lanename=mid,
                           sockdirpath=self.opts['sock_dir'])

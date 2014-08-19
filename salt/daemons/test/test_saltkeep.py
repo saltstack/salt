@@ -115,10 +115,10 @@ class BasicTestCase(unittest.TestCase):
 
         return data
 
-    def createRoadStack(self, data, keep,  eid=0, main=None, ha=None, mutable=None):
+    def createRoadStack(self, data, keep,  uid=0, main=None, ha=None, mutable=None):
         '''
         Creates stack and local estate from data with
-        local estate.eid = eid
+        local estate.uid = uid
         stack.main = main
         stack.mutable = mutable
         stack.auto = auto
@@ -129,7 +129,7 @@ class BasicTestCase(unittest.TestCase):
         returns stack
 
         '''
-        local = estating.LocalEstate(eid=eid,
+        local = estating.LocalEstate(uid=uid,
                                      name=data['name'],
                                      ha=ha,
                                      sigkey=data['sighex'],
@@ -204,7 +204,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -229,7 +229,7 @@ class BasicTestCase(unittest.TestCase):
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=3,
+                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -239,7 +239,7 @@ class BasicTestCase(unittest.TestCase):
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=4,
+                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -303,7 +303,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -331,7 +331,7 @@ class BasicTestCase(unittest.TestCase):
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              eid=3,
+                                              uid=3,
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
@@ -341,7 +341,7 @@ class BasicTestCase(unittest.TestCase):
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              eid=4,
+                                              uid=4,
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
@@ -400,7 +400,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -425,7 +425,7 @@ class BasicTestCase(unittest.TestCase):
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=3,
+                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -435,7 +435,7 @@ class BasicTestCase(unittest.TestCase):
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=4,
+                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -497,7 +497,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -525,7 +525,7 @@ class BasicTestCase(unittest.TestCase):
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              eid=3,
+                                              uid=3,
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
@@ -535,7 +535,7 @@ class BasicTestCase(unittest.TestCase):
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              eid=4,
+                                              uid=4,
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
@@ -594,7 +594,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -619,7 +619,7 @@ class BasicTestCase(unittest.TestCase):
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=3,
+                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -629,7 +629,7 @@ class BasicTestCase(unittest.TestCase):
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=4,
+                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -691,7 +691,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -719,7 +719,7 @@ class BasicTestCase(unittest.TestCase):
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              eid=3,
+                                              uid=3,
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
@@ -729,7 +729,7 @@ class BasicTestCase(unittest.TestCase):
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              eid=4,
+                                              uid=4,
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
@@ -790,7 +790,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -818,7 +818,7 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=3,
+                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -831,7 +831,7 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=4,
+                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -917,7 +917,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -945,7 +945,7 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=3,
+                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -958,7 +958,7 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=4,
+                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -1043,7 +1043,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1071,7 +1071,7 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=3,
+                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -1084,7 +1084,7 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             eid=4,
+                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -1171,7 +1171,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1207,7 +1207,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -1287,7 +1287,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1323,7 +1323,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -1399,7 +1399,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1435,7 +1435,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -1510,7 +1510,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1548,7 +1548,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other1Keep.loadAllRemoteData(), {})
 
         other1 = self.createRoadStack(data=other1Data,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=other1Keep)
@@ -1614,7 +1614,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other2Keep.loadAllRemoteData(), {})
 
         other2 = self.createRoadStack(data=other2Data,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", 7532),
                                      keep=other2Keep)
@@ -1672,7 +1672,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other2Keep.loadAllRemoteData(), {})
 
         other2 = self.createRoadStack(data=other2Data,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", 7532),
                                      keep=other2Keep)
@@ -1755,7 +1755,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     eid=1,
+                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1793,7 +1793,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other1Keep.loadAllRemoteData(), {})
 
         other1 = self.createRoadStack(data=other1Data,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=other1Keep)
@@ -1858,7 +1858,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other2Keep.loadAllRemoteData(), {})
 
         other2 = self.createRoadStack(data=other2Data,
-                                     eid=0,
+                                     uid=0,
                                      main=None,
                                      ha=("", 7532),
                                      keep=other2Keep)

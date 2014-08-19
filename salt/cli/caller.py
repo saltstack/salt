@@ -274,8 +274,8 @@ class RAETCaller(ZeroMQCaller):
         '''
         mid = opts['id']
         sockdirpath = opts['sock_dir']
-        yid = nacling.uuid(size=18)
-        name = 'caller' + yid
+        uid = nacling.uuid(size=18)
+        name = 'caller' + uid
         stack = LaneStack(name=name,
                           lanename=mid,
                           sockdirpath=sockdirpath)
