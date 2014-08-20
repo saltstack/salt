@@ -209,6 +209,9 @@ class SaltNova(OpenStackComputeShell):
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
+        for key in ('name', 'flavor', 'image'):
+            if key in kwargs:
+                del kwargs[key]
         response = nt_ks.servers.create(
             name=name, flavor=flavor_id, image=image_id, **kwargs
         )
