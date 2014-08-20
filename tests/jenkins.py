@@ -76,7 +76,7 @@ def build_minion_target(options, vm_name):
     for grain in options.grain_target:
         target += ' and G@{0}'.format(grain)
     if options.grain_target:
-        return '-C "{0}"'.format(target)
+        return '"{0}"'.format(target)
     return target
 
 
@@ -185,7 +185,7 @@ def download_unittest_reports(options):
         'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
         'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
         'mv -f /var/cache/salt/master/minions/{1}/files/tmp/xml-test-reports.tar.gz {2} && '
-        'tar zxvf {2}/xml-test-reports.tar.gz -C {2}/xml-test-reports && '
+        'tar zxvf {2}/xml-test-reports.tar.gz {2}/xml-test-reports && '
         'rm -f {2}/xml-test-reports.tar.gz'
     )
 
