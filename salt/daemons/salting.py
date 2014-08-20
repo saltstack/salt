@@ -35,11 +35,11 @@ class SaltKeep(Keep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'sid', 'nuid', 'role', 'sighex', 'prihex']
-    LocalDumpFields = ['uid', 'name', 'ha', 'sid', 'nuid', 'role']
-    RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance',
-                    'verhex', 'pubhex', 'role']
-    RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
+    LocalFields = ['uid', 'name', 'ha', 'sid', 'puid', 'role', 'sighex', 'prihex']
+    LocalDumpFields = ['uid', 'name', 'ha', 'sid', 'puid', 'role']
+    RemoteFields = ['name', 'uid', 'fuid', 'ha', 'sid', 'joined', 'acceptance',
+                    'role',  'verhex', 'pubhex']
+    RemoteDumpFields = ['name', 'uid', 'fuid', 'ha', 'sid', 'joined', 'role']
 
     Auto = False #auto accept
 
@@ -128,11 +128,11 @@ class SaltKeep(Keep):
         Dump local estate
         '''
         data = odict([
-                        ('uid', local.uid),
                         ('name', local.name),
+                        ('uid', local.uid),
                         ('ha', local.ha),
                         ('sid', local.sid),
-                        ('nuid', local.stack.nuid),
+                        ('puid', local.stack.puid),
                         ('role', local.role),
                     ])
         if self.verifyLocalData(data, localFields = self.LocalDumpFields):
@@ -145,8 +145,9 @@ class SaltKeep(Keep):
         Dump remote estate
         '''
         data = odict([
-                        ('uid', remote.uid),
                         ('name', remote.name),
+                        ('uid', remote.uid),
+                        ('fuid', remote.fuid),
                         ('ha', remote.ha),
                         ('sid', remote.sid),
                         ('joined', remote.joined),

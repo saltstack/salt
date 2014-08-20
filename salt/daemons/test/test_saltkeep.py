@@ -216,7 +216,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -246,6 +246,7 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote1':
                     {'uid': 3,
+                     'fuid': 0,
                      'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'sid': 0,
@@ -256,6 +257,7 @@ class BasicTestCase(unittest.TestCase):
                      'role': data1['role'],},
                 'remote2':
                     {'uid': 4,
+                     'fuid': 0,
                      'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'sid': 0,
@@ -312,7 +314,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -340,6 +342,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote3':
                 {
                     'uid': 3,
+                    'fuid': 0,
                     'name': data3['name'],
                     'ha': ['127.0.0.1', 7534],
                     'sid': 0,
@@ -352,6 +355,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote4':
                 {
                     'uid': 4,
+                    'fuid': 0,
                     'name': data4['name'],
                     'ha': ['127.0.0.1', 7535],
                     'sid': 0,
@@ -399,7 +403,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -427,6 +431,7 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote1':
                     {'uid': 3,
+                     'fuid': 0,
                      'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'sid': 0,
@@ -437,6 +442,7 @@ class BasicTestCase(unittest.TestCase):
                      'role': data1['role'],},
                 'remote2':
                     {'uid': 4,
+                     'fuid': 0,
                      'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'sid': 0,
@@ -493,7 +499,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -521,6 +527,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote3':
                 {
                     'uid': 3,
+                    'fuid': 0,
                     'name': data3['name'],
                     'ha': ['127.0.0.1', 7534],
                     'sid': 0,
@@ -533,6 +540,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote4':
                 {
                     'uid': 4,
+                    'fuid': 0,
                     'name': data4['name'],
                     'ha': ['127.0.0.1', 7535],
                     'sid': 0,
@@ -580,7 +588,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -608,6 +616,7 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote1':
                     {'uid': 3,
+                     'fuid': 0,
                      'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'sid': 0,
@@ -618,6 +627,7 @@ class BasicTestCase(unittest.TestCase):
                      'role': data1['role'],},
                 'remote2':
                     {'uid': 4,
+                     'fuid': 0,
                      'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'sid': 0,
@@ -674,7 +684,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -702,6 +712,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote3':
                 {
                     'uid': 3,
+                    'fuid': 0,
                     'name': data3['name'],
                     'ha': ['127.0.0.1', 7534],
                     'sid': 0,
@@ -714,6 +725,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote4':
                 {
                     'uid': 4,
+                    'fuid': 0,
                     'name': data4['name'],
                     'ha': ['127.0.0.1', 7535],
                     'sid': 0,
@@ -763,7 +775,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -800,6 +812,7 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote1':
                     {'uid': 3,
+                     'fuid': 0,
                      'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'sid': 0,
@@ -810,6 +823,7 @@ class BasicTestCase(unittest.TestCase):
                      'role': data1['role'],},
                 'remote2':
                     {'uid': 4,
+                     'fuid': 0,
                      'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'sid': 0,
@@ -884,7 +898,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -919,6 +933,7 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote1':
                     {'uid': 3,
+                     'fuid': 0,
                      'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'sid': 0,
@@ -929,6 +944,7 @@ class BasicTestCase(unittest.TestCase):
                      'role': data1['role'],},
                 'remote2':
                     {'uid': 4,
+                     'fuid': 0,
                      'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'sid': 0,
@@ -1004,7 +1020,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -1042,6 +1058,7 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote1':
                     {'uid': 3,
+                     'fuid': 0,
                      'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'sid': 0,
@@ -1052,6 +1069,7 @@ class BasicTestCase(unittest.TestCase):
                      'role': data1['role'],},
                 'remote2':
                     {'uid': 4,
+                     'fuid': 0,
                      'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'sid': 0,
@@ -1126,7 +1144,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -1161,7 +1179,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -1236,7 +1254,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -1271,7 +1289,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -1342,7 +1360,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -1376,7 +1394,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -1447,7 +1465,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -1484,7 +1502,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': other1Data['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
                                 'role': other1Data['role'],
@@ -1547,7 +1565,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
                                 'role': other2Data['role'],
@@ -1602,7 +1620,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
                                 'role': other2Data['role'],
@@ -1680,7 +1698,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
                                                          'sid': 0,
-                                                         'nuid': 1,
+                                                         'puid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -1717,7 +1735,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': other1Data['name'],
                                 'ha': ['0.0.0.0', 7531],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
                                 'role': other1Data['role'],
@@ -1779,7 +1797,7 @@ class BasicTestCase(unittest.TestCase):
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
                                 'sid': 0,
-                                'nuid': 1,
+                                'puid': 1,
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
                                 'role': other2Data['role'],
