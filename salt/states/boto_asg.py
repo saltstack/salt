@@ -220,7 +220,7 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
@@ -250,6 +250,7 @@ def present(
         if __opts__['test']:
             msg = 'Autoscale group set to be created.'
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_asg.create'](name, launch_config_name,
                                               availability_zones, min_size,
@@ -264,7 +265,6 @@ def present(
                                               scaling_policies, region,
                                               key, keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                   profile)
@@ -315,6 +315,7 @@ def present(
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
                 ret['comment'] = msg
+                ret['result'] = None
                 return ret
             updated = __salt__['boto_asg.update'](name, launch_config_name,
                                                   availability_zones, min_size,
@@ -337,7 +338,6 @@ def present(
                         ret["changes"]["launch_config"] = {}
                     ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
             if updated:
-                ret['result'] = True
                 ret['changes']['old'] = asg
                 asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                       profile)
@@ -404,20 +404,19 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
         ret['result'] = False
         ret['comment'] = 'Failed to check autoscale group existence.'
     elif asg:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Autoscale group set to be deleted.'
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'
