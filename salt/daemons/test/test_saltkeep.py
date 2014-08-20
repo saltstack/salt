@@ -219,7 +219,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -316,7 +315,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': raeting.autoModes.never,
                                 'role': otherData['role'],
                             })
 
@@ -404,7 +402,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.always,
                                                          'role': mainData['role'],
                                                          })
 
@@ -499,7 +496,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': raeting.autoModes.always,
                                 'role': otherData['role'],
                             })
 
@@ -587,7 +583,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -682,7 +677,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': raeting.autoModes.once,
                                 'role': otherData['role'],
                             })
 
@@ -772,7 +766,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -894,7 +887,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.always,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1015,7 +1007,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1138,7 +1129,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1174,7 +1164,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': raeting.autoModes.never,
                                 'role': otherData['role'],
                             })
 
@@ -1250,7 +1239,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.always,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1286,7 +1274,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': raeting.autoModes.always,
                                 'role': otherData['role'],
                             })
 
@@ -1358,7 +1345,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1393,7 +1379,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'auto': raeting.autoModes.once,
                                 'role': otherData['role'],
                             })
 
@@ -1465,7 +1450,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.never,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1503,7 +1487,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'auto': raeting.autoModes.never,
                                 'role': other1Data['role'],
                             })
 
@@ -1567,7 +1550,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
-                                'auto': raeting.autoModes.never,
                                 'role': other2Data['role'],
                             })
 
@@ -1623,7 +1605,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'auto': raeting.autoModes.never,
                                 'role': other2Data['role'],
                             })
 
@@ -1702,7 +1683,6 @@ class BasicTestCase(unittest.TestCase):
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'auto': raeting.autoModes.once,
                                                          'role': mainData['role'],
                                                          })
 
@@ -1740,7 +1720,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'auto': raeting.autoModes.once,
                                 'role': other1Data['role'],
                             })
 
@@ -1803,7 +1782,6 @@ class BasicTestCase(unittest.TestCase):
                                 'nuid': 1,
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
-                                'auto': raeting.autoModes.never,
                                 'role': other2Data['role'],
                             })
 

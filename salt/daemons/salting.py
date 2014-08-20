@@ -35,8 +35,7 @@ class SaltKeep(Keep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'sid',
-                   'nuid', 'auto', 'role', 'sighex', 'prihex']
+    LocalFields = ['uid', 'name', 'ha', 'sid', 'nuid', 'role', 'sighex', 'prihex']
     LocalDumpFields = ['uid', 'name', 'ha', 'sid', 'nuid', 'role']
     RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance',
                     'verhex', 'pubhex', 'role']
@@ -67,7 +66,7 @@ class SaltKeep(Keep):
         srkdata = self.saltRaetKey.read_local()
         if not srkdata:
             srkdata = dict(sign=None, priv=None)
-        data.update(sighex=srkdata['sign'], prihex=srkdata['priv'], auto=self.auto)
+        data.update(sighex=srkdata['sign'], prihex=srkdata['priv'])
         return data
 
     def loadRemoteData(self, name):
