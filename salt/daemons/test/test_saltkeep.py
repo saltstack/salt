@@ -849,7 +849,7 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertEqual(main.local.name, mainData['name'])
         self.assertEqual(main.local.uid, 1)
-        self.assertEqual(main.local.main, True)
+        self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
         self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
@@ -970,7 +970,7 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertEqual(main.local.name, mainData['name'])
         self.assertEqual(main.local.uid, 1)
-        self.assertEqual(main.local.main, True)
+        self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
         self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
@@ -1095,7 +1095,7 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertEqual(main.local.name, mainData['name'])
         self.assertEqual(main.local.uid, 1)
-        self.assertEqual(main.local.main, True)
+        self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
         self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
