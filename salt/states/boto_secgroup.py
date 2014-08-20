@@ -124,12 +124,12 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _security_group_present(name, description, vpc_id, region, key,
                                    keyid, profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
@@ -138,7 +138,7 @@ def present(
     _ret = _rules_present(name, rules, vpc_id, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
     return ret
 
@@ -157,18 +157,18 @@ def _security_group_present(
     2. if the group does not exist, creates the group
     3. return the group's configuration and any changes made
     '''
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_secgroup.exists'](name, region, key, keyid,
                                               profile, vpc_id)
     if not exists:
         if __opts__['test']:
             msg = 'Security group {0} is set to be created.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_secgroup.create'](name, description, vpc_id,
                                                    region, key, keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = {'secgroup': None}
             sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
                                                       keyid, profile, vpc_id)
@@ -282,7 +282,7 @@ def _rules_present(
     2. delete/revoke or authorize/create rules
     3. return 'old' and 'new' group rules
     '''
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
                                               profile, vpc_id)
     if not sg:
@@ -297,6 +297,7 @@ def _rules_present(
         if __opts__['test']:
             msg = 'Security group {0} set to have rules modified.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         if to_delete:
             deleted = True
@@ -309,7 +310,6 @@ def _rules_present(
             if deleted:
                 msg = 'Removed rules on {0} security group.'.format(name)
                 ret['comment'] = msg
-                ret['result'] = True
             else:
                 msg = 'Failed to remove rules on {0} security group.'
                 ret['comment'] = msg.format(name)
@@ -325,8 +325,6 @@ def _rules_present(
             if created:
                 msg = 'Created rules on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
-                if ret['result'] is not False:
-                    ret['result'] = True
             else:
                 msg = 'Failed to create rules on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
@@ -369,18 +367,17 @@ def absent(
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
+    sg = __salt__['boto_secgroup.get_config'](name, True, region, key, keyid,
                                               profile, vpc_id)
     if sg:
         if __opts__['test']:
-            ret['result'] = None
             msg = 'Security group {0} is set to be removed.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_secgroup.delete'](name, None, region, key,
                                                    keyid, profile, vpc_id)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = {'secgroup': sg}
             ret['changes']['new'] = {'secgroup': None}
             ret['comment'] = 'Security group {0} deleted.'.format(name)
