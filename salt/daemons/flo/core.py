@@ -149,21 +149,19 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                 basedirpath=basedirpath,
                                 stackname=name)
 
-        self.stack.value = RoadStack(
-                store=self.store,
-                name=name,
-                keep=keep,
-                localname=name,
-                uid=eid,
-                ha=ha,
-                sigkey=sigkey,
-                prikey=prikey,
-                main=main,
-                mutable=mutable,
-                txMsgs=txMsgs,
-                rxMsgs=rxMsgs,
-                period=3.0,
-                offset=0.5)
+        self.stack.value = RoadStack(store=self.store,
+                                     keep=keep,
+                                     name=name,
+                                     uid=eid,
+                                     ha=ha,
+                                     sigkey=sigkey,
+                                     prikey=prikey,
+                                     main=main,
+                                     mutable=mutable,
+                                     txMsgs=txMsgs,
+                                     rxMsgs=rxMsgs,
+                                     period=3.0,
+                                     offset=0.5)
 
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
