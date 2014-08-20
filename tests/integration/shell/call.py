@@ -22,6 +22,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -275,6 +276,39 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
+
+    def test_issue_15074_output_file_append(self):
+        output_file_append = os.path.join(integration.TMP, 'issue-15074')
+        try:
+            # Let's create an initial output file with some data
+            ret = self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            print ret
+
+            with salt.utils.fopen(output_file_append) as ofa:
+                output = ofa.read()
+
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} --output-file-append -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            with salt.utils.fopen(output_file_append) as ofa:
+                self.assertEqual(ofa.read(), output + output)
+        finally:
+            if os.path.exists(output_file_append):
+                os.unlink(output_file_append)
 
 
 if __name__ == '__main__':
