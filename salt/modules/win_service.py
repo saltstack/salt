@@ -5,6 +5,7 @@ Windows Service module.
 
 # Import python libs
 import salt.utils
+from subprocess import list2cmdline
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -61,7 +62,7 @@ def get_enabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
+            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
             lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'AUTO_START' in line:
@@ -95,7 +96,7 @@ def get_disabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
+            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
             lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'DEMAND_START' in line:
@@ -205,7 +206,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'net start "{0}"'.format(name)
+    cmd = list2cmdline(['net', 'start', name])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -219,7 +220,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'net stop "{0}"'.format(name)
+    cmd = list2cmdline(['net', 'stop', name])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -252,7 +253,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = 'sc query "{0}" {1}'.format(name, BUFFSIZE)
+    cmd = list2cmdline(['sc', 'query', name, BUFFSIZE])
     statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
@@ -272,7 +273,7 @@ def getsid(name):
 
         salt '*' service.getsid <service name>
     '''
-    cmd = 'sc showsid "{0}"'.format(name)
+    cmd = list2cmdline(['sc', 'showsid', name])
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE SID:' in line:
@@ -293,7 +294,7 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'sc config "{0}" start= auto'.format(name)
+    cmd = list2cmdline(['sc', 'config', name, 'start=', 'auto'])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -307,7 +308,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'sc config "{0}" start= demand'.format(name)
+    cmd = list2cmdline(['sc', 'config', name, 'start=', 'demand'])
     return not __salt__['cmd.retcode'](cmd)
 
 
