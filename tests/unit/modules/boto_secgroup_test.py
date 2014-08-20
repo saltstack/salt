@@ -3,7 +3,6 @@
 # import Python Libs
 import random
 import string
-from collections import OrderedDict
 from copy import deepcopy
 from distutils.version import LooseVersion
 
@@ -32,6 +31,7 @@ except ImportError:
         return stub_function
 
 # Import Salt Libs
+from salt.utils.odict import OrderedDict
 from salt.modules import boto_secgroup
 
 # Import Salt Testing Libs
