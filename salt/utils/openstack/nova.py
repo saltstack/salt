@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 def check_nova():
     return HAS_NOVA
 
+
 class NovaServer(object):
     def __init__(self, name, server, password=None):
         '''
