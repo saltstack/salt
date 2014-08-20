@@ -224,11 +224,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('-------------------------------------------')
         print_cli('Summary')
         print_cli('-------------------------------------------')
-        if self.options.verbose:
-            print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
         print_cli('# of Minions Returned: {0}'.format(return_counter))
+        print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
         if self.options.verbose:
-            print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
             print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
         print_cli('-------------------------------------------')
 
