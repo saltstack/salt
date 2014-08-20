@@ -141,6 +141,7 @@ def present(
         if __opts__['test']:
             msg = 'alarm {0} is to be created/updated.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         result = __salt__['boto_cloudwatch.create_or_update_alarm'](
             **create_or_update_alarm_args
@@ -154,6 +155,7 @@ def present(
         if __opts__['test']:
             msg = 'alarm {0} is to be created/updated.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         result = __salt__['boto_cloudwatch.create_or_update_alarm'](
             **create_or_update_alarm_args
@@ -200,6 +202,7 @@ def absent(
     if is_present:
         if __opts__['test']:
             ret['comment'] = 'alarm {0} is set to be removed.'.format(name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_cloudwatch.delete_alarm'](name, region, key,
                                                            keyid, profile)
