@@ -28,8 +28,7 @@ release.
 Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
-For information about how to use Salt with RAET please see the tutorial:
-<put tutorial here>
+For information about how to use Salt with RAET please see the :doc:`tutorial </topics/transports/raet/programming_intro>`.
 
 State System Enhancements
 =========================

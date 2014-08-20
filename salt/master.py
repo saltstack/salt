@@ -959,7 +959,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')

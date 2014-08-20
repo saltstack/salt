@@ -1794,7 +1794,7 @@ def build_network_settings(**settings):
 
     # Write domainname to /etc/resolv.conf
     # TODO: how does this work with resolvconf?
-    if len(sline) > 0:
+    if len(sline) > 1:
         domainname = sline[1]
 
         contents = _parse_resolve()
