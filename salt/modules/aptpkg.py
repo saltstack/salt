@@ -588,7 +588,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=True, **kwargs):  # pylint: disable=W0613
+def upgrade(refresh=True, dist_upgrade=True):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
