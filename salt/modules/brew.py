@@ -334,8 +334,19 @@ def list_upgrades():
         salt '*' pkg.list_upgrades
     '''
     cmd = 'brew outdated'
-
-    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+    return out.splitlines()
 
 
 def upgrade_available(pkg):
@@ -369,6 +380,11 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     old = list_pkgs()
 
     if salt.utils.is_true(refresh):
@@ -376,12 +392,20 @@ def upgrade(refresh=True):
 
     cmd = 'brew upgrade'
     user = __salt__['file.get_user'](_homebrew_bin())
-    __salt__['cmd.run'](
+    call = __salt__['cmd.run_all'](
         cmd,
         runas=user if user != __opts__['user'] else __opts__['user'],
         output_loglevel='trace'
     )
 
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
