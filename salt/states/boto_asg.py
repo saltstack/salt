@@ -237,7 +237,7 @@ def present(
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
-    if launch_config and not __opts__['test']:
+    if launch_config:
         launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
         args = {
             'name':  launch_config_name,
@@ -263,12 +263,13 @@ def present(
 
         for d in launch_config:
             args.update(d)
-        lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-        lc_ret = lc_ret.values()[0]
-        if lc_ret["result"] is True:
-            if "launch_config" not in ret["changes"]:
-                ret["changes"]["launch_config"] = {}
-            ret["changes"]["launch_config"] = lc_ret["changes"]
+        if not __opts__['test']:
+            lc_ret = __salt__["state.single"]('boto_lc.present', **args)
+            lc_ret = lc_ret.values()[0]
+            if lc_ret["result"] is True and lc_ret["changes"]:
+                if "launch_config" not in ret["changes"]:
+                    ret["changes"]["launch_config"] = {}
+                ret["changes"]["launch_config"] = lc_ret["changes"]
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
@@ -339,6 +340,8 @@ def present(
             if asg_property in asg:
                 _value = asg[asg_property]
                 if not _recursive_compare(value, _value):
+                    log_msg = '{0} asg_property differs from {1}'
+                    log.debug(log_msg.format(value, _value))
                     need_update = True
                     break
         if need_update:
