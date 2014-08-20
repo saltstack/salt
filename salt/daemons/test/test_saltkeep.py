@@ -215,8 +215,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -276,7 +274,8 @@ class BasicTestCase(unittest.TestCase):
                                      stackname=mainData['name'])
         main = stacking.RoadStack(name=mainData['name'],
                                   store=self.store,
-                                  keep=mainKeep)
+                                  keep=mainKeep,
+                                  main=True)
 
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -313,8 +312,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
@@ -403,8 +400,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -462,7 +457,8 @@ class BasicTestCase(unittest.TestCase):
                                      stackname=mainData['name'])
         main = stacking.RoadStack(name=mainData['name'],
                                   store=self.store,
-                                  keep=mainKeep)
+                                  keep=mainKeep,
+                                  main=True)
 
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -499,8 +495,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
@@ -589,8 +583,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -648,7 +640,8 @@ class BasicTestCase(unittest.TestCase):
                                      stackname=mainData['name'])
         main = stacking.RoadStack(name=mainData['name'],
                                   store=self.store,
-                                  keep=mainKeep)
+                                  keep=mainKeep,
+                                  main=True)
 
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -685,8 +678,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
@@ -777,8 +768,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -845,7 +834,8 @@ class BasicTestCase(unittest.TestCase):
                                      stackname=mainData['name'])
         main = stacking.RoadStack(name=mainData['name'],
                                   store=self.store,
-                                  keep=mainKeep)
+                                  keep=mainKeep,
+                                  main=True)
 
         self.assertEqual(main.local.name, mainData['name'])
         self.assertEqual(main.local.uid, 1)
@@ -900,8 +890,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -966,7 +954,8 @@ class BasicTestCase(unittest.TestCase):
                                      stackname=mainData['name'])
         main = stacking.RoadStack(name=mainData['name'],
                                   store=self.store,
-                                  keep=mainKeep)
+                                  keep=mainKeep,
+                                  main=True)
 
         self.assertEqual(main.local.name, mainData['name'])
         self.assertEqual(main.local.uid, 1)
@@ -1022,8 +1011,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -1091,7 +1078,8 @@ class BasicTestCase(unittest.TestCase):
                                      stackname=mainData['name'])
         main = stacking.RoadStack(name=mainData['name'],
                                   store=self.store,
-                                  keep=mainKeep)
+                                  keep=mainKeep,
+                                  main=True)
 
         self.assertEqual(main.local.name, mainData['name'])
         self.assertEqual(main.local.uid, 1)
@@ -1146,8 +1134,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -1184,8 +1170,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable':  None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
@@ -1262,8 +1246,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -1300,8 +1282,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
@@ -1374,8 +1354,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -1411,8 +1389,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': otherData['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': otherData['sighex'],
@@ -1485,8 +1461,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -1525,8 +1499,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': other1Data['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': other1Data['sighex'],
@@ -1591,8 +1563,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': other2Data['sighex'],
@@ -1649,8 +1619,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': other1Data['sighex'],
@@ -1730,8 +1698,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
                                                          'ha': ['0.0.0.0', 7530],
-                                                         'main': True,
-                                                         'mutable': None,
                                                          'sid': 0,
                                                          'nuid': 1,
                                                          'sighex': mainData['sighex'],
@@ -1770,8 +1736,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': other1Data['name'],
                                 'ha': ['0.0.0.0', 7531],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': other1Data['sighex'],
@@ -1835,8 +1799,6 @@ class BasicTestCase(unittest.TestCase):
                                 'uid': 0,
                                 'name': other2Data['name'],
                                 'ha': ['0.0.0.0', 7532],
-                                'main': None,
-                                'mutable': None,
                                 'sid': 0,
                                 'nuid': 1,
                                 'sighex': other2Data['sighex'],

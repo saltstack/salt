@@ -35,10 +35,9 @@ class SaltKeep(Keep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'main', 'sid',  'mutable',
+    LocalFields = ['uid', 'name', 'ha', 'sid',
                    'nuid', 'auto', 'role', 'sighex', 'prihex']
-    LocalDumpFields = ['uid', 'name', 'ha', 'main', 'sid', 'mutable',
-                       'nuid', 'role']
+    LocalDumpFields = ['uid', 'name', 'ha', 'sid', 'nuid', 'role']
     RemoteFields = ['uid', 'name', 'ha', 'sid', 'joined', 'acceptance',
                     'verhex', 'pubhex', 'role']
     RemoteDumpFields = ['uid', 'name', 'ha', 'sid', 'joined', 'role']
@@ -135,8 +134,6 @@ class SaltKeep(Keep):
                         ('ha', local.ha),
                         ('sid', local.sid),
                         ('nuid', local.stack.nuid),
-                        ('main', local.stack.main),
-                        ('mutable', local.stack.mutable),
                         ('role', local.role),
                     ])
         if self.verifyLocalData(data, localFields = self.LocalDumpFields):
