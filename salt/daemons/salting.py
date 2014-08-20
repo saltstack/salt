@@ -133,10 +133,10 @@ class SaltKeep(Keep):
                         ('uid', local.uid),
                         ('name', local.name),
                         ('ha', local.ha),
-                        ('mutable', local.mutable),
                         ('sid', local.sid),
                         ('nuid', local.stack.nuid),
                         ('main', local.stack.main),
+                        ('mutable', local.stack.mutable),
                         ('role', local.role),
                     ])
         if self.verifyLocalData(data, localFields = self.LocalDumpFields):
