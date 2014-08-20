@@ -35,11 +35,13 @@ class SaltKeep(Keep):
                     estate.name.ext
                     estate.name.ext
     '''
-    LocalFields = ['uid', 'name', 'ha', 'iha', 'sid', 'puid', 'role', 'sighex', 'prihex']
-    LocalDumpFields = ['uid', 'name', 'ha', 'iha', 'sid', 'puid', 'role']
-    RemoteFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'sid', 'joined', 'acceptance',
-                    'role',  'verhex', 'pubhex']
-    RemoteDumpFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'sid', 'joined', 'role']
+    LocalFields = ['uid', 'name', 'ha', 'iha', 'natted', 'sid', 'puid',
+                   'role', 'sighex', 'prihex']
+    LocalDumpFields = ['uid', 'name', 'ha', 'iha', 'natted', 'sid', 'puid', 'role']
+    RemoteFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'natted', 'sid', 'joined',
+                    'acceptance', 'role',  'verhex', 'pubhex']
+    RemoteDumpFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'natted', 'sid',
+                        'joined', 'role']
 
     Auto = False #auto accept
 
@@ -132,6 +134,7 @@ class SaltKeep(Keep):
                         ('uid', local.uid),
                         ('ha', local.ha),
                         ('iha', local.iha),
+                        ('natted', local.natted),
                         ('sid', local.sid),
                         ('puid', local.stack.puid),
                         ('role', local.role),
@@ -151,6 +154,7 @@ class SaltKeep(Keep):
                         ('fuid', remote.fuid),
                         ('ha', remote.ha),
                         ('iha', remote.iha),
+                        ('natted', remote.natted),
                         ('sid', remote.sid),
                         ('joined', remote.joined),
                         ('role', remote.role),
