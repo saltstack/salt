@@ -210,7 +210,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -305,7 +305,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
-        self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other.keep.auto, raeting.autoModes.never)
 
         self.assertDictEqual(other.keep.loadLocalData(),
@@ -397,7 +397,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -490,7 +490,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
-        self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other.keep.auto,raeting.autoModes.always)
 
         self.assertDictEqual(other.keep.loadLocalData(),
@@ -582,7 +582,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto,  raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -675,7 +675,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
-        self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other.keep.auto, raeting.autoModes.once)
 
         self.assertDictEqual(other.keep.loadLocalData(),
@@ -769,7 +769,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -849,7 +849,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
         self.assertIs(main.keep.auto, raeting.autoModes.never)
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
 
@@ -892,7 +892,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -970,7 +970,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
         self.assertIs(main.keep.auto, raeting.autoModes.always)
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
 
@@ -1014,7 +1014,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -1095,7 +1095,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
         self.assertIs(main.keep.auto, raeting.autoModes.once)
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
 
@@ -1138,7 +1138,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -1171,7 +1171,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
-        self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other.keep.auto,  raeting.autoModes.never)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -1248,7 +1248,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -1281,7 +1281,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
-        self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other.keep.auto, raeting.autoModes.always)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -1354,7 +1354,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertEqual(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertEqual(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -1387,7 +1387,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
-        self.assertEqual(other.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'uid': 0,
@@ -1459,7 +1459,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -1494,7 +1494,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith('other1/raet/other1'))
-        self.assertEqual(other1.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other1.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other1.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
@@ -1557,7 +1557,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
-        self.assertEqual(other2.local.ha, ("0.0.0.0", 7532))
+        self.assertEqual(other2.ha, ("0.0.0.0", 7532))
         self.assertIs(other2.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
@@ -1612,7 +1612,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
-        self.assertEqual(other2.local.ha, ("0.0.0.0", 7532))
+        self.assertEqual(other2.ha, ("0.0.0.0", 7532))
         self.assertIs(other2.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
@@ -1692,7 +1692,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\nkeep dirpath = {1}\n".format(
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
-        self.assertTrue(main.local.ha, ("0.0.0.0", raeting.RAET_PORT))
+        self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
                                                          'name': mainData['name'],
@@ -1727,7 +1727,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith('other1/raet/other1'))
-        self.assertEqual(other1.local.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertEqual(other1.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
         self.assertIs(other1.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
@@ -1789,7 +1789,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0} keep dirpath = {1}\n".format(
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
-        self.assertEqual(other2.local.ha, ("0.0.0.0", 7532))
+        self.assertEqual(other2.ha, ("0.0.0.0", 7532))
         self.assertIs(other2.keep.auto, raeting.autoModes.never)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {

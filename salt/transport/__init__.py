@@ -97,7 +97,7 @@ class RAETChannel(Channel):
                 self.stack = jobber_stack
             else:
                 self.stack = jobber_stack = self._setup_stack()
-        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.local.ha))
+        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.ha))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
