@@ -43,13 +43,13 @@ and each event tag has a list of reactor SLS files to be run.
 
 .. code-block:: yaml
 
-    reactor:                           # Master config section "reactor"
+    reactor:                            # Master config section "reactor"
 
-      - 'salt/minion/*/start':                # Match tag "salt/minion/*/start"
-        - /srv/reactor/start.sls       # Things to do when a minion starts
-        - /srv/reactor/monitor.sls     # Other things to do
+      - 'salt/minion/*/start':          # Match tag "salt/minion/*/start"
+        - /srv/reactor/start.sls        # Things to do when a minion starts
+        - /srv/reactor/monitor.sls      # Other things to do
 
-      - 'salt/cloud/*/destroyed':     # Globs can be used to matching tags
+      - 'salt/cloud/*/destroyed':       # Globs can be used to matching tags
         - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
 
 
