@@ -973,11 +973,11 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
         )
         log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
 
-        sent_password = False
+        sent_password = 0
         while proc.isalive():
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password:
+                if sent_password > 1:
                     # second time??? Wrong password?
                     log.warning(
                         'Asking for password again. Wrong one provided???'
@@ -986,7 +986,7 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
                     return 1
 
                 proc.sendline(kwargs['password'])
-                sent_password = True
+                sent_password += 1
 
             time.sleep(0.025)
         proc.close(force=True)
