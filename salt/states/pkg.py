@@ -1069,10 +1069,19 @@ def latest(
         desired_pkgs = [name]
 
     cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
-    avail = __salt__['pkg.latest_version'](*desired_pkgs,
-                                           fromrepo=fromrepo,
-                                           refresh=refresh,
-                                           **kwargs)
+    try:
+        avail = __salt__['pkg.latest_version'](*desired_pkgs,
+                                               fromrepo=fromrepo,
+                                               refresh=refresh,
+                                               **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while checking the '
+                           'newest available version of package(s): {0}'
+                           .format(exc)}
+
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)
     if os.path.isfile(rtag) and refresh:

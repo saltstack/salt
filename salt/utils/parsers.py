@@ -988,6 +988,13 @@ class OutputOptionsMixIn(object):
             help='Write the output to the specified file'
         )
         group.add_option(
+            '--out-file-append', '--output-file-append',
+            action='store_true',
+            dest='output_file_append',
+            default=False,
+            help='Append the output to the specified file'
+        )
+        group.add_option(
             '--no-color', '--no-colour',
             default=False,
             action='store_true',
@@ -1015,10 +1022,13 @@ class OutputOptionsMixIn(object):
         self.selected_output_option = self.options.output
 
     def process_output_file(self):
-        if self.options.output_file is not None:
+        if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    os.remove(self.options.output_file)
+                    with utils.fopen(self.option.output_file, 'w') as ofh:
+                        # Make this a zero length filename instead of removing
+                        # it. This way we keep the file permissions.
+                        ofh.write('')
                 except (IOError, OSError) as exc:
                     self.error(
                         '{0}: Access denied: {1}'.format(
