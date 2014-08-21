@@ -2058,7 +2058,7 @@ Range Cluster Settings
 Default: ``''``
 
 The range server (and optional port) that serves your cluster information
-https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 .. code-block:: yaml
 
