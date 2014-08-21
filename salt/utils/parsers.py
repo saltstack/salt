@@ -29,6 +29,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 
 if not utils.is_windows():
@@ -836,6 +837,12 @@ class TargetOptionsMixIn(object):
                   'use a grain value to identify targets, the syntax '
                   'for the target is the grain key followed by a glob'
                   'expression:\n"os:Arch*"')
+        )
+        group.add_option(
+            '--delimiter',
+            default=DEFAULT_TARGET_DELIM,
+            help=('Change the default delimiter for matching in multi-level '
+                  'data structures. default=\'%default\'')
         )
         group.add_option(
             '--grain-pcre',
