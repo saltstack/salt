@@ -54,7 +54,7 @@ def __virtual__():
             # non-digit characters, and the zeroth element is the major
             # number (it'd be so much simpler if it was always "X.Y"...)
             import re
-            if int(re.split('\D+', __grains__.get('osrelease', ''))[0]) >= 12:
+            if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
                 return False
         except ValueError:
             return False
