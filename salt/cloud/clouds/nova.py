@@ -96,7 +96,12 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-from salt.utils.openstack import nova
+try:
+    from salt.utils.openstack import nova
+    HAS_NOVA = True
+except NameError as exc:
+    HAS_NOVA = False
+
 import salt.utils.cloud
 
 # Import nova libs
@@ -146,7 +151,7 @@ def __virtual__():
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return nova.HAS_NOVA
+    return HAS_NOVA
 
 
 def get_configured_provider():
