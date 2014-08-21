@@ -1338,9 +1338,9 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     time.sleep(0.025)
 
 
-def _exec_ssh_cmd(cmd,
-                  error_msg='A wrong password has been issued while establishing ssh session',
-                  **kwargs):
+def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
+    if error_msg is None:
+        error_msg = 'A wrong password has been issued while establishing ssh session'
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
@@ -1350,7 +1350,8 @@ def _exec_ssh_cmd(cmd,
             log_stdout=True,
             log_stderr=True,
             stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True))
+            stream_stderr=kwargs.get('display_ssh_output', True)
+        )
         sent_password = 0
         while proc.isalive():
             stdout, stderr = proc.recv()
@@ -1365,6 +1366,13 @@ def _exec_ssh_cmd(cmd,
                     raise SaltCloudPasswordError(error_msg)
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
+        if proc.exitstatus != 0:
+            if allow_failure is False:
+                raise SaltCloudSystemExit(
+                    'Command {0!r} failed. Exit code: {1}'.format(
+                        cmd, proc.exitstatus
+                    )
+                )
         return proc.exitstatus
     except vt.TerminalException as err:
         trace = traceback.format_exc()
