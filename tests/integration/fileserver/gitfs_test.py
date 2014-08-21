@@ -13,7 +13,8 @@ ensure_in_syspath('../..')
 # Import Python libs
 import copy
 import os
-import getpass
+import logging
+import pwd
 import shutil
 
 # Import salt libs
@@ -39,13 +40,13 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
 
 LOAD = {'saltenv': 'base'}
 
-GITFS_AVAILABLE = None
+log = logging.getLogger(__name__)
+
 try:
     import git
-
     GITFS_AVAILABLE = True
 except ImportError:
-    pass
+    GITFS_AVAILABLE = False
 
 if not gitfs.__virtual__():
     GITFS_AVAILABLE = False
@@ -78,7 +79,13 @@ class GitFSTest(integration.ModuleCase):
             repo = git.Repo.init(self.tmp_repo_dir)
 
         if 'USERNAME' not in os.environ:
-            os.environ['USERNAME'] = getpass.getuser()
+            try:
+                os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
+            except AttributeError:
+                log.error('Unable to get effective username, falling back to '
+                          '\'root\'.')
+                os.environ['USERNAME'] = 'root'
+
         repo.index.add([x for x in os.listdir(self.tmp_repo_dir)
                         if x != '.git'])
         repo.index.commit('Test')
