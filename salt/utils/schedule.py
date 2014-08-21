@@ -46,7 +46,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    ... versionadded:: 2014.7.0
+    .. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
