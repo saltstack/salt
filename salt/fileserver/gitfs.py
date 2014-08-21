@@ -62,7 +62,6 @@ import subprocess
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
-PYGIT2_TRANSPORTS = ('http', 'https', 'file', 'git', 'git+ssh', 'ssh')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
 
 # Auth support (auth params can be global or per-remote, too)
