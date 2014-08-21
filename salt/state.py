@@ -675,6 +675,7 @@ class State(object):
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
+        self.opts['grains'] = salt.loader.grains(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, self.state_con)
         if isinstance(data, dict):
             if data.get('provider', False):
