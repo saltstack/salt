@@ -27,7 +27,13 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'transport': 'zeromq',
                   'gitfs_mountpoint': '',
                   'gitfs_env_whitelist': [],
-                  'gitfs_env_blacklist': []
+                  'gitfs_env_blacklist': [],
+                  'gitfs_user': '',
+                  'gitfs_password': '',
+                  'gitfs_insecure_auth': False,
+                  'gitfs_privkey': '',
+                  'gitfs_pubkey': '',
+                  'gitfs_passphrase': ''
 }
 
 LOAD = {'saltenv': 'base'}
@@ -87,7 +93,7 @@ class GitFSTest(integration.ModuleCase):
         shutil.rmtree(self.tmp_repo_dir)
         shutil.rmtree(os.path.join(self.master_opts['cachedir'], 'gitfs'))
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
+    #@skipIf(True, 'Skipping tests temporarily')
     def test_file_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
@@ -95,7 +101,7 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.file_list(LOAD)
             self.assertIn('testfile', ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
+    #@skipIf(True, 'Skipping tests temporarily')
     def test_find_file(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
@@ -110,7 +116,7 @@ class GitFSTest(integration.ModuleCase):
             expected_ret = {'path': path, 'rel': 'testfile'}
             self.assertDictEqual(ret, expected_ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
+    #@skipIf(True, 'Skipping tests temporarily')
     def test_dir_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
@@ -118,15 +124,7 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.dir_list(LOAD)
             self.assertIn('grail', ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
-    def test_file_list_emptydirs(self):
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
-            ret = gitfs.file_list_emptydirs(LOAD)
-            self.assertIn('empty_dir', ret)
-
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
+    #@skipIf(True, 'Skipping tests temporarily')
     def test_envs(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
@@ -134,7 +132,7 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.envs()
             self.assertIn('base', ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
+    #@skipIf(True, 'Skipping tests temporarily')
     def test_file_hash_sha1(self):
         '''
         NOTE: This test requires that gitfs.find_file is executed to ensure
@@ -169,7 +167,7 @@ class GitFSTest(integration.ModuleCase):
                  'hsum': '6b18d04b61238ba13b5e4626b13ac5fb7432b5e2'},
                 ret)
 
-    @skipIf(True, 'This test is failing and for good reason! See #9193')
+    #@skipIf(True, 'Skipping tests temporarily')
     def test_serve_file(self):
         '''
         NOTE: This test requires that gitfs.find_file is executed to ensure
