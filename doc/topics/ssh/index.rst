@@ -55,6 +55,11 @@ address. A more elaborate roster can be created:
       sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
+      
+.. note::
+
+    sudo works only if NOPASSWD is set for user in /etc/sudoers:
+    ``fred ALL=(ALL) NOPASSWD: ALL`` 
 
 Calling Salt SSH
 ================
