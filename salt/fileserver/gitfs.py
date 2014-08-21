@@ -26,8 +26,8 @@ to specify which provider should be used.
     as git itself. Instructions for installing GitPython can be found
     :ref:`here <gitfs-dependencies>`.
 
-    Using `pygit2`_ requires a minimum pygit2 version of 0.19.0. Additionally,
-    using pygit2 as a provider requires `libgit2`_ 0.19.0 or newer, as well as
+    Using `pygit2`_ requires a minimum pygit2 version of 0.21.0. Additionally,
+    using pygit2 as a provider requires `libgit2`_ 0.21.0 or newer, as well as
     git itself. pygit2 and libgit2 are developed alongside one another, so it
     is recommended to keep them both at the same major release to avoid
     unexpected behavior.
@@ -35,7 +35,7 @@ to specify which provider should be used.
 .. warning::
 
     `pygit2`_ does not yet support supplying passing SSH credentials, so at
-    this time only ``http://``, ``https://``, and ``file://`` URIs are
+    this time only ``http://``, ``https://``, and ``file://`` URLs are
     supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
     used.
 
@@ -62,8 +62,13 @@ import subprocess
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
-PYGIT2_TRANSPORTS = ('http', 'https', 'file')
+PYGIT2_TRANSPORTS = ('http', 'https', 'file', 'git', 'git+ssh', 'ssh')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
+
+# Auth support (auth params can be global or per-remote, too)
+AUTH_PROVIDERS = ('pygit2',)
+AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
+               'insecure_auth')
 
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set gitfs_provider to '
@@ -171,7 +176,7 @@ def _verify_gitpython(quiet=False):
 def _verify_pygit2(quiet=False):
     '''
     Check if pygit2/libgit2 are available and at a compatible version. Both
-    must be at least 0.19.0.
+    must be at least 0.21.0.
     '''
     if not HAS_PYGIT2:
         log.error(
@@ -185,7 +190,7 @@ def _verify_pygit2(quiet=False):
         return False
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
-    minver_str = '0.19.0'
+    minver_str = '0.21.0'
     minver = distutils.version.LooseVersion(minver_str)
     errors = []
     if pygit2ver < minver:
@@ -248,15 +253,15 @@ def _get_provider():
     provider = __opts__.get('gitfs_provider', '').lower()
     if not provider:
         # Prefer GitPython if it's available and verified
-        if _verify_gitpython(quiet=True):
-            return 'gitpython'
-        elif _verify_pygit2(quiet=True):
+        if _verify_pygit2(quiet=True):
             return 'pygit2'
+        elif _verify_gitpython(quiet=True):
+            return 'gitpython'
         elif _verify_dulwich(quiet=True):
             return 'dulwich'
         else:
             log.error(
-                'No suitable version of GitPython, pygit2/libgit2, or Dulwich '
+                'No suitable version of pygit2/libgit2, GitPython, or Dulwich '
                 'is installed.'
             )
     else:
@@ -265,10 +270,10 @@ def _get_provider():
                 'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
                 .format(provider, ', '.join(VALID_PROVIDERS))
             )
-        elif provider == 'gitpython' and _verify_gitpython():
-            return 'gitpython'
         elif provider == 'pygit2' and _verify_pygit2():
             return 'pygit2'
+        elif provider == 'gitpython' and _verify_gitpython():
+            return 'gitpython'
         elif provider == 'dulwich' and _verify_dulwich():
             return 'dulwich'
     return ''
@@ -482,67 +487,170 @@ def _stale_refs_pygit2(repo):
     return ret
 
 
+def _verify_auth(repo):
+    '''
+    Check the username and password/keypair info for validity. If valid, assign
+    a 'credentials' key (consisting of a relevant credentials object) to the
+    repo config dict passed to this function. Return False if a required auth
+    param is not present. Return True if the required auth parameters are
+    present, or if the desired transport either does not support
+    authentication.
+
+    At this time, pygit2 is the only gitfs_provider which supports auth.
+    '''
+    if os.path.isabs(repo['url']) or _get_provider() not in AUTH_PROVIDERS:
+        # If the URL is an absolute file path, there is no authentication.
+        # Similarly, if the gitfs_provider is not one that supports auth, there
+        # is no reason to proceed any further. Since there is no auth issue, we
+        # return True
+        return True
+    if not any(repo.get(x) for x in AUTH_PARAMS):
+        # Auth information not configured for this remote
+        return True
+
+    def _incomplete_auth(remote_url, missing):
+        '''
+        Helper function to log errors about missing auth parameters
+        '''
+        log.error(
+            'Incomplete authentication information for remote {0}. Missing '
+            'parameters: {1}'.format(remote_url, ', '.join(missing))
+        )
+
+    transport, _, address = repo['url'].partition('://')
+    if not address:
+        # Assume scp-like SSH syntax (user@domain.tld:relative/path.git)
+        transport = 'ssh'
+        address = repo['url']
+
+    transport = transport.lower()
+
+    if transport in ('git', 'file'):
+        # These transports do not use auth
+        return True
+
+    elif transport == 'ssh':
+        required_params = ('pubkey', 'privkey')
+        user = address.split('@')[0]
+        if user == address:
+            # No '@' sign == no user. This is a problem.
+            log.error(
+                'Password / keypair specified for remote {0}, but remote '
+                'URL is missing a username'.format(repo['url'])
+            )
+            return False
+
+        repo['user'] = user
+        if all(bool(repo[x]) for x in required_params):
+            keypair_params = [repo[x] for x in
+                              ('user', 'pubkey', 'privkey', 'passphrase')]
+            repo['credentials'] = pygit2.Keypair(*keypair_params)
+            return True
+        else:
+            missing_auth = [x for x in required_params if not bool(repo[x])]
+            _incomplete_auth(repo['url'], missing_auth)
+            return False
+
+    elif transport in ('https', 'http'):
+        required_params = ('user', 'password')
+        password_ok = all(bool(repo[x]) for x in required_params)
+        no_password_auth = not any(bool(repo[x]) for x in required_params)
+        if no_password_auth:
+            # Auth is not required, return True
+            return True
+        if password_ok:
+            if transport == 'http' and not repo['insecure_auth']:
+                log.error(
+                    'Invalid configuration for remote {0}. Authentication is '
+                    'disabled by default on http remotes. Either set '
+                    'gitfs_insecure_auth to True in the master '
+                    'configuration file, set a per-remote config option named '
+                    '\'insecure_auth\' to True, or use https or ssh-based '
+                    'authentication.'.format(repo['url'])
+                )
+                return False
+            repo['credentials'] = pygit2.UserPass(repo['user'],
+                                                  repo['password'])
+            return True
+        else:
+            missing_auth = [x for x in required_params if not bool(repo[x])]
+            _incomplete_auth(repo['url'], missing_auth)
+            return False
+    else:
+        log.error(
+            'Invalid configuration for remote {0}. Unsupported transport '
+            '{1!r}.'.format(repo['url'], transport)
+        )
+        return False
+
+
 def init():
     '''
     Return the git repo object for this session
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     provider = _get_provider()
+
+    # The global versions of the auth params (gitfs_user, gitfs_password, etc.)
+    # default to empty strings. If any of them are defined and the gitfs
+    # provider is not one that supports auth, then error out and do not
+    # proceed.
+    override_params = PER_REMOTE_PARAMS
+    global_auth_params = [
+        'gitfs_{0}'.format(x) for x in AUTH_PARAMS
+        if __opts__['gitfs_{0}'.format(x)]
+    ]
+    if provider in AUTH_PROVIDERS:
+        override_params += AUTH_PARAMS
+    elif global_auth_params:
+        log.critical(
+            'GitFS authentication was configured, but the {0} gitfs_provider '
+            'does not support authentication. The providers for which '
+            'authentication is supported in gitfs are: {1}'
+            .format(provider, ', '.join(AUTH_PROVIDERS))
+        )
+
     # ignore git ssl verification if requested
     ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) else 'false'
     new_remote = False
     repos = []
 
     per_remote_defaults = {}
-    for param in PER_REMOTE_PARAMS:
+    for param in override_params:
         per_remote_defaults[param] = __opts__['gitfs_{0}'.format(param)]
 
     for remote in __opts__['gitfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
-            repo_uri = next(iter(remote))
-            per_remote_conf = salt.utils.repack_dictlist(remote[repo_uri])
+            repo_url = next(iter(remote))
+            per_remote_conf = salt.utils.repack_dictlist(remote[repo_url])
             if not per_remote_conf:
                 log.error(
                     'Invalid per-remote configuration for remote {0}. If no '
                     'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URI, which should be removed. '
-                    'Check the master configuration file.'.format(repo_uri)
+                    'a trailing colon after the URL, which should be removed. '
+                    'Check the master configuration file.'.format(repo_url)
                 )
             for param in (x for x in per_remote_conf
-                          if x not in PER_REMOTE_PARAMS):
+                          if x not in override_params):
                 log.error(
                     'Invalid configuration parameter {0!r} in remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
-                        param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
+                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
                 per_remote_conf.pop(param)
             repo_conf.update(per_remote_conf)
         else:
-            repo_uri = remote
+            repo_url = remote
 
-        if not isinstance(repo_uri, string_types):
+        if not isinstance(repo_url, string_types):
             log.error(
                 'Invalid gitfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_uri)
+                'need to enclose the URL in quotes'.format(repo_url)
             )
             continue
-
-        # Check repo_uri against the list of valid protocols
-        if provider == 'pygit2':
-            transport, _, uri = repo_uri.partition('://')
-            if not uri:
-                log.error('Invalid gitfs remote {0!r}'.format(repo_uri))
-                continue
-            elif transport.lower() not in PYGIT2_TRANSPORTS:
-                log.error(
-                    'Invalid transport {0!r} in gitfs remote {1}. Valid '
-                    'transports for pygit2 provider: {2}'
-                    .format(transport, repo_uri, ', '.join(PYGIT2_TRANSPORTS))
-                )
-                continue
 
         try:
             repo_conf['mountpoint'] = salt.utils.strip_proto(
@@ -553,22 +661,22 @@ def init():
             pass
 
         hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-        repo_hash = hash_type(repo_uri).hexdigest()
+        repo_hash = hash_type(repo_url).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
 
         try:
             if provider == 'gitpython':
-                repo, new = _init_gitpython(rp_, repo_uri, ssl_verify)
+                repo, new = _init_gitpython(rp_, repo_url, ssl_verify)
                 if new:
                     new_remote = True
             elif provider == 'pygit2':
-                repo, new = _init_pygit2(rp_, repo_uri, ssl_verify)
+                repo, new = _init_pygit2(rp_, repo_url, ssl_verify)
                 if new:
                     new_remote = True
             elif provider == 'dulwich':
-                repo, new = _init_dulwich(rp_, repo_uri, ssl_verify)
+                repo, new = _init_dulwich(rp_, repo_url, ssl_verify)
                 if new:
                     new_remote = True
             else:
@@ -583,21 +691,24 @@ def init():
             if repo is not None:
                 repo_conf.update({
                     'repo': repo,
-                    'uri': repo_uri,
+                    'url': repo_url,
                     'hash': repo_hash,
                     'cachedir': rp_
                 })
                 # Strip trailing slashes from the gitfs root as these cause
                 # path searches to fail.
                 repo_conf['root'] = repo_conf['root'].rstrip(os.path.sep)
+                # Sanity check and assign the credential parameter to repo_conf
+                if not _verify_auth(repo_conf):
+                    continue
                 repos.append(repo_conf)
 
         except Exception as exc:
-            msg = ('Exception caught while initializing the repo for gitfs: '
-                   '{0}.'.format(exc))
+            msg = ('Exception caught while initializing gitfs remote {0}: '
+                   '{0}'.format(exc))
             if provider == 'gitpython':
                 msg += ' Perhaps git is not available.'
-            log.error(msg)
+            log.error(msg, exc_info_on_loglevel=logging.DEBUG)
             continue
 
     if new_remote:
@@ -607,7 +718,7 @@ def init():
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# gitfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
-                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['uri']))
+                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['url']))
         except OSError:
             pass
         else:
@@ -616,7 +727,7 @@ def init():
     return repos
 
 
-def _init_gitpython(rp_, repo_uri, ssl_verify):
+def _init_gitpython(rp_, repo_url, ssl_verify):
     '''
     Initialize/attach to a repository using GitPython. Return the repo object
     if successful, otherwise return None. Also return a boolean that will tell
@@ -632,11 +743,11 @@ def _init_gitpython(rp_, repo_uri, ssl_verify):
         try:
             repo = git.Repo(rp_)
         except git.exc.InvalidGitRepositoryError:
-            log.error(_INVALID_REPO.format(rp_, repo_uri))
+            log.error(_INVALID_REPO.format(rp_, repo_url))
             return None, new
     if not repo.remotes:
         try:
-            repo.create_remote('origin', repo_uri)
+            repo.create_remote('origin', repo_url)
             repo.git.config('http.sslVerify', ssl_verify)
         except os.error:
             # This exception occurs when two processes are trying to write to
@@ -648,7 +759,7 @@ def _init_gitpython(rp_, repo_uri, ssl_verify):
     return None, new
 
 
-def _init_pygit2(rp_, repo_uri, ssl_verify):
+def _init_pygit2(rp_, repo_url, ssl_verify):
     '''
     Initialize/attach to a repository using pygit2. Return the repo object if
     successful, otherwise return None. Also return a boolean that will tell
@@ -664,11 +775,11 @@ def _init_pygit2(rp_, repo_uri, ssl_verify):
         try:
             repo = pygit2.Repository(rp_)
         except KeyError:
-            log.error(_INVALID_REPO.format(rp_, repo_uri))
+            log.error(_INVALID_REPO.format(rp_, repo_url))
             return None, new
     if not repo.remotes:
         try:
-            repo.create_remote('origin', repo_uri)
+            repo.create_remote('origin', repo_url)
             repo.config.set_multivar('http.sslVerify', '', ssl_verify)
         except os.error:
             # This exception occurs when two processes are trying to write to
@@ -680,7 +791,7 @@ def _init_pygit2(rp_, repo_uri, ssl_verify):
     return None, new
 
 
-def _init_dulwich(rp_, repo_uri, ssl_verify):
+def _init_dulwich(rp_, repo_url, ssl_verify):
     '''
     Initialize/attach to a repository using Dulwich. Return the repo object if
     successful, otherwise return None. Also return a boolean that will tell
@@ -700,8 +811,8 @@ def _init_dulwich(rp_, repo_uri, ssl_verify):
                 'fetch',
                 '+refs/heads/*:refs/remotes/origin/*'
             )
-            conf.set('remote "origin"', 'url', repo_uri)
-            conf.set('remote "origin"', 'pushurl', repo_uri)
+            conf.set('remote "origin"', 'url', repo_url)
+            conf.set('remote "origin"', 'pushurl', repo_url)
             conf.write_to_path()
         except os.error:
             pass
@@ -710,7 +821,7 @@ def _init_dulwich(rp_, repo_uri, ssl_verify):
         try:
             repo = dulwich.repo.Repo(rp_)
         except dulwich.repo.NotGitRepository:
-            log.error(_INVALID_REPO.format(rp_, repo_uri))
+            log.error(_INVALID_REPO.format(rp_, repo_url))
             return None, new
     # No way to interact with remotes, so just assume success
     return repo, new
@@ -757,14 +868,14 @@ def update():
             origin = repo['repo'].remotes[0]
             working_dir = repo['repo'].workdir
         elif provider == 'dulwich':
-            # origin is just a uri here, there is no origin object
-            origin = repo['uri']
+            # origin is just a url here, there is no origin object
+            origin = repo['url']
             working_dir = repo['repo'].path
         lk_fn = os.path.join(working_dir, 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         try:
-            log.debug('Fetching from {0}'.format(repo['uri']))
+            log.debug('Fetching from {0}'.format(repo['url']))
             if provider == 'gitpython':
                 try:
                     fetch_results = origin.fetch()
@@ -774,8 +885,17 @@ def update():
                     if fetch.old_commit is not None:
                         data['changed'] = True
             elif provider == 'pygit2':
+                try:
+                    origin.credentials = repo['credentials']
+                except KeyError:
+                    # No credentials configured for this repo
+                    pass
                 fetch = origin.fetch()
-                if fetch.get('received_objects', 0):
+                log.debug(
+                    'Gitfs received {0} objects for remote {1}'
+                    .format(fetch.received_objects, repo['url'])
+                )
+                if fetch.received_objects:
                     data['changed'] = True
             elif provider == 'dulwich':
                 client, path = \
@@ -788,8 +908,8 @@ def update():
                 except dulwich.errors.NotGitRepository:
                     log.critical(
                         'Dulwich does not recognize remote {0} as a valid '
-                        'remote URI. Perhaps it is missing \'.git\' at the '
-                        'end.'.format(repo['uri'])
+                        'remote URL. Perhaps it is missing \'.git\' at the '
+                        'end.'.format(repo['url'])
                     )
                     continue
                 except KeyError:
@@ -799,7 +919,7 @@ def update():
                         'attempt to remove the local checkout to allow it to '
                         'be re-initialized in the next fileserver cache '
                         'update.'
-                        .format(repo['cachedir'], repo['uri'])
+                        .format(repo['cachedir'], repo['url'])
                     )
                     try:
                         salt.utils.rm_rf(repo['cachedir'])
@@ -812,7 +932,7 @@ def update():
                 if refs_post is None:
                     # Empty repository
                     log.warning(
-                        'gitfs remote {0!r} is an empty repository and will '
+                        'Gitfs remote {0!r} is an empty repository and will '
                         'be skipped.'.format(origin)
                     )
                     continue
@@ -826,9 +946,10 @@ def update():
                         if ref not in refs_post:
                             del repo['repo'][ref]
         except Exception as exc:
+            # Do not use {0!r} in the error message, as exc is not a string
             log.error(
-                'Exception {0} caught while fetching gitfs remote {1}'
-                .format(exc, repo['uri']),
+                'Exception \'{0}\' caught while fetching gitfs remote {1}'
+                .format(exc, repo['url']),
                 exc_info_on_loglevel=logging.DEBUG
             )
         try:
