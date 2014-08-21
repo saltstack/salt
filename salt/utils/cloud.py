@@ -2221,7 +2221,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     with salt.utils.fopen(path, 'r') as fh_:
         try:
             cache_data = msgpack.load(fh_)
-        except ValueError as exc:
+        except ValueError:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}
 
