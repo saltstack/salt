@@ -193,17 +193,19 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     config = __salt__['boto_elasticache.get_config'](name, region, key, keyid,
                                                      profile)
     if config is None:
         msg = 'Failed to retrieve cache cluster info from AWS.'
         ret['comment'] = msg
+        ret['result'] = None
         return ret
     elif not config:
         if __opts__['test']:
             msg = 'Cache cluster {0} is set to be created.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_elasticache.create'](
             name=name, num_cache_nodes=num_cache_nodes,
@@ -220,7 +222,6 @@ def present(
             auto_minor_version_upgrade=auto_minor_version_upgrade,
             wait=wait, region=region, key=key, keyid=keyid, profile=profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             config = __salt__['boto_elasticache.get_config'](name, region, key,
                                                              keyid, profile)
@@ -265,7 +266,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_elasticache.exists'](name, region, key, keyid,
                                                      profile)
@@ -274,11 +275,11 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'Cache cluster {0} is set to be removed.'.format(
                 name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_elasticache.delete'](name, wait, region, key,
                                                       keyid, profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:
