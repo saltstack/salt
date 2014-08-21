@@ -9,7 +9,6 @@ HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
     from novaclient.shell import OpenStackComputeShell
-    import novaclient.utils
     import novaclient.auth_plugin
     import novaclient.exceptions
     import novaclient.extension
@@ -110,20 +109,16 @@ class SaltNova(OpenStackComputeShell):
         '''
         if not HAS_NOVA:
             return None
+        self.extensions = self._discover_extensions('1.1')
+        self._run_extension_hooks('__pre_parse_args__')
 
         self.kwargs = kwargs.copy()
-
-        if not novaclient.utils.HookableMixin._hooks_map:
-            self.extensions = self._discover_extensions('1.1')
-            for extension in self.extensions:
-                extension.run_hooks('__pre_parse_args__')
-            self.kwargs['extensions'] = self.extensions
-
         self.kwargs['username'] = username
         self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
+        self.kwargs['extensions'] = self.extensions
 
         if os_auth_plugin is not None:
             novaclient.auth_plugin.discover_auth_systems()
@@ -159,10 +154,7 @@ class SaltNova(OpenStackComputeShell):
                 region_name
             )['publicURL']
 
-        if hasattr(self, 'extensions'):
-            for extension in self.extensions:
-                extension.run_hooks('__post_parse_args__', self.kwargs)
-
+        self._run_extension_hooks('__post_parse_args__', self.kwargs)
         self.compute_conn = client.Client(**self.kwargs)
 
         if region_name is not None:
@@ -179,8 +171,7 @@ class SaltNova(OpenStackComputeShell):
 
         self.kwargs['service_type'] = 'volume'
         self.volume_conn = client.Client(**self.kwargs)
-        if hasattr(self, 'extensions'):
-            self.expand_extensions()
+        self.expand_extensions()
 
     def expand_extensions(self):
         for connection in (self.compute_conn, self.volume_conn):
