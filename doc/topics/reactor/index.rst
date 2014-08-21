@@ -50,7 +50,7 @@ and each event tag has a list of reactor SLS files to be run.
         - /srv/reactor/monitor.sls     # Other things to do
 
       - 'salt/cloud/*/destroyed':     # Globs can be used to matching tags
-        - /srv/reactor/decommision.sls # Things to do when a server is removed
+        - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
 
 
 Reactor sls files are similar to state and pillar sls files.  They are
