@@ -321,6 +321,10 @@ def _verify_install(desired, new_pkgs):
         elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue
+        elif pkgver.endswith("*") and cver[0].startswith(pkgver[:-1]):
+            ok.append(pkgname)
+            continue
+
         match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
         gt_lt, eq, verstr = match.groups()
         comparison = gt_lt or ''
