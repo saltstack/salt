@@ -153,6 +153,23 @@ all interfaces are ignored unless specified.
           - network: eth4
         - require:
           - network: eth4
+
+    system:
+        network.system:
+          - enabled: True
+          - hostname: server1.example.com
+          - gateway: 192.168.0.1
+          - gatewaydev: eth0
+          - nozeroconf: True
+          - nisdomain: example.com
+          - require_reboot: True
+          - apply_hostname: True
+
+    .. note::
+        Apply changes to hostname immediately.
+
+    .. versionadded:: Lithium
+
 '''
 
 # Import python libs
