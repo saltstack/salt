@@ -188,7 +188,7 @@ def not_present(subset=None, show_ipv4=False):
 
     not_connected = []
     for minion in keys['minions']:
-        if not minion in connected:
+        if minion not in connected:
             not_connected.append(minion)
 
     salt.output.display_output(not_connected, '', __opts__)
