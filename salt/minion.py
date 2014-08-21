@@ -368,9 +368,8 @@ class MultiMinion(object):
             s_opts['master'] = master
             try:
                 minions.append(Minion(s_opts, 5, False))
-            except SaltClientError as exc:
-                log.error('Error while bring up minion for multi-master. Is master responding?')
-                raise exc
+            except SaltClientError:
+                minions.append(s_opts)
         return minions
 
     def minions(self):
@@ -462,16 +461,16 @@ class MultiMinion(object):
 
         while True:
             for minion in minions.values():
-                if isinstance(minion, dict):
-                    minion = minion['minion']
-                if not hasattr(minion, 'schedule'):
+                # See the minions function above for the contents of a minions value
+                minion_obj = minion.get('minion')
+                if not hasattr(minion_obj, 'schedule'):
                     continue
                 try:
-                    minion.schedule.eval()
+                    minion_obj.schedule.eval()
                     # Check if scheduler requires lower loop interval than
                     # the loop_interval setting
-                    if minion.schedule.loop_interval < loop_interval:
-                        loop_interval = minion.schedule.loop_interval
+                    if minion_obj.schedule.loop_interval < loop_interval:
+                        loop_interval = minion_obj.schedule.loop_interval
                         log.debug(
                             'Overriding loop_interval because of scheduled jobs.'
                         )
