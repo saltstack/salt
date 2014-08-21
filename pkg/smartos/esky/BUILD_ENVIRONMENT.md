@@ -44,18 +44,18 @@ cd $HERE/salt
 # install all requirements
 # (installing them as eggs seems to trigger esky pulling in the whole egg)
 # this step is buggy... I had to run them repeatedly until they succeeded...
-pip install --egg -r pkg/smartos/esky/zeromq_requirements.txt
-pip install --egg -r pkg/smartos/esky/raet_requirements.txt
+until pip install --egg -r pkg/smartos/esky/zeromq_requirements.txt ; do sleep 1 ; done ;
+until pip install --egg -r pkg/smartos/esky/raet_requirements.txt ; do sleep 1 ; done ;
 
 # install the sodium_grabber library
-python pkg/smartos/esky/sodium_grabber_installer.py install
+python2.7 pkg/smartos/esky/sodium_grabber_installer.py install
 
 # at this point you have a build environment that you could set aside and reuse to run further builds.
 
 bash pkg/smartos/esky/build-tarball.sh
 
 # Upload packages into Manta
-pkgin -y in sdc-manta
-mmkdir -p /$MANTA_USER/public/salt
-for file in dist/salt*; do mput -m /$MANTA_USER/public/salt -f $file; done;
+#pkgin -y in sdc-manta
+#mmkdir -p /$MANTA_USER/public/salt
+#for file in dist/salt*; do mput -m /$MANTA_USER/public/salt -f $file; done;
 ```
