@@ -584,12 +584,20 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         salt.state.Compiler.__init__(self, opts)
         self.wrap = ReactWrap(self.opts)
 
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
     def render_reaction(self, glob_ref, tag, data):
         '''
         Execute the render system against a single reaction file and return
         the data structure
         '''
         react = {}
+
+        if glob_ref.startswith('salt://'):
+            glob_ref = self.minion.functions['cp.cache_file'](glob_ref)
+
         for fn_ in glob.glob(glob_ref):
             try:
                 react.update(self.render_template(
