@@ -2,7 +2,7 @@
 '''
 Support for haproxy
 
-... versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
 '''
 
 from __future__ import generators
