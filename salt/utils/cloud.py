@@ -919,7 +919,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None):
     time.sleep(0.025)
 
 
-def scp_file(dest_path, contents, kwargs):
+def scp_file(dest_path, contents, kwargs, allow_failure=False):
     '''
     Use scp to copy a file to a server
     '''
@@ -990,6 +990,12 @@ def scp_file(dest_path, contents, kwargs):
 
             time.sleep(0.025)
         proc.close(force=True)
+        if allow_failure is False:
+            raise SaltCloudSystemExit(
+                'Failed to upload {0} to {1}. Exit code: {2}'.format(
+                    tmppath, dest_path, proc.exitstatus
+                )
+            )
         return proc.exitstatus
     except vt.TerminalException as err:
         log.error(
