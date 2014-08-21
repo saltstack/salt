@@ -794,7 +794,6 @@ def deploy_windows(host,
                              username=username, password=password,
                              timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
             'Logging into {0}:{1} as {2}'.format(
                 host, port, username
